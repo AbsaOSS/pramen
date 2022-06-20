@@ -1,0 +1,154 @@
+{
+  "type" : "record",
+  "name" : "topLevelRecord",
+  "fields" : [ {
+    "name" : "id",
+    "type" : [ "long", "null" ]
+  }, {
+    "name" : "key1",
+    "type" : [ "long", "null" ]
+  }, {
+    "name" : "key2",
+    "type" : [ "long", "null" ]
+  }, {
+    "name" : "struct1",
+    "type" : [ {
+      "type" : "record",
+      "name" : "struct1",
+      "namespace" : "topLevelRecord",
+      "fields" : [ {
+        "name" : "key3",
+        "type" : [ "int", "null" ]
+      }, {
+        "name" : "key4",
+        "type" : [ "int", "null" ]
+      } ]
+    }, "null" ]
+  }, {
+    "name" : "struct2",
+    "type" : [ {
+      "type" : "record",
+      "name" : "struct2",
+      "namespace" : "topLevelRecord",
+      "fields" : [ {
+        "name" : "inner1",
+        "type" : [ {
+          "type" : "record",
+          "name" : "inner1",
+          "namespace" : "topLevelRecord.struct2",
+          "fields" : [ {
+            "name" : "key5",
+            "type" : [ "long", "null" ]
+          }, {
+            "name" : "key6",
+            "type" : [ "long", "null" ]
+          }, {
+            "name" : "skey1",
+            "type" : [ "string", "null" ]
+          } ]
+        }, "null" ]
+      } ]
+    }, "null" ]
+  }, {
+    "name" : "struct3",
+    "type" : [ {
+      "type" : "record",
+      "name" : "struct3",
+      "namespace" : "topLevelRecord",
+      "fields" : [ {
+        "name" : "inner3",
+        "type" : [ {
+          "type" : "record",
+          "name" : "inner3",
+          "namespace" : "topLevelRecord.struct3",
+          "fields" : [ {
+            "name" : "array3",
+            "type" : [ {
+              "type" : "array",
+              "items" : [ {
+                "type" : "record",
+                "name" : "array3",
+                "namespace" : "topLevelRecord.struct3.inner3",
+                "fields" : [ {
+                  "name" : "a1",
+                  "type" : [ "long", "null" ]
+                }, {
+                  "name" : "a2",
+                  "type" : [ "long", "null" ]
+                }, {
+                  "name" : "a3",
+                  "type" : [ "string", "null" ]
+                } ]
+              }, "null" ]
+            }, "null" ]
+          } ]
+        }, "null" ]
+      } ]
+    }, "null" ]
+  }, {
+    "name" : "array1",
+    "type" : [ {
+      "type" : "array",
+      "items" : [ {
+        "type" : "record",
+        "name" : "array1",
+        "namespace" : "topLevelRecord",
+        "fields" : [ {
+          "name" : "key7",
+          "type" : [ "long", "null" ]
+        }, {
+          "name" : "key8",
+          "type" : [ "long", "null" ]
+        }, {
+          "name" : "skey2",
+          "type" : [ "string", "null" ]
+        } ]
+      }, "null" ]
+    }, "null" ]
+  }, {
+    "name" : "array2",
+    "type" : [ {
+      "type" : "array",
+      "items" : [ {
+        "type" : "record",
+        "name" : "array2",
+        "namespace" : "topLevelRecord",
+        "fields" : [ {
+          "name" : "key2",
+          "type" : [ "long", "null" ]
+        }, {
+          "name" : "inner2",
+          "type" : [ {
+            "type" : "array",
+            "items" : [ {
+              "type" : "record",
+              "name" : "inner2",
+              "namespace" : "topLevelRecord.array2",
+              "fields" : [ {
+                "name" : "key9",
+                "type" : [ "long", "null" ]
+              }, {
+                "name" : "key10",
+                "type" : [ "long", "null" ]
+              }, {
+                "name" : "struct3",
+                "type" : [ {
+                  "type" : "record",
+                  "name" : "struct3",
+                  "namespace" : "topLevelRecord.array2.inner2",
+                  "fields" : [ {
+                    "name" : "k1",
+                    "type" : [ "int", "null" ]
+                  }, {
+                    "name" : "k2",
+                    "type" : [ "int", "null" ]
+                  } ]
+                }, "null" ]
+              } ]
+            }, "null" ]
+          }, "null" ]
+        } ]
+      }, "null" ]
+    }, "null" ]
+  } ]
+}

@@ -1,0 +1,36 @@
+{
+  "type" : "record",
+  "name" : "topLevelRecord",
+  "fields" : [ {
+    "name" : "name",
+    "type" : [ "null", "string" ],
+    "default" : null
+  }, {
+    "name" : "addresses",
+    "type" : [ "null", {
+      "type" : "array",
+      "items" : [ {
+        "type" : "record",
+        "name" : "addresses",
+        "namespace" : "topLevelRecord",
+        "fields" : [ {
+          "name" : "city",
+          "type" : [ "null", "string" ],
+          "default" : null
+        }, {
+          "name" : "state",
+          "type" : [ "null", "string" ],
+          "default" : null
+        } ]
+      }, "null" ]
+    } ],
+    "default" : null
+  }, {
+    "name" : "properties",
+    "type" : [ "null", {
+      "type" : "map",
+      "values" : [ "string", "null" ]
+    } ],
+    "default" : null
+  } ]
+}

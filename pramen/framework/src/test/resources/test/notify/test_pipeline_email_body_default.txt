@@ -1,0 +1,100 @@
+<html>
+<head>
+<style>
+.datagrid table {
+    border-collapse: collapse;
+    text-align: left;
+    width: 100%;
+}
+
+.datagrid {
+    font: normal 12px/150% Arial, Helvetica, sans-serif;
+    background: #fff;
+    overflow: hidden;
+    border: 1px solid #006699;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+}
+
+.datagrid table td, .datagrid table th {
+    padding: 3px 10px;
+}
+
+.datagrid table thead th {
+    background: -webkit-gradient(linear, left top, left bottom, color-stop(0.05, #006699), color-stop(1, #00557F));
+    background: -moz-linear-gradient(center top, #006699 5%, #00557F 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#006699', endColorstr='#00557F');
+    background-color: #006699;
+    color: #FFFFFF;
+    font-size: 14px;
+    font-weight: bold;
+    border-left: 1px solid #0070A8;
+    text-align: center;
+}
+
+.datagrid table thead th:first-child {
+    border: none;
+}
+
+.datagrid table tbody td {
+    color: #00557F;
+    border-left: 1px solid #E1EEF4;
+    font-size: 12px;
+    font-weight: normal;
+    text-align: left;
+}
+
+.datagrid table tbody .alt td {
+    background: #E1EEf4;
+    color: #00557F;
+}
+
+.datagrid table tbody .warn td {
+    background: #ece846;
+    color: #00557F;
+}
+
+.tdwarn {
+    font-weight: bold !important;
+    color: #b66c00 !important;
+}
+
+.tderr {
+    font-weight: bold !important;
+    color: #d11300 !important;
+}
+
+.tdred {
+    color: #d11300 !important;
+}
+
+.tdgreen {
+    font-weight: bold !important;
+    color: #2da334 !important;
+}
+
+.datagrid table tbody td:first-child {
+    border-left: none;
+}
+
+.datagrid table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+</style>
+<body><p>Hi,</p>
+
+<p>This is a notification from Pramen for <b>MyApp</b> on <b>MyEnv</b>. The job has <span class="tdgreen">succeeded</span>.</p>
+
+<p>Job started at <b>2022-03-21 16:29 +0200</b>, finished at <b>2022-03-21 19:16 +0200</b>. Elapsed time: <b>2 hours and 46 minutes</b>.</p>
+
+<p>No new data has been loaded.</p>
+
+<p>Regards,<br>
+Pramen<br>
+1.0.0
+</p>
+
+</body>
+</html>
