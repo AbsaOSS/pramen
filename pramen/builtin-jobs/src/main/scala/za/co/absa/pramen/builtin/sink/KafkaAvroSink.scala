@@ -19,7 +19,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.metastore.MetastoreReader
 import za.co.absa.pramen.api.v2.{ExternalChannelFactory, Sink}
-import za.co.absa.pramen.builtin.sink.KafkaSink.TOPIC_NAME_KEY
+import za.co.absa.pramen.builtin.sink.KafkaAvroSink.TOPIC_NAME_KEY
 import za.co.absa.pramen.writer.TableWriterKafka
 import za.co.absa.pramen.writer.model.KafkaWriterConfig
 
@@ -35,7 +35,7 @@ import java.time.LocalDate
   *  {
   *    # Define a name to reference from the pipeline:
   *    name = "kafka_avro"
-  *    factory.class = "za.co.absa.pramen.builtin.sink.KafkaSink"
+  *    factory.class = "za.co.absa.pramen.builtin.sink.KafkaAvroSink"
   *
   *    writer.kafka {
   *      brokers = "mybroker1:9092,mybroker2:9092"
@@ -109,7 +109,7 @@ import java.time.LocalDate
   * }}}
   *
   */
-class KafkaSink(val kafkaWriterConfig: KafkaWriterConfig) extends Sink {
+class KafkaAvroSink(val kafkaWriterConfig: KafkaWriterConfig) extends Sink {
   override def connect(): Unit = {}
 
   override def close(): Unit = {}
@@ -130,11 +130,11 @@ class KafkaSink(val kafkaWriterConfig: KafkaWriterConfig) extends Sink {
   }
 }
 
-object KafkaSink extends ExternalChannelFactory[KafkaSink] {
+object KafkaAvroSink extends ExternalChannelFactory[KafkaAvroSink] {
   val TOPIC_NAME_KEY = "topic.name"
 
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): KafkaSink = {
+  override def apply(conf: Config, parentPath: String, spark: SparkSession): KafkaAvroSink = {
     val kafkaWriterConfig = KafkaWriterConfig.fromConfig(conf)
-    new KafkaSink(kafkaWriterConfig)
+    new KafkaAvroSink(kafkaWriterConfig)
   }
 }

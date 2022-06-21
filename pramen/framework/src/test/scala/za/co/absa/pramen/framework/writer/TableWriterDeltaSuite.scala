@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests.writer
+package za.co.absa.pramen.framework.writer
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.col
@@ -21,15 +21,16 @@ import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.v2.Query
-import za.co.absa.pramen.base.SparkTestBase
-import za.co.absa.pramen.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.framework.base.SparkTestBase
+import za.co.absa.pramen.framework.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.framework.utils.SparkUtils
-import za.co.absa.pramen.framework.writer.TableWriterDelta
 
 import java.nio.file.Paths
 import java.time.LocalDate
 
 class TableWriterDeltaSuite extends WordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
+  import spark.implicits._
+  
   private val infoDateColumn = "INFORMATION_DATE"
   private val infoDate = LocalDate.of(2021, 8, 16)
   private val infoDateFormat = "yyyy-MM-dd"
@@ -179,14 +180,10 @@ class TableWriterDeltaSuite extends WordSpec with SparkTestBase with TempDirFixt
   }
 
   private def getDataFrame1: DataFrame = {
-    import spark.implicits._
-
     List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
   }
 
   private def getDataFrame2: DataFrame = {
-    import spark.implicits._
-
     List(("D", 4), ("E", 5), ("F", 6)).toDF("a", "b")
   }
 }

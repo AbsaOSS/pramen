@@ -362,7 +362,7 @@ Here is an example of a Kafka sink definition:
 {
   # Define a name to reference from the pipeline:
   name = "kafka_avro"
-  factory.class = "za.co.absa.sync.watcher.builtin.sink.KafkaSink"
+  factory.class = "za.co.absa.sync.watcher.builtin.sink.KafkaAvroSink"
   
   writer.kafka {
     brokers = "mybroker1:9092,mybroker2:9092"
