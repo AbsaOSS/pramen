@@ -15,7 +15,7 @@
 
 package za.co.absa.pramen.framework.mocks
 
-import za.co.absa.pramen.framework.job.v2.job.{DependencyWarning, Job, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline.{DependencyWarning, Job, TaskRunReason}
 import za.co.absa.pramen.framework.mocks.job.JobSpy
 import za.co.absa.pramen.framework.notify.SchemaDifference
 import za.co.absa.pramen.framework.runner.task.{RunInfo, RunStatus, TaskResult}

@@ -22,15 +22,15 @@ import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.api.metastore.MetaTableStats
 import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.framework
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.exceptions.ReasonException
 import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
-import za.co.absa.pramen.framework.job.TransformExpression
-import za.co.absa.pramen.framework.job.v2.job._
 import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.framework.mocks.job.JobSpy
 import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.framework.pipeline._
 import za.co.absa.pramen.framework.runner.task.RunStatus.{Failed, NotRan, Succeeded}
 import za.co.absa.pramen.framework.runner.task.{RunStatus, TaskRunnerBase, TaskRunnerParallel}
 import za.co.absa.pramen.framework.utils.SparkUtils
@@ -51,7 +51,7 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
     "run multiple successful jobs" in {
       val (runner, _, state, tasks) = getUseCase(runFunction = () => exampleDf)
 
-      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => TaskPreDef(d, TaskRunReason.New))
+      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => framework.pipeline.TaskPreDef(d, TaskRunReason.New))
 
       val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
 
@@ -73,7 +73,7 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
     "run multiple failure jobs" in {
       val (runner, _, state, tasks) = getUseCase(runFunction = () => throw new IllegalStateException("Test exception"))
 
-      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => TaskPreDef(d, TaskRunReason.New))
+      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => framework.pipeline.TaskPreDef(d, TaskRunReason.New))
 
       val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
 
@@ -378,7 +378,7 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
 
     val job = new JobSpy(preRunCheckFunction = preRunCheckFunction, validationFunction = validationFunction, runFunction = runFunction, operationDef = operationDef, saveStats = stats)
 
-    val tasks = infoDates.map(d => Task(job, d, TaskRunReason.New))
+    val tasks = infoDates.map(d => framework.pipeline.Task(job, d, TaskRunReason.New))
 
     val runner = new TaskRunnerParallel(conf, bookkeeper, state, runtimeConfig)
 

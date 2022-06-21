@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.runner.orchestrator
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.framework.app.AppContext
-import za.co.absa.pramen.framework.job.v2.job.Job
+import za.co.absa.pramen.framework.pipeline.Job
 import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.framework.state.PipelineState
 

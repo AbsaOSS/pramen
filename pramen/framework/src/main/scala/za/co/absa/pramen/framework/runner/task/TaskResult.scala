@@ -15,7 +15,7 @@
 
 package za.co.absa.pramen.framework.runner.task
 
-import za.co.absa.pramen.framework.job.v2.job.{DependencyWarning, Job}
+import za.co.absa.pramen.framework.pipeline.{DependencyWarning, Job}
 import za.co.absa.pramen.framework.notify.SchemaDifference
 
 case class TaskResult(

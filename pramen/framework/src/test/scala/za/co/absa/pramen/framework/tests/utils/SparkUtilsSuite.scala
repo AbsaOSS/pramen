@@ -20,7 +20,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.WordSpec
 import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.job.TransformExpression
+import za.co.absa.pramen.framework.pipeline.TransformExpression
 import za.co.absa.pramen.framework.utils.SparkUtils
 import za.co.absa.pramen.framework.utils.SparkUtils._
 

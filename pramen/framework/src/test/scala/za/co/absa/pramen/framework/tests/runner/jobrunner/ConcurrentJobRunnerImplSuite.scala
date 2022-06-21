@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.metastore.MetaTableStats
 import za.co.absa.pramen.framework.RuntimeConfigFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.job.Job
+import za.co.absa.pramen.framework.pipeline.Job
 import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.framework.mocks.job.JobSpy
 import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy

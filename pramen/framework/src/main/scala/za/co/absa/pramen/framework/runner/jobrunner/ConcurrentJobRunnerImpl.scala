@@ -19,7 +19,7 @@ import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.job.Job
+import za.co.absa.pramen.framework.pipeline.Job
 import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.framework.runner.splitter.ScheduleParams
 import za.co.absa.pramen.framework.runner.task.{RunStatus, TaskResult, TaskRunner}

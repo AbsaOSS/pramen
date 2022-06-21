@@ -21,7 +21,8 @@ import za.co.absa.pramen.api.schedule.{EveryDay, Weekly}
 import za.co.absa.pramen.api.v2.MetastoreDependency
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.framework.job.v2.job.{TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline
+import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.model.DataChunk
 import za.co.absa.pramen.framework.runner.splitter.RunMode
 import za.co.absa.pramen.framework.runner.splitter.ScheduleStrategyUtils._
@@ -34,7 +35,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
     "getRerun" should {
       "return information date of the rerun" in {
-        val expected = TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
+        val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
 
         assert(getRerun("table", date, "@runDate - 1") == expected :: Nil)
       }
@@ -61,7 +62,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         when(bk.getLatestProcessedDate("table")).thenReturn(None)
 
         val expected = List(date.minusDays(3), date.minusDays(2), date.minusDays(1))
-          .map(d => TaskPreDef(d, TaskRunReason.Late))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
         val actual = getLate("table", date, EveryDay(), "@runDate", date.minusDays(3), bk)
 
@@ -74,7 +75,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         when(bk.getLatestProcessedDate("table")).thenReturn(Some(date.minusDays(2)))
 
         val expected = List(date.minusDays(1))
-          .map(d => TaskPreDef(d, TaskRunReason.Late))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
         val actual = getLate("table", date, EveryDay(), "@runDate", date.minusDays(3), bk)
 
@@ -104,7 +105,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         when(bk.getDataChunksCount("table", Some(date.plusDays(12)), Some(date.plusDays(12)))).thenReturn(1)
 
         val expected = List(date.plusDays(7), date.plusDays(10), date.plusDays(14))
-          .map(d => TaskPreDef(d, TaskRunReason.New))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
         val actual = getHistorical("table", date, date.plusDays(14), schedule, RunMode.SkipAlreadyRan, "@runDate", date.minusDays(3), inverseDateOrder = false, bk)
 
@@ -117,7 +118,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         val schedule = Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
         val expected = List(date, date.plusDays(3), date.plusDays(5))
-          .map(d => TaskPreDef(d, TaskRunReason.New))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
         val actual = getHistorical("table", date, date.plusDays(5), schedule, RunMode.CheckUpdates, "@runDate", date.minusDays(3), inverseDateOrder = false, bk)
 
@@ -130,7 +131,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         val schedule = Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
         val expected = List(date.plusDays(5), date.plusDays(3), date)
-          .map(d => TaskPreDef(d, TaskRunReason.New))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
         val actual = getHistorical("table", date, date.plusDays(5), schedule, RunMode.CheckUpdates, "@runDate", date.minusDays(3), inverseDateOrder = true, bk)
 

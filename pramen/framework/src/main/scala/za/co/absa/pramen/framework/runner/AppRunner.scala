@@ -21,9 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.framework.AppContextFactory
 import za.co.absa.pramen.framework.app.AppContext
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.job.v2.job.Job
-import za.co.absa.pramen.framework.job.v2.operation.OperationSplitter
-import za.co.absa.pramen.framework.job.v2.pipeline.PipelineDef
+import za.co.absa.pramen.framework.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.framework.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.framework.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.framework.runner.task.{TaskRunner, TaskRunnerParallel}

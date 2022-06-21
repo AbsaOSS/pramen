@@ -20,8 +20,7 @@ import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.api.metastore.{MetaTable, MetaTableStats, Metastore}
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.OperationDef
-import za.co.absa.pramen.framework.job.v2.job.{DependencyWarning, JobBase, JobPreRunResult}
+import za.co.absa.pramen.framework.pipeline.{DependencyWarning, JobBase, JobPreRunResult, OperationDef}
 import za.co.absa.pramen.framework.runner.splitter.ScheduleStrategy
 
 import java.time.{Instant, LocalDate}

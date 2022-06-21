@@ -23,9 +23,9 @@ import za.co.absa.pramen.api.metastore.MetaTableStats
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.exceptions.ReasonException
-import za.co.absa.pramen.framework.job.v2.job.JobPreRunStatus._
-import za.co.absa.pramen.framework.job.v2.job._
+import za.co.absa.pramen.framework.pipeline.{Job, JobPreRunResult, Task, TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.notify.SchemaDifference
+import za.co.absa.pramen.framework.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.framework.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}

@@ -18,7 +18,8 @@ package za.co.absa.pramen.framework.runner.splitter
 import za.co.absa.pramen.api.schedule.Schedule
 import za.co.absa.pramen.api.v2.MetastoreDependency
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.job.{TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline
+import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.runner.splitter.ScheduleStrategyUtils._
 
 import java.time.LocalDate
@@ -40,7 +41,7 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
         log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly")
         val trackedDays = if (!lateOnly && !newOnly) {
           getInfoDateRange(runDate.minusDays(delayDays + trackDays), runDate.minusDays(delayDays + 1), infoDateExpression, schedule)
-            .map(d => TaskPreDef(d, TaskRunReason.Late))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
         } else {
           Nil
         }

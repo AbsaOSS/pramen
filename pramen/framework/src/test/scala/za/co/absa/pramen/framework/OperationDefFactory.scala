@@ -18,8 +18,7 @@ package za.co.absa.pramen.framework
 import com.typesafe.config.{Config, ConfigFactory}
 import za.co.absa.pramen.api.schedule.{EveryDay, Schedule}
 import za.co.absa.pramen.api.v2.MetastoreDependency
-import za.co.absa.pramen.framework.job.TransformExpression
-import za.co.absa.pramen.framework.job.v2.{OperationDef, OperationType}
+import za.co.absa.pramen.framework.pipeline.{OperationDef, OperationType, TransformExpression}
 
 object OperationDefFactory {
 

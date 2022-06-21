@@ -18,9 +18,9 @@ package za.co.absa.pramen.framework.state
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.framework.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
-import za.co.absa.pramen.framework.job.v2.pipeline.PipelineDef.{ENVIRONMENT_NAME, PIPELINE_NAME_KEY}
 import za.co.absa.pramen.framework.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
-import za.co.absa.pramen.framework.runner.task.RunStatus.Skipped
+import za.co.absa.pramen.framework.pipeline.PipelineDef._
+import za.co.absa.pramen.framework.runner.task.RunStatus.{NotRan, Skipped}
 import za.co.absa.pramen.framework.runner.task.TaskResult
 
 import java.time.Instant
@@ -60,7 +60,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   }
 
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
-    taskResults ++= statuses.filter(_.runStatus != Skipped)
+    taskResults ++= statuses.filter(_.runStatus != NotRan)
     if (statuses.exists(_.runStatus.isFailure)) {
       exitCode = 2
     }

@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.runner.jobrunner
 
 import com.github.yruslan.channel.ReadChannel
-import za.co.absa.pramen.framework.job.v2.job.Job
+import za.co.absa.pramen.framework.pipeline.Job
 import za.co.absa.pramen.framework.runner.task.TaskResult
 
 trait ConcurrentJobRunner {

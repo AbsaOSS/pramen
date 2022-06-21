@@ -18,7 +18,8 @@ package za.co.absa.pramen.framework.runner.splitter
 import za.co.absa.pramen.api.schedule.Schedule
 import za.co.absa.pramen.api.v2.MetastoreDependency
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.job.{TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline
+import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.runner.splitter.ScheduleStrategyUtils._
 
 import java.time.LocalDate
@@ -40,7 +41,7 @@ class ScheduleStrategyTransformation extends ScheduleStrategy {
         log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly")
         val retrospective = getInfoDateRange(runDate.minusDays(trackDays + delayDays), runDate.minusDays(delayDays + 1), infoDateExpression, schedule)
           .filter(date => anyDependencyUpdatedRetrospectively(outputTable, date, dependencies, bookkeeper))
-          .map(d => TaskPreDef(d, TaskRunReason.Update))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.Update))
 
         val lateDays = if (!newOnly) {
           getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, minimumDate, bookkeeper)

@@ -19,7 +19,7 @@ import com.typesafe.config.Config
 import za.co.absa.pramen.framework.app.config.GeneralConfig.{APPLICATION_VERSION_KEY, BUILD_TIMESTAMP}
 import za.co.absa.pramen.framework.config.Keys.TIMEZONE
 import za.co.absa.pramen.framework.exceptions.{CmdFailedException, ProcessFailedException}
-import za.co.absa.pramen.framework.job.v2.job.TaskRunReason
+import za.co.absa.pramen.framework.pipeline.TaskRunReason
 import za.co.absa.pramen.framework.notify.message._
 import za.co.absa.pramen.framework.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
 import za.co.absa.pramen.framework.notify.{FieldChange, SchemaDifference}

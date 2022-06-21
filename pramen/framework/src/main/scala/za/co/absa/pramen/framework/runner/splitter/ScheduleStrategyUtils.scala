@@ -19,7 +19,8 @@ import za.co.absa.pramen.api.schedule.Schedule
 import za.co.absa.pramen.api.v2.MetastoreDependency
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.expr.DateExprEvaluator
-import za.co.absa.pramen.framework.job.v2.job.{TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline
+import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 
 import java.time.LocalDate
 import scala.collection.mutable
@@ -49,7 +50,7 @@ object ScheduleStrategyUtils {
 
     log.info(s"Rerunning '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
 
-    List(TaskPreDef(infoDate, TaskRunReason.Rerun))
+    List(pipeline.TaskPreDef(infoDate, TaskRunReason.Rerun))
   }
 
   /**
@@ -71,7 +72,7 @@ object ScheduleStrategyUtils {
 
       log.info(s"For $outputTable $runDate is one of scheduled days. Adding infoDate = '$infoDateExpression' = $infoDate to check.")
 
-      Option(TaskPreDef(infoDate, TaskRunReason.New))
+      Option(pipeline.TaskPreDef(infoDate, TaskRunReason.New))
     } else {
       log.info(s"For $outputTable $runDate is out of scheduled days. Skipping.")
 
@@ -98,14 +99,14 @@ object ScheduleStrategyUtils {
           if (range.nonEmpty) {
             log.info(s"Adding catch up jobs for info dates: ${range.mkString(", ")}")
           }
-          range.map(d => TaskPreDef(d, TaskRunReason.Late))
+          range.map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
         } else {
           Nil
         }
       case None               =>
         log.info(s"No jobs for $outputTable have ran yet. Running from the starting date: $minimumDate to the current catch up information date: $infoDate.")
         getInfoDateRange(minimumDate, infoDate, infoDateExpression, schedule)
-          .map(d => TaskPreDef(d, TaskRunReason.Late))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
     }
   }
 
@@ -130,7 +131,7 @@ object ScheduleStrategyUtils {
     val datesWithAlreadyRanSkipped = if (skipAlreadyRanDays) {
       potentialDates.filter(date =>
         bookkeeper.getDataChunksCount(outputTable, Some(date), Some(date)) == 0)
-        .map(d => TaskPreDef(d, TaskRunReason.New))
+        .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
     } else {
       potentialDates
         .map(d => {
@@ -138,7 +139,7 @@ object ScheduleStrategyUtils {
           val reason = if (chunksCount > 0)
             taskReason
           else TaskRunReason.New
-          TaskPreDef(d, reason)
+          pipeline.TaskPreDef(d, reason)
         })
     }
 

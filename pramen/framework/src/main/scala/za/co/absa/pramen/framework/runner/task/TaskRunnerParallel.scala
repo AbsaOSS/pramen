@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.runner.task
 import com.typesafe.config.Config
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.job.Task
+import za.co.absa.pramen.framework.pipeline.Task
 import za.co.absa.pramen.framework.state.PipelineState
 
 import java.time.Instant

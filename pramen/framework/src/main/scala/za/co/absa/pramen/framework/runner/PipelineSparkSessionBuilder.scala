@@ -19,7 +19,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.framework.config.Keys._
-import za.co.absa.pramen.framework.job.v2.pipeline.PipelineDef.PIPELINE_NAME_KEY
+import za.co.absa.pramen.framework.pipeline.PipelineDef.PIPELINE_NAME_KEY
 import za.co.absa.pramen.framework.utils.ConfigUtils
 
 object PipelineSparkSessionBuilder {

@@ -20,8 +20,7 @@ import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.api.metastore.{MetaTable, MetaTableStats}
 import za.co.absa.pramen.framework.OperationDefFactory
-import za.co.absa.pramen.framework.job.v2.OperationDef
-import za.co.absa.pramen.framework.job.v2.job.{Job, JobPreRunResult, JobPreRunStatus}
+import za.co.absa.pramen.framework.pipeline.{Job, JobPreRunResult, JobPreRunStatus, OperationDef}
 import za.co.absa.pramen.framework.mocks.MetaTableFactory.getDummyMetaTable
 import za.co.absa.pramen.framework.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 

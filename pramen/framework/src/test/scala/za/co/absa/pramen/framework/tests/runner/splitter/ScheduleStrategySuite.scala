@@ -20,7 +20,8 @@ import org.scalatest.WordSpec
 import za.co.absa.pramen.api.schedule.{EveryDay, Weekly}
 import za.co.absa.pramen.api.v2.MetastoreDependency
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.job.{TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline
+import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.mocks.DataChunkFactory.getDummyDataChunk
 import za.co.absa.pramen.framework.runner.splitter.{RunMode, ScheduleParams, ScheduleStrategySourcing, ScheduleStrategyTransformation}
 
@@ -52,11 +53,11 @@ class ScheduleStrategySuite extends WordSpec {
         val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = false, lateOnly = false)
 
         val expected = Seq(
-          TaskPreDef(runDate.minusDays(4), TaskRunReason.Late),
-          TaskPreDef(runDate.minusDays(3), TaskRunReason.Late),
-          TaskPreDef(runDate.minusDays(2), TaskRunReason.Late),
-          TaskPreDef(runDate.minusDays(1), TaskRunReason.Late),
-          TaskPreDef(runDate, TaskRunReason.New)
+          pipeline.TaskPreDef(runDate.minusDays(4), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate.minusDays(3), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate.minusDays(2), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate.minusDays(1), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate, TaskRunReason.New)
         )
 
         val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
@@ -72,7 +73,7 @@ class ScheduleStrategySuite extends WordSpec {
         val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = false, lateOnly = true)
 
         val expected = Seq(runDate.minusDays(1))
-          .map(d => TaskPreDef(d, TaskRunReason.Late))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
         val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -87,7 +88,7 @@ class ScheduleStrategySuite extends WordSpec {
         val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = true, lateOnly = false)
 
         val expected = Seq(runDate)
-          .map(d => TaskPreDef(d, TaskRunReason.New))
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
         val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -115,7 +116,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val params = ScheduleParams.Rerun(runDate.minusDays(5))
 
-          val expected = Seq(TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
+          val expected = Seq(pipeline.TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -146,7 +147,7 @@ class ScheduleStrategySuite extends WordSpec {
             runDate.minusDays(4),
             runDate.minusDays(2),
             runDate.minusDays(1))
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -158,11 +159,11 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          val expected = Seq(TaskPreDef(runDate.minusDays(5), TaskRunReason.New),
-            TaskPreDef(runDate.minusDays(4), TaskRunReason.New),
-            TaskPreDef(runDate.minusDays(3), TaskRunReason.Rerun),
-            TaskPreDef(runDate.minusDays(2), TaskRunReason.New),
-            TaskPreDef(runDate.minusDays(1), TaskRunReason.New)
+          val expected = Seq(pipeline.TaskPreDef(runDate.minusDays(5), TaskRunReason.New),
+            pipeline.TaskPreDef(runDate.minusDays(4), TaskRunReason.New),
+            pipeline.TaskPreDef(runDate.minusDays(3), TaskRunReason.Rerun),
+            pipeline.TaskPreDef(runDate.minusDays(2), TaskRunReason.New),
+            pipeline.TaskPreDef(runDate.minusDays(1), TaskRunReason.New)
           )
 
           assert(result == expected)
@@ -175,7 +176,7 @@ class ScheduleStrategySuite extends WordSpec {
             runDate.minusDays(2),
             runDate.minusDays(4),
             runDate.minusDays(5))
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -201,9 +202,9 @@ class ScheduleStrategySuite extends WordSpec {
           val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = false, lateOnly = false)
 
           val expected = Seq(
-            TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.Late),
-            TaskPreDef(lastSaturday, TaskRunReason.Late),
-            TaskPreDef(nextSaturday, TaskRunReason.New)
+            pipeline.TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.Late),
+            pipeline.TaskPreDef(lastSaturday, TaskRunReason.Late),
+            pipeline.TaskPreDef(nextSaturday, TaskRunReason.New)
           )
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
@@ -216,7 +217,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          assert(result == Seq(TaskPreDef(lastSaturday, TaskRunReason.Late)))
+          assert(result == Seq(pipeline.TaskPreDef(lastSaturday, TaskRunReason.Late)))
         }
 
         "new only" in {
@@ -224,7 +225,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          assert(result == Seq(TaskPreDef(nextSaturday, TaskRunReason.New)))
+          assert(result == Seq(pipeline.TaskPreDef(nextSaturday, TaskRunReason.New)))
         }
 
         "incorrect settings" in {
@@ -245,7 +246,7 @@ class ScheduleStrategySuite extends WordSpec {
         "normal rerun" in {
           val params = ScheduleParams.Rerun(runDate.minusDays(5))
 
-          val expected = Seq(TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
+          val expected = Seq(pipeline.TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -270,7 +271,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val expected = Seq(saturdayTwoWeeksAgo,
             nextSaturday)
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -280,9 +281,9 @@ class ScheduleStrategySuite extends WordSpec {
         "rerun all" in {
           val params = ScheduleParams.Historical(runDate.minusDays(14), nextSunday, inverseDateOrder = false, mode = RunMode.ForceRun)
 
-          val expected = Seq(TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.New),
-            TaskPreDef(lastSaturday, TaskRunReason.Rerun),
-            TaskPreDef(nextSaturday, TaskRunReason.New)
+          val expected = Seq(pipeline.TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.New),
+            pipeline.TaskPreDef(lastSaturday, TaskRunReason.Rerun),
+            pipeline.TaskPreDef(nextSaturday, TaskRunReason.New)
           )
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
@@ -295,7 +296,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val expected = Seq(nextSaturday,
             saturdayTwoWeeksAgo)
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -339,8 +340,8 @@ class ScheduleStrategySuite extends WordSpec {
         "normal execution" in {
           val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = false, lateOnly = false)
 
-          val expected = Seq(TaskPreDef(toDate("2022-02-17"), TaskRunReason.Late),
-              TaskPreDef(toDate("2022-02-18"), TaskRunReason.New))
+          val expected = Seq(pipeline.TaskPreDef(toDate("2022-02-17"), TaskRunReason.Late),
+              pipeline.TaskPreDef(toDate("2022-02-18"), TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -352,7 +353,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          assert(result == Seq(TaskPreDef(toDate("2022-02-17"), TaskRunReason.Late)))
+          assert(result == Seq(pipeline.TaskPreDef(toDate("2022-02-17"), TaskRunReason.Late)))
         }
 
         "new only" in {
@@ -360,7 +361,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          assert(result == Seq(TaskPreDef(runDate, TaskRunReason.New)))
+          assert(result == Seq(pipeline.TaskPreDef(runDate, TaskRunReason.New)))
         }
 
         "incorrect settings" in {
@@ -378,9 +379,9 @@ class ScheduleStrategySuite extends WordSpec {
 
           val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = false, lateOnly = false)
 
-          val expected = Seq(TaskPreDef(toDate("2022-02-14"), TaskRunReason.Update),
-            TaskPreDef(toDate("2022-02-17"), TaskRunReason.Late),
-            TaskPreDef(toDate("2022-02-18"), TaskRunReason.New))
+          val expected = Seq(pipeline.TaskPreDef(toDate("2022-02-14"), TaskRunReason.Update),
+            pipeline.TaskPreDef(toDate("2022-02-17"), TaskRunReason.Late),
+            pipeline.TaskPreDef(toDate("2022-02-18"), TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -397,7 +398,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val params = ScheduleParams.Rerun(runDate.minusDays(5))
 
-          val expected = Seq(TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
+          val expected = Seq(pipeline.TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -428,7 +429,7 @@ class ScheduleStrategySuite extends WordSpec {
             runDate.minusDays(4),
             runDate.minusDays(2),
             runDate.minusDays(1))
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -438,11 +439,11 @@ class ScheduleStrategySuite extends WordSpec {
         "rerun all" in {
           val params = ScheduleParams.Historical(runDate.minusDays(5), runDate.minusDays(1), inverseDateOrder = false, mode = RunMode.ForceRun)
 
-          val expected = Seq(TaskPreDef(runDate.minusDays(5), TaskRunReason.New),
-            TaskPreDef(runDate.minusDays(4), TaskRunReason.New),
-            TaskPreDef(runDate.minusDays(3), TaskRunReason.Rerun),
-            TaskPreDef(runDate.minusDays(2), TaskRunReason.New),
-            TaskPreDef(runDate.minusDays(1), TaskRunReason.New)
+          val expected = Seq(pipeline.TaskPreDef(runDate.minusDays(5), TaskRunReason.New),
+            pipeline.TaskPreDef(runDate.minusDays(4), TaskRunReason.New),
+            pipeline.TaskPreDef(runDate.minusDays(3), TaskRunReason.Rerun),
+            pipeline.TaskPreDef(runDate.minusDays(2), TaskRunReason.New),
+            pipeline.TaskPreDef(runDate.minusDays(1), TaskRunReason.New)
           )
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
@@ -457,7 +458,7 @@ class ScheduleStrategySuite extends WordSpec {
             runDate.minusDays(2),
             runDate.minusDays(4),
             runDate.minusDays(5))
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -501,7 +502,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          assert(result == Seq(TaskPreDef(toDate("2022-02-19"), TaskRunReason.New)))
+          assert(result == Seq(pipeline.TaskPreDef(toDate("2022-02-19"), TaskRunReason.New)))
         }
 
         "late only" in {
@@ -511,7 +512,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          assert(result == Seq(TaskPreDef(toDate("2022-02-12"), TaskRunReason.Late)))
+          assert(result == Seq(pipeline.TaskPreDef(toDate("2022-02-12"), TaskRunReason.Late)))
         }
 
         "new only" in {
@@ -519,7 +520,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
-          assert(result == Seq(TaskPreDef(toDate("2022-02-19"), TaskRunReason.New)))
+          assert(result == Seq(pipeline.TaskPreDef(toDate("2022-02-19"), TaskRunReason.New)))
         }
 
         "incorrect settings" in {
@@ -539,9 +540,9 @@ class ScheduleStrategySuite extends WordSpec {
           val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = false, lateOnly = false)
 
           val expected = Seq(
-            TaskPreDef(toDate("2022-02-05"), TaskRunReason.Update),
-            TaskPreDef(toDate("2022-02-12"), TaskRunReason.Late),
-            TaskPreDef(toDate("2022-02-19"), TaskRunReason.New)
+            pipeline.TaskPreDef(toDate("2022-02-05"), TaskRunReason.Update),
+            pipeline.TaskPreDef(toDate("2022-02-12"), TaskRunReason.Late),
+            pipeline.TaskPreDef(toDate("2022-02-19"), TaskRunReason.New)
           )
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
@@ -559,7 +560,7 @@ class ScheduleStrategySuite extends WordSpec {
         "normal rerun" in {
           val params = ScheduleParams.Rerun(runDate.minusDays(5))
 
-          val expected = Seq(TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
+          val expected = Seq(pipeline.TaskPreDef(runDate.minusDays(7), TaskRunReason.Rerun))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -584,7 +585,7 @@ class ScheduleStrategySuite extends WordSpec {
 
           val expected = Seq(saturdayTwoWeeksAgo,
             nextSaturday)
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 
@@ -594,9 +595,9 @@ class ScheduleStrategySuite extends WordSpec {
         "rerun all" in {
           val params = ScheduleParams.Historical(runDate.minusDays(14), nextSunday, inverseDateOrder = false, mode = RunMode.ForceRun)
 
-          val expected = Seq(TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.New),
-            TaskPreDef(lastSaturday, TaskRunReason.Rerun),
-            TaskPreDef(nextSaturday, TaskRunReason.New)
+          val expected = Seq(pipeline.TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.New),
+            pipeline.TaskPreDef(lastSaturday, TaskRunReason.Rerun),
+            pipeline.TaskPreDef(nextSaturday, TaskRunReason.New)
           )
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
@@ -608,7 +609,7 @@ class ScheduleStrategySuite extends WordSpec {
           val params = ScheduleParams.Historical(runDate.minusDays(14), nextSunday, inverseDateOrder = true, mode = RunMode.SkipAlreadyRan)
 
           val expected = Seq(nextSaturday, saturdayTwoWeeksAgo)
-            .map(d => TaskPreDef(d, TaskRunReason.New))
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
 

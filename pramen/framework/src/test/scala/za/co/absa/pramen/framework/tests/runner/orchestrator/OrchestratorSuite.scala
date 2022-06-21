@@ -21,7 +21,7 @@ import za.co.absa.pramen.api.v2.MetastoreDependency
 import za.co.absa.pramen.framework.OperationDefFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.fixtures.AppContextFixture
-import za.co.absa.pramen.framework.job.v2.OperationDef
+import za.co.absa.pramen.framework.pipeline.OperationDef
 import za.co.absa.pramen.framework.mocks.job.JobSpy
 import za.co.absa.pramen.framework.mocks.runner.ConcurrentJobRunnerSpy
 import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy

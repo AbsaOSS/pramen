@@ -15,7 +15,7 @@
 
 package za.co.absa.pramen.framework.runner.task
 
-import za.co.absa.pramen.framework.job.v2.job.{DependencyFailure, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline.{DependencyFailure, TaskRunReason}
 
 sealed trait RunStatus {
   val isFailure: Boolean

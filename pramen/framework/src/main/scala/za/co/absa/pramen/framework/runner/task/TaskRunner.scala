@@ -15,7 +15,7 @@
 
 package za.co.absa.pramen.framework.runner.task
 
-import za.co.absa.pramen.framework.job.v2.job.{Job, TaskPreDef}
+import za.co.absa.pramen.framework.pipeline.{Job, TaskPreDef}
 
 import scala.concurrent.Future
 

@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.runner.splitter
 import za.co.absa.pramen.api.schedule.Schedule
 import za.co.absa.pramen.api.v2.MetastoreDependency
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.job.v2.job.TaskPreDef
+import za.co.absa.pramen.framework.pipeline.TaskPreDef
 
 import java.time.LocalDate
 

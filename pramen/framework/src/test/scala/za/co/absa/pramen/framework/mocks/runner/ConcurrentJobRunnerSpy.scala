@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.mocks.runner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
-import za.co.absa.pramen.framework.job.v2.job.{Job, TaskRunReason}
+import za.co.absa.pramen.framework.pipeline.{Job, TaskRunReason}
 import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.framework.runner.task.{RunInfo, RunStatus, TaskResult}
