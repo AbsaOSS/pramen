@@ -74,7 +74,7 @@ class OperationSplitter(conf: Config,
     val syncWatcherPyExecutable = conf.getString(PRAMEN_PY_EXECUTABLE_KEY)
     val cmdLineTemplate = conf.getString(PRAMEN_PY_CMD_LINE_TEMPLATE_KEY)
 
-    val syncWatcherPyConfig = SyncWatcherPyConfig(syncWatcherPyLocation, syncWatcherPyExecutable, cmdLineTemplate)
+    val syncWatcherPyConfig = PramenPyConfig(syncWatcherPyLocation, syncWatcherPyExecutable, cmdLineTemplate)
 
     val keepLogLines = conf.getInt(KEEP_LOG_LINES_KEY)
 

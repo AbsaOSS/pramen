@@ -17,12 +17,10 @@ package za.co.absa.pramen.framework.journal
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
-
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.framework.journal.model.{JournalTask, JournalTasks}
+import za.co.absa.pramen.framework.journal.model.{JournalTask, JournalTasks, TaskCompleted}
 import za.co.absa.pramen.framework.model.Constants
-import za.co.absa.pramen.framework.notify.TaskCompleted
 import za.co.absa.pramen.framework.utils.SlickUtils
 
 import scala.util.control.NonFatal
@@ -69,7 +67,7 @@ class JournalJdbc(db: Database) extends Journal {
     val entries = SlickUtils.executeQuery(db, JournalTasks.journalTasks.filter(d => d.finishedAt >= fromSec && d.finishedAt <= toSec ))
 
     entries.map(v => {
-      TaskCompleted(
+      model.TaskCompleted(
         jobName = v.jobName,
         tableName = v.pramenTableName,
         periodBegin = LocalDate.parse(v.periodBegin, dateFormatter),

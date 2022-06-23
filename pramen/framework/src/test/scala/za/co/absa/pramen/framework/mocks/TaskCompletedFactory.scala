@@ -15,8 +15,9 @@
 
 package za.co.absa.pramen.framework.mocks
 
+import za.co.absa.pramen.framework.journal.model
+import za.co.absa.pramen.framework.journal.model.TaskCompleted
 import za.co.absa.pramen.framework.model.TaskStatus
-import za.co.absa.pramen.framework.notify.TaskCompleted
 
 import java.time.LocalDate
 
@@ -35,7 +36,7 @@ object TaskCompletedFactory {
                        finishedAt: Long = 1234568L,
                        status: String = TaskStatus.NEW.toString,
                        failureReason: Option[String] = None): TaskCompleted = {
-    TaskCompleted(
+    model.TaskCompleted(
       jobName,
       tableName,
       periodBegin,

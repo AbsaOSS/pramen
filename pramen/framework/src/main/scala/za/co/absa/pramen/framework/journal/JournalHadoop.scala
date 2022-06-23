@@ -19,8 +19,8 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import za.co.absa.pramen.framework.journal.model.{TaskCompleted, TaskCompletedCsv}
 import za.co.absa.pramen.framework.model.Constants
-import za.co.absa.pramen.framework.notify.TaskCompleted
 import za.co.absa.pramen.framework.utils.{CsvUtils, FsUtils, SparkUtils}
 
 import java.time.format.DateTimeFormatter
@@ -67,7 +67,7 @@ class JournalHadoop(journalPath: String)
       .orderBy(col("finishedAt"))
       .as[TaskCompletedCsv]
       .collect()
-      .map(v => TaskCompleted(
+      .map(v => model.TaskCompleted(
         jobName = v.jobName,
         tableName = v.tableName,
         periodBegin = LocalDate.parse(v.periodBegin, dateFormatter),

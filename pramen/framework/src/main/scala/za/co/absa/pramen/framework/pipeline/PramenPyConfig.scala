@@ -15,8 +15,8 @@
 
 package za.co.absa.pramen.framework.pipeline
 
-case class SyncWatcherPyConfig(
-                                location: String,
-                                executable: String,
-                                cmdLineTemplate: String
-                              )
+case class PramenPyConfig(
+                           location: String,
+                           executable: String,
+                           cmdLineTemplate: String
+                         )

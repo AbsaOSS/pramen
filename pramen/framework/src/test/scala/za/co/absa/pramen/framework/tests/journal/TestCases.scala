@@ -15,7 +15,8 @@
 
 package za.co.absa.pramen.framework.tests.journal
 
-import za.co.absa.pramen.framework.notify.TaskCompleted
+import za.co.absa.pramen.framework.journal.model
+import za.co.absa.pramen.framework.journal.model.TaskCompleted
 
 import java.time.{Instant, LocalDate}
 
@@ -28,7 +29,7 @@ object TestCases {
   val instant2: Instant = Instant.ofEpochSecond(1597318835)
   val instant3: Instant = Instant.ofEpochSecond(1597318839)
 
-  val task1: TaskCompleted = TaskCompleted("job1", "table1", infoDate1, infoDate1, infoDate1, 100, 0, Some(100), None, None, 597318830, 1597318830, "New", Some("Test1"))
-  val task2: TaskCompleted = TaskCompleted("job1", "table1", infoDate2, infoDate2, infoDate2, 100, 0, Some(100), None, None, 1597318835, 1597318835, "Late", Some("Test2"))
-  val task3: TaskCompleted = TaskCompleted("job2", "table2", infoDate3, infoDate3, infoDate3, 100, 0, Some(100), None, None, 1597318839, 1597318839, "Fail", Some("Test3"))
+  val task1: TaskCompleted = model.TaskCompleted("job1", "table1", infoDate1, infoDate1, infoDate1, 100, 0, Some(100), None, None, 597318830, 1597318830, "New", Some("Test1"))
+  val task2: TaskCompleted = model.TaskCompleted("job1", "table1", infoDate2, infoDate2, infoDate2, 100, 0, Some(100), None, None, 1597318835, 1597318835, "Late", Some("Test2"))
+  val task3: TaskCompleted = model.TaskCompleted("job2", "table2", infoDate3, infoDate3, infoDate3, 100, 0, Some(100), None, None, 1597318839, 1597318839, "Fail", Some("Test3"))
 }

@@ -24,8 +24,8 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.model.Filters
 import za.co.absa.pramen.framework.dao.MongoDb
 import za.co.absa.pramen.framework.dao.model.{ASC, IndexField}
+import za.co.absa.pramen.framework.journal.model.TaskCompleted
 import za.co.absa.pramen.framework.mongo.MongoDbConnection
-import za.co.absa.pramen.framework.notify.TaskCompleted
 
 import scala.util.control.NonFatal
 

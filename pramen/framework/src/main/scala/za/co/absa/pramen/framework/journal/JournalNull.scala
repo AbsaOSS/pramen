@@ -15,8 +15,7 @@
 
 package za.co.absa.pramen.framework.journal
 
-import za.co.absa.pramen.framework.notify.TaskCompleted
-
+import za.co.absa.pramen.framework.journal.model.TaskCompleted
 import java.time.Instant
 
 /**

@@ -21,17 +21,18 @@ import slick.jdbc.H2Profile.api._
 import za.co.absa.pramen.framework.bookkeeper.model.{BookkeepingRecords, SchemaRecords}
 import za.co.absa.pramen.framework.journal.model.JournalTasks
 import za.co.absa.pramen.framework.lock.model.LockTickets
-import za.co.absa.pramen.framework.rdb.SyncWatcherDb.MODEL_VERSION
+import za.co.absa.pramen.framework.rdb.PramenDb.MODEL_VERSION
 import za.co.absa.pramen.framework.reader.model.JdbcConfig
 import za.co.absa.pramen.framework.utils.JdbcNativeUtils
 
 import java.sql.Connection
 import scala.util.control.NonFatal
 
-class SyncWatcherDb(val jdbcConfig: JdbcConfig,
-                    val activeUrl: String,
-                    val jdbcConnection: Connection,
-                    val slickDb: Database) extends AutoCloseable {
+class PramenDb(val jdbcConfig: JdbcConfig,
+               val activeUrl: String,
+               val jdbcConnection: Connection,
+               val slickDb: Database) extends AutoCloseable {
+
   import za.co.absa.pramen.framework.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -78,13 +79,13 @@ class SyncWatcherDb(val jdbcConfig: JdbcConfig,
   }
 }
 
-object SyncWatcherDb {
+object PramenDb {
   val MODEL_VERSION = 2
 
-  def apply(jdbcConfig: JdbcConfig): SyncWatcherDb = {
+  def apply(jdbcConfig: JdbcConfig): PramenDb = {
     val (url, conn, database) = openDb(jdbcConfig)
 
-    new SyncWatcherDb(jdbcConfig, url, conn, database)
+    new PramenDb(jdbcConfig, url, conn, database)
   }
 
   private def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database) = {

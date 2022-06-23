@@ -13,14 +13,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.journal
+package za.co.absa.pramen.framework.journal.model
 
-case class TaskCompletedCsv(
+import java.time.LocalDate
+
+case class TaskCompleted(
                           jobName: String,
                           tableName: String,
-                          periodBegin: String,
-                          periodEnd: String,
-                          informationDate: String,
+                          periodBegin: LocalDate,
+                          periodEnd: LocalDate,
+                          informationDate: LocalDate,
                           inputRecordCount: Long,
                           inputRecordCountOld: Long,
                           outputRecordCount: Option[Long],

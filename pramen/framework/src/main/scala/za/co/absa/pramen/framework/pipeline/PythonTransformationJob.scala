@@ -52,7 +52,7 @@ class PythonTransformationJob(operationDef: OperationDef,
                               bookkeeper: SyncBookKeeper,
                               outputTable: MetaTable,
                               pythonClass: String,
-                              syncWatcherPyConfig: SyncWatcherPyConfig,
+                              syncWatcherPyConfig: PramenPyConfig,
                               processRunner: ProcessRunner)
                              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, outputTable) {

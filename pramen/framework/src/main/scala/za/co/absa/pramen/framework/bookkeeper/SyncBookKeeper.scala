@@ -23,7 +23,7 @@ import za.co.absa.pramen.framework.journal._
 import za.co.absa.pramen.framework.lock._
 import za.co.absa.pramen.framework.model.DataChunk
 import za.co.absa.pramen.framework.mongo.MongoDbConnection
-import za.co.absa.pramen.framework.rdb.SyncWatcherDb
+import za.co.absa.pramen.framework.rdb.PramenDb
 
 import java.time.LocalDate
 
@@ -68,7 +68,7 @@ object SyncBookKeeper {
 
     val dbOpt = if (hasBookkeepingJdbc) {
       val jdbcConfig = bookkeepingConfig.bookkeepingJdbcConfig.get
-      val syncDb = SyncWatcherDb(jdbcConfig)
+      val syncDb = PramenDb(jdbcConfig)
       syncDb.setupDatabase()
       Option(syncDb)
     } else None

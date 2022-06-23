@@ -15,9 +15,9 @@
 
 package za.co.absa.pramen.framework.journal
 
-import java.time.Instant
+import za.co.absa.pramen.framework.journal.model.TaskCompleted
 
-import za.co.absa.pramen.framework.notify.TaskCompleted
+import java.time.Instant
 
 /**
   * A journal is responsible of keeping track of all completed tasks.

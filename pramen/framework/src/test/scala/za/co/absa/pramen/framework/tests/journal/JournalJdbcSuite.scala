@@ -19,14 +19,14 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, WordSpec}
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.fixtures.RelationalDbFixture
 import za.co.absa.pramen.framework.journal.{Journal, JournalJdbc}
-import za.co.absa.pramen.framework.rdb.SyncWatcherDb
+import za.co.absa.pramen.framework.rdb.PramenDb
 import za.co.absa.pramen.framework.reader.model.JdbcConfig
 
 class JournalJdbcSuite extends WordSpec with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll with RelationalDbFixture {
   import TestCases._
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, Map.empty[String, String])
-  val syncWatcherDb: SyncWatcherDb = SyncWatcherDb(jdbcConfig)
+  val syncWatcherDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
     syncWatcherDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
