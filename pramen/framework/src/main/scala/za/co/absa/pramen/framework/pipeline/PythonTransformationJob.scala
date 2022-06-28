@@ -18,8 +18,7 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.metastore.{DataFormat, MetaTable, MetaTableStats, Metastore}
+import za.co.absa.pramen.api.{DataFormat, MetaTable, MetaTableStats, Metastore, Reason}
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.exceptions.ProcessFailedException
 import za.co.absa.pramen.framework.pipeline.PythonTransformationJob._

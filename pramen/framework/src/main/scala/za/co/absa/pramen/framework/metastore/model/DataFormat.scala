@@ -16,9 +16,8 @@
 package za.co.absa.pramen.framework.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.metastore.DataFormat.{Delta, Parquet}
-import za.co.absa.pramen.api.metastore.{DataFormat => DataFormatApi}
-import za.co.absa.pramen.api.v2.Query
+import za.co.absa.pramen.api.DataFormat.{Delta, Parquet}
+import za.co.absa.pramen.api.{Query, DataFormat => DataFormatApi}
 import za.co.absa.pramen.framework.utils.ConfigUtils
 
 object DataFormat {

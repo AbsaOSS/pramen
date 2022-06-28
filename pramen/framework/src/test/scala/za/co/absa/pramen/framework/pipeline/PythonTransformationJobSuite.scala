@@ -19,8 +19,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.metastore.MetaTableStats
+import za.co.absa.pramen.api.{MetaTableStats, Reason}
 import za.co.absa.pramen.framework.OperationDefFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.exceptions.ProcessFailedException

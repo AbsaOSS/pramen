@@ -17,8 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.metastore.{MetaTable, MetaTableStats}
+import za.co.absa.pramen.api.{MetaTable, MetaTableStats, Reason}
 import za.co.absa.pramen.framework.runner.splitter.ScheduleStrategy
 
 import java.time.{Instant, LocalDate}

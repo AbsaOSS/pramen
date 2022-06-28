@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.v2.Query
+import za.co.absa.pramen.api.Query
 
 class SourceTableSuite extends WordSpec {
   "fromConfig" should {

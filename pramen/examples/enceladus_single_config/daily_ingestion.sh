@@ -16,7 +16,7 @@ ME=`basename "$0" .sh`
 
 cd $(dirname $(readlink -f $0))
 
-BUILT_IN_JAR="bultin-jobs-0.13.0.jar"
+BUILT_IN_JAR="builtin-jobs-0.13.0.jar"
 SYNC_WATCHER_JAR="pipeline-runner-0.13.0.jar"
 
 set -euxo pipefail

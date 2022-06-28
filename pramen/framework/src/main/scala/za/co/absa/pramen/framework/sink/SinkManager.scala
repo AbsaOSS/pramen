@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.sink
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.v2.Sink
+import za.co.absa.pramen.api.Sink
 import za.co.absa.pramen.framework.ExternalChannelFactory
 
 object SinkManager {

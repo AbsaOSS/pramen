@@ -13,12 +13,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.v2
+package za.co.absa.pramen.api
 
-import za.co.absa.pramen.api.reader.TableReader
+import org.apache.spark.sql.DataFrame
 
-trait Source extends ExternalChannel {
-  def hasInfoDate: Boolean
+import java.time.LocalDate
 
-  def getReader(query: Query, columns: Seq[String]): TableReader
+trait TableWriter {
+  def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long
+
+  def getMetadata(key: String): Option[Any] = None
 }

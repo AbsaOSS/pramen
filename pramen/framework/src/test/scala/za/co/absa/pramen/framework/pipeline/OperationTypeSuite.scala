@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.v2.Query.Table
+import za.co.absa.pramen.api.Query.Table
 import za.co.absa.pramen.framework.pipeline.OperationType.{Ingestion, Transformation}
 
 class OperationTypeSuite extends WordSpec {

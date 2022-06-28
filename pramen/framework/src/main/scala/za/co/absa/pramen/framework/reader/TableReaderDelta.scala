@@ -18,8 +18,7 @@ package za.co.absa.pramen.framework.reader
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.reader.TableReader
-import za.co.absa.pramen.api.v2.Query
+import za.co.absa.pramen.api.{Query, TableReader}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.mocks.writer
 import java.time.LocalDate
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.writer.TableWriter
+import za.co.absa.pramen.api.TableWriter
 
 import scala.collection.mutable.ListBuffer
 

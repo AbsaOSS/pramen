@@ -19,7 +19,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.metastore.Metastore
+import za.co.absa.pramen.api.Metastore
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock

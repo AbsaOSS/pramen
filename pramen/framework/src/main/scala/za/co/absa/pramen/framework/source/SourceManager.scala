@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.source
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.v2.Source
+import za.co.absa.pramen.api.Source
 import za.co.absa.pramen.framework.ExternalChannelFactory
 
 object SourceManager {

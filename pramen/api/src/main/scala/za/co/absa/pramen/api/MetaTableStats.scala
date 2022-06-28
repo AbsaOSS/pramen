@@ -13,21 +13,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.metastore
+package za.co.absa.pramen.api
 
-import za.co.absa.pramen.api.v2.Query
-
-/** Storage formats supported by the metastore. */
-sealed trait DataFormat {
-  def name: String
-}
-
-object DataFormat {
-  case class Parquet(path: String, recordsPerPartition: Option[Long]) extends DataFormat {
-    override def name: String = "parquet"
-  }
-
-  case class Delta(query: Query, recordsPerPartition: Option[Long]) extends DataFormat {
-    override def name: String = "delta"
-  }
-}
+case class MetaTableStats(
+                           recordCount: Long,
+                           dataSizeBytes: Option[Long]
+                         )

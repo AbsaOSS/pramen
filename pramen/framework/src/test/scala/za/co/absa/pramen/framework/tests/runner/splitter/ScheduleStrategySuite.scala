@@ -17,8 +17,7 @@ package za.co.absa.pramen.framework.tests.runner.splitter
 
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.schedule.{EveryDay, Weekly}
-import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.api.{Schedule, MetastoreDependency}
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.pipeline
 import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
@@ -43,7 +42,7 @@ class ScheduleStrategySuite extends WordSpec {
 
     "daily" when {
       val infoDateExpression = "@runDate"
-      val schedule = EveryDay()
+      val schedule = Schedule.EveryDay()
 
       "normal execution" in {
         val bk = mock(classOf[SyncBookKeeper])
@@ -187,7 +186,7 @@ class ScheduleStrategySuite extends WordSpec {
 
     "weekly" when {
       val infoDateExpression = "lastSaturday(@date)"
-      val schedule = Weekly(DayOfWeek.SUNDAY :: Nil)
+      val schedule = Schedule.Weekly(DayOfWeek.SUNDAY :: Nil)
 
       val saturdayTwoWeeksAgo = runDate.minusDays(13)
       val lastSaturday = runDate.minusDays(6)
@@ -315,7 +314,7 @@ class ScheduleStrategySuite extends WordSpec {
 
     "daily" when {
       val infoDateExpression = "@runDate"
-      val schedule = EveryDay()
+      val schedule = Schedule.EveryDay()
 
       "normal setup" when {
         val bk = mock(classOf[SyncBookKeeper])
@@ -469,7 +468,7 @@ class ScheduleStrategySuite extends WordSpec {
 
     "weekly" when {
       val infoDateExpression = "lastSaturday(@date)"
-      val schedule = Weekly(DayOfWeek.SUNDAY :: Nil)
+      val schedule = Schedule.Weekly(DayOfWeek.SUNDAY :: Nil)
 
       val saturdayTwoWeeksAgo = runDate.minusDays(13)
       val lastSaturday = runDate.minusDays(6)

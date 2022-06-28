@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.schedule.{EveryDay, Monthly, Weekly}
+import za.co.absa.pramen.api.Schedule
 import za.co.absa.pramen.framework.utils.ScheduleUtils
 
 import java.time._
@@ -24,10 +24,10 @@ import java.time._
 class ScheduleUtilsSuite extends WordSpec {
 
   // Various schedules
-  private val everyday = EveryDay()
-  private val onSundays = Weekly(DayOfWeek.SUNDAY :: Nil)
-  private val onSundaysAndWednesdays = Weekly(DayOfWeek.WEDNESDAY :: DayOfWeek.SUNDAY :: Nil)
-  private val onFirstDayOfMonth = Monthly(1 :: Nil)
+  private val everyday = Schedule. EveryDay()
+  private val onSundays = Schedule.Weekly(DayOfWeek.SUNDAY :: Nil)
+  private val onSundaysAndWednesdays = Schedule.Weekly(DayOfWeek.WEDNESDAY :: DayOfWeek.SUNDAY :: Nil)
+  private val onFirstDayOfMonth = Schedule.Monthly(1 :: Nil)
 
   // Sample dates to use
   private val saturday = LocalDate.of(2020, 8, 1)

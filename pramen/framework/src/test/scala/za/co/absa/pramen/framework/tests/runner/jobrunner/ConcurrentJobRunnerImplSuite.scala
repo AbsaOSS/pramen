@@ -19,7 +19,7 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.metastore.MetaTableStats
+import za.co.absa.pramen.api.MetaTableStats
 import za.co.absa.pramen.framework.RuntimeConfigFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper

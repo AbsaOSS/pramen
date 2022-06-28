@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.app
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.metastore.Metastore
+import za.co.absa.pramen.api.Metastore
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.journal.Journal
 import za.co.absa.pramen.framework.lock.{TokenLockFactory, TokenLockFactoryAllow}

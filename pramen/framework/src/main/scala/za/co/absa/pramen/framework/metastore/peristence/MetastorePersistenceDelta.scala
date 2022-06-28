@@ -19,8 +19,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.metastore.MetaTableStats
-import za.co.absa.pramen.api.v2.Query
+import za.co.absa.pramen.api.{MetaTableStats, Query}
 import za.co.absa.pramen.framework.utils.{FsUtils, StringUtils}
 
 import java.time.LocalDate

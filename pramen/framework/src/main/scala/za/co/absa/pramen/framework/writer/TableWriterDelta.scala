@@ -20,8 +20,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.v2.Query
-import za.co.absa.pramen.api.writer.TableWriter
+import za.co.absa.pramen.api.{Query, TableWriter}
 import za.co.absa.pramen.framework.model.Constants
 import za.co.absa.pramen.framework.utils.{ConfigUtils, FsUtils, StringUtils}
 

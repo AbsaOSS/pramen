@@ -13,7 +13,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.metastore
+package za.co.absa.pramen.api
 
 import org.apache.spark.sql.DataFrame
 

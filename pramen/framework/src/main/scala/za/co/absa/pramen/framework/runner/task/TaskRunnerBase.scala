@@ -18,8 +18,7 @@ package za.co.absa.pramen.framework.runner.task
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.metastore.MetaTableStats
+import za.co.absa.pramen.api.{MetaTableStats, Reason}
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.exceptions.ReasonException

@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.mocks
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.v2.{ExternalChannel, ExternalChannelFactory}
+import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory}
 
 class ExternalChannelMock(val value1: String, val value2: String) extends ExternalChannel
 

@@ -15,7 +15,7 @@
 
 package za.co.absa.pramen.framework.model
 
-import za.co.absa.pramen.api.reader.TableReader
+import za.co.absa.pramen.api.TableReader
 
 case class Table(
                 name: String,

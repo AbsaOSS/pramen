@@ -16,8 +16,7 @@
 package za.co.absa.pramen.framework
 
 import com.typesafe.config.{Config, ConfigFactory}
-import za.co.absa.pramen.api.schedule.{EveryDay, Schedule}
-import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
 import za.co.absa.pramen.framework.pipeline.{OperationDef, OperationType, TransformExpression}
 
 object OperationDefFactory {
@@ -25,7 +24,7 @@ object OperationDefFactory {
   def getDummyOperationDef(name: String = "DummyOperation",
                            operationConf: Config = ConfigFactory.empty(),
                            operationType: OperationType = OperationType.Transformation("dummy.class", "dummy_output_table"),
-                           schedule: Schedule = EveryDay(),
+                           schedule: Schedule = Schedule.EveryDay(),
                            expectedDelayDays: Int = 0,
                            dependencies: Seq[MetastoreDependency] = Nil,
                            outputInfoDateExpression: String = "@date",

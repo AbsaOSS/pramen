@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.metastore.{MetaTable => MetaTableApi}
+import za.co.absa.pramen.api.{MetaTable => MetaTableApi}
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
 import za.co.absa.pramen.framework.config.InfoDateOverride
 import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL

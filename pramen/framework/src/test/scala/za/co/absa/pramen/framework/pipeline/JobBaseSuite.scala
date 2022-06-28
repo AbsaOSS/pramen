@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.api.MetastoreDependency
 import za.co.absa.pramen.framework.OperationDefFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException

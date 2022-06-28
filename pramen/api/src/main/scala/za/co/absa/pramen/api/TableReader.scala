@@ -13,9 +13,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.metastore
+package za.co.absa.pramen.api
 
-case class MetaTableStats(
-                           recordCount: Long,
-                           dataSizeBytes: Option[Long]
-                         )
+import org.apache.spark.sql.DataFrame
+
+import java.time.LocalDate
+
+trait TableReader {
+  def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
+
+  def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame]
+
+  def getMetadata(key: String): Option[Any] = None
+}

@@ -18,9 +18,7 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.metastore.{MetaTable, MetaTableStats, Metastore}
-import za.co.absa.pramen.api.v2.Source
+import za.co.absa.pramen.api.{MetaTable, MetaTableStats, Metastore, Reason, Source}
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 import za.co.absa.pramen.framework.utils.SparkUtils._

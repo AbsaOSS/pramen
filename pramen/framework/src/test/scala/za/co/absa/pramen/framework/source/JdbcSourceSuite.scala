@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.source
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.v2.Source
+import za.co.absa.pramen.api.Source
 import za.co.absa.pramen.framework.ExternalChannelFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 

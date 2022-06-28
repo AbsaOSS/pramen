@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.v2.{ExternalChannel, ExternalChannelFactory => ExternalChannelFactoryV2}
+import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory => ExternalChannelFactoryV2}
 import za.co.absa.pramen.framework.utils.ClassLoaderUtils
 
 import scala.collection.JavaConverters._

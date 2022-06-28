@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.abris.avro.functions.to_avro
 import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
 import za.co.absa.abris.config.{AbrisConfig, ToAvroConfig}
-import za.co.absa.pramen.api.writer.TableWriter
+import za.co.absa.pramen.api.TableWriter
 import za.co.absa.pramen.avro.AvroUtils.{convertSparkToAvroSchema, fixNullableFields}
 import za.co.absa.pramen.framework.utils.ConfigUtils
 import za.co.absa.pramen.writer.model.{KafkaWriterConfig, NamingStrategy}

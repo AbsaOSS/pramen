@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.schedule.EveryDay
+import za.co.absa.pramen.api.Schedule
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
 import za.co.absa.pramen.framework.fixtures.TempDirFixture
 import za.co.absa.pramen.framework.pipeline.OperationType.{Ingestion, Transformation}
@@ -73,7 +73,7 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
       val op = OperationDef.fromConfig(conf, defaults, "path", 0).get
 
       assert(op.name == "dummy_name")
-      assert(op.schedule.isInstanceOf[EveryDay])
+      assert(op.schedule.isInstanceOf[Schedule.EveryDay])
       assert(op.outputInfoDateExpression.contains("dummy_expr"))
       assert(op.operationType.asInstanceOf[Ingestion].sourceName == "jdbc1")
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.size == 1)
@@ -115,7 +115,7 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
       val op = OperationDef.fromConfig(conf, defaults, "path", 0).get
 
       assert(op.name == "dummy_transformation")
-      assert(op.schedule.isInstanceOf[EveryDay])
+      assert(op.schedule.isInstanceOf[Schedule.EveryDay])
       assert(op.outputInfoDateExpression == "@date")
       assert(op.operationType.asInstanceOf[Transformation].clazz == "myclass")
       assert(op.dependencies.length == 2)
@@ -152,7 +152,7 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
       val op = OperationDef.fromConfig(conf, defaults, "path", 0).get
 
       assert(op.name == "dummy_name")
-      assert(op.schedule.isInstanceOf[EveryDay])
+      assert(op.schedule.isInstanceOf[Schedule.EveryDay])
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkName == "kafka1")
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.size == 1)
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.head.metaTableName == "table1_sync")

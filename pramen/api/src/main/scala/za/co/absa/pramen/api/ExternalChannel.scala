@@ -13,6 +13,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.v2
+package za.co.absa.pramen.api
 
 trait ExternalChannel

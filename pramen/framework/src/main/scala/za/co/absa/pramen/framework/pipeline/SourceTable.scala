@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.v2.Query
+import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.framework.utils.{AlgorithmicUtils, ConfigUtils}
 
 import scala.collection.JavaConverters._

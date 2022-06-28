@@ -13,11 +13,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.v2
+package za.co.absa.pramen.api
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.metastore.MetastoreReader
 
 import java.time.LocalDate
 
@@ -29,7 +27,7 @@ trait Transformer {
     *
     * If requirements are not met the validation routine should do one of teh following:
     * - return Reason.NotReady - this means some input data is missing, but the transformation can run in the future
-    *   when the requirements are met
+    * when the requirements are met
     * - return Reason.Skip - this means the running of the transformation should be completely skipped.
     * - throw an exception - this will result in the same behavior as returning Reason.NotReady
     *
@@ -39,8 +37,8 @@ trait Transformer {
     * @return Reason as the validation result.
     */
   def validate(metastore: MetastoreReader,
-              infoDate: LocalDate,
-              options: Map[String, String]): Reason
+               infoDate: LocalDate,
+               options: Map[String, String]): Reason
 
   /**
     * A job has access to the metastore where it can query tables registered in the configuration.

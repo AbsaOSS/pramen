@@ -13,34 +13,33 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.schedule
-
-import java.time.{DayOfWeek, LocalDate}
+package za.co.absa.pramen.api
 
 import com.typesafe.config.Config
 
+import java.time.{DayOfWeek, LocalDate}
 import scala.collection.JavaConverters._
 
 sealed trait Schedule {
   def isEnabled(day: LocalDate): Boolean
 }
 
-case class EveryDay() extends Schedule {
-  def isEnabled(day: LocalDate): Boolean = true
-}
-
-case class Weekly(days: Seq[DayOfWeek]) extends Schedule {
-  def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfWeek)
-}
-
-case class Monthly(days: Seq[Int]) extends Schedule {
-  def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfMonth)
-}
-
 object Schedule {
   val SCHEDULE_TYPE_KEY = "schedule.type"
   val SCHEDULE_DAYS_OF_WEEK_KEY = "schedule.days.of.week"
   val SCHEDULE_DAYS_OF_MONTH_KEY = "schedule.days.of.month"
+
+  case class EveryDay() extends Schedule {
+    def isEnabled(day: LocalDate): Boolean = true
+  }
+
+  case class Weekly(days: Seq[DayOfWeek]) extends Schedule {
+    def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfWeek)
+  }
+
+  case class Monthly(days: Seq[Int]) extends Schedule {
+    def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfMonth)
+  }
 
   def fromConfig(conf: Config): Schedule = {
     conf.getString(SCHEDULE_TYPE_KEY) match {

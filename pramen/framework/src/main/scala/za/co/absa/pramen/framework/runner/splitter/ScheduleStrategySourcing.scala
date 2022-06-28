@@ -15,8 +15,7 @@
 
 package za.co.absa.pramen.framework.runner.splitter
 
-import za.co.absa.pramen.api.schedule.Schedule
-import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.pipeline
 import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}

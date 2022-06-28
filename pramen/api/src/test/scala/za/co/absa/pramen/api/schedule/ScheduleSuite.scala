@@ -16,14 +16,14 @@
 package za.co.absa.pramen.api.schedule
 
 import java.time.{DayOfWeek, LocalDate}
-
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
+import za.co.absa.pramen.api.Schedule
 
 class ScheduleSuite extends WordSpec {
 
-  import Schedule._
+  import za.co.absa.pramen.api.Schedule._
 
   "Schedule.fromConfig" should {
     "Deserialize daily jobs" when {
@@ -31,7 +31,7 @@ class ScheduleSuite extends WordSpec {
         val config = ConfigFactory.parseString(s"$SCHEDULE_TYPE_KEY = daily")
         val schedule = fromConfig(config)
 
-        assert(schedule == EveryDay())
+        assert(schedule == Schedule.EveryDay())
       }
     }
 
@@ -42,7 +42,7 @@ class ScheduleSuite extends WordSpec {
              |$SCHEDULE_DAYS_OF_WEEK_KEY = [ 7 ]""".stripMargin)
         val schedule = fromConfig(config)
 
-        assert(schedule == Weekly(DayOfWeek.SUNDAY :: Nil))
+        assert(schedule == Schedule.Weekly(DayOfWeek.SUNDAY :: Nil))
       }
       "a multiple days weekly job is provided" in {
         val config = ConfigFactory.parseString(
@@ -50,7 +50,7 @@ class ScheduleSuite extends WordSpec {
              |$SCHEDULE_DAYS_OF_WEEK_KEY = [ 1, 7 ]""".stripMargin)
         val schedule = fromConfig(config)
 
-        assert(schedule == Weekly(DayOfWeek.MONDAY :: DayOfWeek.SUNDAY :: Nil))
+        assert(schedule == Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.SUNDAY :: Nil))
       }
 
       "throw an exception when a wrong week day is provided 1" in {

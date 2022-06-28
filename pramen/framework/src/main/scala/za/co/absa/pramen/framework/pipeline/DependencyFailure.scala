@@ -15,7 +15,7 @@
 
 package za.co.absa.pramen.framework.pipeline
 
-import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.api.MetastoreDependency
 
 case class DependencyFailure(
                               dep: MetastoreDependency,

@@ -17,9 +17,7 @@ package za.co.absa.pramen.framework.metastore
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.metastore._
-import za.co.absa.pramen.api.reader.TableReader
-import za.co.absa.pramen.api.writer.TableWriter
+import za.co.absa.pramen.api.{DataFormat, MetaTable, MetaTableStats, Metastore, MetastoreReader, TableReader, TableWriter}
 import za.co.absa.pramen.framework.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.config.Keys.TEMPORARY_DIRECTORY

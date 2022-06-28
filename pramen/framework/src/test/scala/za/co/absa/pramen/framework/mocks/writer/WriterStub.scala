@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.mocks.writer
 import java.time.LocalDate
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.writer.TableWriter
+import za.co.absa.pramen.api.TableWriter
 
 class WriterStub extends TableWriter {
   override def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long = 0

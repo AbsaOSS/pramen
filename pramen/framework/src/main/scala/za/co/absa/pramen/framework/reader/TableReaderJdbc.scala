@@ -20,7 +20,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{DateType, DecimalType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.reader.TableReader
+import za.co.absa.pramen.api.TableReader
 import za.co.absa.pramen.framework.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.framework.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.framework.utils.SparkUtils.sanitizeDfColumns

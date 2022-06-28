@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.reader
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.reader.TableReader
+import za.co.absa.pramen.api.TableReader
 import za.co.absa.pramen.framework.reader.model.JdbcConfig
 import za.co.absa.pramen.framework.utils.SparkUtils.sanitizeDfColumns
 import za.co.absa.pramen.framework.utils.{ConfigUtils, JdbcNativeUtils, TimeUtils}

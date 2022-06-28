@@ -17,8 +17,7 @@ package za.co.absa.pramen.framework.tests.runner.splitter
 
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.schedule.{EveryDay, Weekly}
-import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.api.{Schedule, MetastoreDependency}
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.framework.pipeline
@@ -43,15 +42,15 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
     "getNew" should {
       "return the date if it is scheduled to run on this date" in {
-        assert(getNew("table", date, EveryDay(), "@runDate").exists(t => t.infoDate == date))
+        assert(getNew("table", date, Schedule.EveryDay(), "@runDate").exists(t => t.infoDate == date))
       }
 
       "return None is out of schedule" in {
-        assert(getNew("table", date, Weekly(DayOfWeek.MONDAY :: Nil), "@runDate").isEmpty)
+        assert(getNew("table", date, Schedule.Weekly(DayOfWeek.MONDAY :: Nil), "@runDate").isEmpty)
       }
 
       "returns the information date from the run date" in {
-        assert(getNew("table", date, Weekly(DayOfWeek.FRIDAY :: Nil), "@runDate - 1").exists(t => t.infoDate == date.minusDays(1)))
+        assert(getNew("table", date, Schedule.Weekly(DayOfWeek.FRIDAY :: Nil), "@runDate - 1").exists(t => t.infoDate == date.minusDays(1)))
       }
     }
 
@@ -64,7 +63,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         val expected = List(date.minusDays(3), date.minusDays(2), date.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
-        val actual = getLate("table", date, EveryDay(), "@runDate", date.minusDays(3), bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", date.minusDays(3), bk)
 
         assert(actual == expected)
       }
@@ -77,7 +76,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         val expected = List(date.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
-        val actual = getLate("table", date, EveryDay(), "@runDate", date.minusDays(3), bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", date.minusDays(3), bk)
 
         assert(actual == expected)
       }
@@ -87,7 +86,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
         when(bk.getLatestProcessedDate("table")).thenReturn(Some(date.minusDays(1)))
 
-        val actual = getLate("table", date, EveryDay(), "@runDate", date.minusDays(3), bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", date.minusDays(3), bk)
 
         assert(actual.isEmpty)
       }
@@ -97,7 +96,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       "return date range with completed jobs skipped" in {
         val bk = mock(classOf[SyncBookKeeper])
 
-        val schedule = Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
+        val schedule = Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
         when(bk.getDataChunksCount("table", Some(date), Some(date))).thenReturn(1)
         when(bk.getDataChunksCount("table", Some(date.plusDays(3)), Some(date.plusDays(3)))).thenReturn(1)
@@ -115,7 +114,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       "return date range without completed jobs skipped" in {
         val bk = mock(classOf[SyncBookKeeper])
 
-        val schedule = Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
+        val schedule = Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
         val expected = List(date, date.plusDays(3), date.plusDays(5))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
@@ -128,7 +127,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       "return date range with reverse order" in {
         val bk = mock(classOf[SyncBookKeeper])
 
-        val schedule = Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
+        val schedule = Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
         val expected = List(date.plusDays(5), date.plusDays(3), date)
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
@@ -251,7 +250,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
     "getInfoDateRange" should {
       val date = LocalDate.of(2022, 2, 18)
-      val schedule = EveryDay()
+      val schedule = Schedule.EveryDay()
 
       "return a range for a one day" in {
         assert(getInfoDateRange(date, date, "@runDate", schedule) == List(date))

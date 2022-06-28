@@ -18,8 +18,7 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.v2.Query
+import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.framework.OperationDefFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.fixtures.{RelationalDbFixture, TextComparisonFixture}

@@ -17,8 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.schedule.{EveryDay, Monthly, Schedule, Weekly}
-import za.co.absa.pramen.api.v2.MetastoreDependency
+import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
 import za.co.absa.pramen.framework.utils.ConfigUtils
 
@@ -79,9 +78,9 @@ object OperationDef {
       case Some(expr) => expr
       case None =>
         schedule match {
-          case _: EveryDay => infoDateConfig.expressionDaily
-          case _: Weekly => infoDateConfig.expressionWeekly
-          case _: Monthly => infoDateConfig.expressionMonthly
+          case _: Schedule.EveryDay => infoDateConfig.expressionDaily
+          case _: Schedule.Weekly => infoDateConfig.expressionWeekly
+          case _: Schedule.Monthly => infoDateConfig.expressionMonthly
         }
     }
 

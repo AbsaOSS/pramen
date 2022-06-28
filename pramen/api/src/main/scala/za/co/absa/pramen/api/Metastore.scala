@@ -13,11 +13,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.metastore
+package za.co.absa.pramen.api
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.reader.TableReader
-import za.co.absa.pramen.api.writer.TableWriter
 
 import java.time.LocalDate
 

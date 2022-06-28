@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.metastore.MetastoreReader
+import za.co.absa.pramen.api.MetastoreReader
 
 import java.time.LocalDate
 

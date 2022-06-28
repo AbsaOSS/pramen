@@ -19,8 +19,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.v2.Sink
+import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.framework.OperationDefFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.fixtures.TextComparisonFixture

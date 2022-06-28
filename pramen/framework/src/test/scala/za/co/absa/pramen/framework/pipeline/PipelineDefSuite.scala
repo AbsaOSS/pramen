@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.schedule.EveryDay
+import za.co.absa.pramen.api.Schedule
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
 import za.co.absa.pramen.framework.fixtures.TempDirFixture
 import za.co.absa.pramen.framework.pipeline.OperationType.{Ingestion, Transformation}
@@ -51,7 +51,7 @@ class PipelineDefSuite extends WordSpec with TempDirFixture {
         assert(op1.name == "op1")
         assert(op2.name == "op2")
 
-        assert(op1.schedule.isInstanceOf[EveryDay])
+        assert(op1.schedule.isInstanceOf[Schedule.EveryDay])
         assert(op1.expectedDelayDays == 1)
         assert(op1.dependencies.isEmpty)
         assert(op1.outputInfoDateExpression.contains("beginOfMonth(@runDate)"))

@@ -13,16 +13,19 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.reader
+package za.co.absa.pramen.api
 
-import java.time.LocalDate
+/** Storage formats supported by the metastore. */
+sealed trait DataFormat {
+  def name: String
+}
 
-import org.apache.spark.sql.DataFrame
+object DataFormat {
+  case class Parquet(path: String, recordsPerPartition: Option[Long]) extends DataFormat {
+    override def name: String = "parquet"
+  }
 
-trait TableReader {
-  def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
-
-  def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame]
-
-  def getMetadata(key: String): Option[Any] = None
+  case class Delta(query: Query, recordsPerPartition: Option[Long]) extends DataFormat {
+    override def name: String = "delta"
+  }
 }

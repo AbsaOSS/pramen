@@ -17,8 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.metastore.Metastore
-import za.co.absa.pramen.api.v2.Transformer
+import za.co.absa.pramen.api.{Metastore, Transformer}
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
 import za.co.absa.pramen.framework.pipeline.OperationType._
 import za.co.absa.pramen.framework.pipeline.PythonTransformationJob._

@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.mocks.reader
 import java.time.LocalDate
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.reader.TableReader
+import za.co.absa.pramen.api.TableReader
 
 class ReaderStub extends TableReader {
   override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = 0
