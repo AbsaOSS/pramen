@@ -22,7 +22,7 @@ import za.co.absa.pramen.framework.utils.ConfigUtils
 import java.time.ZoneId
 
 case class EnceladusConfig(
-                            syncWatcherVersion: String,
+                            pramenVersion: String,
                             timezoneId: ZoneId,
                             infoDateColumn: String,
                             partitionPattern: String,
@@ -51,7 +51,7 @@ object EnceladusConfig {
   def fromConfig(conf: Config): EnceladusConfig = {
     val appContext = AppContextFactory.get
 
-    val syncWatcherVersion = if (appContext != null) {
+    val pramenVersion = if (appContext != null) {
       appContext.appConfig.generalConfig.applicationVersion
     } else {
       "Unspecified"
@@ -64,7 +64,7 @@ object EnceladusConfig {
     }
 
     EnceladusConfig(
-      syncWatcherVersion,
+      pramenVersion,
       timezoneId,
       ConfigUtils.getOptionString(conf, INFO_DATE_COLUMN_KEY).getOrElse(DEFAULT_INFO_DATE_COLUMN),
       ConfigUtils.getOptionString(conf, PARTITION_PATTERN_KEY).getOrElse(DEFAULT_PARTITION_PATTERN),

@@ -178,7 +178,7 @@ class EnceladusSink(enceladusConfig: EnceladusConfig, conf: Config) extends Sink
         .save(outputPathStr)
 
       if (enceladusConfig.generateInfoFile) {
-        InfoFileGeneration.generateInfoFile(enceladusConfig.syncWatcherVersion,
+        InfoFileGeneration.generateInfoFile(enceladusConfig.pramenVersion,
           enceladusConfig.timezoneId,
           count,
           df,

@@ -34,7 +34,7 @@ object InfoFileGeneration {
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def generateInfoFile(syncWatcherVersion: String,
+  def generateInfoFile(pramenVersion: String,
                        timezoneId: ZoneId,
                        sourceCount: Long,
                        rawDf: DataFrame,
@@ -46,7 +46,7 @@ object InfoFileGeneration {
     val fs = outputPartitionPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
     val rawCount = rawDf.count()
 
-    val infoFileContents = renderInfoFile(syncWatcherVersion, timezoneId, sourceCount, rawCount, infoDate, sourceStart, rawStart, Instant.now())
+    val infoFileContents = renderInfoFile(pramenVersion, timezoneId, sourceCount, rawCount, infoDate, sourceStart, rawStart, Instant.now())
 
     val infoFilePath = new Path(outputPartitionPath, "_INFO")
 
@@ -57,7 +57,7 @@ object InfoFileGeneration {
     log.info(s"The info file is saved to $infoFilePath:\n$infoFileContents")
   }
 
-  def renderInfoFile(syncWatcherVersion: String,
+  def renderInfoFile(pramenVersion: String,
                      timezoneId: ZoneId,
                      sourceCount: Long,
                      rawCount: Long,
@@ -97,7 +97,7 @@ object InfoFileGeneration {
        |  "checkpoints" : [ {
        |    "name" : "Source",
        |    "software" : "pramen",
-       |    "version" : "$syncWatcherVersion",
+       |    "version" : "$pramenVersion",
        |    "processStartTime" : "$sourceStarted",
        |    "processEndTime" : "$rawStarted",
        |    "workflowName" : "Source",
@@ -111,7 +111,7 @@ object InfoFileGeneration {
        |  }, {
        |    "name" : "Raw",
        |    "software" : "pramen",
-       |    "version" : "$syncWatcherVersion",
+       |    "version" : "$pramenVersion",
        |    "processStartTime" : "$rawStarted",
        |    "processEndTime" : "$rawFinished",
        |    "workflowName" : "Source",

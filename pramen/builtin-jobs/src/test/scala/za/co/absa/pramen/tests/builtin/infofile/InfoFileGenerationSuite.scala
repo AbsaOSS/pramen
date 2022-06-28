@@ -32,7 +32,7 @@ class InfoFileGenerationSuite extends WordSpec with SparkTestBase with TextCompa
   private val rawStart = Instant.ofEpochSecond(1640684386L)
   private val rawFinish = Instant.ofEpochSecond(1640688586L)
   private val infoDate = LocalDate.of(2021, 12, 28)
-  private val syncWatcherVersion = "1.0.0"
+  private val pramenVersion = "1.0.0"
   private val timezoneId = ZoneId.of("Africa/Johannesburg")
 
   "renderInfoFile" should {
@@ -82,7 +82,7 @@ class InfoFileGenerationSuite extends WordSpec with SparkTestBase with TextCompa
 
       implicit val conf: Config = getConfig
 
-      val infoFile = renderInfoFile(syncWatcherVersion, timezoneId, 100, 200, infoDate, sourceStart, rawStart, rawFinish)
+      val infoFile = renderInfoFile(pramenVersion, timezoneId, 100, 200, infoDate, sourceStart, rawStart, rawFinish)
 
       compareText(infoFile, expectedInfoFile)
     }
@@ -95,7 +95,7 @@ class InfoFileGenerationSuite extends WordSpec with SparkTestBase with TextCompa
           implicit val conf: Config = getConfig.withoutPath(key)
 
           val ex = intercept[IllegalArgumentException] {
-            renderInfoFile(syncWatcherVersion, timezoneId, 100, 200, infoDate, sourceStart, rawStart, rawFinish)
+            renderInfoFile(pramenVersion, timezoneId, 100, 200, infoDate, sourceStart, rawStart, rawFinish)
           }
 
           assert(ex.getMessage.contains(key))
@@ -111,7 +111,7 @@ class InfoFileGenerationSuite extends WordSpec with SparkTestBase with TextCompa
       val rawDf = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
       withTempDirectory("info_file_test") { tempDir =>
-        generateInfoFile(syncWatcherVersion, timezoneId, 100, rawDf, new Path(tempDir), infoDate, sourceStart, rawStart)
+        generateInfoFile(pramenVersion, timezoneId, 100, rawDf, new Path(tempDir), infoDate, sourceStart, rawStart)
 
         assert(Files.exists(Paths.get(tempDir, "_INFO")))
       }

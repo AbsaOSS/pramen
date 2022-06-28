@@ -69,11 +69,11 @@ class OperationSplitter(conf: Config,
                                  pythonClass: String,
                                  outputTable: String)(implicit spark: SparkSession): Seq[Job] = {
     val outputMetaTable = metastore.getTableDef(outputTable)
-    val syncWatcherPyLocation = conf.getString(PRAMEN_PY_LOCATION_KEY)
-    val syncWatcherPyExecutable = conf.getString(PRAMEN_PY_EXECUTABLE_KEY)
+    val pramenPyLocation = conf.getString(PRAMEN_PY_LOCATION_KEY)
+    val pramenPyExecutable = conf.getString(PRAMEN_PY_EXECUTABLE_KEY)
     val cmdLineTemplate = conf.getString(PRAMEN_PY_CMD_LINE_TEMPLATE_KEY)
 
-    val syncWatcherPyConfig = PramenPyConfig(syncWatcherPyLocation, syncWatcherPyExecutable, cmdLineTemplate)
+    val pramenPyConfig = PramenPyConfig(pramenPyLocation, pramenPyExecutable, cmdLineTemplate)
 
     val keepLogLines = conf.getInt(KEEP_LOG_LINES_KEY)
 
@@ -84,7 +84,7 @@ class OperationSplitter(conf: Config,
       stdErrLogPrefix = "Pramen-Py(err)",
       redirectErrorStream = false)
 
-    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, outputMetaTable, pythonClass, syncWatcherPyConfig, processRunner))
+    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, outputMetaTable, pythonClass, pramenPyConfig, processRunner))
   }
 
   def createSink(operationDef: OperationDef,

@@ -385,7 +385,7 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table2")
 
-    val syncWatcherPyConfig = PramenPyConfig("/dummy/path", "dummy_cmd", "@location/@executable transformations run @pythonClass")
+    val pramenPyConfig = PramenPyConfig("/dummy/path", "dummy_cmd", "@location/@executable transformations run @pythonClass")
 
     val processRunner = new ProcessRunnerSpy(exitCode, runException = runException)
 
@@ -395,7 +395,7 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
       bk,
       outputTable,
       "python_class",
-      syncWatcherPyConfig,
+      pramenPyConfig,
       processRunner
     )
 

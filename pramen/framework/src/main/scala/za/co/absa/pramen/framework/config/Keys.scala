@@ -27,14 +27,7 @@ object Keys {
   val WARN_THROUGHPUT_RPS = "pramen.warn.throughput.rps"
   val GOOD_THROUGHPUT_RPS = "pramen.good.throughput.rps"
 
-  val JDBC_SYNC_TABLE_DAILY_PREFIX="jdbc.sync.daily.table"
-  val JDBC_SYNC_TABLE_WEEKLY_PREFIX="jdbc.sync.weekly.table"
-
-  val JDBC_SYNC_TABLE_WEEKLY_OUTPUT_INFO_DATE_DELAY = "jdbc.sync.weekly.info.date.delay.days"
-
   val JOB_FACTORIES = "pramen.jobs"
-
-  val SYNC_WEEKLY_DAYS_OF_WEEK = "jdbc.sync.weekly.days.of.week"
 
   val MAIL_FROM = "mail.send.from"
   val MAIL_TO = "mail.send.to"

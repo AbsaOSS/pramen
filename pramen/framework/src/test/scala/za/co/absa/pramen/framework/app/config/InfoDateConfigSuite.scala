@@ -57,7 +57,7 @@ class InfoDateConfigSuite extends WordSpec {
 
       val runtimeConfig = InfoDateConfig.fromConfig(config)
 
-      assert(runtimeConfig.columnName == "syncpramen_info_date")
+      assert(runtimeConfig.columnName == "pramen_info_date")
       assert(runtimeConfig.dateFormat == "yyyy-MM-dd")
 
       assert(runtimeConfig.expressionDaily == "@runDate")

@@ -16,9 +16,9 @@
 package za.co.absa.pramen.framework.model
 
 object Constants {
-  val BOOKKEEPING_FILE_NAME = "sync-status.json"
+  val BOOKKEEPING_FILE_NAME = "pramen-status.json"
 
-  val JOURNAL_FILE_NAME = "sync-journal.csv"
+  val JOURNAL_FILE_NAME = "pramen-journal.csv"
 
   val DATE_FORMAT_INTERNAL = "yyyy-MM-dd"
 

@@ -51,7 +51,7 @@ class PythonTransformationJob(operationDef: OperationDef,
                               bookkeeper: SyncBookKeeper,
                               outputTable: MetaTable,
                               pythonClass: String,
-                              syncWatcherPyConfig: PramenPyConfig,
+                              pramenPyConfig: PramenPyConfig,
                               processRunner: ProcessRunner)
                              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
@@ -126,10 +126,10 @@ class PythonTransformationJob(operationDef: OperationDef,
   private[framework] def runPythonCmdLine(infoDate: LocalDate, conf: Config): Unit = {
     val metastoreConfigLocation = getMetastoreConfig(infoDate, conf)
 
-    log.info(s"Using template: ${syncWatcherPyConfig.cmdLineTemplate}")
-    val cmd = syncWatcherPyConfig.cmdLineTemplate
-      .replace(LOCATION_VAR, syncWatcherPyConfig.location)
-      .replace(EXECUTABLE_VAR, syncWatcherPyConfig.executable)
+    log.info(s"Using template: ${pramenPyConfig.cmdLineTemplate}")
+    val cmd = pramenPyConfig.cmdLineTemplate
+      .replace(LOCATION_VAR, pramenPyConfig.location)
+      .replace(EXECUTABLE_VAR, pramenPyConfig.executable)
       .replace(PYTHON_CLASS_VAR, pythonClass)
       .replace(METASTORE_CONFIG_VAR, metastoreConfigLocation)
       .replace(INFO_DATE_VAR, infoDate.toString)
