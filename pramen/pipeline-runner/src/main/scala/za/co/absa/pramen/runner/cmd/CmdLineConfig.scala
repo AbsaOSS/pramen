@@ -40,7 +40,6 @@ case class CmdLineConfig(
                           dateFrom: Option[LocalDate] = None,
                           dateTo: Option[LocalDate] = None,
                           mode: String = "",
-                          trackUpdates: Option[Boolean] = None,
                           inverseOrder: Option[Boolean] = None,
                           tableNum: Option[Int] = None
                         )
@@ -73,8 +72,7 @@ object CmdLineConfig {
       "[--date-from <date_from>]" +
       "[--date-to <date_to>]" +
       "[--run-mode { fill_gaps | check_updates | force }]" +
-      "[--inverse-order <true/false>]" +
-      "[--track-updates <true/false>]"
+      "[--inverse-order <true/false>]"
     )
 
     parser.parse(args, CmdLineConfig())
@@ -131,37 +129,30 @@ object CmdLineConfig {
       case None         => conf7
     }
 
-    val conf9 = cmd.trackUpdates match {
-      case Some(trackUpdates) => conf8
-        .withValue(TRACK_UPDATES,
-          ConfigValueFactory.fromAnyRef(trackUpdates))
-      case None               => conf8
+    val conf9 = cmd.undercover match {
+      case Some(v) => conf8.withValue(UNDERCOVER, ConfigValueFactory.fromAnyRef(v))
+      case None    => conf8
     }
 
-    val conf10 = cmd.undercover match {
-      case Some(v) => conf9.withValue(UNDERCOVER, ConfigValueFactory.fromAnyRef(v))
+    val conf10 = cmd.dryRun match {
+      case Some(v) => conf9.withValue(DRY_RUN, ConfigValueFactory.fromAnyRef(v))
       case None    => conf9
     }
 
-    val conf11 = cmd.dryRun match {
-      case Some(v) => conf10.withValue(DRY_RUN, ConfigValueFactory.fromAnyRef(v))
+    val conf11 = cmd.useLock match {
+      case Some(v) => conf10.withValue(USE_LOCK, ConfigValueFactory.fromAnyRef(v))
       case None    => conf10
     }
 
-    val conf12 = cmd.useLock match {
-      case Some(v) => conf11.withValue(USE_LOCK, ConfigValueFactory.fromAnyRef(v))
+    val conf12 = cmd.inverseOrder match {
+      case Some(v) => conf11.withValue(IS_INVERSE_ORDER, ConfigValueFactory.fromAnyRef(v))
       case None    => conf11
     }
 
-    val conf13 = cmd.inverseOrder match {
-      case Some(v) => conf12.withValue(IS_INVERSE_ORDER, ConfigValueFactory.fromAnyRef(v))
-      case None    => conf12
-    }
-
     if (cmd.mode.nonEmpty) {
-      conf13.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
+      conf12.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
     } else {
-      conf13
+      conf12
     }
   }
 
@@ -201,10 +192,6 @@ object CmdLineConfig {
             if (v == "fill_gaps" || v == "check_updates" || v == "force") success
             else failure("Invalid run mode. Must be one of 'fill_gaps', 'check_updates', 'force'"))
       )
-
-    opt[Boolean]("track-updates").optional().action((value, config) =>
-      config.copy(trackUpdates = Option(value)))
-      .text("If false, Pramen won't check information dates for which data has already loaded")
 
     opt[Boolean]("inverse-order").optional().action((value, config) =>
       config.copy(inverseOrder = Option(value)))

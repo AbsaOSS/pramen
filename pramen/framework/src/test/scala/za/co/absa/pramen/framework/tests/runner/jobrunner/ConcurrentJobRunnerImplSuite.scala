@@ -111,12 +111,11 @@ class ConcurrentJobRunnerImplSuite extends WordSpec with SparkTestBase {
 
   def getUseCase(runDateIn: LocalDate = runDate,
                  isRerun: Boolean = false,
-                 trackUpdates: Boolean = true,
                  runFunction: () => DataFrame = () => exampleDf
                 ): (ConcurrentJobRunnerImpl, SyncBookKeeper, PipelineStateSpy, Job) = {
     val conf = ConfigFactory.empty()
 
-    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(trackUpdates = trackUpdates, isRerun = isRerun, runDate = runDateIn)
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn)
 
     val bookkeeper = new SyncBookkeeperMock
 

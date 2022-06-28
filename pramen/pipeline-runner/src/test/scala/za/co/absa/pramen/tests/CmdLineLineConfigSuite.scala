@@ -47,7 +47,6 @@ class CmdLineLineConfigSuite extends WordSpec {
         assert(cmd.nonEmpty)
         assert(cmd.get.configPathName == "dummy.config")
         assert(cmd.get.dryRun.isEmpty)
-        assert(cmd.get.trackUpdates.isEmpty)
         assert(cmd.get.undercover.isEmpty)
         assert(cmd.get.useLock.isEmpty)
       }
@@ -84,18 +83,6 @@ class CmdLineLineConfigSuite extends WordSpec {
         assert(cmd.nonEmpty)
         assert(cmd.get.checkOnlyNewData.nonEmpty)
         assert(cmd.get.checkOnlyNewData.get)
-      }
-
-      "parse track updates for --track-updates = true" in {
-        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--track-updates", "true"))
-        assert(cmd.nonEmpty)
-        assert(cmd.get.trackUpdates.get)
-      }
-
-      "parse track updates for --track-updates = false" in {
-        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--track-updates", "false"))
-        assert(cmd.nonEmpty)
-        assert(!cmd.get.trackUpdates.get)
       }
 
       "return None when wrong date format is passed to --date" in {
@@ -213,24 +200,6 @@ class CmdLineLineConfigSuite extends WordSpec {
       assert(config.getBoolean(DRY_RUN))
       assert(config.getBoolean(CHECK_ONLY_LATE_DATA))
       assert(config.getString(CURRENT_DATE) == "2020-08-16")
-    }
-
-    "return the modified config if track updates = true" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--track-updates", "true"))
-      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
-
-      assert(config.hasPath(TRACK_UPDATES))
-
-      assert(config.getBoolean(TRACK_UPDATES))
-    }
-
-    "return the modified config if track updates = false" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--track-updates", "false"))
-      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
-
-      assert(config.hasPath(TRACK_UPDATES))
-
-      assert(!config.getBoolean(TRACK_UPDATES))
     }
 
     "return the modified config if undercover = true" in {

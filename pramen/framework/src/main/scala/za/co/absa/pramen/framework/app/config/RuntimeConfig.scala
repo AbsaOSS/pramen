@@ -31,7 +31,6 @@ case class RuntimeConfig(
                           runTables: Seq[String], // Specifies which operations (identified by output table names) to run
                           isUndercover: Boolean, // If true, no bookkeeping will be done for the job
                           useLocks: Boolean, // If true, the pipeline will acquire locks before writing to a metastore table
-                          trackUpdates: Boolean, // If false, the pipeline will not track retrospective updates
                           checkOnlyLateData: Boolean,
                           checkOnlyNewData: Boolean,
                           warnIfNoData: Boolean,
@@ -129,7 +128,6 @@ object RuntimeConfig {
       runTables = ConfigUtils.getOptListStrings(conf, RUN_TABLES),
       isUndercover = isUndercover,
       useLocks = conf.getBoolean(USE_LOCK),
-      trackUpdates = conf.getBoolean(TRACK_UPDATES),
       checkOnlyLateData = checkOnlyLateData,
       checkOnlyNewData = checkOnlyNewData,
       warnIfNoData = conf.getBoolean(WARN_NO_DATA),

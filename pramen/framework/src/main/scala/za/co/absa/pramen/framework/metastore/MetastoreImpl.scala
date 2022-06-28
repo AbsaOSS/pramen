@@ -82,7 +82,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
 
     mt.format match {
       case DataFormat.Parquet(path, recordsPerPartition) =>
-        new TableWriterParquet(mt.infoDateColumn, mt.infoDateFormat, path, tempPath, recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION))
+        new TableWriterParquet(mt.infoDateColumn, mt.infoDateFormat, path, tempPath, recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION), None)
       case DataFormat.Delta(query, recordsPerPartition)  =>
         new TableWriterDelta(mt.infoDateColumn, mt.infoDateFormat, query, recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION), Map.empty[String, String])
     }

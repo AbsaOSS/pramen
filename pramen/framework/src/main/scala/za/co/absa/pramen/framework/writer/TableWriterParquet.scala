@@ -19,13 +19,11 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.plugins.{IngestionContext, PostProcessingPlugin}
 import za.co.absa.pramen.api.writer.TableWriter
-import za.co.absa.pramen.framework.model.Constants
-import za.co.absa.pramen.framework.utils.{FsUtils, PartitionUtils, StringUtils}
+import za.co.absa.pramen.framework.utils.{FsUtils, PartitionUtils}
 
+import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.time.{Instant, LocalDate}
 import scala.collection.mutable
 
 class TableWriterParquet(infoDateColumn: String,
@@ -33,21 +31,8 @@ class TableWriterParquet(infoDateColumn: String,
                          baseOutputDirectory: String,
                          temporaryDirectory: String,
                          recordsPerPartition: Long,
-                         customPartitionPattern: Option[String],
-                         postProcessPlugin: Seq[PostProcessingPlugin])
+                         customPartitionPattern: Option[String])
                         (implicit spark: SparkSession) extends TableWriter {
-  // ToDo Add support for extra Spark options in 0.9.0
-
-  // This constructor is used for backwards compatibility
-  def this(infoDateColumn: String,
-           infoDateFormat: String,
-           baseOutputDirectory: String,
-           temporaryDirectory: String,
-           recordsPerPartition: Long
-          )(implicit spark: SparkSession) {
-    this(infoDateColumn, infoDateFormat, baseOutputDirectory, temporaryDirectory, recordsPerPartition, None, Seq.empty[PostProcessingPlugin])
-  }
-
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
   private val metadata = new mutable.HashMap[String, Any]()
@@ -73,13 +58,13 @@ class TableWriterParquet(infoDateColumn: String,
       case None    => dfIn
     }
 
-    val sourceStart = Instant.now()
     dfRepartitioned
       .write
       .mode(SaveMode.Overwrite)
       .parquet(outputDir)
 
-    postProcess(infoDate, outputDir, numOfRecordsEstimate, sourceStart)
+    val rawDf = spark.read.parquet(outputDir)
+    rawDf.count()
   }
 
   override def getMetadata(key: String): Option[Any] = {
@@ -93,27 +78,6 @@ class TableWriterParquet(infoDateColumn: String,
     }
     new Path(baseOutputDirectory, partition).toUri.toString
   }
-
-  private def postProcess(infoDate: LocalDate,
-                          outputDir: String,
-                          numOfRecordsEstimate: Option[Long],
-                          sourceStart: Instant): Long = {
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputDir)
-
-    val rawStart = Instant.now()
-    val rawDf = spark.read.parquet(outputDir)
-    val actualCount = rawDf.count()
-    val context = IngestionContext(numOfRecordsEstimate.getOrElse(actualCount), actualCount, new Path(outputDir), infoDate, sourceStart, rawStart)
-    postProcessPlugin.foreach(p => p.postProcess(context, rawDf))
-
-    val size = fsUtils.getDirectorySize(outputDir)
-    metadata.put(Constants.METADATA_LAST_SIZE_WRITTEN, size)
-
-    log.info(s"Successfully saved $actualCount records (${StringUtils.prettySize(size)}) to $outputDir")
-
-    actualCount
-  }
-
 }
 
 object TableWriterParquet {
@@ -124,15 +88,13 @@ object TableWriterParquet {
             recordsPerPartition: Long,
             extraConf: Config,
             parent: String,
-            customPartitionPattern: Option[String],
-            postProcessPlugin: Seq[PostProcessingPlugin])(implicit spark: SparkSession): TableWriterParquet = {
+            customPartitionPattern: Option[String])(implicit spark: SparkSession): TableWriterParquet = {
 
     new TableWriterParquet(infoDateColumn,
       infoDateFormat,
       baseOutputDirectory,
       temporaryDirectory,
       recordsPerPartition,
-      customPartitionPattern,
-      postProcessPlugin)
+      customPartitionPattern)
   }
 }

@@ -173,8 +173,7 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
       }
 
       "historical" in {
-        val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil),
-          trackUpdates = false)
+        val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil))
 
         val result = runner.preRunCheck(task.head, started)
 
@@ -358,12 +357,11 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
                  runFunction: () => DataFrame = () => null,
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
-                 trackUpdates: Boolean = true,
                  bookkeeperIn: SyncBookKeeper = null
                 ): (TaskRunnerBase, SyncBookKeeper, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
-    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(trackUpdates = trackUpdates, isRerun = isRerun, isDryRun = isDryRun)
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun)
 
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
 

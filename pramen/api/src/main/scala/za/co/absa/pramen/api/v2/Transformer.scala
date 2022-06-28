@@ -16,13 +16,12 @@
 package za.co.absa.pramen.api.v2
 
 import org.apache.spark.sql.DataFrame
+import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.api.metastore.MetastoreReader
-import za.co.absa.pramen.api.{Reason, SyncWatcherJob}
 
 import java.time.LocalDate
 
-trait Transformer extends SyncWatcherJob {
-
+trait Transformer {
   /**
     * Validates if the transformation can run.
     *
