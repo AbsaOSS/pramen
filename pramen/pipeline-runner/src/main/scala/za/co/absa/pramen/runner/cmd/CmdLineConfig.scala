@@ -17,8 +17,8 @@ package za.co.absa.pramen.runner.cmd
 
 import com.typesafe.config.{Config, ConfigValueFactory}
 import scopt.OptionParser
+import za.co.absa.pramen.framework.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.framework.app.config.RuntimeConfig._
-import za.co.absa.pramen.framework.config.WatcherConfig
 import za.co.absa.pramen.framework.model.Constants
 import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL
 
@@ -64,16 +64,15 @@ object CmdLineConfig {
       "[--files <comma-separated list of files> " +
       "[--ops output_table1,output_table2,...]" +
       "[--date <Current date override (yyyy-MM-dd)>] " +
-      "[--rerun <Information date (yyyy-MM-dd)>] " +
-      "[--check-late-only] " +
+      "[--rerun <The date to force rerun (yyyy-MM-dd)>] " +
+      "[--check-late-only]" +
+      "[--check-new-only] " +
       "[--dry-run <true/false>] " +
       "[--use-lock <true/false>] " +
       "[--undercover <true/false>] " +
-      "{[--check-late-only] [--check-new-only]} " +
       "[--date-from <date_from>]" +
       "[--date-to <date_to>]" +
       "[--run-mode { fill_gaps | check_updates | force }]" +
-      "[--skip-already-ran <true/false>]" +
       "[--inverse-order <true/false>]" +
       "[--track-updates <true/false>]"
     )
@@ -90,34 +89,32 @@ object CmdLineConfig {
 
     val conf3 = cmd.rerunInfoDate match {
       case Some(infoDate) =>
-        conf2.withValue(WatcherConfig.RERUN_INFO_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(infoDate)))
+        conf2
           .withValue(IS_RERUN, ConfigValueFactory.fromAnyRef(true))
-          .withValue(WatcherConfig.CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(infoDate)))
+          .withValue(CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(infoDate)))
       case None           => conf2
     }
 
     val conf4 = cmd.currentDate match {
       case Some(date) => conf3
-        .withValue(WatcherConfig.CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(date)))
+        .withValue(CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(date)))
       case None       => conf3
     }
 
     val conf5 = cmd.checkOnlyLateData match {
-      case Some(checkLateOnly) => conf4.withValue(WatcherConfig.CHECK_ONLY_LATE_DATA,
+      case Some(checkLateOnly) => conf4.withValue(CHECK_ONLY_LATE_DATA,
         ConfigValueFactory.fromAnyRef(checkLateOnly))
       case None                => conf4
     }
 
     val conf6 = cmd.checkOnlyNewData match {
-      case Some(checkNewOnly) => conf5.withValue(WatcherConfig.CHECK_ONLY_NEW_DATA,
+      case Some(checkNewOnly) => conf5.withValue(CHECK_ONLY_NEW_DATA,
         ConfigValueFactory.fromAnyRef(checkNewOnly))
       case None               => conf5
     }
 
     val conf7 = cmd.dateFrom match {
       case Some(dateFrom) => conf6
-        .withValue(WatcherConfig.INFORMATION_DATE_START,
-          ConfigValueFactory.fromAnyRef(dateFormatter.format(dateFrom)))
         .withValue(LOAD_DATE_FROM,
           ConfigValueFactory.fromAnyRef(dateFormatter.format(dateFrom)))
       case None           => conf6
@@ -125,53 +122,46 @@ object CmdLineConfig {
 
     val conf8 = cmd.dateTo match {
       case Some(dateTo) => conf7
-        .withValue(WatcherConfig.LOAD_DATE_TO,
+        .withValue(LOAD_DATE_TO,
           ConfigValueFactory.fromAnyRef(dateFormatter.format(dateTo)))
-        .withValue(WatcherConfig.CURRENT_DATE,
+        .withValue(CURRENT_DATE,
           ConfigValueFactory.fromAnyRef(dateFormatter.format(dateTo)))
-        .withValue(WatcherConfig.TRACK_DAYS,
+        .withValue(TRACK_DAYS,
           ConfigValueFactory.fromAnyRef(0))
       case None         => conf7
     }
 
     val conf9 = cmd.trackUpdates match {
       case Some(trackUpdates) => conf8
-        .withValue(WatcherConfig.TRACK_UPDATES,
+        .withValue(TRACK_UPDATES,
           ConfigValueFactory.fromAnyRef(trackUpdates))
       case None               => conf8
     }
 
-    val conf10 = cmd.tableNum match {
-      case Some(tableNum) => conf9
-        .withValue(WatcherConfig.RUN_ONLY_TABLE,
-          ConfigValueFactory.fromAnyRef(tableNum))
-      case None           => conf9
+    val conf10 = cmd.undercover match {
+      case Some(v) => conf9.withValue(UNDERCOVER, ConfigValueFactory.fromAnyRef(v))
+      case None    => conf9
     }
 
-    val conf11 = cmd.undercover match {
-      case Some(v) => conf10.withValue(WatcherConfig.RUN_UNDERCOVER, ConfigValueFactory.fromAnyRef(v))
+    val conf11 = cmd.dryRun match {
+      case Some(v) => conf10.withValue(DRY_RUN, ConfigValueFactory.fromAnyRef(v))
       case None    => conf10
     }
 
-    val conf12 = cmd.dryRun match {
-      case Some(v) => conf11.withValue(WatcherConfig.DRY_RUN, ConfigValueFactory.fromAnyRef(v))
+    val conf12 = cmd.useLock match {
+      case Some(v) => conf11.withValue(USE_LOCK, ConfigValueFactory.fromAnyRef(v))
       case None    => conf11
     }
 
-    val conf13 = cmd.useLock match {
-      case Some(v) => conf12.withValue(WatcherConfig.RUN_USE_LOCK, ConfigValueFactory.fromAnyRef(v))
+    val conf13 = cmd.inverseOrder match {
+      case Some(v) => conf12.withValue(IS_INVERSE_ORDER, ConfigValueFactory.fromAnyRef(v))
       case None    => conf12
     }
 
-    val conf14 = cmd.inverseOrder match {
-      case Some(v) => conf13.withValue(IS_INVERSE_ORDER, ConfigValueFactory.fromAnyRef(v))
-      case None    => conf13
-    }
-
     if (cmd.mode.nonEmpty) {
-      conf14.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
+      conf13.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
     } else {
-      conf14
+      conf13
     }
   }
 

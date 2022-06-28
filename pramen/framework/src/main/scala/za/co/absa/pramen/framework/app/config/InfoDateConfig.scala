@@ -16,7 +16,6 @@
 package za.co.absa.pramen.framework.app.config
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.config.WatcherConfig.{EXPECTED_DELAY_DAYS, TRACK_DAYS}
 import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL
 import za.co.absa.pramen.framework.utils.DateUtils.convertStrToDate
 
@@ -41,6 +40,9 @@ object InfoDateConfig {
   val INFORMATION_DATE_EXPRESSION_DAILY_KEY = "pramen.default.daily.output.info.date.expr"
   val INFORMATION_DATE_EXPRESSION_WEEKLY_KEY = "pramen.default.weekly.output.info.date.expr"
   val INFORMATION_DATE_EXPRESSION_MONTHLY_KEY = "pramen.default.monthly.output.info.date.expr"
+
+  val TRACK_DAYS = "pramen.track.days"
+  val EXPECTED_DELAY_DAYS = "pramen.expected.delay.days"
 
   def fromConfig(conf: Config): InfoDateConfig = {
     val dateFormat = conf.getString(INFORMATION_DATE_FORMAT_KEY)

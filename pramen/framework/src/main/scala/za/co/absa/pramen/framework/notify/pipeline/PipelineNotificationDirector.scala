@@ -16,8 +16,8 @@
 package za.co.absa.pramen.framework.notify.pipeline
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.framework.app.config.RuntimeConfig.{DRY_RUN, UNDERCOVER}
 import za.co.absa.pramen.framework.config.Keys
-import za.co.absa.pramen.framework.config.WatcherConfig.{DRY_RUN, RUN_UNDERCOVER}
 import za.co.absa.pramen.framework.utils.ConfigUtils
 
 object PipelineNotificationDirector {
@@ -31,7 +31,7 @@ object PipelineNotificationDirector {
     val minRps = conf.getInt(Keys.WARN_THROUGHPUT_RPS)
     val goodRps = conf.getInt(Keys.GOOD_THROUGHPUT_RPS)
     val dryRun = conf.getBoolean(DRY_RUN)
-    val undercover = ConfigUtils.getOptionBoolean(conf, RUN_UNDERCOVER).getOrElse(false)
+    val undercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
     notificationBuilder.addAppName(notification.pipelineName)
     notificationBuilder.addEnvironmentName(notification.environmentName)

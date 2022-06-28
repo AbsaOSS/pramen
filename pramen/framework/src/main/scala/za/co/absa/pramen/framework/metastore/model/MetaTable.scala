@@ -17,9 +17,8 @@ package za.co.absa.pramen.framework.metastore.model
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.metastore.{MetaTable => MetaTableApi}
+import za.co.absa.pramen.framework.app.config.InfoDateConfig
 import za.co.absa.pramen.framework.config.InfoDateOverride
-import za.co.absa.pramen.framework.config.Keys.{INFORMATION_DATE_COLUMN, INFORMATION_DATE_FORMAT_APP}
-import za.co.absa.pramen.framework.config.WatcherConfig.{INFORMATION_DATE_START, TRACK_DAYS}
 import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL
 import za.co.absa.pramen.framework.utils.DateUtils.convertStrToDate
 import za.co.absa.pramen.framework.utils.{AlgorithmicUtils, ConfigUtils}
@@ -37,10 +36,10 @@ object MetaTable {
   val WRITE_OPTION_KEY = "write.option"
 
   def fromConfig(conf: Config, key: String): Seq[MetaTableApi] = {
-    val defaultInfoDateColumnName = conf.getString(INFORMATION_DATE_COLUMN)
-    val defaultInfoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
-    val defaultStartDate = convertStrToDate(conf.getString(INFORMATION_DATE_START), DATE_FORMAT_INTERNAL, defaultInfoDateFormat)
-    val defaultTrackDays = conf.getInt(TRACK_DAYS)
+    val defaultInfoDateColumnName = conf.getString(InfoDateConfig.INFORMATION_DATE_COLUMN_KEY)
+    val defaultInfoDateFormat = conf.getString(InfoDateConfig.INFORMATION_DATE_FORMAT_KEY)
+    val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DATE_FORMAT_INTERNAL, defaultInfoDateFormat)
+    val defaultTrackDays = conf.getInt(InfoDateConfig.TRACK_DAYS)
 
     val tableConfigs = conf.getConfigList(key).asScala
 

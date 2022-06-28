@@ -17,8 +17,8 @@ package za.co.absa.pramen.tests
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
+import za.co.absa.pramen.framework.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.framework.app.config.RuntimeConfig._
-import za.co.absa.pramen.framework.config.WatcherConfig
 import za.co.absa.pramen.framework.utils.ConfigUtils
 import za.co.absa.pramen.runner.cmd.CmdLineConfig
 
@@ -26,8 +26,9 @@ class CmdLineLineConfigSuite extends WordSpec {
 
   private val emptyConfig = ConfigFactory.empty
   private val populatedConfig = ConfigFactory.parseString(
-    s"""${WatcherConfig.DRY_RUN} = false
-       |${WatcherConfig.RERUN_INFO_DATE} = 2020-08-10
+    s"""$DRY_RUN = false
+       |$CURRENT_DATE = 2020-08-10
+       |$IS_RERUN = true
        |""".stripMargin
   )
 
@@ -122,56 +123,55 @@ class CmdLineLineConfigSuite extends WordSpec {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run", "false"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(!config.hasPath(WatcherConfig.RERUN_INFO_DATE))
-      assert(config.hasPath(WatcherConfig.DRY_RUN))
-      assert(!config.getBoolean(WatcherConfig.DRY_RUN))
+      assert(!config.hasPath(CURRENT_DATE))
+      assert(config.hasPath(DRY_RUN))
+      assert(!config.getBoolean(DRY_RUN))
+      assert(!config.hasPath(IS_RERUN))
     }
 
     "return a modified config if dry-run is true" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run", "true"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.DRY_RUN))
-      assert(config.getBoolean(WatcherConfig.DRY_RUN))
-      assert(!config.hasPath(WatcherConfig.RERUN_INFO_DATE))
+      assert(config.hasPath(DRY_RUN))
+      assert(config.getBoolean(DRY_RUN))
+      assert(!config.hasPath(CURRENT_DATE))
+      assert(!config.hasPath(IS_RERUN))
     }
 
     "return a modified config if rerun info date is specified" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--rerun", "2020-08-16"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.RERUN_INFO_DATE))
-      assert(config.getString(WatcherConfig.RERUN_INFO_DATE) == "2020-08-16")
+      assert(config.hasPath(CURRENT_DATE))
+      assert(config.getString(CURRENT_DATE) == "2020-08-16")
       assert(config.hasPath(IS_RERUN))
       assert(config.getBoolean(IS_RERUN))
-      assert(config.hasPath(WatcherConfig.CURRENT_DATE))
-      assert(config.getString(WatcherConfig.CURRENT_DATE) == "2020-08-16")
     }
 
     "return a modified config if current date override is specified" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date", "2020-08-15"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.CURRENT_DATE))
-      assert(config.getString(WatcherConfig.CURRENT_DATE) == "2020-08-15")
+      assert(config.hasPath(CURRENT_DATE))
+      assert(config.getString(CURRENT_DATE) == "2020-08-15")
+      assert(!config.hasPath(IS_RERUN))
     }
 
     "return a proper dates when both rerun and current dates are specified" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date", "2020-08-15", "--rerun", "2020-08-16"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.CURRENT_DATE))
-      assert(config.hasPath(WatcherConfig.RERUN_INFO_DATE))
-      assert(config.getString(WatcherConfig.CURRENT_DATE) == "2020-08-15")
-      assert(config.getString(WatcherConfig.RERUN_INFO_DATE) == "2020-08-16")
+      assert(config.hasPath(CURRENT_DATE))
+      assert(config.getString(CURRENT_DATE) == "2020-08-15")
+      assert(config.hasPath(IS_RERUN))
+      assert(config.getBoolean(IS_RERUN))
     }
 
     "return a modified config if date-from override is specified" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date-from", "2020-08-15"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.INFORMATION_DATE_START))
-      assert(config.getString(WatcherConfig.INFORMATION_DATE_START) == "2020-08-15")
       assert(config.hasPath(LOAD_DATE_FROM))
       assert(config.getString(LOAD_DATE_FROM) == "2020-08-15")
     }
@@ -180,10 +180,10 @@ class CmdLineLineConfigSuite extends WordSpec {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date-to", "2020-08-15", "--inverse-order", "true", "--run-mode", "fill_gaps"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.LOAD_DATE_TO))
-      assert(config.getString(WatcherConfig.LOAD_DATE_TO) == "2020-08-15")
-      assert(config.hasPath(WatcherConfig.TRACK_DAYS))
-      assert(config.getString(WatcherConfig.TRACK_DAYS) == "0")
+      assert(config.hasPath(LOAD_DATE_TO))
+      assert(config.getString(LOAD_DATE_TO) == "2020-08-15")
+      assert(config.hasPath(TRACK_DAYS))
+      assert(config.getString(TRACK_DAYS) == "0")
       assert(config.hasPath(IS_INVERSE_ORDER))
       assert(config.getBoolean(IS_INVERSE_ORDER))
       assert(config.getString(RUN_MODE) == "fill_gaps")
@@ -193,11 +193,11 @@ class CmdLineLineConfigSuite extends WordSpec {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--inverse-order", "false"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.RERUN_INFO_DATE))
-      assert(config.hasPath(WatcherConfig.DRY_RUN))
+      assert(config.hasPath(CURRENT_DATE))
+      assert(config.hasPath(DRY_RUN))
 
-      assert(!config.getBoolean(WatcherConfig.DRY_RUN))
-      assert(config.getString(WatcherConfig.RERUN_INFO_DATE) == "2020-08-10")
+      assert(!config.getBoolean(DRY_RUN))
+      assert(config.getString(CURRENT_DATE) == "2020-08-10")
 
       assert(config.hasPath(IS_INVERSE_ORDER))
       assert(!config.getBoolean(IS_INVERSE_ORDER))
@@ -207,66 +207,66 @@ class CmdLineLineConfigSuite extends WordSpec {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--rerun", "2020-08-16", "--dry-run", "true", "--check-late-only"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.RERUN_INFO_DATE))
-      assert(config.hasPath(WatcherConfig.DRY_RUN))
+      assert(config.hasPath(CURRENT_DATE))
+      assert(config.hasPath(DRY_RUN))
 
-      assert(config.getBoolean(WatcherConfig.DRY_RUN))
-      assert(config.getBoolean(WatcherConfig.CHECK_ONLY_LATE_DATA))
-      assert(config.getString(WatcherConfig.RERUN_INFO_DATE) == "2020-08-16")
+      assert(config.getBoolean(DRY_RUN))
+      assert(config.getBoolean(CHECK_ONLY_LATE_DATA))
+      assert(config.getString(CURRENT_DATE) == "2020-08-16")
     }
 
     "return the modified config if track updates = true" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--track-updates", "true"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.TRACK_UPDATES))
+      assert(config.hasPath(TRACK_UPDATES))
 
-      assert(config.getBoolean(WatcherConfig.TRACK_UPDATES))
+      assert(config.getBoolean(TRACK_UPDATES))
     }
 
     "return the modified config if track updates = false" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--track-updates", "false"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.TRACK_UPDATES))
+      assert(config.hasPath(TRACK_UPDATES))
 
-      assert(!config.getBoolean(WatcherConfig.TRACK_UPDATES))
+      assert(!config.getBoolean(TRACK_UPDATES))
     }
 
     "return the modified config if undercover = true" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--undercover", "true"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.RUN_UNDERCOVER))
+      assert(config.hasPath(UNDERCOVER))
 
-      assert(config.getBoolean(WatcherConfig.RUN_UNDERCOVER))
+      assert(config.getBoolean(UNDERCOVER))
     }
 
     "return the modified config if useLock = true" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--use-lock", "true"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.RUN_USE_LOCK))
+      assert(config.hasPath(USE_LOCK))
 
-      assert(config.getBoolean(WatcherConfig.RUN_USE_LOCK))
+      assert(config.getBoolean(USE_LOCK))
     }
 
     "return the modified config if useLock = false" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--use-lock", "false"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.RUN_USE_LOCK))
+      assert(config.hasPath(USE_LOCK))
 
-      assert(!config.getBoolean(WatcherConfig.RUN_USE_LOCK))
+      assert(!config.getBoolean(USE_LOCK))
     }
 
     "return the modified config if undercover = false" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--undercover", "false"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(WatcherConfig.RUN_UNDERCOVER))
+      assert(config.hasPath(UNDERCOVER))
 
-      assert(!config.getBoolean(WatcherConfig.RUN_UNDERCOVER))
+      assert(!config.getBoolean(UNDERCOVER))
     }
 
     "return None on invalid run mode" in {

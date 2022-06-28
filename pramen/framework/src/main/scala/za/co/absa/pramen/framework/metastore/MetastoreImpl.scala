@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.reader.TableReader
 import za.co.absa.pramen.api.writer.TableWriter
 import za.co.absa.pramen.framework.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
-import za.co.absa.pramen.framework.config.WatcherConfig.TEMPORARY_DIRECTORY
+import za.co.absa.pramen.framework.config.Keys.TEMPORARY_DIRECTORY
 import za.co.absa.pramen.framework.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
 import za.co.absa.pramen.framework.metastore.model.{MetaTable => MetaTableBuilder}
 import za.co.absa.pramen.framework.metastore.peristence.MetastorePersistence

@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
-import za.co.absa.pramen.framework.config.WatcherConfig.EXPECTED_DELAY_DAYS
+import za.co.absa.pramen.framework.app.config.InfoDateConfig.EXPECTED_DELAY_DAYS
 
 import scala.collection.JavaConverters._
 
