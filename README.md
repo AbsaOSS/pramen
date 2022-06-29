@@ -1,11 +1,11 @@
 
-# About SyncWatcher
-[![Build](https://github.com/absa-group/sync-watcher/workflows/Build/badge.svg)](https://github.com/absa-group/sync-watcher/actions)
+# About Pramen
+[![Build](https://github.com/AbsaOSS/pramen/workflows/Build/badge.svg)](https://github.com/AbsaOSS/pramen/actions)
 
-SyncWatcher is a framework for defining data pipelines based on Spark and a configuration driven tool to run and
+Pramen is a framework for defining data pipelines based on Spark and a configuration driven tool to run and
 coordinate those pipelines. The project focuses around Hadoop and Spark, but can run arbitrary jobs.
 
-The idea behind SyncWatcher pipelines is easy. A pipeline consists of
+The idea behind Pramen pipelines is simple. A pipeline consists of
 * _Sources_ are the data systems that is not managed by the pipeline. An example could be an operational relational database.
   - Ingestion jobs are used to get data from external systems into the metastore.
 * _Metastore_ is the data storage managed by the pipeline. Data in the metastore is accessed by table names.
@@ -14,14 +14,14 @@ The idea behind SyncWatcher pipelines is easy. A pipeline consists of
     Transformers can be written in Scala on in Python.
 * _Sinks_ are targets to send data from the metastore to. An example could be a Kafka cluster or a local folder to save
   CSV files to.
-  - Sink jobs are used to send data from the matastore to sinks
+  - Sink jobs are used to send data from the metastore to sinks
 
-The architecture is customizable so you can define your own sources, transformers and sinks and deploy it independently
+The architecture is customizable, so you can define your own sources, transformers and sinks and deploy it independently
 from the framework.
 
 ![](resources/concepts.png)
 
-With SyncWatcher you can:
+With Pramen you can:
 * Build a data lake for tabular data.
   - Define ingestion jobs to get data from external data sources to HDFS or S3.
   - Organize data by partitioning it according to event or snapshot date.
@@ -34,10 +34,10 @@ With SyncWatcher you can:
   - Use transformers to clean, aggregate and extract features from the raw data  in the metastore.
   - Use sinks to train and deploy models or to send data from the metastore to target systems.
 
-There are many other data pipeline management tools. Why you would want to use SyncWatcher?
+There are many other data pipeline management tools. Why you would want to use Pramen?
 
 * Declarative pipeline definitions
-  - You define dependencies for transformers and SyncWatcher will resolve them for you making sure a transformation
+  - You define dependencies for transformers and Pramen will resolve them for you making sure a transformation
     runs only when all dependencies are satisfied.
 * Auto-healing as much as possible
   - Keeping pipeline state allows quicker recovery from a faulty source or transformation since the framework will
@@ -45,25 +45,42 @@ There are many other data pipeline management tools. Why you would want to use S
   - Handling of late data and retrospective updates to data in data sources by re-running dependent jobs.
   - Handling of schema changes from data sources.
 * Functional design
-  - The discipline on restricting mutable operations allows replayable deterministic pipelines.
+  - The discipline on restricting mutable operations allows re-playable deterministic pipelines.
   - Easier to test individual transformers.
 * Language support
-  - You can use Scala and Python transformers and mix them.
+  - You can use Scala and Python transformers and combine them.
 * Extendable
-  - Your data source or sink is not supported by SyncWatcher yet? You can implement your own very easy.
+  - If your data source or sink is not supported by Pramen yet? You can implement your own very easy.
 * Builtin support of various relational database sources
-  - SyncWatcher already supports getting data from the following RDMS: PostgreSQL, Oracle Data Warehouse, Microsoft SQL Server,
-    Denodo Virtualized data sources.
+  - Pramen already supports getting data from the following RDMS: PostgreSQL, Oracle Data Warehouse, Microsoft SQL Server,
+    Denodo Virtualized and other standard JDBC compliant data sources 
+    
+# Typical Use Case and Benefits
+
+Many environments still have numerous heterogeneous data sources that aren't integrated into a central data lake environment.
+
+Pramen provides the ability to ingest and manage data pipelines en-masse from sourcing to producing.
+
+Pramen assists with simplifying the efforts of ingestion and orchestration to a "no/low-code" level:
+ - Automatic data loading and recovery (including missed and late data sources)
+ - Automatic data reloading (partial or incorrect data load)
+ - Automatic orchestration and coordination of dependant jobs (re-run downstream Pramen jobs automatically when upstream jobs are re-executed)
+
+In addition to basic error notification, typical operational warnings are generated through email notifications such as:
+ - Changes to upstream schema (unexpected changes to source data schemas) 
+ - Sourcing performance thresholds (unexpected slower than expected data throughput)
+
+**With Pramen data engineers and data scientists to focus on development and worry less about monitoring and maintaining existing data and machine learning pipelines.**
 
 # Quick start
 
-1. Get SyncWatcher pipeline runner:
+1. Get Pramen pipeline runner:
 
-   You can download SyncWatcher from Maven by following link: [SyncWatcher]()
+   You can download Pramen from Maven by following link: [Pramen]()
 
    Or you can build it from source by running:
    ```sh
-   git clone https://github.com/absa-group/sync-watcher
+   git clone https://github.com/AbsaOSS/pramen
    mvn clean package
    ```
    (You need JDK 1.8 and Maven installed to run this)
@@ -80,8 +97,8 @@ There are many other data pipeline management tools. Why you would want to use S
      --num-executors 1 \
      --driver-memory 2g \
      --executor-memory 2g \
-     --class za.co.absa.sync.watcher.runner.PipelineRunner \
-     sync-runner-0.12.10.jar \
+     --class za.co.absa.pramen.runner.PipelineRunner \
+     pipeline-runner-0.12.10.jar \
      --workflow ingestion_pipeline.conf \
      --rerun 2022-01-01
    ```
@@ -94,17 +111,19 @@ Let's take a look on components of a data pipeline in more detail.
 
 A pipeline consists of _sources_, _the metastore_ and _sinks_.
 
-Consequently there are 3 types of jobs:
+Currently there are 3 types of jobs:
 - _Ingestion_ jobs to get data from external sources to the metastore.
-- _Transformation jobs_ to transform data inside the matastore.
-- _Sink_ jobs to send data from the matastore to external systems.
+- _Transformation jobs_ to transform data inside the metastore.
+- _Sink_ jobs to send data from the metastore to external systems.
 
 ### Metastore
 A metastore helps to abstract away the tabular data and the underlying storage. The idea is simple: a data pipeline 
 designer can choose different ways of storing data, but implementers of transformations don't need to worry about it
 since they can access data by table names.
 
-The way it works is this. SyncWatcher can store data in folders of file systems supported by Hadoop (HDFS, S3, AzureFS,
+#### How does this work? 
+
+Pramen can store data in folders of file systems supported by Hadoop (HDFS, S3, AzureFS,
 etc.) in Parquet or Delta format, or as tables in DeltaLake. But implementers of transformations do not need to worry
 about the underlying storage. They can access it using `getTable()` method of a metastore object provided to them. The
 framework will provide them with a Spark DataFrame. 
@@ -113,19 +132,19 @@ framework will provide them with a Spark DataFrame.
 > system / data format to another seamlessly.
 
 #### Defining a metastore
-A metastore is just a mapping from a _table name_ to a _path_ where the data is stored. That's all it is.
+A metastore is simply a mapping from a _table name_ to a _path_ where the data is stored.
 
 ##### Storage types
 Currently, the following underlying storage is supported. 
-- Parquet files in Hadoop
-- Delta files in Hadoop
+- Parquet files in Hdfs
+- Delta files in Hdfs
 - DeltaLake tables
 
-Here is an example of a metastore configuration with a single table:
+Here is an example of a metastore configuration with a single table (Parquet format):
 ```config
 watcher.metastore {
   tables = [
-  {
+  {  
     name = "table_name"
     format = "parquet"
     path = "hdfs://cluster/path/to/parquet/folder"
@@ -158,7 +177,7 @@ Default information date settings can be set using the following configuration k
 
 | Name                                            | Default value     | Description                                        |
 |-------------------------------------------------|-------------------|----------------------------------------------------|
-| `watcher.information.date.column`               | syncwatcher_info_date | Default information date column name.              |
+| `watcher.information.date.column`               | pramen_info_date  | Default information date column name.              |
 | `watcher.information.date.format`               | yyyy-MM-dd        | Default information date format.                   |
 | `watcher.information.date.start`                | 2020-01-01        | Default starting date for tables in the metastore. |
 
@@ -200,7 +219,7 @@ Storage type examples:
 
 ### Sources
 
-Sources define endpoints and paths go get data into the pipeline. Currently, SyncWatcher supports the following
+Sources define endpoints and paths go get data into the pipeline. Currently, Pramen supports the following
 builtin sources:
 
 - **JDBC source** - allows fetching data from a relational database. The following RDBMS dialects are supported at
@@ -209,6 +228,7 @@ builtin sources:
    - Oracle (a JDBC driver should be provided in the classpath)
    - Microsoft SQL Server
    - Denodo (a JDBC driver should be provided in the classpath)
+   - Hive 1/2
 - **Parquet on Hadoop** - allows fetching data in Parquet format from any Hadoop-compatible store: HDFS, S3, etc.
 
 You can define your own source by implementing the corresponding interface.
@@ -220,13 +240,13 @@ watcher.sources = [
     # The name of the source. It will be used to refer to the source in the pipeline.
     name = "source1_name"
     # The factory class of the source determines the source type.
-    factory.class = "za.co.absa.sync.watcher.framework.source.JdbcSource"
+    factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
     
     # Depending of the factory source parameters vary.
   },
   {
     name = "source2_name"
-    factory.class = "za.co.absa.sync.watcher.framework.source.ParquetSource"
+    factory.class = "za.co.absa.pramen.framework.source.ParquetSource"
     # ...
   }
   ## etc
@@ -235,10 +255,10 @@ watcher.sources = [
 
 Builtin sources:
 
-| Factory Class                                            | Description               |
-|----------------------------------------------------------|---------------------------|
-| `za.co.absa.sync.watcher.framework.source.JdbcSource`    | JDBC Source               |
-| `za.co.absa.sync.watcher.framework.source.ParquetSource` | Parquet on Hadoop source. |
+| Factory Class                                       | Description               |
+|-----------------------------------------------------|---------------------------|
+| `za.co.absa.pramen.framework.source.JdbcSource`     | JDBC Source               |
+| `za.co.absa.pramen.framework.source.ParquetSource`  | Parquet on Hadoop source. |
 
 Here is how each of these sources can be configured:
 
@@ -248,7 +268,7 @@ is determined by the pipeline configuration.
 ```config
 {
     name = "source1_name"
-    factory.class = "za.co.absa.sync.watcher.framework.source.JdbcSource"
+    factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
 
     jdbc = {
       # Driver fully qualified class
@@ -302,8 +322,8 @@ is determined by the pipeline configuration.
   }
 ```
 
-You can specify more than one JDBC url. SyncWatcher will always try the primary URL first. If connection fails,
-it will try fallback URLs in random order. If the primary URL is not specified, SyncWatcher will try fallback URLs in
+You can specify more than one JDBC url. Pramen will always try the primary URL first. If connection fails,
+it will try fallback URLs in random order. If the primary URL is not specified, Pramen will try fallback URLs in
 random order. You can also specify the number of retries. By default the number of retries is the same as the number
 of URLs.
 
@@ -325,7 +345,7 @@ present. The exact path to the source is defined in the sourcing job configurati
 ```config
 {
     name = "parquet_source1"
-    factory.class = "za.co.absa.sync.watcher.framework.source.ParquetSource"
+    factory.class = "za.co.absa.pramen.framework.source.ParquetSource"
 
     # Specifies if tables of the data source have an information date colunn
     has.information.date.column = true
@@ -343,7 +363,7 @@ present. The exact path to the source is defined in the sourcing job configurati
 ```
 
 ### Sinks
-Sinks define a way data needs to be sent to a target system. Built-in sinks inclide:
+Sinks define a way data needs to be sent to a target system. Built-in sinks include:
 - Kafka sink.
 - CSV in a local folder sink.
 - Command Line sink.
@@ -362,7 +382,7 @@ Here is an example of a Kafka sink definition:
 {
   # Define a name to reference from the pipeline:
   name = "kafka_avro"
-  factory.class = "za.co.absa.sync.watcher.builtin.sink.KafkaAvroSink"
+  factory.class = "za.co.absa.pramen.builtin.sink.KafkaSink"
   
   writer.kafka {
     brokers = "mybroker1:9092,mybroker2:9092"
@@ -443,7 +463,7 @@ Here is an example of a CSV sink definition:
 ```config
 {
   name = "local_csv"
-  factory.class = "za.co.absa.sync.watcher.framework.sink.LocalCsvSink"
+  factory.class = "za.co.absa.pramen.framework.sink.LocalCsvSink"
   temp.hadoop.path = "/tmp/csv_sink"
   
   # This defines output file name pattern.
@@ -527,7 +547,7 @@ Here is an example of a command line sink definition that outputs to a CSV in a 
 ```config
 {
   name = "cmd_line"
-  factory.class = "za.co.absa.sync.watcher.framework.sink.CmdLineSink"
+  factory.class = "za.co.absa.pramen.framework.sink.CmdLineSink"
   
   # A temporary folder in Hadoop to put data to.
   temp.hadoop.path = "/tmp/cmd_line_sink"
@@ -600,7 +620,7 @@ The pipeline operation for this sink could look like this:
 
 ### Dynamic Conformance Engine (Enceladus) sink
 
-This sink is used to send data to the landing are of Enceladus Data Lake (also known as 'raw folder'). You can configure
+This sink is used to send data to the landing area of the Enceladus Data Lake (also known as 'raw folder'). You can configure
 output format, partition patterns and info file generation option for the sink.
 
 Here is an example configuration of a sink:
@@ -613,7 +633,7 @@ Here is an example configuration of a sink:
   # Define a name to reference from the pipeline:
   name = "enceladus_raw"
   
-  factory.class = "za.co.absa.sync.watcher.builtin.sink.EnceladusSink"
+  factory.class = "za.co.absa.pramen.builtin.sink.EnceladusSink"
   
   # Output format. Can be: csv, parquet, json, delta, etc (anything supported by Spark). Default: parquet
   format = "csv"
@@ -698,9 +718,9 @@ package com.example
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
-import za.co.absa.sync.watcher.api.Reason
-import za.co.absa.sync.watcher.api.metastore.MetastoreReader
-import za.co.absa.sync.watcher.api.v2.Transformer
+import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.MetastoreReader
+import za.co.absa.pramen.Transformer
 
 import java.time.LocalDate
 
@@ -732,12 +752,12 @@ class ExampleTransformer(conf: Config) extends Transformer {
   }
 }
 ```
-(full example: [IdentityTransformer.scala](framework/src/main/scala/za/co/absa/sync/watcher/framework/transformers/IdentityTransformer.scala))
+(full example: [IdentityTransformer.scala](pramen/framework/src/main/scala/za/co/absa/pramen/framework/transformers/IdentityTransformer.scala))
 
 You can refer to the transformer from the pipeline by its fully qualified class name (`com.example.ExampleTransformer` in this case).
 
 In order to define a transformer you need to define 2 methods:
-- `validate()` Validation allows doing pre-condition checks and fail gracefully, before the transfomer is going to be actually started.
+- `validate()` Validation allows pre-condition checks and failure to execute gracefully, before the transfomer is initialized.
   Alternativaly, throwing an exception inside this method is considered validation failure. 
 
   Possible validation return reasons:
@@ -749,7 +769,7 @@ In order to define a transformer you need to define 2 methods:
     so nothing to process.
 
 - `run()` Run the transformation and return a `DataFrame` containing transformation results. Input data can be fetched
-  from the metastore. If an exception is thrown from this method, it is considered a noj failure. The pipeline will try
+  from the metastore. If an exception is thrown from this method, it is not considered as a failure. The pipeline will try
   running such transformations again when run again for the same information date.
 
 Let's take a look at parameters passed to the transformer:
@@ -758,7 +778,7 @@ Let's take a look at parameters passed to the transformer:
 
   While this is useful, we would recommend avoiding it for passing parameters to transformers. Prefer `options` (below)
   when possible. 
-- `metastore: MetastoreReader` - this is the object you should get data from. While you can still use `spark.read(...)`,
+- `metastore: MetastoreReader` - this is the object you should use to access data. While you can still use `spark.read(...)`,
   the use of the metastore is strongly preferred in order to make transformers re-playable. 
   - `getTable()` - returns a `DataFrame` for the specified table and information date range. By default fetched data for
     the current information date.
@@ -795,9 +815,9 @@ class ExampleTransformation1(Transformation):
 
 Full example can be found here: [ToDo](ToDo)
 
-## Setting up the pipeline pipeline
+## Setting up a pipeline
 Once the metastore, sources, transformers and sinks are defined, they can be connected to form a data pipeline. A data
-pipeline in SyncWatcher defines a set of jobs that should run together or in a sequence. Your data engineering estate can
+pipeline in Pramen defines a set of jobs that should run together or in a sequence. Your data engineering estate can
 consist of several pipelines scheduled to run at different times. You can define dependencies between jobs in the pipeline
 and jobs between pipeline as long as these pipelines share the metastore. 
 
@@ -822,15 +842,15 @@ watcher {
   parallel.tasks = 1
 
   
-  # SyncWatcher-Py settings
+  # Pramen-Py settings
   py {
     # This is mandatory of you want to use Python transformations
-    location = "/opt/SyncWatcher-Py/bin"
+    location = "/opt/Pramen-Py/bin"
     
-    # Optionally you can specify SyncWatcher-Py executable name
-    executable = "syncwatcher-py"
+    # Optionally you can specify Pramen-Py executable name
+    executable = "pramen-py"
     
-    # Optionally you can override the default command line pattern for SyncWatcher-Py 
+    # Optionally you can override the default command line pattern for Pramen-Py 
     cmd.line.template = "@location/@executable transformations run @pythonClass -c @metastoreConfig --info-date @infoDate"
     
     # Optionally you can override the default number of log lines to include in email notifications on a transformation failure.
@@ -840,7 +860,7 @@ watcher {
 ```
 
 A pipeline is defined as a set of operations. Each operation is either a source, transformation or a sink job. When a pipeline is
-started, SyncWatcher splits operations into jobs, jobs into tasks:
+started, Pramen splits operations into jobs, jobs into tasks:
 
 ![](resources/ops_jobs_tasks.png)
 
@@ -887,7 +907,7 @@ watcher.operations = [
  {
     name = "A transformer"
     type = "transformer"
-    class = "za.co.absa.sync.watcher.framework.transformers.IdentityTransformer"
+    class = "za.co.absa.pramen.framework.transformers.IdentityTransformer"
     schedule.type = "daily"
 
     # Specifies a metastore table to save output data to
@@ -933,7 +953,7 @@ Each operation has the following properties:
 #### Schedule
 A schedule specifies when an operation should run. 
 
-SyncWatcher does not have a built-in scheduler, so an external scheduler should be used to trigger runs of a pipeline.
+Pramen does not have a built-in scheduler, so an external scheduler should be used to trigger runs of a pipeline.
 It can be AirFlow, Dagster, RunDeck, DataBricks job scheduler, or even  local cron. Usually a pipeline runs daily,
 but each operation can be configured to run only at specific days so some of them won't run each day. The schedule
 setting specifies exactly that.
@@ -1096,8 +1116,8 @@ transformations = [
 ],
 ```
 
-#### Columns selection
-Columns selection can be defined for any operation as well as any ingestion on sink table. Columns selection
+#### Columns selection / projection
+Columns selection or project can be defined for any operation as well as any ingestion on sink table. Columns selection
 are applied before saving data to the metastore table or before sending data to the sink.
 
 The purpose of columns selection is to define the set and the order of columns to load or send. Similar can be achieved
@@ -1358,7 +1378,7 @@ sink operation definition.
 ```
 
 ### Enceladus ingestion pipelines for the Data Lake
-SyncWatcher can help with ingesting data for data lake pipelines of [Enceladus](https://github.com/AbsaOSS/enceladus).
+Pramen can help with ingesting data for data lake pipelines of [Enceladus](https://github.com/AbsaOSS/enceladus).
 A special sink (`EnceladusSink`) is used to save data to Enceladus' raw folder.
 
 Here is a template for such a pipeline:
@@ -1381,7 +1401,7 @@ watcher.metastore {
 watcher.sources = [
   {
     name = "postgre"
-    factory.class = "za.co.absa.sync.watcher.framework.source.JdbcSource"
+    factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
 
     jdbc = {
       driver = "org.postgresql.Driver"
@@ -1404,7 +1424,7 @@ watcher.sources = [
 watcher.sinks = [
   {
     name = "enceladus_sink"
-    factory.class = "za.co.absa.sync.watcher.builtin.sink.EnceladusSink"
+    factory.class = "za.co.absa.pramen.builtin.sink.EnceladusSink"
 
     format = "json"
 
@@ -1477,7 +1497,7 @@ watcher.operations = [
 ```
 </details>
 
-More can be found at the implementation of the sink itself: [EnceladusSink](builtin-jobs/src/main/scala/za/co/absa/sync/watcher/builtin/sink/EnceladusSink.scala)
+More can be found at the implementation of the sink itself: [EnceladusSink](builtin-jobs/src/main/scala/za/co/absa/pramen/builtin/sink/EnceladusSink.scala)
 
 ## Schema evolutions patterns
 
@@ -1485,12 +1505,12 @@ More can be found at the implementation of the sink itself: [EnceladusSink](buil
 
 # Running pipelines
 
-SyncWatcher is a Spark application so a pipeline can be started using a job submission tool applicable for particular cluster.
+Pramen is a Spark application so a pipeline can be started using a job submission tool applicable for particular cluster.
 Usually a pipeline is ran daily. But each operation can define its own run schedule. If a pipeline is ran on a day
 not applicable for a particular operation, the operation will be automatically skipped. So at different days different set
 of operations is executed when you run a pipeline.
 
-SyncWatcher framework and some of built-in jobs are packaged in `sync-runner-x.y.z.jar`. In order to minimize chance of
+Pramen framework and some of built-in jobs are packaged in `pipeline-runner-x.y.z.jar`. In order to minimize chance of
 binary incompatibility with custom sources, sinks and transformers jobs that require additional libraries are packaged
 in `bultin-jobs-x.y.z.jar`. If you are running a pipeline with builtin jobs make sure `bultin-jobs-x.y.z.jar` is included
 in the class path.
@@ -1501,26 +1521,26 @@ in the class path.
 
 ## Running on Hadoop/Yarn clusters (like AWS EMR)
 
-Use `spark-submit` to run `sync-watcher` jobs.
+Use `spark-submit` to run `pramen` jobs.
 
 ```sh
-spark-submit --class za.co.absa.sync.watcher.runner.SyncWatcherRunner \
-  sync-runner-x.y.z.jar --workflow my_workflow.conf
+spark-submit --class za.co.absa.pramen.runner.PipelineRunner \
+  pipeline-runner-x.y.z.jar --workflow my_workflow.conf
 ```
 
 ### Running built-in jobs
 
 ```sh
 spark-submit --jars bultin-jobs-x.y.z.jar \
-  --class za.co.absa.sync.watcher.runner.SyncWatcherRunner \
-  sync-runner-x.y.z.jar --workflow my_workflow.conf
+  --class za.co.absa.pramen.runner.PipelineRunner \
+  pipeline-runner-x.y.z.jar --workflow my_workflow.conf
 ```
 
 When configuration files are located at HDFS or S3 use `--files` option to fetch the configuration:
 ```sh
 spark-submit --jars bultin-jobs-x.y.z.jar \
-  --class za.co.absa.sync.watcher.runner.SyncWatcherRunner \
-  sync-runner-x.y.z.jar --workflow ingestion_job.conf \
+  --class za.co.absa.pramen.runner.PipelineRunner \
+  pipeline-runner-x.y.z.jar --workflow ingestion_job.conf \
   --files s3://mybucket/ingestion_job.conf,s3://mybucket/common.conf,s3://mybucket/sources.conf,s3://mybucket/metastore.conf
 ```
 
@@ -1530,8 +1550,8 @@ To run builtin jobs just specify your custom jar with `--jars` when submitting t
 
 ```sh
 spark-submit --jars custom-x.y.z.jar \
-  --class za.co.absa.sync.watcher.runner.SyncWatcherRunner \
-  sync-runner-x.y.z.jar --workflow my_workflow.conf
+  --class za.co.absa.pramen.runner.PipelineRunner \
+  pipeline-runner-x.y.z.jar --workflow my_workflow.conf
 ```
 
 ## Running on Databricks
@@ -1539,17 +1559,17 @@ spark-submit --jars custom-x.y.z.jar \
 
 ## Default pipeline run
 
-When started without additional command line arguments SyncWatcher will run a normal daily pipeline checks and will execute
+When started without additional command line arguments Pramen will run a normal daily pipeline checks and will execute
 jobs scheduled for the day.
 
 Here is how it works. Suppose you run a pipeline at `2020-07-19` and `expected.delay.days = 1`. This means that
 the pipeline should process data for the `information date = 2020-07-18`, as usual for T+1 jobs. During a normal
-execution SyncWatcher will do the following:
+execution Pramen will do the following:
 
 ![](resources/run_diagram.png)
 
 - Check for retrospective updates of the source data according to `track.days` of corresponding tables in the metastore.
-  For this check SyncWatcherwill query sources for record counts for each of previous days.
+  For this check Pramen will query sources for record counts for each of previous days.
   - If a mismatch is found (as at `2020-07-16` on this diagram), the data is reloaded and dependent transformers are
     recomputed (if `trigger.updates = true`)
 - Check for late data by querying sources for records for previous days if none were loaded. If such data is found, it
@@ -1580,10 +1600,10 @@ Execution options:
 
 | Argument                   | Example             | Description                                                                                                                                                                                                         |
 |----------------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| --dry-run <true/false>]    | `--dry-run true`    | If `true` the pipeline won't be executed. SyncWatcher will print which job it would have run.                                                                                                                       |
-| --check-late-only          | `--check-late-only` | If specified, SyncWatcher will do only late data checks and checks for retrospective updates. It won't run jobs that are not yet late. Useful for catch-up job schedules.                                           |
-| --check-new-only           | `--check-new-only`  | If specified, SyncWatcher will not check for late and updated data and will run only jobs scheduled for the current date.                                                                                           |
-| --undercover <true/false>  | `--undercover true` | If true, SyncWatcher will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
+| --dry-run <true/false>]    | `--dry-run true`    | If `true` the pipeline won't be executed. Pramen will print which job it would have run.                                                                                                                       |
+| --check-late-only          | `--check-late-only` | If specified, Pramen will do only late data checks and checks for retrospective updates. It won't run jobs that are not yet late. Useful for catch-up job schedules.                                           |
+| --check-new-only           | `--check-new-only`  | If specified, Pramen will not check for late and updated data and will run only jobs scheduled for the current date.                                                                                           |
+| --undercover <true/false>  | `--undercover true` | If true, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
 
 ### Command line examples
 
