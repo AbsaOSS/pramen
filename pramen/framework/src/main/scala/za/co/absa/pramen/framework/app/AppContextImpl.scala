@@ -18,13 +18,13 @@ package za.co.absa.pramen.framework.app
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.Metastore
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.journal.Journal
 import za.co.absa.pramen.framework.lock.{TokenLockFactory, TokenLockFactoryAllow}
 import za.co.absa.pramen.framework.metastore.MetastoreImpl
 
 class AppContextImpl(val appConfig: AppConfig,
-                     val bookkeeper: SyncBookKeeper,
+                     val bookkeeper: Bookkeeper,
                      val tokenLockFactory: TokenLockFactory,
                      val journal: Journal,
                      val metastore: Metastore
@@ -51,7 +51,7 @@ object AppContextImpl {
 
     val appConfig = AppConfig.fromConfig(conf)
 
-    val (bookkeeper, tokenLockFactory, journal, closable) = SyncBookKeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
+    val (bookkeeper, tokenLockFactory, journal, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
 
     val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper)
 
@@ -69,7 +69,7 @@ object AppContextImpl {
   }
 
   def getMock(conf: Config,
-              bookkeeper: SyncBookKeeper,
+              bookkeeper: Bookkeeper,
               journal: Journal)(implicit spark: SparkSession): AppContextImpl = {
     val appConfig = AppConfig.fromConfig(conf)
 

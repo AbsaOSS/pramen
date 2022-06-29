@@ -18,14 +18,14 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{MetaTable, MetaTableStats, Metastore, Reason, Transformer}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
 
 class TransformationJob(operationDef: OperationDef,
                         metastore: Metastore,
-                        bookkeeper: SyncBookKeeper,
+                        bookkeeper: Bookkeeper,
                         outputTable: MetaTable,
                         transformer: Transformer)
                        (implicit spark: SparkSession)

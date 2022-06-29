@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.runner.jobrunner
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.pipeline.Job
 import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.framework.runner.splitter.ScheduleParams
@@ -33,7 +33,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
-                              bookkeeper: SyncBookKeeper,
+                              bookkeeper: Bookkeeper,
                               taskRunner: TaskRunner) extends ConcurrentJobRunner {
   private val log = LoggerFactory.getLogger(this.getClass)
 

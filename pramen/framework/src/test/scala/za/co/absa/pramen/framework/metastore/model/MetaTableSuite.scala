@@ -29,7 +29,7 @@ class MetaTableSuite extends WordSpec {
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 2
           |
-          |syncpramen.metastore.tables = [
+          |pramen.metastore.tables = [
           |  {
           |    name = table1
           |    format = parquet
@@ -50,7 +50,7 @@ class MetaTableSuite extends WordSpec {
           |]
           |""".stripMargin)
 
-      val metaTables = MetaTable.fromConfig(conf, "syncpramen.metastore.tables")
+      val metaTables = MetaTable.fromConfig(conf, "pramen.metastore.tables")
 
       assert(metaTables.size == 3)
       assert(metaTables.head.name == "table1")
@@ -76,7 +76,7 @@ class MetaTableSuite extends WordSpec {
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 1
           |
-          |syncpramen.metastore.tables = [
+          |pramen.metastore.tables = [
           |  {
           |    name = table1
           |    format = parquet
@@ -96,7 +96,7 @@ class MetaTableSuite extends WordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfig(conf, "syncpramen.metastore.tables")
+        MetaTable.fromConfig(conf, "pramen.metastore.tables")
       }
 
       assert(ex.getMessage.contains("Duplicate table definitions in the metastore: TABLE1"))

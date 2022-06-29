@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.{Metastore, Transformer}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.pipeline.OperationType._
 import za.co.absa.pramen.framework.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.framework.process.ProcessRunnerImpl
@@ -28,7 +28,7 @@ import za.co.absa.pramen.framework.utils.ClassLoaderUtils
 
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
-                        bookkeeper: SyncBookKeeper)(implicit spark: SparkSession) {
+                        bookkeeper: Bookkeeper)(implicit spark: SparkSession) {
   def createJobs(operationDef: OperationDef): Seq[Job] = {
     operationDef.operationType match {
       case Ingestion(sourceName, sourceTables)            => createIngestion(operationDef, sourceName, sourceTables)

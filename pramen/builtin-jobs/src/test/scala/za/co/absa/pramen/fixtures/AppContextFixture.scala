@@ -19,7 +19,7 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.framework.AppContextFactory
 import za.co.absa.pramen.framework.app.AppContext
-import za.co.absa.pramen.framework.bookkeeper.{SyncBookKeeper, SyncBookKeeperNull}
+import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperNull}
 import za.co.absa.pramen.framework.journal.{Journal, JournalNull}
 import za.co.absa.pramen.framework.utils.ResourceUtils
 
@@ -27,7 +27,7 @@ trait AppContextFixture {
 
   def withAppContext(spark: SparkSession,
                      confBase: Config = ConfigFactory.empty(),
-                     bookkeeper: SyncBookKeeper = new SyncBookKeeperNull()
+                     bookkeeper: Bookkeeper = new BookkeeperNull()
                     )(f: AppContext => Unit): Unit = {
     val configStr = ResourceUtils.getResourceString("/test/app_context.conf")
 

@@ -16,12 +16,12 @@
 package za.co.absa.pramen.framework.tests.bookkeeper
 
 import org.scalatest.BeforeAndAfter
-import za.co.absa.pramen.framework.bookkeeper.{SyncBookKeeper, SyncBookKeeperMongoDb}
+import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperMongoDb}
 import za.co.absa.pramen.framework.fixtures.MongoDbFixture
 
-class SyncBookKeeperMongoDbLongSuite extends SyncBookKeeperCommonSuite with MongoDbFixture with BeforeAndAfter {
+class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixture with BeforeAndAfter {
 
-  import SyncBookKeeperMongoDb._
+  import BookkeeperMongoDb._
   import za.co.absa.pramen.framework.dao.ScalaMongoImplicits._
 
   before {
@@ -33,8 +33,8 @@ class SyncBookKeeperMongoDbLongSuite extends SyncBookKeeperCommonSuite with Mong
     }
   }
 
-  def getBookkeeper: SyncBookKeeper = {
-    new SyncBookKeeperMongoDb(connection)
+  def getBookkeeper: Bookkeeper = {
+    new BookkeeperMongoDb(connection)
   }
 
   "BookkeeperMongoDb" when {

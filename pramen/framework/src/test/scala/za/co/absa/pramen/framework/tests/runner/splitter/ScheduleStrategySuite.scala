@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.tests.runner.splitter
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.{Schedule, MetastoreDependency}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.pipeline
 import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.mocks.DataChunkFactory.getDummyDataChunk
@@ -45,7 +45,7 @@ class ScheduleStrategySuite extends WordSpec {
       val schedule = Schedule.EveryDay()
 
       "normal execution" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -65,7 +65,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "late only" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -80,7 +80,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "new only" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -95,7 +95,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "incorrect settings" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -108,7 +108,7 @@ class ScheduleStrategySuite extends WordSpec {
 
       "rerun" when {
         "normal rerun" in {
-          val bk = mock(classOf[SyncBookKeeper])
+          val bk = mock(classOf[Bookkeeper])
           val infoDateExpression = "@runDate - 2"
 
           when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
@@ -123,7 +123,7 @@ class ScheduleStrategySuite extends WordSpec {
         }
 
         "earlier than the minimum date" in {
-          val bk = mock(classOf[SyncBookKeeper])
+          val bk = mock(classOf[Bookkeeper])
 
           when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -136,7 +136,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "historical" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
         when(bk.getDataChunksCount(outputTable, Some(runDate.minusDays(3)), Some(runDate.minusDays(3)))).thenReturn(100)
 
         "fill gaps" in {
@@ -194,7 +194,7 @@ class ScheduleStrategySuite extends WordSpec {
       val nextSunday = runDate.plusDays(2)
 
       "normal execution" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(9)))
 
         "default behavior" in {
@@ -237,7 +237,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "rerun" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
         val infoDateExpression = "@runDate - 2"
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(9)))
@@ -262,7 +262,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "historical" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
         when(bk.getDataChunksCount(outputTable, Some(lastSaturday), Some(lastSaturday))).thenReturn(100)
 
         "fill gaps" in {
@@ -317,7 +317,7 @@ class ScheduleStrategySuite extends WordSpec {
       val schedule = Schedule.EveryDay()
 
       "normal setup" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -390,7 +390,7 @@ class ScheduleStrategySuite extends WordSpec {
 
       "rerun" when {
         "normal rerun" in {
-          val bk = mock(classOf[SyncBookKeeper])
+          val bk = mock(classOf[Bookkeeper])
           val infoDateExpression = "@runDate - 2"
 
           when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
@@ -405,7 +405,7 @@ class ScheduleStrategySuite extends WordSpec {
         }
 
         "earlier than the minimum date" in {
-          val bk = mock(classOf[SyncBookKeeper])
+          val bk = mock(classOf[Bookkeeper])
 
           when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -418,7 +418,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "historical" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
         when(bk.getDataChunksCount(outputTable, Some(runDate.minusDays(3)), Some(runDate.minusDays(3)))).thenReturn(100)
 
         "fill gaps" in {
@@ -476,7 +476,7 @@ class ScheduleStrategySuite extends WordSpec {
       val nextSunday = runDate.plusDays(2)
 
       "normal setup" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(2)))
 
@@ -551,7 +551,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "rerun" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
         val infoDateExpression = "@runDate - 2"
 
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(9)))
@@ -576,7 +576,7 @@ class ScheduleStrategySuite extends WordSpec {
       }
 
       "historical" when {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
         when(bk.getDataChunksCount(outputTable, Some(lastSaturday), Some(lastSaturday))).thenReturn(100)
 
         "fill gaps" in {

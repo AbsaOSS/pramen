@@ -28,7 +28,7 @@ import za.co.absa.pramen.framework.utils.SlickUtils
 import java.time.LocalDate
 import scala.util.control.NonFatal
 
-class SyncBookKeeperJdbc(db: Database) extends SyncBookKeeper {
+class BookkeeperJdbc(db: Database) extends Bookkeeper {
 
   import za.co.absa.pramen.framework.utils.FutureImplicits._
 
@@ -198,17 +198,17 @@ class SyncBookKeeperJdbc(db: Database) extends SyncBookKeeper {
   }
 }
 
-object SyncBookKeeperJdbc {
+object BookkeeperJdbc {
 
-  def fromJdbcConfig(jdbcConfig: JdbcConfig): SyncBookKeeperJdbc = {
+  def fromJdbcConfig(jdbcConfig: JdbcConfig): BookkeeperJdbc = {
     val url = new JdbcUrlSelector(jdbcConfig).getUrl
     val db = Database.forURL(url = url, user = jdbcConfig.user, password = jdbcConfig.password, driver = jdbcConfig.driver)
-    new SyncBookKeeperJdbc(db)
+    new BookkeeperJdbc(db)
   }
 
-  def fromConfig(conf: Config, path: String): SyncBookKeeperJdbc = {
+  def fromConfig(conf: Config, path: String): BookkeeperJdbc = {
     val db = Database.forConfig(path, conf)
-    new SyncBookKeeperJdbc(db)
+    new BookkeeperJdbc(db)
   }
 
 }

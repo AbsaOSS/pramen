@@ -16,11 +16,11 @@
 package za.co.absa.pramen.framework.tests.bookkeeper
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.bookkeeper.{SyncBookKeeper, SyncBookKeeperNull}
+import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperNull}
 
 import java.time.LocalDate
 
-class SyncBookKeeperNullSuite extends WordSpec {
+class BookkeeperNullSuite extends WordSpec {
   private val infoDate1 = LocalDate.of(2020, 8, 11)
   private val infoDate2 = LocalDate.of(2020, 8, 12)
   private val infoDate3 = LocalDate.of(2020, 8, 13)
@@ -66,8 +66,8 @@ class SyncBookKeeperNullSuite extends WordSpec {
     }
   }
 
-  def getBookkeeper: SyncBookKeeper = {
-    val bk = new SyncBookKeeperNull
+  def getBookkeeper: Bookkeeper = {
+    val bk = new BookkeeperNull
     bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)
     bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318830, 1597318835)
     bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318830, 1597318835)

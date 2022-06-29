@@ -16,28 +16,28 @@
 package za.co.absa.pramen.framework.tests.bookkeeper
 
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
-import za.co.absa.pramen.framework.bookkeeper.{SyncBookKeeper, SyncBookKeeperJdbc}
+import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperJdbc}
 import za.co.absa.pramen.framework.fixtures.RelationalDbFixture
 import za.co.absa.pramen.framework.rdb.PramenDb
 import za.co.absa.pramen.framework.reader.model.JdbcConfig
 
-class SyncBookKeeperJdbcSuite extends SyncBookKeeperCommonSuite with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
+class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, Map.empty[String, String])
-  val syncWatcherDb: PramenDb = PramenDb(jdbcConfig)
+  val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
-    syncWatcherDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    syncWatcherDb.setupDatabase()
+    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase()
   }
 
   override def afterAll(): Unit = {
-    syncWatcherDb.close()
+    pramenDb.close()
     super.afterAll()
   }
 
-  def getBookkeeper: SyncBookKeeper = {
-    new SyncBookKeeperJdbc(syncWatcherDb.slickDb)
+  def getBookkeeper: Bookkeeper = {
+    new BookkeeperJdbc(pramenDb.slickDb)
   }
 
   "BookkeeperJdbc" when {

@@ -19,7 +19,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, MetaTable, MetaTableStats, Metastore, Reason}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.exceptions.ProcessFailedException
 import za.co.absa.pramen.framework.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.framework.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
@@ -48,7 +48,7 @@ object PythonTransformationJob {
 
 class PythonTransformationJob(operationDef: OperationDef,
                               metastore: Metastore,
-                              bookkeeper: SyncBookKeeper,
+                              bookkeeper: Bookkeeper,
                               outputTable: MetaTable,
                               pythonClass: String,
                               pramenPyConfig: PramenPyConfig,

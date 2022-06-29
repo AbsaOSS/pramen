@@ -19,7 +19,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{DataFormat, MetaTable, MetaTableStats, Metastore, MetastoreReader, TableReader, TableWriter}
 import za.co.absa.pramen.framework.app.config.RuntimeConfig.UNDERCOVER
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.config.Keys.TEMPORARY_DIRECTORY
 import za.co.absa.pramen.framework.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
 import za.co.absa.pramen.framework.metastore.model.{MetaTable => MetaTableBuilder}
@@ -31,7 +31,7 @@ import za.co.absa.pramen.framework.writer.{TableWriterDelta, TableWriterParquet}
 import java.time.{Instant, LocalDate}
 
 class MetastoreImpl(tableDefs: Seq[MetaTable],
-                    bookkeeper: SyncBookKeeper,
+                    bookkeeper: Bookkeeper,
                     tempPath: String,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
@@ -149,7 +149,7 @@ object MetastoreImpl {
   val METASTORE_KEY = "pramen.metastore.tables"
   val DEFAULT_RECORDS_PER_PARTITION = 500000
 
-  def fromConfig(conf: Config, bookkeeper: SyncBookKeeper)(implicit spark: SparkSession): MetastoreImpl = {
+  def fromConfig(conf: Config, bookkeeper: Bookkeeper)(implicit spark: SparkSession): MetastoreImpl = {
     val tempPath = conf.getString(TEMPORARY_DIRECTORY)
     val tableDefs = MetaTableBuilder.fromConfig(conf, METASTORE_KEY)
 

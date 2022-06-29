@@ -22,7 +22,7 @@ import org.scalatest.WordSpec
 import za.co.absa.pramen.api.MetaTableStats
 import za.co.absa.pramen.framework.RuntimeConfigFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.pipeline.Job
 import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.framework.mocks.job.JobSpy
@@ -112,7 +112,7 @@ class ConcurrentJobRunnerImplSuite extends WordSpec with SparkTestBase {
   def getUseCase(runDateIn: LocalDate = runDate,
                  isRerun: Boolean = false,
                  runFunction: () => DataFrame = () => exampleDf
-                ): (ConcurrentJobRunnerImpl, SyncBookKeeper, PipelineStateSpy, Job) = {
+                ): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
     val conf = ConfigFactory.empty()
 
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn)

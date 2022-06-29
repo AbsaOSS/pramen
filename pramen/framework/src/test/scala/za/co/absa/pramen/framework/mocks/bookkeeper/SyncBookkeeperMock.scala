@@ -16,14 +16,14 @@
 package za.co.absa.pramen.framework.mocks.bookkeeper
 
 import org.apache.spark.sql.types.{DataType, StructType}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.model.{DataChunk, TableSchema}
 
 import java.time.LocalDate
 import scala.collection.mutable
 import scala.util.Try
 
-class SyncBookkeeperMock extends SyncBookKeeper {
+class SyncBookkeeperMock extends Bookkeeper {
   private val chunks = new mutable.HashMap[(String, LocalDate), DataChunk]()
   private val schemas = new mutable.ListBuffer[(String, (LocalDate, TableSchema))]()
 

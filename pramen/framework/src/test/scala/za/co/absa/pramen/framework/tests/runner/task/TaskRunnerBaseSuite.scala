@@ -22,7 +22,7 @@ import org.scalatest.WordSpec
 import za.co.absa.pramen.api.{MetaTableStats, MetastoreDependency, Reason}
 import za.co.absa.pramen.framework
 import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.exceptions.ReasonException
 import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
 import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
@@ -355,8 +355,8 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
                  runFunction: () => DataFrame = () => null,
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
-                 bookkeeperIn: SyncBookKeeper = null
-                ): (TaskRunnerBase, SyncBookKeeper, PipelineStateSpy, Seq[Task]) = {
+                 bookkeeperIn: Bookkeeper = null
+                ): (TaskRunnerBase, Bookkeeper, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun)

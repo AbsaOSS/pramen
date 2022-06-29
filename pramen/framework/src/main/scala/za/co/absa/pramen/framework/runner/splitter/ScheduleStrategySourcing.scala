@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.runner.splitter
 
 import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.pipeline
 import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.runner.splitter.ScheduleStrategyUtils._
@@ -29,7 +29,7 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
   override def getDaysToRun(
                              outputTable: String,
                              dependencies: Seq[MetastoreDependency],
-                             bookkeeper: SyncBookKeeper,
+                             bookkeeper: Bookkeeper,
                              infoDateExpression: String,
                              schedule: Schedule,
                              params: ScheduleParams,

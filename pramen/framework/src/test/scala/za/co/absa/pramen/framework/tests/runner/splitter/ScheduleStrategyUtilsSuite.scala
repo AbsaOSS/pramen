@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.tests.runner.splitter
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.{Schedule, MetastoreDependency}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.framework.pipeline
 import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
@@ -56,7 +56,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
     "getLate" should {
       "return the date range when job hasn't ran yet" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate("table")).thenReturn(None)
 
@@ -69,7 +69,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       }
 
       "return the date range when there is some late data" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate("table")).thenReturn(Some(date.minusDays(2)))
 
@@ -82,7 +82,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       }
 
       "return empty list when data is up to date" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate("table")).thenReturn(Some(date.minusDays(1)))
 
@@ -94,7 +94,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
     "getHistorical" should {
       "return date range with completed jobs skipped" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         val schedule = Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
@@ -112,7 +112,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       }
 
       "return date range without completed jobs skipped" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         val schedule = Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
@@ -125,7 +125,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       }
 
       "return date range with reverse order" in {
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         val schedule = Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.WEDNESDAY :: DayOfWeek.FRIDAY :: Nil)
 
@@ -145,7 +145,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
       "return false if a dependency is specified that has no retrospective updates" in {
         val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
           .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
@@ -158,7 +158,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
       "return true if a dependency is specified that has retrospective updates" in {
         val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
           .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
@@ -172,7 +172,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       "return true if 2 dependency is a retrospective update, and other is not" in {
         val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
         val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table3", date, date))
           .thenReturn(Some(DataChunk("table3", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
@@ -189,7 +189,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       "return false if the dependency that has retrospective updates is not tracked" in {
         val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
         val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = false, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table3", date, date))
           .thenReturn(Some(DataChunk("table3", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
@@ -204,7 +204,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
     "isDependencyUpdatedRetrospectively" should {
       "return false if the dependency if the job hasn't been ran" in {
         val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date)).thenReturn(None)
 
@@ -216,7 +216,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
       "return false if the dependency if the output table is not updated retrospectively" in {
         val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
           .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
@@ -229,7 +229,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
       "return true if the dependency if the output table is updated retrospectively" in {
         val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
           .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
@@ -242,7 +242,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
       "return false if tracking updates is disabled for the dependency" in {
         val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = false, isOptional = false)
-        val bk = mock(classOf[SyncBookKeeper])
+        val bk = mock(classOf[Bookkeeper])
 
         assert(!isDependencyUpdatedRetrospectively("table2", date, dep, bk))
       }

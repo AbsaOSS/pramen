@@ -512,7 +512,7 @@ class ConfigUtilsSuite extends WordSpec with TempDirFixture with TextComparisonF
       val expectedYaml =
         """default:
           |  info.date:
-          |    column: syncpramen_info_date
+          |    column: pramen_info_date
           |    format: yyyy-MM-dd
           |  records.per.partition: 100000
           |pramen.metastore.tables:

@@ -56,7 +56,6 @@ object RuntimeConfig {
   val RUN_TABLES = "pramen.runtime.run.tables"
   val UNDERCOVER = "pramen.undercover"
   val USE_LOCK = "pramen.use.lock"
-  val TRACK_UPDATES = "pramen.track.updates"
   val CHECK_ONLY_LATE_DATA = "pramen.check.only.late.data"
   val CHECK_ONLY_NEW_DATA = "pramen.check.only.new.data"
   val WARN_NO_DATA = "pramen.warn.if.no.data"

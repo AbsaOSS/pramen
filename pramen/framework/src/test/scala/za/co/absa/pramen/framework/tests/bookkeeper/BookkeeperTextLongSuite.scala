@@ -18,30 +18,31 @@ package za.co.absa.pramen.framework.tests.bookkeeper
 import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfter
 import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.{SyncBookKeeper, SyncBookKeeperDelta}
+import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperText}
 import za.co.absa.pramen.framework.fixtures.TempDirFixture
 import za.co.absa.pramen.framework.utils.FsUtils
 
-class SyncBookKeeperDeltaLongSuite extends SyncBookKeeperCommonSuite with SparkTestBase with BeforeAndAfter with TempDirFixture {
-  import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeperDelta._
+class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase with BeforeAndAfter with TempDirFixture {
+
+  import za.co.absa.pramen.framework.bookkeeper.BookkeeperText._
 
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 
   var tmpDir: String = _
 
   before {
-    tmpDir = createTempDir("bkDeltaSuite")
+    tmpDir = createTempDir("bkHadoopSuite")
   }
 
   after {
     deleteDir(tmpDir)
   }
 
-  def getBookkeeper: SyncBookKeeper = {
-    new SyncBookKeeperDelta(tmpDir)
+  def getBookkeeper: Bookkeeper = {
+    new BookkeeperText(tmpDir)
   }
 
-  "BookkeeperHadoopDelta" when {
+  "BookkeeperHadoopText" when {
     "initialized" should {
       "Initialize bookkeeping directory" in {
         getBookkeeper
@@ -53,4 +54,5 @@ class SyncBookKeeperDeltaLongSuite extends SyncBookKeeperCommonSuite with SparkT
 
     testBookKeeper(() => getBookkeeper)
   }
+
 }

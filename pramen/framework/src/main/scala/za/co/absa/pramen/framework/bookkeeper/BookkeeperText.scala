@@ -28,7 +28,7 @@ import java.time.{Instant, LocalDate}
 import scala.util.Random
 
 
-object SyncBookKeeperText {
+object BookkeeperText {
   val bkFileName = "bookkeeping.csv"
   val schemasFileName = "schemas.json"
   val bookkeepingRootPath = "bk"
@@ -37,9 +37,9 @@ object SyncBookKeeperText {
   val locksDirName = "locks"
 }
 
-class SyncBookKeeperText(bookkeepingPath: String)(implicit spark: SparkSession) extends SyncBookKeeperHadoop {
+class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) extends BookkeeperHadoop {
 
-  import SyncBookKeeperText._
+  import BookkeeperText._
   import spark.implicits._
 
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, bookkeepingPath)

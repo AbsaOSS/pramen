@@ -22,7 +22,7 @@ import za.co.absa.pramen.framework.model.DataChunk
 import java.time.LocalDate
 
 
-abstract class SyncBookKeeperHadoop extends SyncBookKeeper {
+abstract class BookkeeperHadoop extends Bookkeeper {
   protected def getDateStr(date: LocalDate): String = DataChunk.dateFormatter.format(date)
 
   protected def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate]): Column = {

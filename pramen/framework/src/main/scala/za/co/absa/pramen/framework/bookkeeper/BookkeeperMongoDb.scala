@@ -32,16 +32,16 @@ import za.co.absa.pramen.framework.mongo.MongoDbConnection
 import java.time.LocalDate
 import scala.util.control.NonFatal
 
-object SyncBookKeeperMongoDb {
+object BookkeeperMongoDb {
   val collectionName = "bookkeeping"
   val schemaCollectionName = "schemas"
 
   val MODEL_VERSION = 2
 }
 
-class SyncBookKeeperMongoDb(mongoDbConnection: MongoDbConnection) extends SyncBookKeeper {
+class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper {
 
-  import SyncBookKeeperMongoDb._
+  import BookkeeperMongoDb._
   import za.co.absa.pramen.framework.dao.ScalaMongoImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)

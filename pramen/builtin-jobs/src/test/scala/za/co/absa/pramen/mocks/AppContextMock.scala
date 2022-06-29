@@ -18,7 +18,7 @@ package za.co.absa.pramen.mocks
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.framework.AppContextFactory
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.journal.JournalNull
 import za.co.absa.pramen.framework.utils.ResourceUtils
 
@@ -41,7 +41,7 @@ object AppContextMock {
           .resolve()
     }
 
-    val bookkeeper: SyncBookKeeper = null
+    val bookkeeper: Bookkeeper = null
     val journal = new JournalNull
 
     AppContextFactory.createMockAppContext(conf, bookkeeper, journal)

@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
 import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeperNull
+import za.co.absa.pramen.framework.bookkeeper.BookkeeperNull
 import za.co.absa.pramen.framework.journal.JournalNull
 import za.co.absa.pramen.framework.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.framework.utils.ResourceUtils
@@ -53,7 +53,7 @@ class AppContextFactorySuite extends WordSpec with SparkTestBase {
 
       assert(context == AppContextFactory.get)
 
-      assert(context.bookkeeper.isInstanceOf[SyncBookKeeperNull])
+      assert(context.bookkeeper.isInstanceOf[BookkeeperNull])
       assert(context.tokenLockFactory.isInstanceOf[TokenLockFactoryAllow])
       assert(context.journal.isInstanceOf[JournalNull])
       assert(context.metastore != null)
@@ -62,7 +62,7 @@ class AppContextFactorySuite extends WordSpec with SparkTestBase {
     }
 
     "be able to create mock app context" in {
-      val bookkeeper = new SyncBookKeeperNull()
+      val bookkeeper = new BookkeeperNull()
       val journal = new JournalNull()
 
       val context = AppContextFactory.createMockAppContext(conf, bookkeeper, journal)

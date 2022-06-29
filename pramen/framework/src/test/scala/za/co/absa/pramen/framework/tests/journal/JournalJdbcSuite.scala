@@ -26,15 +26,15 @@ class JournalJdbcSuite extends WordSpec with SparkTestBase with BeforeAndAfter w
   import TestCases._
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, Map.empty[String, String])
-  val syncWatcherDb: PramenDb = PramenDb(jdbcConfig)
+  val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
-    syncWatcherDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    syncWatcherDb.setupDatabase()
+    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase()
   }
 
   override def afterAll(): Unit = {
-    syncWatcherDb.close()
+    pramenDb.close()
     super.afterAll()
   }
 
@@ -72,6 +72,6 @@ class JournalJdbcSuite extends WordSpec with SparkTestBase with BeforeAndAfter w
   }
 
   private def getJournal: Journal = {
-    new JournalJdbc(syncWatcherDb.slickDb)
+    new JournalJdbc(pramenDb.slickDb)
   }
 }

@@ -30,7 +30,7 @@ import java.time.LocalDate
 /**
   * A bookkeeper is responsible of querying and updating state of all tables related to an ingestion pipeline.
   */
-trait SyncBookKeeper {
+trait Bookkeeper {
   val bookkeepingEnabled: Boolean
 
   def getLatestProcessedDate(table: String, until: Option[LocalDate] = None): Option[LocalDate]
@@ -55,11 +55,11 @@ trait SyncBookKeeper {
   private[pramen] def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit
 }
 
-object SyncBookKeeper {
+object Bookkeeper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   def fromConfig(bookkeepingConfig: BookkeeperConfig, runtimeConfig: RuntimeConfig)
-                (implicit spark: SparkSession): (SyncBookKeeper, TokenLockFactory, Journal, AutoCloseable) = {
+                (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, AutoCloseable) = {
     val mongoDbConnection = bookkeepingConfig.bookkeepingConnectionString.map { url =>
       MongoDbConnection.getConnection(url, bookkeepingConfig.bookkeepingDbName.get)
     }
@@ -94,22 +94,22 @@ object SyncBookKeeper {
 
     val bookkeeper = if (!bookkeepingConfig.bookkeepingEnabled) {
       log.info(s"Bookkeeping is DISABLED. Updates won't be tracked")
-      new SyncBookKeeperNull()
+      new BookkeeperNull()
     } else if (hasBookkeepingJdbc) {
-      new SyncBookKeeperJdbc(dbOpt.get.slickDb)
+      new BookkeeperJdbc(dbOpt.get.slickDb)
     } else {
       mongoDbConnection match {
         case Some(connection) =>
           log.info(s"Using MongoDB for bookkeeping.")
-          new SyncBookKeeperMongoDb(connection)
+          new BookkeeperMongoDb(connection)
         case None             =>
           bookkeepingConfig.bookkeepingHadoopFormat match {
             case HadoopFormat.Text  =>
               log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping.")
-              new SyncBookKeeperText(bookkeepingConfig.bookkeepingLocation.get)
+              new BookkeeperText(bookkeepingConfig.bookkeepingLocation.get)
             case HadoopFormat.Delta =>
               log.info(s"Using Hadoop/Delta for bookkeeping.")
-              new SyncBookKeeperDelta(bookkeepingConfig.bookkeepingLocation.get)
+              new BookkeeperDelta(bookkeepingConfig.bookkeepingLocation.get)
           }
       }
     }

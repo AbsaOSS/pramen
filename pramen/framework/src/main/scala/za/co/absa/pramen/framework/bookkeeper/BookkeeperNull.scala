@@ -25,7 +25,7 @@ import java.time.LocalDate
   * this bookkeeper implementation is used. It always returns the state as if every table is new and no information is
   * available.
   */
-class SyncBookKeeperNull() extends SyncBookKeeper {
+class BookkeeperNull() extends Bookkeeper {
   override val bookkeepingEnabled: Boolean = false
 
   override def getLatestProcessedDate(table: String, until: Option[LocalDate]): Option[LocalDate] = None

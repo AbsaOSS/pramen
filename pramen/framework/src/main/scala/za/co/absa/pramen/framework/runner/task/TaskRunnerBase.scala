@@ -20,7 +20,7 @@ import org.apache.spark.sql.DataFrame
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetaTableStats, Reason}
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.exceptions.ReasonException
 import za.co.absa.pramen.framework.pipeline.{Job, JobPreRunResult, Task, TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.notify.SchemaDifference
@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
 
 abstract class TaskRunnerBase(conf: Config,
-                              bookkeeper: SyncBookKeeper,
+                              bookkeeper: Bookkeeper,
                               runtimeConfig: RuntimeConfig) extends TaskRunner {
   implicit private val ecDefault: ExecutionContext = ExecutionContext.global
 

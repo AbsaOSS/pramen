@@ -26,16 +26,16 @@ import java.time.LocalDate
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe._
 
-object SyncBookKeeperDelta {
+object BookkeeperDelta {
   val bookkeepingRootPath = "bk"
   val recordsDirName = "records_delta"
   val schemasDirName = "schemas_delta"
   val locksDirName = "locks"
 }
 
-class SyncBookKeeperDelta(bookkeepingPath: String)(implicit spark: SparkSession) extends SyncBookKeeperHadoop {
+class BookkeeperDelta(bookkeepingPath: String)(implicit spark: SparkSession) extends BookkeeperHadoop {
 
-  import SyncBookKeeperDelta._
+  import BookkeeperDelta._
   import spark.implicits._
 
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, bookkeepingPath)

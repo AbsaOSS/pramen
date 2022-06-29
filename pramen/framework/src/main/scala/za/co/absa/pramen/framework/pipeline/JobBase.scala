@@ -18,7 +18,7 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetaTable, Metastore, MetastoreDependency}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.expr.DateExprEvaluator
 import za.co.absa.pramen.framework.pipeline
 
@@ -26,7 +26,7 @@ import java.time.LocalDate
 
 abstract class JobBase(operationDef: OperationDef,
                        metastore: Metastore,
-                       bookkeeper: SyncBookKeeper,
+                       bookkeeper: Bookkeeper,
                        outputTableDef: MetaTable
                       ) extends Job {
   private val log = LoggerFactory.getLogger(this.getClass)

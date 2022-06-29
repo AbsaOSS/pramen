@@ -23,15 +23,15 @@ import za.co.absa.pramen.framework.reader.model.JdbcConfig
 
 class TokenLockJdbcSuite extends WordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, Map.empty[String, String])
-  val syncWatcherDb: PramenDb = PramenDb(jdbcConfig)
+  val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
-    syncWatcherDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    syncWatcherDb.setupDatabase()
+    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase()
   }
 
   override def afterAll(): Unit = {
-    syncWatcherDb.close()
+    pramenDb.close()
     super.afterAll()
   }
 
@@ -73,10 +73,10 @@ class TokenLockJdbcSuite extends WordSpec with RelationalDbFixture with BeforeAn
     }
 
     "lock pramen should constantly update lock ticket" in {
-      val lock1 = new TokenLockJdbc("token1", syncWatcherDb.slickDb) {
+      val lock1 = new TokenLockJdbc("token1", pramenDb.slickDb) {
         override val TOKEN_EXPIRES_SECONDS = 1L
       }
-      val lock2 = new TokenLockJdbc("token1", syncWatcherDb.slickDb)
+      val lock2 = new TokenLockJdbc("token1", pramenDb.slickDb)
       assert(lock1.tryAcquire())
       Thread.sleep(2000)
       assert(!lock2.tryAcquire())
@@ -86,7 +86,7 @@ class TokenLockJdbcSuite extends WordSpec with RelationalDbFixture with BeforeAn
   }
 
   private def getLock(token: String): TokenLock = {
-    new TokenLockJdbc(token, syncWatcherDb.slickDb)
+    new TokenLockJdbc(token, pramenDb.slickDb)
   }
 
 }

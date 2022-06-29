@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.runner.splitter
 
 import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.expr.DateExprEvaluator
 import za.co.absa.pramen.framework.pipeline
 import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
@@ -84,7 +84,7 @@ object ScheduleStrategyUtils {
                                  schedule: Schedule,
                                  infoDateExpression: String,
                                  minimumDate: LocalDate,
-                                 bookkeeper: SyncBookKeeper
+                                 bookkeeper: Bookkeeper
                                 ): List[TaskPreDef] = {
     val infoDate = evaluateRunDate(runDate, infoDateExpression).minusDays(1)
 
@@ -117,7 +117,7 @@ object ScheduleStrategyUtils {
                                        infoDateExpression: String,
                                        minimumDate: LocalDate,
                                        inverseDateOrder: Boolean,
-                                       bookkeeper: SyncBookKeeper
+                                       bookkeeper: Bookkeeper
                                       ): List[TaskPreDef] = {
     val potentialDates = getInfoDateRange(dateFrom, dateTo, infoDateExpression, schedule)
 
@@ -155,14 +155,14 @@ object ScheduleStrategyUtils {
   private[framework] def anyDependencyUpdatedRetrospectively(outputTable: String,
                                                              infoDate: LocalDate,
                                                              dependencies: Seq[MetastoreDependency],
-                                                             bookkeeper: SyncBookKeeper): Boolean = {
+                                                             bookkeeper: Bookkeeper): Boolean = {
     dependencies.exists(dependency => isDependencyUpdatedRetrospectively(outputTable, infoDate, dependency, bookkeeper))
   }
 
   private[framework] def isDependencyUpdatedRetrospectively(outputTable: String,
                                                             infoDate: LocalDate,
                                                             dependency: MetastoreDependency,
-                                                            bookkeeper: SyncBookKeeper): Boolean = {
+                                                            bookkeeper: Bookkeeper): Boolean = {
     if (!dependency.triggerUpdates) {
       return false
     }

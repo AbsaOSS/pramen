@@ -19,7 +19,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetaTable, MetaTableStats, Metastore, Reason, Source}
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 import za.co.absa.pramen.framework.utils.SparkUtils._
 
@@ -27,7 +27,7 @@ import java.time.{Instant, LocalDate}
 
 class IngestionJob(operationDef: OperationDef,
                    metastore: Metastore,
-                   bookkeeper: SyncBookKeeper,
+                   bookkeeper: Bookkeeper,
                    source: Source,
                    sourceTable: SourceTable,
                    outputTable: MetaTable)

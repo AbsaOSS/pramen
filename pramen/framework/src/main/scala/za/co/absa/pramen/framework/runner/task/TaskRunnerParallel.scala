@@ -17,7 +17,7 @@ package za.co.absa.pramen.framework.runner.task
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.bookkeeper.SyncBookKeeper
+import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.pipeline.Task
 import za.co.absa.pramen.framework.state.PipelineState
 
@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext.fromExecutorService
 import scala.concurrent.{ExecutionContextExecutorService, Future}
 
 class TaskRunnerParallel(conf: Config,
-                         bookkeeper: SyncBookKeeper,
+                         bookkeeper: Bookkeeper,
                          pipelineState: PipelineState,
                          runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, runtimeConfig) {
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)
