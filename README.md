@@ -69,7 +69,7 @@ In addition to basic error notification, typical operational warnings are genera
  - Changes to upstream schema (unexpected changes to source data schemas) 
  - Sourcing performance thresholds (unexpected slower than expected data throughput)
 
-**With Pramen data engineers and data scientists to focus on development and worry less about monitoring and maintaining existing data and machine learning pipelines.**
+**With Pramen data engineers and data scientists may focus on development and worry less about monitoring and maintaining existing data and machine learning pipelines.**
 
 # Quick start
 
