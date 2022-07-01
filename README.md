@@ -6,7 +6,7 @@ Pramen is a framework for defining data pipelines based on Spark and a configura
 coordinate those pipelines. The project focuses around Hadoop and Spark, but can run arbitrary jobs.
 
 The idea behind Pramen pipelines is simple. A pipeline consists of
-* _Sources_ are the data systems that is not managed by the pipeline. An example could be an operational relational database.
+* _Sources_ are the data systems that are not managed by the pipeline. An example could be an operational relational database.
   - Ingestion jobs are used to get data from external systems into the metastore.
 * _Metastore_ is the data storage managed by the pipeline. Data in the metastore is accessed by table names.
   The metastore hides the underlying storage and format, which is usually Parquet or Delta on HDFS or S3.
