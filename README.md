@@ -11,7 +11,7 @@ The idea behind Pramen pipelines is simple. A pipeline consists of
 * _Metastore_ is the data storage managed by the pipeline. Data in the metastore is accessed by table names.
   The metastore hides the underlying storage and format, which is usually Parquet or Delta on HDFS or S3.
   - Transformation jobs are used to transform data from the metastore and save the results back to the metastore.
-    Transformers can be written in Scala on in Python.
+    Transformers can be written in Scala or in Python.
 * _Sinks_ are targets to send data from the metastore to. An example could be a Kafka cluster or a local folder to save
   CSV files to.
   - Sink jobs are used to send data from the metastore to sinks
