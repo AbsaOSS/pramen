@@ -17,12 +17,13 @@ package za.co.absa.pramen.framework.tests.runner.splitter
 
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.{Schedule, MetastoreDependency}
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
+import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
 import za.co.absa.pramen.framework.pipeline
 import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.framework.mocks.DataChunkFactory.getDummyDataChunk
 import za.co.absa.pramen.framework.runner.splitter.{RunMode, ScheduleParams, ScheduleStrategySourcing, ScheduleStrategyTransformation}
+import za.co.absa.pramen.framework.schedule.Schedule
 
 import java.time.format.DateTimeFormatter
 import java.time.{DayOfWeek, LocalDate}

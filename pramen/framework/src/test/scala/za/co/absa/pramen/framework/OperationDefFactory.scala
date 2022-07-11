@@ -16,8 +16,9 @@
 package za.co.absa.pramen.framework
 
 import com.typesafe.config.{Config, ConfigFactory}
-import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
+import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
 import za.co.absa.pramen.framework.pipeline.{OperationDef, OperationType, TransformExpression}
+import za.co.absa.pramen.framework.schedule.Schedule
 
 object OperationDefFactory {
 

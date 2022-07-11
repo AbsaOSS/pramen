@@ -15,9 +15,8 @@
 
 package za.co.absa.pramen.framework.mocks
 
-import za.co.absa.pramen.api
-import za.co.absa.pramen.api.{DataFormat, MetaTable}
-import za.co.absa.pramen.api.DataFormat.Parquet
+import za.co.absa.pramen.framework.metastore.model.DataFormat._
+import za.co.absa.pramen.framework.metastore.model.{DataFormat, MetaTable}
 
 import java.time.LocalDate
 
@@ -34,7 +33,7 @@ object MetaTableFactory {
                         readOptions: Map[String, String] = Map.empty[String, String],
                         writeOptions: Map[String, String] = Map.empty[String, String]
                        ): MetaTable = {
-    api.MetaTable(name,
+    MetaTable(name,
       description,
       format,
       infoDateColumn,
@@ -46,5 +45,4 @@ object MetaTableFactory {
       readOptions,
       writeOptions)
   }
-
 }

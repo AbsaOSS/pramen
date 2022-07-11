@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.tests.runner.orchestrator
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.JobDependency
+import za.co.absa.pramen.framework.pipeline.JobDependency
 import za.co.absa.pramen.framework.runner.orchestrator.{DependencyResolver, DependencyResolverImpl}
 
 class DependencyResolverSuite extends WordSpec {

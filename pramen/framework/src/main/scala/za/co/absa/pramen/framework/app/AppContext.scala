@@ -15,10 +15,10 @@
 
 package za.co.absa.pramen.framework.app
 
-import za.co.absa.pramen.api.Metastore
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.journal.Journal
 import za.co.absa.pramen.framework.lock.TokenLockFactory
+import za.co.absa.pramen.framework.metastore.Metastore
 
 trait AppContext {
   val appConfig: AppConfig

@@ -17,13 +17,20 @@ package za.co.absa.pramen.framework
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory => ExternalChannelFactoryV2}
+import za.co.absa.pramen.api.ExternalChannel
 import za.co.absa.pramen.framework.utils.ClassLoaderUtils
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
+
+/**
+  * Base interface for all Pramen source and sink factories.
+  */
+trait ExternalChannelFactory[+A <: ExternalChannel] {
+  def apply(conf: Config, parentPath: String, spark: SparkSession): A
+}
 
 object ExternalChannelFactory {
   val FACTORY_CLASS_KEY = "factory.class"
@@ -37,7 +44,7 @@ object ExternalChannelFactory {
       throw new IllegalArgumentException(s"A class should be specified for the $channelType at '$parentPath'.")
     }
     val clazz = conf.getString(FACTORY_CLASS_KEY)
-    val factory = ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactoryV2[T]](clazz)
+    val factory = ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactory[T]](clazz)
 
     factory.apply(conf, parentPath, spark)
   }

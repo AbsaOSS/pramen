@@ -19,12 +19,14 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.{MetaTableStats, MetastoreDependency, Reason}
+import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.framework
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.exceptions.ReasonException
 import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
+import za.co.absa.pramen.framework.metastore.MetaTableStats
+import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
 import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.framework.mocks.job.JobSpy
 import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy

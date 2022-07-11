@@ -17,10 +17,10 @@ package za.co.absa.pramen.framework.tests.runner.orchestrator
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.MetastoreDependency
 import za.co.absa.pramen.framework.OperationDefFactory
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.fixtures.AppContextFixture
+import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
 import za.co.absa.pramen.framework.pipeline.OperationDef
 import za.co.absa.pramen.framework.mocks.job.JobSpy
 import za.co.absa.pramen.framework.mocks.runner.ConcurrentJobRunnerSpy

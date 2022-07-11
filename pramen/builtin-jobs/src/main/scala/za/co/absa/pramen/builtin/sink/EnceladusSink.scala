@@ -19,8 +19,9 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{MetastoreReader, Sink}
 import za.co.absa.pramen.builtin.infofile.InfoFileGeneration
+import za.co.absa.pramen.framework.ExternalChannelFactory
 import za.co.absa.pramen.framework.utils.{FsUtils, PartitionUtils}
 
 import java.time.{Instant, LocalDate}

@@ -13,19 +13,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api
+package za.co.absa.pramen.framework.pipeline
 
-/** Storage formats supported by the metastore. */
-sealed trait DataFormat {
-  def name: String
-}
-
-object DataFormat {
-  case class Parquet(path: String, recordsPerPartition: Option[Long]) extends DataFormat {
-    override def name: String = "parquet"
-  }
-
-  case class Delta(query: Query, recordsPerPartition: Option[Long]) extends DataFormat {
-    override def name: String = "delta"
-  }
-}
+/**
+  * Each task is a transformation of one or more input tables into one output table.
+  */
+case class JobDependency(
+                          inputTables: Seq[String],
+                          outputTable: String
+                        )

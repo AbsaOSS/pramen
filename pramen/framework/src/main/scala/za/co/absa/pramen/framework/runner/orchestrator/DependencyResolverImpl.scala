@@ -15,7 +15,7 @@
 
 package za.co.absa.pramen.framework.runner.orchestrator
 
-import za.co.absa.pramen.api.JobDependency
+import za.co.absa.pramen.framework.pipeline.JobDependency
 import za.co.absa.pramen.framework.utils.AlgorithmUtils
 
 import scala.collection.mutable

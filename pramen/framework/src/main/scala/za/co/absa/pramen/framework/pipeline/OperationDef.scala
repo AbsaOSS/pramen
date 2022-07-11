@@ -17,8 +17,9 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
+import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
+import za.co.absa.pramen.framework.schedule.Schedule
 import za.co.absa.pramen.framework.utils.ConfigUtils
 
 import scala.collection.JavaConverters._

@@ -16,11 +16,23 @@
 package za.co.absa.pramen.framework.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.DataFormat.{Delta, Parquet}
-import za.co.absa.pramen.api.{Query, DataFormat => DataFormatApi}
+import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.framework.utils.ConfigUtils
 
+/** Storage formats supported by the metastore. */
+sealed trait DataFormat {
+  def name: String
+}
+
 object DataFormat {
+  case class Parquet(path: String, recordsPerPartition: Option[Long]) extends DataFormat {
+    override def name: String = "parquet"
+  }
+
+  case class Delta(query: Query, recordsPerPartition: Option[Long]) extends DataFormat {
+    override def name: String = "delta"
+  }
+
   val FORMAT_PARQUET = "parquet"
   val FORMAT_DELTA = "delta"
 
@@ -30,7 +42,7 @@ object DataFormat {
   val RECORDS_PER_PARTITION_KEY = "records.per.partition"
   val DEFAULT_FORMAT = "parquet"
 
-  def fromConfig(conf: Config): DataFormatApi = {
+  def fromConfig(conf: Config): DataFormat = {
     val format = ConfigUtils.getOptionString(conf, FORMAT_KEY).getOrElse(DEFAULT_FORMAT)
 
     format match {

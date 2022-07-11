@@ -13,17 +13,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.schedule
+package za.co.absa.pramen.framework.schedule
 
-import java.time.{DayOfWeek, LocalDate}
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.Schedule
+import za.co.absa.pramen.framework.schedule.Schedule._
+
+import java.time.{DayOfWeek, LocalDate}
 
 class ScheduleSuite extends WordSpec {
-
-  import za.co.absa.pramen.api.Schedule._
 
   "Schedule.fromConfig" should {
     "Deserialize daily jobs" when {

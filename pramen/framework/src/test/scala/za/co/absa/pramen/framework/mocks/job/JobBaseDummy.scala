@@ -17,8 +17,10 @@ package za.co.absa.pramen.framework.mocks.job
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.{MetaTable, MetaTableStats, Metastore, Reason}
+import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
+import za.co.absa.pramen.framework.metastore.model.MetaTable
+import za.co.absa.pramen.framework.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.framework.pipeline.{DependencyWarning, JobBase, JobPreRunResult, OperationDef}
 import za.co.absa.pramen.framework.runner.splitter.ScheduleStrategy
 

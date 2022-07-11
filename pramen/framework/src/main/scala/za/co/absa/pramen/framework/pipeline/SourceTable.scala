@@ -18,6 +18,7 @@ package za.co.absa.pramen.framework.pipeline
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.framework.model.QueryBuilder
 import za.co.absa.pramen.framework.utils.{AlgorithmicUtils, ConfigUtils}
 
 import scala.collection.JavaConverters._
@@ -50,7 +51,7 @@ object SourceTable {
     }
 
     val metaTableName = conf.getString(METATABLE_TABLE_KEY)
-    val query = Query.fromConfig(conf, "input", parentPath)
+    val query = QueryBuilder.fromConfig(conf, "input", parentPath)
     val dateFromExpr = ConfigUtils.getOptionString(conf, DATE_FROM_KEY)
     val dateToExpr = ConfigUtils.getOptionString(conf, DATE_TO_KEY)
     val columns = ConfigUtils.getOptListStrings(conf, COLUMNS_KEY)

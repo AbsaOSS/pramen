@@ -15,9 +15,10 @@
 
 package za.co.absa.pramen.framework.runner.splitter
 
-import za.co.absa.pramen.api.{MetastoreDependency, Schedule}
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
+import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
 import za.co.absa.pramen.framework.pipeline.TaskPreDef
+import za.co.absa.pramen.framework.schedule.Schedule
 
 import java.time.LocalDate
 
