@@ -16,7 +16,7 @@
 package za.co.absa.pramen.framework.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.Schedule
+import za.co.absa.pramen.framework.schedule.Schedule
 import za.co.absa.pramen.framework.utils.ScheduleUtils
 
 import java.time._

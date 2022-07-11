@@ -16,8 +16,9 @@
 package za.co.absa.pramen.framework.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.{MetaTable, MetaTableStats, Metastore, MetastoreReader, TableReader, TableWriter}
-import za.co.absa.pramen.framework.metastore.TableNotConfigured
+import za.co.absa.pramen.api.{MetastoreReader, TableReader, TableWriter}
+import za.co.absa.pramen.framework.metastore.model.MetaTable
+import za.co.absa.pramen.framework.metastore.{MetaTableStats, Metastore, TableNotConfigured}
 import za.co.absa.pramen.framework.mocks.MetaTableFactory
 
 import java.time.LocalDate

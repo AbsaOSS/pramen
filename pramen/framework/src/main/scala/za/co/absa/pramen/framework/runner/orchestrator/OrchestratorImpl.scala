@@ -19,9 +19,8 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.JobDependency
 import za.co.absa.pramen.framework.app.AppContext
-import za.co.absa.pramen.framework.pipeline.{Job, OperationType}
+import za.co.absa.pramen.framework.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.framework.runner.task.{RunStatus, TaskResult}
 import za.co.absa.pramen.framework.state.PipelineState

@@ -15,4 +15,8 @@
 
 package za.co.absa.pramen.api
 
+/**
+  * This is a marker trait tha allows a unified way of creating new instances of sources and sinks
+  * from a fully qualified class name.
+  */
 trait ExternalChannel

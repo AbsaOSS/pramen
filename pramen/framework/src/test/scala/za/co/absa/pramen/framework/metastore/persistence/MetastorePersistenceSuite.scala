@@ -19,9 +19,9 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.{Assertion, WordSpec}
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.api.DataFormat._
 import za.co.absa.pramen.framework.base.SparkTestBase
 import za.co.absa.pramen.framework.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.framework.metastore.model.DataFormat._
 import za.co.absa.pramen.framework.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet}
 import za.co.absa.pramen.framework.mocks.MetaTableFactory
 import za.co.absa.pramen.framework.utils.{LocalFsUtils, SparkUtils}

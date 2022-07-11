@@ -17,12 +17,12 @@ package za.co.absa.pramen.framework.metastore
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{DataFormat, MetaTable, MetaTableStats, Metastore, MetastoreReader, TableReader, TableWriter}
+import za.co.absa.pramen.api.{MetastoreReader, TableReader, TableWriter}
 import za.co.absa.pramen.framework.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.config.Keys.TEMPORARY_DIRECTORY
 import za.co.absa.pramen.framework.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
-import za.co.absa.pramen.framework.metastore.model.{MetaTable => MetaTableBuilder}
+import za.co.absa.pramen.framework.metastore.model.{DataFormat, MetaTable}
 import za.co.absa.pramen.framework.metastore.peristence.MetastorePersistence
 import za.co.absa.pramen.framework.reader.{TableReaderDelta, TableReaderParquet}
 import za.co.absa.pramen.framework.utils.ConfigUtils
@@ -151,7 +151,7 @@ object MetastoreImpl {
 
   def fromConfig(conf: Config, bookkeeper: Bookkeeper)(implicit spark: SparkSession): MetastoreImpl = {
     val tempPath = conf.getString(TEMPORARY_DIRECTORY)
-    val tableDefs = MetaTableBuilder.fromConfig(conf, METASTORE_KEY)
+    val tableDefs = MetaTable.fromConfig(conf, METASTORE_KEY)
 
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 

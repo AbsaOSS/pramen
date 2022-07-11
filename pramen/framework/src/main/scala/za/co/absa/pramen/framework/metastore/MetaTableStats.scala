@@ -13,14 +13,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api
+package za.co.absa.pramen.framework.metastore
 
-import com.typesafe.config.Config
-import org.apache.spark.sql.SparkSession
-
-/**
-  * Base interface for all SyncWatch sources and sinks.
-  */
-trait ExternalChannelFactory[+A <: ExternalChannel] {
-  def apply(conf: Config, parentPath: String, spark: SparkSession): A
-}
+case class MetaTableStats(
+                           recordCount: Long,
+                           dataSizeBytes: Option[Long]
+                         )

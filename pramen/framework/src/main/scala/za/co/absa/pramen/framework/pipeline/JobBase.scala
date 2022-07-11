@@ -17,9 +17,10 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{MetaTable, Metastore, MetastoreDependency}
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
 import za.co.absa.pramen.framework.expr.DateExprEvaluator
+import za.co.absa.pramen.framework.metastore.Metastore
+import za.co.absa.pramen.framework.metastore.model.{MetaTable, MetastoreDependency}
 import za.co.absa.pramen.framework.pipeline
 
 import java.time.LocalDate

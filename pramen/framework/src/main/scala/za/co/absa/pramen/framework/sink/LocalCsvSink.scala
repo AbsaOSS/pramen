@@ -21,7 +21,8 @@ import org.apache.spark.sql.functions.{col, date_format}
 import org.apache.spark.sql.types.{DateType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{MetastoreReader, Sink}
+import za.co.absa.pramen.framework.ExternalChannelFactory
 import za.co.absa.pramen.framework.sink.LocalCsvSink.OUTPUT_PATH_KEY
 import za.co.absa.pramen.framework.utils.FsUtils
 

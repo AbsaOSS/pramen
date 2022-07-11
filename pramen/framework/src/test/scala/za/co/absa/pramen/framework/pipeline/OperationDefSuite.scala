@@ -17,10 +17,10 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.api.Schedule
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
 import za.co.absa.pramen.framework.fixtures.TempDirFixture
 import za.co.absa.pramen.framework.pipeline.OperationType.{Ingestion, Transformation}
+import za.co.absa.pramen.framework.schedule.Schedule
 
 import java.time.LocalDate
 

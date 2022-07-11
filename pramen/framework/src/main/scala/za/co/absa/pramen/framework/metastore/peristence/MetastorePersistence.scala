@@ -16,7 +16,8 @@
 package za.co.absa.pramen.framework.metastore.peristence
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{DataFormat, MetaTable, MetaTableStats}
+import za.co.absa.pramen.framework.metastore.MetaTableStats
+import za.co.absa.pramen.framework.metastore.model.{DataFormat, MetaTable}
 
 import java.time.LocalDate
 

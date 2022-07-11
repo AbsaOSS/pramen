@@ -16,7 +16,6 @@
 package za.co.absa.pramen.framework.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{MetaTable => MetaTableApi}
 import za.co.absa.pramen.framework.app.config.InfoDateConfig
 import za.co.absa.pramen.framework.config.InfoDateOverride
 import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL
@@ -27,6 +26,20 @@ import java.time.LocalDate
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.util.{Failure, Success, Try}
 
+case class MetaTable(
+                      name: String,
+                      description: String,
+                      format: DataFormat,
+                      infoDateColumn: String,
+                      infoDateFormat: String,
+                      hiveTable: Option[String],
+                      infoDateExpression: Option[String],
+                      infoDateStart: LocalDate,
+                      trackDays: Int,
+                      readOptions: Map[String, String],
+                      writeOptions: Map[String, String]
+                    )
+
 object MetaTable {
   val NAME_KEY = "name"
   val NAME_DESCRIPTION = "description"
@@ -35,7 +48,7 @@ object MetaTable {
   val READ_OPTION_KEY = "read.option"
   val WRITE_OPTION_KEY = "write.option"
 
-  def fromConfig(conf: Config, key: String): Seq[MetaTableApi] = {
+  def fromConfig(conf: Config, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = conf.getString(InfoDateConfig.INFORMATION_DATE_COLUMN_KEY)
     val defaultInfoDateFormat = conf.getString(InfoDateConfig.INFORMATION_DATE_FORMAT_KEY)
     val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DATE_FORMAT_INTERNAL, defaultInfoDateFormat)
@@ -58,7 +71,7 @@ object MetaTable {
                              defaultInfoColumnName: String,
                              defaultInfoDateFormat: String,
                              defaultStartDate: LocalDate,
-                             defaultTrackDays: Int): MetaTableApi = {
+                             defaultTrackDays: Int): MetaTable = {
     val name = ConfigUtils.getOptionString(conf, NAME_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $NAME_KEY"))
     val description = ConfigUtils.getOptionString(conf, NAME_DESCRIPTION).getOrElse("")
     val infoDateOverride = InfoDateOverride.fromConfig(conf)
@@ -79,7 +92,7 @@ object MetaTable {
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
 
-    MetaTableApi(name, description, format, infoDateColumn, infoDateFormat, hiveTable, infoDateExpressionOpt, startDate, trackDays, readOptions, writeOptions)
+    MetaTable(name, description, format, infoDateColumn, infoDateFormat, hiveTable, infoDateExpressionOpt, startDate, trackDays, readOptions, writeOptions)
   }
 
 }

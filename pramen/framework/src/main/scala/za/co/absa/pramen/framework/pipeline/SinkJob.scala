@@ -17,8 +17,10 @@ package za.co.absa.pramen.framework.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{MetaTable, MetaTableStats, Metastore, Reason, Sink}
+import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
+import za.co.absa.pramen.framework.metastore.model.MetaTable
+import za.co.absa.pramen.framework.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.framework.pipeline.JobPreRunStatus.Ready
 import za.co.absa.pramen.framework.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 import za.co.absa.pramen.framework.utils.SparkUtils._
