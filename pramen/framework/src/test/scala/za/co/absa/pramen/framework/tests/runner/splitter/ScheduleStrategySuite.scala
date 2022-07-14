@@ -212,6 +212,36 @@ class ScheduleStrategySuite extends WordSpec {
           assert(result == expected)
         }
 
+        "default behavior with track days" in {
+          val minimumDate = LocalDate.of(2022, 7, 1)
+          val runDate = LocalDate.of(2022, 7, 14)
+          val params = ScheduleParams.Normal(runDate, 6, 0, newOnly = false, lateOnly = false)
+
+          val expected = Seq(
+            pipeline.TaskPreDef(LocalDate.of(2022, 7, 2), TaskRunReason.Late),
+            pipeline.TaskPreDef(LocalDate.of(2022, 7, 9), TaskRunReason.Late)
+          )
+
+          val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
+
+          assert(result == expected)
+        }
+
+        "default behavior with more than 1 day late" in {
+          val minimumDate = LocalDate.of(2022, 7, 1)
+          val runDate = LocalDate.of(2022, 7, 14)
+          val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+
+          val expected = Seq(
+            pipeline.TaskPreDef(LocalDate.of(2022, 7, 2), TaskRunReason.Late),
+            pipeline.TaskPreDef(LocalDate.of(2022, 7, 9), TaskRunReason.Late)
+          )
+
+          val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
+
+          assert(result == expected)
+        }
+
         "late only" in {
           val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = false, lateOnly = true)
 
