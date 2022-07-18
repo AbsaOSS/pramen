@@ -110,17 +110,23 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * /a/b/c/d, /a/x/y/z -> x/y/z
     */
   def getSubPath(path1: Path, path2: Path): String = {
+    if (path1 == path2) {
+      return ""
+    }
+
     val path1Fixed = splitUriPath(path1)._2
     val path2Fixed = splitUriPath(path2)._2
 
-    val minSize = Math.min(path1Fixed.length, path2Fixed.length)
+    val folders1 = path1Fixed.split('/')
+    val folders2 = path2Fixed.split('/')
+
+    val minSize = Math.min(folders1.length, folders2.length)
 
     var i = 0
-    while (path1Fixed(i) == path2Fixed(i) && i < minSize) {
+    while (i < minSize && folders1(i) == folders2(i)) {
       i += 1
     }
-    val outputPath = path2Fixed.substring(i)
-    outputPath
+    folders2.drop(i).mkString("/")
   }
 
   /**

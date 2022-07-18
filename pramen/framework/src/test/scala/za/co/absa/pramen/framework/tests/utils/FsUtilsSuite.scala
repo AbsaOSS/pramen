@@ -88,6 +88,14 @@ class FsUtilsSuite extends WordSpec with SparkTestBase with TempDirFixture {
       assert(fsUtils.getSubPath(new Path("../a/b/c"), new Path("../a/x/y/z")) == "x/y/z")
     }
 
+    "work with similar paths" in {
+      assert(fsUtils.getSubPath(new Path("../a/b/path1"), new Path("../a/b/path2")) == "path2")
+    }
+
+    "work with second path longer" in {
+      assert(fsUtils.getSubPath(new Path("/a/b/path/c/d/e"), new Path("/a/b/path")) == "")
+    }
+
     "work with paths that have schemas and authorities" in {
       assert(fsUtils.getSubPath(new Path("hdfs://server1:123/a/b/c"), new Path("/a/x/y/z")) == "x/y/z")
     }
