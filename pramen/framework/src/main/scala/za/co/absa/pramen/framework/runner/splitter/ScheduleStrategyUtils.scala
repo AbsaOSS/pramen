@@ -87,20 +87,13 @@ object ScheduleStrategyUtils {
                                  minimumDate: LocalDate,
                                  bookkeeper: Bookkeeper
                                 ): List[TaskPreDef] = {
-    val lastInfoDate = evaluateRunDate(runDate, infoDateExpression)
-
-    // An info date is considered late if it is older than today
-    val infoDateLate = if (runDate == lastInfoDate) {
-      lastInfoDate.minusDays(1)
-    } else {
-      lastInfoDate
-    }
+    val lastInfoDate = evaluateRunDate(runDate.minusDays(1), infoDateExpression)
 
     bookkeeper.getLatestProcessedDate(outputTable) match {
       case Some(lastUpdatedInfoDate) =>
         val nextExpected = lastUpdatedInfoDate.plusDays(1)
 
-        if (nextExpected.toEpochDay <= infoDateLate.toEpochDay) {
+        if (nextExpected.toEpochDay <= lastInfoDate.toEpochDay) {
           val range = getInfoDateRange(nextExpected, runDate.minusDays(1), infoDateExpression, schedule)
 
           if (range.nonEmpty) {
@@ -111,7 +104,7 @@ object ScheduleStrategyUtils {
           Nil
         }
       case None               =>
-        log.info(s"No jobs for $outputTable have ran yet. Running from the starting date: $minimumDate to the current catch up information date: $infoDateLate.")
+        log.info(s"No jobs for $outputTable have ran yet. Running from the starting date: $minimumDate to the current catch up information date: $lastInfoDate.")
         getInfoDateRange(minimumDate, runDate.minusDays(1), infoDateExpression, schedule)
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
     }
