@@ -334,6 +334,31 @@ class ScheduleStrategySuite extends WordSpec {
         }
       }
     }
+
+    "monthly" when {
+      val infoDateExpression = "beginOfMonth(@date)"
+      val schedule = Schedule.Monthly(2 :: Nil)
+
+      "normal execution" should {
+        val bk = mock(classOf[Bookkeeper])
+        when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(9)))
+
+        "default behavior with a monthly job" in {
+          val minimumDate = LocalDate.of(2022, 5, 30)
+          val runDate = LocalDate.of(2022, 7, 14)
+          val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+
+          val expected = Seq(
+            pipeline.TaskPreDef(LocalDate.of(2022, 6, 1), TaskRunReason.Late),
+            pipeline.TaskPreDef(LocalDate.of(2022, 7, 1), TaskRunReason.Late)
+          )
+
+          val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, minimumDate)
+
+          assert(result == expected)
+        }
+      }
+    }
   }
 
   "ScheduleStrategyTransformation" when {
