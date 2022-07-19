@@ -105,6 +105,7 @@ abstract class JobBase(operationDef: OperationDef,
     val failures = dep.tables.flatMap(table => {
       val isAvailable = metastore.isDataAvailable(table, Option(dateFrom), dateUntilOpt)
       if (!isAvailable) {
+        log.warn(s"No data found for $table $range.")
         Some((table, range))
       } else {
         None
