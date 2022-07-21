@@ -35,7 +35,7 @@ lazy val printSparkVersion = taskKey[Unit]("Print Spark version pramen is buildi
 def itFilter(name: String): Boolean = name endsWith "LongSuite"
 def unitFilter(name: String): Boolean = (name endsWith "Suite") && !itFilter(name)
 
-lazy val IntegrationTest = config("integration") extend(Test)
+lazy val IntegrationTest = config("integration") extend Test
 
 lazy val pramen = (project in file("."))
   .disablePlugins(sbtassembly.AssemblyPlugin)
@@ -66,6 +66,8 @@ lazy val api = (project in file("api"))
 
 lazy val framework = (project in file("framework"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
+  .configs( IntegrationTest )
+  .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "framework",
     printSparkVersion := {
@@ -127,7 +129,6 @@ lazy val pipelineRunner = (project in file("pipeline-runner"))
 
 // release settings
 releaseCrossBuild := true
-addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bump.Bugfix; release with-defaults")
 
 lazy val assemblySettings = Seq(
   // This merge strategy retains service entries for all services in manifest.
@@ -154,3 +155,7 @@ lazy val assemblySettings = Seq(
   assembly / logLevel := Level.Info,
   assembly / test := {}
 )
+
+addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bump.Bugfix; release with-defaults")
+addCommandAlias("itTest", "integration:test")
+addCommandAlias("xcoverage", "clean;coverage;test;coverageReport")

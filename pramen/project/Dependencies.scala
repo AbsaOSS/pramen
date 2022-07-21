@@ -29,32 +29,32 @@ object Dependencies {
 
   def FrameworkDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
-    "org.mongodb.scala"    %% "mongo-scala-driver"         % "2.7.0",
-    "com.typesafe.slick"   %% "slick"                      % "3.3.3",
-    "com.typesafe.slick"   %% "slick-hikaricp"             % "3.3.3",
-    "org.postgresql"       %  "postgresql"                 % "42.3.3",
-    "com.github.yruslan"   %% "channel_scala"              % "0.1.3",
-    "org.apache.kafka"     %  "kafka-clients"              % "2.5.1",
-    "com.sun.mail"         %  "javax.mail"                 % "1.6.2",
+    "org.mongodb.scala"    %% "mongo-scala-driver"         % mongoDbScalaDriverVersion,
+    "com.typesafe.slick"   %% "slick"                      % slickVersion,
+    "com.typesafe.slick"   %% "slick-hikaricp"             % slickVersion,
+    "org.postgresql"       %  "postgresql"                 % postgreSqlDriverVersion,
+    "com.github.yruslan"   %% "channel_scala"              % channelsVersion,
+    "org.apache.kafka"     %  "kafka-clients"              % kafkaClientVersion,
+    "com.sun.mail"         %  "javax.mail"                 % javaXMailVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test,
     "org.mockito"          %  "mockito-core"               % mockitoVersion             % Test,
-    "de.flapdoodle.embed"  %  "de.flapdoodle.embed.mongo"  % "2.2.0"                    % Test,
-    "org.hsqldb"           %  "hsqldb"                     % "2.5.1"                    % Test
-  ) :+ getDeltaDependency(scalaVersion)
+    "de.flapdoodle.embed"  %  "de.flapdoodle.embed.mongo"  % embeddedMongoDbVersion     % Test,
+    "org.hsqldb"           %  "hsqldb"                     % hsqlDbVersion              % Test
+  ) :+ getDeltaDependency(sparkVersion(scalaVersion))
 
   def BuildinJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
-    "za.co.absa"           %% "abris"                      % "5.1.1" excludeAll(
+    "za.co.absa"           %% "abris"                      % abrisVersion excludeAll(
       ExclusionRule(organization = "com.fasterxml.jackson.core"),
       ExclusionRule(organization = "org.apache.avro")
     ),
-    "net.sourceforge.jtds" %  "jtds"                       % "1.3.1",
+    "net.sourceforge.jtds" %  "jtds"                       % msSqlDriverVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   )
 
   def PipelineRunnerDependencied(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
-    "com.github.scopt"     %% "scopt"                      % "3.7.1",
+    "com.github.scopt"     %% "scopt"                      % scoptVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   )
 
