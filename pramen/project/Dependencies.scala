@@ -77,7 +77,7 @@ object Dependencies {
   def BuildinJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     // compile
     "za.co.absa"           %% "abris"                      % "4.2.0",
-    "org.apache.spark  "   %% "spark-sql-kafka-0-10"       % sparkVersion(scalaVersion),
+    "org.apache.spark"     %% "spark-sql-kafka-0-10"       % sparkVersion(scalaVersion),
     "io.confluent"         %  "kafka-avro-serializer"      % "5.3.1",
     "net.sourceforge.jtds" %  "jtds"                       % "1.3.1",
 
