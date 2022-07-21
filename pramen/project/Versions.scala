@@ -16,12 +16,23 @@
 import sbt._
 
 object Versions {
-  val typesafeConfigVersion = "1.4.0"
-  val scalatestVersion = "3.0.3"
-  val mockitoVersion = "2.28.2"
-
   val defaultSparkVersionForScala211 = "2.4.8"
   val defaultSparkVersionForScala212 = "3.2.1"
+
+  val typesafeConfigVersion = "1.4.0"
+  val abrisVersion = "5.1.1"
+  val postgreSqlDriverVersion = "42.3.3"
+  val msSqlDriverVersion = "1.3.1"
+  val mongoDbScalaDriverVersion = "2.7.0"
+  val hsqlDbVersion = "2.5.1"
+  val slickVersion = "3.3.3"
+  val scoptVersion = "3.7.1"
+  val channelsVersion = "0.1.3"
+  val kafkaClientVersion = "2.5.1"
+  val javaXMailVersion = "1.6.2"
+  val embeddedMongoDbVersion = "2.2.0"
+  val scalatestVersion = "3.0.3"
+  val mockitoVersion = "2.28.2"
 
   def sparkFallbackVersion(scalaVersion: String): String = {
     if (scalaVersion.startsWith("2.11")) {
@@ -42,8 +53,8 @@ object Versions {
     }
   }
 
-  def getDeltaDependency(scalaVersion: String): ModuleID = {
-    if (scalaVersion.startsWith("2.11")) {
+  def getDeltaDependency(sparkVersion: String): ModuleID = {
+    if (sparkVersion.startsWith("2.")) {
       "io.delta" %% "delta-core" % "0.6.1",
     } else {
       "io.delta" %% "delta-core" % "1.2.1",
