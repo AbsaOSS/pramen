@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.app.config
+import sbt._
+import Keys._
 
-trait HadoopFormat
+object B extends Build {
+  lazy val root =
+    Project("root", file("."))
+      .configs( FunTest )
+      .settings( inConfig(FunTest)(Defaults.testTasks) : _*)
+      .settings(
+        libraryDependencies += specs,
+        testOptions in Test := Seq(Tests.Filter(itFilter)),
+        testOptions in FunTest := Seq(Tests.Filter(unitFilter))
+      )
 
-case object HadoopFormat {
-  case object Text extends HadoopFormat
+  def itFilter(name: String): Boolean = name endsWith "LongSuite"
+  def unitFilter(name: String): Boolean = (name endsWith "Suite") && !itFilter(name)
 
-  def apply(format: String): HadoopFormat = format.toLowerCase match {
-    case "text" => Text
-    case _ => throw new IllegalArgumentException(s"Unknown Hadoop format: $format")
-  }
+  lazy val FunTest = config("integration") extend(Test)
 }
