@@ -288,7 +288,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * @param path a path.
     * @return true if the path is a file.
     */
-  def isFile(path: Path): Boolean = fs.isFile(path)
+  def isFile(path: Path): Boolean = fs.getFileStatus(path).isFile
 
   /**
     * Implements a file guard. A guard is a file on HDFS that contains its expiration time.

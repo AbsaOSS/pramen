@@ -24,7 +24,7 @@ import org.slf4j.LoggerFactory
   * This is required for Spark to be able to handle data that comes from Hive JDBC drivers
   */
 object HiveDialect extends JdbcDialect {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val logger = LoggerFactory.getLogger(this.getClass)
 
   override def canHandle(url: String): Boolean = url.startsWith("jdbc:hive2")
 
@@ -46,7 +46,7 @@ object HiveDialect extends JdbcDialect {
 
     val inferredTypeOpt = super.getCatalystType(sqlType, typeName, size, md)
 
-    log.debug(s"sqlType=$sqlType, typeName=$typeName, size=$size, TYPE=$inferredTypeOpt")
+    logger.debug(s"sqlType=$sqlType, typeName=$typeName, size=$size, TYPE=$inferredTypeOpt")
 
     inferredTypeOpt
   }
