@@ -238,7 +238,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
       // This is a workaround for this particular case, so the append can be done anyway.
       // At the same time, all other exceptions will be re-thrown. Since IOException is too broad, the code relies on
       // the particular message. It's a hack, sorry. HDFS supports append().
-      case ex: IOException if ex.getMessage.contains("Not supported") =>
+      case ex: Throwable if ex.getMessage != null && ex.getMessage.toLowerCase.contains("not supported") =>
         log.info("Appending using full overwrite")
         val originalContent = if (exists(filePath)) {
           readFile(filePath)

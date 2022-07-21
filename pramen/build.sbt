@@ -15,6 +15,7 @@
  */
 
 import Dependencies._
+import Versions._
 
 val scala211 = "2.11.12"
 val scala212 = "2.12.16"
@@ -31,6 +32,11 @@ ThisBuild / autoScalaLibrary := false
 
 lazy val printSparkVersion = taskKey[Unit]("Print Spark version pramen is building against.")
 
+def itFilter(name: String): Boolean = name endsWith "LongSuite"
+def unitFilter(name: String): Boolean = (name endsWith "Suite") && !itFilter(name)
+
+lazy val IntegrationTest = config("integration") extend(Test)
+
 lazy val pramen = (project in file("."))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
@@ -44,6 +50,7 @@ lazy val pramen = (project in file("."))
   .aggregate(api, framework, pipelineRunner, builtinJobs)
 
 lazy val api = (project in file("api"))
+  .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
     name := "api",
     printSparkVersion := {
@@ -53,9 +60,9 @@ lazy val api = (project in file("api"))
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
     libraryDependencies ++= ApiDependencies(scalaVersion.value) :+ getScalaDependency(scalaVersion.value),
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    assemblySettings
-  ).enablePlugins(AutomateHeaderPlugin)
+    releasePublishArtifactsAction := PgpKeys.publishSigned.value
+  )
+  .enablePlugins(AutomateHeaderPlugin)
 
 lazy val framework = (project in file("framework"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
@@ -67,10 +74,16 @@ lazy val framework = (project in file("framework"))
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= FrameworkDependencies(scalaVersion.value) :+ getScalaDependency(scalaVersion.value),
-    //populateBuildInfoTemplate,
+    libraryDependencies ++= FrameworkDependencies(scalaVersion.value)  ++
+      getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
+      getScalaDependency(scalaVersion.value),
+    (Test / testOptions) := Seq(Tests.Filter(unitFilter)),
+    (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
+    Test / fork := true,
+      //populateBuildInfoTemplate,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value
-  ).dependsOn(api)
+  )
+  .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val builtinJobs = (project in file("builtin-jobs"))
@@ -83,10 +96,14 @@ lazy val builtinJobs = (project in file("builtin-jobs"))
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= BuildinJobsDependencies(scalaVersion.value) :+ getScalaDependency(scalaVersion.value),
+    libraryDependencies ++= BuildinJobsDependencies(scalaVersion.value) ++
+      getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
+      getScalaDependency(scalaVersion.value),
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
+    Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value
-  ).dependsOn(framework)
+  )
+  .dependsOn(framework)
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val pipelineRunner = (project in file("pipeline-runner"))
@@ -98,7 +115,9 @@ lazy val pipelineRunner = (project in file("pipeline-runner"))
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= PipelineRunnerDependencied(scalaVersion.value) :+ getScalaDependency(scalaVersion.value),
+    libraryDependencies ++= PipelineRunnerDependencied(scalaVersion.value)  ++
+      getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
+      getScalaDependency(scalaVersion.value),
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     assemblySettings

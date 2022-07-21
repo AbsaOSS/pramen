@@ -108,9 +108,6 @@ object Bookkeeper {
             case HadoopFormat.Text  =>
               log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping.")
               new BookkeeperText(bookkeepingConfig.bookkeepingLocation.get)
-            case HadoopFormat.Delta =>
-              log.info(s"Using Hadoop/Delta for bookkeeping.")
-              new BookkeeperDelta(bookkeepingConfig.bookkeepingLocation.get)
           }
       }
     }

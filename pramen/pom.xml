@@ -168,7 +168,7 @@
             <dependency>
                 <groupId>za.co.absa</groupId>
                 <artifactId>abris_${scala.compat.version}</artifactId>
-                <version>4.2.0</version>
+                <version>5.1.1</version>
             </dependency>
 
             <!-- Kafka clients (https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients/2.5.1) -->
