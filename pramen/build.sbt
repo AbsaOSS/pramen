@@ -89,7 +89,6 @@ lazy val framework = (project in file("framework"))
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val builtinJobs = (project in file("builtin-jobs"))
-  .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
     name := "builtin-jobs",
     printSparkVersion := {
@@ -103,7 +102,8 @@ lazy val builtinJobs = (project in file("builtin-jobs"))
       getScalaDependency(scalaVersion.value),
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
     Test / fork := true,
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value
+    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    assemblySettingsBuiltInJobs
   )
   .dependsOn(framework)
   .enablePlugins(AutomateHeaderPlugin)
@@ -122,7 +122,7 @@ lazy val pipelineRunner = (project in file("pipeline-runner"))
       getScalaDependency(scalaVersion.value),
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    assemblySettings
+    assemblySettingsPipelineRunner
   )
   .dependsOn(framework)
   .enablePlugins(AutomateHeaderPlugin)
@@ -130,31 +130,69 @@ lazy val pipelineRunner = (project in file("pipeline-runner"))
 // release settings
 releaseCrossBuild := true
 
-lazy val assemblySettings = Seq(
+lazy val assemblySettingsCommon = Seq(
   // This merge strategy retains service entries for all services in manifest.
   assembly / assemblyMergeStrategy := {
+    case "reference.conf"   => MergeStrategy.concat
+    case "LICENSE"          => MergeStrategy.concat
+    case "log4j.properties" => MergeStrategy.filterDistinctLines
     case PathList("META-INF", xs @ _*) =>
       xs map {_.toLowerCase} match {
-        case "manifest.mf" :: Nil =>
-          MergeStrategy.discard
-        case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") =>
-          MergeStrategy.discard
-        case "maven" :: x =>
-          MergeStrategy.discard
-        case "services" :: x =>
-          MergeStrategy.filterDistinctLines
-        case _ => MergeStrategy.deduplicate
+        case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") => MergeStrategy.discard
+        case "dependencies" :: Nil => MergeStrategy.discard
+        case "notice" :: Nil       => MergeStrategy.discard
+        case "license" :: Nil      => MergeStrategy.concat
+        case "license.txt" :: Nil  => MergeStrategy.concat
+        case "manifest.mf" :: Nil  => MergeStrategy.discard
+        case "maven" :: x          => MergeStrategy.discard
+        case "services" :: x       => MergeStrategy.filterDistinctLines
+        case _                     => MergeStrategy.deduplicate
       }
     case _ => MergeStrategy.deduplicate
   },
   assembly / assemblyOption:= (assembly / assemblyOption).value.copy(includeScala = false),
-  assembly / assemblyShadeRules:= Seq(
-    // The SLF4j API and implementation are provided by Spark
-    ShadeRule.zap("org.slf4j.**").inAll
-  ),
   assembly / logLevel := Level.Info,
   assembly / test := {}
 )
+
+lazy val assemblySettingsBuiltInJobs = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
+  ShadeRule.zap("za.co.absa.pramen.**").inAll,
+  ShadeRule.zap("com.typesafe.config.**").inAll,
+  ShadeRule.zap("com.typesafe.slick.**").inAll,
+  ShadeRule.zap("io.delta.**").inAll,
+  ShadeRule.zap("org.antlr.**").inAll,
+  ShadeRule.zap("org.glassfish.**").inAll,
+  ShadeRule.zap("org.abego.**").inAll,
+  ShadeRule.zap("org.checkerframework.**").inAll,
+  ShadeRule.zap("org.reactivestreams.**").inAll,
+  ShadeRule.zap("com.zaxxer.**").inAll,
+  ShadeRule.zap("com.github.luben.**").inAll,
+  ShadeRule.zap("org.lz4.**").inAll,
+  ShadeRule.zap("org.xerial.snappy.**").inAll,
+  ShadeRule.zap("org.json4s.**").inAll,
+  ShadeRule.zap("com.sun.mail.**").inAll,
+  ShadeRule.zap("javax.activation.**").inAll,
+  ShadeRule.zap("com.github.yruslan.**").inAll,
+  ShadeRule.zap("com.thoughtworks.paranamer.**").inAll,
+  ShadeRule.zap("org.apache.zookeeper.**").inAll,
+  ShadeRule.zap("log4j.**").inAll,
+  ShadeRule.zap("io.netty.**").inAll,
+  ShadeRule.zap("org.codehaus.jackson.**").inAll,
+  ShadeRule.zap("com.fasterxml.**").inAll,
+  ShadeRule.zap("org.apache.avro.**").inAll,
+  ShadeRule.zap("org.apache.commons.**").inAll,
+  ShadeRule.zap("org.tukaani.**").inAll,
+  ShadeRule.zap("com.101tec.**").inAll,
+  ShadeRule.zap("za.co.absa.commons.**").inAll,
+  ShadeRule.zap("com.ibm.icu.**").inAll,
+  ShadeRule.zap("org.mongodb.scala.**").inAll,
+  ShadeRule.zap("org.postgresql.**").inAll,
+  ShadeRule.zap("org.slf4j.**").inAll
+))
+
+lazy val assemblySettingsPipelineRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
+  ShadeRule.zap("org.slf4j.**").inAll
+))
 
 addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bump.Bugfix; release with-defaults")
 addCommandAlias("itTest", "integration:test")
