@@ -1,4 +1,4 @@
-name: Build
+name: ScalaCI
 
 on:
   push:
@@ -7,16 +7,38 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
-
+  build-maven:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v2
       - name: Set up JDK 1.8
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-      - name: Run tests and license check
+      - name: Test and license check
         working-directory: ./pramen
         run: mvn verify --no-transfer-progress -Penable-long-tests
+  build-sbt:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scala: [2.11.12, 2.12.16]
+        spark: [2.4.8, 3.2.1]
+        exclude:
+          - scala: 2.11.12
+            spark: 3.2.1
+          - scala: 2.12.16
+            spark: 3.2.1
+    name: Test Spark ${{matrix.spark}} on Scala ${{matrix.scala}}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - uses: coursier/cache-action@v5
+      - name: Setup Scala
+        uses: olafurpg/setup-scala@v10
+        with:
+          java-version: "adopt@1.8"
+      - name: Build and run tests
+        working-directory: ./pramen
+        run: sbt ++${{matrix.scala}} test -DSPARK_VERSION=${{matrix.spark}}
