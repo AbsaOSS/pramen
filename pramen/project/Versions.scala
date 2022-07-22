@@ -35,10 +35,12 @@ object Versions {
   val mockitoVersion = "2.28.2"
 
   def sparkFallbackVersion(scalaVersion: String): String = {
-    if (scalaVersion.startsWith("2.11")) {
+    if (scalaVersion.startsWith("2.11.")) {
       defaultSparkVersionForScala211
-    } else {
+    } else if (scalaVersion.startsWith("2.12.")) {
       defaultSparkVersionForScala212
+    } else {
+      throw new IllegalArgumentException(s"Scala $scalaVersion not supported.")
     }
   }
 
@@ -48,16 +50,20 @@ object Versions {
     if (sparkVersion.startsWith("2.")) {
       // Seq("com.fasterxml.jackson.core" % "jackson-databind" % "2.6.7.3")
       Nil
-    } else{
+    } else if (sparkVersion.startsWith("3.")) {
       Nil
+    } else {
+      throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
   }
 
   def getDeltaDependency(sparkVersion: String): ModuleID = {
     if (sparkVersion.startsWith("2.")) {
       "io.delta" %% "delta-core" % "0.6.1",
-    } else {
+    } else if (sparkVersion.startsWith("3.")) {
       "io.delta" %% "delta-core" % "1.2.1",
+    } else {
+      throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
   }
 
