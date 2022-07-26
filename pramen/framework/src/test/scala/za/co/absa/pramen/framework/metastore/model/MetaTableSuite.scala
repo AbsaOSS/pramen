@@ -37,7 +37,6 @@ class MetaTableSuite extends WordSpec {
           |    path = /a/b/c
           |    information.date.column = INFO_DATE
           |    information.date.format = dd-MM-yyyy
-          |    initial.sourcing.date.expr = expr1
           |  },
           |  {
           |    name = table2
@@ -60,18 +59,15 @@ class MetaTableSuite extends WordSpec {
       assert(metaTables.head.infoDateColumn == "INFO_DATE")
       assert(metaTables.head.infoDateFormat == "dd-MM-yyyy")
       assert(metaTables.head.trackDays == 2)
-      assert(metaTables.head.initialSourcingDateExpression.contains("expr1"))
       assert(metaTables.head.infoDateStart == LocalDate.of(2020, 1, 31))
       assert(metaTables(1).name == "table2")
       assert(metaTables(1).format.name == "delta")
       assert(metaTables(1).infoDateColumn == "INFORMATION_DATE")
       assert(metaTables(1).infoDateFormat == "yyyy-MM-dd")
-      assert(metaTables(1).initialSourcingDateExpression.isEmpty)
       assert(metaTables(2).name == "table3")
       assert(metaTables(2).format.name == "delta")
       assert(metaTables(2).infoDateColumn == "INFORMATION_DATE")
       assert(metaTables(2).infoDateFormat == "yyyy-MM-dd")
-      assert(metaTables(2).initialSourcingDateExpression.isEmpty)
     }
 
     "throw an exception if there are multiple tables with the same name" in {

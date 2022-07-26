@@ -98,7 +98,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
       job.operation.outputInfoDateExpression,
       job.operation.schedule,
       scheduleParams,
-      job.outputTable.initialSourcingDateExpression.getOrElse(job.operation.initialSourcingDateExpression),
+      job.operation.initialSourcingDateExpression,
       job.outputTable.infoDateStart
     )
 
