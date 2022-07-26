@@ -35,6 +35,7 @@ case class MetaTable(
                       infoDateFormat: String,
                       hiveTable: Option[String],
                       infoDateExpression: Option[String],
+                      initialSourcingDateExpression: Option[String],
                       infoDateStart: LocalDate,
                       trackDays: Int,
                       readOptions: Map[String, String],
@@ -48,6 +49,7 @@ object MetaTable {
   val TRACK_DAYS_KEY = "track.days"
   val READ_OPTION_KEY = "read.option"
   val WRITE_OPTION_KEY = "write.option"
+  val INITIAL_SOURCING_DATE_EXPR = "initial.sourcing.date.expr"
 
   def fromConfig(conf: Config, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = conf.getString(InfoDateConfig.INFORMATION_DATE_COLUMN_KEY)
@@ -79,6 +81,7 @@ object MetaTable {
     val infoDateColumn = infoDateOverride.columnName.getOrElse(defaultInfoColumnName)
     val infoDateFormat = infoDateOverride.dateFormat.getOrElse(defaultInfoDateFormat)
     val infoDateExpressionOpt = infoDateOverride.expression
+    val initialSourcingDateExpression = ConfigUtils.getOptionString(conf, INITIAL_SOURCING_DATE_EXPR)
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
 
@@ -93,7 +96,7 @@ object MetaTable {
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
 
-    MetaTable(name, description, format, infoDateColumn, infoDateFormat, hiveTable, infoDateExpressionOpt, startDate, trackDays, readOptions, writeOptions)
+    MetaTable(name, description, format, infoDateColumn, infoDateFormat, hiveTable, infoDateExpressionOpt, initialSourcingDateExpression, startDate, trackDays, readOptions, writeOptions)
   }
 
 }

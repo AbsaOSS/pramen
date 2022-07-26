@@ -34,6 +34,10 @@ class InfoDateConfigSuite extends WordSpec {
            |  default.daily.output.info.date.expr = "expr1"
            |  default.weekly.output.info.date.expr = "expr2"
            |  default.monthly.output.info.date.expr = "expr3"
+           |
+           |  initial.sourcing.date.daily.expr = "expr4"
+           |  initial.sourcing.date.weekly.expr= "expr5"
+           |  initial.sourcing.date.monthly.expr = "expr6"
            |}
            |""".stripMargin
 
@@ -51,6 +55,9 @@ class InfoDateConfigSuite extends WordSpec {
       assert(runtimeConfig.expressionDaily == "expr1")
       assert(runtimeConfig.expressionWeekly == "expr2")
       assert(runtimeConfig.expressionMonthly == "expr3")
+      assert(runtimeConfig.initialSourcingDateExprDaily == "expr4")
+      assert(runtimeConfig.initialSourcingDateExprWeekly == "expr5")
+      assert(runtimeConfig.initialSourcingDateExprMonthly == "expr6")
     }
 
     "have default values" in {

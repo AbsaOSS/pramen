@@ -85,7 +85,7 @@ object ScheduleStrategyUtils {
                                  runDate: LocalDate,
                                  schedule: Schedule,
                                  infoDateExpression: String,
-                                 minimumDate: LocalDate,
+                                 initialDateExpr: String,
                                  bookkeeper: Bookkeeper
                                 ): List[TaskPreDef] = {
     val lastInfoDate = evaluateRunDate(runDate.minusDays(1), infoDateExpression)
@@ -105,9 +105,16 @@ object ScheduleStrategyUtils {
           Nil
         }
       case None               =>
-        log.info(s"No jobs for $outputTable have ran yet. Running from the starting date: $minimumDate to the current catch up information date: $lastInfoDate.")
-        getInfoDateRange(minimumDate, runDate.minusDays(1), infoDateExpression, schedule)
-          .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
+        log.info(s"No jobs for $outputTable have ran yet. Getting the initial sourcing date: $initialDateExpr, runDate=$runDate.")
+        val initialDate = evaluateRunDate(runDate, initialDateExpr)
+        if (initialDate.toEpochDay <= lastInfoDate.toEpochDay) {
+          log.info(s"Running from the starting date: $initialDate to the current catch up information date: $lastInfoDate.")
+          getInfoDateRange(initialDate, runDate.minusDays(1), infoDateExpression, schedule)
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
+        } else {
+          log.info(s"The expression for the initial date returned $initialDate which is after the previous information date $lastInfoDate - no catch up needed.")
+          Nil
+        }
     }
   }
 
