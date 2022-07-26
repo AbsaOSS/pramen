@@ -34,6 +34,9 @@ class PipelineDefSuite extends WordSpec with TempDirFixture {
     0,
     "@date",
     "lastSaturday(@runDate)",
+    "beginOfMonth(@runDate)",
+    "@runDate",
+    "@runDate - 6",
     "beginOfMonth(@runDate)")
 
   "PipelineDef.fromConfig()" should {

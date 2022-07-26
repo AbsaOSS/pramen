@@ -33,7 +33,11 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
     0,
     "@date",
     "lastSaturday(@runDate)",
-    "beginOfMonth(@runDate)")
+    "beginOfMonth(@runDate)",
+    "@runDate",
+    "@runDate - 6",
+    "beginOfMonth(@runDate)"
+  )
 
   "OperationDef.fromConfig()" should {
     "return None for the disabled operation" in {

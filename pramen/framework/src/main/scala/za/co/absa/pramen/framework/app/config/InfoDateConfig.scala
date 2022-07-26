@@ -30,8 +30,10 @@ case class InfoDateConfig(
                            defaultDelayDays: Int,
                            expressionDaily: String,
                            expressionWeekly: String,
-                           expressionMonthly: String
-                         )
+                           expressionMonthly: String,
+                           initialSourcingDateExprDaily: String,
+                           initialSourcingDateExprWeekly: String,
+                           initialSourcingDateExprMonthly: String                         )
 
 object InfoDateConfig {
   val INFORMATION_DATE_COLUMN_KEY = "pramen.information.date.column"
@@ -41,6 +43,10 @@ object InfoDateConfig {
   val INFORMATION_DATE_EXPRESSION_DAILY_KEY = "pramen.default.daily.output.info.date.expr"
   val INFORMATION_DATE_EXPRESSION_WEEKLY_KEY = "pramen.default.weekly.output.info.date.expr"
   val INFORMATION_DATE_EXPRESSION_MONTHLY_KEY = "pramen.default.monthly.output.info.date.expr"
+
+  val INITIAL_INFORMATION_DATE_EXPRESSION_DAILY_KEY = "pramen.initial.sourcing.date.daily.expr"
+  val INITIAL_INFORMATION_DATE_EXPRESSION_WEEKLY_KEY = "pramen.initial.sourcing.date.weekly.expr"
+  val INITIAL_INFORMATION_DATE_EXPRESSION_MONTHLY_KEY = "pramen.initial.sourcing.date.monthly.expr"
 
   val TRACK_DAYS = "pramen.track.days"
   val EXPECTED_DELAY_DAYS = "pramen.expected.delay.days"
@@ -54,9 +60,23 @@ object InfoDateConfig {
     val expressionWeekly = conf.getString(INFORMATION_DATE_EXPRESSION_WEEKLY_KEY)
     val expressionMonthly = conf.getString(INFORMATION_DATE_EXPRESSION_MONTHLY_KEY)
 
+    val initialDateExprDaily = conf.getString(INITIAL_INFORMATION_DATE_EXPRESSION_DAILY_KEY)
+    val initialDateExprWeekly = conf.getString(INITIAL_INFORMATION_DATE_EXPRESSION_WEEKLY_KEY)
+    val initialDateExprMonthly = conf.getString(INITIAL_INFORMATION_DATE_EXPRESSION_MONTHLY_KEY)
+
     val defaultTrackDays = conf.getInt(TRACK_DAYS)
     val defaultDelayDays = conf.getInt(EXPECTED_DELAY_DAYS)
 
-    InfoDateConfig(columnName, dateFormat, startDate, defaultTrackDays, defaultDelayDays, expressionDaily, expressionWeekly, expressionMonthly)
+    InfoDateConfig(columnName,
+      dateFormat,
+      startDate,
+      defaultTrackDays,
+      defaultDelayDays,
+      expressionDaily,
+      expressionWeekly,
+      expressionMonthly,
+      initialDateExprDaily,
+      initialDateExprWeekly,
+      initialDateExprMonthly)
   }
 }

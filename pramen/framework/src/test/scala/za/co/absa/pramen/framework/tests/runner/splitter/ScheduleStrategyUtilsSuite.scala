@@ -65,7 +65,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         val expected = List(date.minusDays(3), date.minusDays(2), date.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
-        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", date.minusDays(3), bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", bk)
 
         assert(actual == expected)
       }
@@ -78,7 +78,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
         val expected = List(date.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
-        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", date.minusDays(3), bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", bk)
 
         assert(actual == expected)
       }
@@ -88,7 +88,7 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
 
         when(bk.getLatestProcessedDate("table")).thenReturn(Some(date.minusDays(1)))
 
-        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", date.minusDays(3), bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", bk)
 
         assert(actual.isEmpty)
       }

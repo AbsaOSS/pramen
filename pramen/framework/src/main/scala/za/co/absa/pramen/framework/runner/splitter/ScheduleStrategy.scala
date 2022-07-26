@@ -32,6 +32,7 @@ trait ScheduleStrategy {
                     infoDateExpression: String,
                     schedule: Schedule,
                     params: ScheduleParams,
+                    initialSourcingDateExpr: String,
                     minimumDate: LocalDate
                   ): Seq[TaskPreDef]
 }

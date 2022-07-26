@@ -34,6 +34,7 @@ case class OperationDef(
                          expectedDelayDays: Int,
                          dependencies: Seq[MetastoreDependency],
                          outputInfoDateExpression: String,
+                         initialSourcingDateExpression: String,
                          processingTimestampColumn: Option[String],
                          schemaTransformations: Seq[TransformExpression],
                          filters: Seq[String],
@@ -50,6 +51,7 @@ object OperationDef {
   val EXPECTED_DELAY_DAYS_KEY = "expected.delay.days"
   val DEPENDENCIES_KEY = "dependencies"
   val OUTPUT_INFO_DATE_EXPRESSION_KEY = "info.date.expr"
+  val INITIAL_SOURCING_DATE_EXPR = "initial.sourcing.date.expr"
   val PROCESSING_TIMESTAMP_COLUMN_KEY = "processing.timestamp.column"
   val SCHEMA_TRANSFORMATIONS_KEY = "transformations"
   val FILTERS_KEY = "filters"
@@ -71,6 +73,7 @@ object OperationDef {
     val expectedDelayDays = ConfigUtils.getOptionInt(conf, EXPECTED_DELAY_DAYS_KEY).getOrElse(defaultDelayDays)
     val dependencies = getDependencies(conf, parent)
     val outputInfoDateExpressionOpt = ConfigUtils.getOptionString(conf, OUTPUT_INFO_DATE_EXPRESSION_KEY)
+    val initialSourcingDateExpressionOpt = ConfigUtils.getOptionString(conf, INITIAL_SOURCING_DATE_EXPR)
     val processingTimestampColumn = ConfigUtils.getOptionString(conf, PROCESSING_TIMESTAMP_COLUMN_KEY)
     val schemaTransformations = TransformExpression.fromConfig(conf, SCHEMA_TRANSFORMATIONS_KEY, parent)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
@@ -78,11 +81,21 @@ object OperationDef {
 
     val outputInfoDateExpression = outputInfoDateExpressionOpt match {
       case Some(expr) => expr
-      case None =>
+      case None       =>
         schedule match {
           case _: Schedule.EveryDay => infoDateConfig.expressionDaily
-          case _: Schedule.Weekly => infoDateConfig.expressionWeekly
-          case _: Schedule.Monthly => infoDateConfig.expressionMonthly
+          case _: Schedule.Weekly   => infoDateConfig.expressionWeekly
+          case _: Schedule.Monthly  => infoDateConfig.expressionMonthly
+        }
+    }
+
+    val initialSourcingDateExpression = initialSourcingDateExpressionOpt match {
+      case Some(expr) => expr
+      case None       =>
+        schedule match {
+          case _: Schedule.EveryDay => infoDateConfig.initialSourcingDateExprDaily
+          case _: Schedule.Weekly   => infoDateConfig.initialSourcingDateExprWeekly
+          case _: Schedule.Monthly  => infoDateConfig.initialSourcingDateExprMonthly
         }
     }
 
@@ -93,6 +106,7 @@ object OperationDef {
       expectedDelayDays,
       dependencies,
       outputInfoDateExpression,
+      initialSourcingDateExpression,
       processingTimestampColumn,
       schemaTransformations,
       filters,

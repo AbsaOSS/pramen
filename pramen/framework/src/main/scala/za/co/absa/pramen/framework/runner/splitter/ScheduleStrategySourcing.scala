@@ -35,6 +35,7 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
                              infoDateExpression: String,
                              schedule: Schedule,
                              params: ScheduleParams,
+                             initialSourcingDateExpr: String,
                              minimumDate: LocalDate
                            ): Seq[TaskPreDef] = {
     val dates = params match {
@@ -48,7 +49,7 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
         }
 
         val lateDays = if (!newOnly) {
-          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, minimumDate, bookkeeper)
+          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, bookkeeper)
         } else {
           Nil
         }
