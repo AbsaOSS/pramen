@@ -141,7 +141,7 @@ Currently, the following underlying storage is supported.
 
 Here is an example of a metastore configuration with a single table (Parquet format):
 ```config
-watcher.metastore {
+pramen.metastore {
   tables = [
   {  
     name = "table_name"
@@ -167,8 +167,6 @@ Metastore table options:
 | `information.date.column`    | Name of the column that contains the information date. *                          |
 | `information.date.format`    | Format of the information date used for partitioning (in Java format notation). * |
 | `information.date.start`     | The earliest date the table contains data for. *                                  |
-| `initial.sourcing.date.expr` | An expression used to determine the earliest the table should be initially loaded |
-
 
 `*` - It is recommended to standardize information date column used for partitioning folders in the metastore. You can
 define default values for the information date column at the top of configuration and it will be used by default if not
@@ -181,14 +179,6 @@ Default information date settings can be set using the following configuration k
 | `pramen.information.date.column` | pramen_info_date  | Default information date column name.              |
 | `pramen.information.date.format` | yyyy-MM-dd        | Default information date format.                   |
 | `pramen.information.date.start`  | 2020-01-01        | Default starting date for tables in the metastore. |
-
-Default sourcing date expressions for loading the table for the first time, when no bookkeeping information is available:
-
-| Name                                 | Default value            | Description               |
-|--------------------------------------|--------------------------|---------------------------|
-| `initial.sourcing.date.daily.expr`   | "@runDate"               | Default for daily jobs.   |
-| `initial.sourcing.date.weekly.expr`  | "@runDate - 6"           | Default for weekly jobs.  |
-| `initial.sourcing.date.monthly.expr` | "beginOfMonth(@runDate)" | Default for monthly jobs. |
 
 Storage type examples:
 
@@ -244,7 +234,7 @@ You can define your own source by implementing the corresponding interface.
 
 Sources are defined like this:
 ```config
-watcher.sources = [
+pramen.sources = [
   {
     # The name of the source. It will be used to refer to the source in the pipeline.
     name = "source1_name"
@@ -839,7 +829,7 @@ have a pipeline without transformers if data ingestion is all is needed.
 Each pipeline has several mandatory options:
 
 ```config
-watcher {
+pramen {
   # The environment name and pipeline name are defined to be included in email notifications.
   # You can reference system environment variables if you want your pipeline config to be deployable
   # to different envorinments without a change.
@@ -878,7 +868,7 @@ A pipeline is defined as an array of operations. It becomes a DAG (directed acyc
 are evaluated.
 
 ```config
-watcher.operations = [
+pramen.operations = [
   {
     name = "Source operation"
     type = "ingestion"
@@ -892,6 +882,10 @@ watcher.operations = [
 
     # schedule.type = monthly
     # schedule.days.of.month = [ 1 ]
+    
+    # (optional) Specifies an expression for date of initial sourcing for all tables in this operation.
+    # Overrides 'default.daily.output.info.date.expr'   
+    initial.sourcing.date.expr = "@runDate - 5"
     
     source = "my_jdbc_source"
     
@@ -1017,7 +1011,7 @@ so that querying the data is easier.
 
 You can specify default output information date expressions in the config (usually `common.conf`) liek this:
 ```conf
-watcher {
+pramen {
   # Default infroamation date expression for daily jobs
   default.daily.output.info.date.expr = "@runDate"
 
@@ -1031,11 +1025,45 @@ watcher {
 
 You can override defaults for specific operations by changing the definition of the operation as follows:
 ```
-watcher.operations = [
+pramen.operations = [
   ...
   {
     ...
     info.date.expr = "@runDate"
+  }
+  ...
+]
+```
+
+#### Initial sourcing dates
+
+When you add a new table to the metastore and have a sourcing job for it, by default Pramen will load only recent data.
+You can change the behavior by either providing default initial sourcing date expressions or specifying an initial 
+sourcing date expression for an operation.
+
+In the expression you specify an expression that given the current date (@runDate) returns the oldest date to load data for.  
+
+Default values are configured like this:
+```conf
+pramen {
+  # Default initial sourcing date expression for daily jobs
+  initial.sourcing.date.daily.expr = "@runDate"
+
+  # Default initial sourcing date expression for weekly jobs (pick up any information date last week)
+  initial.sourcing.date.weekly.expr = "@runDate - 6"
+
+  # Default initial sourcing date expression for monthly jobs (start from the beginning on the current month)
+  initial.sourcing.date.monthly.expr = "beginOfMonth(@runDate)"
+}
+```
+
+You can override defaults for specific operations by changing the definition of the operation as follows:
+```
+pramen.operations = [
+  ...
+  {
+    ...
+    initial.sourcing.date.expr = "@runDate"
   }
   ...
 ]
@@ -1395,7 +1423,7 @@ Here is a template for such a pipeline:
   <summary>Click to expand</summary>
 
 ```config
-watcher.metastore {
+pramen.metastore {
   tables = [
     {
       name = "table"
@@ -1407,7 +1435,7 @@ watcher.metastore {
   ]
 }
 
-watcher.sources = [
+pramen.sources = [
   {
     name = "postgre"
     factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
@@ -1430,7 +1458,7 @@ watcher.sources = [
   }
 ]
 
-watcher.sinks = [
+pramen.sinks = [
   {
     name = "enceladus_sink"
     factory.class = "za.co.absa.pramen.builtin.sink.EnceladusSink"
@@ -1455,7 +1483,7 @@ watcher.sinks = [
   }
 ]
 
-watcher.operations = [
+pramen.operations = [
 {
     name = "Table1 sourcing"
     type = "ingestion"
