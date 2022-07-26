@@ -157,16 +157,18 @@ watcher.metastore {
 
 Metastore table options:
 
-| Name                      | Description                                                                       |
-|---------------------------|-----------------------------------------------------------------------------------|
-| `name`                    | Name of the metastore table                                                       |
-| `format`                  | Storage format (`parquet` or `delta`)                                             |
-| `path`                    | Path to the data in the metastore.                                                |
-| `table`                   | DataLake table name (if DataLake tables are the underlying storage).              |
-| `records.per.partition`   | Number of records per partition (in order to avoid small files problem).          |
-| `information.date.column` | Name of the column that contains the information date. *                          |
-| `information.date.format` | Format of the information date used for partitioning (in Java format notation). * |
-| `information.date.start`  | The earliest date the table contains data for. *                                  |
+| Name                         | Description                                                                       |
+|------------------------------|-----------------------------------------------------------------------------------|
+| `name`                       | Name of the metastore table                                                       |
+| `format`                     | Storage format (`parquet` or `delta`)                                             |
+| `path`                       | Path to the data in the metastore.                                                |
+| `table`                      | DataLake table name (if DataLake tables are the underlying storage).              |
+| `records.per.partition`      | Number of records per partition (in order to avoid small files problem).          |
+| `information.date.column`    | Name of the column that contains the information date. *                          |
+| `information.date.format`    | Format of the information date used for partitioning (in Java format notation). * |
+| `information.date.start`     | The earliest date the table contains data for. *                                  |
+| `initial.sourcing.date.expr` | An expression used to determine the earliest the table should be initially loaded |
+
 
 `*` - It is recommended to standardize information date column used for partitioning folders in the metastore. You can
 define default values for the information date column at the top of configuration and it will be used by default if not
@@ -174,11 +176,19 @@ overridden explicitly for a metastore table.
 
 Default information date settings can be set using the following configuration keys:
 
-| Name                                            | Default value     | Description                                        |
-|-------------------------------------------------|-------------------|----------------------------------------------------|
-| `watcher.information.date.column`               | pramen_info_date  | Default information date column name.              |
-| `watcher.information.date.format`               | yyyy-MM-dd        | Default information date format.                   |
-| `watcher.information.date.start`                | 2020-01-01        | Default starting date for tables in the metastore. |
+| Name                             | Default value     | Description                                        |
+|----------------------------------|-------------------|----------------------------------------------------|
+| `pramen.information.date.column` | pramen_info_date  | Default information date column name.              |
+| `pramen.information.date.format` | yyyy-MM-dd        | Default information date format.                   |
+| `pramen.information.date.start`  | 2020-01-01        | Default starting date for tables in the metastore. |
+
+Default sourcing date expressions for loading the table for the first time, when no bookkeeping information is available:
+
+| Name                                 | Default value            | Description               |
+|--------------------------------------|--------------------------|---------------------------|
+| `initial.sourcing.date.daily.expr`   | "@runDate"               | Default for daily jobs.   |
+| `initial.sourcing.date.weekly.expr`  | "@runDate - 6"           | Default for weekly jobs.  |
+| `initial.sourcing.date.monthly.expr` | "beginOfMonth(@runDate)" | Default for monthly jobs. |
 
 Storage type examples:
 
