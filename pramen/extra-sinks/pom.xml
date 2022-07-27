@@ -20,7 +20,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <artifactId>builtin-jobs</artifactId>
+    <artifactId>pramen-extra-sinks</artifactId>
     <packaging>jar</packaging>
 
     <parent>
@@ -37,7 +37,7 @@
         <!-- Pramen API -->
         <dependency>
             <groupId>za.co.absa.pramen</groupId>
-            <artifactId>framework</artifactId>
+            <artifactId>pramen-core</artifactId>
             <version>${project.version}</version>
         </dependency>
 
