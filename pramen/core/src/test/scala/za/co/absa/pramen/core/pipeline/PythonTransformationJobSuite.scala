@@ -14,22 +14,22 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.framework.OperationDefFactory
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.exceptions.ProcessFailedException
-import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
-import za.co.absa.pramen.framework.metastore.MetaTableStats
-import za.co.absa.pramen.framework.mocks.MetaTableFactory
-import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
-import za.co.absa.pramen.framework.mocks.metastore.MetastoreSpy
-import za.co.absa.pramen.framework.mocks.process.ProcessRunnerSpy
+import za.co.absa.pramen.core.OperationDefFactory
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.exceptions.ProcessFailedException
+import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.mocks.MetaTableFactory
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
+import za.co.absa.pramen.core.mocks.process.ProcessRunnerSpy
 
 import java.nio.file.{Files, Paths}
 import java.time.{Instant, LocalDate}

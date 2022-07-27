@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.orchestrator
+package za.co.absa.pramen.core.runner.orchestrator
 
-import za.co.absa.pramen.framework.pipeline.JobDependency
-import za.co.absa.pramen.framework.utils.AlgorithmUtils
+import za.co.absa.pramen.core.pipeline.JobDependency
+import za.co.absa.pramen.core.utils.AlgorithmUtils
 
 import scala.collection.mutable
 

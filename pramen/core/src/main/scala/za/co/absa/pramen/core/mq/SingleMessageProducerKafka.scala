@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mq
+package za.co.absa.pramen.core.mq
 
 import java.util.Properties
 import java.util.concurrent.TimeUnit
 
 import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration

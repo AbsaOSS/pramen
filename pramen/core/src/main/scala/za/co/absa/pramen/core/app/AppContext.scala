@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.app
+package za.co.absa.pramen.core.app
 
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.journal.Journal
-import za.co.absa.pramen.framework.lock.TokenLockFactory
-import za.co.absa.pramen.framework.metastore.Metastore
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.journal.Journal
+import za.co.absa.pramen.core.lock.TokenLockFactory
+import za.co.absa.pramen.core.metastore.Metastore
 
 trait AppContext {
   val appConfig: AppConfig

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.source
+package za.co.absa.pramen.core.source
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.Source
-import za.co.absa.pramen.framework.ExternalChannelFactory
+import za.co.absa.pramen.core.ExternalChannelFactory
 
 object SourceManager {
   val SOURCES_KEY = "pramen.sources"

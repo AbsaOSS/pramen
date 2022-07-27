@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.{Reason, Sink}
-import za.co.absa.pramen.framework.OperationDefFactory
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
-import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
-import za.co.absa.pramen.framework.mocks.job.SinkSpy
-import za.co.absa.pramen.framework.mocks.metastore.MetastoreSpy
-import za.co.absa.pramen.framework.mocks.{MetaTableFactory, SinkTableFactory}
-import za.co.absa.pramen.framework.utils.SparkUtils
+import za.co.absa.pramen.core.OperationDefFactory
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.job.SinkSpy
+import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
+import za.co.absa.pramen.core.mocks.{MetaTableFactory, SinkTableFactory}
+import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.{Instant, LocalDate}
 

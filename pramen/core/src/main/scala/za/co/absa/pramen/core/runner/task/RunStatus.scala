@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.task
+package za.co.absa.pramen.core.runner.task
 
-import za.co.absa.pramen.framework.pipeline.{DependencyFailure, TaskRunReason}
+import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 
 sealed trait RunStatus {
   val isFailure: Boolean

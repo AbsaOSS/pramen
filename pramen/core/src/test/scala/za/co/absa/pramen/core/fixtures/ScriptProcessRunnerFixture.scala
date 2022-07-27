@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.fixtures
+package za.co.absa.pramen.core.fixtures
 
 import org.apache.commons.io.FileUtils
-import za.co.absa.pramen.framework.mocks.DummyProcessRunner
-import za.co.absa.pramen.framework.process.{ProcessRunner, ProcessRunnerImpl}
+import za.co.absa.pramen.core.mocks.DummyProcessRunner
+import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
 
 import java.io.File
 import java.nio.file.attribute.PosixFilePermission

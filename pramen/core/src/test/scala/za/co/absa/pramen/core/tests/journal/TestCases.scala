@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.journal
+package za.co.absa.pramen.core.tests.journal
 
-import za.co.absa.pramen.framework.journal.model
-import za.co.absa.pramen.framework.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model
+import za.co.absa.pramen.core.journal.model.TaskCompleted
 
 import java.time.{Instant, LocalDate}
 

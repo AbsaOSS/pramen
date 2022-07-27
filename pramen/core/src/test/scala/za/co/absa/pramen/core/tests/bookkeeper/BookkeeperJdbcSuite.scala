@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.bookkeeper
+package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
-import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperJdbc}
-import za.co.absa.pramen.framework.fixtures.RelationalDbFixture
-import za.co.absa.pramen.framework.rdb.PramenDb
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperJdbc}
+import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
 

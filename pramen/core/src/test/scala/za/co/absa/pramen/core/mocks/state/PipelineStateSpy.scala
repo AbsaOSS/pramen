@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.state
+package za.co.absa.pramen.core.mocks.state
 
-import za.co.absa.pramen.framework.runner.task.TaskResult
-import za.co.absa.pramen.framework.state.PipelineState
+import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.core.state.PipelineState
 
 import scala.collection.mutable.ListBuffer
 

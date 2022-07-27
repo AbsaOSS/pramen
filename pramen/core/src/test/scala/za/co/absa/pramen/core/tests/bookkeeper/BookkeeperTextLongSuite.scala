@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.bookkeeper
+package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfter
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperText}
-import za.co.absa.pramen.framework.fixtures.TempDirFixture
-import za.co.absa.pramen.framework.utils.FsUtils
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperText}
+import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.utils.FsUtils
 
 class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase with BeforeAndAfter with TempDirFixture {
 
-  import za.co.absa.pramen.framework.bookkeeper.BookkeeperText._
+  import za.co.absa.pramen.core.bookkeeper.BookkeeperText._
 
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 

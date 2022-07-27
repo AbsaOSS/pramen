@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.bookkeeper
+package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.BeforeAndAfter
-import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperMongoDb}
-import za.co.absa.pramen.framework.fixtures.MongoDbFixture
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperMongoDb}
+import za.co.absa.pramen.core.fixtures.MongoDbFixture
 
 class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixture with BeforeAndAfter {
 
   import BookkeeperMongoDb._
-  import za.co.absa.pramen.framework.dao.ScalaMongoImplicits._
+  import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
   before {
     if (db.doesCollectionExists(collectionName)) {

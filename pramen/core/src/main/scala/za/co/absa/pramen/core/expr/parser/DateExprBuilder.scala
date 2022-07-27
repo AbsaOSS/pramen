@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.expr.parser
+package za.co.absa.pramen.core.expr.parser
 
 import java.time.LocalDate
 

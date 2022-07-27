@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
 class TokenLockFactoryAllow extends TokenLockFactory {
   override def getLock(token: String): TokenLock = {

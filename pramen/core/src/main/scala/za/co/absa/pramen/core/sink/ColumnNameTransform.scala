@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sink
+package za.co.absa.pramen.core.sink
 
 sealed trait ColumnNameTransform
 

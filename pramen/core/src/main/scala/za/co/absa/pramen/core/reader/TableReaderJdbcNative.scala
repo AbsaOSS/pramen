@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.reader
+package za.co.absa.pramen.core.reader
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
-import za.co.absa.pramen.framework.utils.SparkUtils.sanitizeDfColumns
-import za.co.absa.pramen.framework.utils.{ConfigUtils, JdbcNativeUtils, TimeUtils}
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.SparkUtils.sanitizeDfColumns
+import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
@@ -40,7 +40,7 @@ class TableReaderJdbcNative(queryExpression: String,
 
   logConfiguration()
 
-  private[framework] def getJdbcConfig: JdbcConfig = jdbcConfig
+  private[core] def getJdbcConfig: JdbcConfig = jdbcConfig
 
   override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val start = Instant.now()

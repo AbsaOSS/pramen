@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.runner.orchestrator
+package za.co.absa.pramen.core.tests.runner.orchestrator
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.pipeline.JobDependency
-import za.co.absa.pramen.framework.runner.orchestrator.{DependencyResolver, DependencyResolverImpl}
+import za.co.absa.pramen.core.pipeline.JobDependency
+import za.co.absa.pramen.core.runner.orchestrator.{DependencyResolver, DependencyResolverImpl}
 
 class DependencyResolverSuite extends WordSpec {
 

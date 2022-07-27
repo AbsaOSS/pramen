@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.utils
+package za.co.absa.pramen.core.utils
 
 import java.time._
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
@@ -22,7 +22,7 @@ import scala.annotation.tailrec
 
 object DateUtils {
   // Include this line if you need to sort containers by a date:
-  // import za.co.absa.pramen.framework.utils.DateUtils._
+  // import za.co.absa.pramen.core.utils.DateUtils._
   implicit val localDateOrdering: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
 
   val isoDatePattern = "yyyy-MM-dd"

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify
+package za.co.absa.pramen.core.notify
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.util.Properties
 import javax.mail.internet.{InternetAddress, MimeMessage}

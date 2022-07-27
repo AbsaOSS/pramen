@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.rdb
+package za.co.absa.pramen.core.rdb
 
 case class DbVersion (version: Int)

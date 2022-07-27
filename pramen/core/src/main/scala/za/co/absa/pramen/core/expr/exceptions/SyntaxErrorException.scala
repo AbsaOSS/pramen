@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.expr.exceptions
+package za.co.absa.pramen.core.expr.exceptions
 
 class SyntaxErrorException(message: String, cause: Throwable = null)
   extends RuntimeException(message, cause) {

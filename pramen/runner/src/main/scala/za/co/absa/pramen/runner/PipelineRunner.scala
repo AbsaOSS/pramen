@@ -17,8 +17,8 @@
 package za.co.absa.pramen.runner
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.config.Keys
-import za.co.absa.pramen.framework.runner.AppRunner
+import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.runner.RunnerCommons._
 
 object PipelineRunner {

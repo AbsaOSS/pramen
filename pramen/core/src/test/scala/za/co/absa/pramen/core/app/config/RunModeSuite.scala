@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.app.config
+package za.co.absa.pramen.core.app.config
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.runner.splitter.RunMode
+import za.co.absa.pramen.core.runner.splitter.RunMode
 
 class RunModeSuite extends WordSpec {
   "RunMode.fromString()" should {

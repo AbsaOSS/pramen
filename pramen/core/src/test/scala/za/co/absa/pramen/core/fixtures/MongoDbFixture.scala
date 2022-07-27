@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.fixtures
+package za.co.absa.pramen.core.fixtures
 
 import org.mongodb.scala.{MongoClient, MongoDatabase}
 import org.scalatest.{BeforeAndAfterAll, Suite}
-import za.co.absa.pramen.framework.dao.MongoDb
-import za.co.absa.pramen.framework.mocks.dao.MongoDbSingleton
-import za.co.absa.pramen.framework.mongo.MongoDbConnection
+import za.co.absa.pramen.core.dao.MongoDb
+import za.co.absa.pramen.core.mocks.dao.MongoDbSingleton
+import za.co.absa.pramen.core.mongo.MongoDbConnection
 
 trait MongoDbFixture extends BeforeAndAfterAll {
 
   this: Suite =>
 
-  import za.co.absa.pramen.framework.dao.ScalaMongoImplicits._
+  import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
   private val (mongoDbExecutable, mongoPort) = MongoDbSingleton.embeddedMongoDb
 

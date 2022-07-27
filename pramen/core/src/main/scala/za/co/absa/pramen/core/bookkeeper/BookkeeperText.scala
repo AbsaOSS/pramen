@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.bookkeeper
+package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Column, Dataset, SparkSession}
-import za.co.absa.pramen.framework.bookkeeper.model.TableSchemaJson
-import za.co.absa.pramen.framework.lock.TokenLockHadoop
-import za.co.absa.pramen.framework.model.{DataChunk, TableSchema}
-import za.co.absa.pramen.framework.utils.{CsvUtils, FsUtils, JsonUtils, SparkUtils}
+import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
+import za.co.absa.pramen.core.lock.TokenLockHadoop
+import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
+import za.co.absa.pramen.core.utils.{CsvUtils, FsUtils, JsonUtils, SparkUtils}
 
 import java.time.{Instant, LocalDate}
 import scala.util.Random

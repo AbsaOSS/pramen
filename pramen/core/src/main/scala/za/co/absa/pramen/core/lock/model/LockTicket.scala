@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock.model
+package za.co.absa.pramen.core.lock.model
 
 case class LockTicket(token: String,
                       owner: String,

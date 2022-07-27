@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.samples.SampleCaseClass
-import za.co.absa.pramen.framework.utils.JsonUtils
+import za.co.absa.pramen.core.samples.SampleCaseClass
+import za.co.absa.pramen.core.utils.JsonUtils
 
 class JsonUtilsSuite extends WordSpec {
 

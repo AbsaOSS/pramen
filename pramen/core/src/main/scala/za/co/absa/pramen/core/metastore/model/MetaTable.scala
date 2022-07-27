@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore.model
+package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.app.config.InfoDateConfig
-import za.co.absa.pramen.framework.config.InfoDateOverride
-import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL
-import za.co.absa.pramen.framework.utils.DateUtils.convertStrToDate
-import za.co.absa.pramen.framework.utils.{AlgorithmicUtils, ConfigUtils}
+import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.config.InfoDateOverride
+import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
+import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
+import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
 
 import java.time.LocalDate
 import scala.collection.JavaConverters.iterableAsScalaIterableConverter

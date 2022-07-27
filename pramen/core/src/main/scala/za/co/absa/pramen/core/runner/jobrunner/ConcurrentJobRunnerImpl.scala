@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.jobrunner
+package za.co.absa.pramen.core.runner.jobrunner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.pipeline.Job
-import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner.JobRunResults
-import za.co.absa.pramen.framework.runner.splitter.ScheduleParams
-import za.co.absa.pramen.framework.runner.task.{RunStatus, TaskResult, TaskRunner}
+import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
+import za.co.absa.pramen.core.runner.splitter.ScheduleParams
+import za.co.absa.pramen.core.runner.task.{RunStatus, TaskResult, TaskRunner}
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors.newFixedThreadPool
@@ -88,7 +88,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
     completedJobsChannel.close()
   }
 
-  private[framework] def runJob(job: Job): Boolean = {
+  private[core] def runJob(job: Job): Boolean = {
     val scheduleParams = ScheduleParams.fromRuntimeConfig(runtimeConfig, job.outputTable.trackDays, job.operation.expectedDelayDays)
 
     val taskDefs = job.scheduleStrategy.getDaysToRun(

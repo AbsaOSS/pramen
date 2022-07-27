@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.framework.lock.model.{LockTicket, LockTickets}
-import za.co.absa.pramen.framework.utils.{JvmUtils, SlickUtils, StringUtils}
+import za.co.absa.pramen.core.lock.model.{LockTicket, LockTickets}
+import za.co.absa.pramen.core.utils.{JvmUtils, SlickUtils, StringUtils}
 
 import java.sql.SQLIntegrityConstraintViolationException
 import java.time.Instant
@@ -27,7 +27,7 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Random, Success, Try}
 
 class TokenLockJdbc(token: String, db: Database) extends TokenLock {
-  import za.co.absa.pramen.framework.utils.FutureImplicits._
+  import za.co.absa.pramen.core.utils.FutureImplicits._
 
   protected val TOKEN_EXPIRES_SECONDS: Long = 10L * 60L
 

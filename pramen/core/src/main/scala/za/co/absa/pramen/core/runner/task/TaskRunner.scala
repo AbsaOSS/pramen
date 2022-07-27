@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.task
+package za.co.absa.pramen.core.runner.task
 
-import za.co.absa.pramen.framework.pipeline.{Job, TaskPreDef}
+import za.co.absa.pramen.core.pipeline.{Job, TaskPreDef}
 
 import scala.concurrent.Future
 

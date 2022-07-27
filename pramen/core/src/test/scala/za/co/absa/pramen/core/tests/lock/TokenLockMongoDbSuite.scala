@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.lock
+package za.co.absa.pramen.core.tests.lock
 
 import org.scalatest.{BeforeAndAfter, WordSpec}
-import za.co.absa.pramen.framework.fixtures.MongoDbFixture
-import za.co.absa.pramen.framework.lock.TokenLockMongoDb
-import za.co.absa.pramen.framework.lock.TokenLockMongoDb.collectionName
+import za.co.absa.pramen.core.fixtures.MongoDbFixture
+import za.co.absa.pramen.core.lock.TokenLockMongoDb
+import za.co.absa.pramen.core.lock.TokenLockMongoDb.collectionName
 
 class TokenLockMongoDbSuite extends WordSpec with MongoDbFixture with BeforeAndAfter {
 

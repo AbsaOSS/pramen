@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.reader
+package za.co.absa.pramen.core.mocks.reader
 
 import java.time.LocalDate
 

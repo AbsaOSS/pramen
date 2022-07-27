@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sql
+package za.co.absa.pramen.core.sql
 
 /**
   * This class contains implementation of methods that are common across all SQL dialects.

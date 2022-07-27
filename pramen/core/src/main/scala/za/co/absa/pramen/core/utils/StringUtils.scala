@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.utils
+package za.co.absa.pramen.core.utils
 
-import za.co.absa.pramen.framework.expr.DateExprEvaluator
+import za.co.absa.pramen.core.expr.DateExprEvaluator
 
 import java.util.StringTokenizer
 import scala.util.control.NonFatal

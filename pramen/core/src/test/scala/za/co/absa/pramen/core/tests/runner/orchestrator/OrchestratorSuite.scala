@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.runner.orchestrator
+package za.co.absa.pramen.core.tests.runner.orchestrator
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.OperationDefFactory
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.AppContextFixture
-import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
-import za.co.absa.pramen.framework.pipeline.OperationDef
-import za.co.absa.pramen.framework.mocks.job.JobSpy
-import za.co.absa.pramen.framework.mocks.runner.ConcurrentJobRunnerSpy
-import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy
-import za.co.absa.pramen.framework.runner.orchestrator.OrchestratorImpl
-import za.co.absa.pramen.framework.runner.task.RunStatus.{Failed, MissingDependencies, NoData, Succeeded}
+import za.co.absa.pramen.core.OperationDefFactory
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.AppContextFixture
+import za.co.absa.pramen.core.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.pipeline.OperationDef
+import za.co.absa.pramen.core.mocks.job.JobSpy
+import za.co.absa.pramen.core.mocks.runner.ConcurrentJobRunnerSpy
+import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
+import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, MissingDependencies, NoData, Succeeded}
 
 class OrchestratorSuite extends WordSpec with SparkTestBase with AppContextFixture {
   "runJobs" should {

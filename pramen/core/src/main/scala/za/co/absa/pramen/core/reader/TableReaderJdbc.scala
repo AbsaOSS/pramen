@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.reader
+package za.co.absa.pramen.core.reader
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.functions._
@@ -22,10 +22,10 @@ import org.apache.spark.sql.types.{DateType, DecimalType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
-import za.co.absa.pramen.framework.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.framework.sql.{SqlColumnType, SqlConfig, SqlGenerator}
-import za.co.absa.pramen.framework.utils.SparkUtils.sanitizeDfColumns
-import za.co.absa.pramen.framework.utils.{ConfigUtils, TimeUtils}
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
+import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
+import za.co.absa.pramen.core.utils.SparkUtils.sanitizeDfColumns
+import za.co.absa.pramen.core.utils.{ConfigUtils, TimeUtils}
 
 import java.time.{Instant, LocalDate}
 import scala.annotation.tailrec
@@ -50,7 +50,7 @@ class TableReaderJdbc(tableName: String,
 
   logConfiguration()
 
-  private[framework] lazy val sqlGen = {
+  private[core] lazy val sqlGen = {
     val gen = SqlGenerator.fromDriverName(jdbcReaderConfig.jdbcConfig.driver,
       getSqlConfig,
       ConfigUtils.getExtraConfig(conf, "sql"))
@@ -62,7 +62,7 @@ class TableReaderJdbc(tableName: String,
     gen
   }
 
-  private[framework] def getJdbcConfig: TableReaderJdbcConfig = jdbcReaderConfig
+  private[core] def getJdbcConfig: TableReaderJdbcConfig = jdbcReaderConfig
 
   override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val sql = if (jdbcReaderConfig.hasInfoDate) {

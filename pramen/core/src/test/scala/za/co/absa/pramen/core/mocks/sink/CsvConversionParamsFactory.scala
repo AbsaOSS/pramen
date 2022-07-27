@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.sink
+package za.co.absa.pramen.core.mocks.sink
 
-import za.co.absa.pramen.framework.sink.{ColumnNameTransform, CsvConversionParams}
+import za.co.absa.pramen.core.sink.{ColumnNameTransform, CsvConversionParams}
 
 object CsvConversionParamsFactory {
   def getDummyCsvConversionParams(csvOptions: Map[String, String] = Map.empty[String, String],

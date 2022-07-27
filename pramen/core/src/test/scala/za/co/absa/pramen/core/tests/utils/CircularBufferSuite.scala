@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.utils.CircularBuffer
+import za.co.absa.pramen.core.utils.CircularBuffer
 
 class CircularBufferSuite extends WordSpec {
   "add()" should {

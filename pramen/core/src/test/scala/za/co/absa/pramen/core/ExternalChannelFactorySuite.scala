@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework
+package za.co.absa.pramen.core
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.mocks.ExternalChannelMock
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.mocks.ExternalChannelMock
 
 class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
   "fromConfig" should {
     "be able to construct a channel from factory" in {
       val conf = ConfigFactory.parseString(
-        """factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMock"
+        """factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMock"
           |key1 = "test1"
           |key2 = "test2"
           |""".stripMargin)
@@ -57,7 +57,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
         """channels = [
           | {
           |   name = "test_name"
-          |   factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMock"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMock"
           |   key1 = "test1"
           |   key2 = "test2"
           | }
@@ -76,7 +76,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
         """channels = [
           | {
           |   name = "test_name"
-          |   factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMock"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMock"
           |   key1 = "test1"
           |   key2 = "test2"
           | }
@@ -100,7 +100,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
         """channels = [
           | {
           |   name = "test_name"
-          |   factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMock"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMock"
           |   key1 = "test1"
           |   key2 = "test2"
           | }
@@ -121,7 +121,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
         """channels = [
           | {
           |   name = "test_name"
-          |   factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMock"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMock"
           |   key1 = "test1"
           |   key2 = "test2"
           | }
@@ -135,18 +135,18 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
       val conf = ConfigFactory.parseString(
         """channels = [
           | {
-          |   factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMockA"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMockA"
           | },
           | {
           |   name = "test2"
           | },
           | {
           |   name = "test3"
-          |   factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMockB"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMockB"
           | },
           | {
           |   name = "test3"
-          |   factory.class = "za.co.absa.pramen.framework.mocks.ExternalChannelMockC"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMockC"
           | }
           |]
           |""".stripMargin)

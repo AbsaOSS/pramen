@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.apache.spark.sql.types.IntegerType
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.RelationalDbFixture
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
-import za.co.absa.pramen.framework.samples.RdbExampleTable
-import za.co.absa.pramen.framework.utils.{JdbcNativeUtils, SparkUtils}
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.samples.RdbExampleTable
+import za.co.absa.pramen.core.utils.{JdbcNativeUtils, SparkUtils}
 
 import java.sql.{DriverManager, ResultSet, SQLSyntaxErrorException}
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.config
+package za.co.absa.pramen.core.config
 
 import com.typesafe.config.Config
 

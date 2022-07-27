@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.runner
+package za.co.absa.pramen.core.tests.runner
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.mocks.job.JobSpy
-import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy
-import za.co.absa.pramen.framework.runner.AppRunner
-import za.co.absa.pramen.framework.state.PipelineState
-import za.co.absa.pramen.framework.utils.ResourceUtils
-import za.co.absa.pramen.framework.{AppContextFactory, RuntimeConfigFactory}
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.mocks.job.JobSpy
+import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.core.runner.AppRunner
+import za.co.absa.pramen.core.state.PipelineState
+import za.co.absa.pramen.core.utils.ResourceUtils
+import za.co.absa.pramen.core.{AppContextFactory, RuntimeConfigFactory}
 
 import scala.util.{Failure, Success}
 

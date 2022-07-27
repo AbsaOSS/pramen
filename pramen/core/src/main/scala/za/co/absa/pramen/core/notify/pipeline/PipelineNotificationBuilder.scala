@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify.pipeline
+package za.co.absa.pramen.core.notify.pipeline
 
-import za.co.absa.pramen.framework.runner.task.TaskResult
+import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.Instant
 

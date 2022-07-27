@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.sql.{SqlColumnType, SqlConfig}
+import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig}
 
 object DummySqlConfigFactory {
   def getDummyConfig(columns: Seq[String] = Seq.empty,

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner
+package za.co.absa.pramen.core.runner
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.config.Keys._
-import za.co.absa.pramen.framework.pipeline.PipelineDef.PIPELINE_NAME_KEY
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.config.Keys._
+import za.co.absa.pramen.core.pipeline.PipelineDef.PIPELINE_NAME_KEY
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 object PipelineSparkSessionBuilder {
   private val log = LoggerFactory.getLogger(this.getClass)

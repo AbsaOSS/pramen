@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.dao.model
+package za.co.absa.pramen.core.dao.model
 
 case class Index(collection: String, key: Seq[IndexField], unique: Boolean = false, sparse: Boolean = false)
 

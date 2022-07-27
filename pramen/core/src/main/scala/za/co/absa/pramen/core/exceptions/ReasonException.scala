@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.exceptions
+package za.co.absa.pramen.core.exceptions
 
 import za.co.absa.pramen.api.Reason
 

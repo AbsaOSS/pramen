@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.dao.model
+package za.co.absa.pramen.core.dao.model
 
 case class DbVersion (version: Int)

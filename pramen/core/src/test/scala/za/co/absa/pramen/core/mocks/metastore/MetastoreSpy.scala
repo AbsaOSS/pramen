@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.metastore
+package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.{MetastoreReader, TableReader, TableWriter}
-import za.co.absa.pramen.framework.metastore.model.MetaTable
-import za.co.absa.pramen.framework.metastore.{MetaTableStats, Metastore, TableNotConfigured}
-import za.co.absa.pramen.framework.mocks.MetaTableFactory
+import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, TableNotConfigured}
+import za.co.absa.pramen.core.mocks.MetaTableFactory
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer

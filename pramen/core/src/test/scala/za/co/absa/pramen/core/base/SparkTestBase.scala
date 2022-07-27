@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.base
+package za.co.absa.pramen.core.base
 
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession

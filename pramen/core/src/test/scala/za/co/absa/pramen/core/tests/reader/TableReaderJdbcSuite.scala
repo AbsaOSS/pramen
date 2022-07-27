@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.reader
+package za.co.absa.pramen.core.tests.reader
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.reader.TableReaderJdbc
-import za.co.absa.pramen.framework.sql.SqlGeneratorOracle
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.reader.TableReaderJdbc
+import za.co.absa.pramen.core.sql.SqlGeneratorOracle
 
 class TableReaderJdbcSuite extends WordSpec with SparkTestBase {
   "TableReaderJdbc" should {

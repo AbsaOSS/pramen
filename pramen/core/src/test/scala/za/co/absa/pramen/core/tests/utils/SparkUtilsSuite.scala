@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.pipeline.TransformExpression
-import za.co.absa.pramen.framework.utils.SparkUtils
-import za.co.absa.pramen.framework.utils.SparkUtils._
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.pipeline.TransformExpression
+import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.LocalDate
 

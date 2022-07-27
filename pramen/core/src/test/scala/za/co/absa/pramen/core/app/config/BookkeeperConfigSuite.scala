@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.app.config
+package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec

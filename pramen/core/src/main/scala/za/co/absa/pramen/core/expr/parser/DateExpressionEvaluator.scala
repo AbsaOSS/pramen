@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.expr.parser
+package za.co.absa.pramen.core.expr.parser
 
-import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
+import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 
 import java.time.format.DateTimeFormatter
 import java.time.{DayOfWeek, LocalDate}

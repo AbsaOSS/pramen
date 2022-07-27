@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.source
+package za.co.absa.pramen.core.source
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, Source, TableReader}
-import za.co.absa.pramen.framework.ExternalChannelFactory
-import za.co.absa.pramen.framework.reader.TableReaderParquet
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.core.reader.TableReaderParquet
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 class ParquetSource(hasInfoDateCol: Boolean,
                     infoDateColumn: String,

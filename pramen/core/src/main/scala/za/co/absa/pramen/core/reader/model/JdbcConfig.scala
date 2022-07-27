@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.reader.model
+package za.co.absa.pramen.core.reader.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.util.Try
 

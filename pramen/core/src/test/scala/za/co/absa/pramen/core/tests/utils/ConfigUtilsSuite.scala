@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import com.typesafe.config.ConfigException.{Missing, WrongType}
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeParseException

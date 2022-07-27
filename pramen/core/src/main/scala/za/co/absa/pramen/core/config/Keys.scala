@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.config
+package za.co.absa.pramen.core.config
 
 object Keys {
   val INFORMATION_DATE_COLUMN = "pramen.information.date.column"

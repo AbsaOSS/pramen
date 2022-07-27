@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.validator
+package za.co.absa.pramen.core.validator
 
 import java.time.ZonedDateTime
 

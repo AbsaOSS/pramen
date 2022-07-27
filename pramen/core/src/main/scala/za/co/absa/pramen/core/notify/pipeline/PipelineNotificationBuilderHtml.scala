@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify.pipeline
+package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.app.config.GeneralConfig.{APPLICATION_VERSION_KEY, BUILD_TIMESTAMP}
-import za.co.absa.pramen.framework.config.Keys.TIMEZONE
-import za.co.absa.pramen.framework.exceptions.{CmdFailedException, ProcessFailedException}
-import za.co.absa.pramen.framework.pipeline.TaskRunReason
-import za.co.absa.pramen.framework.notify.message._
-import za.co.absa.pramen.framework.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
-import za.co.absa.pramen.framework.notify.{FieldChange, SchemaDifference}
-import za.co.absa.pramen.framework.runner.task.RunStatus._
-import za.co.absa.pramen.framework.runner.task.TaskResult
-import za.co.absa.pramen.framework.utils.{ConfigUtils, StringUtils, TimeUtils}
+import za.co.absa.pramen.core.app.config.GeneralConfig.{APPLICATION_VERSION_KEY, BUILD_TIMESTAMP}
+import za.co.absa.pramen.core.config.Keys.TIMEZONE
+import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
+import za.co.absa.pramen.core.pipeline.TaskRunReason
+import za.co.absa.pramen.core.notify.message._
+import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
+import za.co.absa.pramen.core.notify.{FieldChange, SchemaDifference}
+import za.co.absa.pramen.core.runner.task.RunStatus._
+import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.core.utils.{ConfigUtils, StringUtils, TimeUtils}
 
 import java.time._
 import java.time.format.DateTimeFormatter

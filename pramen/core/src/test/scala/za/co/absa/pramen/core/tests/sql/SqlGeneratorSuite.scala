@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.sql
+package za.co.absa.pramen.core.tests.sql
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.fixtures.RelationalDbFixture
-import za.co.absa.pramen.framework.mocks.DummySqlConfigFactory
-import za.co.absa.pramen.framework.samples.RdbExampleTable
-import za.co.absa.pramen.framework.sql.{SqlColumnType, SqlGeneratorGeneric, SqlGeneratorMicrosoft, SqlGeneratorOracle}
+import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
+import za.co.absa.pramen.core.samples.RdbExampleTable
+import za.co.absa.pramen.core.sql.{SqlColumnType, SqlGeneratorGeneric, SqlGeneratorMicrosoft, SqlGeneratorOracle}
 
 import java.time.LocalDate
 
 class SqlGeneratorSuite extends WordSpec with RelationalDbFixture {
 
-  import za.co.absa.pramen.framework.sql.SqlGenerator._
+  import za.co.absa.pramen.core.sql.SqlGenerator._
 
   private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D")
   private val sqlConfigDateTime = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATETIME, infoDateColumn = "D")

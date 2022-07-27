@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.utils
+package za.co.absa.pramen.core.utils
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
@@ -23,7 +23,7 @@ import java.time.{Duration, Instant}
 import scala.util.control.NonFatal
 
 object SlickUtils {
-  import za.co.absa.pramen.framework.utils.FutureImplicits._
+  import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 

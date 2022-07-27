@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.process.ProcessRunnerImpl
+import za.co.absa.pramen.core.process.ProcessRunnerImpl
 
 class DummyProcessRunner(includeOutputLines: Int,
                          logStdOut: Boolean,

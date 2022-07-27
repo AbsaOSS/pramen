@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.fixtures
+package za.co.absa.pramen.core.fixtures
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.framework.AppContextFactory
-import za.co.absa.pramen.framework.app.AppContext
-import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperNull}
-import za.co.absa.pramen.framework.journal.{Journal, JournalNull}
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.AppContextFactory
+import za.co.absa.pramen.core.app.AppContext
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperNull}
+import za.co.absa.pramen.core.journal.{Journal, JournalNull}
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 trait AppContextFixture {
 

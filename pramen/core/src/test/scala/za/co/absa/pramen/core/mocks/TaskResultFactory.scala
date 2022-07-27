@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.pipeline.{DependencyWarning, Job, TaskRunReason}
-import za.co.absa.pramen.framework.mocks.job.JobSpy
-import za.co.absa.pramen.framework.notify.SchemaDifference
-import za.co.absa.pramen.framework.runner.task.{RunInfo, RunStatus, TaskResult}
+import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job, TaskRunReason}
+import za.co.absa.pramen.core.mocks.job.JobSpy
+import za.co.absa.pramen.core.notify.SchemaDifference
+import za.co.absa.pramen.core.runner.task.{RunInfo, RunStatus, TaskResult}
 
 import java.time.{Instant, LocalDate}
 

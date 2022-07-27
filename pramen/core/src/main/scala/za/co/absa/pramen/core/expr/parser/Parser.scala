@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.expr.parser
+package za.co.absa.pramen.core.expr.parser
 
-import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.framework.expr.lexer.Token
-import za.co.absa.pramen.framework.expr.lexer.Token._
-import za.co.absa.pramen.framework.model.Constants
+import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
+import za.co.absa.pramen.core.expr.lexer.Token
+import za.co.absa.pramen.core.expr.lexer.Token._
+import za.co.absa.pramen.core.model.Constants
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

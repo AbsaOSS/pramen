@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
 import org.mockito.Mockito._
 import org.scalatest.WordSpec
 import org.slf4j.{Logger, LoggerFactory}
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.TempDirFixture
-import za.co.absa.pramen.framework.utils.{DateUtils, FsUtils}
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.utils.{DateUtils, FsUtils}
 
 import java.io.IOException
 import java.nio.file.Paths

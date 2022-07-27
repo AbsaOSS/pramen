@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.runner
+package za.co.absa.pramen.core.tests.runner
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.framework.runner.InfoDateCalculator
+import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
+import za.co.absa.pramen.core.runner.InfoDateCalculator
 
 import java.time.LocalDate
 

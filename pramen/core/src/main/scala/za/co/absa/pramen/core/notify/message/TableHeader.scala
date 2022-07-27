@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify.message
+package za.co.absa.pramen.core.notify.message
 
 case class TableHeader(textElement: TextElement, align: Align = Align.Left)

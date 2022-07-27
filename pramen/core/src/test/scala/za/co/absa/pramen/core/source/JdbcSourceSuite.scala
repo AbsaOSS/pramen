@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.source
+package za.co.absa.pramen.core.source
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Source
-import za.co.absa.pramen.framework.ExternalChannelFactory
-import za.co.absa.pramen.framework.base.SparkTestBase
+import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.core.base.SparkTestBase
 
 class JdbcSourceSuite extends WordSpec with SparkTestBase {
   private val conf: Config = ConfigFactory.parseString(
@@ -29,7 +29,7 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
        |   sources = [
        |    {
        |      name = "jdbc1"
-       |      factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+       |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
        |      jdbc {
        |        driver = "driver1"
        |        connection.string = "url1"
@@ -45,7 +45,7 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
        |    },
        |    {
        |      name = "jdbc2"
-       |      factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+       |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
        |      jdbc {
        |        driver = "driver2"
        |        connection.string = "url2"
@@ -110,10 +110,10 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
            | pramen {
            |   sources = [
            |    {
-           |      factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+           |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
            |    },
            |    {
-           |      factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+           |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
            |      has.information.date.column = false
            |    }
            |  ]
@@ -160,11 +160,11 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
            |   sources = [
            |    {
            |      name = "mysource1"
-           |      factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+           |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
            |    },
            |    {
            |      name = "MYsource1"
-           |      factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+           |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
            |    }
            |  ]
            | }

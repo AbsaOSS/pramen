@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.app.config
+package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.ZoneId
 

@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.reader
+package za.co.absa.pramen.core.tests.reader
 
 import java.time.LocalDate
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.RelationalDbFixture
-import za.co.absa.pramen.framework.reader.TableReaderJdbcNative
-import za.co.absa.pramen.framework.samples.RdbExampleTable
-import za.co.absa.pramen.framework.utils.SparkUtils
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.reader.TableReaderJdbcNative
+import za.co.absa.pramen.core.samples.RdbExampleTable
+import za.co.absa.pramen.core.utils.SparkUtils
 
 class TableReaderJdbcNativeSuite extends WordSpec with RelationalDbFixture with SparkTestBase {
   private val tableName = RdbExampleTable.Company.tableName

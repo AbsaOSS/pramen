@@ -18,9 +18,9 @@ package za.co.absa.pramen.tests
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.app.config.InfoDateConfig.TRACK_DAYS
-import za.co.absa.pramen.framework.app.config.RuntimeConfig._
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
+import za.co.absa.pramen.core.app.config.RuntimeConfig._
+import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.runner.cmd.CmdLineConfig
 
 class CmdLineLineConfigSuite extends WordSpec {

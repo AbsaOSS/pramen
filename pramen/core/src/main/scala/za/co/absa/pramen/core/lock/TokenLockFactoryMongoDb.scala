@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
-import za.co.absa.pramen.framework.mongo.MongoDbConnection
+import za.co.absa.pramen.core.mongo.MongoDbConnection
 
 class TokenLockFactoryMongoDb(mongoDbConnection: MongoDbConnection) extends TokenLockFactory {
   override def getLock(token: String): TokenLock = {

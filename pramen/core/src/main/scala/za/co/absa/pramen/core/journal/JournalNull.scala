@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.journal
+package za.co.absa.pramen.core.journal
 
-import za.co.absa.pramen.framework.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.TaskCompleted
 import java.time.Instant
 
 /**

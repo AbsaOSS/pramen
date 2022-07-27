@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.journal
+package za.co.absa.pramen.core.journal
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.framework.journal.model.{JournalTask, JournalTasks, TaskCompleted}
-import za.co.absa.pramen.framework.model.Constants
-import za.co.absa.pramen.framework.utils.SlickUtils
+import za.co.absa.pramen.core.journal.model.{JournalTask, JournalTasks, TaskCompleted}
+import za.co.absa.pramen.core.model.Constants
+import za.co.absa.pramen.core.utils.SlickUtils
 
 import scala.util.control.NonFatal
 
 class JournalJdbc(db: Database) extends Journal {
-  import za.co.absa.pramen.framework.utils.FutureImplicits._
+  import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)

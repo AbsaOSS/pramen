@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.sink
+package za.co.absa.pramen.core.mocks.sink
 
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.exceptions.CmdFailedException
-import za.co.absa.pramen.framework.fixtures.TempDirFixture
-import za.co.absa.pramen.framework.mocks.process.ProcessRunnerSpy
-import za.co.absa.pramen.framework.sink.CmdLineSink
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.exceptions.CmdFailedException
+import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.mocks.process.ProcessRunnerSpy
+import za.co.absa.pramen.core.sink.CmdLineSink
 
 import java.time.LocalDate
 
@@ -40,7 +40,7 @@ class CmdLineSinkSuite extends WordSpec with SparkTestBase with TempDirFixture {
       val configStr =
         """{
           |  name = "cmd_line"
-          |  factory.class = "za.co.absa.pramen.framework.sink.CmdLineSink"
+          |  factory.class = "za.co.absa.pramen.core.sink.CmdLineSink"
           |  temp.hadoop.path = "/tmp/cmd_line_sink"
           |  format = "csv"
           |  include.log.lines = 1000

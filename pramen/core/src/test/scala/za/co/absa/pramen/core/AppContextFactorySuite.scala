@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework
+package za.co.absa.pramen.core
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.BookkeeperNull
-import za.co.absa.pramen.framework.journal.JournalNull
-import za.co.absa.pramen.framework.lock.TokenLockFactoryAllow
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.bookkeeper.BookkeeperNull
+import za.co.absa.pramen.core.journal.JournalNull
+import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 class AppContextFactorySuite extends WordSpec with SparkTestBase {
 

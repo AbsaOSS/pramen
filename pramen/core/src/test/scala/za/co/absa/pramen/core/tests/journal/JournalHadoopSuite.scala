@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.journal
+package za.co.absa.pramen.core.tests.journal
 
 import org.apache.hadoop.fs.Path
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.TempDirFixture
-import za.co.absa.pramen.framework.journal.{Journal, JournalHadoop}
-import za.co.absa.pramen.framework.utils.FsUtils
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.journal.{Journal, JournalHadoop}
+import za.co.absa.pramen.core.utils.FsUtils
 
 class JournalHadoopSuite extends WordSpec with SparkTestBase with BeforeAndAfterAll with TempDirFixture {
   import TestCases._
-  import za.co.absa.pramen.framework.journal.JournalHadoop._
+  import za.co.absa.pramen.core.journal.JournalHadoop._
 
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 

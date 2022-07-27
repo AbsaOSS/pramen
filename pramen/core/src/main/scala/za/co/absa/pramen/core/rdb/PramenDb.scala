@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.rdb
+package za.co.absa.pramen.core.rdb
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.framework.bookkeeper.model.{BookkeepingRecords, SchemaRecords}
-import za.co.absa.pramen.framework.journal.model.JournalTasks
-import za.co.absa.pramen.framework.lock.model.LockTickets
-import za.co.absa.pramen.framework.rdb.PramenDb.MODEL_VERSION
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
-import za.co.absa.pramen.framework.utils.JdbcNativeUtils
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, SchemaRecords}
+import za.co.absa.pramen.core.journal.model.JournalTasks
+import za.co.absa.pramen.core.lock.model.LockTickets
+import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.JdbcNativeUtils
 
 import java.sql.Connection
 import scala.util.control.NonFatal
@@ -34,7 +34,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
                val jdbcConnection: Connection,
                val slickDb: Database) extends AutoCloseable {
 
-  import za.co.absa.pramen.framework.utils.FutureImplicits._
+  import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 

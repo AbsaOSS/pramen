@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.pipeline.{SinkTable, TransformExpression}
+import za.co.absa.pramen.core.pipeline.{SinkTable, TransformExpression}
 
 object SinkTableFactory {
   def getDummySinkTable(metaTableName: String = "table1",

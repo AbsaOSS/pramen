@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.expr
+package za.co.absa.pramen.core.expr
 
 import java.time.LocalDate
 
-import za.co.absa.pramen.framework.expr.lexer.Lexer
-import za.co.absa.pramen.framework.expr.parser.{DateExpressionEvaluator, Parser}
+import za.co.absa.pramen.core.expr.lexer.Lexer
+import za.co.absa.pramen.core.expr.parser.{DateExpressionEvaluator, Parser}
 
 import scala.collection.mutable
 

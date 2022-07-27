@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore.peristence
+package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.{FileSystem, Path}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.metastore.MetaTableStats
-import za.co.absa.pramen.framework.utils.{FsUtils, StringUtils}
+import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.sql.Date
 import java.time.LocalDate

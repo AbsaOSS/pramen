@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.lock
+package za.co.absa.pramen.core.mocks.lock
 
-import za.co.absa.pramen.framework.lock.TokenLock
+import za.co.absa.pramen.core.lock.TokenLock
 
 class TokenLockMock extends TokenLock {
   var acquired = false

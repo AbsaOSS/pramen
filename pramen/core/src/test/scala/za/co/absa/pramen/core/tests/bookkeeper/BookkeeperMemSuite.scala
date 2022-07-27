@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.bookkeeper
+package za.co.absa.pramen.core.tests.bookkeeper
 
 import java.time.LocalDate
 
 import org.scalatest.{BeforeAndAfter, WordSpec}
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
-import za.co.absa.pramen.framework.model.DataChunk
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.model.DataChunk
 
 class BookkeeperMemSuite extends WordSpec with BeforeAndAfter {
 

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.splitter
+package za.co.absa.pramen.core.runner.splitter
 
-import za.co.absa.pramen.framework.app.config.RuntimeConfig
+import za.co.absa.pramen.core.app.config.RuntimeConfig
 
 import java.time.LocalDate
 

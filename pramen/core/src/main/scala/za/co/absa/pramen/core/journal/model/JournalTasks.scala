@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.journal.model
+package za.co.absa.pramen.core.journal.model
 
 import slick.jdbc.H2Profile.api._
 import slick.lifted.TableQuery

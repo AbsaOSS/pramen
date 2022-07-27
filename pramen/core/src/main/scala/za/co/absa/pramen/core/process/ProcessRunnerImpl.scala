@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.process
+package za.co.absa.pramen.core.process
 
 import org.slf4j.{Logger, LoggerFactory}
-import za.co.absa.pramen.framework.utils.{CircularBuffer, StringUtils}
+import za.co.absa.pramen.core.utils.{CircularBuffer, StringUtils}
 
 import java.io.{BufferedReader, InputStreamReader}
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -75,7 +75,7 @@ class ProcessRunnerImpl(includeOutputLines: Int,
       None
   }
 
-  private[framework] def processExecutionOutput(stdout: BufferedReader, stderr: BufferedReader): Unit = {
+  private[core] def processExecutionOutput(stdout: BufferedReader, stderr: BufferedReader): Unit = {
     val futOut = Future {
       processReader(stdout, lastStdoutLines, stdOutLogPrefix, logStdOut)
     }
@@ -87,7 +87,7 @@ class ProcessRunnerImpl(includeOutputLines: Int,
     Await.ready(Future.sequence(Seq(futOut, futErr)), Duration.Inf)
   }
 
-  private[framework] def processReader(reader: BufferedReader,
+  private[core] def processReader(reader: BufferedReader,
                             buffer: Option[CircularBuffer[String]],
                             prefix: String,
                             logEnabled: Boolean): Unit = {

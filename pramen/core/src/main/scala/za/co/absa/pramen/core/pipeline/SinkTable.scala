@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.utils.{AlgorithmicUtils, ConfigUtils}
+import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
 
 import scala.collection.JavaConverters._
 

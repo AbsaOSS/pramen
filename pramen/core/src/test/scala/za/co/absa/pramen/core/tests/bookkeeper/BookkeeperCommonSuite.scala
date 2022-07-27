@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.bookkeeper
+package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.apache.spark.sql.types._
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.model.DataChunk
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
 

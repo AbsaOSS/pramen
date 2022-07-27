@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.journal.model
+package za.co.absa.pramen.core.journal.model
 
 case class TaskCompletedCsv(
                              jobName: String,

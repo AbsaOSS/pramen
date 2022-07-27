@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.bookkeeper.model
+package za.co.absa.pramen.core.bookkeeper.model
 
 /* This class is needed since Json format used for storing schema changes is immutable so it needs the timestamp
  * to apply last-write-wins policy*/

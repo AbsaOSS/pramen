@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.process
+package za.co.absa.pramen.core.process
 
 trait ProcessRunner {
   /**

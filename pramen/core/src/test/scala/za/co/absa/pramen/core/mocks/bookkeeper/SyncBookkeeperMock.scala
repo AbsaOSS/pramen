@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.bookkeeper
+package za.co.absa.pramen.core.mocks.bookkeeper
 
 import org.apache.spark.sql.types.{DataType, StructType}
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.model.{DataChunk, TableSchema}
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
 import java.time.LocalDate
 import scala.collection.mutable

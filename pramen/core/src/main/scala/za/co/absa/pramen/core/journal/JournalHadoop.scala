@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.journal
+package za.co.absa.pramen.core.journal
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
-import za.co.absa.pramen.framework.journal.model.{TaskCompleted, TaskCompletedCsv}
-import za.co.absa.pramen.framework.model.Constants
-import za.co.absa.pramen.framework.utils.{CsvUtils, FsUtils, SparkUtils}
+import za.co.absa.pramen.core.journal.model.{TaskCompleted, TaskCompletedCsv}
+import za.co.absa.pramen.core.model.Constants
+import za.co.absa.pramen.core.utils.{CsvUtils, FsUtils, SparkUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}

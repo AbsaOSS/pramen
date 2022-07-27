@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.runner
+package za.co.absa.pramen.core.tests.runner
 
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.conf.Configuration
@@ -24,8 +24,8 @@ import org.mockito.Mockito.{doAnswer, mock, when => whenMock}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.config.Keys._
-import za.co.absa.pramen.framework.runner.PipelineSparkSessionBuilder
+import za.co.absa.pramen.core.config.Keys._
+import za.co.absa.pramen.core.runner.PipelineSparkSessionBuilder
 
 class PipelineSparkSessionBuilderSuite extends WordSpec {
   "applyHadoopConfig" should {

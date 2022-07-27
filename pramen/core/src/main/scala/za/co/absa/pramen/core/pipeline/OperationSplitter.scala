@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.Transformer
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.metastore.Metastore
-import za.co.absa.pramen.framework.pipeline.OperationType._
-import za.co.absa.pramen.framework.pipeline.PythonTransformationJob._
-import za.co.absa.pramen.framework.process.ProcessRunnerImpl
-import za.co.absa.pramen.framework.sink.SinkManager
-import za.co.absa.pramen.framework.source.SourceManager
-import za.co.absa.pramen.framework.utils.ClassLoaderUtils
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.metastore.Metastore
+import za.co.absa.pramen.core.pipeline.OperationType._
+import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
+import za.co.absa.pramen.core.process.ProcessRunnerImpl
+import za.co.absa.pramen.core.sink.SinkManager
+import za.co.absa.pramen.core.source.SourceManager
+import za.co.absa.pramen.core.utils.ClassLoaderUtils
 
 class OperationSplitter(conf: Config,
                         metastore: Metastore,

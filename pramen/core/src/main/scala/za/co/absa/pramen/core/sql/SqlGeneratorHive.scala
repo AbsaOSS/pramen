@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sql
+package za.co.absa.pramen.core.sql
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.sql.impl.HiveDialect
+import za.co.absa.pramen.core.sql.impl.HiveDialect
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.bookkeeper
+package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.bookkeeper.{Bookkeeper, BookkeeperNull}
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperNull}
 
 import java.time.LocalDate
 
