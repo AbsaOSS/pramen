@@ -17,8 +17,10 @@ ME=`basename "$0" .sh`
 
 cd $(dirname $(readlink -f $0))
 
-EXTRAS_JAR="pramen-extras-1.0.0.jar"
-RUNNER_JAR="pramen-runner-1.0.0.jar"
+SCALA_VERSION="2.11"
+
+EXTRAS_JAR="pramen-extras_${SCALA_VERSION}-1.0.0.jar"
+RUNNER_JAR="pramen-runner_${SCALA_VERSION}-1.0.0.jar"
 
 set -euxo pipefail
 
