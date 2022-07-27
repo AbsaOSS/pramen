@@ -1,0 +1,41 @@
+# configuration section of the transformations
+run_transformers:
+  # information date for which transformation will be
+  #   run (--info-date overwrites this)
+- info_date: 2022-02-14
+  # the name of the output table inside the metastore
+  output_table: table_out1
+  # name of the transformation. Only transformations
+  #   specified here can be executed
+  name: ExampleTransformation1
+  # arbitrary options of the transformation. Can be
+  #  Dict[str, str]
+  options: {}
+- info_date: 2022-02-15
+  output_table: table_out1
+  name: ExampleTransformation2
+  options: {}
+# configuration section of the metastore
+watcher_metastore_tables:
+- description: Table 1 description
+  # data source format
+  format: parquet
+  # settings of the information date
+  info_date_settings:
+    column: info_date
+    format: yyyy-MM-dd
+    start: 2017-01-31
+  name: table1_sync
+  # URI in file system. If prefix is omitted,
+  #  then PRAMENPY_DEFAULT_FS env variable will be used
+  #  to identify the fs. Default fs is hdfs:///
+  path: /tmp/dummy/table1
+  records_per_partition: 1000000
+- description: Output table
+  format: parquet
+  info_date_settings:
+    column: INFORMATION_DATE
+    format: yyyy-MM-dd
+    start: 2017-01-29
+  name: table_out1
+  path: /tmp/dummy/table_out1

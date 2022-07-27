@@ -1,0 +1,65 @@
+import datetime
+import os.path
+
+from typing import List
+
+import attrs
+
+from loguru import logger
+from pyspark.sql import DataFrame, SparkSession
+
+from pramen_py.models import TableFormat, WatcherMetastoreTable
+from pramen_py.models.utils import get_metastore_table
+
+
+@attrs.define(auto_attribs=True, slots=True)
+class MetastoreWriter:
+    """Adds writing capabilities to the Metastore.
+
+    Makes it possible to refer tables based on it name and configurations.
+    """
+
+    spark: SparkSession = attrs.field()
+    config: List[WatcherMetastoreTable] = attrs.field()
+    info_date: datetime.date = attrs.field()
+
+    @config.validator
+    def check_config(  # type: ignore
+        self,
+        _,
+        value: List[WatcherMetastoreTable],
+    ) -> None:
+        for table in value:
+            assert isinstance(table, WatcherMetastoreTable)
+
+    def write(
+        self,
+        table_name: str,
+        df: DataFrame,
+    ) -> None:
+        """Write the given table in accordance with the configuration."""
+
+        logger.info(f"Writing table {table_name} started")
+
+        target_table = get_metastore_table(table_name, self.config)
+        if target_table.format is TableFormat.parquet:
+            target_path = os.path.join(
+                target_table.path,
+                f"{target_table.info_date_settings.column}={self.info_date}",
+            )
+            (
+                df.drop(target_table.info_date_settings.column)
+                # TODO #24 calculate and make repartition instead
+                .write.option(
+                    "maxRecordsPerFile",
+                    target_table.records_per_partition,
+                ).parquet(target_path, mode="overwrite")
+            )
+        elif target_table.format is TableFormat.delta:
+            raise NotImplementedError
+        else:
+            raise NotImplementedError
+        logger.info(
+            f"Successfully written {df.count()} items to {table_name} at "
+            f" {target_path}"
+        )
