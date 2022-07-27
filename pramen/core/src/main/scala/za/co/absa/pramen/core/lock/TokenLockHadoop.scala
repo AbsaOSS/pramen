@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.utils.{FsUtils, StringUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.time.Instant
 

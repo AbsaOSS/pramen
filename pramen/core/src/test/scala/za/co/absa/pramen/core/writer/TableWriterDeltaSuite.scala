@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.writer
+package za.co.absa.pramen.core.writer
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.col
@@ -22,9 +22,9 @@ import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.framework.utils.SparkUtils
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.nio.file.Paths
 import java.time.LocalDate

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sink
+package za.co.absa.pramen.core.sink
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class CsvConversionParams(
                                 csvOptions: Map[String, String],

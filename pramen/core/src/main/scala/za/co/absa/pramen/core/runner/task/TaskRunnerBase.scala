@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.task
+package za.co.absa.pramen.core.runner.task
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.exceptions.ReasonException
-import za.co.absa.pramen.framework.metastore.MetaTableStats
-import za.co.absa.pramen.framework.pipeline.{Job, JobPreRunResult, Task, TaskPreDef, TaskRunReason}
-import za.co.absa.pramen.framework.notify.SchemaDifference
-import za.co.absa.pramen.framework.pipeline.JobPreRunStatus._
-import za.co.absa.pramen.framework.utils.SparkUtils._
+import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.exceptions.ReasonException
+import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.pipeline.{Job, JobPreRunResult, Task, TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.core.notify.SchemaDifference
+import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
+import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
 import scala.concurrent.{ExecutionContext, Future}
@@ -202,7 +202,7 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
-  private[framework] def handleSchemaChange(df: DataFrame, table: String, infoDate: LocalDate): List[SchemaDifference] = {
+  private[core] def handleSchemaChange(df: DataFrame, table: String, infoDate: LocalDate): List[SchemaDifference] = {
     val lastSchema = bookkeeper.getLatestSchema(table, infoDate.minusDays(1))
 
     lastSchema match {

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore.model
+package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 /** Storage formats supported by the metastore. */
 sealed trait DataFormat {

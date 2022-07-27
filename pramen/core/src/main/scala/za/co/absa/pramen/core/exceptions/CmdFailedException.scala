@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.exceptions
+package za.co.absa.pramen.core.exceptions
 
 case class CmdFailedException(msg: String, log: Array[String]) extends RuntimeException(msg)
 

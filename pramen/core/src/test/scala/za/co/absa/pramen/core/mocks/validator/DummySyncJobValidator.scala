@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.validator
+package za.co.absa.pramen.core.mocks.validator
 
-import za.co.absa.pramen.framework.validator.{RunDecision, RunDecisionSummary, SyncJobValidator}
+import za.co.absa.pramen.core.validator.{RunDecision, RunDecisionSummary, SyncJobValidator}
 
 import java.time.LocalDate
 

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.state
+package za.co.absa.pramen.core.state
 
-import za.co.absa.pramen.framework.runner.task.TaskResult
+import za.co.absa.pramen.core.runner.task.TaskResult
 
 trait PipelineState {
   def setSuccess(): Unit

@@ -14,28 +14,28 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.runner.task
+package za.co.absa.pramen.core.tests.runner.task
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.framework
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.exceptions.ReasonException
-import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
-import za.co.absa.pramen.framework.metastore.MetaTableStats
-import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
-import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
-import za.co.absa.pramen.framework.mocks.job.JobSpy
-import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy
-import za.co.absa.pramen.framework.pipeline._
-import za.co.absa.pramen.framework.runner.task.RunStatus.{Failed, NotRan, Succeeded}
-import za.co.absa.pramen.framework.runner.task.{RunStatus, TaskRunnerBase, TaskRunnerParallel}
-import za.co.absa.pramen.framework.utils.SparkUtils
-import za.co.absa.pramen.framework.{OperationDefFactory, RuntimeConfigFactory}
+import za.co.absa.pramen.core
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.exceptions.ReasonException
+import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.job.JobSpy
+import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.core.pipeline._
+import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, NotRan, Succeeded}
+import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerBase, TaskRunnerParallel}
+import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 
 import java.time.{Instant, LocalDate}
 import scala.concurrent.Await
@@ -52,7 +52,7 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
     "run multiple successful jobs" in {
       val (runner, _, state, tasks) = getUseCase(runFunction = () => exampleDf)
 
-      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => framework.pipeline.TaskPreDef(d, TaskRunReason.New))
+      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
       val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
 
@@ -74,7 +74,7 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
     "run multiple failure jobs" in {
       val (runner, _, state, tasks) = getUseCase(runFunction = () => throw new IllegalStateException("Test exception"))
 
-      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => framework.pipeline.TaskPreDef(d, TaskRunReason.New))
+      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
       val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
 
@@ -377,7 +377,7 @@ class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextCompariso
 
     val job = new JobSpy(preRunCheckFunction = preRunCheckFunction, validationFunction = validationFunction, runFunction = runFunction, operationDef = operationDef, saveStats = stats)
 
-    val tasks = infoDates.map(d => framework.pipeline.Task(job, d, TaskRunReason.New))
+    val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
     val runner = new TaskRunnerParallel(conf, bookkeeper, state, runtimeConfig)
 

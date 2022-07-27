@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sink
+package za.co.absa.pramen.core.sink
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
@@ -23,9 +23,9 @@ import org.apache.spark.sql.types.{DateType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetastoreReader, Sink}
-import za.co.absa.pramen.framework.ExternalChannelFactory
-import za.co.absa.pramen.framework.sink.LocalCsvSink.OUTPUT_PATH_KEY
-import za.co.absa.pramen.framework.utils.FsUtils
+import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.core.sink.LocalCsvSink.OUTPUT_PATH_KEY
+import za.co.absa.pramen.core.utils.FsUtils
 
 import java.nio.file.Paths
 import java.time.format.DateTimeFormatter
@@ -42,7 +42,7 @@ import java.time.{LocalDate, ZonedDateTime}
   * {{{
   *  {
   *    name = "local_csv"
-  *    factory.class = "za.co.absa.pramen.framework.sink.LocalCsvSink"
+  *    factory.class = "za.co.absa.pramen.core.sink.LocalCsvSink"
   *
   *    temp.hadoop.path = "/tmp/csv_sink"
   *
@@ -153,7 +153,7 @@ class LocalCsvSink(params: CsvConversionParams) extends Sink {
     }
   }
 
-  private[framework] def applyColumnTransformations(df: DataFrame): DataFrame = {
+  private[core] def applyColumnTransformations(df: DataFrame): DataFrame = {
     params.columnNameTransform match {
       case ColumnNameTransform.NoChange  =>
         df
@@ -168,7 +168,7 @@ class LocalCsvSink(params: CsvConversionParams) extends Sink {
     }
   }
 
-  private[framework] def convertDateTimeToString(df: DataFrame, datePattern: String, timestampPattern: String): DataFrame = {
+  private[core] def convertDateTimeToString(df: DataFrame, datePattern: String, timestampPattern: String): DataFrame = {
     val columns = df.schema.map(field => {
       field.dataType match {
         case _: DateType      => date_format(col(field.name), datePattern).as(field.name)
@@ -179,7 +179,7 @@ class LocalCsvSink(params: CsvConversionParams) extends Sink {
     df.select(columns: _*)
   }
 
-  private[framework] def getEffectiveOptions(options: Map[String, String]): Map[String, String] = {
+  private[core] def getEffectiveOptions(options: Map[String, String]): Map[String, String] = {
     val headerOptions = if (options.contains("header")) {
       None
     } else {
@@ -195,12 +195,12 @@ class LocalCsvSink(params: CsvConversionParams) extends Sink {
     options ++ headerOptions ++ quoteOptions
   }
 
-  private[framework] def getTempPath(fsUtils: FsUtils): Path = {
+  private[core] def getTempPath(fsUtils: FsUtils): Path = {
     val tempBasePath = new Path(params.tempHadoopPath)
     fsUtils.getTempPath(tempBasePath)
   }
 
-  private[framework] def copyToLocal(tableName: String,
+  private[core] def copyToLocal(tableName: String,
                                      infoDate: LocalDate,
                                      tempPathWithCSV: Path,
                                      localPath: String,
@@ -217,7 +217,7 @@ class LocalCsvSink(params: CsvConversionParams) extends Sink {
     finalFileName
   }
 
-  private[framework] def getFileName(fileNamePattern: String, timestampPattern: String, tableName: String, infoDate: LocalDate): String = {
+  private[core] def getFileName(fileNamePattern: String, timestampPattern: String, tableName: String, infoDate: LocalDate): String = {
     val timestampFmt: DateTimeFormatter = DateTimeFormatter.ofPattern(timestampPattern)
 
     val ts = timestampFmt.format(ZonedDateTime.now())

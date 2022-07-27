@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mongo
+package za.co.absa.pramen.core.mongo
 
 import org.mongodb.scala.{MongoClient, MongoDatabase}
 

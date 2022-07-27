@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mq
+package za.co.absa.pramen.core.mq
 
 trait SingleMessageProducer {
   def send(message: String, numberOrRetries: Int = 3): Unit

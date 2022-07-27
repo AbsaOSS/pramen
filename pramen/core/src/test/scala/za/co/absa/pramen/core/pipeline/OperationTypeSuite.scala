@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Query.Table
-import za.co.absa.pramen.framework.pipeline.OperationType.{Ingestion, Transformation}
+import za.co.absa.pramen.core.pipeline.OperationType.{Ingestion, Transformation}
 
 class OperationTypeSuite extends WordSpec {
   "OperationType.fromConfig()" should {

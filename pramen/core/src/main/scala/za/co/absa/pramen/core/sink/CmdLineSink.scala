@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sink
+package za.co.absa.pramen.core.sink
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetastoreReader, Sink}
-import za.co.absa.pramen.framework.ExternalChannelFactory
-import za.co.absa.pramen.framework.exceptions.CmdFailedException
-import za.co.absa.pramen.framework.process.{ProcessRunner, ProcessRunnerImpl}
-import za.co.absa.pramen.framework.sink.CmdLineSink.CMD_LINE_KEY
-import za.co.absa.pramen.framework.utils.{ConfigUtils, FsUtils}
+import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.core.exceptions.CmdFailedException
+import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
+import za.co.absa.pramen.core.sink.CmdLineSink.CMD_LINE_KEY
+import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -49,7 +49,7 @@ import scala.util.control.NonFatal
   * {{{
   *  {
   *    name = "cmd_line"
-  *    factory.class = "za.co.absa.pramen.framework.sink.CmdLineSink"
+  *    factory.class = "za.co.absa.pramen.core.sink.CmdLineSink"
   *
   *    temp.hadoop.path = "/tmp/cmd_line_sink"
   *    format = "csv"
@@ -158,7 +158,7 @@ class CmdLineSink(processRunner: ProcessRunner,
     }
   }
 
-  private[framework] def getCmdLine(cmdLineTemplate: String,
+  private[core] def getCmdLine(cmdLineTemplate: String,
                                     dataPath: Path,
                                     infoDate: LocalDate): String = {
     log.info(s"CmdLine template: $cmdLineTemplate")
@@ -169,7 +169,7 @@ class CmdLineSink(processRunner: ProcessRunner,
       .replace("@dataUri", dataPath.toUri.toString)
   }
 
-  private[framework] def runCmd(cmdLine: String): Unit = {
+  private[core] def runCmd(cmdLine: String): Unit = {
     val exitCode = try {
       processRunner.run(cmdLine)
     } catch {

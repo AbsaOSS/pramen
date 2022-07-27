@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.task
+package za.co.absa.pramen.core.runner.task
 
-import za.co.absa.pramen.framework.pipeline.{DependencyWarning, Job}
-import za.co.absa.pramen.framework.notify.SchemaDifference
+import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job}
+import za.co.absa.pramen.core.notify.SchemaDifference
 
 case class TaskResult(
                        job: Job,

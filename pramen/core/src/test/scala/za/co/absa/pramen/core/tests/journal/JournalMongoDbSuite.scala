@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.journal
+package za.co.absa.pramen.core.tests.journal
 
 import org.scalatest.{BeforeAndAfter, WordSpec}
-import za.co.absa.pramen.framework.fixtures.MongoDbFixture
-import za.co.absa.pramen.framework.journal.{Journal, JournalMongoDb}
+import za.co.absa.pramen.core.fixtures.MongoDbFixture
+import za.co.absa.pramen.core.journal.{Journal, JournalMongoDb}
 
 class JournalMongoDbSuite extends WordSpec with MongoDbFixture with BeforeAndAfter {
   import TestCases._
-  import za.co.absa.pramen.framework.dao.ScalaMongoImplicits._
-  import za.co.absa.pramen.framework.journal.JournalMongoDb._
+  import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
+  import za.co.absa.pramen.core.journal.JournalMongoDb._
 
   var journal: Journal = _
 

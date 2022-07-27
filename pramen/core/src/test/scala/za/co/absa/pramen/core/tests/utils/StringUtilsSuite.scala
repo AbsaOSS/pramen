@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.expr.DateExprEvaluator
-import za.co.absa.pramen.framework.utils.StringUtils
+import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.utils.StringUtils
 
 import java.time.LocalDate
 

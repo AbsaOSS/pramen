@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.reader
+package za.co.absa.pramen.core.reader
 
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.sql.{Connection, DriverManager, SQLException}
 import java.util.Properties

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.app
+package za.co.absa.pramen.core.app
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.app.config.{BookkeeperConfig, GeneralConfig, InfoDateConfig, RuntimeConfig}
+import za.co.absa.pramen.core.app.config.{BookkeeperConfig, GeneralConfig, InfoDateConfig, RuntimeConfig}
 
 case class AppConfig(
                       generalConfig: GeneralConfig,

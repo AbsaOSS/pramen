@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.utils
+package za.co.absa.pramen.core.utils
 
 import com.typesafe.config._
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.utils.StringUtils.{escapeString, trimLeft}
+import za.co.absa.pramen.core.utils.StringUtils.{escapeString, trimLeft}
 
 import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter

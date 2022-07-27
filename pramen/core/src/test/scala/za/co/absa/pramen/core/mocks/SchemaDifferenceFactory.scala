@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.notify.{FieldChange, SchemaDifference}
+import za.co.absa.pramen.core.notify.{FieldChange, SchemaDifference}
 
 import java.time.LocalDate
 

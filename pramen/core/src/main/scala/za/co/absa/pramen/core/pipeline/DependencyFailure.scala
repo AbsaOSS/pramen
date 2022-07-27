@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
-import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 
 case class DependencyFailure(
                               dep: MetastoreDependency,

@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.bookkeeper
+package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
-import za.co.absa.pramen.framework.journal._
-import za.co.absa.pramen.framework.lock._
-import za.co.absa.pramen.framework.model.DataChunk
-import za.co.absa.pramen.framework.mongo.MongoDbConnection
-import za.co.absa.pramen.framework.rdb.PramenDb
+import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
+import za.co.absa.pramen.core.journal._
+import za.co.absa.pramen.core.lock._
+import za.co.absa.pramen.core.model.DataChunk
+import za.co.absa.pramen.core.mongo.MongoDbConnection
+import za.co.absa.pramen.core.rdb.PramenDb
 
 import java.time.LocalDate
 

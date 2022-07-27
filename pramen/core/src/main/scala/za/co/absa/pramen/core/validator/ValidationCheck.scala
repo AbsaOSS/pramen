@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.validator
+package za.co.absa.pramen.core.validator
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class ValidationCheck(
                           tablesAll: Seq[String],

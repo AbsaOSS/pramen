@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.model
+package za.co.absa.pramen.core.model
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.Query

@@ -27,7 +27,7 @@ object Dependencies {
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   )
 
-  def FrameworkDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
+  def CoreDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "org.mongodb.scala"    %% "mongo-scala-driver"         % mongoDbScalaDriverVersion,
     "com.typesafe.slick"   %% "slick"                      % slickVersion,
@@ -42,7 +42,7 @@ object Dependencies {
     "org.hsqldb"           %  "hsqldb"                     % hsqlDbVersion              % Test
   ) :+ getDeltaDependency(sparkVersion(scalaVersion))
 
-  def BuildinJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
+  def ExtraSinksJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "za.co.absa"           %% "abris"                      % abrisVersion excludeAll(
       ExclusionRule(organization = "com.fasterxml.jackson.core"),
@@ -52,7 +52,7 @@ object Dependencies {
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   )
 
-  def PipelineRunnerDependencied(scalaVersion: String): Seq[ModuleID] = Seq(
+  def RunnerDependencied(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "com.github.scopt"     %% "scopt"                      % scoptVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test

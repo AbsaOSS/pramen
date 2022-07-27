@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify.message
+package za.co.absa.pramen.core.notify.message
 
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 import scala.collection.mutable.ListBuffer
 import scala.compat.Platform.EOL

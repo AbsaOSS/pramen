@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify.pipeline
+package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.app.config.RuntimeConfig.{DRY_RUN, UNDERCOVER}
-import za.co.absa.pramen.framework.config.Keys
-import za.co.absa.pramen.framework.utils.ConfigUtils
+import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, UNDERCOVER}
+import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 object PipelineNotificationDirector {
 

@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.exceptions.ProcessFailedException
-import za.co.absa.pramen.framework.metastore.{MetaTableStats, Metastore}
-import za.co.absa.pramen.framework.pipeline.PythonTransformationJob._
-import za.co.absa.pramen.framework.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
-import za.co.absa.pramen.framework.metastore.model.{DataFormat, MetaTable}
-import za.co.absa.pramen.framework.process.ProcessRunner
-import za.co.absa.pramen.framework.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
-import za.co.absa.pramen.framework.utils.StringUtils.escapeString
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.exceptions.ProcessFailedException
+import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
+import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
+import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
+import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.process.ProcessRunner
+import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.utils.StringUtils.escapeString
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.time.{Instant, LocalDate}
@@ -126,7 +126,7 @@ class PythonTransformationJob(operationDef: OperationDef,
     stats
   }
 
-  private[framework] def runPythonCmdLine(infoDate: LocalDate, conf: Config): Unit = {
+  private[core] def runPythonCmdLine(infoDate: LocalDate, conf: Config): Unit = {
     val metastoreConfigLocation = getMetastoreConfig(infoDate, conf)
 
     log.info(s"Using template: ${pramenPyConfig.cmdLineTemplate}")
@@ -147,7 +147,7 @@ class PythonTransformationJob(operationDef: OperationDef,
       throw ProcessFailedException(s"The process has exited with error code $exitCode.", processRunner.getLastStdoutLines, processRunner.getLastStderrLines)
   }
 
-  private[framework] def getMetastoreConfig(infoDate: LocalDate, conf: Config): String = {
+  private[core] def getMetastoreConfig(infoDate: LocalDate, conf: Config): String = {
     val tempFile = File.createTempFile("metastore", ".yaml")
 
     tempFile.deleteOnExit()
@@ -165,7 +165,7 @@ class PythonTransformationJob(operationDef: OperationDef,
     tempFile.getAbsolutePath
   }
 
-  private[framework] def getYamlConfig(infoDate: LocalDate, conf: Config): String = {
+  private[core] def getYamlConfig(infoDate: LocalDate, conf: Config): String = {
     def addTransformation(): String = {
       val options = addOptions()
 

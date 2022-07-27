@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.dao
+package za.co.absa.pramen.core.mocks.dao
 
 import de.flapdoodle.embed.mongo.config.{MongodConfigBuilder, Net, RuntimeConfigBuilder}
 import de.flapdoodle.embed.mongo.distribution.Version

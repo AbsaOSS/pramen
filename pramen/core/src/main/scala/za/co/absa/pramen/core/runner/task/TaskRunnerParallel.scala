@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.task
+package za.co.absa.pramen.core.runner.task
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.pipeline.Task
-import za.co.absa.pramen.framework.state.PipelineState
+import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.pipeline.Task
+import za.co.absa.pramen.core.state.PipelineState
 
 import java.time.Instant
 import java.util.concurrent.ExecutorService

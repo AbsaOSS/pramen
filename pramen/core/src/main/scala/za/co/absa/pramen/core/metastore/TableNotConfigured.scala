@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore
+package za.co.absa.pramen.core.metastore
 
 class TableNotConfigured(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause)

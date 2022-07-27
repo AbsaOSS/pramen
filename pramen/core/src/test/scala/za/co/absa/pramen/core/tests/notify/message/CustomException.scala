@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.notify.message
+package za.co.absa.pramen.core.tests.notify.message
 
 class CustomException(msg: String, cause: Throwable = null) extends RuntimeException(msg, cause) {
   override def fillInStackTrace(): Throwable = {

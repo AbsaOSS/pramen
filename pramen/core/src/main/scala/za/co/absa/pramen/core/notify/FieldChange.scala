@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify
+package za.co.absa.pramen.core.notify
 
 sealed trait FieldChange
 

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.app.config
+package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL
-import za.co.absa.pramen.framework.utils.DateUtils.convertStrToDate
+import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
+import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 
 import java.time.LocalDate
 

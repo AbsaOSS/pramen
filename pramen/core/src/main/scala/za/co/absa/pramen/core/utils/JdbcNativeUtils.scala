@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.utils
+package za.co.absa.pramen.core.utils
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.reader.JdbcUrlSelector
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
-import za.co.absa.pramen.framework.utils.impl.ResultSetToRowIterator
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 
 import java.sql.{Connection, DriverManager, ResultSet}
 import java.util.Properties
@@ -104,7 +104,7 @@ object JdbcNativeUtils {
     spark.createDataFrame(rdd, schema)
   }
 
-  private [framework] def getResultSetCount(resultSet: ResultSet): Long = {
+  private [core] def getResultSetCount(resultSet: ResultSet): Long = {
     val countOpt = Try {
       // The fast way of getting record count from a scrollable cursor
       resultSet.last()

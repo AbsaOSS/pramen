@@ -18,10 +18,10 @@ package za.co.absa.pramen.runner.cmd
 
 import com.typesafe.config.{Config, ConfigValueFactory}
 import scopt.OptionParser
-import za.co.absa.pramen.framework.app.config.InfoDateConfig.TRACK_DAYS
-import za.co.absa.pramen.framework.app.config.RuntimeConfig._
-import za.co.absa.pramen.framework.model.Constants
-import za.co.absa.pramen.framework.model.Constants.DATE_FORMAT_INTERNAL
+import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
+import za.co.absa.pramen.core.app.config.RuntimeConfig._
+import za.co.absa.pramen.core.model.Constants
+import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

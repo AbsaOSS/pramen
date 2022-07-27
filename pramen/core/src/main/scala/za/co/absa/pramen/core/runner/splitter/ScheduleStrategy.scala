@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.splitter
+package za.co.absa.pramen.core.runner.splitter
 
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
-import za.co.absa.pramen.framework.pipeline.TaskPreDef
-import za.co.absa.pramen.framework.schedule.Schedule
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.pipeline.TaskPreDef
+import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.LocalDate
 

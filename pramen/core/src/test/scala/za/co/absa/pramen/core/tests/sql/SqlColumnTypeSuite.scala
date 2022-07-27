@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.sql
+package za.co.absa.pramen.core.tests.sql
 
 import org.scalatest.WordSpec
 
 class SqlColumnTypeSuite extends WordSpec {
-  import za.co.absa.pramen.framework.sql.SqlColumnType._
+  import za.co.absa.pramen.core.sql.SqlColumnType._
 
   "fromString()" should {
     "return corresponding type" in {

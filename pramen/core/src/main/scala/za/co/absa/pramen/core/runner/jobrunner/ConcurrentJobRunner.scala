@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.jobrunner
+package za.co.absa.pramen.core.runner.jobrunner
 
 import com.github.yruslan.channel.ReadChannel
-import za.co.absa.pramen.framework.pipeline.Job
-import za.co.absa.pramen.framework.runner.task.TaskResult
+import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.runner.task.TaskResult
 
 trait ConcurrentJobRunner {
   def startWorkerLoop(incomingJobs: ReadChannel[Job]): Unit

@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework
+package za.co.absa.pramen.core
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.framework.app.{AppContext, AppContextImpl}
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.journal.Journal
+import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.journal.Journal
 
 object AppContextFactory {
   private var appContext: AppContext = _

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore.model
+package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec

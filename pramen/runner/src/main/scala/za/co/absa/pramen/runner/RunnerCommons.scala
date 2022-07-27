@@ -21,7 +21,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.log4j.{Level, Logger}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.utils.{ConfigUtils, JavaXConfig}
+import za.co.absa.pramen.core.utils.{ConfigUtils, JavaXConfig}
 import za.co.absa.pramen.runner.cmd.CmdLineConfig
 import za.co.absa.pramen.runner.config.Constants
 

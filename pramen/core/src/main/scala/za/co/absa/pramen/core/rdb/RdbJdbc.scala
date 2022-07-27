@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.rdb
+package za.co.absa.pramen.core.rdb
 
 import java.sql.Connection
 
-import za.co.absa.pramen.framework.rdb.RdbJdbc.dbVersionTableName
+import za.co.absa.pramen.core.rdb.RdbJdbc.dbVersionTableName
 
 import scala.util.control.NonFatal
 

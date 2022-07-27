@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
 import slick.jdbc.H2Profile.api._
 

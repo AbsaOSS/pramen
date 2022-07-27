@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.transformers
+package za.co.absa.pramen.core.transformers
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._

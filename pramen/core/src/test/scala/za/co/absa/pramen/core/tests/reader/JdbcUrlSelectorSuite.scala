@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.reader
+package za.co.absa.pramen.core.tests.reader
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.reader.JdbcUrlSelector
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 class JdbcUrlSelectorSuite extends WordSpec {
   "constructor" should {

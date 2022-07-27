@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.process
+package za.co.absa.pramen.core.process
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.fixtures.ScriptProcessRunnerFixture
-import za.co.absa.pramen.framework.utils.CircularBuffer
+import za.co.absa.pramen.core.fixtures.ScriptProcessRunnerFixture
+import za.co.absa.pramen.core.utils.CircularBuffer
 
 import java.io.{BufferedReader, IOException, StringReader}
 

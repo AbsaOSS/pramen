@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.utils.DateUtils._
+import za.co.absa.pramen.core.utils.DateUtils._
 
 import java.time.{LocalDate, ZoneId}
 

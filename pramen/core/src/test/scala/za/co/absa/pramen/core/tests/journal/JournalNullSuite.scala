@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.journal
+package za.co.absa.pramen.core.tests.journal
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.journal.{Journal, JournalNull}
+import za.co.absa.pramen.core.journal.{Journal, JournalNull}
 
 class JournalNullSuite extends WordSpec {
   import TestCases._

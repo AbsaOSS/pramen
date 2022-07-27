@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.job
+package za.co.absa.pramen.core.mocks.job
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.framework.OperationDefFactory
-import za.co.absa.pramen.framework.metastore.MetaTableStats
-import za.co.absa.pramen.framework.metastore.model.MetaTable
-import za.co.absa.pramen.framework.mocks.MetaTableFactory.getDummyMetaTable
-import za.co.absa.pramen.framework.pipeline.{Job, JobPreRunResult, JobPreRunStatus, OperationDef}
-import za.co.absa.pramen.framework.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.OperationDefFactory
+import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.mocks.MetaTableFactory.getDummyMetaTable
+import za.co.absa.pramen.core.pipeline.{Job, JobPreRunResult, JobPreRunStatus, OperationDef}
+import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
 

@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore.model
+package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.framework.metastore.model.DataFormat._
+import za.co.absa.pramen.core.metastore.model.DataFormat._
 
 class DataFormatSuite extends WordSpec {
   "fromConfig()" should {

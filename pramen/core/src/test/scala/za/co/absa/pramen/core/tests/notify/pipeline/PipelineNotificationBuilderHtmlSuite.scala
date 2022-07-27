@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.notify.pipeline
+package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
-import za.co.absa.pramen.framework.mocks.{SchemaDifferenceFactory, TaskResultFactory}
-import za.co.absa.pramen.framework.notify.pipeline.PipelineNotificationBuilderHtml
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory}
+import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.Instant
 

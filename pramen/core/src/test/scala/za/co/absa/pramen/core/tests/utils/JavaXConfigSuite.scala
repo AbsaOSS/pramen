@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import java.nio.file.{Files, Paths}
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.{BeforeAndAfter, WordSpec}
-import za.co.absa.pramen.framework.utils.JavaXConfig
+import za.co.absa.pramen.core.utils.JavaXConfig
 
 class JavaXConfigSuite extends WordSpec with BeforeAndAfter {
   private val testConfig = ConfigFactory.parseResources("test/config/test_javax.conf")

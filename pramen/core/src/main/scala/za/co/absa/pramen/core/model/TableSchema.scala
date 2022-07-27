@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.model
+package za.co.absa.pramen.core.model
 
 import org.apache.spark.sql.types.StructType
-import za.co.absa.pramen.framework.utils.SparkUtils
+import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.LocalDate
 import scala.util.Try

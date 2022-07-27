@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~
+  ~ Copyright 2022 ABSA Group Limited
+  ~
+  ~  Licensed under the Apache License, Version 2.0 (the "License");
+  ~  you may not use this file except in compliance with the License.
+  ~  You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~  Unless required by applicable law or agreed to in writing, software
+  ~  distributed under the License is distributed on an "AS IS" BASIS,
+  ~  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~  See the License for the specific language governing permissions and
+  ~  limitations under the License.
+  ~
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>pramen-extras</artifactId>
+    <packaging>jar</packaging>
+
+    <parent>
+        <groupId>za.co.absa.pramen</groupId>
+        <artifactId>pramen</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+
+    <properties>
+        <encoding>UTF-8</encoding>
+    </properties>
+
+    <dependencies>
+        <!-- Pramen API -->
+        <dependency>
+            <groupId>za.co.absa.pramen</groupId>
+            <artifactId>pramen-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Scala -->
+        <dependency>
+            <groupId>org.scala-lang</groupId>
+            <artifactId>scala-library</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Spark -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql_${scala.compat.version}</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/net.sourceforge.jtds/jtds -->
+        <dependency>
+            <groupId>net.sourceforge.jtds</groupId>
+            <artifactId>jtds</artifactId>
+        </dependency>
+
+        <!--ABRiS-->
+        <dependency>
+            <groupId>io.confluent</groupId>
+            <artifactId>kafka-avro-serializer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>za.co.absa</groupId>
+            <artifactId>abris_${scala.compat.version}</artifactId>
+        </dependency>
+
+        <!--Kafka-->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-sql-kafka-${kafka.spark.version}_${scala.compat.version}</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <testResources>
+            <testResource>
+                <directory>src/test/resources</directory>
+                <filtering>true</filtering>
+            </testResource>
+        </testResources>
+
+        <plugins>
+            <!-- Generate an uber jar for spark-submit -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>${maven.shade.version}</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                            <mainClass>za.co.absa.pramen.runner.PipelineRunner</mainClass>
+                        </transformer>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                            <resource>reference.conf</resource>
+                        </transformer>
+                    </transformers>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/LICENSE.txt</exclude>
+                                <exclude>META-INF/MANIFEST.MF</exclude>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
+                    <artifactSet>
+                        <includes>
+                            <include>com.oracle:*</include>
+                            <include>io.confluent:*</include>
+                            <include>net.sourceforge.jtds:*</include>
+                            <include>org.apache.kafka:kafka-clients</include>
+                            <include>org.apache.spark:spark-avro_${scala.compat.version}</include>
+                            <include>org.apache.spark:spark-sql-kafka-${kafka.spark.version}_${scala.compat.version}</include>
+                            <include>za.co.absa:abris_${scala.compat.version}</include>
+                        </includes>
+                    </artifactSet>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

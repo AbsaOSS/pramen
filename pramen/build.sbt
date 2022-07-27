@@ -47,12 +47,12 @@ lazy val pramen = (project in file("."))
     publish := {},
     publishLocal := {}
   )
-  .aggregate(api, framework, pipelineRunner, builtinJobs)
+  .aggregate(api, core, runner, extraSinks)
 
 lazy val api = (project in file("api"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
-    name := "api",
+    name := "pramen-api",
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
@@ -64,19 +64,19 @@ lazy val api = (project in file("api"))
   )
   .enablePlugins(AutomateHeaderPlugin)
 
-lazy val framework = (project in file("framework"))
+lazy val core = (project in file("core"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .configs( IntegrationTest )
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
-    name := "framework",
+    name := "pramen-core",
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= FrameworkDependencies(scalaVersion.value)  ++
+    libraryDependencies ++= CoreDependencies(scalaVersion.value)  ++
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
     (Test / testOptions) := Seq(Tests.Filter(unitFilter)),
@@ -88,16 +88,16 @@ lazy val framework = (project in file("framework"))
   .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
 
-lazy val builtinJobs = (project in file("builtin-jobs"))
+lazy val extraSinks = (project in file("extra-sinks"))
   .settings(
-    name := "builtin-jobs",
+    name := "pramen-extra-sinks",
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= BuildinJobsDependencies(scalaVersion.value) ++
+    libraryDependencies ++= ExtraSinksJobsDependencies(scalaVersion.value) ++
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
@@ -105,26 +105,26 @@ lazy val builtinJobs = (project in file("builtin-jobs"))
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     assemblySettingsBuiltInJobs
   )
-  .dependsOn(framework)
+  .dependsOn(core)
   .enablePlugins(AutomateHeaderPlugin)
 
-lazy val pipelineRunner = (project in file("pipeline-runner"))
+lazy val runner = (project in file("runner"))
   .settings(
-    name := "pipeline-runner",
+    name := "pramen-runner",
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= PipelineRunnerDependencied(scalaVersion.value)  ++
+    libraryDependencies ++= RunnerDependencied(scalaVersion.value)  ++
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    assemblySettingsPipelineRunner
+    assemblySettingsRunner
   )
-  .dependsOn(framework)
+  .dependsOn(core)
   .enablePlugins(AutomateHeaderPlugin)
 
 // release settings
@@ -190,7 +190,7 @@ lazy val assemblySettingsBuiltInJobs = assemblySettingsCommon ++ Seq(assembly / 
   ShadeRule.zap("org.slf4j.**").inAll
 ))
 
-lazy val assemblySettingsPipelineRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
+lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
   ShadeRule.zap("org.slf4j.**").inAll
 ))
 

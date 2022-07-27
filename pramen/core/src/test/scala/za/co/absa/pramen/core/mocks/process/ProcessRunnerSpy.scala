@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.process
+package za.co.absa.pramen.core.mocks.process
 
-import za.co.absa.pramen.framework.process.ProcessRunner
+import za.co.absa.pramen.core.process.ProcessRunner
 
 import scala.collection.mutable.ListBuffer
 

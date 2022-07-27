@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify.pipeline
+package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.config.Keys
-import za.co.absa.pramen.framework.notify.Sendable
+import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.notify.Sendable
 
 class PipelineNotificationEmail(notification: PipelineNotification)
                                (implicit conf: Config) extends Sendable {

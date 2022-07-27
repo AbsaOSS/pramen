@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.notify.message
+package za.co.absa.pramen.core.tests.notify.message
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.fixtures.TextComparisonFixture
-import za.co.absa.pramen.framework.notify.message._
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.notify.message._
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 class MessageBuilderHtmlSuite extends WordSpec with TextComparisonFixture {
   "EmailBuilderHtml" should {

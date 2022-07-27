@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore
+package za.co.absa.pramen.core.metastore
 
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api._
-import za.co.absa.pramen.framework.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.model.MetaTable
 
 import java.time.LocalDate
 

@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.splitter
+package za.co.absa.pramen.core.runner.splitter
 
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.expr.DateExprEvaluator
-import za.co.absa.pramen.framework.metastore.model.MetastoreDependency
-import za.co.absa.pramen.framework.pipeline
-import za.co.absa.pramen.framework.pipeline.{TaskPreDef, TaskRunReason}
-import za.co.absa.pramen.framework.schedule.Schedule
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.pipeline
+import za.co.absa.pramen.core.pipeline.{TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.LocalDate
 import scala.collection.mutable
@@ -43,7 +43,7 @@ object ScheduleStrategyUtils {
     * @param infoDateExpression the expression used to calculate info date by the run date
     * @return The sequence of information dates to run. In case of the rerun it will be just one date
     */
-  private[framework] def getRerun(outputTable: String,
+  private[core] def getRerun(outputTable: String,
                                   runDate: LocalDate,
                                   infoDateExpression: String
                                  ): List[TaskPreDef] = {
@@ -63,7 +63,7 @@ object ScheduleStrategyUtils {
     * @param infoDateExpression the expression used to calculate info date by the run date
     * @return Information date of the job to run, if any
     */
-  private[framework] def getNew(outputTable: String,
+  private[core] def getNew(outputTable: String,
                                 runDate: LocalDate,
                                 schedule: Schedule,
                                 infoDateExpression: String
@@ -81,7 +81,7 @@ object ScheduleStrategyUtils {
     }
   }
 
-  private[framework] def getLate(outputTable: String,
+  private[core] def getLate(outputTable: String,
                                  runDate: LocalDate,
                                  schedule: Schedule,
                                  infoDateExpression: String,
@@ -118,7 +118,7 @@ object ScheduleStrategyUtils {
     }
   }
 
-  private[framework] def getHistorical(outputTable: String,
+  private[core] def getHistorical(outputTable: String,
                                        dateFrom: LocalDate,
                                        dateTo: LocalDate,
                                        schedule: Schedule,
@@ -161,14 +161,14 @@ object ScheduleStrategyUtils {
     datesWithProperOrder.filter(t => t.infoDate.isAfter(beforeMinDate))
   }
 
-  private[framework] def anyDependencyUpdatedRetrospectively(outputTable: String,
+  private[core] def anyDependencyUpdatedRetrospectively(outputTable: String,
                                                              infoDate: LocalDate,
                                                              dependencies: Seq[MetastoreDependency],
                                                              bookkeeper: Bookkeeper): Boolean = {
     dependencies.exists(dependency => isDependencyUpdatedRetrospectively(outputTable, infoDate, dependency, bookkeeper))
   }
 
-  private[framework] def isDependencyUpdatedRetrospectively(outputTable: String,
+  private[core] def isDependencyUpdatedRetrospectively(outputTable: String,
                                                             infoDate: LocalDate,
                                                             dependency: MetastoreDependency,
                                                             bookkeeper: Bookkeeper): Boolean = {
@@ -213,7 +213,7 @@ object ScheduleStrategyUtils {
     * @param schedule           the schedule of the job
     * @return
     */
-  private[framework] def getInfoDateRange(dateFrom: LocalDate,
+  private[core] def getInfoDateRange(dateFrom: LocalDate,
                                           dateTo: LocalDate,
                                           infoDateExpression: String,
                                           schedule: Schedule
@@ -245,7 +245,7 @@ object ScheduleStrategyUtils {
     * @param expression The expression for converting the run date to info date
     * @return The info date
     */
-  private[framework] def evaluateRunDate(runDate: LocalDate, expression: String): LocalDate = {
+  private[core] def evaluateRunDate(runDate: LocalDate, expression: String): LocalDate = {
     val evaluator = new DateExprEvaluator
 
     evaluator.setValue(RUN_DATE_VAR1, runDate)
@@ -264,7 +264,7 @@ object ScheduleStrategyUtils {
     * @param expression A date expression that uses the info date as a variable
     * @return The info date
     */
-  private[framework] def evaluateFromInfoDate(infoDate: LocalDate, expression: String): LocalDate = {
+  private[core] def evaluateFromInfoDate(infoDate: LocalDate, expression: String): LocalDate = {
     val evaluator = new DateExprEvaluator
 
     evaluator.setValue(INFO_DATE_VAR, infoDate)
@@ -275,7 +275,7 @@ object ScheduleStrategyUtils {
   /**
     * Renders date range (for logging).
     */
-  private[framework] def renderPeriod(dateFrom: Option[LocalDate], dateTo: Option[LocalDate]): String = {
+  private[core] def renderPeriod(dateFrom: Option[LocalDate], dateTo: Option[LocalDate]): String = {
     (dateFrom, dateTo) match {
       case (Some(from), Some(to)) =>
         s" (from $from to $to)"

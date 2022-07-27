@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sql
+package za.co.absa.pramen.core.sql
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.sql.impl.SasDialect
+import za.co.absa.pramen.core.sql.impl.SasDialect
 
 import java.sql.{Connection, ResultSet}
 import java.time.LocalDate

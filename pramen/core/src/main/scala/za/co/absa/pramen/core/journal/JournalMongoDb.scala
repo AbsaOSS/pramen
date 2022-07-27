@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.journal
+package za.co.absa.pramen.core.journal
 
 import java.time.Instant
 
@@ -23,10 +23,10 @@ import org.bson.codecs.configuration.CodecRegistry
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
 import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.model.Filters
-import za.co.absa.pramen.framework.dao.MongoDb
-import za.co.absa.pramen.framework.dao.model.{ASC, IndexField}
-import za.co.absa.pramen.framework.journal.model.TaskCompleted
-import za.co.absa.pramen.framework.mongo.MongoDbConnection
+import za.co.absa.pramen.core.dao.MongoDb
+import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
+import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.mongo.MongoDbConnection
 
 import scala.util.control.NonFatal
 
@@ -37,7 +37,7 @@ object JournalMongoDb {
 class JournalMongoDb(mongoDbConnection: MongoDbConnection) extends Journal {
 
   import JournalMongoDb._
-  import za.co.absa.pramen.framework.dao.ScalaMongoImplicits._
+  import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
   private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[TaskCompleted]), DEFAULT_CODEC_REGISTRY)
   private val db = mongoDbConnection.getDatabase

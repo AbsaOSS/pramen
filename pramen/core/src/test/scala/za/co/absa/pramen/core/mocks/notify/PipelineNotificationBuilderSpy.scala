@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.notify
+package za.co.absa.pramen.core.mocks.notify
 
-import za.co.absa.pramen.framework.notify.pipeline.PipelineNotificationBuilder
-import za.co.absa.pramen.framework.runner.task.TaskResult
+import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilder
+import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.Instant
 

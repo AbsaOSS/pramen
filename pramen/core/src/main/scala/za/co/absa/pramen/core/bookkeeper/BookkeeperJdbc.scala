@@ -14,24 +14,24 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.bookkeeper
+package za.co.absa.pramen.core.bookkeeper
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.framework.bookkeeper.model.{BookkeepingRecord, BookkeepingRecords, SchemaRecord, SchemaRecords}
-import za.co.absa.pramen.framework.model.{DataChunk, TableSchema}
-import za.co.absa.pramen.framework.reader.JdbcUrlSelector
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
-import za.co.absa.pramen.framework.utils.SlickUtils
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecord, BookkeepingRecords, SchemaRecord, SchemaRecords}
+import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.SlickUtils
 
 import java.time.LocalDate
 import scala.util.control.NonFatal
 
 class BookkeeperJdbc(db: Database) extends Bookkeeper {
 
-  import za.co.absa.pramen.framework.utils.FutureImplicits._
+  import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 

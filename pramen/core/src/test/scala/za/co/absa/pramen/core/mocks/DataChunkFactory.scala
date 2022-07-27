@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.model.DataChunk
+import za.co.absa.pramen.core.model.DataChunk
 
 object DataChunkFactory {
   def getDummyDataChunk(tableName: String = "table1",

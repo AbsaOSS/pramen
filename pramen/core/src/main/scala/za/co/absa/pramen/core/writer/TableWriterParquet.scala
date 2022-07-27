@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.writer
+package za.co.absa.pramen.core.writer
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableWriter
-import za.co.absa.pramen.framework.utils.{FsUtils, PartitionUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, PartitionUtils}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter

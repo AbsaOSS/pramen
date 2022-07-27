@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner
+package za.co.absa.pramen.core.runner
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.AppContextFactory
-import za.co.absa.pramen.framework.app.AppContext
-import za.co.absa.pramen.framework.app.config.RuntimeConfig
-import za.co.absa.pramen.framework.pipeline.{Job, OperationSplitter, PipelineDef}
-import za.co.absa.pramen.framework.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
-import za.co.absa.pramen.framework.runner.orchestrator.OrchestratorImpl
-import za.co.absa.pramen.framework.runner.task.{TaskRunner, TaskRunnerParallel}
-import za.co.absa.pramen.framework.state.{PipelineState, PipelineStateImpl}
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.AppContextFactory
+import za.co.absa.pramen.core.app.AppContext
+import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
+import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
+import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
+import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerParallel}
+import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl}
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -74,20 +74,20 @@ object AppRunner {
     }
   }
 
-  private[framework] def handleFailure[T](t: Try[T], state: PipelineState, stage: String): Try[T] = {
+  private[core] def handleFailure[T](t: Try[T], state: PipelineState, stage: String): Try[T] = {
     t.recoverWith { case NonFatal(ex) =>
       state.setFailure(stage, ex)
       Failure(new RuntimeException(s"An error occurred during $stage.", ex))
     }
   }
 
-  private[framework] def createPipelineState(implicit conf: Config): Try[PipelineState] = {
+  private[core] def createPipelineState(implicit conf: Config): Try[PipelineState] = {
     Try {
       new PipelineStateImpl
     }
   }
 
-  private[framework] def createAppContext(implicit conf: Config,
+  private[core] def createAppContext(implicit conf: Config,
                                           state: PipelineState,
                                           spark: SparkSession): Try[AppContext] = {
     handleFailure(Try {
@@ -95,7 +95,7 @@ object AppRunner {
     }, state, "initialization of the pipeline")
   }
 
-  private[framework] def createTaskRunner(implicit conf: Config,
+  private[core] def createTaskRunner(implicit conf: Config,
                                           state: PipelineState,
                                           appContext: AppContext): Try[TaskRunner] = {
     handleFailure(Try {
@@ -103,14 +103,14 @@ object AppRunner {
     }, state, "initialization of the task runner")
   }
 
-  private[framework] def getSparkSession(implicit conf: Config,
+  private[core] def getSparkSession(implicit conf: Config,
                                          state: PipelineState): Try[SparkSession] = {
     handleFailure(Try {
       PipelineSparkSessionBuilder.buildSparkSession(conf)
     }, state, "Spark Session creation")
   }
 
-  private[framework] def logBanner(implicit spark: SparkSession): Try[Unit] = {
+  private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {
     Try {
       val banner = ResourceUtils.getResourceString("/banner.txt")
       log.info(s"\n$banner")
@@ -119,13 +119,13 @@ object AppRunner {
     }
   }
 
-  private[framework] def getPipelineDef(implicit conf: Config, state: PipelineState, appContext: AppContext): Try[PipelineDef] = {
+  private[core] def getPipelineDef(implicit conf: Config, state: PipelineState, appContext: AppContext): Try[PipelineDef] = {
     handleFailure(Try {
       PipelineDef.fromConfig(conf, appContext.appConfig.infoDateDefaults)
     }, state, "reading of the pipeline configuration")
   }
 
-  private[framework] def splitJobs(implicit conf: Config,
+  private[core] def splitJobs(implicit conf: Config,
                                    pipelineDef: PipelineDef,
                                    state: PipelineState,
                                    appContext: AppContext,
@@ -137,7 +137,7 @@ object AppRunner {
     }, state, "splitting of the pipeline into jobs")
   }
 
-  private[framework] def filterJobs(state: PipelineState,
+  private[core] def filterJobs(state: PipelineState,
                                     jobs: Seq[Job],
                                     runtimeConfig: RuntimeConfig): Try[Seq[Job]] = {
     handleFailure(Try {
@@ -165,7 +165,7 @@ object AppRunner {
     }, state, "selecting jobs for execution")
   }
 
-  private[framework] def runPipeline(implicit conf: Config,
+  private[core] def runPipeline(implicit conf: Config,
                                      jobs: Seq[Job],
                                      state: PipelineState,
                                      appContext: AppContext,
@@ -185,7 +185,7 @@ object AppRunner {
     }, state, "running of the pipeline")
   }
 
-  private[framework] def shutdown(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {
+  private[core] def shutdown(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {
     handleFailure(Try {
       taskRunner.shutdown()
     }, state, "shutting down task runner execution context")

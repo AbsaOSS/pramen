@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.runner
+package za.co.absa.pramen.core.mocks.runner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
-import za.co.absa.pramen.framework.pipeline.{Job, TaskRunReason}
-import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner
-import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner.JobRunResults
-import za.co.absa.pramen.framework.runner.task.{RunInfo, RunStatus, TaskResult}
+import za.co.absa.pramen.core.pipeline.{Job, TaskRunReason}
+import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
+import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
+import za.co.absa.pramen.core.runner.task.{RunInfo, RunStatus, TaskResult}
 
 import java.time.{Instant, LocalDate}
 import java.util.concurrent.ExecutorService

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.metastore
+package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.MetastoreReader

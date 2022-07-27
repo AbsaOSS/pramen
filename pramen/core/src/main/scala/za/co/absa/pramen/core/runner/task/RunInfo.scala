@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.task
+package za.co.absa.pramen.core.runner.task
 
 import java.time.{Instant, LocalDate}
 

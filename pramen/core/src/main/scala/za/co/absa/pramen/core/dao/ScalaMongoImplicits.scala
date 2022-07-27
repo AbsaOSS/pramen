@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.dao
+package za.co.absa.pramen.core.dao
 
 import java.util.concurrent.TimeUnit
 

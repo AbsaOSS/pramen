@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.dao
+package za.co.absa.pramen.core.dao
 
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.bson.codecs.configuration.CodecRegistry
@@ -25,7 +25,7 @@ import org.mongodb.scala.bson.collection.immutable.Document
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.{MongoCollection, MongoDatabase, MongoNamespace}
 import org.slf4j.{Logger, LoggerFactory}
-import za.co.absa.pramen.framework.dao.model.{DbVersion, IndexField}
+import za.co.absa.pramen.core.dao.model.{DbVersion, IndexField}
 
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
 /**
   * This class provides facilities to protect against multiple jobs writing

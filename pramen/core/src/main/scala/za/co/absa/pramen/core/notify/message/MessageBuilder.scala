@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.notify.message
+package za.co.absa.pramen.core.notify.message
 
 trait MessageBuilder {
   def withParagraph(text: Seq[TextElement]): MessageBuilder

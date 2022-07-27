@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mq
+package za.co.absa.pramen.core.mq
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory

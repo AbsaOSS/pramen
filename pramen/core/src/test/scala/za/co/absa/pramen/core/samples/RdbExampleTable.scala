@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.samples
+package za.co.absa.pramen.core.samples
 
 import java.sql.{Connection, SQLException}
 

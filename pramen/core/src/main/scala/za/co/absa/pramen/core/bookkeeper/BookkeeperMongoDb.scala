@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.bookkeeper
+package za.co.absa.pramen.core.bookkeeper
 
 import com.mongodb.client.model.ReplaceOptions
 import org.apache.spark.sql.types.StructType
@@ -25,10 +25,10 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{Filters, Sorts}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.dao.MongoDb
-import za.co.absa.pramen.framework.dao.model.{ASC, IndexField}
-import za.co.absa.pramen.framework.model.{DataChunk, TableSchema}
-import za.co.absa.pramen.framework.mongo.MongoDbConnection
+import za.co.absa.pramen.core.dao.MongoDb
+import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
+import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
+import za.co.absa.pramen.core.mongo.MongoDbConnection
 
 import java.time.LocalDate
 import scala.util.control.NonFatal
@@ -43,7 +43,7 @@ object BookkeeperMongoDb {
 class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper {
 
   import BookkeeperMongoDb._
-  import za.co.absa.pramen.framework.dao.ScalaMongoImplicits._
+  import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 

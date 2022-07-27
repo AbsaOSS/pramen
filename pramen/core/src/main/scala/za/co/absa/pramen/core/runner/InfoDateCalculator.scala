@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner
+package za.co.absa.pramen.core.runner
 
-import za.co.absa.pramen.framework.expr.DateExprEvaluator
+import za.co.absa.pramen.core.expr.DateExprEvaluator
 
 import java.time.LocalDate
 

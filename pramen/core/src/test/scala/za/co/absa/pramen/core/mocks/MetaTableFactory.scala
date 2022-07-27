@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.metastore.model.DataFormat._
-import za.co.absa.pramen.framework.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.metastore.model.DataFormat._
+import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 
 import java.time.LocalDate
 

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.journal.model
-import za.co.absa.pramen.framework.journal.model.TaskCompleted
-import za.co.absa.pramen.framework.model.TaskStatus
+import za.co.absa.pramen.core.journal.model
+import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.model.TaskStatus
 
 import java.time.LocalDate
 

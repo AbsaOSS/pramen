@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.utils.impl
+package za.co.absa.pramen.core.utils.impl
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRow

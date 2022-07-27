@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.expr.lexer
+package za.co.absa.pramen.core.expr.lexer
 
 sealed trait Token {
   def pos: Int

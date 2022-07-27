@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore
+package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{MetastoreReader, TableReader, TableWriter}
-import za.co.absa.pramen.framework.app.config.RuntimeConfig.UNDERCOVER
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.config.Keys.TEMPORARY_DIRECTORY
-import za.co.absa.pramen.framework.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
-import za.co.absa.pramen.framework.metastore.model.{DataFormat, MetaTable}
-import za.co.absa.pramen.framework.metastore.peristence.MetastorePersistence
-import za.co.absa.pramen.framework.reader.{TableReaderDelta, TableReaderParquet}
-import za.co.absa.pramen.framework.utils.ConfigUtils
-import za.co.absa.pramen.framework.writer.{TableWriterDelta, TableWriterParquet}
+import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.config.Keys.TEMPORARY_DIRECTORY
+import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
+import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
+import za.co.absa.pramen.core.reader.{TableReaderDelta, TableReaderParquet}
+import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.writer.{TableWriterDelta, TableWriterParquet}
 
 import java.time.{Instant, LocalDate}
 

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.expr.lexer
+package za.co.absa.pramen.core.expr.lexer
 
-import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.framework.expr.lexer.Token._
+import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
+import za.co.absa.pramen.core.expr.lexer.Token._
 
 import scala.collection.mutable.ListBuffer
 

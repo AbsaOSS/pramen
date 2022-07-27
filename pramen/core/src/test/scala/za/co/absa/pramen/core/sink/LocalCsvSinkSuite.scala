@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.sink
+package za.co.absa.pramen.core.sink
 
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.framework.mocks.sink.CsvConversionParamsFactory
-import za.co.absa.pramen.framework.utils.{FsUtils, SparkUtils}
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.mocks.sink.CsvConversionParamsFactory
+import za.co.absa.pramen.core.utils.{FsUtils, SparkUtils}
 
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate

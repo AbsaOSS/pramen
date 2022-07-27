@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.schedule
+package za.co.absa.pramen.core.schedule
 
 import com.typesafe.config.Config
 

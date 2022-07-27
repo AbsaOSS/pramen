@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.framework.notify.FieldChange
+import za.co.absa.pramen.core.notify.FieldChange
 
 object FieldChangeFactory {
   def getDummyNewField(columnName: String = "dummy_new_column", dataType: String = "int"): FieldChange = {

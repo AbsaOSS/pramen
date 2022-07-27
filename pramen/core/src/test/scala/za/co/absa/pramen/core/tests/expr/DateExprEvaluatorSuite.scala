@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.expr
+package za.co.absa.pramen.core.tests.expr
 
 import java.time.LocalDate
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.expr.DateExprEvaluator
-import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.framework.model.Constants
+import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
+import za.co.absa.pramen.core.model.Constants
 
 class DateExprEvaluatorSuite extends WordSpec {
   private val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)

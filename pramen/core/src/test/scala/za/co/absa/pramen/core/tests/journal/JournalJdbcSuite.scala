@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.journal
+package za.co.absa.pramen.core.tests.journal
 
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, WordSpec}
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.RelationalDbFixture
-import za.co.absa.pramen.framework.journal.{Journal, JournalJdbc}
-import za.co.absa.pramen.framework.rdb.PramenDb
-import za.co.absa.pramen.framework.reader.model.JdbcConfig
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.journal.{Journal, JournalJdbc}
+import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 class JournalJdbcSuite extends WordSpec with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll with RelationalDbFixture {
   import TestCases._

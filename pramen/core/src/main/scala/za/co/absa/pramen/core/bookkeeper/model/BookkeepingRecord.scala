@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.bookkeeper.model
+package za.co.absa.pramen.core.bookkeeper.model
 
 case class BookkeepingRecord(pramenTableName: String,
                              infoDate: String, /* Use String to workaround serialization issues */

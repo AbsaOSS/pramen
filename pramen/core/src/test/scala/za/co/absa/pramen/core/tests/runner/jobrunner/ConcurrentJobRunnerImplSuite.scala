@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.runner.jobrunner
+package za.co.absa.pramen.core.tests.runner.jobrunner
 
 import com.github.yruslan.channel.Channel
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.RuntimeConfigFactory
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.metastore.MetaTableStats
-import za.co.absa.pramen.framework.pipeline.Job
-import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
-import za.co.absa.pramen.framework.mocks.job.JobSpy
-import za.co.absa.pramen.framework.mocks.state.PipelineStateSpy
-import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunnerImpl
-import za.co.absa.pramen.framework.runner.task.RunStatus.{Failed, Succeeded}
-import za.co.absa.pramen.framework.runner.task.TaskRunnerParallel
+import za.co.absa.pramen.core.RuntimeConfigFactory
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.job.JobSpy
+import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
+import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, Succeeded}
+import za.co.absa.pramen.core.runner.task.TaskRunnerParallel
 
 import java.time.{Instant, LocalDate, Duration => Dur}
 

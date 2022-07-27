@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.expr.parser
+package za.co.absa.pramen.core.tests.expr.parser
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.framework.expr.lexer.Token._
-import za.co.absa.pramen.framework.expr.lexer.{Lexer, Token}
+import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
+import za.co.absa.pramen.core.expr.lexer.Token._
+import za.co.absa.pramen.core.expr.lexer.{Lexer, Token}
 
 class LexerSuite extends WordSpec {
   "Lexer" should {

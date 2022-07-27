@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
 class TokenLockAllow extends TokenLock {
   override def tryAcquire(): Boolean = true

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.bookkeeper.Bookkeeper
-import za.co.absa.pramen.framework.expr.DateExprEvaluator
-import za.co.absa.pramen.framework.metastore.Metastore
-import za.co.absa.pramen.framework.metastore.model.{MetaTable, MetastoreDependency}
-import za.co.absa.pramen.framework.pipeline
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.metastore.Metastore
+import za.co.absa.pramen.core.metastore.model.{MetaTable, MetastoreDependency}
+import za.co.absa.pramen.core.pipeline
 
 import java.time.LocalDate
 
@@ -121,7 +121,7 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  private[framework] def getInfoDateRange(infoDate: LocalDate, fromExpr: Option[String], toExpr: Option[String]): (LocalDate, LocalDate) = {
+  private[core] def getInfoDateRange(infoDate: LocalDate, fromExpr: Option[String], toExpr: Option[String]): (LocalDate, LocalDate) = {
     val evaluator = new DateExprEvaluator
     evaluator.setValue("infoDate", infoDate)
     evaluator.setValue("date", infoDate)

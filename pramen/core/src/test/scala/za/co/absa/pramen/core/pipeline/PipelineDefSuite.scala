@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.app.config.InfoDateConfig
-import za.co.absa.pramen.framework.fixtures.TempDirFixture
-import za.co.absa.pramen.framework.pipeline.OperationType.{Ingestion, Transformation}
-import za.co.absa.pramen.framework.schedule.Schedule
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.pipeline.OperationType.{Ingestion, Transformation}
+import za.co.absa.pramen.core.schedule.Schedule
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.LocalDate
 

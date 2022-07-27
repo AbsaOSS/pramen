@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework
+package za.co.absa.pramen.core
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.ExternalChannel
-import za.co.absa.pramen.framework.utils.ClassLoaderUtils
+import za.co.absa.pramen.core.utils.ClassLoaderUtils
 
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer

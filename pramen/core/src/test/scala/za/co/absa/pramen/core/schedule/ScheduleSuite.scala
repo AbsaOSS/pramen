@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.schedule
+package za.co.absa.pramen.core.schedule
 
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.schedule.Schedule._
+import za.co.absa.pramen.core.schedule.Schedule._
 
 import java.time.{DayOfWeek, LocalDate}
 

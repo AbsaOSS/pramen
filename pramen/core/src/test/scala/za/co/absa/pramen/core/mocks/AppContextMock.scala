@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks
+package za.co.absa.pramen.core.mocks
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.framework.AppContextFactory
-import za.co.absa.pramen.framework.journal.JournalNull
-import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
-import za.co.absa.pramen.framework.utils.ResourceUtils
+import za.co.absa.pramen.core.AppContextFactory
+import za.co.absa.pramen.core.journal.JournalNull
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.utils.ResourceUtils
 
 object AppContextMock {
   def initAppContext(confInOpt: Option[Config] = None)(implicit spark: SparkSession): Unit = {

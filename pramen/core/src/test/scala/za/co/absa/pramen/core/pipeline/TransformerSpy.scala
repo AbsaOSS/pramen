@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.{MetastoreReader, Reason, Transformer}

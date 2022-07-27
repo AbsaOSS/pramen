@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.lock
+package za.co.absa.pramen.core.lock
 
 import java.time.Instant
 
@@ -27,11 +27,11 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{Filters, Updates}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.dao.model.{ASC, IndexField}
-import za.co.absa.pramen.framework.dao.{MongoDb, ScalaMongoImplicits}
-import za.co.absa.pramen.framework.lock.model.LockTicket
-import za.co.absa.pramen.framework.mongo.MongoDbConnection
-import za.co.absa.pramen.framework.utils.{JvmUtils, StringUtils}
+import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
+import za.co.absa.pramen.core.dao.{MongoDb, ScalaMongoImplicits}
+import za.co.absa.pramen.core.lock.model.LockTicket
+import za.co.absa.pramen.core.mongo.MongoDbConnection
+import za.co.absa.pramen.core.utils.{JvmUtils, StringUtils}
 
 import scala.util.control.NonFatal
 import scala.util.{Failure, Random, Success, Try}

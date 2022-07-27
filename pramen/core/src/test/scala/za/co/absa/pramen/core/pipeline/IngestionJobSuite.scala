@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.pipeline
+package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.{Query, Reason}
-import za.co.absa.pramen.framework.OperationDefFactory
-import za.co.absa.pramen.framework.base.SparkTestBase
-import za.co.absa.pramen.framework.fixtures.{RelationalDbFixture, TextComparisonFixture}
-import za.co.absa.pramen.framework.mocks.MetaTableFactory
-import za.co.absa.pramen.framework.mocks.bookkeeper.SyncBookkeeperMock
-import za.co.absa.pramen.framework.mocks.metastore.MetastoreSpy
-import za.co.absa.pramen.framework.samples.RdbExampleTable
-import za.co.absa.pramen.framework.source.SourceManager.getSourceByName
-import za.co.absa.pramen.framework.utils.SparkUtils
+import za.co.absa.pramen.core.OperationDefFactory
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.mocks.MetaTableFactory
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
+import za.co.absa.pramen.core.samples.RdbExampleTable
+import za.co.absa.pramen.core.source.SourceManager.getSourceByName
+import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.sql.SQLSyntaxErrorException
 import java.time.{Instant, LocalDate}
@@ -46,7 +46,7 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
        |   sources = [
        |    {
        |      name = "jdbc"
-       |      factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+       |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
        |      jdbc {
        |        driver = "$driver"
        |        connection.string = "$url"

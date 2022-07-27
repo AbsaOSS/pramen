@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.metastore.peristence
+package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.framework.metastore.MetaTableStats
-import za.co.absa.pramen.framework.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 
 import java.time.LocalDate
 

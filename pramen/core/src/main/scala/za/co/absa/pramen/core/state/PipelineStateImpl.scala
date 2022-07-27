@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.state
+package za.co.absa.pramen.core.state
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
-import za.co.absa.pramen.framework.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
-import za.co.absa.pramen.framework.pipeline.PipelineDef._
-import za.co.absa.pramen.framework.runner.task.RunStatus.{NotRan, Skipped}
-import za.co.absa.pramen.framework.runner.task.TaskResult
+import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
+import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
+import za.co.absa.pramen.core.pipeline.PipelineDef._
+import za.co.absa.pramen.core.runner.task.RunStatus.{NotRan, Skipped}
+import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer

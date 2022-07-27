@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.model
+package za.co.absa.pramen.core.model
 
 sealed trait TaskStatus
 

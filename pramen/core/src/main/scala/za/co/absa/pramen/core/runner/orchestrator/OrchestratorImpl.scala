@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.runner.orchestrator
+package za.co.absa.pramen.core.runner.orchestrator
 
 import com.github.yruslan.channel.Channel
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.framework.app.AppContext
-import za.co.absa.pramen.framework.pipeline.{Job, JobDependency, OperationType}
-import za.co.absa.pramen.framework.runner.jobrunner.ConcurrentJobRunner
-import za.co.absa.pramen.framework.runner.task.{RunStatus, TaskResult}
-import za.co.absa.pramen.framework.state.PipelineState
+import za.co.absa.pramen.core.app.AppContext
+import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
+import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
+import za.co.absa.pramen.core.runner.task.{RunStatus, TaskResult}
+import za.co.absa.pramen.core.state.PipelineState
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer

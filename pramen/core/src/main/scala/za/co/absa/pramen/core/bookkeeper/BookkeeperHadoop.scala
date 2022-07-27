@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.bookkeeper
+package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions._
-import za.co.absa.pramen.framework.model.DataChunk
+import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
 

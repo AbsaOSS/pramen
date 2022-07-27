@@ -239,13 +239,13 @@ pramen.sources = [
     # The name of the source. It will be used to refer to the source in the pipeline.
     name = "source1_name"
     # The factory class of the source determines the source type.
-    factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+    factory.class = "za.co.absa.pramen.core.source.JdbcSource"
     
     # Depending of the factory source parameters vary.
   },
   {
     name = "source2_name"
-    factory.class = "za.co.absa.pramen.framework.source.ParquetSource"
+    factory.class = "za.co.absa.pramen.core.source.ParquetSource"
     # ...
   }
   ## etc
@@ -254,10 +254,10 @@ pramen.sources = [
 
 Builtin sources:
 
-| Factory Class                                       | Description               |
-|-----------------------------------------------------|---------------------------|
-| `za.co.absa.pramen.framework.source.JdbcSource`     | JDBC Source               |
-| `za.co.absa.pramen.framework.source.ParquetSource`  | Parquet on Hadoop source. |
+| Factory Class                                 | Description               |
+|-----------------------------------------------|---------------------------|
+| `za.co.absa.pramen.core.source.JdbcSource`    | JDBC Source               |
+| `za.co.absa.pramen.core.source.ParquetSource` | Parquet on Hadoop source. |
 
 Here is how each of these sources can be configured:
 
@@ -267,7 +267,7 @@ is determined by the pipeline configuration.
 ```config
 {
     name = "source1_name"
-    factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+    factory.class = "za.co.absa.pramen.core.source.JdbcSource"
 
     jdbc = {
       # Driver fully qualified class
@@ -344,7 +344,7 @@ present. The exact path to the source is defined in the sourcing job configurati
 ```config
 {
     name = "parquet_source1"
-    factory.class = "za.co.absa.pramen.framework.source.ParquetSource"
+    factory.class = "za.co.absa.pramen.core.source.ParquetSource"
 
     # Specifies if tables of the data source have an information date colunn
     has.information.date.column = true
@@ -462,7 +462,7 @@ Here is an example of a CSV sink definition:
 ```config
 {
   name = "local_csv"
-  factory.class = "za.co.absa.pramen.framework.sink.LocalCsvSink"
+  factory.class = "za.co.absa.pramen.core.sink.LocalCsvSink"
   temp.hadoop.path = "/tmp/csv_sink"
   
   # This defines output file name pattern.
@@ -546,7 +546,7 @@ Here is an example of a command line sink definition that outputs to a CSV in a 
 ```config
 {
   name = "cmd_line"
-  factory.class = "za.co.absa.pramen.framework.sink.CmdLineSink"
+  factory.class = "za.co.absa.pramen.core.sink.CmdLineSink"
   
   # A temporary folder in Hadoop to put data to.
   temp.hadoop.path = "/tmp/cmd_line_sink"
@@ -751,7 +751,7 @@ class ExampleTransformer(conf: Config) extends Transformer {
   }
 }
 ```
-(full example: [IdentityTransformer.scala](pramen/framework/src/main/scala/za/co/absa/pramen/framework/transformers/IdentityTransformer.scala))
+(full example: [IdentityTransformer.scala](pramen/core/src/main/scala/za/co/absa/pramen/core/transformers/IdentityTransformer.scala))
 
 You can refer to the transformer from the pipeline by its fully qualified class name (`com.example.ExampleTransformer` in this case).
 
@@ -910,7 +910,7 @@ pramen.operations = [
  {
     name = "A transformer"
     type = "transformer"
-    class = "za.co.absa.pramen.framework.transformers.IdentityTransformer"
+    class = "za.co.absa.pramen.core.transformers.IdentityTransformer"
     schedule.type = "daily"
 
     # Specifies a metastore table to save output data to
@@ -1438,7 +1438,7 @@ pramen.metastore {
 pramen.sources = [
   {
     name = "postgre"
-    factory.class = "za.co.absa.pramen.framework.source.JdbcSource"
+    factory.class = "za.co.absa.pramen.core.source.JdbcSource"
 
     jdbc = {
       driver = "org.postgresql.Driver"

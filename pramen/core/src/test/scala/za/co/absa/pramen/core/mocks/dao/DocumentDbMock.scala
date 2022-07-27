@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.mocks.dao
+package za.co.absa.pramen.core.mocks.dao
 
-import za.co.absa.pramen.framework.dao.DocumentDb
-import za.co.absa.pramen.framework.dao.model.IndexField
+import za.co.absa.pramen.core.dao.DocumentDb
+import za.co.absa.pramen.core.dao.model.IndexField
 
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}

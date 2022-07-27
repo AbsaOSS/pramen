@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.framework.tests.utils
+package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.framework.fixtures.TempDirFixture
-import za.co.absa.pramen.framework.utils.LocalFsUtils
+import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.utils.LocalFsUtils
 
 import java.nio.file.{Files, Paths}
 
