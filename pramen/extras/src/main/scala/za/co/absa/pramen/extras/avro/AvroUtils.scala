@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.avro
+package za.co.absa.pramen.extras.avro
 
 import org.apache.avro.{JsonProperties, Schema}
 import org.apache.spark.sql.avro.SchemaConverters.toAvroType

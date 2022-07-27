@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.builtin.process
+package za.co.absa.pramen.extras.process
 
 import java.io.{BufferedReader, InputStreamReader}
 

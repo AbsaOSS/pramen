@@ -20,7 +20,7 @@ import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.WordSpec
 
 class KafkaWriterConfigSuite extends WordSpec {
-  import za.co.absa.pramen.writer.model.KafkaWriterConfig._
+  import za.co.absa.pramen.extras.writer.model.KafkaWriterConfig._
 
   private val conf = ConfigFactory.parseString(
     """writer.kafka.brokers = "localhost:9092"

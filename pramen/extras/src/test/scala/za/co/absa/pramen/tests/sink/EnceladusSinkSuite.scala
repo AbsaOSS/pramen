@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
 import za.co.absa.pramen.base.SparkTestBase
-import za.co.absa.pramen.builtin.sink.EnceladusSink
+import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.utils.FsUtils
 

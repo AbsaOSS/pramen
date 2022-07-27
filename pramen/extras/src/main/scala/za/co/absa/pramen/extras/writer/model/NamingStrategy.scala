@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.writer.model
+package za.co.absa.pramen.extras.writer.model
 
 import com.typesafe.config.Config
 import za.co.absa.abris.avro.registry.SchemaSubject

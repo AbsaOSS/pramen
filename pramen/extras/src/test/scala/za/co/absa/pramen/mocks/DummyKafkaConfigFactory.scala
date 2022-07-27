@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.mocks
 
-import za.co.absa.pramen.writer.model.{KafkaWriterConfig, NamingStrategy}
+import za.co.absa.pramen.extras.writer.model.{KafkaWriterConfig, NamingStrategy}
 
 object DummyKafkaConfigFactory {
   def getDummyKafkaWriterConfig(brokers: String = "localhost:9092",

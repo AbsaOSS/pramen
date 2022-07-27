@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.builtin.infofile
+package za.co.absa.pramen.extras.infofile
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path

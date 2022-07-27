@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.builtin.sink
+package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.AppContextFactory

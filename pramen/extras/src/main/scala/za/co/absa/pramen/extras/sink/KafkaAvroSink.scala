@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.builtin.sink
+package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{MetastoreReader, Sink}
-import za.co.absa.pramen.builtin.sink.KafkaAvroSink.TOPIC_NAME_KEY
+import za.co.absa.pramen.extras.sink.KafkaAvroSink.TOPIC_NAME_KEY
 import za.co.absa.pramen.core.ExternalChannelFactory
-import za.co.absa.pramen.writer.TableWriterKafka
-import za.co.absa.pramen.writer.model.KafkaWriterConfig
+import za.co.absa.pramen.extras.writer.TableWriterKafka
+import za.co.absa.pramen.extras.writer.model.KafkaWriterConfig
 
 import java.time.LocalDate
 
@@ -36,7 +36,7 @@ import java.time.LocalDate
   *  {
   *    # Define a name to reference from the pipeline:
   *    name = "kafka_avro"
-  *    factory.class = "za.co.absa.pramen.builtin.sink.KafkaAvroSink"
+  *    factory.class = "za.co.absa.pramen.extras.sink.KafkaAvroSink"
   *
   *    writer.kafka {
   *      brokers = "mybroker1:9092,mybroker2:9092"

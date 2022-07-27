@@ -103,7 +103,7 @@ lazy val extraSinks = (project in file("extra-sinks"))
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    assemblySettingsBuiltInJobs
+    assemblySettingsExtras
   )
   .dependsOn(core)
   .enablePlugins(AutomateHeaderPlugin)
@@ -155,7 +155,7 @@ lazy val assemblySettingsCommon = Seq(
   assembly / test := {}
 )
 
-lazy val assemblySettingsBuiltInJobs = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
+lazy val assemblySettingsExtras = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
   ShadeRule.zap("za.co.absa.pramen.**").inAll,
   ShadeRule.zap("com.typesafe.config.**").inAll,
   ShadeRule.zap("com.typesafe.slick.**").inAll,

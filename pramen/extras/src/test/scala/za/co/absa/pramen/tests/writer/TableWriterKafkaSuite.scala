@@ -19,7 +19,7 @@ package za.co.absa.pramen.tests.writer
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
 import za.co.absa.pramen.base.SparkTestBase
-import za.co.absa.pramen.writer.TableWriterKafka
+import za.co.absa.pramen.extras.writer.TableWriterKafka
 
 class TableWriterKafkaSuite extends WordSpec with SparkTestBase {
   "TableWriterKafka" should {

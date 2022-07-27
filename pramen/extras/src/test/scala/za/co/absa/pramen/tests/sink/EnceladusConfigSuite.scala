@@ -19,7 +19,7 @@ package za.co.absa.pramen.tests.sink
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
 import za.co.absa.pramen.base.SparkTestBase
-import za.co.absa.pramen.builtin.sink.EnceladusConfig
+import za.co.absa.pramen.extras.sink.EnceladusConfig
 import za.co.absa.pramen.fixtures.AppContextFixture
 import za.co.absa.pramen.core.AppContextFactory
 

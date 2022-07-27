@@ -21,7 +21,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
 
 class NamingStrategySuite extends WordSpec {
-  import za.co.absa.pramen.writer.model.NamingStrategy._
+  import za.co.absa.pramen.extras.writer.model.NamingStrategy._
 
   "fromConfigOpt" should {
     "return None if strategy is not specified" in {
