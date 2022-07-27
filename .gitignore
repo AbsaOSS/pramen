@@ -34,3 +34,5 @@ dependency-reduced-pom.xml
 
 # Environment-specific configuration
 application.conf
+.gitsecret/keys/random_seed
+!*.secret
