@@ -147,6 +147,7 @@ dmypy.json
 .env*
 !.env.example
 !.env.ci
+!*.secret
 
 # Makefile target
 .install*

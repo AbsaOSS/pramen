@@ -27,6 +27,9 @@ install: .poetry_installed
 .env:
 	ln -sfv .env.$(ENV) .env
 
+.pypi_token:
+	poetry config pypi-token.pypi $(PRAMENPY_PYPI_TOKEN)
+
 build: install
 	rm -frv dist
 	poetry build
@@ -37,5 +40,5 @@ test: install .env
 pre-commit: install
 	poetry run pre-commit run --all-files
 
-publish: .env build
+publish: .env .pypi_token build
 	poetry publish
