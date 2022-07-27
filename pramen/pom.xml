@@ -76,9 +76,9 @@
 
     <modules>
         <module>api</module>
-        <module>builtin-jobs</module>
-        <module>pipeline-runner</module>
-        <module>framework</module>
+        <module>core</module>
+        <module>runner</module>
+        <module>extra-sinks</module>
     </modules>
 
     <properties>
