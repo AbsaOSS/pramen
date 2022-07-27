@@ -1,0 +1,14 @@
+[flake8]
+ban-relative-imports = true
+extend-ignore =
+    E501,
+    E203,
+    E231,
+    A003,
+    N812,
+    N802,
+    N803,
+    N806,
+inline-quotes = double
+max-complexity = 15
+multiline-quotes = double
