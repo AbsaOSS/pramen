@@ -381,7 +381,7 @@ Here is an example of a Kafka sink definition:
 {
   # Define a name to reference from the pipeline:
   name = "kafka_avro"
-  factory.class = "za.co.absa.pramen.builtin.sink.KafkaSink"
+  factory.class = "za.co.absa.pramen.extras.sink.KafkaSink"
   
   writer.kafka {
     brokers = "mybroker1:9092,mybroker2:9092"
@@ -632,7 +632,7 @@ Here is an example configuration of a sink:
   # Define a name to reference from the pipeline:
   name = "enceladus_raw"
   
-  factory.class = "za.co.absa.pramen.builtin.sink.EnceladusSink"
+  factory.class = "za.co.absa.pramen.extras.sink.EnceladusSink"
   
   # Output format. Can be: csv, parquet, json, delta, etc (anything supported by Spark). Default: parquet
   format = "csv"
@@ -1461,7 +1461,7 @@ pramen.sources = [
 pramen.sinks = [
   {
     name = "enceladus_sink"
-    factory.class = "za.co.absa.pramen.builtin.sink.EnceladusSink"
+    factory.class = "za.co.absa.pramen.extras.sink.EnceladusSink"
 
     format = "json"
 
@@ -1534,7 +1534,7 @@ pramen.operations = [
 ```
 </details>
 
-More can be found at the implementation of the sink itself: [EnceladusSink](builtin-jobs/src/main/scala/za/co/absa/pramen/builtin/sink/EnceladusSink.scala)
+More can be found at the implementation of the sink itself: [EnceladusSink](pramen/extras/src/main/scala/za/co/absa/pramen/extras/sink/EnceladusSink.scala)
 
 ## Schema evolutions patterns
 
@@ -1547,9 +1547,9 @@ Usually a pipeline is ran daily. But each operation can define its own run sched
 not applicable for a particular operation, the operation will be automatically skipped. So at different days different set
 of operations is executed when you run a pipeline.
 
-Pramen framework and some of built-in jobs are packaged in `pipeline-runner-x.y.z.jar`. In order to minimize chance of
+Pramen framework and some of built-in jobs are packaged in `pramen-runner-x.y.z.jar`. In order to minimize chance of
 binary incompatibility with custom sources, sinks and transformers jobs that require additional libraries are packaged
-in `bultin-jobs-x.y.z.jar`. If you are running a pipeline with builtin jobs make sure `bultin-jobs-x.y.z.jar` is included
+in `pramen-extras-x.y.z.jar`. If you are running a pipeline with builtin jobs make sure `pramen-extras-x.y.z.jar` is included
 in the class path.
 
 ## Running on a single local computer
@@ -1561,23 +1561,23 @@ in the class path.
 Use `spark-submit` to run `pramen` jobs.
 
 ```sh
-spark-submit --class za.co.absa.pramen.runner.PipelineRunner \
-  pipeline-runner-x.y.z.jar --workflow my_workflow.conf
+spark-submit --class za.co.absa.pramen.core.runner.PipelineRunner \
+  pramen-runner_2.11-x.y.z.jar --workflow my_workflow.conf
 ```
 
 ### Running built-in jobs
 
 ```sh
-spark-submit --jars bultin-jobs-x.y.z.jar \
+spark-submit --jars pramen_extras_2.11-x.y.z.jar \
   --class za.co.absa.pramen.runner.PipelineRunner \
-  pipeline-runner-x.y.z.jar --workflow my_workflow.conf
+  pramen-runner_2.11-x.y.z.jar --workflow my_workflow.conf
 ```
 
 When configuration files are located at HDFS or S3 use `--files` option to fetch the configuration:
 ```sh
-spark-submit --jars bultin-jobs-x.y.z.jar \
+spark-submit --jars pramen-extras_2.11-x.y.z.jar \
   --class za.co.absa.pramen.runner.PipelineRunner \
-  pipeline-runner-x.y.z.jar --workflow ingestion_job.conf \
+  pramen-runner_2.11-x.y.z.jar --workflow ingestion_job.conf \
   --files s3://mybucket/ingestion_job.conf,s3://mybucket/common.conf,s3://mybucket/sources.conf,s3://mybucket/metastore.conf
 ```
 
@@ -1588,7 +1588,7 @@ To run builtin jobs just specify your custom jar with `--jars` when submitting t
 ```sh
 spark-submit --jars custom-x.y.z.jar \
   --class za.co.absa.pramen.runner.PipelineRunner \
-  pipeline-runner-x.y.z.jar --workflow my_workflow.conf
+  pramen-runner_2.11-x.y.z.jar --workflow my_workflow.conf
 ```
 
 ## Running on Databricks

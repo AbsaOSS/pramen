@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.mocks
 
-import za.co.absa.pramen.writer.model.NamingStrategy
+import za.co.absa.pramen.extras.writer.model.NamingStrategy
 
 object DummyNamingStrategyFactory {
   def getDummyNamingStrategy(namingStrategy: String = "topic.name",

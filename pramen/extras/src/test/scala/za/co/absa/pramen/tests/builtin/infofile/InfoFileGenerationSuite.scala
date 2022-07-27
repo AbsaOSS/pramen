@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests.builtin.infofile
+package za.co.absa.pramen.tests.extras.infofile
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
 import org.scalatest.WordSpec
 import za.co.absa.pramen.base.SparkTestBase
-import za.co.absa.pramen.builtin.infofile.InfoFileGeneration._
+import za.co.absa.pramen.extras.infofile.InfoFileGeneration._
 import za.co.absa.pramen.fixtures.{TempDirFixture, TextComparisonFixture}
 
 import java.nio.file.{Files, Paths}

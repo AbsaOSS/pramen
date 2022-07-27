@@ -59,7 +59,7 @@ object CmdLineConfig {
 
   def parseCmdLine(args: Array[String]): Option[CmdLineConfig] = {
     val parser = new CmdParser("spark-submit pipeline-runner.jar " +
-      "za.co.absa.pramen.runner.PipelineRunner " +
+      "za.co.absa.pramen.core.runner.PipelineRunner " +
       "--workflow <Workflow Configuration Path> " +
       "[--files <comma-separated list of files> " +
       "[--ops output_table1,output_table2,...]" +

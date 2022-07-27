@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.builtin.sink
+package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetastoreReader, Sink}
-import za.co.absa.pramen.builtin.infofile.InfoFileGeneration
+import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.core.ExternalChannelFactory
 import za.co.absa.pramen.core.utils.{FsUtils, PartitionUtils}
 
@@ -38,7 +38,7 @@ import java.time.{Instant, LocalDate}
   *  {
   *    # Define a name to reference from the pipeline:
   *    name = "enceladus_raw"
-  *    factory.class = "za.co.absa.pramen.builtin.sink.EnceladusSink"
+  *    factory.class = "za.co.absa.pramen.extras.sink.EnceladusSink"
   *
   *    # Output format. Can be: csv, parquet, json, delta, etc (anything supported by Spark). Default: parquet
   *    format = "csv"
@@ -130,7 +130,7 @@ import java.time.{Instant, LocalDate}
   *
   */
 class EnceladusSink(enceladusConfig: EnceladusConfig, conf: Config) extends Sink {
-  import za.co.absa.pramen.builtin.sink.EnceladusSink._
+  import za.co.absa.pramen.extras.sink.EnceladusSink._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 

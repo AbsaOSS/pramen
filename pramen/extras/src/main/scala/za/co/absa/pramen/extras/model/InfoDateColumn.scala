@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.builtin.model
+package za.co.absa.pramen.extras.model
 
 case class InfoDateColumn(
                            name: String,
