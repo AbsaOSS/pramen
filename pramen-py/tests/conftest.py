@@ -114,17 +114,17 @@ def load_and_patch_config(
 
     >>> # check if table was written indeed
     >>> output_table = spark.read.parquet(
-    >>>     load_and_patch_config.watcher_metastore_tables[-1].path
+    >>>     load_and_patch_config.metastore_tables[-1].path
     >>> )
     >>> assert output_table.count() == 8
     """
     object.__setattr__(
-        config.watcher_metastore_tables[0],
+        config.metastore_tables[0],
         "path",
         create_parquet_data_stubs[0].resolve().as_posix(),
     )
     object.__setattr__(
-        config.watcher_metastore_tables[-1],
+        config.metastore_tables[-1],
         "path",
         (create_parquet_data_stubs[0].parent / "example_output_table")
         .resolve()

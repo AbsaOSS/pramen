@@ -61,7 +61,7 @@ class InfoDateSettings:
 
 
 @attrs.define(auto_attribs=True, frozen=True, slots=True)
-class WatcherMetastoreTable:
+class MetastoreTable:
     name: str = attrs.field()
     format: TableFormat = attrs.field()
     path: str = attrs.field()
@@ -111,7 +111,7 @@ class RunTransformer:
 @attrs.define(auto_attribs=True, frozen=True, slots=True)
 class TransformationConfig:
     run_transformers: List[RunTransformer] = attrs.field()
-    watcher_metastore_tables: List[WatcherMetastoreTable] = attrs.field()
+    metastore_tables: List[MetastoreTable] = attrs.field()
 
 
 def serialization_callback(

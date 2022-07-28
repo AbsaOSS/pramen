@@ -24,7 +24,7 @@ import pyspark.sql.types as T
 from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
 
-from pramen_py.models import TableFormat, WatcherMetastoreTable
+from pramen_py.models import MetastoreTable, TableFormat
 from pramen_py.models.utils import get_metastore_table
 from pramen_py.utils import convert_date_to_str, convert_str_to_date
 from pramen_py.utils.file_system import FileSystemUtils
@@ -43,7 +43,7 @@ class MetastoreReader:
     """
 
     spark: SparkSession = attrs.field()
-    config: List[WatcherMetastoreTable] = attrs.field()
+    config: List[MetastoreTable] = attrs.field()
     info_date: datetime.date = attrs.field()
     fs_utils: FileSystemUtils = attrs.field(init=False)
 
@@ -54,10 +54,10 @@ class MetastoreReader:
     def check_config(
         self,
         _: attrs.Attribute,  # type: ignore
-        value: List[WatcherMetastoreTable],
+        value: List[MetastoreTable],
     ) -> None:
         for table in value:
-            assert isinstance(table, WatcherMetastoreTable)
+            assert isinstance(table, MetastoreTable)
 
     def get_table(
         self,

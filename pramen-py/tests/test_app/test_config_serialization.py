@@ -32,7 +32,7 @@ def test_config_structure_unstructure(repo_root, monkeypatch) -> None:
 
     # normalize the config for further comparison with the one
     #  retrieved via deserialization of the t_config_structured
-    for t in config["watcher_metastore_tables"]:
+    for t in config["metastore_tables"]:
         try:
             t["records_per_partition"] = int(t["records_per_partition"])
         except KeyError:
@@ -73,7 +73,7 @@ def test_structured_config_is_deserialized_properly(repo_root, monkeypatch):
                 "options": {},
             },
         ],
-        "watcher_metastore_tables": [
+        "metastore_tables": [
             {
                 "name": "table1_sync",
                 "description": "Table 1 description",

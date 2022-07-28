@@ -47,7 +47,7 @@ def test_transformations_run_example_transformation1(
 
     # check if table was written indeed and its properties
     actual = spark.read.parquet(
-        load_and_patch_config.watcher_metastore_tables[-1].path
+        load_and_patch_config.metastore_tables[-1].path
     )
     expected = generate_df(
         """
@@ -109,7 +109,7 @@ def test_transformations_run_with_info_date(
 
     # check the info_date column
     output_table = spark.read.parquet(
-        load_and_patch_config.watcher_metastore_tables[-1].path
+        load_and_patch_config.metastore_tables[-1].path
     )
     output_table = output_table.withColumn(
         "expected_information_date",

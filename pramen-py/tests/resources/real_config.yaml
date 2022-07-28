@@ -16,7 +16,7 @@ run_transformers:
   name: ExampleTransformation2
   options: {}
 # configuration section of the metastore
-watcher_metastore_tables:
+metastore_tables:
 - description: Table 1 description
   # data source format
   format: parquet

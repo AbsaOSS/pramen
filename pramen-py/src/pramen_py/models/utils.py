@@ -14,14 +14,14 @@
 
 from typing import List
 
-from pramen_py.models import WatcherMetastoreTable
+from pramen_py.models import MetastoreTable
 
 
 def get_metastore_table(
     table_name: str,
-    tables: List[WatcherMetastoreTable],
-) -> WatcherMetastoreTable:
-    def filter_func(table: WatcherMetastoreTable) -> bool:
+    tables: List[MetastoreTable],
+) -> MetastoreTable:
+    def filter_func(table: MetastoreTable) -> bool:
         return table.name == table_name
 
     try:
