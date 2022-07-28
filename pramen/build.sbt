@@ -136,6 +136,10 @@ lazy val assemblySettingsCommon = Seq(
     case "reference.conf"   => MergeStrategy.concat
     case "LICENSE"          => MergeStrategy.concat
     case "log4j.properties" => MergeStrategy.filterDistinctLines
+    case PathList("include", xs @ _*)    => MergeStrategy.discard
+    case PathList("com", "ibm", "icu", xs @ _*)    => MergeStrategy.discard
+    case PathList("javax", "json", xs @ _*)    => MergeStrategy.discard
+    case PathList(ps @ _*) if ps.last.endsWith(".so") || ps.last.endsWith(".dylib") => MergeStrategy.discard
     case PathList("META-INF", xs @ _*) =>
       xs map {_.toLowerCase} match {
         case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") => MergeStrategy.discard
@@ -156,42 +160,54 @@ lazy val assemblySettingsCommon = Seq(
 )
 
 lazy val assemblySettingsExtras = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
-  ShadeRule.zap("za.co.absa.pramen.**").inAll,
+  ShadeRule.zap("com.101tec.**").inAll,
+  ShadeRule.zap("com.fasterxml.**").inAll,
+  ShadeRule.zap("com.github.luben.**").inAll,
+  ShadeRule.zap("com.github.yruslan.**").inAll,
+  ShadeRule.zap("com.ibm.icu.**").inAll,
+  ShadeRule.zap("com.mongodb.**").inAll,
+  ShadeRule.zap("com.sun.mail.**").inAll,
+  ShadeRule.zap("com.thoughtworks.paranamer.**").inAll,
   ShadeRule.zap("com.typesafe.config.**").inAll,
   ShadeRule.zap("com.typesafe.slick.**").inAll,
-  ShadeRule.zap("io.delta.**").inAll,
-  ShadeRule.zap("org.antlr.**").inAll,
-  ShadeRule.zap("org.glassfish.**").inAll,
-  ShadeRule.zap("org.abego.**").inAll,
-  ShadeRule.zap("org.checkerframework.**").inAll,
-  ShadeRule.zap("org.reactivestreams.**").inAll,
   ShadeRule.zap("com.zaxxer.**").inAll,
-  ShadeRule.zap("com.github.luben.**").inAll,
-  ShadeRule.zap("org.lz4.**").inAll,
-  ShadeRule.zap("org.xerial.snappy.**").inAll,
-  ShadeRule.zap("org.json4s.**").inAll,
-  ShadeRule.zap("com.sun.mail.**").inAll,
-  ShadeRule.zap("javax.activation.**").inAll,
-  ShadeRule.zap("com.github.yruslan.**").inAll,
-  ShadeRule.zap("com.thoughtworks.paranamer.**").inAll,
-  ShadeRule.zap("org.apache.zookeeper.**").inAll,
-  ShadeRule.zap("log4j.**").inAll,
+  ShadeRule.zap("io.delta.**").inAll,
   ShadeRule.zap("io.netty.**").inAll,
-  ShadeRule.zap("org.codehaus.jackson.**").inAll,
-  ShadeRule.zap("com.fasterxml.**").inAll,
+  ShadeRule.zap("javax.activation.**").inAll,
+  ShadeRule.zap("log4j.**").inAll,
+  ShadeRule.zap("org.abego.**").inAll,
+  ShadeRule.zap("org.antlr.**").inAll,
   ShadeRule.zap("org.apache.avro.**").inAll,
   ShadeRule.zap("org.apache.commons.**").inAll,
-  ShadeRule.zap("org.tukaani.**").inAll,
-  ShadeRule.zap("com.101tec.**").inAll,
-  ShadeRule.zap("za.co.absa.commons.**").inAll,
-  ShadeRule.zap("com.ibm.icu.**").inAll,
+  ShadeRule.zap("org.apache.zookeeper.**").inAll,
+  ShadeRule.zap("org.checkerframework.**").inAll,
+  ShadeRule.zap("org.codehaus.jackson.**").inAll,
+  ShadeRule.zap("org.glassfish.**").inAll,
+  ShadeRule.zap("org.json4s.**").inAll,
+  ShadeRule.zap("org.lz4.**").inAll,
   ShadeRule.zap("org.mongodb.scala.**").inAll,
   ShadeRule.zap("org.postgresql.**").inAll,
-  ShadeRule.zap("org.slf4j.**").inAll
+  ShadeRule.zap("org.reactivestreams.**").inAll,
+  ShadeRule.zap("org.slf4j.**").inAll,
+  ShadeRule.zap("org.tukaani.**").inAll,
+  ShadeRule.zap("org.xerial.snappy.**").inAll,
+  ShadeRule.zap("za.co.absa.commons.**").inAll,
+  ShadeRule.zap("za.co.absa.pramen.**").inAll
 ))
 
 lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
-  ShadeRule.zap("org.slf4j.**").inAll
+  ShadeRule.rename("com.mongodb.**" -> "za.co.absa.pramen.shaded.com.mongodb.@1").inAll,
+  ShadeRule.rename("org.mongodb.**" -> "za.co.absa.pramen.shaded.org.mongodb.@1").inAll,
+  ShadeRule.zap("com.github.luben.**").inAll,
+  ShadeRule.zap("com.ibm.icu.**").inAll,
+  ShadeRule.zap("net.jpountz.**").inAll,
+  ShadeRule.zap("org.abego.**").inAll,
+  ShadeRule.zap("org.apache.kafka.**").inAll,
+  ShadeRule.zap("org.glassfish.**").inAll,
+  ShadeRule.zap("org.lz4.**").inAll,
+  ShadeRule.zap("org.slf4j.**").inAll,
+  ShadeRule.zap("org.slf4j.**").inAll,
+  ShadeRule.zap("org.xerial.snappy.**").inAll
 ))
 
 addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bump.Bugfix; release with-defaults")
