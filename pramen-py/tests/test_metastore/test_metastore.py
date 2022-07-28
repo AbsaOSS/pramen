@@ -22,11 +22,7 @@ from chispa import assert_df_equality
 from pyspark.sql import SparkSession
 
 from pramen_py import MetastoreReader, MetastoreWriter
-from pramen_py.models import (
-    InfoDateSettings,
-    TableFormat,
-    WatcherMetastoreTable,
-)
+from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 
 
 @pytest.mark.parametrize(
@@ -101,7 +97,7 @@ def test_metastore_get_latest_available_date(
     """
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.watcher_metastore_tables,
+        config=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     if exc:
@@ -124,8 +120,8 @@ def test_metastore_raises_valueerror_on_bad_path(
     config,
     monkeypatch,
 ):
-    config.watcher_metastore_tables.append(
-        WatcherMetastoreTable(
+    config.metastore_tables.append(
+        MetastoreTable(
             name="bad_table",
             format=TableFormat.parquet,
             path="/i/am/not/exist",
@@ -137,7 +133,7 @@ def test_metastore_raises_valueerror_on_bad_path(
     )
     metastore = MetastoreReader(
         spark=spark,
-        config=config.watcher_metastore_tables,
+        config=config.metastore_tables,
         info_date=d(2022, 3, 26),
     )
     with pytest.raises(ValueError, match="No partitions"):
@@ -299,7 +295,7 @@ def test_metastore_is_data_available(
     """
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.watcher_metastore_tables,
+        config=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     if exc:
@@ -374,7 +370,7 @@ def test_metastore_get_latest(
 
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.watcher_metastore_tables,
+        config=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     if exc:
@@ -389,7 +385,7 @@ def test_metastore_get_latest(
             until=until,
         )
         expected = spark.read.parquet(
-            load_and_patch_config.watcher_metastore_tables[0].path
+            load_and_patch_config.metastore_tables[0].path
         )
         latest_date = min(
             expected.select(F.col("info_date"))
@@ -440,7 +436,7 @@ def test_metastore_get_table(
     """
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.watcher_metastore_tables,
+        config=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     table = metastore.get_table(
@@ -488,7 +484,7 @@ def test_get_latest_available_date(
     """
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.watcher_metastore_tables,
+        config=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     if exc:
@@ -513,7 +509,7 @@ def test_metastore_writer_write(spark: SparkSession, load_and_patch_config):
     )
     writer = MetastoreWriter(
         spark=spark,
-        config=load_and_patch_config.watcher_metastore_tables,
+        config=load_and_patch_config.metastore_tables,
         info_date=d(2022, 4, 6),
     )
     writer.write(
@@ -522,7 +518,7 @@ def test_metastore_writer_write(spark: SparkSession, load_and_patch_config):
     )
 
     actual = spark.read.parquet(
-        load_and_patch_config.watcher_metastore_tables[-1].path
+        load_and_patch_config.metastore_tables[-1].path
     )
     expected = df.withColumn(
         "INFORMATION_DATE",

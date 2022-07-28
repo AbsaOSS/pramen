@@ -22,7 +22,7 @@ import attrs
 from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
 
-from pramen_py.models import TableFormat, WatcherMetastoreTable
+from pramen_py.models import MetastoreTable, TableFormat
 from pramen_py.models.utils import get_metastore_table
 
 
@@ -34,17 +34,17 @@ class MetastoreWriter:
     """
 
     spark: SparkSession = attrs.field()
-    config: List[WatcherMetastoreTable] = attrs.field()
+    config: List[MetastoreTable] = attrs.field()
     info_date: datetime.date = attrs.field()
 
     @config.validator
     def check_config(  # type: ignore
         self,
         _,
-        value: List[WatcherMetastoreTable],
+        value: List[MetastoreTable],
     ) -> None:
         for table in value:
-            assert isinstance(table, WatcherMetastoreTable)
+            assert isinstance(table, MetastoreTable)
 
     def write(
         self,
