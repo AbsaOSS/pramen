@@ -269,7 +269,7 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
         |  output_table: table2
         |  name: python_class
         |  options: {}
-        |pramen_metastore_tables:
+        |metastore_tables:
         |- name: table1
         |  description: description
         |  format: parquet
@@ -309,7 +309,7 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
           |  output_table: table2
           |  name: python_class
           |  options: {}
-          |pramen_metastore_tables:
+          |metastore_tables:
           |- name: table1
           |  description: description
           |  format: parquet
@@ -345,7 +345,7 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
           |  options:
           |    key.2: "value'2'"
           |    key1: "value1"
-          |pramen_metastore_tables:
+          |metastore_tables:
           |- name: table1
           |  description: description
           |  format: parquet

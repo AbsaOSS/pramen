@@ -198,7 +198,7 @@ class PythonTransformationJob(operationDef: OperationDef,
     def addMetastore(): String = {
       metastore.getRegisteredMetaTables
         .map(getTable)
-        .mkString("pramen_metastore_tables:\n", "\n", "")
+        .mkString("metastore_tables:\n", "\n", "")
     }
 
     def getTable(mt: MetaTable): String = {
