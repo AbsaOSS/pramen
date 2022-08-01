@@ -591,3 +591,133 @@ def test_metastore_writer_makes_columns_upper_case_by_default(
         ignore_row_order=True,
         ignore_column_order=True,
     )
+
+
+def test_metastore_reader_get_table_uppercase(
+    spark,
+    generate_df,
+    load_and_patch_config,
+):
+    metastore = MetastoreReader(
+        spark=spark,
+        config=load_and_patch_config.metastore_tables,
+        info_date=d(2022, 3, 26),
+    )
+
+    expected = generate_df(
+        """
+        +---+---+----------+
+        |A  |B  |info_date |
+        +---+---+----------+
+        |13 |14 |2022-03-26|
+        |15 |16 |2022-03-26|
+        +---+---+----------+
+        """,
+        """
+        root
+         |-- A: integer (nullable = true)
+         |-- B: integer (nullable = true)
+         |-- info_date: date (nullable = true)
+        """,
+    )
+    actual = metastore.get_table(
+        load_and_patch_config.metastore_tables[0].name
+    )
+    assert_df_equality(
+        actual,
+        expected,
+        ignore_row_order=True,
+        ignore_column_order=True,
+    )
+
+    actual = metastore.get_table(
+        load_and_patch_config.metastore_tables[0].name,
+        uppercase_columns=True,
+    )
+    expected = generate_df(
+        """
+        +---+---+----------+
+        |A  |B  |INFO_DATE |
+        +---+---+----------+
+        |13 |14 |2022-03-26|
+        |15 |16 |2022-03-26|
+        +---+---+----------+
+        """,
+        """
+        root
+         |-- A: integer (nullable = true)
+         |-- B: integer (nullable = true)
+         |-- INFO_DATE: date (nullable = true)
+        """,
+    )
+    assert_df_equality(
+        actual,
+        expected,
+        ignore_row_order=True,
+        ignore_column_order=True,
+    )
+
+
+def test_metastore_reader_get_latest_uppercase(
+    spark,
+    generate_df,
+    load_and_patch_config,
+):
+    metastore = MetastoreReader(
+        spark=spark,
+        config=load_and_patch_config.metastore_tables,
+        info_date=d(2022, 8, 1),
+    )
+
+    expected = generate_df(
+        """
+        +---+---+----------+
+        |A  |B  |info_date |
+        +---+---+----------+
+        |13 |14 |2022-03-26|
+        |15 |16 |2022-03-26|
+        +---+---+----------+
+        """,
+        """
+        root
+         |-- A: integer (nullable = true)
+         |-- B: integer (nullable = true)
+         |-- info_date: date (nullable = true)
+        """,
+    )
+    actual = metastore.get_latest(
+        load_and_patch_config.metastore_tables[0].name
+    )
+    assert_df_equality(
+        actual,
+        expected,
+        ignore_row_order=True,
+        ignore_column_order=True,
+    )
+
+    actual = metastore.get_latest(
+        load_and_patch_config.metastore_tables[0].name,
+        uppercase_columns=True,
+    )
+    expected = generate_df(
+        """
+        +---+---+----------+
+        |A  |B  |INFO_DATE |
+        +---+---+----------+
+        |13 |14 |2022-03-26|
+        |15 |16 |2022-03-26|
+        +---+---+----------+
+        """,
+        """
+        root
+         |-- A: integer (nullable = true)
+         |-- B: integer (nullable = true)
+         |-- INFO_DATE: date (nullable = true)
+        """,
+    )
+    assert_df_equality(
+        actual,
+        expected,
+        ignore_row_order=True,
+        ignore_column_order=True,
+    )
