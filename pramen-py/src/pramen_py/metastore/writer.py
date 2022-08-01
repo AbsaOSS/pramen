@@ -18,7 +18,6 @@ import os.path
 from typing import List
 
 import attrs
-import pyspark.sql.functions as F
 
 from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
@@ -63,9 +62,8 @@ class MetastoreWriter:
         )
         df = df.drop(target_table.info_date_settings.column)
         df_writer = (
-            df.select([F.col(c).alias(c.upper()) for c in df.columns])
             # TODO #24 calculate and make repartition instead
-            .write.option(
+            df.write.option(
                 "maxRecordsPerFile",
                 target_table.records_per_partition,
             )
