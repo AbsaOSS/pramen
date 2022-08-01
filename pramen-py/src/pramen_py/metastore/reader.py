@@ -64,11 +64,13 @@ class MetastoreReader:
         table_name: str,
         info_date_from: Optional[datetime.date] = None,
         info_date_to: Optional[datetime.date] = None,
+        uppercase_columns: bool = False,
     ) -> DataFrame:
         """Get the table based on its name and config attributes.
 
         :param info_date_from: optional param with info_date as default
         :param info_date_to: optional param with info_date as default
+        :param uppercase_columns: returns a table with uppercase column names
 
         if info_date_* params are provided, the data will be filtered
             based on it
@@ -101,12 +103,16 @@ class MetastoreReader:
         logger.info(
             f"Table {table_name} successfully loaded from {table.path}."
         )
-        return df
+        if uppercase_columns:
+            return df.select([F.col(c).alias(c.upper()) for c in df.columns])
+        else:
+            return df
 
     def get_latest(
         self,
         table_name: str,
         until: Optional[datetime.date] = None,
+        uppercase_columns: bool = False,
     ) -> DataFrame:
         """Provides the latest partition of the table.
 
@@ -140,7 +146,10 @@ class MetastoreReader:
             f"Table {table_name} with the latest partition {latest_date} "
             f"loaded"
         )
-        return df
+        if uppercase_columns:
+            return df.select([F.col(c).alias(c.upper()) for c in df.columns])
+        else:
+            return df
 
     def get_latest_available_date(
         self,
