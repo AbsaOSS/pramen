@@ -18,6 +18,7 @@ import os.path
 from typing import List
 
 import attrs
+import pyspark.sql.functions as F
 
 from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
@@ -56,19 +57,21 @@ class MetastoreWriter:
         logger.info(f"Writing table {table_name} started")
 
         target_table = get_metastore_table(table_name, self.config)
+        target_path = os.path.join(
+            target_table.path,
+            f"{target_table.info_date_settings.column}={self.info_date}",
+        )
+        df = df.drop(target_table.info_date_settings.column)
+        df_writer = (
+            df.select([F.col(c).alias(c.upper()) for c in df.columns])
+            # TODO #24 calculate and make repartition instead
+            .write.option(
+                "maxRecordsPerFile",
+                target_table.records_per_partition,
+            )
+        )
         if target_table.format is TableFormat.parquet:
-            target_path = os.path.join(
-                target_table.path,
-                f"{target_table.info_date_settings.column}={self.info_date}",
-            )
-            (
-                df.drop(target_table.info_date_settings.column)
-                # TODO #24 calculate and make repartition instead
-                .write.option(
-                    "maxRecordsPerFile",
-                    target_table.records_per_partition,
-                ).parquet(target_path, mode="overwrite")
-            )
+            df_writer.parquet(target_path, mode="overwrite")
         elif target_table.format is TableFormat.delta:
             raise NotImplementedError
         else:

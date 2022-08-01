@@ -529,3 +529,65 @@ def test_metastore_writer_write(spark: SparkSession, load_and_patch_config):
         actual,
         ignore_row_order=True,
     )
+
+
+def test_metastore_writer_makes_columns_upper_case_by_default(
+    spark,
+    generate_df,
+    load_and_patch_config,
+):
+    writer = MetastoreWriter(
+        spark, load_and_patch_config.metastore_tables, info_date=d(2022, 8, 1)
+    )
+
+    df = spark.createDataFrame(
+        (
+            (1, 2),
+            (3, 4),
+        ),
+        T.StructType(
+            [
+                T.StructField("small_a", T.IntegerType()),
+                T.StructField("small_b", T.IntegerType()),
+            ],
+        ),
+    )
+    writer.write("table_out1", df)
+    actual = spark.read.parquet(
+        load_and_patch_config.metastore_tables[-1].path
+    )
+    expected = generate_df(
+        """
+        +-------+-------+----------------+
+        |SMALL_A|SMALL_B|INFORMATION_DATE|
+        +-------+-------+----------------+
+        |3      |4      |2022-08-01      |
+        |1      |2      |2022-08-01      |
+        +-------+-------+----------------+
+        """,
+        """
+        root
+         |-- SMALL_A: integer (nullable = true)
+         |-- SMALL_B: integer (nullable = true)
+         |-- INFORMATION_DATE: date (nullable = true)
+        """,
+    )
+    assert_df_equality(
+        actual,
+        expected,
+        ignore_row_order=True,
+        ignore_column_order=True,
+    )
+
+    # check if writer doesn't change the case if the columns are already upper
+    # case
+    writer.write("table_out1", expected)
+    actual = spark.read.parquet(
+        load_and_patch_config.metastore_tables[-1].path
+    )
+    assert_df_equality(
+        actual,
+        expected,
+        ignore_row_order=True,
+        ignore_column_order=True,
+    )
