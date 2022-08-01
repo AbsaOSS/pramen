@@ -52,7 +52,7 @@ def test_transformations_run_example_transformation1(
     expected = generate_df(
         """
         +---+---+----------+----------------+
-        |A  |B  |info_date |INFORMATION_DATE|
+        |A  |B  |INFO_DATE |INFORMATION_DATE|
         +---+---+----------+----------------+
         |7  |8  |2022-03-24|2022-02-14      |
         |9  |10 |2022-03-25|2022-02-14      |
@@ -68,7 +68,7 @@ def test_transformations_run_example_transformation1(
         root
          |-- A: integer (nullable = true)
          |-- B: integer (nullable = true)
-         |-- info_date: date (nullable = true)
+         |-- INFO_DATE: date (nullable = true)
          |-- INFORMATION_DATE: date (nullable = true)
         """,
     )
