@@ -47,7 +47,7 @@ lazy val pramen = (project in file("."))
     publish := {},
     publishLocal := {}
   )
-  .aggregate(api, core, runner, extraSinks)
+  .aggregate(api, core, runner, extras)
 
 lazy val api = (project in file("api"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
@@ -88,16 +88,16 @@ lazy val core = (project in file("core"))
   .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
 
-lazy val extraSinks = (project in file("extra-sinks"))
+lazy val extras = (project in file("extras"))
   .settings(
-    name := "pramen-extra-sinks",
+    name := "pramen-extras",
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= ExtraSinksJobsDependencies(scalaVersion.value) ++
+    libraryDependencies ++= ExtrasJobsDependencies(scalaVersion.value) ++
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
@@ -130,16 +130,21 @@ lazy val runner = (project in file("runner"))
 // release settings
 releaseCrossBuild := true
 
+def isFiltered(fileName: String): Boolean = {
+  val filteredExtensions = ".a" :: ".dll" :: ".dylib" :: ".py" :: ".so" :: ".st" :: ".stg" :: Nil
+  filteredExtensions.exists(name => fileName.endsWith(name))
+}
+
 lazy val assemblySettingsCommon = Seq(
   // This merge strategy retains service entries for all services in manifest.
   assembly / assemblyMergeStrategy := {
-    case "reference.conf"   => MergeStrategy.concat
-    case "LICENSE"          => MergeStrategy.concat
-    case "log4j.properties" => MergeStrategy.filterDistinctLines
-    case PathList("include", xs @ _*)    => MergeStrategy.discard
+    case "reference.conf"                          => MergeStrategy.concat
+    case "LICENSE"                                 => MergeStrategy.concat
+    case "log4j.properties"                        => MergeStrategy.filterDistinctLines
+    case PathList("include", xs @ _*)              => MergeStrategy.discard
     case PathList("com", "ibm", "icu", xs @ _*)    => MergeStrategy.discard
-    case PathList("javax", "json", xs @ _*)    => MergeStrategy.discard
-    case PathList(ps @ _*) if ps.last.endsWith(".so") || ps.last.endsWith(".dylib") => MergeStrategy.discard
+    case PathList("javax", "json", xs @ _*)        => MergeStrategy.discard
+    case PathList(ps @ _*) if isFiltered(ps.last)  => MergeStrategy.discard
     case PathList("META-INF", xs @ _*) =>
       xs map {_.toLowerCase} match {
         case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") => MergeStrategy.discard
@@ -154,6 +159,7 @@ lazy val assemblySettingsCommon = Seq(
       }
     case _ => MergeStrategy.deduplicate
   },
+  assembly / assemblyJarName := s"${name.value}_${scalaBinaryVersion.value}-${sparkVersion(scalaVersion.value)}_${version.value}.jar",
   assembly / assemblyOption:= (assembly / assemblyOption).value.copy(includeScala = false),
   assembly / logLevel := Level.Info,
   assembly / test := {}
@@ -161,38 +167,58 @@ lazy val assemblySettingsCommon = Seq(
 
 lazy val assemblySettingsExtras = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
   ShadeRule.zap("com.101tec.**").inAll,
+  ShadeRule.zap("buildinfo.**").inAll,
+  ShadeRule.zap("com.databricks.**").inAll,
   ShadeRule.zap("com.fasterxml.**").inAll,
   ShadeRule.zap("com.github.luben.**").inAll,
   ShadeRule.zap("com.github.yruslan.**").inAll,
   ShadeRule.zap("com.ibm.icu.**").inAll,
   ShadeRule.zap("com.mongodb.**").inAll,
+  ShadeRule.zap("com.sun.**").inAll,
   ShadeRule.zap("com.sun.mail.**").inAll,
   ShadeRule.zap("com.thoughtworks.paranamer.**").inAll,
   ShadeRule.zap("com.typesafe.config.**").inAll,
   ShadeRule.zap("com.typesafe.slick.**").inAll,
   ShadeRule.zap("com.zaxxer.**").inAll,
+  ShadeRule.zap("delta.**").inAll,
+  ShadeRule.zap("edu.**").inAll,
   ShadeRule.zap("io.delta.**").inAll,
   ShadeRule.zap("io.netty.**").inAll,
+  ShadeRule.zap("javax.**").inAll,
   ShadeRule.zap("javax.activation.**").inAll,
+  ShadeRule.zap("jline.**").inAll,
   ShadeRule.zap("log4j.**").inAll,
+  ShadeRule.zap("net.jpountz.**").inAll,
+  ShadeRule.zap("org.I0Itec.**").inAll,
   ShadeRule.zap("org.abego.**").inAll,
   ShadeRule.zap("org.antlr.**").inAll,
   ShadeRule.zap("org.apache.avro.**").inAll,
   ShadeRule.zap("org.apache.commons.**").inAll,
+  ShadeRule.zap("org.apache.jute.**").inAll,
+  ShadeRule.zap("org.apache.spark.annotation.**").inAll,
+  ShadeRule.zap("org.apache.yetus.**").inAll,
   ShadeRule.zap("org.apache.zookeeper.**").inAll,
+  ShadeRule.zap("org.bson.**").inAll,
   ShadeRule.zap("org.checkerframework.**").inAll,
   ShadeRule.zap("org.codehaus.jackson.**").inAll,
   ShadeRule.zap("org.glassfish.**").inAll,
+  ShadeRule.zap("org.glassfish.**").inAll,
+  ShadeRule.zap("org.jboss.**").inAll,
   ShadeRule.zap("org.json4s.**").inAll,
   ShadeRule.zap("org.lz4.**").inAll,
   ShadeRule.zap("org.mongodb.scala.**").inAll,
   ShadeRule.zap("org.postgresql.**").inAll,
   ShadeRule.zap("org.reactivestreams.**").inAll,
   ShadeRule.zap("org.slf4j.**").inAll,
+  ShadeRule.zap("org.stringtemplate.**").inAll,
   ShadeRule.zap("org.tukaani.**").inAll,
+  ShadeRule.zap("org.xerial.**").inAll,
   ShadeRule.zap("org.xerial.snappy.**").inAll,
+  ShadeRule.zap("scala.**").inAll,
+  ShadeRule.zap("slick.**").inAll,
   ShadeRule.zap("za.co.absa.commons.**").inAll,
-  ShadeRule.zap("za.co.absa.pramen.**").inAll
+  ShadeRule.zap("za.co.absa.pramen.api.**").inAll,
+  ShadeRule.zap("za.co.absa.pramen.core.**").inAll
 ))
 
 lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
