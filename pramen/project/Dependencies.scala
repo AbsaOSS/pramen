@@ -23,7 +23,7 @@ object Dependencies {
 
   def ApiDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
-    "com.typesafe"         % "config"                      % typesafeConfigVersion,
+    "com.typesafe"         %  "config"                     % typesafeConfigVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   )
 
@@ -42,7 +42,7 @@ object Dependencies {
     "org.hsqldb"           %  "hsqldb"                     % hsqlDbVersion              % Test
   ) :+ getDeltaDependency(sparkVersion(scalaVersion))
 
-  def ExtraSinksJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
+  def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "za.co.absa"           %% "abris"                      % abrisVersion excludeAll(
       ExclusionRule(organization = "com.fasterxml.jackson.core"),
