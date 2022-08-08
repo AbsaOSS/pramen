@@ -1,6 +1,6 @@
 # About Pramen
 [![Build](https://github.com/AbsaOSS/pramen/workflows/Build/badge.svg)](https://github.com/AbsaOSS/pramen/actions)
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FAbsaOSS%2Fpramen.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FAbsaOSS%2Fpramen?ref=badge_shield)
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen.svg?type=shield)](https://app.fossa.com/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen)
 
 Pramen is a framework for defining data pipelines based on Spark and a configuration driven tool to run and
 coordinate those pipelines. The project focuses around Hadoop and Spark, but can run arbitrary jobs.
@@ -1716,4 +1716,4 @@ For below examples, assume @infoDate = '2020-12-27'
 
 
 ## License
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FAbsaOSS%2Fpramen.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FAbsaOSS%2Fpramen?ref=badge_large)
+[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen.svg?type=large)](https://app.fossa.com/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen?ref=badge_large)
