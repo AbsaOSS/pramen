@@ -1711,9 +1711,3 @@ For below examples, assume @infoDate = '2020-12-27'
 | lastFriday(date)            | `lastFriday(@infoDate) = '2020-12-25'`        | Returns last Friday. |
 | lastSaturday(date)          | `lastSaturday(@infoDate) = '2020-12-26'`      | Returns last Saturday. |
 | lastSunday(date)            | `lastSunday(@infoDate) = '2020-12-27'`        | Returns last Sunday. |
-
-
-
-
-## License
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen.svg?type=large)](https://app.fossa.com/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen?ref=badge_large)
