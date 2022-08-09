@@ -57,4 +57,6 @@ object Keys {
   val EXIT_CODE_ENABLED = "pramen.exit.code.enabled"
 
   val TIMEZONE = "pramen.timezone"
+
+  val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd")
 }
