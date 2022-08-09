@@ -70,7 +70,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
 
     mt.format match {
       case DataFormat.Parquet(path, _) =>
-        new TableReaderSpark("parquet", path, hasInfoDateColumn = true, infoDateColumn = mt.infoDateColumn, infoDateFormat = mt.infoDateFormat)
+        new TableReaderSpark("parquet", None, path, hasInfoDateColumn = true, infoDateColumn = mt.infoDateColumn, infoDateFormat = mt.infoDateFormat)
       case DataFormat.Delta(query, _)  =>
         new TableReaderDelta(query, mt.infoDateColumn, mt.infoDateFormat)
     }

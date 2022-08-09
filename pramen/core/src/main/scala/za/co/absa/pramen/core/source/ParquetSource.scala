@@ -42,7 +42,7 @@ class ParquetSource(hasInfoDateCol: Boolean,
         throw new IllegalArgumentException(s"Unexpected 'sql' spec for the Parquet reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
       case Query.Path(path) =>
         log.info(s"Using TableReaderParquet to read the path: $path")
-        new TableReaderSpark("parquet", path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark("parquet", None, path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
     }
   }
 }
