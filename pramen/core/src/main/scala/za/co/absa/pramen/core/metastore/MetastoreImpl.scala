@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.config.Keys.TEMPORARY_DIRECTORY
 import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
 import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
-import za.co.absa.pramen.core.reader.{TableReaderDelta, TableReaderParquet}
+import za.co.absa.pramen.core.reader.{TableReaderDelta, TableReaderSpark}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.writer.{TableWriterDelta, TableWriterParquet}
 
@@ -70,7 +70,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
 
     mt.format match {
       case DataFormat.Parquet(path, _) =>
-        new TableReaderParquet(path, hasInfoDateColumn = true, infoDateColumn = mt.infoDateColumn, infoDateFormat = mt.infoDateFormat)
+        new TableReaderSpark("parquet", path, hasInfoDateColumn = true, infoDateColumn = mt.infoDateColumn, infoDateFormat = mt.infoDateFormat)
       case DataFormat.Delta(query, _)  =>
         new TableReaderDelta(query, mt.infoDateColumn, mt.infoDateFormat)
     }

@@ -21,38 +21,46 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, Source, TableReader}
 import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderSpark
 import za.co.absa.pramen.core.utils.ConfigUtils
 
-class ParquetSource(hasInfoDateCol: Boolean,
-                    infoDateColumn: String,
-                    infoDateFormat: String,
-                    sourceConfig: Config,
-                    sourceConfigParentPath: String,
-                    options: Map[String, String])(implicit spark: SparkSession) extends Source {
+class SparkSource(format: String,
+                  hasInfoDateCol: Boolean,
+                  infoDateColumn: String,
+                  infoDateFormat: String,
+                  sourceConfig: Config,
+                  sourceConfigParentPath: String,
+                  options: Map[String, String])(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def hasInfoDate: Boolean = hasInfoDateCol
 
   override def getReader(query: Query, columns: Seq[String]): TableReader = {
     query match {
-      case Query.Table(_) =>
-        throw new IllegalArgumentException(s"Unexpected 'table' spec for the Parquet reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
-      case Query.Sql(_)   =>
-        throw new IllegalArgumentException(s"Unexpected 'sql' spec for the Parquet reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
+      case Query.Table(_)   =>
+        throw new IllegalArgumentException(s"Unexpected 'table' spec for the Spark reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
+      case Query.Sql(_)     =>
+        throw new IllegalArgumentException(s"Unexpected 'sql' spec for the Spark reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
       case Query.Path(path) =>
-        log.info(s"Using TableReaderParquet to read the path: $path")
-        new TableReaderSpark("parquet", path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        log.info(s"Using TableReaderSpark to read '$format' from: $path")
+        ConfigUtils.logExtraOptions(s"Options passed for '$format':", options, KEYS_TO_REDACT)
+        new TableReaderSpark(format, path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
     }
   }
 }
 
-object ParquetSource extends ExternalChannelFactory[ParquetSource] {
+object SparkSource extends ExternalChannelFactory[SparkSource] {
+  val FORMAT = "format"
   val HAS_INFO_DATE = "has.information.date.column"
   val INFO_COLUMN_NAME = "information.date.column"
   val INFO_COLUMN_FORMAT = "information.date.app.format"
 
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): ParquetSource = {
+  override def apply(conf: Config, parentPath: String, spark: SparkSession): SparkSource = {
+    ConfigUtils.validatePathsExistence(conf, parentPath, Seq(FORMAT))
+
+    val format = conf.getString(FORMAT)
+
     val hasInfoDate = conf.hasPath(HAS_INFO_DATE) && conf.getBoolean(HAS_INFO_DATE)
     val (infoDateColumn, infoDateFormat) = if (hasInfoDate) {
       (conf.getString(INFO_COLUMN_NAME), conf.getString(INFO_COLUMN_FORMAT))
@@ -62,6 +70,6 @@ object ParquetSource extends ExternalChannelFactory[ParquetSource] {
 
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    new ParquetSource(hasInfoDate, infoDateColumn, infoDateFormat, conf, parentPath, options)(spark)
+    new SparkSource(format, hasInfoDate, infoDateColumn, infoDateFormat, conf, parentPath, options)(spark)
   }
 }

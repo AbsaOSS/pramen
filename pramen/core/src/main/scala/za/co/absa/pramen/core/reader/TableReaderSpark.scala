@@ -25,27 +25,13 @@ import za.co.absa.pramen.api.TableReader
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class TableReaderParquet(path: String,
-                         hasInfoDateColumn: Boolean,
-                         infoDateColumn: String,
-                         infoDateFormat: String = "yyyy-MM-dd",
-                         options: Map[String, String] = Map.empty[String, String]
+class TableReaderSpark(format: String,
+                       path: String,
+                       hasInfoDateColumn: Boolean,
+                       infoDateColumn: String,
+                       infoDateFormat: String = "yyyy-MM-dd",
+                       options: Map[String, String] = Map.empty[String, String]
                         )(implicit spark: SparkSession) extends TableReader {
-
-  // This constructor is used for backwards compatibility
-  def this(path: String,
-           infoDateColumn: String,
-           infoDateFormat: String
-          )(implicit spark: SparkSession) {
-    this(path, true, infoDateColumn, infoDateFormat);
-  }
-
-  // This constructor is used for backwards compatibility
-  def this(path: String,
-           infoDateColumn: String
-          )(implicit spark: SparkSession) {
-    this(path, true, infoDateColumn, "yyyy-MM-dd");
-  }
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
@@ -97,7 +83,8 @@ class TableReaderParquet(path: String,
 
       val dfIn = spark
         .read
-        .parquet(partitionPath.toUri.toString)
+        .format(format)
+        .load(partitionPath.toUri.toString)
 
       if (dfIn.schema.fields.exists(_.name == infoDateColumn)) {
         log.warn(s"Partition column $infoDateColumn is duplicated in data itself for $dateStr.")
@@ -118,14 +105,16 @@ class TableReaderParquet(path: String,
     if (infoDateBegin.equals(infoDateEnd)) {
       spark
         .read
+        .format(format)
         .options(options)
-        .parquet(path)
+        .load(path)
         .filter(col(s"$infoDateColumn") === lit(infoDateBeginStr))
     } else {
       spark
         .read
+        .format(format)
         .options(options)
-        .parquet(path)
+        .load(path)
         .filter(col(s"$infoDateColumn") >= lit(infoDateBeginStr) && col(s"$infoDateColumn") <= lit(infoDateEndStr))
     }
   }
@@ -133,8 +122,9 @@ class TableReaderParquet(path: String,
   private def getUnfilteredDataFrame: DataFrame = {
     spark
       .read
+      .format(format)
       .options(options)
-      .parquet(path)
+      .load(path)
   }
 
   private def hasData(infoDate: LocalDate): Boolean = {

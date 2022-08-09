@@ -148,7 +148,7 @@ object ConfigUtils {
       val p = "\""
       log.info(description)
       extraOptions.foreach { case (key, value) =>
-        if (redactedKeys.contains(key)) {
+        if (redactedKeys.contains(key.toLowerCase())) {
           log.info(s"$key = [redacted]")
         } else {
           log.info(s"$key = $p$value$p")
