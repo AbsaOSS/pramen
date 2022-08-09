@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.reader
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, lit}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
 
@@ -26,12 +26,13 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class TableReaderSpark(format: String,
+                       schemaOpt: Option[String],
                        path: String,
                        hasInfoDateColumn: Boolean,
                        infoDateColumn: String,
                        infoDateFormat: String = "yyyy-MM-dd",
                        options: Map[String, String] = Map.empty[String, String]
-                        )(implicit spark: SparkSession) extends TableReader {
+                      )(implicit spark: SparkSession) extends TableReader {
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
@@ -81,10 +82,7 @@ class TableReaderSpark(format: String,
       val partitionPath = getPartitionPath(infoDate)
       log.info(s"Partition column exists, reading from $partitionPath.")
 
-      val dfIn = spark
-        .read
-        .format(format)
-        .load(partitionPath.toUri.toString)
+      val dfIn = reader.load(partitionPath.toUri.toString)
 
       if (dfIn.schema.fields.exists(_.name == infoDateColumn)) {
         log.warn(s"Partition column $infoDateColumn is duplicated in data itself for $dateStr.")
@@ -103,28 +101,16 @@ class TableReaderSpark(format: String,
     val infoDateBeginStr = dateFormatter.format(infoDateBegin)
     val infoDateEndStr = dateFormatter.format(infoDateEnd)
     if (infoDateBegin.equals(infoDateEnd)) {
-      spark
-        .read
-        .format(format)
-        .options(options)
-        .load(path)
+      reader.load(path)
         .filter(col(s"$infoDateColumn") === lit(infoDateBeginStr))
     } else {
-      spark
-        .read
-        .format(format)
-        .options(options)
-        .load(path)
+      reader.load(path)
         .filter(col(s"$infoDateColumn") >= lit(infoDateBeginStr) && col(s"$infoDateColumn") <= lit(infoDateEndStr))
     }
   }
 
   private def getUnfilteredDataFrame: DataFrame = {
-    spark
-      .read
-      .format(format)
-      .options(options)
-      .load(path)
+    reader.load(path)
   }
 
   private def hasData(infoDate: LocalDate): Boolean = {
@@ -136,6 +122,20 @@ class TableReaderSpark(format: String,
       log.warn(s"No partition: $path")
     }
     hasPartition
+  }
+
+  private def reader: DataFrameReader = {
+    schemaOpt match {
+      case Some(schema) =>
+        spark.read
+          .format(format)
+          .schema(schema)
+          .options(options)
+      case None         =>
+        spark.read
+          .format(format)
+          .options(options)
+    }
   }
 
   private def getPartitionPath(infoDate: LocalDate): Path = {

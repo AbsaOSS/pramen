@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.reader.TableReaderSpark
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 class SparkSource(format: String,
+                  schema: Option[String],
                   hasInfoDateCol: Boolean,
                   infoDateColumn: String,
                   infoDateFormat: String,
@@ -45,13 +46,15 @@ class SparkSource(format: String,
       case Query.Path(path) =>
         log.info(s"Using TableReaderSpark to read '$format' from: $path")
         ConfigUtils.logExtraOptions(s"Options passed for '$format':", options, KEYS_TO_REDACT)
-        new TableReaderSpark(format, path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        schema.foreach(s => log.info(s"Using schema: $s"))
+        new TableReaderSpark(format, schema, path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
     }
   }
 }
 
 object SparkSource extends ExternalChannelFactory[SparkSource] {
   val FORMAT = "format"
+  val SCHEMA = "schema"
   val HAS_INFO_DATE = "has.information.date.column"
   val INFO_COLUMN_NAME = "information.date.column"
   val INFO_COLUMN_FORMAT = "information.date.app.format"
@@ -60,6 +63,7 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
     ConfigUtils.validatePathsExistence(conf, parentPath, Seq(FORMAT))
 
     val format = conf.getString(FORMAT)
+    val schema = ConfigUtils.getOptionString(conf, SCHEMA)
 
     val hasInfoDate = conf.hasPath(HAS_INFO_DATE) && conf.getBoolean(HAS_INFO_DATE)
     val (infoDateColumn, infoDateFormat) = if (hasInfoDate) {
@@ -70,6 +74,6 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
 
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    new SparkSource(format, hasInfoDate, infoDateColumn, infoDateFormat, conf, parentPath, options)(spark)
+    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, conf, parentPath, options)(spark)
   }
 }
