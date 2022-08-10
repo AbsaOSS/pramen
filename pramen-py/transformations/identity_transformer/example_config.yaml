@@ -4,7 +4,7 @@ run_transformers:
   name: IdentityTransformer
   options:
     table: "cif"
-watcher_metastore_tables:
+metastore_tables:
 - description: Table 1 description
   format: parquet
   info_date_settings:
