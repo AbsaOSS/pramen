@@ -104,6 +104,20 @@ class JobBaseSuite extends WordSpec with SparkTestBase with TextComparisonFixtur
 
       assert(actual.dependencyWarnings.isEmpty)
       assert(actual.status.isInstanceOf[FailedDependencies])
+      assert(actual.status.asInstanceOf[FailedDependencies].failures.head.emptyTables.isEmpty)
+      assert(actual.status.asInstanceOf[FailedDependencies].failures.head.failedTables.head == "table1")
+    }
+
+    "return failure on empty tables" in {
+      val conf = ConfigFactory.empty()
+      val dep = MetastoreDependency(Seq("table2"), "@infoDate", None, triggerUpdates = false, isOptional = false)
+      val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false, isTableEmpty = true)
+
+      val actual = job.preRunCheck(infoDate, conf)
+
+      assert(actual.dependencyWarnings.isEmpty)
+      assert(actual.status.isInstanceOf[FailedDependencies])
+      assert(actual.status.asInstanceOf[FailedDependencies].failures.head.emptyTables.head == "table2")
     }
 
     "return warnings on failed optional dependencies" in {
@@ -111,7 +125,7 @@ class JobBaseSuite extends WordSpec with SparkTestBase with TextComparisonFixtur
       val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = true)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false)
 
-      val actual = job.preRunCheck(infoDate, conf)
+      val actual = job.preRunCheck(infoDate.plusDays(1), conf)
 
       assert(actual.dependencyWarnings.nonEmpty)
       assert(actual.dependencyWarnings.head.table == "table1")
@@ -120,13 +134,14 @@ class JobBaseSuite extends WordSpec with SparkTestBase with TextComparisonFixtur
 
   def getUseCase(tableDf: DataFrame = null,
                  dependencies: Seq[MetastoreDependency] = Nil,
-                 isTableAvailable: Boolean = true): JobBase = {
+                 isTableAvailable: Boolean = true,
+                 isTableEmpty: Boolean = false): JobBase = {
     val operation = OperationDefFactory.getDummyOperationDef(dependencies = dependencies,
       extraOptions = Map[String, String]("value" -> "7"))
 
     val bk = new SyncBookkeeperMock
 
-    val metastore = new MetastoreSpy(tableDf = tableDf, isTableAvailable = isTableAvailable)
+    val metastore = new MetastoreSpy(tableDf = tableDf, isTableAvailable = isTableAvailable, isTableEmpty = isTableEmpty)
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "test_output_table")
 

@@ -20,6 +20,7 @@ import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 
 case class DependencyFailure(
                               dep: MetastoreDependency,
+                              emptyTables: Seq[String],
                               failedTables: Seq[String],
                               failedDateRanges: Seq[String]
                             )
