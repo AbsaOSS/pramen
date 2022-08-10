@@ -37,7 +37,6 @@ class TableWriterDelta(infoDateColumn: String,
                       (implicit spark: SparkSession) extends TableWriter {
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
-  private val metadata = new mutable.HashMap[String, Any]()
 
   override def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long = {
     val infoDateStr = dateFormatter.format(infoDate)
@@ -71,16 +70,11 @@ class TableWriterDelta(infoDateColumn: String,
     val size = getActualSize(infoDateStr)
 
     val prettySize = size.map(s => {
-      metadata.put(Constants.METADATA_LAST_SIZE_WRITTEN, s)
       s"(${StringUtils.prettySize(s)})"
     })
 
     log.info(s"Successfully saved $actualCount records $prettySize to ${outputQuery.query}")
     actualCount
-  }
-
-  override def getMetadata(key: String): Option[Any] = {
-    metadata.get(key)
   }
 
   def getExtraOptions: Map[String, String] = extraOptions

@@ -22,6 +22,4 @@ import java.time.LocalDate
 
 trait TableWriter {
   def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long
-
-  def getMetadata(key: String): Option[Any] = None
 }
