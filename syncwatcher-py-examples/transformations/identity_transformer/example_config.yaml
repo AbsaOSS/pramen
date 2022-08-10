@@ -1,0 +1,24 @@
+run_transformers:
+- info_date: 2022-02-14
+  output_table: table_out1
+  name: IdentityTransformer
+  options:
+    table: "cif"
+watcher_metastore_tables:
+- description: Table 1 description
+  format: parquet
+  info_date_settings:
+    column: "enceladus_info_date"
+    format: yyyy-MM-dd
+    start: 2017-01-31
+  name: "cif"
+  path: "/bigdatahdfs/datalake/publish/cif/CISA521"
+  records_per_partition: 1000000
+- description: Output table
+  format: parquet
+  info_date_settings:
+    column: SYNCWATCHER_INFO_DATE
+    format: yyyy-MM-dd
+    start: 2017-01-29
+  name: table_out1
+  path: /tmp/syncwatcher-py/identity-transformer/
