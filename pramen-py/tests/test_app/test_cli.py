@@ -179,6 +179,7 @@ def test_transformations_ls_basic(monkeypatch):
     assert set(results.stdout.split()) == {
         "ExampleTransformation1",
         "ExampleTransformation2",
+        "IdentityTransformer",
     }
 
 

@@ -1,3 +1,17 @@
+#  Copyright 2022 ABSA Group Limited
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 # TODO #30 add possibility to write more lightweight unit tests
 #   - remove a need to construct config
 #   - return df directly instead of writing it to the local fs
@@ -9,16 +23,15 @@ from chispa import assert_column_equality
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, lit
 from pyspark.sql.types import DateType
-from syncwatcher_py import MetastoreReader
-from syncwatcher_py.models import (
+
+from pramen_py import MetastoreReader
+from pramen_py.models import (
     InfoDateSettings,
+    MetastoreTable,
     RunTransformer,
     TableFormat,
     TransformationConfig,
-    WatcherMetastoreTable,
 )
-from syncwatcher_py.test_utils.spark_utils import generate_df_from_show_repr
-
 from transformations.identity_transformer import IdentityTransformer
 
 
@@ -28,11 +41,11 @@ async def test_identity_transformer(
     tmp_path_builder,
     when,
     transformer_runner,
+    generate_df,
 ):
 
     # stub for transformer dependency table
-    table_in_stub = generate_df_from_show_repr(
-        spark,
+    table_in_stub = generate_df(
         """
         +---+---+----------+
         |A  |B  |info_date |
@@ -66,8 +79,8 @@ async def test_identity_transformer(
                 options={"table": "table_in"},
             ),
         ],
-        watcher_metastore_tables=[
-            WatcherMetastoreTable(
+        metastore_tables=[
+            MetastoreTable(
                 name="table_in",
                 format=TableFormat.parquet,
                 path=tmp_path_builder().as_posix(),
@@ -76,7 +89,7 @@ async def test_identity_transformer(
                     format="yyyy-MM-ddd",
                 ),
             ),
-            WatcherMetastoreTable(
+            MetastoreTable(
                 name="table_out",
                 format=TableFormat.parquet,
                 path=table_out_path.as_posix(),
@@ -155,8 +168,8 @@ async def test_identity_transformer_wrong_options(
                 options={},
             ),
         ],
-        watcher_metastore_tables=[
-            WatcherMetastoreTable(
+        metastore_tables=[
+            MetastoreTable(
                 name="table_in",
                 format=TableFormat.parquet,
                 path=tmp_path_builder().as_posix(),
@@ -165,7 +178,7 @@ async def test_identity_transformer_wrong_options(
                     format="yyyy-MM-ddd",
                 ),
             ),
-            WatcherMetastoreTable(
+            MetastoreTable(
                 name="table_out",
                 format=TableFormat.parquet,
                 path=tmp_path_builder().as_posix(),
