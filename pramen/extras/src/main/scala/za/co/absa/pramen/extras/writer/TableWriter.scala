@@ -14,23 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mocks.writer
+package za.co.absa.pramen.extras.writer
+
+import org.apache.spark.sql.DataFrame
 
 import java.time.LocalDate
 
-import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.TableWriter
-
-import scala.collection.mutable.ListBuffer
-
-class WriterSpy(numOfRecords: Long) extends TableWriter {
-  val infoDatesWritten = new ListBuffer[LocalDate]
-  val estimates = new ListBuffer[Option[Long]]
-
-  override def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long = {
-    infoDatesWritten += infoDate
-    estimates += numOfRecordsEstimate
-
-    numOfRecords
-  }
+trait TableWriter {
+  def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long
 }

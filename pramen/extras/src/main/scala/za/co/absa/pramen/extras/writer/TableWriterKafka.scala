@@ -23,9 +23,8 @@ import org.slf4j.LoggerFactory
 import za.co.absa.abris.avro.functions.to_avro
 import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
 import za.co.absa.abris.config.{AbrisConfig, ToAvroConfig}
-import za.co.absa.pramen.api.TableWriter
-import za.co.absa.pramen.extras.avro.AvroUtils.{convertSparkToAvroSchema, fixNullableFields}
 import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.extras.avro.AvroUtils.{convertSparkToAvroSchema, fixNullableFields}
 import za.co.absa.pramen.extras.writer.model.{KafkaWriterConfig, NamingStrategy}
 
 import java.time.LocalDate

@@ -39,8 +39,6 @@ trait Metastore {
 
   def getReader(tableName: String): TableReader
 
-  def getWriter(tableName: String): TableWriter
-
   def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long] = None): MetaTableStats
 
   def getStats(tableName: String, infoDate: LocalDate): MetaTableStats
