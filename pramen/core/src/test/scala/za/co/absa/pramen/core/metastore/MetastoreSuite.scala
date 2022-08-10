@@ -223,43 +223,6 @@ class MetastoreSuite extends WordSpec with SparkTestBase with TextComparisonFixt
 
   }
 
-  "getWriter()" should {
-    "return a writer to be able to write to the table" in {
-      withTempDirectory("metastore_test") { tempDir =>
-        val expected =
-          """[ {
-            |  "a" : "A",
-            |  "b" : 1,
-            |  "p" : 1,
-            |  "sync_date" : "2011-10-12"
-            |}, {
-            |  "a" : "B",
-            |  "b" : 2,
-            |  "p" : 1,
-            |  "sync_date" : "2011-10-12"
-            |}, {
-            |  "a" : "C",
-            |  "b" : 3,
-            |  "p" : 1,
-            |  "sync_date" : "2011-10-12"
-            |} ]""".stripMargin
-
-        val (m, _) = getTestCase(tempDir)
-
-        val writer = m.getWriter("table1")
-
-        writer.write(getDf.withColumn("p", lit(1)), infoDate, Some(3))
-
-        val df = m.getTable("table1", Some(infoDate), Some(infoDate))
-
-        val actual = SparkUtils.dataFrameToJson(df)
-
-        compareText(actual, expected)
-      }
-    }
-
-  }
-
   "saveTable()" should {
     "save data to the metastore" in {
       withTempDirectory("metastore_test") { tempDir =>

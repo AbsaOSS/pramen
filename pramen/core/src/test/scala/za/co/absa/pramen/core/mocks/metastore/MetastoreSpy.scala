@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.{MetastoreReader, TableReader, TableWriter}
+import za.co.absa.pramen.api.{MetastoreReader, TableReader}
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
@@ -54,8 +54,6 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = null
 
   override def getReader(tableName: String): TableReader = null
-
-  override def getWriter(tableName: String): TableWriter = null
 
   override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
     saveTableInvocations.append((tableName, infoDate, df))

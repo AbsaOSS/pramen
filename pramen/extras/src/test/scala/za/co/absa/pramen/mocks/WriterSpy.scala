@@ -16,11 +16,10 @@
 
 package za.co.absa.pramen.mocks
 
-import java.time.LocalDate
-
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.TableWriter
+import za.co.absa.pramen.extras.writer.TableWriter
 
+import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
 class WriterSpy(numRecords: Long = 0L)(implicit spark: SparkSession) extends TableWriter {

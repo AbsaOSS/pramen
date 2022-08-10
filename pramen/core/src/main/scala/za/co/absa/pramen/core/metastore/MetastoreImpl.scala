@@ -18,16 +18,14 @@ package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{MetastoreReader, TableReader, TableWriter}
+import za.co.absa.pramen.api.{MetastoreReader, TableReader}
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.TEMPORARY_DIRECTORY
-import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
 import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
 import za.co.absa.pramen.core.reader.{TableReaderDelta, TableReaderSpark}
 import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.writer.{TableWriterDelta, TableWriterParquet}
 
 import java.time.{Instant, LocalDate}
 
@@ -73,17 +71,6 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
         new TableReaderSpark("parquet", None, path, hasInfoDateColumn = true, infoDateColumn = mt.infoDateColumn, infoDateFormat = mt.infoDateFormat)
       case DataFormat.Delta(query, _)  =>
         new TableReaderDelta(query, mt.infoDateColumn, mt.infoDateFormat)
-    }
-  }
-
-  override def getWriter(tableName: String): TableWriter = {
-    val mt = getTableDef(tableName)
-
-    mt.format match {
-      case DataFormat.Parquet(path, recordsPerPartition) =>
-        new TableWriterParquet(mt.infoDateColumn, mt.infoDateFormat, path, tempPath, recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION), None)
-      case DataFormat.Delta(query, recordsPerPartition)  =>
-        new TableWriterDelta(mt.infoDateColumn, mt.infoDateFormat, query, recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION), Map.empty[String, String])
     }
   }
 
