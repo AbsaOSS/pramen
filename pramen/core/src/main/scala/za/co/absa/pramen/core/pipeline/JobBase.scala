@@ -107,22 +107,24 @@ abstract class JobBase(operationDef: OperationDef,
       if (!isAvailable) {
         if (metastore.isDataAvailable(table, None, None)) {
           log.warn(s"No data found for '$table' $range.")
+          Some(Some(table), None)
         } else {
           log.error(s"Empty input table (no bookkeeping information) for '$table'.")
+          Some(None, Some(table))
         }
-        Some((table, range))
       } else {
         None
       }
     })
 
-    val failedTables = failures.map(_._1)
-    val failedDateRanges = failures.map(_._2)
+    val failedTables = failures.flatMap(_._1)
+    val emptyTables = failures.flatMap(_._2)
+    val failedDateRanges = failedTables.map(_ => range)
 
-    if (failedTables.isEmpty) {
+    if (failedTables.isEmpty && emptyTables.isEmpty) {
       None
     } else {
-      Some(pipeline.DependencyFailure(dep, failedTables, failedDateRanges))
+      Some(pipeline.DependencyFailure(dep, emptyTables, failedTables, failedDateRanges))
     }
   }
 

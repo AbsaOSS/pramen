@@ -31,7 +31,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    tableException: Throwable = null,
                    stats: MetaTableStats = MetaTableStats(0, None),
                    statsException: Throwable = null,
-                   isTableAvailable: Boolean = true) extends Metastore {
+                   isTableAvailable: Boolean = true,
+                   isTableEmpty: Boolean = false) extends Metastore {
 
   val saveTableInvocations = new ListBuffer[(String, LocalDate, DataFrame)]
 
@@ -41,7 +42,12 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
   override def isTableAvailable(tableName: String, infoDate: LocalDate): Boolean = registeredTables.contains(tableName) && availableDates.contains(infoDate)
 
-  override def isDataAvailable(tableName: String, infoDateFromOpt: Option[LocalDate], infoDateToOpt: Option[LocalDate]): Boolean = isTableAvailable
+  override def isDataAvailable(tableName: String, infoDateFromOpt: Option[LocalDate], infoDateToOpt: Option[LocalDate]): Boolean = {
+    if (infoDateFromOpt.isEmpty && infoDateToOpt.isEmpty)
+      !isTableEmpty
+    else
+      isTableAvailable
+  }
 
   override def getTableDef(tableName: String): MetaTable = null
 

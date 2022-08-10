@@ -20,10 +20,10 @@ import com.typesafe.config.Config
 import za.co.absa.pramen.core.app.config.GeneralConfig.{APPLICATION_VERSION_KEY, BUILD_TIMESTAMP}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
-import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
 import za.co.absa.pramen.core.notify.{FieldChange, SchemaDifference}
+import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.TaskResult
 import za.co.absa.pramen.core.utils.{ConfigUtils, StringUtils, TimeUtils}
@@ -386,9 +386,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   private def renderDependency(dep: DependencyFailure): String = {
     val length = Math.min(dep.failedTables.length, dep.failedDateRanges.length)
 
-    Range(0, length).map { i =>
+    val emptyTables = dep.emptyTables.map(t => s"$t (Empty or wrong name)")
+
+    val failedTables = Range(0, length).map { i =>
       s"${dep.failedTables(i)} (${dep.failedDateRanges(i)})"
-    }.mkString(", ")
+    }
+
+    (emptyTables ++ failedTables).mkString(", ")
   }
 
   private def getFinishTime(task: TaskResult): String = {
