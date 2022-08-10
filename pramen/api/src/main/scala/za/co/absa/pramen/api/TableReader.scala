@@ -24,6 +24,4 @@ trait TableReader {
   def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
 
   def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame]
-
-  def getMetadata(key: String): Option[Any] = None
 }

@@ -36,7 +36,6 @@ class TableWriterParquet(infoDateColumn: String,
                         (implicit spark: SparkSession) extends TableWriter {
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
-  private val metadata = new mutable.HashMap[String, Any]()
 
   override def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long = {
     val outputDir = getPartitionPath(infoDate)
@@ -66,10 +65,6 @@ class TableWriterParquet(infoDateColumn: String,
 
     val rawDf = spark.read.parquet(outputDir)
     rawDf.count()
-  }
-
-  override def getMetadata(key: String): Option[Any] = {
-    metadata.get(key)
   }
 
   private def getPartitionPath(date: LocalDate): String = {
