@@ -102,7 +102,7 @@ class IngestionJob(operationDef: OperationDef,
     val (from, to) = getInfoDateRange(infoDate, sourceTable.sinkFromExpr, sourceTable.sinkToExpr)
 
     source.getReader(sourceTable.query, Nil).getData(from, to) match {
-      case Some(df) => df
+      case Some(df) => sanitizeDfColumns(df)
       case None     => throw new RuntimeException(s"Failed to read data from '${sourceTable.query.query}'")
     }
   }
