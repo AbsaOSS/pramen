@@ -39,9 +39,9 @@ class IdentityTransformer(Transformation):
         # just as example
         df = metastore.get_table(table_name)
 
-        df = metastore.get_latest(
-            table_name,
-            until=datetime.date(2022, 4, 1),
-        )
+        # or you can get latest
+        #df = metastore.get_latest(
+        #    table_name,
+        #)
         assert df.count() != 0, f"Empty table {table_name} received"
         return df.withColumn("transform_id", rand())
