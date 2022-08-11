@@ -21,7 +21,6 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.SparkUtils.sanitizeDfColumns
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
@@ -55,7 +54,7 @@ class TableReaderJdbcNative(queryExpression: String,
 
   override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = {
     val df = getDataFrame(getSql(infoDateBegin, infoDateEnd))
-    Option(sanitizeDfColumns(df))
+    Option(df)
   }
 
   private def getSql(infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {

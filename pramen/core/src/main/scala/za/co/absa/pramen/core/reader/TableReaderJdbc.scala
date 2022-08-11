@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
-import za.co.absa.pramen.core.utils.SparkUtils.sanitizeDfColumns
 import za.co.absa.pramen.core.utils.{ConfigUtils, TimeUtils}
 
 import java.time.{Instant, LocalDate}
@@ -95,7 +94,7 @@ class TableReaderJdbc(tableName: String,
       df
     })
 
-    Option(sanitizeDfColumns(df))
+    Option(df)
   }
 
   @tailrec
