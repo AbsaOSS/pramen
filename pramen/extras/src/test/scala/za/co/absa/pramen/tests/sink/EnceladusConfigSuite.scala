@@ -47,7 +47,6 @@ class EnceladusConfigSuite extends WordSpec with SparkTestBase with AppContextFi
 
       val enceladusConfig = EnceladusConfig.fromConfig(conf)
 
-      assert(enceladusConfig.pramenVersion == "Unspecified")
       assert(enceladusConfig.timezoneId == ZoneId.systemDefault())
       assert(enceladusConfig.infoDateColumn == "ABC")
       assert(enceladusConfig.partitionPattern == "DEF")

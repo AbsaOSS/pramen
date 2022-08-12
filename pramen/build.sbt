@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+import Dependencies._
+import Versions._
+import BuildInfoTemplateSettings._
+
 val scala211 = "2.11.12"
 val scala212 = "2.12.16"
 
