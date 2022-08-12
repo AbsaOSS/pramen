@@ -66,6 +66,9 @@ class PipelineNotificationBuilderHtmlSuite extends WordSpec with TextComparisonF
       val builder = getBuilder
 
       val actual = builder.renderBody()
+        .split("\n")
+        .dropRight(5) // dropping lines that contain build version and timestamp
+        .mkString("\n")
 
       compareText(actual, expected)
     }
@@ -82,6 +85,9 @@ class PipelineNotificationBuilderHtmlSuite extends WordSpec with TextComparisonF
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil))
 
       val actual = builder.renderBody()
+        .split("\n")
+        .dropRight(5) // dropping lines that contain build version and timestamp
+        .mkString("\n")
 
       compareText(actual, expected)
     }

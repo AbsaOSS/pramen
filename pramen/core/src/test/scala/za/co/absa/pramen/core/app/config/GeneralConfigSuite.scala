@@ -26,7 +26,6 @@ class GeneralConfigSuite extends WordSpec {
     "deserialize the config properly" in {
       val configStr =
         s"""pramen {
-           |  application.version = "1.0.0"
            |  environment.name = "DummyEnv"
            |  temporary.directory = "/dummy/dir"
            |  timezone = "Africa/Johannesburg"
@@ -37,7 +36,6 @@ class GeneralConfigSuite extends WordSpec {
 
       val generalConfig = GeneralConfig.fromConfig(config)
 
-      assert(generalConfig.applicationVersion == "1.0.0")
       assert(generalConfig.timezoneId == ZoneId.of("Africa/Johannesburg"))
       assert(generalConfig.environmentName == "DummyEnv")
       assert(generalConfig.temporaryDirectory == "/dummy/dir")

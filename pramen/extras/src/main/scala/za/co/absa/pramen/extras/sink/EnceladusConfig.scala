@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.AppContextFactory
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.{BuildProperties, ConfigUtils}
 
 import java.time.ZoneId
 
@@ -52,11 +52,7 @@ object EnceladusConfig {
   def fromConfig(conf: Config): EnceladusConfig = {
     val appContext = AppContextFactory.get
 
-    val pramenVersion = if (appContext != null) {
-      appContext.appConfig.generalConfig.applicationVersion
-    } else {
-      "Unspecified"
-    }
+    val pramenVersion = BuildProperties.buildVersion
 
     val timezoneId = if (appContext != null) {
       appContext.appConfig.generalConfig.timezoneId
