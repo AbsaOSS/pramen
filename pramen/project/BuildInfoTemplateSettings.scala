@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-import java.time.ZonedDateTime
+import sbt.Keys._
+import sbt._
 
+import java.time.ZonedDateTime
 
 object BuildInfoTemplateSettings {
 
