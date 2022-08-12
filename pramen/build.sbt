@@ -14,9 +14,6 @@
  * limitations under the License.
  */
 
-import Dependencies._
-import Versions._
-
 val scala211 = "2.11.12"
 val scala212 = "2.12.16"
 
@@ -82,7 +79,7 @@ lazy val core = (project in file("core"))
     (Test / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
-      //populateBuildInfoTemplate,
+    populateBuildInfoTemplate,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value
   )
   .dependsOn(api)

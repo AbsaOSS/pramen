@@ -22,26 +22,22 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 import java.time.ZoneId
 
 case class GeneralConfig(
-                          applicationVersion: String,
                           timezoneId: ZoneId,
                           environmentName: String,
                           temporaryDirectory: String
                         )
 object GeneralConfig {
-  val APPLICATION_VERSION_KEY = "pramen.application.version"
-  val BUILD_TIMESTAMP = "pramen.build.timestamp"
   val TIMEZONE_ID_KEY = "pramen.timezone"
   val ENVIRONMENT_NAME_KEY = "pramen.environment.name"
   val TEMPORARY_DIRECTORY_KEY = "pramen.temporary.directory"
 
   def fromConfig(conf: Config): GeneralConfig = {
-    val applicationVersion = conf.getString(APPLICATION_VERSION_KEY)
     val timezoneId = ConfigUtils.getOptionString(conf, TIMEZONE_ID_KEY)
       .map(tz => ZoneId.of(tz))
       .getOrElse(ZoneId.systemDefault())
     val environmentName = conf.getString(ENVIRONMENT_NAME_KEY)
     val temporaryDirectory = conf.getString(TEMPORARY_DIRECTORY_KEY)
 
-    GeneralConfig(applicationVersion, timezoneId, environmentName, temporaryDirectory)
+    GeneralConfig(timezoneId, environmentName, temporaryDirectory)
   }
 }

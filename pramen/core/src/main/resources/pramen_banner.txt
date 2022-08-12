@@ -5,4 +5,4 @@
  | |   | | | (_| | | | | | |  __/ | | |
  |_|   |_|  \__,_|_| |_| |_|\___|_| |_|
 
-version ${project.version}
+version project_version

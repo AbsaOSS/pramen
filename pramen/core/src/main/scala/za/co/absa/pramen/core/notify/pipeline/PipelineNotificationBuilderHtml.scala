@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.core.app.config.GeneralConfig.{APPLICATION_VERSION_KEY, BUILD_TIMESTAMP}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
@@ -26,7 +25,7 @@ import za.co.absa.pramen.core.notify.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.TaskResult
-import za.co.absa.pramen.core.utils.{ConfigUtils, StringUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{BuildProperties, ConfigUtils, StringUtils, TimeUtils}
 
 import java.time._
 import java.time.format.DateTimeFormatter
@@ -125,7 +124,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withRawParagraph(
       s"""Regards,<br>
          |Pramen<br>
-         |${getApplicationVersion(conf)}
+         |${BuildProperties.getFullVersion}
          |""".stripMargin
     )
 
@@ -479,15 +478,5 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
 
     builder.withTable(tableBuilder)
-  }
-
-  private def getApplicationVersion(conf: Config): String = {
-    val version = conf.getString(APPLICATION_VERSION_KEY)
-    if (version.contains("SNAPSHOT")) {
-      val builtAt = conf.getString(BUILD_TIMESTAMP)
-      s"$version built $builtAt "
-    } else {
-      version
-    }
   }
 }
