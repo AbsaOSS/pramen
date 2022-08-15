@@ -44,8 +44,10 @@ class IngestionJob(operationDef: OperationDef,
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate, infoDate)
 
+    val (from, to) = getInfoDateRange(infoDate, sourceTable.sinkFromExpr, sourceTable.sinkToExpr)
+
     val reader = source.getReader(sourceTable.query, sourceTable.columns)
-    val recordCount = reader.getRecordCount(infoDate, infoDate)
+    val recordCount = reader.getRecordCount(from, to)
 
     dataChunk match {
       case Some(chunk) =>
