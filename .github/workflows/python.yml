@@ -18,7 +18,6 @@ defaults:
 
 jobs:
   lint:
-    if: ${{ false }}
     strategy:
       matrix:
         python-version: [ "3.10"]
@@ -38,7 +37,6 @@ jobs:
       - name: lint
         run: make --silent pre-commit
   test:
-    if: ${{ false }}
     strategy:
       matrix:
         python-version: [ "3.6", "3.7", "3.8", "3.9", "3.10"]
@@ -60,8 +58,8 @@ jobs:
           ENV: ci
         run: make --silent test
   publish:
-    #if: "${{ github.event_name == 'push' }}"
-    #needs: ["lint", "test"]
+    if: "${{ github.event_name == 'push' }}"
+    needs: ["lint", "test"]
     environment: release
     runs-on: ubuntu-latest
     steps:
