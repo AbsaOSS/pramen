@@ -64,16 +64,13 @@ jobs:
     #needs: ["lint", "test"]
     environment: release
     runs-on: ubuntu-latest
-    container: ubuntu:20.04
     steps:
       - uses: actions/checkout@v3
       - name: import absa oss ci/cd bot key
         run: |
-          apt update -y && apt dist-upgrade -y
-          apt install -y gnupg wget
-          sh -c "echo 'deb https://gitsecret.jfrog.io/artifactory/git-secret-deb git-secret main' >> /etc/apt/sources.list"
-          wget -qO - 'https://gitsecret.jfrog.io/artifactory/api/gpg/key/public' | apt-key add -
-          apt install -y --no-install-recommends \
+          sudo sh -c "echo 'deb https://gitsecret.jfrog.io/artifactory/git-secret-deb git-secret main' >> /etc/apt/sources.list"
+          wget -qO - 'https://gitsecret.jfrog.io/artifactory/api/gpg/key/public' | sudo apt-key add -
+          sudo apt install -y --no-install-recommends \
             git-secret
           echo "${{ secrets.ABSA_OSS_CI_CD_BOT_GPG_KEY }}" | tr ',' '\n' > ./private_key.gpg
           gpg --batch --yes --pinentry-mode loopback --import private_key.gpg
@@ -87,7 +84,7 @@ jobs:
           git secret reveal
       - name: install project dependencies
         run: |
-          apt install -y --no-install-recommends \
+          sudo apt install -y --no-install-recommends \
             libssl-dev \
             make
       - uses: actions/setup-python@v4
@@ -96,6 +93,8 @@ jobs:
       - uses: abatilo/actions-poetry@v2.0.0
         with:
           poetry-version: 1.1.13
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
       - name: build and publish the wheel to jfrog
         env:
           ENV: pypi
