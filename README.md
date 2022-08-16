@@ -362,9 +362,74 @@ of URLs.
     connection.retries = 5
 ```
 
+#### Spark source (CSV example)
+Pramen supports loading data to the metastore from any format that Spark directly supports. You can provide
+any format-specific options for the Spark reader (spark.read...). 
+
+For a Spark source you should define:
+- The format (`csv`, `json`, `parquet`, etc)
+- [Optionally] a schema in a [Spark SQL notation](https://spark.apache.org/docs/latest/sql-ref-syntax-ddl-create-table-datasource.html).
+- Format-specific options (for CSV it would be a delimiter character etc).
+- The presence and the format of the information date column. If no information column is
+  present, Pramen will take the snapshot of all data at scheduled times.
+
+Here is how you can configure A CSV source:
+```config
+{
+    name = "my_csv_source"
+    factory.class = "za.co.absa.pramen.core.source.SparkSource"
+
+    format = "csv"
+    has.information.date.column = false
+    
+    # You can define a schema for CSV here or directly at the operation level  
+    schema = "id int, name string"
+    
+    option {
+       header = true
+       delimiter = ","
+    }
+
+    # Specifies if tables of the data source have an information date colunn
+    has.information.date.column = true
+    
+    # If information column is present, specify its parameters:
+    information.date {
+      column = "info_date"
+      date.app.format = "yyyy-MM-dd"
+    }
+}
+```
+
+At the operation level you can define
+- The path to a CSV file or directory.
+- You can override schema and other options.
+
+An operation for ingesting a CSV file from S3 can look like this:
+```
+pramen.operations = [
+  {
+    name = "Sourcing of a CSV file"
+    type = "ingestion"
+    schedule.type = "daily"
+
+    source = "my_csv_source"
+    tables = [
+      {
+        input.path = s3a://bucket/path/to/file.csv
+        output.metastore.table = my_table
+        source {
+          schema = "id int, name string"
+        }
+      }
+    ]
+  }
+]
+```
+
 #### Parquet source
-Here is how you can configure the source. Parquet data source defines only if an information date column is
-present. The exact path to the source is defined in the sourcing job configuration of the pipeline.
+Here is how you can configure a Parquet source. The exact path to the source is defined in the sourcing job configuration
+of the pipeline.
 
 ```config
 {
@@ -384,6 +449,25 @@ present. The exact path to the source is defined in the sourcing job configurati
       date.app.format = "yyyy-MM-dd"
     }
 }
+```
+
+An operation for sourcing a Parquet directory from HDFS can look like this:
+```
+pramen.operations = [
+  {
+    name = "Sourcing of a Parquet directory"
+    type = "ingestion"
+    schedule.type = "daily"
+
+    source = "parquet_source1"
+    tables = [
+      {
+        input.path = hdfs://server/path/to/parquet/data
+        output.metastore.table = my_table1
+      }
+    ]
+  }
+]
 ```
 
 ### Sinks
