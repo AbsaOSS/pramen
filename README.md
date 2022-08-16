@@ -101,6 +101,31 @@ In addition to basic error notification, typical operational warnings are genera
      --workflow ingestion_pipeline.conf \
      --rerun 2022-01-01
    ```
+   
+## Building Pramen to suite your environment
+
+Pramen is released a thin JAR dependencies. When running on a specific environment you might want to tune the pipeline
+runner and extra pipeline elements to Scala and Spark version. You can do that by building Pramen from source and creating
+an uber JAR file that contains all dependencies required to run the pipeline on a Spark cluster (an uber jar aka fat jar).
+
+Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
+```sh
+sbt ++2.11.12 assembly -DSPARK_VERSION=2.4.8
+sbt ++2.12.16 assembly -DSPARK_VERSION=2.4.8
+sbt ++2.12.16 assembly -DSPARK_VERSION=3.1.3
+sbt ++2.12.16 assembly -DSPARK_VERSION=3.2.1
+```
+
+You can collect the uber jar of `pramen-runner` either at
+- `runner/target/scala-2.11/` or in `runner/target/scala-2.12/` for the pipeline runner.
+- `extras/target/scala-2.11/` or in `extras/target/scala-2.12/` for extra pipeline elements.
+
+depending on the Scala version you used.
+
+Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
+```sh
+$ spark-shell --jars pramen-runner_2.12_3.2.1-1.0.0-SNAPSHOT.jar
+```
 
 # Building a data pipeline
 
