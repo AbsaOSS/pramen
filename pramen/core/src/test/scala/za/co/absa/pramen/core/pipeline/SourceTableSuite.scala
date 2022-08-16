@@ -46,7 +46,9 @@ class SourceTableSuite extends WordSpec {
           |    { col="a", expr="2+2" },
           |    { col="b", expr="cast(a) as string" },
           |  ]
-          |  filters = [ "A > 1" ]
+          |  filters = [ "A > 1" ],
+          |  date.from = "@infoDate - 1"
+          |  date.to = "@infoDate + 1"
           | }
           |]
           |""".stripMargin)
@@ -65,18 +67,24 @@ class SourceTableSuite extends WordSpec {
       assert(tbl1.query.asInstanceOf[Query.Table].dbTable == "table12")
       assert(tbl1.columns == Seq("a", "b", "c"))
       assert(tbl1.filters.isEmpty)
+      assert(tbl1.rangeFromExpr.isEmpty)
+      assert(tbl1.rangeToExpr.isEmpty)
 
       assert(tbl2.metaTableName == "table22")
       assert(tbl2.query.isInstanceOf[Query.Sql])
       assert(tbl2.query.asInstanceOf[Query.Sql].query == "SELECT * FROM X")
       assert(tbl2.columns.isEmpty)
       assert(tbl2.filters.isEmpty)
+      assert(tbl2.rangeFromExpr.isEmpty)
+      assert(tbl2.rangeToExpr.isEmpty)
 
       assert(tbl3.metaTableName == "table33")
       assert(tbl3.query.isInstanceOf[Query.Path])
       assert(tbl3.query.asInstanceOf[Query.Path].path == "/a/b/c")
       assert(tbl3.columns.isEmpty)
       assert(tbl3.filters.isEmpty)
+      assert(tbl3.rangeFromExpr.isEmpty)
+      assert(tbl3.rangeToExpr.isEmpty)
 
       assert(tbl4.metaTableName == "table44")
       assert(tbl4.query.isInstanceOf[Query.Table])
@@ -88,6 +96,8 @@ class SourceTableSuite extends WordSpec {
       assert(tbl4.transformations(1).expression == "cast(a) as string")
       assert(tbl4.columns == Seq.empty[String])
       assert(tbl4.filters == Seq("A > 1"))
+      assert(tbl4.rangeFromExpr.contains("@infoDate - 1"))
+      assert(tbl4.rangeToExpr.contains("@infoDate + 1"))
     }
 
     "throw an exception in case of an incorrect query type" in {
