@@ -35,7 +35,6 @@ class JdbcNativeUtilsSuite extends WordSpec with RelationalDbFixture with SparkT
     RdbExampleTable.Company.initTable(getConnection)
   }
 
-
   override protected def afterAll(): Unit = {
     RdbExampleTable.Company.dropTable(getConnection)
     super.afterAll()
@@ -127,6 +126,11 @@ class JdbcNativeUtilsSuite extends WordSpec with RelationalDbFixture with SparkT
           |  }, {
           |    "name" : "LAST_UPDATED",
           |    "type" : "timestamp",
+          |    "nullable" : true,
+          |    "metadata" : { }
+          |  }, {
+          |    "name" : "INFO_DATE",
+          |    "type" : "string",
           |    "nullable" : true,
           |    "metadata" : { }
           |  } ]

@@ -55,7 +55,23 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
        |      }
        |
        |      has.information.date.column = false
-       |    }
+       |    },
+       |    {
+       |      name = "jdbc_info_date"
+       |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
+       |      jdbc {
+       |        driver = "$driver"
+       |        connection.string = "$url"
+       |        user = "$user"
+       |        password = "$password"
+       |      }
+       |
+       |      has.information.date.column = true
+       |      information.date.column = "info_date"
+       |      information.date.type = "string"
+       |      information.date.app.format = "yyyy-MM-dd"
+       |      information.date.sql.format = "YYYY-MM-DD"
+       |    },
        |  ]
        | }
        |""".stripMargin)
@@ -75,40 +91,88 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
   }
 
   "preRunCheckJob" should {
-    "track already ran" in {
-      val (bk, _, job) = getUseCase()
+    "single day inputs" should {
+      "track already ran" in {
+        val (bk, _, job) = getUseCase()
 
-      bk.setRecordCount("table1", infoDate, infoDate, infoDate, 3, 3, 123, 456)
+        bk.setRecordCount("table1", infoDate, infoDate, infoDate, 3, 3, 123, 456)
 
-      val result = job.preRunCheckJob(infoDate, conf, Nil)
+        val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(result.status == JobPreRunStatus.AlreadyRan)
+        assert(result.status == JobPreRunStatus.AlreadyRan)
+      }
+
+      "track needs update" in {
+        val (bk, _, job) = getUseCase()
+
+        bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+
+        val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+        assert(result.status == JobPreRunStatus.NeedsUpdate)
+      }
+
+      "track ready" in {
+        val (_, _, job) = getUseCase()
+
+        val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+        assert(result.status == JobPreRunStatus.Ready)
+      }
+
+      "track no data" in {
+        val (_, _, job) = getUseCase(sourceTable = "empty")
+
+        val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+        assert(result.status == JobPreRunStatus.NoData)
+      }
     }
 
-    "track needs update" in {
-      val (bk, _, job) = getUseCase()
+    "ranged inputs" should {
+      "already ran" in {
+        val (bk, _, job) = getUseCase(sourceName = "jdbc_info_date", rangeFromExpr = Some("@infoDate-1"), rangeToExpr = Some("@infoDate"))
 
-      bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+        val noDataInfoDate = infoDate.plusDays(1)
 
-      val result = job.preRunCheckJob(infoDate, conf, Nil)
+        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 3, 3, 123, 456)
 
-      assert(result.status == JobPreRunStatus.NeedsUpdate)
-    }
+        val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
 
-    "track ready" in {
-      val (_, _, job) = getUseCase()
+        assert(result.status == JobPreRunStatus.AlreadyRan)
+      }
 
-      val result = job.preRunCheckJob(infoDate, conf, Nil)
+      "track needs update" in {
+        val (bk, _, job) = getUseCase(sourceName = "jdbc_info_date", rangeFromExpr = Some("@infoDate-1"), rangeToExpr = Some("@infoDate"))
 
-      assert(result.status == JobPreRunStatus.Ready)
-    }
+        val noDataInfoDate = infoDate.plusDays(1)
 
-    "track no data" in {
-      val (_, _, job) = getUseCase(sourceTable = "empty")
+        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 30, 30, 123, 456)
 
-      val result = job.preRunCheckJob(infoDate, conf, Nil)
+        val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
 
-      assert(result.status == JobPreRunStatus.NoData)
+        assert(result.status == JobPreRunStatus.NeedsUpdate)
+      }
+
+      "track ready" in {
+        val (bk, _, job) = getUseCase(sourceName = "jdbc_info_date", rangeFromExpr = Some("@infoDate-1"), rangeToExpr = Some("@infoDate"))
+
+        val noDataInfoDate = infoDate.plusDays(1)
+
+        val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
+
+        assert(result.status == JobPreRunStatus.Ready)
+      }
+
+      "track no data" in {
+        val (bk, _, job) = getUseCase(sourceName = "jdbc_info_date", rangeFromExpr = Some("@infoDate-1"), rangeToExpr = Some("@infoDate"))
+
+        val noDataInfoDate = infoDate.plusDays(2)
+
+        val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
+
+        assert(result.status == JobPreRunStatus.NoData)
+      }
     }
   }
 
@@ -187,12 +251,15 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
     }
   }
 
-  def getUseCase(sourceTable: String = RdbExampleTable.Company.tableName): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
+  def getUseCase(sourceName: String = "jdbc",
+                 sourceTable: String = RdbExampleTable.Company.tableName,
+                 rangeFromExpr: Option[String] = None,
+                 rangeToExpr: Option[String] = None): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy
     val operationDef = OperationDefFactory.getDummyOperationDef()
 
-    val source = getSourceByName("jdbc", conf, None)
+    val source = getSourceByName(sourceName, conf, None)
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1")
 
@@ -200,7 +267,7 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
       metastore,
       bk,
       source,
-      SourceTable("table1", Query.Table(sourceTable), None, None, Seq(
+      SourceTable("table1", Query.Table(sourceTable), rangeFromExpr, rangeToExpr, Seq(
         TransformExpression("NAME_U", "upper(NAME)")
       ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), None),
       outputTable)
