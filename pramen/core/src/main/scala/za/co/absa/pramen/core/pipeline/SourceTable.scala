@@ -27,8 +27,8 @@ import scala.collection.JavaConverters._
 case class SourceTable(
                         metaTableName: String,
                         query: Query,
-                        sinkFromExpr: Option[String],
-                        sinkToExpr: Option[String],
+                        rangeFromExpr: Option[String],
+                        rangeToExpr: Option[String],
                         transformations: Seq[TransformExpression],
                         filters: Seq[String],
                         columns: Seq[String],

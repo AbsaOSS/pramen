@@ -25,8 +25,8 @@ import scala.collection.JavaConverters._
 case class SinkTable(
                       metaTableName: String,
                       outputTableName: Option[String],
-                      sinkFromExpr: Option[String],
-                      sinkToExpr: Option[String],
+                      rangeFromExpr: Option[String],
+                      rangeToExpr: Option[String],
                       transformations: Seq[TransformExpression],
                       filters: Seq[String],
                       columns: Seq[String],

@@ -44,7 +44,7 @@ class IngestionJob(operationDef: OperationDef,
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate, infoDate)
 
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.sinkFromExpr, sourceTable.sinkToExpr)
+    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
     val reader = source.getReader(sourceTable.query, sourceTable.columns)
     val recordCount = reader.getRecordCount(from, to)
@@ -101,7 +101,7 @@ class IngestionJob(operationDef: OperationDef,
   }
 
   private def getSourcingDataFrame(infoDate: LocalDate): DataFrame = {
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.sinkFromExpr, sourceTable.sinkToExpr)
+    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
     source.getReader(sourceTable.query, Nil).getData(from, to) match {
       case Some(df) => sanitizeDfColumns(df)

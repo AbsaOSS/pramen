@@ -45,6 +45,8 @@ class SinkTableSuite extends WordSpec {
           |  ]
           |  filters = [ "A > 1" ]
           |  columns = [ "A", "B"]
+          |  date.from = "@infoDate - 1"
+          |  date.to = "@infoDate + 1"
           | }
           |]
           |""".stripMargin)
@@ -62,16 +64,22 @@ class SinkTableSuite extends WordSpec {
       assert(tbl1.options.get("topic.name").contains("aaa"))
       assert(tbl1.columns.isEmpty)
       assert(tbl1.filters.isEmpty)
+      assert(tbl1.rangeFromExpr.isEmpty)
+      assert(tbl1.rangeToExpr.isEmpty)
 
       assert(tbl2.metaTableName == "table22")
       assert(tbl2.options.get("topic.name").contains("bbb"))
       assert(tbl2.columns.isEmpty)
       assert(tbl2.filters.isEmpty)
+      assert(tbl2.rangeFromExpr.isEmpty)
+      assert(tbl2.rangeToExpr.isEmpty)
 
       assert(tbl3.metaTableName == "table33")
       assert(tbl3.columns.isEmpty)
       assert(tbl3.filters.isEmpty)
       assert(tbl3.outputTableName.contains("output_table"))
+      assert(tbl3.rangeFromExpr.isEmpty)
+      assert(tbl3.rangeToExpr.isEmpty)
 
       assert(tbl4.metaTableName == "table44")
       assert(tbl4.transformations.length == 2)
@@ -84,6 +92,8 @@ class SinkTableSuite extends WordSpec {
       assert(tbl4.columns.length == 2)
       assert(tbl4.columns.head == "A")
       assert(tbl4.columns(1) == "B")
+      assert(tbl4.rangeFromExpr.contains("@infoDate - 1"))
+      assert(tbl4.rangeToExpr.contains("@infoDate + 1"))
     }
 
     "throw an exception in case of duplicate entries" in {

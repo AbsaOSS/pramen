@@ -129,7 +129,7 @@ class SinkJob(operationDef: OperationDef,
 
   private def getDataDf(infoDate: LocalDate): DataFrame = {
     try {
-      val (from, to) = getInfoDateRange(infoDate, sinkTable.sinkFromExpr, sinkTable.sinkToExpr)
+      val (from, to) = getInfoDateRange(infoDate, sinkTable.rangeFromExpr, sinkTable.rangeToExpr)
       metastore.getTable(sinkTable.metaTableName, Option(from), Option(to))
     } catch {
       case NonFatal(ex) => throw new IllegalStateException(s"Unable to read input table ${sinkTable.metaTableName} for $infoDate.", ex)
