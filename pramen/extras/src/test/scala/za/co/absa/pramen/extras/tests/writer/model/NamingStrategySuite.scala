@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests.writer.model
+package za.co.absa.pramen.extras.tests.writer.model
 
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.ConfigFactory

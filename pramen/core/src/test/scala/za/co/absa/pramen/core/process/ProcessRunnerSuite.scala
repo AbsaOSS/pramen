@@ -42,7 +42,7 @@ class ProcessRunnerSuite extends WordSpec with ScriptProcessRunnerFixture {
       }
     }
 
-    "handle very long streams" in {
+    "handle long streams" in {
       def generateLongString(): String = {
         val line = "a" * 120
         val lines = new StringBuilder

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.fixtures
+package za.co.absa.pramen.extras.fixtures
 
 import org.scalatest.{Assertion, Suite}
 

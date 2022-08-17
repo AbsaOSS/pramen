@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.mocks
+package za.co.absa.pramen.extras.mocks
 
 import za.co.absa.pramen.extras.writer.model.{KafkaWriterConfig, NamingStrategy}
 

@@ -14,21 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.base
+package za.co.absa.pramen.extras.mocks
 
-import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import za.co.absa.pramen.extras.writer.TableWriter
 
-trait SparkTestBase {
-  // Turn off as much as possible Spark logging in tests
-  Logger.getLogger("org").setLevel(Level.ERROR)
-  Logger.getLogger("akka").setLevel(Level.ERROR)
+import java.time.LocalDate
+import scala.collection.mutable.ListBuffer
 
-  implicit val spark: SparkSession = SparkSession.builder()
-    .master("local[2]")
-    .appName("test")
-    .config("spark.ui.enabled", "false")
-    .config("spark.driver.bindAddress","127.0.0.1")
-    .config("spark.driver.host", "127.0.0.1")
-    .getOrCreate()
+class WriterSpy(numRecords: Long = 0L)(implicit spark: SparkSession) extends TableWriter {
+
+  val calls = new ListBuffer[(LocalDate, Option[Long])]
+
+  override def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long = {
+    calls += infoDate -> numOfRecordsEstimate
+    numRecords
+  }
 }
