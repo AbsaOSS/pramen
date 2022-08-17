@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests.extras.infofile
+package za.co.absa.pramen.extras.tests.builtin.infofile
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
 import org.scalatest.WordSpec
-import za.co.absa.pramen.base.SparkTestBase
+import za.co.absa.pramen.extras.base.SparkTestBase
+import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration._
-import za.co.absa.pramen.fixtures.{TempDirFixture, TextComparisonFixture}
 
 import java.nio.file.{Files, Paths}
 import java.time.{Instant, LocalDate, ZoneId}

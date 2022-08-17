@@ -86,11 +86,19 @@
         <encoding>UTF-8</encoding>
         <timestamp>${maven.build.timestamp}</timestamp>
 
-        <!-- Scala and Spark -->
-        <scala.version>2.11.12</scala.version>
-        <scala.compat.version>2.11</scala.compat.version>
-        <spark.version>2.4.8</spark.version>
-        <delta.version>0.6.1</delta.version>
+        <!-- Scala 2.11 and Spark -->
+<!--        <scala.version>2.11.12</scala.version>-->
+<!--        <scala.compat.version>2.11</scala.compat.version>-->
+<!--        <spark.version>2.4.8</spark.version>-->
+<!--        <hadoop.version>2.6.5</hadoop.version>-->
+<!--        <delta.version>0.6.1</delta.version>-->
+
+        <!-- Scala 2.12 and Spark -->
+        <scala.version>2.12.16</scala.version>
+        <scala.compat.version>2.12</scala.compat.version>
+        <spark.version>3.2.2</spark.version>
+        <hadoop.version>3.3.1</hadoop.version>
+        <delta.version>2.0.0</delta.version>
 
         <!-- Build and plugins properties -->
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssX</maven.build.timestamp.format>
@@ -157,6 +165,13 @@
                 <groupId>org.apache.spark</groupId>
                 <artifactId>spark-sql-kafka-${kafka.spark.version}_${scala.compat.version}</artifactId>
                 <version>${spark.version}</version>
+            </dependency>
+
+            <!-- Hadoop -->
+            <dependency>
+                <groupId>org.apache.hadoop</groupId>
+                <artifactId>hadoop-client-api</artifactId>
+                <version>${hadoop.version}</version>
             </dependency>
 
             <!-- Avro -->

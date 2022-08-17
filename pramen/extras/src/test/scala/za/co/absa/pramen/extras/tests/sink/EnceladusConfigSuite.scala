@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests.sink
+package za.co.absa.pramen.extras.tests.sink
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
-import za.co.absa.pramen.base.SparkTestBase
+import za.co.absa.pramen.extras.base.SparkTestBase
+import za.co.absa.pramen.extras.fixtures.AppContextFixture
 import za.co.absa.pramen.extras.sink.EnceladusConfig
-import za.co.absa.pramen.fixtures.AppContextFixture
-import za.co.absa.pramen.core.AppContextFactory
 
 import java.time.ZoneId
 

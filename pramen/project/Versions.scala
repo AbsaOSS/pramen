@@ -17,7 +17,7 @@ import sbt._
 
 object Versions {
   val defaultSparkVersionForScala211 = "2.4.8"
-  val defaultSparkVersionForScala212 = "3.2.1"
+  val defaultSparkVersionForScala212 = "3.2.2"
 
   val typesafeConfigVersion = "1.4.0"
   val abrisVersion = "5.1.1"
@@ -58,10 +58,15 @@ object Versions {
   }
 
   def getDeltaDependency(sparkVersion: String): ModuleID = {
+    // According to this: https://docs.delta.io/latest/releases.html
     if (sparkVersion.startsWith("2.")) {
       "io.delta" %% "delta-core" % "0.6.1",
-    } else if (sparkVersion.startsWith("3.")) {
+    } else if (sparkVersion.startsWith("3.1.")) {
       "io.delta" %% "delta-core" % "1.2.1",
+    } else if (sparkVersion.startsWith("3.2.")) {
+      "io.delta" %% "delta-core" % "2.0.0",
+    } else if (sparkVersion.startsWith("3.3.")) {
+      "io.delta" %% "delta-core" % "2.0.0",
     } else {
       throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }

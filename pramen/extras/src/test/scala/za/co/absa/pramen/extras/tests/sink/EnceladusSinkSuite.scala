@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests.sink
+package za.co.absa.pramen.extras.tests.sink
 
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
-import za.co.absa.pramen.base.SparkTestBase
+import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusSink
-import za.co.absa.pramen.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.utils.FsUtils
 
 import java.nio.file.{Files, Paths}
@@ -73,6 +73,7 @@ class EnceladusSinkSuite extends WordSpec with SparkTestBase with TextComparison
         val partitionPath = new Path(outputPath, "2022/02/18/v1")
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
+        println(exampleDf.count)
         "send sends data to the target directory" in {
           val count = sink.send(exampleDf,
             "dummy_table",

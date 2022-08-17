@@ -14,19 +14,18 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests.avro
+package za.co.absa.pramen.extras.tests.avro
 
 import org.apache.spark.sql.functions.struct
 import org.scalatest.WordSpec
 import za.co.absa.pramen.NestedDataFrameFactory
-import za.co.absa.pramen.extras.avro.AvroUtils
-import za.co.absa.pramen.base.SparkTestBase
-import za.co.absa.pramen.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.utils.ResourceUtils.getResourceString
 import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.extras.avro.AvroUtils
+import za.co.absa.pramen.extras.base.SparkTestBase
+import za.co.absa.pramen.extras.fixtures.TextComparisonFixture
 
 class AvroUtilsSuite extends WordSpec with SparkTestBase with TextComparisonFixture {
-
   import spark.implicits._
 
   "convertSparkToAvroSchema" should {
