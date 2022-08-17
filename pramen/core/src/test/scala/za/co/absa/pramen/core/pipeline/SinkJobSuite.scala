@@ -152,7 +152,7 @@ class SinkJobSuite extends WordSpec with SparkTestBase with TextComparisonFixtur
       }
 
       assert(ex.getMessage == "Preprocessing failed on the sink.")
-      assert(ex.getCause.getMessage.contains("cannot resolve '`b2`' given input columns: [a, b]"))
+      assert(ex.getCause.getMessage.contains("given input columns: [a, b]"))
     }
   }
 
