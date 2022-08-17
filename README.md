@@ -104,7 +104,7 @@ In addition to basic error notification, typical operational warnings are genera
    
 ## Building Pramen to suite your environment
 
-Pramen is released a thin JAR dependencies. When running on a specific environment you might want to tune the pipeline
+Pramen is released as a set of thin JAR libraries. When running on a specific environment you might want to tune the pipeline
 runner and extra pipeline elements to Scala and Spark version. You can do that by building Pramen from source and creating
 an uber JAR file that contains all dependencies required to run the pipeline on a Spark cluster (an uber jar aka fat jar).
 
