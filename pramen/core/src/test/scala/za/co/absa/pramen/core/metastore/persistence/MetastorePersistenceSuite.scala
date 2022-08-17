@@ -179,7 +179,7 @@ class MetastorePersistenceSuite extends WordSpec with SparkTestBase with TempDir
       mtp.loadTable(Some(infoDate), Some(infoDate))
     }
 
-    assert(ex.getMessage.contains("exist"))
+    assert(ex.getMessage.contains("exist") || ex.getMessage.contains("is not a Delta table"))
   }
 
   def testInfoDateExists(mtp: MetastorePersistence): Assertion = {
@@ -225,7 +225,9 @@ class MetastorePersistenceSuite extends WordSpec with SparkTestBase with TempDir
       mtp.getStats(infoDate)
     }
 
-    assert(ex.getMessage.contains("Path does not exist") || ex.getMessage().contains("doesn't exist"))
+    assert(ex.getMessage.contains("Path does not exist") ||
+      ex.getMessage().contains("doesn't exist") ||
+      ex.getMessage().contains("is not a Delta table"))
   }
 
   def testOverwritePartition(mtp: MetastorePersistence): Assertion = {
@@ -353,31 +355,31 @@ class MetastorePersistenceSuite extends WordSpec with SparkTestBase with TempDir
     }
 
     "saveTable()" should {
-      "supports fixing the existing info date column" in {
+      "support fixing the existing info date column" in {
         withTempDirectory("mt_persist") { tempDir =>
           testInfoDateExists(getParquetMtPersistence(tempDir))
         }
       }
 
-      "supports partition overwrites" in {
+      "support partition overwrites" in {
         withTempDirectory("mt_persist") { tempDir =>
           testOverwritePartition(getParquetMtPersistence(tempDir))
         }
       }
 
-      "supports schema overwrites" in {
+      "support schema overwrites" in {
         withTempDirectory("mt_persist") { tempDir =>
           testSchemaMerge(getParquetMtPersistence(tempDir))
         }
       }
 
-      "supports records per partition" in {
+      "support records per partition" in {
         withTempDirectory("mt_persist") { tempDir =>
           testRecordsPerPartition(s"$tempDir/parquet/info_date=2021-10-12", "*.parquet", getParquetMtPersistence(tempDir, recordsPerPartition = Some(2)))
         }
       }
 
-      "supports path creation" in {
+      "support path creation" in {
         withTempDirectory("mt_persist") { tempDir =>
           testPathCreation(getParquetMtPersistence(tempDir, pathSuffix = "a/b/c/d"))
         }
@@ -430,7 +432,7 @@ class MetastorePersistenceSuite extends WordSpec with SparkTestBase with TempDir
         }
       }
 
-      "supports partition overwrites" in {
+      "support partition overwrites" in {
         withTempDirectory("mt_persist") { tempDir =>
           testOverwritePartition(getDeltaMtPersistence(tempDir))
         }
