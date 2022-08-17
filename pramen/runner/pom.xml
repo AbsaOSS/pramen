@@ -57,7 +57,7 @@
 
         <dependency>
             <groupId>com.github.scopt</groupId>
-            <artifactId>scopt_2.11</artifactId>
+            <artifactId>scopt_${scala.compat.version}</artifactId>
         </dependency>
     </dependencies>
 

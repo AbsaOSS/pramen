@@ -90,12 +90,6 @@
             <artifactId>kafka-clients</artifactId>
         </dependency>
 
-        <!-- The version is selected to be compatible with Spark 2.4.* -->
-        <dependency>
-            <groupId>org.json4s</groupId>
-            <artifactId>json4s-native_${scala.compat.version}</artifactId>
-        </dependency>
-
         <!-- https://search.maven.org/artifact/com.sun.mail/javax.mail -->
         <dependency>
             <groupId>com.sun.mail</groupId>

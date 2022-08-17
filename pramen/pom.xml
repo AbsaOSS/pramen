@@ -86,6 +86,12 @@
         <encoding>UTF-8</encoding>
         <timestamp>${maven.build.timestamp}</timestamp>
 
+        <!-- Scala and Spark -->
+        <scala.version>2.11.12</scala.version>
+        <scala.compat.version>2.11</scala.compat.version>
+        <spark.version>2.4.8</spark.version>
+        <delta.version>0.6.1</delta.version>
+
         <!-- Build and plugins properties -->
         <maven.build.timestamp.format>yyyy-MM-dd'T'HH:mm:ssX</maven.build.timestamp.format>
         <maven.compiler.source>1.8</maven.compiler.source>
@@ -103,10 +109,6 @@
         <maven.surefire.version>2.20.1</maven.surefire.version>
 
         <!-- Frameworks and libraries -->
-        <scala.version>2.11.12</scala.version>
-        <scala.compat.version>2.11</scala.compat.version>
-        <spark.version>2.4.8</spark.version>
-
         <jackson.version>2.10.3</jackson.version>
         <scala_logging.version>3.7.2</scala_logging.version>
         <scodec_bits.version>1.1.4</scodec_bits.version>
@@ -206,13 +208,6 @@
                 <version>1.4.0</version>
             </dependency>
 
-            <!-- The version is selected to be compatible with Spark 2.4.* -->
-            <dependency>
-                <groupId>org.json4s</groupId>
-                <artifactId>json4s-native_${scala.compat.version}</artifactId>
-                <version>3.5.3</version>
-            </dependency>
-
             <!-- https://search.maven.org/artifact/com.sun.mail/javax.mail -->
             <dependency>
                 <groupId>com.sun.mail</groupId>
@@ -252,7 +247,7 @@
             <dependency>
                 <groupId>io.delta</groupId>
                 <artifactId>delta-core_${scala.compat.version}</artifactId>
-                <version>0.6.1</version>
+                <version>${delta.version}</version>
             </dependency>
 
             <!-- https://mvnrepository.com/artifact/net.sourceforge.jtds/jtds -->
@@ -299,7 +294,7 @@
             <!-- https://github.com/scopt/scopt -->
             <dependency>
                 <groupId>com.github.scopt</groupId>
-                <artifactId>scopt_2.11</artifactId>
+                <artifactId>scopt_${scala.compat.version}</artifactId>
                 <version>3.7.1</version>
             </dependency>
 
