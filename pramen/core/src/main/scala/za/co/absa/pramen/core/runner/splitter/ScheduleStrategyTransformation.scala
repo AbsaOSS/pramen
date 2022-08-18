@@ -60,7 +60,7 @@ class ScheduleStrategyTransformation extends ScheduleStrategy {
         (retrospective ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
       case ScheduleParams.Rerun(runDate)                                                     =>
         log.info(s"Rerun strategy for a single day: $runDate")
-        getRerun(outputTable, runDate, infoDateExpression)
+        getRerun(outputTable, runDate, schedule, infoDateExpression)
       case ScheduleParams.Historical(dateFrom, dateTo, inverseDateOrder, mode) =>
         log.info(s"Ranged strategy: from $dateFrom to $dateTo, mode = '${mode.toString}', minimumDate = $minimumDate")
         getHistorical(outputTable, dateFrom, dateTo, schedule, mode, infoDateExpression, minimumDate, inverseDateOrder, bookkeeper)

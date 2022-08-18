@@ -38,7 +38,19 @@ class ScheduleStrategyUtilsSuite extends WordSpec {
       "return information date of the rerun" in {
         val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
 
-        assert(getRerun("table", date, "@runDate - 1") == expected :: Nil)
+        assert(getRerun("table", date, Schedule.EveryDay(), "@runDate - 1") == expected :: Nil)
+      }
+
+      "return information date of a non-daily run rerun" in {
+        val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
+
+        assert(getRerun("table", date, Schedule.Monthly(18 :: Nil), "@runDate - 1") == expected :: Nil)
+      }
+
+      "return nothing is out of schedule rerun" in {
+        val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
+
+        assert(getRerun("table", date, Schedule.Monthly(1 :: Nil), "@runDate - 1").isEmpty)
       }
     }
 

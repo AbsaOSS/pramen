@@ -139,7 +139,7 @@ object ScheduleUtils {
       }
       day = day.plusDays(1)
     }
-    infoDates
+    infoDates.toSeq
   }
 
   /**

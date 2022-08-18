@@ -44,14 +44,20 @@ object ScheduleStrategyUtils {
     * @return The sequence of information dates to run. In case of the rerun it will be just one date
     */
   private[core] def getRerun(outputTable: String,
-                                  runDate: LocalDate,
-                                  infoDateExpression: String
-                                 ): List[TaskPreDef] = {
-    val infoDate = evaluateRunDate(runDate, infoDateExpression)
+                             runDate: LocalDate,
+                             schedule: Schedule,
+                             infoDateExpression: String
+                            ): List[TaskPreDef] = {
+    if (schedule.isEnabled(runDate)) {
+      val infoDate = evaluateRunDate(runDate, infoDateExpression)
 
-    log.info(s"Rerunning '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
+      log.info(s"Rerunning '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
 
-    List(pipeline.TaskPreDef(infoDate, TaskRunReason.Rerun))
+      List(pipeline.TaskPreDef(infoDate, TaskRunReason.Rerun))
+    } else {
+      log.info(s"The job for '$outputTable' is out of schedule $schedule for $runDate. Skipping...")
+      Nil
+    }
   }
 
   /**
@@ -64,10 +70,10 @@ object ScheduleStrategyUtils {
     * @return Information date of the job to run, if any
     */
   private[core] def getNew(outputTable: String,
-                                runDate: LocalDate,
-                                schedule: Schedule,
-                                infoDateExpression: String
-                               ): Option[TaskPreDef] = {
+                           runDate: LocalDate,
+                           schedule: Schedule,
+                           infoDateExpression: String
+                          ): Option[TaskPreDef] = {
     if (schedule.isEnabled(runDate)) {
       val infoDate = evaluateRunDate(runDate, infoDateExpression)
 
@@ -82,12 +88,12 @@ object ScheduleStrategyUtils {
   }
 
   private[core] def getLate(outputTable: String,
-                                 runDate: LocalDate,
-                                 schedule: Schedule,
-                                 infoDateExpression: String,
-                                 initialDateExpr: String,
-                                 bookkeeper: Bookkeeper
-                                ): List[TaskPreDef] = {
+                            runDate: LocalDate,
+                            schedule: Schedule,
+                            infoDateExpression: String,
+                            initialDateExpr: String,
+                            bookkeeper: Bookkeeper
+                           ): List[TaskPreDef] = {
     val lastInfoDate = evaluateRunDate(runDate.minusDays(1), infoDateExpression)
 
     bookkeeper.getLatestProcessedDate(outputTable) match {
@@ -104,7 +110,7 @@ object ScheduleStrategyUtils {
         } else {
           Nil
         }
-      case None               =>
+      case None                      =>
         log.info(s"No jobs for $outputTable have ran yet. Getting the initial sourcing date: $initialDateExpr, runDate=$runDate.")
         val initialDate = evaluateRunDate(runDate, initialDateExpr)
         if (initialDate.toEpochDay <= lastInfoDate.toEpochDay) {
@@ -119,15 +125,15 @@ object ScheduleStrategyUtils {
   }
 
   private[core] def getHistorical(outputTable: String,
-                                       dateFrom: LocalDate,
-                                       dateTo: LocalDate,
-                                       schedule: Schedule,
-                                       mode: RunMode,
-                                       infoDateExpression: String,
-                                       minimumDate: LocalDate,
-                                       inverseDateOrder: Boolean,
-                                       bookkeeper: Bookkeeper
-                                      ): List[TaskPreDef] = {
+                                  dateFrom: LocalDate,
+                                  dateTo: LocalDate,
+                                  schedule: Schedule,
+                                  mode: RunMode,
+                                  infoDateExpression: String,
+                                  minimumDate: LocalDate,
+                                  inverseDateOrder: Boolean,
+                                  bookkeeper: Bookkeeper
+                                 ): List[TaskPreDef] = {
     val potentialDates = getInfoDateRange(dateFrom, dateTo, infoDateExpression, schedule)
 
     val skipAlreadyRanDays = mode == RunMode.SkipAlreadyRan
@@ -162,16 +168,16 @@ object ScheduleStrategyUtils {
   }
 
   private[core] def anyDependencyUpdatedRetrospectively(outputTable: String,
-                                                             infoDate: LocalDate,
-                                                             dependencies: Seq[MetastoreDependency],
-                                                             bookkeeper: Bookkeeper): Boolean = {
+                                                        infoDate: LocalDate,
+                                                        dependencies: Seq[MetastoreDependency],
+                                                        bookkeeper: Bookkeeper): Boolean = {
     dependencies.exists(dependency => isDependencyUpdatedRetrospectively(outputTable, infoDate, dependency, bookkeeper))
   }
 
   private[core] def isDependencyUpdatedRetrospectively(outputTable: String,
-                                                            infoDate: LocalDate,
-                                                            dependency: MetastoreDependency,
-                                                            bookkeeper: Bookkeeper): Boolean = {
+                                                       infoDate: LocalDate,
+                                                       dependency: MetastoreDependency,
+                                                       bookkeeper: Bookkeeper): Boolean = {
     if (!dependency.triggerUpdates) {
       return false
     }
@@ -214,10 +220,10 @@ object ScheduleStrategyUtils {
     * @return
     */
   private[core] def getInfoDateRange(dateFrom: LocalDate,
-                                          dateTo: LocalDate,
-                                          infoDateExpression: String,
-                                          schedule: Schedule
-                                         ): List[LocalDate] = {
+                                     dateTo: LocalDate,
+                                     infoDateExpression: String,
+                                     schedule: Schedule
+                                    ): List[LocalDate] = {
     if (dateFrom.isAfter(dateTo)) {
       Nil
     } else {
