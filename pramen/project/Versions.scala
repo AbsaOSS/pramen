@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 import sbt._
 
 object Versions {
@@ -59,17 +60,15 @@ object Versions {
 
   def getDeltaDependency(sparkVersion: String): ModuleID = {
     // According to this: https://docs.delta.io/latest/releases.html
-    if (sparkVersion.startsWith("2.")) {
-      "io.delta" %% "delta-core" % "0.6.1",
-    } else if (sparkVersion.startsWith("3.1.")) {
-      "io.delta" %% "delta-core" % "1.2.1",
-    } else if (sparkVersion.startsWith("3.2.")) {
-      "io.delta" %% "delta-core" % "2.0.0",
-    } else if (sparkVersion.startsWith("3.3.")) {
-      "io.delta" %% "delta-core" % "2.0.0",
-    } else {
-      throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
+    val deltaVersion = sparkVersion match {
+      case version if version.startsWith("2.")   => "0.6.1"
+      case version if version.startsWith("3.0.") => "0.8.0"
+      case version if version.startsWith("3.1.") => "1.0.1"
+      case version if version.startsWith("3.2.") => "2.0.0"
+      case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
+    println(s"Using Delta version $deltaVersion")
+    "io.delta" %% "delta-core" % deltaVersion
   }
 
 }

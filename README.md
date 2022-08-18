@@ -112,6 +112,7 @@ Creating an uber jar for Pramen is very easy. Just clone the repository and run 
 ```sh
 sbt ++2.11.12 assembly -DSPARK_VERSION=2.4.8
 sbt ++2.12.16 assembly -DSPARK_VERSION=2.4.8
+sbt ++2.12.16 assembly -DSPARK_VERSION=3.0.3
 sbt ++2.12.16 assembly -DSPARK_VERSION=3.1.3
 sbt ++2.12.16 assembly -DSPARK_VERSION=3.2.1
 ```
