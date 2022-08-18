@@ -32,14 +32,20 @@ object Schedule {
 
   case class EveryDay() extends Schedule {
     def isEnabled(day: LocalDate): Boolean = true
+
+    override def toString: String = "daily"
   }
 
   case class Weekly(days: Seq[DayOfWeek]) extends Schedule {
     def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfWeek)
+
+    override def toString: String = s"weekly (${days.mkString(", ")})"
   }
 
   case class Monthly(days: Seq[Int]) extends Schedule {
     def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfMonth)
+
+    override def toString: String = s"monthly (${days.mkString(", ")})"
   }
 
   def fromConfig(conf: Config): Schedule = {
@@ -58,7 +64,7 @@ object Schedule {
       throw new IllegalArgumentException(s"No days of week are provided $SCHEDULE_DAYS_OF_WEEK_KEY")
     }
 
-    weekDayNums.map(num => DayOfWeek.of(num))
+    weekDayNums.map(num => DayOfWeek.of(num)).toSeq
   }
 
   private def getDaysOfMonth(conf: Config): Seq[Int] = {
@@ -73,6 +79,6 @@ object Schedule {
         throw new IllegalArgumentException(s"Invalid day of month: $day")
       }
     })
-    monthDayNums
+    monthDayNums.toSeq
   }
 }
