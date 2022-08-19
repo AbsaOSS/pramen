@@ -56,7 +56,7 @@ class IngestionJob(operationDef: OperationDef,
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Souring is not needed.")
           JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings)
         } else {
-          log.info(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.outputRecordCount} records. The table needs update.")
+          log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.outputRecordCount} records. The table needs update.")
           JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
         }
       case None        =>

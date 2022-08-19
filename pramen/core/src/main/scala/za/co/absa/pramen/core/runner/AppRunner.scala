@@ -27,6 +27,7 @@ import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJ
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerParallel}
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl}
+import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.{BuildProperties, ResourceUtils}
 
 import scala.util.control.NonFatal
@@ -61,7 +62,8 @@ object AppRunner {
       _          <- shutdown(taskRunner, state)
     } yield {
       val exitCode = state.getExitCode
-      log.info(s"The pipeline has finished. Exit code = $exitCode")
+      val emoji = if (exitCode == 0) SUCCESS else FAILURE
+      log.info(s"$emoji The pipeline has finished. Exit code = $exitCode")
       exitCode
     }
 
@@ -69,7 +71,7 @@ object AppRunner {
       case Success(exitCode)      =>
         exitCode
       case Failure(ex: Throwable) =>
-        log.error(s"The pipeline has failed with an exception.", ex)
+        log.error(s"$FAILURE The pipeline has failed with an exception.", ex)
         ERROR_CODE_FAILURE
     }
   }

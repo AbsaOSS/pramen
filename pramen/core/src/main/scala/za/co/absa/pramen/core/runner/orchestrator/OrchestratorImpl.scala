@@ -77,7 +77,7 @@ class OrchestratorImpl extends Orchestrator {
     }
 
     pendingJobs.foreach(job => {
-      log.warn(s"Job '${job.name}' outputting to '${job.outputTable.name}' is SKIPPED.")
+      log.warn(s"$WARNING Job '${job.name}' outputting to '${job.outputTable.name}' is SKIPPED.")
       log.warn(s"Dependencies: ${dependencyResolver.getDag(job.outputTable.name :: Nil)}")
 
       val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
