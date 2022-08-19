@@ -92,7 +92,7 @@ object ConfigUtils {
   def getDaysOfWeek(conf: Config, path: String): Seq[DayOfWeek] = {
     val weekDayNums = conf.getIntList(path).asScala
 
-    weekDayNums.map(num => DayOfWeek.of(num))
+    weekDayNums.map(num => DayOfWeek.of(num)).toSeq
   }
 
   def getListStringsByPrefix(conf: Config, prefix: String): Seq[String] = {

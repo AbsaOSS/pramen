@@ -76,10 +76,10 @@ object SourceTable {
       .zipWithIndex
       .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]") }
 
-    val duplicates = AlgorithmicUtils.findDuplicates(sourceTables.map(_.metaTableName))
+    val duplicates = AlgorithmicUtils.findDuplicates(sourceTables.map(_.metaTableName).toSeq)
     if (duplicates.nonEmpty) {
       throw new IllegalArgumentException(s"Duplicate source table definitions for the sourcing job: ${duplicates.mkString(", ")}")
     }
-    sourceTables
+    sourceTables.toSeq
   }
 }

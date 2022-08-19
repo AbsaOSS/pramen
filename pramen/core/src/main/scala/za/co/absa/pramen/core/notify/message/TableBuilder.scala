@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.notify.message
 trait TableBuilder {
   def withHeaders(headers: Seq[TableHeader]): TableBuilder
 
-  def withRow(row: Seq[TextElement]): TableBuilder
+  def withRow(row: Iterable[TextElement]): TableBuilder
 
   def renderTable: String
 }

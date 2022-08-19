@@ -167,7 +167,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
       Seq(path)
     } else {
       addToListRecursive(path)
-      files
+      files.toSeq
     }
   }
 

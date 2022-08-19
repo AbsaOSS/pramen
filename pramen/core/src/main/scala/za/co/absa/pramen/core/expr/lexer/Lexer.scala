@@ -35,7 +35,7 @@ class Lexer(expression: String) {
     tokens.clear()
 
     while (pos < expression.length) {
-      val ok = findOneCharTokens || findWhiteSpace() || findName() || findNumLiteral() || findDateLiteral()
+      val ok = findOneCharTokens() || findWhiteSpace() || findName() || findNumLiteral() || findDateLiteral()
       if (!ok) {
         throw new SyntaxErrorException(s"Unexpected character '${expression(pos)}' at position: $pos")
       }

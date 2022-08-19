@@ -31,15 +31,15 @@ object ScalaMongoImplicits {
   private val executionTimeout = Duration(300, TimeUnit.SECONDS)
 
   implicit class ObservableExecutor[T](observable: Observable[T]) {
-    def execute(): Seq[T] = Await.result(observable.toFuture, executionTimeout)
+    def execute(): Seq[T] = Await.result(observable.toFuture(), executionTimeout)
   }
 
   implicit class SingleObservableExecutor[T](observable: SingleObservable[T]) {
-    def execute(): T = Await.result(observable.toFuture, executionTimeout)
+    def execute(): T = Await.result(observable.toFuture(), executionTimeout)
   }
 
   implicit class FindObservableExecutor[T](observable: FindObservable[T]) {
-    def execute(): Seq[T] = Await.result(observable.toFuture, executionTimeout)
+    def execute(): Seq[T] = Await.result(observable.toFuture(), executionTimeout)
   }
 
   implicit class FindObservableTraversable[T](observable: FindObservable[T]) {

@@ -167,7 +167,7 @@ class TableReaderSparkSuite extends WordSpec with SparkTestBase with TempDirFixt
           assert(dfOpt.isDefined)
 
           dfOpt.foreach(df => {
-            assert(df.count == 5)
+            assert(df.count() == 5)
 
             assert(df.schema.fields.head.name == "a")
             assert(df.schema.fields.head.dataType == IntegerType)
@@ -186,7 +186,7 @@ class TableReaderSparkSuite extends WordSpec with SparkTestBase with TempDirFixt
           assert(dfOpt.isDefined)
 
           dfOpt.foreach(df => {
-            assert(df.count == 0)
+            assert(df.count() == 0)
 
             assert(df.schema.fields.head.name == "a")
             assert(df.schema.fields.head.dataType == IntegerType)
@@ -208,7 +208,7 @@ class TableReaderSparkSuite extends WordSpec with SparkTestBase with TempDirFixt
           assert(dfOpt.isDefined)
 
           dfOpt.foreach(df => {
-            assert(df.count == 5)
+            assert(df.count() == 5)
 
             assert(df.schema.fields.head.name == "a")
             assert(df.schema.fields.head.dataType == IntegerType)
@@ -227,7 +227,7 @@ class TableReaderSparkSuite extends WordSpec with SparkTestBase with TempDirFixt
           assert(dfOpt.isDefined)
 
           dfOpt.foreach(df => {
-            assert(df.count == 5)
+            assert(df.count() == 5)
 
             assert(df.schema.fields.head.name == "_c0")
             assert(df.schema.fields.head.dataType == StringType)

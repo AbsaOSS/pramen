@@ -38,7 +38,7 @@ class TableReaderDelta(query: Query,
     } else {
       log.info(s"Reading COUNT(*) FROM ${query.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
     }
-    getFilteredDataFrame(infoDateBegin, infoDateEnd).count
+    getFilteredDataFrame(infoDateBegin, infoDateEnd).count()
   }
 
   override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = {

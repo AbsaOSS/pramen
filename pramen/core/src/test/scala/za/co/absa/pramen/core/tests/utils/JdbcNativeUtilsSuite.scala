@@ -55,7 +55,7 @@ class JdbcNativeUtilsSuite extends WordSpec with RelationalDbFixture with SparkT
       assert(df.schema.fields.nonEmpty)
       assert(df.schema.fields.head.name == "ID")
       assert(df.schema.fields.head.dataType == IntegerType)
-      assert(df.count == 3)
+      assert(df.count() == 3)
     }
   }
 

@@ -53,7 +53,7 @@ class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val dateTypes = Array(SqlColumnType.DATETIME)
+    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
 
     val infoDateColumnAdjusted =
       if (dateTypes.contains(sqlConfig.infoDateType)) {

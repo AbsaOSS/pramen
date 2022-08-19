@@ -110,7 +110,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       .flatMap(_.schemaChanges)
       .sortBy(_.tableName)
 
-    renderSchemaDifference(builder, allSchemaChanges)
+    renderSchemaDifference(builder, allSchemaChanges.toSeq)
 
     completedTasks
       .foreach(t => {
@@ -277,7 +277,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     if (haveReasonColumn)
       tableHeaders.append(TableHeader(TextElement("Reason"), Align.Left))
 
-    tableBuilder.withHeaders(tableHeaders)
+    tableBuilder.withHeaders(tableHeaders.toSeq)
 
     tasks.foreach(task => {
       val row = new ListBuffer[TextElement]

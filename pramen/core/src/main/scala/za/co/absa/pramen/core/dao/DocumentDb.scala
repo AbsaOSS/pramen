@@ -106,5 +106,5 @@ abstract class DocumentDb {
   /**
     * Executes a command expressed in the database-specific language/format on the database.
     */
-  def executeCommand(cmd: String)
+  def executeCommand(cmd: String): Unit
 }

@@ -108,7 +108,7 @@ class SqlGeneratorSas(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGene
       i += 1
     }
 
-    columns
+    columns.toSeq
   }
 
   @throws[java.sql.SQLException]

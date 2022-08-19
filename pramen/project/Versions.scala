@@ -19,9 +19,9 @@ import sbt._
 object Versions {
   val defaultSparkVersionForScala211 = "2.4.8"
   val defaultSparkVersionForScala212 = "3.2.2"
+  val defaultSparkVersionForScala213 = "3.2.2"
 
   val typesafeConfigVersion = "1.4.0"
-  val abrisVersion = "5.1.1"
   val postgreSqlDriverVersion = "42.3.3"
   val msSqlDriverVersion = "1.3.1"
   val mongoDbScalaDriverVersion = "2.7.0"
@@ -32,7 +32,7 @@ object Versions {
   val kafkaClientVersion = "2.5.1"
   val javaXMailVersion = "1.6.2"
   val embeddedMongoDbVersion = "2.2.0"
-  val scalatestVersion = "3.0.3"
+  val scalatestVersion = "3.0.9"
   val mockitoVersion = "2.28.2"
 
   def sparkFallbackVersion(scalaVersion: String): String = {
@@ -40,6 +40,8 @@ object Versions {
       defaultSparkVersionForScala211
     } else if (scalaVersion.startsWith("2.12.")) {
       defaultSparkVersionForScala212
+    } else if (scalaVersion.startsWith("2.13.")) {
+      defaultSparkVersionForScala213
     } else {
       throw new IllegalArgumentException(s"Scala $scalaVersion not supported.")
     }
@@ -69,6 +71,23 @@ object Versions {
     }
     println(s"Using Delta version $deltaVersion")
     "io.delta" %% "delta-core" % deltaVersion
+  }
+
+  def getAbrisDependency(scalaVersion: String): ModuleID = {
+    // According to this: https://docs.delta.io/latest/releases.html
+    val abrisVersion = scalaVersion match {
+      case version if version.startsWith("2.11.") => "5.1.1"
+      case version if version.startsWith("2.12.") => "5.1.1"
+      case version if version.startsWith("2.13.") => "6.0.0"
+      case _                                      => throw new IllegalArgumentException(s"Scaka $scalaVersion not supported for Abris dependency.")
+    }
+
+    println(s"Using Abris version $abrisVersion")
+
+    "za.co.absa" %% "abris" % abrisVersion excludeAll(
+      ExclusionRule(organization = "com.fasterxml.jackson.core"),
+      ExclusionRule(organization = "org.apache.avro")
+    )
   }
 
 }
