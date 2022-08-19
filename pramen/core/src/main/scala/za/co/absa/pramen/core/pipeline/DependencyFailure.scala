@@ -23,4 +23,16 @@ case class DependencyFailure(
                               emptyTables: Seq[String],
                               failedTables: Seq[String],
                               failedDateRanges: Seq[String]
-                            )
+                            ) {
+  def renderText: String = {
+    val length = Math.min(failedTables.length, failedDateRanges.length)
+
+    val emptyTablesRendered = emptyTables.map(t => s"$t (Empty or wrong name)")
+
+    val failedTablesRendered = Range(0, length).map { i =>
+      s"${failedTables(i)} (${failedDateRanges(i)})"
+    }
+
+    (emptyTablesRendered ++ failedTablesRendered).mkString(", ")
+  }
+}

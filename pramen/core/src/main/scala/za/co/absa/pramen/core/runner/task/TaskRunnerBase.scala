@@ -24,9 +24,10 @@ import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.ReasonException
 import za.co.absa.pramen.core.metastore.MetaTableStats
-import za.co.absa.pramen.core.pipeline.{Job, JobPreRunResult, Task, TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.core.notify.SchemaDifference
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
+import za.co.absa.pramen.core.pipeline._
+import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
@@ -73,12 +74,12 @@ abstract class TaskRunnerBase(conf: Config,
       task.job.preRunCheck(task.infoDate, conf)
     } match {
       case Success(validationResult) =>
-        validationResult.status match {
+        val resultToReturn = validationResult.status match {
           case Ready                        =>
             log.info(s"Validation of the task: $outputTable for date: ${task.infoDate} is SUCCEEDED.")
             Right(validationResult)
           case NeedsUpdate                  =>
-            log.info(s"The task needs update: $outputTable for date: ${task.infoDate}.")
+            log.info(s"The table needs update: $outputTable for date: ${task.infoDate}.")
             Right(validationResult)
           case NoData                       =>
             log.info(s"NO DATA available for the task: $outputTable for date: ${task.infoDate}.")
@@ -94,6 +95,11 @@ abstract class TaskRunnerBase(conf: Config,
           case FailedDependencies(failures) =>
             Left(TaskResult(task.job, RunStatus.FailedDependencies(failures), getRunInfo(task.infoDate, started), Nil, Nil))
         }
+        if (validationResult.dependencyWarnings.nonEmpty) {
+          log.warn(s"$WARNING Validation of the task: $outputTable for date: ${task.infoDate} has " +
+            s"optional dependency failure(s) for table(s): ${validationResult.dependencyWarnings.map(_.table).mkString(", ")} ")
+        }
+        resultToReturn
       case Failure(ex)               =>
         Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), Nil, Nil))
     }
@@ -177,7 +183,7 @@ abstract class TaskRunnerBase(conf: Config,
       }
 
       val stats = if (runtimeConfig.isDryRun) {
-        log.info(s"DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
+        log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
         MetaTableStats(dfTransformed.count(), None)
       } else {
         task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
@@ -209,7 +215,7 @@ abstract class TaskRunnerBase(conf: Config,
       case Some((oldSchema, oldInfoDate)) =>
         val diff = compareSchemas(oldSchema, df.schema)
         if (diff.nonEmpty) {
-          log.warn(s"SCHEMA CHANGE for $table from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
+          log.warn(s"$WARNING SCHEMA CHANGE for $table from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
           bookkeeper.saveSchema(table, infoDate, df.schema)
           SchemaDifference(table, oldInfoDate, infoDate, diff) :: Nil
         } else {
@@ -232,19 +238,19 @@ abstract class TaskRunnerBase(conf: Config,
     }
     result.runStatus match {
       case _: RunStatus.Succeeded                =>
-        log.info(s"Task '${result.job.name}'$infoDateMsg has SUCCEEDED.")
+        log.info(s"$SUCCESS Task '${result.job.name}'$infoDateMsg has SUCCEEDED.")
       case RunStatus.ValidationFailed(ex)        =>
-        log.warn(s"Task '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
+        log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
       case RunStatus.Failed(ex)                  =>
-        log.error(s"Task '${result.job.name}'$infoDateMsg has FAILED", ex)
+        log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED", ex)
       case RunStatus.MissingDependencies(tables) =>
-        log.warn(s"Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
+        log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
       case RunStatus.FailedDependencies(deps)    =>
-        log.warn(s"Task '${result.job.name}'$infoDateMsg has MISSING DEPENDENCIES: ${deps.flatMap(d => d.failedTables).distinct.mkString(", ")}")
+        log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
       case RunStatus.NoData                      =>
-        log.info(s"Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
+        log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
       case RunStatus.Skipped(msg)                =>
-        log.info(s"Task '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
+        log.info(s"$WARNING Task '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
       case RunStatus.NotRan                      =>
         log.info(s"Task '${result.job.name}'$infoDateMsg is SKIPPED.")
     }

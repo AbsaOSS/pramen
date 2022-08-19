@@ -24,6 +24,7 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.utils.Emoji.WARNING
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
@@ -55,7 +56,7 @@ class IngestionJob(operationDef: OperationDef,
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Souring is not needed.")
           JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings)
         } else {
-          log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.outputRecordCount} records. The table needs update.")
+          log.info(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.outputRecordCount} records. The table needs update.")
           JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
         }
       case None        =>

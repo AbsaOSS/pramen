@@ -25,6 +25,7 @@ import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.task.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.state.PipelineState
+import za.co.absa.pramen.core.utils.Emoji._
 
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
@@ -127,10 +128,10 @@ class OrchestratorImpl extends Orchestrator {
     val outputTable = job.outputTable
 
     if (isSucceeded) {
-      log.info(s"\u2705 Job '${job.name}' outputting to '${outputTable.name}' is SUCCEEDED.")
+      log.info(s"$SUCCESS Job '${job.name}' outputting to '${outputTable.name}' is SUCCEEDED.")
       dependencyResolver.setAvailableTable(outputTable.name)
     } else {
-      log.warn(s"\u274C Job '${job.name}' outputting to '${outputTable.name}' is FAILED.")
+      log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' is FAILED.")
       dependencyResolver.setFailedTable(outputTable.name)
     }
   }
