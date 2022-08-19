@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.notify
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.Emoji._
 
 import java.util.Properties
 import javax.mail.internet.{InternetAddress, MimeMessage}
@@ -83,9 +84,9 @@ trait Sendable {
     // Send it
     try {
       Transport.send(message)
-      log.info(s"An email has been sent successfully.")
+      log.info(s"$EMAIL2 An email has been sent successfully.")
     } catch {
-      case NonFatal(ex) => log.error(s"Failed to send an email.", ex)
+      case NonFatal(ex) => log.error(s"$FAILURE Failed to send an email.", ex)
     }
   }
 

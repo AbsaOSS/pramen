@@ -371,7 +371,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case Failed(ex)                  => ex.getMessage
       case ValidationFailed(ex)        => ex.getMessage
       case MissingDependencies(tables) => s"Dependent job failures: ${tables.mkString(", ")}"
-      case FailedDependencies(deps)    => s"Dependency check failures: ${deps.map(renderDependency).mkString("; ")}"
+      case FailedDependencies(deps)    => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
       case _                           =>
         if (task.dependencyWarnings.isEmpty) {
           ""
@@ -380,18 +380,6 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           s"Optional dependencies failed for: $tables"
         }
     }
-  }
-
-  private def renderDependency(dep: DependencyFailure): String = {
-    val length = Math.min(dep.failedTables.length, dep.failedDateRanges.length)
-
-    val emptyTables = dep.emptyTables.map(t => s"$t (Empty or wrong name)")
-
-    val failedTables = Range(0, length).map { i =>
-      s"${dep.failedTables(i)} (${dep.failedDateRanges(i)})"
-    }
-
-    (emptyTables ++ failedTables).mkString(", ")
   }
 
   private def getFinishTime(task: TaskResult): String = {

@@ -23,6 +23,7 @@ import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{MetaTable, MetastoreDependency}
 import za.co.absa.pramen.core.pipeline
+import za.co.absa.pramen.core.utils.Emoji._
 
 import java.time.LocalDate
 
@@ -56,7 +57,7 @@ abstract class JobBase(operationDef: OperationDef,
       .map(table => DependencyWarning(table))
 
     if (dependencyErrors.nonEmpty) {
-      log.info(s"Job for table ${outputTableDef.name} at $infoDate has validation failures.")
+      log.warn(s"Job for table ${outputTableDef.name} at $infoDate has validation failures.")
       JobPreRunResult(JobPreRunStatus.FailedDependencies(dependencyErrors), None, dependencyWarnings)
     } else {
       if (dependencyWarnings.nonEmpty) {
@@ -106,10 +107,10 @@ abstract class JobBase(operationDef: OperationDef,
       val isAvailable = metastore.isDataAvailable(table, Option(dateFrom), dateUntilOpt)
       if (!isAvailable) {
         if (metastore.isDataAvailable(table, None, None)) {
-          log.warn(s"No data found for '$table' $range.")
+          log.warn(s"$WARNING No data found for '$table' $range.")
           Some(Some(table), None)
         } else {
-          log.error(s"Empty input table (no bookkeeping information) for '$table'.")
+          log.warn(s"$STAR Empty input table (no bookkeeping information) for '$table'.")
           Some(None, Some(table))
         }
       } else {
