@@ -26,7 +26,7 @@ class ParagraphBuilder {
     this
   }
 
-  def paragraph: Seq[TextElement] = textElements
+  def paragraph: Seq[TextElement] = textElements.toSeq
 }
 
 object ParagraphBuilder {

@@ -47,7 +47,7 @@ object TransformExpression {
         .zipWithIndex
         .map { case (transformationConfig, idx) => fromConfigSingleEntry(transformationConfig, s"$parentPath.$arrayPath[$idx]") }
 
-      transformations
+      transformations.toSeq
     } else {
       Seq.empty[TransformExpression]
     }

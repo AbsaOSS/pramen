@@ -113,7 +113,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
       val dfOut = applyTransformations(exampleDf, Nil)
 
       assert(dfOut.schema.fields.length == 2)
-      assert(dfOut.count == 3)
+      assert(dfOut.count() == 3)
     }
 
     "apply specified transformations" in {
@@ -123,7 +123,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
 
       assert(dfOut.schema.fields.length == 3)
       assert(dfOut.schema.fields(2).name == "c")
-      assert(dfOut.count == 3)
+      assert(dfOut.count() == 3)
     }
   }
 
@@ -131,7 +131,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
     "do nothing for empty filters" in {
       val dfOut = applyFilters(exampleDf, Nil, null)
 
-      assert(dfOut.count == 3)
+      assert(dfOut.count() == 3)
     }
 
     "apply specified filters" in {
@@ -139,7 +139,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
 
       val dfOut = applyFilters(exampleDf, filters, infoDate)
 
-      assert(dfOut.count == 2)
+      assert(dfOut.count() == 2)
     }
 
     "apply filters with an info date" in {
@@ -147,7 +147,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
 
       val dfOut = applyFilters(exampleDf, filters, infoDate)
 
-      assert(dfOut.count == 3)
+      assert(dfOut.count() == 3)
     }
   }
 

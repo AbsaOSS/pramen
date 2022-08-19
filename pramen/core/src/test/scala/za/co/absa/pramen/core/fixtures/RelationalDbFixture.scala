@@ -55,6 +55,6 @@ trait RelationalDbFixture extends BeforeAndAfterAll {
     while(rs.next()) {
       tables += rs.getString(1)
     }
-    tables
+    tables.toSeq
   }
 }

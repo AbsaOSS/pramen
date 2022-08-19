@@ -119,6 +119,7 @@ object OperationDef {
       dependencyConfigs.asScala
         .zipWithIndex
         .map { case (c, i) => MetastoreDependency.fromConfig(c, s"$parent[$i]") }
+        .toSeq
     } else {
       Seq.empty[MetastoreDependency]
     }

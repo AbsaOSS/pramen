@@ -192,7 +192,7 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
 
       val df = job.run(infoDate, conf)
 
-      assert(df.count == 3)
+      assert(df.count() == 3)
       assert(df.schema.fields.head.name == "ID")
       assert(df.schema.fields(1).name == "NAME")
       assert(df.schema.fields(2).name == "EMAIL")

@@ -36,7 +36,7 @@ class TableBuilderHtml extends TableBuilder {
     this
   }
 
-  override def withRow(row: Seq[TextElement]): TableBuilder = {
+  override def withRow(row: Iterable[TextElement]): TableBuilder = {
     if (headerArray == null) {
       throw new IllegalStateException("Create headers first")
     }

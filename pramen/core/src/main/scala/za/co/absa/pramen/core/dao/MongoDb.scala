@@ -242,7 +242,7 @@ class MongoDb(db: MongoDatabase) extends DocumentDb {
     log.info(s"Processing all documents of $collectionName...")
     getCollection(collectionName)
       .find()
-      .syncForeach(document => f(document.toJson))
+      .syncForeach(document => f(document.toJson()))
   }
 
   /**

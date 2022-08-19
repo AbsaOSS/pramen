@@ -70,7 +70,7 @@ class OrchestratorImpl extends Orchestrator {
 
         val jobStarted = sendPendingJobs(runJobChannel, dependencyResolver)
         if (!jobStarted && runningJobs.isEmpty) {
-          runJobChannel.close
+          runJobChannel.close()
         }
       }
     }
@@ -127,10 +127,10 @@ class OrchestratorImpl extends Orchestrator {
     val outputTable = job.outputTable
 
     if (isSucceeded) {
-      log.info(s"Job '${job.name}' outputting to '${outputTable.name}' is SUCCEEDED.")
+      log.info(s"\u2705 Job '${job.name}' outputting to '${outputTable.name}' is SUCCEEDED.")
       dependencyResolver.setAvailableTable(outputTable.name)
     } else {
-      log.warn(s"Job '${job.name}' outputting to '${outputTable.name}' is FAILED.")
+      log.warn(s"\u274C Job '${job.name}' outputting to '${outputTable.name}' is FAILED.")
       dependencyResolver.setFailedTable(outputTable.name)
     }
   }

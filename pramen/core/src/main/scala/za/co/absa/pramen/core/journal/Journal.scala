@@ -25,7 +25,7 @@ import java.time.Instant
   */
 trait Journal {
 
-  def addEntry(entry: TaskCompleted)
+  def addEntry(entry: TaskCompleted): Unit
 
   def getEntries(from: Instant, to: Instant): Seq[TaskCompleted]
 

@@ -77,10 +77,10 @@ object SinkTable {
       .zipWithIndex
       .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]") }
 
-    val duplicates = AlgorithmicUtils.findDuplicates(sinkTables.map(_.metaTableName))
+    val duplicates = AlgorithmicUtils.findDuplicates(sinkTables.map(_.metaTableName).toSeq)
     if (duplicates.nonEmpty) {
       throw new IllegalArgumentException(s"Duplicate sink table definitions for the sink job: ${duplicates.mkString(", ")}")
     }
-    sinkTables
+    sinkTables.toSeq
   }
 }

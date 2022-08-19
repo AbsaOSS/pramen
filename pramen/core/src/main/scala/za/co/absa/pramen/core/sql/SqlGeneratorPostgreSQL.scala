@@ -55,7 +55,7 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig, extraConfig: Config) extends 
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val dateTypes = Array(SqlColumnType.DATETIME)
+    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
 
     val infoDateColumnAdjusted =
       if (dateTypes.contains(sqlConfig.infoDateType)) {

@@ -171,7 +171,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLock {
 
   private def startWatcherThread(): Thread = {
     val thread = new Thread {
-      override def run() {
+      override def run(): Unit = {
         lockWatcher()
       }
     }

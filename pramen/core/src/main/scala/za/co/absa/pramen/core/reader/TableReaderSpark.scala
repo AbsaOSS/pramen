@@ -42,14 +42,14 @@ class TableReaderSpark(format: String,
       if (infoDateBegin.equals(infoDateEnd)) {
         if (hasData(infoDateEnd)) {
           log.info(s"Reading COUNT(*) FROM $path WHERE $infoDateColumn='${dateFormatter.format(infoDateBegin)}'")
-          getDailyDataFrame(infoDateBegin).count
+          getDailyDataFrame(infoDateBegin).count()
         } else {
           log.info(s"No partition for $path with $infoDateColumn='${dateFormatter.format(infoDateBegin)}' has been created yet.")
           0L
         }
       } else {
         log.info(s"Reading COUNT(*) FROM $path WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
-        getFilteredDataFrame(infoDateBegin, infoDateEnd).count
+        getFilteredDataFrame(infoDateBegin, infoDateEnd).count()
       }
     } else {
       getUnfilteredDataFrame.count()

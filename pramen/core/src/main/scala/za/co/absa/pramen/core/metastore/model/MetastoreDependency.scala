@@ -44,7 +44,7 @@ object MetastoreDependency {
       throw new IllegalArgumentException(s"Missing required key '$path.$DATE_FROM_EXPR_KEY' in config")
     }
 
-    val tables = conf.getStringList(TABLES_KEY).asScala
+    val tables = conf.getStringList(TABLES_KEY).asScala.toSeq
     val dateFromExpr = conf.getString(DATE_FROM_EXPR_KEY)
     val triggerUpdates = Try(conf.getBoolean(TRIGGER_UPDATES_KEY)).getOrElse(false)
     val isOptional = Try(conf.getBoolean(OPTIONAL_KEY)).getOrElse(false)

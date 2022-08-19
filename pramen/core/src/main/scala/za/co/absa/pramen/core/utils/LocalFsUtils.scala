@@ -45,7 +45,7 @@ object LocalFsUtils {
       }
     })
 
-    outputList
+    outputList.toSeq
   }
 
   /**

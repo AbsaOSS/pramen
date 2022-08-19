@@ -166,7 +166,7 @@ class TokenLockMongoDb(token: String,
 
   private def startWatcherThread(): Thread = {
     val thread = new Thread {
-      override def run() {
+      override def run(): Unit = {
         lockWatcher()
       }
     }

@@ -44,13 +44,9 @@ object Dependencies {
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
-    "za.co.absa"           %% "abris"                      % abrisVersion excludeAll(
-      ExclusionRule(organization = "com.fasterxml.jackson.core"),
-      ExclusionRule(organization = "org.apache.avro")
-    ),
     "net.sourceforge.jtds" %  "jtds"                       % msSqlDriverVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
-  )
+  ) :+ getAbrisDependency(scalaVersion)
 
   def RunnerDependencied(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
