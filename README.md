@@ -101,7 +101,28 @@ In addition to basic error notification, typical operational warnings are genera
      --workflow ingestion_pipeline.conf \
      --rerun 2022-01-01
    ```
-   
+
+# Building the project
+Pramen consists of a few components:
+- `pramen-api` - contains traits for defining custom transformations, sources and sinks. 
+- `pramen-core` - contains the orchestration and run logic.
+- `pramen-extras` - contains additional sources and sinks that are not part of the core since they add many additional
+  dependencies.
+
+A Pramen data pipeline runs on a Spark cluster (standalone, Yarn, EMR, Databricks, etc). API and core are provided as
+libraries to link. Usually to define data pipeline components all you need link is the API. Running a pipeline requires
+creating an uber jar containing all the dependencies. 
+
+## Linking
+
+| Scala version |    Spark version     |
+|:-------------:|:--------------------:|
+|     2.11      |        2.4.8         |
+|     2.12      | 3.0.x, 3.1.x, 3.2.x  |
+|     2.13      |        3.2.2         |
+
+Spark 3.3.0 is not yet supported since Delta format is not released for Spark 3.3.0 yet (https://docs.delta.io/latest/releases.html).
+
 ## Building Pramen to suite your environment
 
 Pramen is released as a set of thin JAR libraries. When running on a specific environment you might want to tune the pipeline
@@ -114,7 +135,9 @@ sbt ++2.11.12 assembly -DSPARK_VERSION=2.4.8
 sbt ++2.12.16 assembly -DSPARK_VERSION=2.4.8
 sbt ++2.12.16 assembly -DSPARK_VERSION=3.0.3
 sbt ++2.12.16 assembly -DSPARK_VERSION=3.1.3
-sbt ++2.12.16 assembly -DSPARK_VERSION=3.2.1
+sbt ++2.12.16 assembly -DSPARK_VERSION=3.2.2
+
+sbt ++2.13.8 assembly -DSPARK_VERSION=3.2.2
 ```
 
 You can collect the uber jar of `pramen-runner` either at
@@ -125,10 +148,10 @@ depending on the Scala version you used.
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
 ```sh
-$ spark-shell --jars pramen-runner_2.12_3.2.1-1.0.0-SNAPSHOT.jar
+$ spark-shell --jars pramen-runner_2.12_3.2.2-1.0.0-SNAPSHOT.jar
 ```
 
-# Building a data pipeline
+# Creating a data pipeline
 
 Let's take a look on components of a data pipeline in more detail.
 
