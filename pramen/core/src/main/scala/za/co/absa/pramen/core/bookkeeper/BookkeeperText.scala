@@ -167,6 +167,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
         listChunks.maxBy(c => c.jobFinished)
       }
       .toArray[DataChunk]
+      .sortBy(_.jobFinished)
   }
 
   override def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)] = {
