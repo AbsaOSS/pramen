@@ -104,7 +104,7 @@ In addition to basic error notification, typical operational warnings are genera
 
 # Building the project
 Pramen consists of a few components:
-- `pramen-api` - contains traits for defining custom transformations, sources and sinks. 
+- `pramen-api` - contains traits (interfaces) for defining custom transformations, sources and sinks. 
 - `pramen-core` - contains the orchestration and run logic.
 - `pramen-extras` - contains additional sources and sinks that are not part of the core since they add many additional
   dependencies.
