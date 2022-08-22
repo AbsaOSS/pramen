@@ -50,7 +50,7 @@ There are many other data pipeline management tools. Why you would want to use P
   - You can use Scala and Python transformers and combine them.
 * Extendable
   - If your data source or sink is not supported by Pramen yet? You can implement your own very easy.
-* Builtin support of various relational database sources
+* Built-in support of various relational database sources
   - Pramen already supports getting data from the following RDMS: PostgreSQL, Oracle Data Warehouse, Microsoft SQL Server,
     Denodo Virtualized and other standard JDBC compliant data sources 
     
@@ -244,7 +244,7 @@ Storage type examples:
 ### Sources
 
 Sources define endpoints and paths go get data into the pipeline. Currently, Pramen supports the following
-builtin sources:
+built-in sources:
 
 - **JDBC source** - allows fetching data from a relational database. The following RDBMS dialects are supported at
   the moment:
@@ -273,11 +273,11 @@ pramen.sources = [
     factory.class = "za.co.absa.pramen.core.source.ParquetSource"
     # ...
   }
-  ## etc
+  ## etc.
 ]
 ```
 
-Builtin sources:
+Built-in sources:
 
 | Factory Class                                 | Description               |
 |-----------------------------------------------|---------------------------|
@@ -367,9 +367,9 @@ Pramen supports loading data to the metastore from any format that Spark directl
 any format-specific options for the Spark reader (spark.read...). 
 
 For a Spark source you should define:
-- The format (`csv`, `json`, `parquet`, etc)
+- The format (`csv`, `json`, `parquet`, etc.)
 - [Optionally] a schema in a [Spark SQL notation](https://spark.apache.org/docs/latest/sql-ref-syntax-ddl-create-table-datasource.html).
-- Format-specific options (for CSV it would be a delimiter character etc).
+- Format-specific options (for CSV it would be a delimiter character etc.).
 - The presence and the format of the information date column. If no information column is
   present, Pramen will take the snapshot of all data at scheduled times.
 
@@ -543,7 +543,7 @@ The corresponding pipeline operation could look like this:
       
       # Date range to read the source table for. By default the job information date is used.
       # But you can define an arbitrary expression based on the information date.
-      # More: see the section of documentation regarding date expressions, an the list of functions allowed.
+      # More: see the section of documentation regarding date expressions, a the list of functions allowed.
       date {
         from = "@infoDate"
         to = "@infoDate"
@@ -865,7 +865,7 @@ class ExampleTransformer(conf: Config) extends Transformer {
 You can refer to the transformer from the pipeline by its fully qualified class name (`com.example.ExampleTransformer` in this case).
 
 In order to define a transformer you need to define 2 methods:
-- `validate()` Validation allows pre-condition checks and failure to execute gracefully, before the transfomer is initialized.
+- `validate()` Validation allows pre-condition checks and failure to execute gracefully, before the transformer is initialized.
   Alternativaly, throwing an exception inside this method is considered validation failure. 
 
   Possible validation return reasons:
@@ -1118,16 +1118,16 @@ pipeline is ran at.
 Well-designed pipelines standardize information dates for weekly and monthly jobs across ingestion and transformation jobs
 so that querying the data is easier.
 
-You can specify default output information date expressions in the config (usually `common.conf`) liek this:
+You can specify default output information date expressions in the config (usually `common.conf`) like this:
 ```conf
 pramen {
-  # Default infroamation date expression for daily jobs
+  # Default information date expression for daily jobs
   default.daily.output.info.date.expr = "@runDate"
 
-  # Default infroamation date expression for weekly jobs (Monday of the current week)
+  # Default information date expression for weekly jobs (Monday of the current week)
   default.weekly.output.info.date.expr = "lastMonday(@runDate)"
 
-  # Default infroamation date expression for monthly jobs (The first day of the month)
+  # Default information date expression for monthly jobs (The first day of the month)
   default.monthly.output.info.date.expr = "beginOfMonth(@runDate)"
 }
 ```
@@ -1393,7 +1393,7 @@ Here is a example:
   ]
   
   # Arbitrary key/value pairs to be passed to the transformer.
-  # Remember, you can refer enevironment variables here.
+  # Remember, you can refer environment variables here.
   option {
     key1 = "value1"
     key2 = "value2"
@@ -1447,7 +1447,7 @@ and 'python.class' to refer to the transformer.
   ]
   
   # Arbitrary key/value pairs to be passed to the transformer.
-  # Remember, you can refer enevironment variables here.
+  # Remember, you can refer environment variables here.
   option {
     key1 = "value1"
     key2 = "value2"
@@ -1658,7 +1658,7 @@ of operations is executed when you run a pipeline.
 
 Pramen framework and some of built-in jobs are packaged in `pramen-runner-x.y.z.jar`. In order to minimize chance of
 binary incompatibility with custom sources, sinks and transformers jobs that require additional libraries are packaged
-in `pramen-extras-x.y.z.jar`. If you are running a pipeline with builtin jobs make sure `pramen-extras-x.y.z.jar` is included
+in `pramen-extras-x.y.z.jar`. If you are running a pipeline with built-in jobs make sure `pramen-extras-x.y.z.jar` is included
 in the class path.
 
 ## Running on a single local computer
@@ -1692,7 +1692,7 @@ spark-submit --jars pramen-extras_2.11-x.y.z.jar \
 
 ### Running custom jobs
 
-To run builtin jobs just specify your custom jar with `--jars` when submitting the runner jar.
+To run built-in jobs just specify your custom jar with `--jars` when submitting the runner jar.
 
 ```sh
 spark-submit --jars custom-x.y.z.jar \
