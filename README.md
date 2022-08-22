@@ -109,7 +109,7 @@ Pramen consists of a few components:
 - `pramen-extras` - contains additional sources and sinks that are not part of the core since they add many additional
   dependencies.
 
-A Pramen data pipeline runs on a Spark cluster (standalone, Yarn, EMR, Databricks, etc). API and core are provided as
+A Pramen's data pipeline runs on a Spark cluster (standalone, Yarn, EMR, Databricks, etc). API and core are provided as
 libraries to link. Usually to define data pipeline components all you need link is the API. Running a pipeline requires
 creating an uber jar containing all the dependencies. 
 
