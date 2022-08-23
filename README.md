@@ -206,7 +206,7 @@ for example,
     <summary>Click to expand</summary>
 
     ```
-     schedule.type = "daily"
+     schedule.type = "weekly"
      schedule.days.of.week = [ 1 ] # Mondays
      info.date.expr = "@runDate - 2" # Saturday previous week
      
@@ -220,7 +220,7 @@ for example,
     <summary>Click to expand</summary>
 
     ```
-     schedule.type = "daily"
+     schedule.type = "weekly"
      schedule.days.of.week = [ 2 ] # Tuesdays
      info.date.expr = "@runDate - 1" # Monday
     
