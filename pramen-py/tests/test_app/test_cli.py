@@ -12,12 +12,15 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
+import pytest
+
 from chispa import assert_column_equality, assert_df_equality
 from click.testing import CliRunner
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import lit
 from pyspark.sql.types import DateType
 
+from pramen_py import MetastoreReader
 from pramen_py.app.cli import main
 
 
@@ -120,6 +123,41 @@ def test_transformations_run_with_info_date(
         "INFORMATION_DATE",
         "expected_information_date",
     )
+
+
+# TODO This test works only if run in standalone mode
+@pytest.mark.skip(reason="Can't work when run together with other tests.")
+def test_spark_config_precedence_in_transformation_2(repo_root, when, mocker):
+    """Ensure spark_config in yaml config takes precedence.
+
+    ExampleTransformation2 in its configuration has spark_config,
+    which should take precedence over the default config.
+    """
+    (
+        when(MetastoreReader, "get_table")
+        .called_with("table1_sync")
+        .then_return(mocker.Mock())
+    )
+    runner = CliRunner(mix_stderr=False)
+    runner.invoke(
+        main,
+        [
+            "-v",
+            "transformations",
+            "run",
+            "ExampleTransformation2",
+            "--config",
+            (repo_root / "tests/resources/real_config.yaml").as_posix(),
+            "--parse",
+            "argument",
+        ],
+        catch_exceptions=False,
+    )
+
+    session = SparkSession.getActiveSession()
+    assert session.conf.get("spark.driver.host") == "127.0.0.1"
+    assert session.conf.get("spark.executor.instances") == "1"
+    assert session.conf.get("spark.executor.cores") == "1"
 
 
 def test_transformations_run_cli_options(load_and_patch_config, repo_root):

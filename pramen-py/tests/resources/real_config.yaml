@@ -14,6 +14,12 @@ run_transformers:
 - info_date: 2022-02-15
   output_table: table_out1
   name: ExampleTransformation2
+  # optional spark configuration which is overwriting the default configured
+  # via PRAMENPY_SPARK_CONFIG environment variable
+  spark_config:
+    spark.driver.host: 127.0.0.1
+    spark.executor.instances: 1
+    spark.executor.cores: 1
   options: {}
 # configuration section of the metastore
 metastore_tables:

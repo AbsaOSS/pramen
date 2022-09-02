@@ -23,7 +23,7 @@ from pyspark.sql import SparkSession
 from typing_extensions import ParamSpec
 
 from pramen_py.app import env
-from pramen_py.models import TransformationConfig
+from pramen_py.models import RunTransformer, TransformationConfig
 from pramen_py.transformation.transformation_base import (
     T_EXTRA_OPTIONS,
     Transformation,
@@ -33,6 +33,32 @@ from pramen_py.utils import get_or_create_spark_session
 
 T_TRANSFORMATION = TypeVar("T_TRANSFORMATION", bound=Transformation)
 CLI_CALLBACK = ParamSpec("CLI_CALLBACK")
+
+
+def get_current_transformer_cfg(
+    T: Type[T_TRANSFORMATION],
+    config: TransformationConfig,
+) -> RunTransformer:
+    """Find corresponding transformer in the config.
+
+    In case if the current transformer is not defined - raise an error.
+    """
+    try:
+        transformer_to_run = next(
+            filter(
+                lambda t: t.name == T.__name__,
+                config.run_transformers,
+            )
+        )
+    except StopIteration:
+        raise ValueError(
+            f"{T.__name__} transformer missed "
+            f"in the configuration. Currently the following transformers "
+            f"are available in the configuration:\n"
+            f"{chr(10).join(map(str,config.run_transformers))}"
+        )
+    else:
+        return transformer_to_run
 
 
 @attrs.define(auto_attribs=True, slots=True)
@@ -151,7 +177,10 @@ class Runner(metaclass=abc.ABCMeta):
         the tranformation.
         """
 
-        self.spark = self.spark or get_or_create_spark_session(env)
+        self.spark = self.spark or get_or_create_spark_session(
+            env,
+            spark_config=get_current_transformer_cfg(T, config).spark_config,
+        )
         ...
 
     @abc.abstractmethod
