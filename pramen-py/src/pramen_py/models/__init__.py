@@ -89,6 +89,7 @@ class RunTransformer:
     info_date: datetime.date = attrs.field()
     output_table: str = attrs.field()
     options: Dict[str, str] = attrs.field(factory=dict)
+    spark_config: Dict[str, str] = attrs.field(factory=dict)
 
     def __attrs_post_init__(self) -> None:
         # converter to datetime

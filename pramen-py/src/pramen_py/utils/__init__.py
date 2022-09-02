@@ -45,6 +45,12 @@ DATE_FMTS = {
     "yyyyMMdd": "%Y%m%d",
 }
 DEFAULT_DATE_FMT = "yyyy-MM-dd"
+SPARK_DEFAULT_CONFIG = {
+    "spark.master": "yarn",
+    "spark.submit.deployMode": "client",
+    "spark.dynamicAllocation.enabled": "true",
+    "spark.dynamicAllocation.maxExecutors": "32",
+}
 
 
 def convert_str_to_date(
@@ -121,8 +127,17 @@ def coro(
 
 def get_or_create_spark_session(
     env: Env,
+    spark_config: Optional[Dict[str, str]] = None,
     force_recreate: bool = False,
 ) -> SparkSession:
+    """Create or return existing SparkSession.
+
+    In case force_recreate=True, the current session will be
+    destroyed and a new one will be created.
+
+    spark_config takes precedence over config defined via
+    environment variable PRAMENPY_SPARK_CONFIG
+    """
     logger.info("Preparing SparkSession")
     os.environ.update(
         {
@@ -136,15 +151,11 @@ def get_or_create_spark_session(
         "spark.app.name",
         "pramen-py",
     )
-    for k, v in env.dict(
+    selected_config = spark_config or env.dict(
         "PRAMENPY_SPARK_CONFIG",
-        {
-            "spark.master": "yarn",
-            "spark.submit.deployMode": "client",
-            "spark.dynamicAllocation.enabled": "true",
-            "spark.dynamicAllocation.maxExecutors": "32",
-        },
-    ).items():
+        SPARK_DEFAULT_CONFIG,
+    )
+    for k, v in selected_config.items():
         logger.debug(f"Setting spark config option: {k} to {v}")
         session.config(k, v)
 

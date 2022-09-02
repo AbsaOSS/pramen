@@ -38,6 +38,10 @@ def test_config_structure_unstructure(repo_root, monkeypatch) -> None:
         except KeyError:
             t["records_per_partition"] = 500000
 
+    # if ExampleTransformation1 do not have the spark_config,
+    # the field in structured variant is presented with the value None
+    config["run_transformers"][0]["spark_config"] = {}
+
     # deserialize the config
     t_config_unstructured = cattr.unstructure(t_config_structured)
 
@@ -64,6 +68,7 @@ def test_structured_config_is_deserialized_properly(repo_root, monkeypatch):
                 "name": "ExampleTransformation1",
                 "info_date": "2022-02-14",
                 "output_table": "table_out1",
+                "spark_config": {},
                 "options": {},
             },
             {
@@ -71,6 +76,11 @@ def test_structured_config_is_deserialized_properly(repo_root, monkeypatch):
                 "info_date": "2022-02-15",
                 "output_table": "table_out1",
                 "options": {},
+                "spark_config": {
+                    "spark.driver.host": "127.0.0.1",
+                    "spark.executor.cores": "1",
+                    "spark.executor.instances": "1",
+                },
             },
         ],
         "metastore_tables": [

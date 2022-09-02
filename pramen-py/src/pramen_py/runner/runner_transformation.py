@@ -26,12 +26,12 @@ from py4j.protocol import Py4JJavaError  # type: ignore
 
 from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.app import env
-from pramen_py.models import (
-    RunTransformer,
-    TransformationConfig,
-    serialization_callback,
+from pramen_py.models import TransformationConfig, serialization_callback
+from pramen_py.runner.runner_base import (
+    CLI_CALLBACK,
+    Runner,
+    get_current_transformer_cfg,
 )
-from pramen_py.runner.runner_base import CLI_CALLBACK, Runner
 from pramen_py.transformation.transformation_base import (
     T_EXTRA_OPTIONS,
     Transformation,
@@ -65,32 +65,6 @@ def overwrite_info_dates(
             )
             object.__setattr__(transformer, "info_date", info_date_)
     return config
-
-
-def get_current_transformer_cfg(
-    T: Type[T_TRANSFORMATION],
-    config: TransformationConfig,
-) -> RunTransformer:
-    """Find corresponding transformer in the config.
-
-    In case if the current transformer is not defined - raise an error.
-    """
-    try:
-        transformer_to_run = next(
-            filter(
-                lambda t: t.name == T.__name__,
-                config.run_transformers,
-            )
-        )
-    except StopIteration:
-        raise ValueError(
-            f"{T.__name__} transformer missed "
-            f"in the configuration. Currently the following transformers "
-            f"are available in the configuration:\n"
-            f"{chr(10).join(map(str,config.run_transformers))}"
-        )
-    else:
-        return transformer_to_run
 
 
 def discover_transformations(
