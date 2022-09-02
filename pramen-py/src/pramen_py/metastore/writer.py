@@ -12,39 +12,24 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import datetime
 import os.path
-
-from typing import List
 
 import attrs
 
 from loguru import logger
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 
-from pramen_py.models import MetastoreTable, TableFormat
+from pramen_py.metastore.writer_base import MetastoreWriterBase
+from pramen_py.models import TableFormat
 from pramen_py.models.utils import get_metastore_table
 
 
 @attrs.define(auto_attribs=True, slots=True)
-class MetastoreWriter:
+class MetastoreWriter(MetastoreWriterBase):
     """Adds writing capabilities to the Metastore.
 
     Makes it possible to refer tables based on it name and configurations.
     """
-
-    spark: SparkSession = attrs.field()
-    config: List[MetastoreTable] = attrs.field()
-    info_date: datetime.date = attrs.field()
-
-    @config.validator
-    def check_config(  # type: ignore
-        self,
-        _,
-        value: List[MetastoreTable],
-    ) -> None:
-        for table in value:
-            assert isinstance(table, MetastoreTable)
 
     def write(
         self,

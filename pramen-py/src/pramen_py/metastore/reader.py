@@ -15,23 +15,23 @@
 import datetime
 import os.path
 
-from typing import List, Optional
+from typing import Optional
 
 import attrs
 import pyspark.sql.functions as F
 import pyspark.sql.types as T
 
 from loguru import logger
-from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql import DataFrame
 
-from pramen_py.models import MetastoreTable, TableFormat
+from pramen_py.metastore.reader_base import MetastoreReaderBase
+from pramen_py.models import TableFormat
 from pramen_py.models.utils import get_metastore_table
 from pramen_py.utils import convert_date_to_str, convert_str_to_date
-from pramen_py.utils.file_system import FileSystemUtils
 
 
 @attrs.define(auto_attribs=True, slots=True)
-class MetastoreReader:
+class MetastoreReader(MetastoreReaderBase):
     """Interact with the data inside the file system in a convenient way.
 
     Provides interfaces for checking the data availability and
@@ -41,23 +41,6 @@ class MetastoreReader:
     the configuration. If the table_name will be missing in the config
     a KeyError will be raised.
     """
-
-    spark: SparkSession = attrs.field()
-    config: List[MetastoreTable] = attrs.field()
-    info_date: datetime.date = attrs.field()
-    fs_utils: FileSystemUtils = attrs.field(init=False)
-
-    def __attrs_post_init__(self) -> None:
-        self.fs_utils = FileSystemUtils(spark=self.spark)
-
-    @config.validator
-    def check_config(
-        self,
-        _: attrs.Attribute,  # type: ignore
-        value: List[MetastoreTable],
-    ) -> None:
-        for table in value:
-            assert isinstance(table, MetastoreTable)
 
     def get_table(
         self,
