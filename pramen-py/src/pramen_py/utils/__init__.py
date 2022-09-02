@@ -147,6 +147,16 @@ def get_or_create_spark_session(
             )
         }
     )
+
+    maybe_active_session = SparkSession.getActiveSession()
+    if maybe_active_session and force_recreate:
+        logger.info("Force recreating a spark session")
+        spark = maybe_active_session
+        logger.info("Stopping active session and waiting for 3s...")
+        spark.sparkContext.stop()
+        spark.stop()
+        sleep(3)
+
     session = SparkSession.builder.config(
         "spark.app.name",
         "pramen-py",
@@ -159,13 +169,6 @@ def get_or_create_spark_session(
         logger.debug(f"Setting spark config option: {k} to {v}")
         session.config(k, v)
 
-    if force_recreate:
-        logger.info("Force recreating a spark session")
-        spark = session.getOrCreate()
-        logger.info("Stopping active session and waiting for 3s...")
-        spark.sparkContext.stop()
-        spark.stop()
-        sleep(3)
     spark = session.getOrCreate()
     logger.info("SparkSession is ready")
     return spark
