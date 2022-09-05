@@ -152,12 +152,12 @@ object CmdLineConfig {
       case None    => conf11
     }
 
-    val conf13 = conf11.withValue(VERBOSE, ConfigValueFactory.fromAnyRef(cmd.verbose))
+    val conf13 = conf12.withValue(VERBOSE, ConfigValueFactory.fromAnyRef(cmd.verbose))
 
     if (cmd.mode.nonEmpty) {
       conf13.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
     } else {
-      conf12
+      conf13
     }
   }
 

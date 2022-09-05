@@ -127,6 +127,22 @@ class CmdLineLineConfigSuite extends WordSpec {
       assert(!config.hasPath(IS_RERUN))
     }
 
+    "return the original config if verbose is not mentioned" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
+      val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
+
+      assert(config.hasPath(VERBOSE))
+      assert(!config.getBoolean(VERBOSE))
+    }
+
+    "return a modified config if verbose is true" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--verbose"))
+      val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
+
+      assert(config.hasPath(VERBOSE))
+      assert(config.getBoolean(VERBOSE))
+    }
+
     "return a modified config if rerun info date is specified" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--rerun", "2020-08-16"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
