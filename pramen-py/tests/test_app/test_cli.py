@@ -12,8 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import pytest
-
 from chispa import assert_column_equality, assert_df_equality
 from click.testing import CliRunner
 from pyspark.sql import SparkSession
@@ -125,8 +123,6 @@ def test_transformations_run_with_info_date(
     )
 
 
-# TODO This test works only if run in standalone mode
-@pytest.mark.skip(reason="Can't work when run together with other tests.")
 def test_spark_config_precedence_in_transformation_2(repo_root, when, mocker):
     """Ensure spark_config in yaml config takes precedence.
 

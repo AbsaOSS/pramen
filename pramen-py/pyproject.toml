@@ -81,7 +81,7 @@ ignore_errors = true
 
 [tool.pytest.ini_options]
 minversion = "6.0.0"
-addopts = "-vv -s --tb=native"
+addopts = "-vv -s --tb=native -n auto"
 testpaths = "tests/"
 
 [tool.poetry]
@@ -144,6 +144,7 @@ coverage = { extras = ["toml"], version = "^6.2" }
 mypy = "^0.931"
 black = "^22.1.0"
 pre-commit = "^2.17.0"
+pytest-xdist = "^2.5.0"
 
 [build-system]
 requires = ["poetry>=1.2.0"]
