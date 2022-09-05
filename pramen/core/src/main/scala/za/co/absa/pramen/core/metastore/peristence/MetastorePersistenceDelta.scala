@@ -22,6 +22,7 @@ import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.utils.Emoji.SUCCESS
 import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.time.LocalDate
@@ -105,8 +106,8 @@ class MetastorePersistenceDelta(query: Query,
     val stats = getStats(infoDate)
 
     stats.dataSizeBytes match {
-      case Some(size) => log.info(s"Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(size)}) to ${query.query}")
-      case None => log.info(s"Successfully saved ${stats.recordCount} records to ${query.query}")
+      case Some(size) => log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(size)}) to ${query.query}")
+      case None => log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records to ${query.query}")
     }
 
     stats

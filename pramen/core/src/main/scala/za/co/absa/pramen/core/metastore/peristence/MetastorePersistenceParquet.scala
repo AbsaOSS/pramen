@@ -21,6 +21,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.utils.Emoji.SUCCESS
 import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.sql.Date
@@ -115,7 +116,7 @@ class MetastorePersistenceParquet(path: String,
 
     val stats = getStats(infoDate)
 
-    log.info(s"Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+    log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
 
     stats
   }

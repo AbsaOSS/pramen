@@ -67,6 +67,7 @@ object RuntimeConfig {
   val LOAD_DATE_TO = "pramen.load.date.to"
   val PARALLEL_TASKS = "pramen.parallel.tasks"
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
+  val VERBOSE = "pramen.verbose"
 
   def fromConfig(conf: Config): RuntimeConfig = {
     val infoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
