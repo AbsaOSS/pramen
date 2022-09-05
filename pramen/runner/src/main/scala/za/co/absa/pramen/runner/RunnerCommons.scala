@@ -21,6 +21,7 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.log4j.{Level, Logger}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.app.config.RuntimeConfig.VERBOSE
 import za.co.absa.pramen.core.utils.{ConfigUtils, JavaXConfig}
 import za.co.absa.pramen.runner.cmd.CmdLineConfig
 import za.co.absa.pramen.runner.config.Constants
@@ -49,9 +50,11 @@ object RunnerCommons {
 
     ConfigUtils.logEffectiveConfigProps(conf, Constants.CONFIG_KEYS_TO_REDACT, Constants.CONFIG_WORDS_TO_REDACT)
 
-    // Switch logging level to WARN
-    Logger.getLogger("org").setLevel(Level.WARN)
-    Logger.getLogger("akka").setLevel(Level.WARN)
+    if (!conf.getBoolean(VERBOSE)) {
+      // Switch logging level to WARN
+      Logger.getLogger("org").setLevel(Level.WARN)
+      Logger.getLogger("akka").setLevel(Level.WARN)
+    }
 
     conf
   }

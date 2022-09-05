@@ -42,7 +42,8 @@ case class CmdLineConfig(
                           dateTo: Option[LocalDate] = None,
                           mode: String = "",
                           inverseOrder: Option[Boolean] = None,
-                          tableNum: Option[Int] = None
+                          tableNum: Option[Int] = None,
+                          verbose: Boolean = false
                         )
 
 object CmdLineConfig {
@@ -61,6 +62,7 @@ object CmdLineConfig {
     val parser = new CmdParser("spark-submit pipeline-runner.jar " +
       "za.co.absa.pramen.core.runner.PipelineRunner " +
       "--workflow <Workflow Configuration Path> " +
+      "[--verbose] "  +
       "[--files <comma-separated list of files> " +
       "[--ops output_table1,output_table2,...]" +
       "[--date <Current date override (yyyy-MM-dd)>] " +
@@ -150,8 +152,10 @@ object CmdLineConfig {
       case None    => conf11
     }
 
+    val conf13 = conf11.withValue(VERBOSE, ConfigValueFactory.fromAnyRef(cmd.verbose))
+
     if (cmd.mode.nonEmpty) {
-      conf12.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
+      conf13.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
     } else {
       conf12
     }
@@ -225,6 +229,10 @@ object CmdLineConfig {
     opt[Unit]("check-new-only").optional().action((_, config) =>
       config.copy(checkOnlyNewData = Some(true)))
       .text("When specified, only new data from the source will be checked. The 'track.days' option will be ignored.")
+
+    opt[Unit]("verbose").optional().action((_, config) =>
+      config.copy(verbose = true))
+      .text("When specified, more detailed logs will be generated.")
 
     help("help").text("prints this usage text")
   }
