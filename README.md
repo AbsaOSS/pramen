@@ -1835,20 +1835,22 @@ Specify which dates to run:
 
 Execution options:
 
-| Argument                   | Example             | Description                                                                                                                                                                                                         |
-|----------------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| --dry-run <true/false>]    | `--dry-run true`    | If `true` the pipeline won't be executed. Pramen will print which job it would have run.                                                                                                                       |
-| --check-late-only          | `--check-late-only` | If specified, Pramen will do only late data checks and checks for retrospective updates. It won't run jobs that are not yet late. Useful for catch-up job schedules.                                           |
-| --check-new-only           | `--check-new-only`  | If specified, Pramen will not check for late and updated data and will run only jobs scheduled for the current date.                                                                                           |
-| --undercover <true/false>  | `--undercover true` | If true, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
+| Argument          | Example             | Description                                                                                                                                                                                                         |
+|-------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --dry-run         | `--dry-run`         | If specified the pipeline won't be executed. Pramen will print which job it would have run.                                                                                                                         |
+| --verbose         | `--verbose`         | If specified, application logs will include more Spark execution details.                                                                                                                                           |
+| --check-late-only | `--check-late-only` | If specified, Pramen will do only late data checks and checks for retrospective updates. It won't run jobs that are not yet late. Useful for catch-up job schedules.                                                |
+| --check-new-only  | `--check-new-only`  | If specified, Pramen will not check for late and updated data and will run only jobs scheduled for the current date.                                                                                                |
+| --undercover      | `--undercover`      | If specified, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
 
 ### Command line examples
 
 The below examples assume the spark application submit command is embedded in `run.sh` script. 
 
-Load the table or run the transformation for an explicit date, regardless of if the data is already loaded.
+Load the table or run the transformation for an explicit date, regardless of if the data is already loaded. Generate
+more detailed logs.
 ```sh
- ./run.sh --ops mytable --rerun 2021-01-01
+ ./run.sh --ops mytable --rerun 2021-01-01 --verbose
 ```
 
 Load the table or run the transformation for all info dates between `2020-01-01` and `2021-04-01` skipping dates for
@@ -1867,7 +1869,7 @@ Load the table or run the transformation for all info dates between `2020-01-01`
 dates for which data is already loaded. Do not update bookkeeping information so that dependent jobs won't be
 triggerred:
 ```sh
-./run.sh --ops mytable --date-from 2020-01-01 --date-to 2021-04-01 --run-mode force --undercover true
+./run.sh --ops mytable --date-from 2020-01-01 --date-to 2021-04-01 --run-mode force --undercover
 ```
 
 ## Expression syntax
