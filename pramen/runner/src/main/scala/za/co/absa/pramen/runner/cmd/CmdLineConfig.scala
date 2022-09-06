@@ -43,7 +43,7 @@ case class CmdLineConfig(
                           mode: String = "",
                           inverseOrder: Option[Boolean] = None,
                           tableNum: Option[Int] = None,
-                          verbose: Boolean = false
+                          verbose: Option[Boolean] = None
                         )
 
 object CmdLineConfig {
@@ -62,16 +62,16 @@ object CmdLineConfig {
     val parser = new CmdParser("spark-submit pipeline-runner.jar " +
       "za.co.absa.pramen.core.runner.PipelineRunner " +
       "--workflow <Workflow Configuration Path> " +
-      "[--verbose] "  +
       "[--files <comma-separated list of files> " +
       "[--ops output_table1,output_table2,...]" +
       "[--date <Current date override (yyyy-MM-dd)>] " +
       "[--rerun <The date to force rerun (yyyy-MM-dd)>] " +
+      "[--verbose] "  +
+      "[--dry-run] " +
       "[--check-late-only]" +
       "[--check-new-only] " +
-      "[--dry-run <true/false>] " +
+      "[--undercover] " +
       "[--use-lock <true/false>] " +
-      "[--undercover <true/false>] " +
       "[--date-from <date_from>]" +
       "[--date-to <date_to>]" +
       "[--run-mode { fill_gaps | check_updates | force }]" +
@@ -152,7 +152,10 @@ object CmdLineConfig {
       case None    => conf11
     }
 
-    val conf13 = conf12.withValue(VERBOSE, ConfigValueFactory.fromAnyRef(cmd.verbose))
+    val conf13 = cmd.verbose match {
+      case Some(v) => conf12.withValue(VERBOSE, ConfigValueFactory.fromAnyRef(v))
+      case None    => conf12
+    }
 
     if (cmd.mode.nonEmpty) {
       conf13.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
@@ -210,16 +213,16 @@ object CmdLineConfig {
       config.copy(tableNum = Option(value)))
       .text("Run the job only for the specified table number")
 
-    opt[Boolean]("dry-run").optional().action((value, config) =>
-      config.copy(dryRun = Option(value)))
+    opt[Unit]("dry-run").optional().action((_, config) =>
+      config.copy(dryRun = Some(true)))
       .text("If true, no actual data processing will be done.")
 
     opt[Boolean]("use-lock").optional().action((value, config) =>
       config.copy(useLock = Option(value)))
       .text("If true (default) a lock is used when writing to a table")
 
-    opt[Boolean]("undercover").optional().action((value, config) =>
-      config.copy(undercover = Option(value)))
+    opt[Unit]("undercover").optional().action((_, config) =>
+      config.copy(undercover = Some(true)))
       .text("If true, no updates will be done to the bookkeeping data (Ensure you are know what you are doing!)")
 
     opt[Unit]("check-late-only").optional().action((_, config) =>
@@ -231,7 +234,7 @@ object CmdLineConfig {
       .text("When specified, only new data from the source will be checked. The 'track.days' option will be ignored.")
 
     opt[Unit]("verbose").optional().action((_, config) =>
-      config.copy(verbose = true))
+      config.copy(verbose = Some(true)))
       .text("When specified, more detailed logs will be generated.")
 
     help("help").text("prints this usage text")
