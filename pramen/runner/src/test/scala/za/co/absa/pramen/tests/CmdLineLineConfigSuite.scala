@@ -59,17 +59,16 @@ class CmdLineLineConfigSuite extends WordSpec {
       }
 
       "parse dry-run flag when dry run = true" in {
-        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run", "true"))
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run"))
         assert(cmd.nonEmpty)
         assert(cmd.get.dryRun.nonEmpty)
         assert(cmd.get.dryRun.get)
       }
 
-      "parse dry-run flag when dry run = false" in {
-        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run", "false"))
+      "ignore dry-run if it is not specified" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
         assert(cmd.nonEmpty)
-        assert(cmd.get.dryRun.nonEmpty)
-        assert(!cmd.get.dryRun.get)
+        assert(cmd.get.dryRun.isEmpty)
       }
 
       "parse check late data only if --check-late-only = true" in {
@@ -107,18 +106,17 @@ class CmdLineLineConfigSuite extends WordSpec {
       assert(ConfigUtils.getOptListStrings(config, RUN_TABLES) == Seq("table_1", "table_2", "table_3"))
     }
 
-    "return the original config if dry-run is false" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run", "false"))
+    "return the original config if dry-run is not specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
       assert(!config.hasPath(CURRENT_DATE))
-      assert(config.hasPath(DRY_RUN))
-      assert(!config.getBoolean(DRY_RUN))
+      assert(!config.hasPath(DRY_RUN))
       assert(!config.hasPath(IS_RERUN))
     }
 
     "return a modified config if dry-run is true" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run", "true"))
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--dry-run"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
       assert(config.hasPath(DRY_RUN))
@@ -131,8 +129,7 @@ class CmdLineLineConfigSuite extends WordSpec {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
-      assert(config.hasPath(VERBOSE))
-      assert(!config.getBoolean(VERBOSE))
+      assert(!config.hasPath(VERBOSE))
     }
 
     "return a modified config if verbose is true" in {
@@ -208,7 +205,7 @@ class CmdLineLineConfigSuite extends WordSpec {
     }
 
     "return the modified config if cmd line arguments are provided" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--rerun", "2020-08-16", "--dry-run", "true", "--check-late-only"))
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--rerun", "2020-08-16", "--dry-run", "--check-late-only"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
       assert(config.hasPath(CURRENT_DATE))
@@ -220,7 +217,7 @@ class CmdLineLineConfigSuite extends WordSpec {
     }
 
     "return the modified config if undercover = true" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--undercover", "true"))
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--undercover"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
       assert(config.hasPath(UNDERCOVER))
@@ -246,13 +243,11 @@ class CmdLineLineConfigSuite extends WordSpec {
       assert(!config.getBoolean(USE_LOCK))
     }
 
-    "return the modified config if undercover = false" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--undercover", "false"))
+    "return the origina config if undercover is not specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(UNDERCOVER))
-
-      assert(!config.getBoolean(UNDERCOVER))
+      assert(!config.hasPath(UNDERCOVER))
     }
 
     "return None on invalid run mode" in {
