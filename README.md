@@ -103,6 +103,11 @@ In addition to basic error notification, typical operational warnings are genera
    ```
 
 # Building the project
+
+The primary build tool for the project is SBT. Maven is used as a fallback for development only and integration with 
+IDEs that have better Maven support. Maven builds should not be used for production builds.
+
+## Project structure
 Pramen consists of a few components:
 - `pramen-api` - contains traits (interfaces) for defining custom transformations, sources and sinks. 
 - `pramen-core` - contains the orchestration and run logic.
