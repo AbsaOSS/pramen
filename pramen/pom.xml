@@ -286,7 +286,7 @@
             <dependency>
                 <groupId>com.github.yruslan</groupId>
                 <artifactId>channel_scala_${scala.compat.version}</artifactId>
-                <version>0.1.3</version>
+                <version>0.1.4</version>
             </dependency>
 
             <!-- Logging -->

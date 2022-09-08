@@ -28,7 +28,7 @@ object Versions {
   val hsqlDbVersion = "2.5.1"
   val slickVersion = "3.3.3"
   val scoptVersion = "3.7.1"
-  val channelsVersion = "0.1.3"
+  val channelsVersion = "0.1.4"
   val kafkaClientVersion = "2.5.1"
   val javaXMailVersion = "1.6.2"
   val embeddedMongoDbVersion = "2.2.0"
