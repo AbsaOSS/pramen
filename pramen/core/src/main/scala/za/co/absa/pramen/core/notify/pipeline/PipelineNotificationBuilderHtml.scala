@@ -124,7 +124,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withRawParagraph(
       s"""Regards,<br>
          |Pramen<br>
-         |${BuildProperties.getFullVersion}
+         |version ${BuildProperties.getFullVersion}
          |""".stripMargin
     )
 
