@@ -173,6 +173,8 @@ abstract class TaskRunnerBase(conf: Config,
       val dfTransformed = applyFilters(
         applyTransformations(postProcessed, task.job.operation.schemaTransformations),
         task.job.operation.filters,
+        task.infoDate,
+        task.infoDate,
         task.infoDate
       )
 

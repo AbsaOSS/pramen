@@ -74,7 +74,9 @@ class SinkJob(operationDef: OperationDef,
     try {
       val dfTransformed = applyTransformations(df, sinkTable.transformations)
 
-      val dfFiltered = applyFilters(dfTransformed, sinkTable.filters, infoDate)
+      val (from, to) = getInfoDateRange(infoDate, sinkTable.rangeFromExpr, sinkTable.rangeToExpr)
+
+      val dfFiltered = applyFilters(dfTransformed, sinkTable.filters, infoDate, from, to)
 
       val dfFinal = if (sinkTable.columns.nonEmpty) {
         dfFiltered.select(sinkTable.columns.head, sinkTable.columns.tail: _*)

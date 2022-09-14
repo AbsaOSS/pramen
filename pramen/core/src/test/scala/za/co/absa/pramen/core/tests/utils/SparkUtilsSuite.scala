@@ -129,7 +129,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
 
   "applyFilters" should {
     "do nothing for empty filters" in {
-      val dfOut = applyFilters(exampleDf, Nil, null)
+      val dfOut = applyFilters(exampleDf, Nil, null, null, null)
 
       assert(dfOut.count() == 3)
     }
@@ -137,7 +137,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
     "apply specified filters" in {
       val filters = List("b > 1")
 
-      val dfOut = applyFilters(exampleDf, filters, infoDate)
+      val dfOut = applyFilters(exampleDf, filters, infoDate, infoDate, infoDate)
 
       assert(dfOut.count() == 2)
     }
@@ -145,7 +145,25 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
     "apply filters with an info date" in {
       val filters = List("b < unix_timestamp(@infoDate)")
 
-      val dfOut = applyFilters(exampleDf, filters, infoDate)
+      val dfOut = applyFilters(exampleDf, filters, infoDate, infoDate, infoDate)
+
+      assert(dfOut.count() == 3)
+    }
+
+    "apply filters with a date as string" in {
+      val filters = List("b < unix_timestamp(date'@date')")
+
+      val dfOut = applyFilters(exampleDf, filters, infoDate, infoDate, infoDate)
+
+      assert(dfOut.count() == 3)
+    }
+
+    "apply filters with a date range" in {
+      val filters = List("b >= unix_timestamp(date'@dateFrom') AND b < unix_timestamp(date'@dateTo')")
+
+      val inputDf = exampleDf.withColumn("b", lit(1639824275))
+
+      val dfOut = applyFilters(inputDf, filters, infoDate, infoDate.minusDays(1), infoDate.plusDays(1))
 
       assert(dfOut.count() == 3)
     }

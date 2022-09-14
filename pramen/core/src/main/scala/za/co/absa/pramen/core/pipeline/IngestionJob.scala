@@ -83,7 +83,9 @@ class IngestionJob(operationDef: OperationDef,
                      conf: Config): DataFrame = {
     val dfTransformed = applyTransformations(df, sourceTable.transformations)
 
-    val dfFiltered = applyFilters(dfTransformed, sourceTable.filters, infoDate)
+    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+
+    val dfFiltered = applyFilters(dfTransformed, sourceTable.filters, infoDate, from, to)
 
     val dfFinal = if (sourceTable.columns.nonEmpty) {
       dfFiltered.select(sourceTable.columns.head, sourceTable.columns.tail: _*)
