@@ -95,6 +95,14 @@ class TableReaderJdbcNativeSuite extends WordSpec with RelationalDbFixture with 
       assert(count == 1)
     }
 
+    "return the actual count for a single end day" in {
+      val reader = getReader(s"SELECT * FROM $tableName WHERE founded = '@date'")
+
+      val count = reader.getRecordCount(LocalDate.parse("2005-03-29"), LocalDate.parse("2005-03-29"))
+
+      assert(count == 1)
+    }
+
     "return the actual count for a date range" in {
       val reader = getReader(s"SELECT * FROM $tableName WHERE founded >= '@infoDateBegin' AND founded <= '@infoDateEnd'")
 
@@ -172,7 +180,7 @@ class TableReaderJdbcNativeSuite extends WordSpec with RelationalDbFixture with 
         |  "FOUNDED" : "2016-12-30"
         |} ]"""
 
-      val reader = getReader(s"SELECT id, name, email, founded FROM $tableName WHERE founded >= '@infoDateBegin' AND founded <= '@infoDateEnd'")
+      val reader = getReader(s"SELECT id, name, email, founded FROM $tableName WHERE founded >= '@dateFrom' AND founded <= '@dateTo'")
 
       val df = reader.getData(LocalDate.parse("2000-01-01"), LocalDate.parse("2017-12-31"))
       assert(df.isDefined)
