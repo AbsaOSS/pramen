@@ -59,6 +59,9 @@ class TableReaderJdbcNative(queryExpression: String,
 
   private def getSql(infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     queryExpression
+      .replaceAll("@dateFrom", dateFormatter.format(infoDateBegin))
+      .replaceAll("@dateTo", dateFormatter.format(infoDateEnd))
+      .replaceAll("@date", dateFormatter.format(infoDateEnd))
       .replaceAll("@infoDateBegin", dateFormatter.format(infoDateBegin))
       .replaceAll("@infoDateEnd", dateFormatter.format(infoDateEnd))
       .replaceAll("@infoDate", dateFormatter.format(infoDateEnd))

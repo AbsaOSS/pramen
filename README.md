@@ -1406,10 +1406,6 @@ Here is an example configuration for a JDBC source:
     {
       input.db.table = "table2"
       output.metastore.table = "table2"
-      
-      # You can define range queries to the input table by providing date expressions like this:
-      date.from = "@infoDate - 1"
-      date.to = "@infoDate"
     },
     {
       input.db.table = "table3"
@@ -1421,8 +1417,12 @@ Here is an example configuration for a JDBC source:
       columns = [ ]
     },
     {
-      input.sql = "SELECT * FROM table4 WHERE info_date = date'@infoDate'"
+      input.sql = "SELECT * FROM table4 WHERE info_date = date'@dateFrom'"
       output.metastore.table = "table4"
+      
+      # You can define range queries to the input table by providing date expressions like this:
+      date.from = "@infoDate - 1"
+      date.to = "@infoDate"
       
       # You can override any of source settings here 
       source {
@@ -1435,6 +1435,22 @@ Here is an example configuration for a JDBC source:
 ```
 
 Full example of JDBC ingestion pipelines: [examples/jdbc_sourcing](examples/jdbc_sourcing)
+
+
+For example, let's have this range defined for a table:
+```
+   date.from = '@infoDate-2' # 2022-07-01
+   date.to   = '@infoDate'   # 2022-07-03
+```
+
+When you use `input.sql = "..."` you can refer to the date range defined for the table `date.from` and `date.to` using the
+following variables:
+
+| Variable    | Example expression                               | Actual substitution                               |
+|-------------|--------------------------------------------------|---------------------------------------------------|
+| `@dateFrom` | SELECT * FROM table WHERE date > **'@dateFrom'** | SELECT * FROM table WHERE date > **'2022-07-01'** |
+| `@dateTo`   | SELECT * FROM table WHERE date > **'@dateTo'**   | SELECT * FROM table WHERE date > **'2022-07-03'** |
+| `@date`     | SELECT * FROM table WHERE date > **'@date'**     | SELECT * FROM table WHERE date > **'2022-07-03'** |
 
 Here is an example configuration for a Parquet on Hadoop source. The biggest difference is that
 this source uses `input.path` rather than `input.db.table` to refer to the source data. Filters,
