@@ -175,6 +175,7 @@ class StringUtilsSuite extends WordSpec {
       assert(escapeString("1-1") == "1-1")
       assert(escapeString("a#") == "\"a#\"")
       assert(escapeString("a>=b") == "\"a>=b\"")
+      assert(escapeString("'a'") == "\"'a'\"")
     }
   }
 

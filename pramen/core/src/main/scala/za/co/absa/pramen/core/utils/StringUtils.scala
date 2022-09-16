@@ -41,7 +41,7 @@ object StringUtils {
         throw new IllegalArgumentException(s"Recursive substitutions are not allowed in $key = $value.")
       }
 
-      acc.replaceAllLiterally(variable, value)
+      acc.replace(variable, value)
     }
   }
 
@@ -147,7 +147,7 @@ object StringUtils {
 
   /** Wraps in quotes and escape special characters if necessary. */
   def escapeString(s: String): String = {
-    if (s.forall(a => !" =<>#*+~`@!&*()[]{}\\\n\"".contains(a)))
+    if (s.forall(a => !" =<>#*+~`'@!&*()[]{}\\\n\"".contains(a)))
       s"$s"
     else {
       // Escape quotes, back slashed and line ending characters
