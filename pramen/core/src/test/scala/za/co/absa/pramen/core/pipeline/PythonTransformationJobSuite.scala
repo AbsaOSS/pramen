@@ -268,6 +268,7 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
         |- info_date: 2022-02-18
         |  output_table: table2
         |  name: python_class
+        |  spark_config: {}
         |  options: {}
         |metastore_tables:
         |- name: table1
@@ -308,6 +309,7 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
           |- info_date: 2022-02-18
           |  output_table: table2
           |  name: python_class
+          |  spark_config: {}
           |  options: {}
           |metastore_tables:
           |- name: table1
@@ -332,16 +334,20 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
 
       val (_, _, job, _) = getUseCase()
 
-      val actual = job.getYamlConfig(infoDate, conf)
+      val actual = job.getYamlConfig(infoDate)
 
       compareText(actual, expected)
     }
-    "generate yaml config from the metastore and task definition with extra options" in {
+    "generate yaml config from the metastore and task definition with extra options and Spark config" in {
       val expected =
         """run_transformers:
           |- info_date: 2022-02-18
           |  output_table: table2
           |  name: python_class
+          |  spark_config:
+          |    spark.driver.host: "127.0.0.1"
+          |    spark.executor.cores: "1"
+          |    spark.executor.instances: "1"
           |  options:
           |    key.2: "value'2'"
           |    key1: "value1"
@@ -366,9 +372,19 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
           |    start: 2020-01-31
           |""".stripMargin
 
-      val (_, _, job, _) = getUseCase(extraOptions = Map[String, String]("key1" -> "value1", "key.2" -> "value'2'"))
+      val (_, _, job, _) = getUseCase(
+        sparkConfig = Map[String, String](
+          "spark.driver.host" -> "127.0.0.1",
+          "spark.executor.instances" -> "1",
+          "spark.executor.cores" -> "1"
+        ),
+        extraOptions = Map[String, String](
+          "key1" -> "value1",
+          "key.2" -> "value'2'"
+        )
+      )
 
-      val actual = job.getYamlConfig(infoDate, conf)
+      val actual = job.getYamlConfig(infoDate)
 
       compareText(actual, expected)
     }
@@ -380,10 +396,11 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
                  tableException: Throwable = null,
                  stats: MetaTableStats = null,
                  statsException: Throwable = null,
+                 sparkConfig: Map[String, String] = Map.empty[String, String],
                  extraOptions: Map[String, String] = Map.empty[String, String]): (SyncBookkeeperMock, MetastoreSpy, PythonTransformationJob, ProcessRunnerSpy) = {
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy(tableDf = tableDf, tableException = tableException, stats = stats, statsException = statsException)
-    val operationDef = OperationDefFactory.getDummyOperationDef(extraOptions = extraOptions)
+    val operationDef = OperationDefFactory.getDummyOperationDef(sparkConfig = sparkConfig, extraOptions = extraOptions)
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table2")
 

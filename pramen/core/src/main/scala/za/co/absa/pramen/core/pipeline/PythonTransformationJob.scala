@@ -32,6 +32,7 @@ import za.co.absa.pramen.core.utils.StringUtils.escapeString
 
 import java.io.{BufferedWriter, File, FileWriter}
 import java.time.{Instant, LocalDate}
+import scala.collection.mutable
 import scala.util.control.NonFatal
 
 object PythonTransformationJob {
@@ -155,7 +156,7 @@ class PythonTransformationJob(operationDef: OperationDef,
     val bw = new BufferedWriter(new FileWriter(tempFile))
 
     try {
-      val yaml = getYamlConfig(infoDate, conf)
+      val yaml = getYamlConfig(infoDate)
       log.info(s"Pramen-Py config:\n$yaml")
       bw.write(yaml)
     } finally {
@@ -165,24 +166,26 @@ class PythonTransformationJob(operationDef: OperationDef,
     tempFile.getAbsolutePath
   }
 
-  private[core] def getYamlConfig(infoDate: LocalDate, conf: Config): String = {
+  private[core] def getYamlConfig(infoDate: LocalDate): String = {
     def addTransformation(): String = {
-      val options = addOptions()
+      val sparkConfig = addOptions(operationDef.sparkConfig, "spark_config")
+      val options = addOptions(operationDef.extraOptions, "options")
 
       s"""run_transformers:
          |- info_date: $infoDate
          |  output_table: ${outputTable.name}
          |  name: $pythonClass
+         |$sparkConfig
          |$options
          |""".stripMargin
     }
 
-    def addOptions(): String = {
+    def addOptions(options: Map[String, String], key: String): String = {
       val q = "\""
-      if (operationDef.extraOptions.isEmpty) {
-        "  options: {}"
+      if (options.isEmpty) {
+        s"  $key: {}"
       } else {
-        val opts = operationDef.extraOptions
+        val opts = options
           .toArray
           .sortBy(_._1)
           .map {
@@ -191,7 +194,7 @@ class PythonTransformationJob(operationDef: OperationDef,
               s"    $k: $q$value$q"
           }
           .mkString("\n")
-        s"  options:\n$opts"
+        s"  $key:\n$opts"
       }
     }
 
@@ -223,7 +226,7 @@ class PythonTransformationJob(operationDef: OperationDef,
          |    start: ${mt.infoDateStart.toString}""".stripMargin
     }
 
-    val sb = new StringBuilder
+    val sb = new mutable.StringBuilder()
 
     sb.append(addTransformation())
     sb.append(addMetastore())
