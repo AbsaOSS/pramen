@@ -38,6 +38,7 @@ case class OperationDef(
                          processingTimestampColumn: Option[String],
                          schemaTransformations: Seq[TransformExpression],
                          filters: Seq[String],
+                         sparkConfig: Map[String, String],
                          extraOptions: Map[String, String]
                        )
 
@@ -55,6 +56,7 @@ object OperationDef {
   val PROCESSING_TIMESTAMP_COLUMN_KEY = "processing.timestamp.column"
   val SCHEMA_TRANSFORMATIONS_KEY = "transformations"
   val FILTERS_KEY = "filters"
+  val SPARK_CONFIG_PREFIX = "spark.config"
   val EXTRA_OPTIONS_PREFIX = "option"
 
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, parent: String, defaultDelayDays: Int): Option[OperationDef] = {
@@ -77,6 +79,7 @@ object OperationDef {
     val processingTimestampColumn = ConfigUtils.getOptionString(conf, PROCESSING_TIMESTAMP_COLUMN_KEY)
     val schemaTransformations = TransformExpression.fromConfig(conf, SCHEMA_TRANSFORMATIONS_KEY, parent)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
+    val sparkConfigOptions = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
     val extraOptions = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
 
     val outputInfoDateExpression = outputInfoDateExpressionOpt match {
@@ -110,6 +113,7 @@ object OperationDef {
       processingTimestampColumn,
       schemaTransformations,
       filters,
+      sparkConfigOptions,
       extraOptions))
   }
 

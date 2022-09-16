@@ -34,6 +34,7 @@ object OperationDefFactory {
                            processingTimestampColumn: Option[String] = None,
                            schemaTransformations: Seq[TransformExpression] = Nil,
                            filters: Seq[String] = Nil,
+                           sparkConfig: Map[String, String] = Map.empty[String, String],
                            extraOptions: Map[String, String] = Map.empty[String, String]): OperationDef = {
     OperationDef(
       name,
@@ -47,6 +48,7 @@ object OperationDefFactory {
       processingTimestampColumn,
       schemaTransformations,
       filters,
+      sparkConfig,
       extraOptions)
   }
 }
