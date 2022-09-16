@@ -1558,6 +1558,14 @@ and 'python.class' to refer to the transformer.
     }
   ]
   
+  # Arbitrary Spark configuration
+  # You can use any configuration option from the official documentation: https://spark.apache.org/docs/latest/configuration.html
+  spark.config {
+    spark.executor.instances = 4
+    spark.executor.cores = 1
+    spark.executor.memory = "4g"
+  }
+  
   # Arbitrary key/value pairs to be passed to the transformer.
   # Remember, you can refer environment variables here.
   option {

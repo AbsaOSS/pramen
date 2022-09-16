@@ -181,7 +181,6 @@ class PythonTransformationJob(operationDef: OperationDef,
     }
 
     def addOptions(options: Map[String, String], key: String): String = {
-      val q = "\""
       if (options.isEmpty) {
         s"  $key: {}"
       } else {
@@ -191,8 +190,10 @@ class PythonTransformationJob(operationDef: OperationDef,
           .map {
             case (key, value) =>
               val k = escapeString(key)
-              s"    $k: $q$value$q"
+              val v = escapeString(value)
+              s"    $k: $v"
           }
+          .sorted
           .mkString("\n")
         s"  $key:\n$opts"
       }

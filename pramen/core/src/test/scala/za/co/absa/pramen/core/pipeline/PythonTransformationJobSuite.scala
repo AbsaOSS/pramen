@@ -345,12 +345,12 @@ class PythonTransformationJobSuite extends WordSpec with SparkTestBase with Text
           |  output_table: table2
           |  name: python_class
           |  spark_config:
-          |    spark.driver.host: "127.0.0.1"
-          |    spark.executor.cores: "1"
-          |    spark.executor.instances: "1"
+          |    spark.driver.host: 127.0.0.1
+          |    spark.executor.cores: 1
+          |    spark.executor.instances: 1
           |  options:
           |    key.2: "value'2'"
-          |    key1: "value1"
+          |    key1: value1
           |metastore_tables:
           |- name: table1
           |  description: description
