@@ -18,8 +18,8 @@ package za.co.absa.pramen.extras.fixtures
 
 import org.apache.commons.io.FileUtils
 
-import java.io.File
-import java.nio.file.Files
+import java.io.{File, RandomAccessFile}
+import java.nio.file.{Files, Paths}
 
 /**
   * This fixture adds ability for a unit test to use temporary directories provided by the test env.
@@ -60,6 +60,17 @@ trait TempDirFixture {
     */
   def deleteDir(path: String): Unit = {
     FileUtils.deleteDirectory(new File(path))
+  }
+
+  /**
+    * Creates a file having the given size.
+    *
+    * @return The full path to the file.
+    */
+  def createBinFile(path: String, fileName: String, size: Int): Unit = {
+    val fullPathToTheFile = Paths.get(path, fileName).toString
+    val f = new RandomAccessFile(fullPathToTheFile, "rw")
+    f.setLength(size)
   }
 
 }

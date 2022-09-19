@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.tests.utils
+package za.co.absa.pramen.extras.tests.utils
 
 import org.scalatest.WordSpec
-import za.co.absa.pramen.core.utils.PartitionUtils.unpackCustomPartitionPattern
+import za.co.absa.pramen.extras.utils.PartitionUtils._
 
 import java.time.LocalDate
 

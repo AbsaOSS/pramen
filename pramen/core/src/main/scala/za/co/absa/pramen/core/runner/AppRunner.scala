@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerParallel}
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl}
 import za.co.absa.pramen.core.utils.Emoji._
-import za.co.absa.pramen.core.utils.{BuildProperties, ResourceUtils}
+import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ResourceUtils}
 
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -114,7 +114,7 @@ object AppRunner {
 
   private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {
     Try {
-      val version = BuildProperties.getFullVersion
+      val version = BuildPropertyUtils.instance.getFullVersion
       val banner = ResourceUtils.getResourceString("/pramen_banner.txt")
         .replaceAll("""project_version""", version)
       log.info(s"\n$banner")

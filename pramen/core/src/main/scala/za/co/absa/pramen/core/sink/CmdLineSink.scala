@@ -20,8 +20,7 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{MetastoreReader, Sink}
-import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
 import za.co.absa.pramen.core.sink.CmdLineSink.CMD_LINE_KEY

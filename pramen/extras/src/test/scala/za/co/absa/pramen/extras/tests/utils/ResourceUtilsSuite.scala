@@ -14,17 +14,24 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sink
+package za.co.absa.pramen.extras.tests.utils
 
-import com.typesafe.config.Config
-import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.Sink
-import za.co.absa.pramen.core.ExternalChannelFactoryReflect
+import org.scalatest.WordSpec
+import za.co.absa.pramen.extras.utils.ResourceUtils
 
-object SinkManager {
-  val SINKS_KEY = "pramen.sinks"
+class ResourceUtilsSuite extends WordSpec {
+  "getResourceString" should {
+    "return the content of the resource" in {
+      val str = ResourceUtils.getResourceString("/test/testResource.txt")
 
-  def getSinkByName(name: String, conf: Config, overrideConf: Option[Config])(implicit spark: SparkSession): Sink = {
-    ExternalChannelFactoryReflect.fromConfigByName[Sink](conf, overrideConf, SINKS_KEY, name, "sink")
+      assert(str == "Hello")
+    }
+
+    "thrown an exception if the resource is not found" in {
+      intercept[NullPointerException] {
+        ResourceUtils.getResourceString("test/NoSuchFile.txt")
+      }
+    }
   }
+
 }

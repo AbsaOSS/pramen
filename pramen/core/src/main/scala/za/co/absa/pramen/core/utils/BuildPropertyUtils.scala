@@ -16,21 +16,23 @@
 
 package za.co.absa.pramen.core.utils
 
+import za.co.absa.pramen.buildinfo.BuildPropertiesRetriever
+
 import java.util.Properties
 
-object BuildProperties {
+class BuildPropertyUtils extends BuildPropertiesRetriever {
   private val properties = new Properties()
   private val buildVersionKey = "build.version"
   private val buildTimestampKey = "build.timestamp"
 
   /** Returns the version of the build. */
-  lazy val buildVersion: String = properties.getProperty(buildVersionKey)
+  override lazy val buildVersion: String = properties.getProperty(buildVersionKey)
 
   /** Returns the version of the build. */
-  lazy val buildTimestamp: String = properties.getProperty(buildTimestampKey)
+  override lazy val buildTimestamp: String = properties.getProperty(buildTimestampKey)
 
   /** Returns full version to refer to in the user interface. */
-  def getFullVersion: String = {
+  override def getFullVersion: String = {
     val version = buildVersion
     if (version.contains("SNAPSHOT")) {
       val builtAt = buildTimestamp
@@ -47,4 +49,10 @@ object BuildProperties {
     try properties.load(is)
     finally if (is != null) is.close()
   }
+}
+
+// This is needed for ease of access to the class definition from components that do not include 'pramen-core' as a dependency.
+// See za.co.absa.pramen.buildinfo.BuildPropertiesRetriever
+object BuildPropertyUtils {
+  val instance = new BuildPropertyUtils()
 }

@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sink
+package za.co.absa.pramen.api
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.Sink
-import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 
-object SinkManager {
-  val SINKS_KEY = "pramen.sinks"
-
-  def getSinkByName(name: String, conf: Config, overrideConf: Option[Config])(implicit spark: SparkSession): Sink = {
-    ExternalChannelFactoryReflect.fromConfigByName[Sink](conf, overrideConf, SINKS_KEY, name, "sink")
-  }
+/**
+  * Base interface for all Pramen source and sink factories.
+  */
+trait ExternalChannelFactory[+A <: ExternalChannel] {
+  def apply(conf: Config, parentPath: String, spark: SparkSession): A
 }

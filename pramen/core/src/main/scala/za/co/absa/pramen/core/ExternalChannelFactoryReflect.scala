@@ -18,7 +18,7 @@ package za.co.absa.pramen.core
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.ExternalChannel
+import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory}
 import za.co.absa.pramen.core.utils.ClassLoaderUtils
 
 import scala.collection.JavaConverters._
@@ -29,11 +29,7 @@ import scala.reflect.runtime.universe
 /**
   * Base interface for all Pramen source and sink factories.
   */
-trait ExternalChannelFactory[+A <: ExternalChannel] {
-  def apply(conf: Config, parentPath: String, spark: SparkSession): A
-}
-
-object ExternalChannelFactory {
+object ExternalChannelFactoryReflect {
   val FACTORY_CLASS_KEY = "factory.class"
   val NAME_KEY = "name"
 

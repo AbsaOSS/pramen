@@ -14,17 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sink
+package za.co.absa.pramen.extras.utils
 
-import com.typesafe.config.Config
-import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.Sink
-import za.co.absa.pramen.core.ExternalChannelFactoryReflect
+import org.apache.commons.io.IOUtils
 
-object SinkManager {
-  val SINKS_KEY = "pramen.sinks"
-
-  def getSinkByName(name: String, conf: Config, overrideConf: Option[Config])(implicit spark: SparkSession): Sink = {
-    ExternalChannelFactoryReflect.fromConfigByName[Sink](conf, overrideConf, SINKS_KEY, name, "sink")
-  }
+object ResourceUtils {
+  def getResourceString(name: String): String =
+    IOUtils.toString(getClass.getResourceAsStream(name), "UTF-8")
 }

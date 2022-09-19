@@ -17,10 +17,11 @@
 package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.core.AppContextFactory
-import za.co.absa.pramen.core.utils.{BuildProperties, ConfigUtils}
+import za.co.absa.pramen.buildinfo.BuildPropertiesRetriever
+import za.co.absa.pramen.extras.utils.ConfigUtils
 
 import java.time.ZoneId
+import scala.util.Try
 
 case class EnceladusConfig(
                             pramenVersion: String,
@@ -43,6 +44,7 @@ object EnceladusConfig {
   val RECORDS_PER_PARTITION = "records.per.partition"
   val SAVE_EMPTY_KEY = "save.empty"
   val GENERATE_INFO_FILE_KEY = "info.file.generate"
+  val TIMEZONE_ID_KEY = "timezone"
 
   val DEFAULT_INFO_DATE_COLUMN = "enceladus_info_date"
   val DEFAULT_PARTITION_PATTERN = "{year}/{month}/{day}/v{version}"
@@ -50,14 +52,13 @@ object EnceladusConfig {
   val DEFAULT_MODE = "errorifexists"
 
   def fromConfig(conf: Config): EnceladusConfig = {
-    val appContext = AppContextFactory.get
+    val pramenVersion = Try {
+      BuildPropertiesRetriever.apply().getFullVersion
+    }.recover(_ => "unknown").get
 
-    val pramenVersion = BuildProperties.buildVersion
-
-    val timezoneId = if (appContext != null) {
-      appContext.appConfig.generalConfig.timezoneId
-    } else {
-      ZoneId.systemDefault()
+    val timezoneId = ConfigUtils.getOptionString(conf, TIMEZONE_ID_KEY) match {
+      case Some(configuredTimeZoneStr) => ZoneId.of(configuredTimeZoneStr)
+      case None => ZoneId.systemDefault()
     }
 
     EnceladusConfig(

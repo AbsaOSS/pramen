@@ -14,28 +14,22 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.tests.utils
+package za.co.absa.pramen.buildinfo
 
-import org.scalatest.WordSpec
-import za.co.absa.pramen.core.utils._
+trait BuildPropertiesRetriever {
+  def buildVersion: String
 
-class BuildPropertiesSuite extends WordSpec {
-  "buildVersion" should {
-    "be replaced by the current version" in {
-      assert(!BuildProperties.buildVersion.contains("$"))
-    }
-  }
+  def buildTimestamp: String
 
-  "buildTimestamp" should {
-    "be replaced by the build timestamp" in {
-      assert(!BuildProperties.buildTimestamp.contains("$"))
-    }
-  }
+  def getFullVersion: String
+}
 
-  "getFullVersion" should {
-    "be replaced by the build timestamp" in {
-      assert(!BuildProperties.getFullVersion.contains("$"))
-    }
-  }
-
+object BuildPropertiesRetriever {
+  // This call assumes 'pramen-core' is in the class path, but not a compile time dependency, but either
+  // provided or runtime dependency.
+  def apply(): BuildPropertiesRetriever =
+    Class.forName("za.co.absa.pramen.core.utils.BuildPropertyUtils")
+      .getConstructor()
+      .newInstance()
+      .asInstanceOf[BuildPropertiesRetriever]
 }

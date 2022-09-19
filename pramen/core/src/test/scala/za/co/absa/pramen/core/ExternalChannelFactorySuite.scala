@@ -30,7 +30,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
           |key2 = "test2"
           |""".stripMargin)
 
-      val channel = ExternalChannelFactory.fromConfig[ExternalChannelMock](conf, "", "dummy")
+      val channel = ExternalChannelFactoryReflect.fromConfig[ExternalChannelMock](conf, "", "dummy")
 
       assert(channel.isInstanceOf[ExternalChannelMock])
       assert(channel.value1 == "test1")
@@ -44,7 +44,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactory.fromConfig[ExternalChannelMock](conf, "", "dummy")
+        ExternalChannelFactoryReflect.fromConfig[ExternalChannelMock](conf, "", "dummy")
       }
 
       assert(ex.getMessage.contains("A class should be specified for the dummy"))
@@ -64,7 +64,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
           |]
           |""".stripMargin)
 
-      val channel = ExternalChannelFactory.fromConfigByName[ExternalChannelMock](conf, None, "channels", "test_name", "dummy")
+      val channel = ExternalChannelFactoryReflect.fromConfigByName[ExternalChannelMock](conf, None, "channels", "test_name", "dummy")
 
       assert(channel.isInstanceOf[ExternalChannelMock])
       assert(channel.value1 == "test1")
@@ -88,7 +88,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
           |key2 = "test2"
           |""".stripMargin)
 
-      val channel = ExternalChannelFactory.fromConfigByName[ExternalChannelMock](conf1, Some(conf2), "channels", "test_name", "dummy")
+      val channel = ExternalChannelFactoryReflect.fromConfigByName[ExternalChannelMock](conf1, Some(conf2), "channels", "test_name", "dummy")
 
       assert(channel.isInstanceOf[ExternalChannelMock])
       assert(channel.value1 == "test3")
@@ -108,7 +108,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactory.fromConfigByName[ExternalChannelMock](conf, None, "channels", "dummy_name", "dummy type")
+        ExternalChannelFactoryReflect.fromConfigByName[ExternalChannelMock](conf, None, "channels", "dummy_name", "dummy type")
       }
 
       assert(ex.getMessage.contains("Unknown name of a data dummy type: dummy_name"))
@@ -128,7 +128,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
           |]
           |""".stripMargin)
 
-      ExternalChannelFactory.validateConfig(conf, "channels", "dummy")
+      ExternalChannelFactoryReflect.validateConfig(conf, "channels", "dummy")
     }
 
     "throw an exception if there are validation issues" in {
@@ -152,7 +152,7 @@ class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactory.validateConfig(conf, "channels", "dummy type")
+        ExternalChannelFactoryReflect.validateConfig(conf, "channels", "dummy type")
       }
 
       assert(ex.getMessage.contains("Configuration error for a dummy type at 'channels'"))

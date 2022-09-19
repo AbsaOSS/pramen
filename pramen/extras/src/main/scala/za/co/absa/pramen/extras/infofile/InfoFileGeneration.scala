@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.extras.utils.ConfigUtils
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate, ZoneId, ZonedDateTime}

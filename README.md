@@ -857,6 +857,9 @@ Here is an example configuration of a sink:
   # Optionally repartition te dataframe according to the number of records per partition
   records.per.partition = 1000000
   
+  # The timezone used for the info file
+  timezone = "Africa/Johannesburg"
+  
   # Output format options
   option {
     sep = "|"

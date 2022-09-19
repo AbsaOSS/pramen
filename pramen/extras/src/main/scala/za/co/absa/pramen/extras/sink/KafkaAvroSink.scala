@@ -18,9 +18,8 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 import za.co.absa.pramen.extras.sink.KafkaAvroSink.TOPIC_NAME_KEY
-import za.co.absa.pramen.core.ExternalChannelFactory
 import za.co.absa.pramen.extras.writer.TableWriterKafka
 import za.co.absa.pramen.extras.writer.model.KafkaWriterConfig
 

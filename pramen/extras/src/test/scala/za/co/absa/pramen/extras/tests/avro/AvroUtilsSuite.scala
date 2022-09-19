@@ -19,8 +19,8 @@ package za.co.absa.pramen.extras.tests.avro
 import org.apache.spark.sql.functions.struct
 import org.scalatest.WordSpec
 import za.co.absa.pramen.NestedDataFrameFactory
-import za.co.absa.pramen.core.utils.ResourceUtils.getResourceString
-import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.extras.utils.ResourceUtils.getResourceString
+import za.co.absa.pramen.extras.utils.JsonUtils
 import za.co.absa.pramen.extras.avro.AvroUtils
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.TextComparisonFixture
@@ -58,8 +58,8 @@ class AvroUtilsSuite extends WordSpec with SparkTestBase with TextComparisonFixt
 
       val avroWithNullsFixed = AvroUtils.fixNullableFields(avro)
 
-      val actualOrigin = SparkUtils.prettyJSON(avro.toString())
-      val actualFixed = SparkUtils.prettyJSON(avroWithNullsFixed.toString())
+      val actualOrigin = JsonUtils.prettyJSON(avro.toString())
+      val actualFixed = JsonUtils.prettyJSON(avroWithNullsFixed.toString())
 
       val expectedOrigin = getResourceString("/test/nestedDf1_origin_avro.json")
       val expectedFixed = getResourceString("/test/nestedDf1_fixed_avro.json")
@@ -77,8 +77,8 @@ class AvroUtilsSuite extends WordSpec with SparkTestBase with TextComparisonFixt
 
       val avroWithNullsFixed = AvroUtils.fixNullableFields(avro)
 
-      val actualOrigin = SparkUtils.prettyJSON(avro.toString())
-      val actualFixed = SparkUtils.prettyJSON(avroWithNullsFixed.toString())
+      val actualOrigin = JsonUtils.prettyJSON(avro.toString())
+      val actualFixed = JsonUtils.prettyJSON(avroWithNullsFixed.toString())
 
       val expectedOrigin = getResourceString("/test/nestedMap_origin_avro.json")
       val expectedFixed = getResourceString("/test/nestedMap_fixed_avro.json")
