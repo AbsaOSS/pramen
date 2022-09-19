@@ -22,8 +22,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetastoreReader, Sink}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
-import za.co.absa.pramen.core.ExternalChannelFactory
-import za.co.absa.pramen.core.utils.{FsUtils, PartitionUtils}
+import za.co.absa.pramen.api.ExternalChannelFactory
+import za.co.absa.pramen.extras.utils.{FsUtils, PartitionUtils}
 
 import java.time.{Instant, LocalDate}
 

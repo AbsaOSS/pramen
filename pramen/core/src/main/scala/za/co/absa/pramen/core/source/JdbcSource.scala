@@ -19,8 +19,7 @@ package za.co.absa.pramen.core.source
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{Query, Source, TableReader}
-import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader}
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{TableReaderJdbc, TableReaderJdbcNative}
 

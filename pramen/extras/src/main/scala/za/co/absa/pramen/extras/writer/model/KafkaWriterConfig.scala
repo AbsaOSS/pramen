@@ -17,7 +17,7 @@
 package za.co.absa.pramen.extras.writer.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.extras.utils.ConfigUtils
 
 case class KafkaWriterConfig(
                               brokers: String,

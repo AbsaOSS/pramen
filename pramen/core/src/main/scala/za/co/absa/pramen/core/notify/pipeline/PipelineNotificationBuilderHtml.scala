@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.notify.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.TaskResult
-import za.co.absa.pramen.core.utils.{BuildProperties, ConfigUtils, StringUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
 
 import java.time._
 import java.time.format.DateTimeFormatter
@@ -124,7 +124,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withRawParagraph(
       s"""Regards,<br>
          |Pramen<br>
-         |version ${BuildProperties.getFullVersion}
+         |version ${BuildPropertyUtils.instance.getFullVersion}
          |""".stripMargin
     )
 

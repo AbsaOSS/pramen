@@ -19,12 +19,11 @@ package za.co.absa.pramen.extras.tests.sink
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
-import za.co.absa.pramen.extras.fixtures.AppContextFixture
 import za.co.absa.pramen.extras.sink.EnceladusConfig
 
 import java.time.ZoneId
 
-class EnceladusConfigSuite extends WordSpec with SparkTestBase with AppContextFixture {
+class EnceladusConfigSuite extends WordSpec with SparkTestBase {
   "fromConfig" should {
     "construct a config from minimal settings" in {
       val conf = ConfigFactory.parseString(
@@ -66,6 +65,8 @@ class EnceladusConfigSuite extends WordSpec with SparkTestBase with AppContextFi
            |mode = "append"
            |save.empty = false
            |
+           |timezone = "Africa/Johannesburg"
+           |
            |option {
            |  my.option1 = "1"
            |  my.option2 = "2"
@@ -76,22 +77,19 @@ class EnceladusConfigSuite extends WordSpec with SparkTestBase with AppContextFi
            |}
            |""".stripMargin)
 
-      withAppContext(spark) { appContext =>
-        val enceladusConfig = EnceladusConfig.fromConfig(conf)
+      val enceladusConfig = EnceladusConfig.fromConfig(conf)
 
-        assert(enceladusConfig.pramenVersion != "Unspecified")
-        assert(enceladusConfig.timezoneId == ZoneId.of("Africa/Johannesburg"))
-        assert(enceladusConfig.infoDateColumn == "ABC")
-        assert(enceladusConfig.partitionPattern == "DEF")
-        assert(enceladusConfig.format == "json")
-        assert(enceladusConfig.mode == "append")
-        assert(enceladusConfig.formatOptions.size == 2)
-        assert(enceladusConfig.formatOptions("my.option1") == "1")
-        assert(enceladusConfig.formatOptions("my.option2") == "2")
-        assert(!enceladusConfig.saveEmpty)
-        assert(!enceladusConfig.generateInfoFile)
-      }
+      assert(enceladusConfig.pramenVersion != "Unspecified")
+      assert(enceladusConfig.timezoneId == ZoneId.of("Africa/Johannesburg"))
+      assert(enceladusConfig.infoDateColumn == "ABC")
+      assert(enceladusConfig.partitionPattern == "DEF")
+      assert(enceladusConfig.format == "json")
+      assert(enceladusConfig.mode == "append")
+      assert(enceladusConfig.formatOptions.size == 2)
+      assert(enceladusConfig.formatOptions("my.option1") == "1")
+      assert(enceladusConfig.formatOptions("my.option2") == "2")
+      assert(!enceladusConfig.saveEmpty)
+      assert(!enceladusConfig.generateInfoFile)
     }
   }
-
 }

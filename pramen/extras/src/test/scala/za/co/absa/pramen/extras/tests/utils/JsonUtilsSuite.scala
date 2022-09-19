@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sink
+package za.co.absa.pramen.extras.tests.utils
 
-import com.typesafe.config.Config
-import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.Sink
-import za.co.absa.pramen.core.ExternalChannelFactoryReflect
+import org.scalatest.WordSpec
+import za.co.absa.pramen.extras.utils.JsonUtils
 
-object SinkManager {
-  val SINKS_KEY = "pramen.sinks"
+class JsonUtilsSuite extends WordSpec {
 
-  def getSinkByName(name: String, conf: Config, overrideConf: Option[Config])(implicit spark: SparkSession): Sink = {
-    ExternalChannelFactoryReflect.fromConfigByName[Sink](conf, overrideConf, SINKS_KEY, name, "sink")
+  "prettyJSON" should {
+    "prettify a JSON" in {
+      val json = """{"a":1,"b":2}"""
+      val expected = """{
+                       |  "a" : 1,
+                       |  "b" : 2
+                       |}""".stripMargin
+      assert(JsonUtils.prettyJSON(json) == expected)
+    }
   }
+
 }

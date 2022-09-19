@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.utils
+package za.co.absa.pramen.extras.utils
 
 import java.time.LocalDate
 
 object PartitionUtils {
-
   /**
     * Transforms a custom pattern template to the actual pattern.
     * Variable substitutions:
@@ -47,5 +46,4 @@ object PartitionUtils {
       .replace("{version}", s"$infoVersion")
       .replace("{column}", infoDateColumn)
   }
-
 }

@@ -18,8 +18,7 @@ package za.co.absa.pramen.core.mocks.job
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{MetastoreReader, Sink}
-import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer

@@ -23,7 +23,7 @@ import org.scalatest.WordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.utils.FsUtils
+import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate

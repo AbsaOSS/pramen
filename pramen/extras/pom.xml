@@ -37,7 +37,7 @@
         <!-- Pramen API -->
         <dependency>
             <groupId>za.co.absa.pramen</groupId>
-            <artifactId>pramen-core</artifactId>
+            <artifactId>pramen-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 

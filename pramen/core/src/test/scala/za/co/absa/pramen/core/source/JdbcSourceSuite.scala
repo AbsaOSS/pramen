@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.source
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.WordSpec
 import za.co.absa.pramen.api.Source
-import za.co.absa.pramen.core.ExternalChannelFactory
+import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
 
 class JdbcSourceSuite extends WordSpec with SparkTestBase {
@@ -72,14 +72,14 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
 
-      val src = ExternalChannelFactory.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
 
       assert(src.hasInfoDate)
       assert(src.jdbcReaderConfig.infoDateColumn == "INFO_DATE")
     }
 
     "be able to get a source by its name" in {
-      val src = ExternalChannelFactory.fromConfigByName[Source](conf, None, "pramen.sources", "Jdbc2", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "Jdbc2", "source").asInstanceOf[JdbcSource]
 
       assert(!src.hasInfoDate)
       assert(src.jdbcReaderConfig.limitRecords.contains(100))
@@ -98,7 +98,7 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
 
     "throw an exception if a source is not found" in {
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactory.fromConfigByName[Source](conf, None, "pramen.sources", "Dummy", "source").asInstanceOf[JdbcSource]
+        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "Dummy", "source").asInstanceOf[JdbcSource]
       }
 
       assert(ex.getMessage.contains("Unknown name of a data source: Dummy"))
@@ -123,7 +123,7 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
         .resolve()
 
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactory.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
+        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
       }
 
       assert(ex.getMessage.contains("A name is not configured for 2 source(s)"))
@@ -147,7 +147,7 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
         .resolve()
 
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactory.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
+        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
       }
 
       assert(ex.getMessage.contains("Factory class is not configured for 2 source(s)"))
@@ -173,7 +173,7 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
         .resolve()
 
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactory.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
+        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
       }
 
       assert(ex.getMessage.contains("Duplicate source names: mysource1, MYsource1"))
