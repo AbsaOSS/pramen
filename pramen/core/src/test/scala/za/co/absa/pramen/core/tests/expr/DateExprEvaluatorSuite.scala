@@ -135,6 +135,10 @@ class DateExprEvaluatorSuite extends WordSpec {
       assert(expr.evalDate("minusMonths(plusWeeks(@now, 2), 3) - 1") == now.plusWeeks(2).minusMonths(3).minusDays(1))
     }
 
+    "evaluate a literal" in {
+      assert(expr.evalDate("'2020-10-10'") == LocalDate.of(2020, 10, 10))
+    }
+
     "throw an exception on a non-matching single quote" in {
       val ex = intercept[SyntaxErrorException] {
         expr.evalDate("'2020-10-10")

@@ -1903,7 +1903,13 @@ triggerred:
 
 ## Expression syntax
 
-When an expression is expected as a configuration option `@infoDate` variable is set to the information date of the job.
+When an expression is expected you can use variables available depending on context
+(see [the section on dates](#dates)). These can be
+- `@runDate` - for determining information date from the run date.
+- `@infoDate` - for determining date ranges from the information date.
+- `@dateFrom`, `@dateto` - for referencing date ranges in custom SQL queries.
+
+You can use date literals in the format `yyyy-MM-dd` as single quited strings, e.g. `'2022-12-27'`.
 
 You can use days arithmetic, e.g. `'2020-12-27' + 1` will produce `'2020-12-28'`.
 
