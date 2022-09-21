@@ -23,7 +23,6 @@ import za.co.absa.pramen.extras.fixtures.TempDirFixture
 import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.Paths
-import java.time.ZoneId
 
 class FsUtilsSuite extends WordSpec with SparkTestBase with TempDirFixture {
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
