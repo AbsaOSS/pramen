@@ -54,7 +54,7 @@ object EnceladusConfig {
   def fromConfig(conf: Config): EnceladusConfig = {
     val pramenVersion = Try {
       BuildPropertiesRetriever.apply().getFullVersion
-    }.recover(_ => "unknown").get
+    }.recover{case _ => "unknown"}.get
 
     val timezoneId = ConfigUtils.getOptionString(conf, TIMEZONE_ID_KEY) match {
       case Some(configuredTimeZoneStr) => ZoneId.of(configuredTimeZoneStr)
