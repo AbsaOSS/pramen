@@ -1196,6 +1196,19 @@ Monthly (on 1st day of the month):
     schedule.type = monthly
     schedule.days.of.month = [ 1 ]
 ```
+
+Monthly (on the last day of the month):
+```conf
+    schedule.type = monthly
+    schedule.days.of.month = [ LAST ]
+```
+
+Monthly (on the second to last day of the month, e.g. Jan 30th or Apr 29th):
+```conf
+    schedule.type = monthly
+    schedule.days.of.month = [ -2 ]
+```
+
 Twice a month (on 1st and 15th day of each month):
 ```conf
     schedule.type = monthly

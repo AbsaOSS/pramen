@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 
 import java.time.{DayOfWeek, LocalDate}
 import scala.collection.JavaConverters._
+import scala.util.Try
 
 sealed trait Schedule {
   def isEnabled(day: LocalDate): Boolean
@@ -43,17 +44,24 @@ object Schedule {
   }
 
   case class Monthly(days: Seq[Int]) extends Schedule {
-    def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfMonth)
+    val hasPositiveDays: Boolean = days.exists(_ > 0)
+    val hasNegativeDays: Boolean = days.exists(_ < 0)
+
+    def isEnabled(day: LocalDate): Boolean = {
+      val isInPositives = hasPositiveDays && days.contains(day.getDayOfMonth)
+      val isInNegatives = hasNegativeDays && days.contains(-day.lengthOfMonth() + day.getDayOfMonth - 1)
+      isInPositives || isInNegatives
+    }
 
     override def toString: String = s"monthly (${days.mkString(", ")})"
   }
 
   def fromConfig(conf: Config): Schedule = {
     conf.getString(SCHEDULE_TYPE_KEY) match {
-      case "daily" => EveryDay()
-      case "weekly" => Weekly(getDaysOfWeek(conf))
+      case "daily"   => EveryDay()
+      case "weekly"  => Weekly(getDaysOfWeek(conf))
       case "monthly" => Monthly(getDaysOfMonth(conf))
-      case s => throw new IllegalArgumentException(s"Unknown schedule type: $s")
+      case s         => throw new IllegalArgumentException(s"Unknown schedule type: $s")
     }
   }
 
@@ -68,14 +76,22 @@ object Schedule {
   }
 
   private def getDaysOfMonth(conf: Config): Seq[Int] = {
-    val monthDayNums = conf.getIntList(SCHEDULE_DAYS_OF_MONTH_KEY).asScala.map(_.toInt)
+    val monthDayNums = conf.getStringList(SCHEDULE_DAYS_OF_MONTH_KEY).asScala.map { str =>
+      val strUpper = str.trim.toUpperCase
+      val num = if (strUpper == "LAST" || strUpper == "L") {
+        -1
+      } else {
+        Try(str.toInt).getOrElse(throw new IllegalArgumentException(s"Invalid day of month: $str"))
+      }
+      num
+    }
 
     if (monthDayNums.isEmpty) {
       throw new IllegalArgumentException(s"No days of month are provided $SCHEDULE_DAYS_OF_WEEK_KEY")
     }
 
     monthDayNums.foreach(day => {
-      if (day < 1 || day > 31) {
+      if (day < -31 || day > 31 || day == 0) {
         throw new IllegalArgumentException(s"Invalid day of month: $day")
       }
     })
