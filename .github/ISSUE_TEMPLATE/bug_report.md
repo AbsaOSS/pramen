@@ -21,7 +21,7 @@ pramen {
 A clear and concise description of what you expected to happen.
 
 ## Context
-- Pramen version:
+- Pramen/pramen-py version:
 - Spark version:
 - Scala/Python version:
 - Operating system:
