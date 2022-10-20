@@ -58,5 +58,7 @@ object Keys {
 
   val TIMEZONE = "pramen.timezone"
 
+  val SPECIAL_CHARACTERS_IN_COLUMN_NAMES = "pramen.special.characters.in.column.names"
+
   val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd")
 }

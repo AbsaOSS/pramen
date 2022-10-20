@@ -19,9 +19,11 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
@@ -263,6 +265,8 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1")
 
+    val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
+
     val job = new IngestionJob(operationDef,
       metastore,
       bk,
@@ -270,7 +274,8 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
       SourceTable("table1", Query.Table(sourceTable), rangeFromExpr, rangeToExpr, Seq(
         TransformExpression("NAME_U", "upper(NAME)")
       ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), None),
-      outputTable)
+      outputTable,
+      specialCharacters)
 
     (bk, metastore, job)
   }

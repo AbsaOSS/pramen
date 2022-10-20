@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.Transformer
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
@@ -43,6 +44,7 @@ class OperationSplitter(conf: Config,
   def createIngestion(operationDef: OperationDef,
                       sourceName: String,
                       sourceTables: Seq[SourceTable])(implicit spark: SparkSession): Seq[Job] = {
+    val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
     val sourceBase = SourceManager.getSourceByName(sourceName, conf, None)
 
     sourceTables.map(sourceTable => {
@@ -53,7 +55,7 @@ class OperationSplitter(conf: Config,
 
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
-      new IngestionJob(operationDef, metastore, bookkeeper, source, sourceTable, outputTable)
+      new IngestionJob(operationDef, metastore, bookkeeper, source, sourceTable, outputTable, specialCharacters)
     })
   }
 
