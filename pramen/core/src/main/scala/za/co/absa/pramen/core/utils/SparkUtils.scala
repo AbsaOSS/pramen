@@ -84,9 +84,11 @@ object SparkUtils {
     * Renames space characters in column names.
     *
     * This can be potentially improved by adding support for other special characters
+    *
+    * @param df         A dataframe to sanitize columns of
+    * @param characters A set of characters considered special
     */
-  def sanitizeDfColumns(df: DataFrame): DataFrame = {
-    val characters = " "
+  def sanitizeDfColumns(df: DataFrame, characters: String): DataFrame = {
 
     def replaceSpecialChars(s: String): String = {
       s.map(c => if (characters.contains(c)) '_' else c)

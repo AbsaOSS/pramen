@@ -34,7 +34,8 @@ class IngestionJob(operationDef: OperationDef,
                    bookkeeper: Bookkeeper,
                    source: Source,
                    sourceTable: SourceTable,
-                   outputTable: MetaTable)
+                   outputTable: MetaTable,
+                   specialCharacters: String)
                   (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
 
@@ -107,7 +108,7 @@ class IngestionJob(operationDef: OperationDef,
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
     source.getReader(sourceTable.query, Nil).getData(from, to) match {
-      case Some(df) => sanitizeDfColumns(df)
+      case Some(df) => sanitizeDfColumns(df, specialCharacters)
       case None     => throw new RuntimeException(s"Failed to read data from '${sourceTable.query.query}'")
     }
   }

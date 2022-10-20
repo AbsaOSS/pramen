@@ -48,11 +48,31 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
         |  "_b_" : 3
         |} ]"""
 
-      import spark.implicits._
-
       val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a a", " b ")
 
-      val actualDf = sanitizeDfColumns(df)
+      val actualDf = sanitizeDfColumns(df, " ")
+
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.lines.mkString("").trim
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+    }
+
+    "rename special characters of input dataframe columns" in {
+      val expected =
+        """[ {
+          |  "a_a" : "A",
+          |  "_b_" : 1
+          |}, {
+          |  "a_a" : "B",
+          |  "_b_" : 2
+          |}, {
+          |  "a_a" : "C",
+          |  "_b_" : 3
+          |} ]"""
+
+      val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a:a", "<b>")
+
+      val actualDf = sanitizeDfColumns(df, " :<>")
 
       val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.lines.mkString("").trim
 
@@ -63,11 +83,9 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
       val expected =
         """[ {  "a_a" : "A",  "b" : 1}, {  "a_a" : "B",  "b" : 2}, {  "a_a" : "C",  "b" : 3} ]"""
 
-      import spark.implicits._
-
       val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("tbl.a a", "tbl.b")
 
-      val actualDf = sanitizeDfColumns(df)
+      val actualDf = sanitizeDfColumns(df, " ")
 
       val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.lines.mkString("").trim
 
