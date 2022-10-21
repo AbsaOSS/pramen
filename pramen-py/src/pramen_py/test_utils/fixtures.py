@@ -39,7 +39,7 @@ from pramen_py.utils import get_or_create_spark_session
 
 env = Env(expand_vars=True)
 env.read_env(
-    path=(pathlib.Path(".") / ".env").as_posix(),
+    path=(pathlib.Path(".") / ".env.test").as_posix(),
     override=True,
 )
 
