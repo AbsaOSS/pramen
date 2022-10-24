@@ -1023,7 +1023,7 @@ pramen.operations = [
     schedule.type = "daily"
 
     # Specifies a metastore table to save output data to
-    output.table = "transformed_users"
+    output.table = "transformed_table1"
 
     # Specifies an expression to calculate output information date based on the day at which the job has ran.
     info.date.expr = "@runDate"
@@ -1031,7 +1031,7 @@ pramen.operations = [
     # Specifies which tables are inputs to the transformer and which date range input tables are expected to have input data.
     dependencies = [
       {
-        tables = [ users1 ]
+        tables = [ table1 ]
         date.from = "@infoDate"
         date.to = "@infoDate" // optional
       }
@@ -1046,8 +1046,8 @@ pramen.operations = [
 
     tables = [
       {
-        input.metastore.table = table1
-        output.topic = kafka.topic.table1"
+        input.metastore.table = transformed_table1
+        output.topic = kafka.topic.transformed_table1"
       }
     ]
   }
