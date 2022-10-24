@@ -44,14 +44,15 @@ DATE_FMTS = {
     "yyyy-MM-dd": "%Y-%m-%d",
     "yyyyMMdd": "%Y%m%d",
 }
+
 DEFAULT_DATE_FMT = "yyyy-MM-dd"
+
 SPARK_DEFAULT_CONFIG = {
     "spark.master": "yarn",
     "spark.submit.deployMode": "client",
     "spark.dynamicAllocation.enabled": "true",
     "spark.dynamicAllocation.maxExecutors": "32",
 }
-
 
 def convert_str_to_date(
     s: str,
@@ -139,14 +140,10 @@ def get_or_create_spark_session(
     environment variable PRAMENPY_SPARK_CONFIG
     """
     logger.info("Preparing SparkSession")
-    os.environ.update(
-        {
-            "JAVA_HOME": env.str(
-                "PRAMENPY_SPARK_JAVA_HOME",
-                os.environ.get("JAVA_HOME", ""),
-            )
-        }
-    )
+
+    if env.str("PRAMENPY_SPARK_JAVA_HOME", "") != "":
+        os.environ.update({"JAVA_HOME": env.str("PRAMENPY_SPARK_JAVA_HOME")})
+        logger.info("JAVA_HOME is set to " + env.str("PRAMENPY_SPARK_JAVA_HOME"))
 
     maybe_active_session = SparkSession.getActiveSession()
     if maybe_active_session and force_recreate:
