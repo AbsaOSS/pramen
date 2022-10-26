@@ -30,7 +30,7 @@ from pramen_py.utils import DEFAULT_DATE_FMT, convert_str_to_date
 
 
 cattr.register_structure_hook(datetime.date, lambda v, t: v)  # type: ignore
-cattr.register_unstructure_hook(datetime.date, lambda v: str(v))  # type: ignore
+cattr.register_unstructure_hook(datetime.date, lambda v: str(v))
 
 
 @enum.unique

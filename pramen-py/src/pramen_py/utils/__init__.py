@@ -54,6 +54,7 @@ SPARK_DEFAULT_CONFIG = {
     "spark.dynamicAllocation.maxExecutors": "32",
 }
 
+
 def convert_str_to_date(
     s: str,
     fmt: str = DEFAULT_DATE_FMT,
@@ -143,7 +144,9 @@ def get_or_create_spark_session(
 
     if env.str("PRAMENPY_SPARK_JAVA_HOME", "") != "":
         os.environ.update({"JAVA_HOME": env.str("PRAMENPY_SPARK_JAVA_HOME")})
-        logger.info("JAVA_HOME is set to " + env.str("PRAMENPY_SPARK_JAVA_HOME"))
+        logger.info(
+            "JAVA_HOME is set to " + env.str("PRAMENPY_SPARK_JAVA_HOME")
+        )
 
     maybe_active_session = SparkSession.getActiveSession()
     if maybe_active_session and force_recreate:

@@ -43,7 +43,6 @@ async def test_identity_transformer(
     transformer_runner,
     generate_df,
 ):
-
     # stub for transformer dependency table
     table_in_stub = generate_df(
         """
@@ -158,7 +157,6 @@ async def test_identity_transformer_wrong_options(
     when,
     transformer_runner,
 ):
-
     config = TransformationConfig(
         run_transformers=[
             RunTransformer(

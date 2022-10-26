@@ -14,10 +14,13 @@
 
 import os.path
 import re
-import attrs
+
 from pathlib import PurePath
-from urllib.parse import urlparse
 from typing import List
+from urllib.parse import urlparse
+
+import attrs
+
 from pyspark.sql import SparkSession
 from typing_extensions import Protocol
 
@@ -53,7 +56,7 @@ class FileSystemUtils:
         """
         return self.FileSystem.get(
             self.URI(self.fix_uri_scheme_availability(uri)),
-            self.spark.sparkContext._jsc.hadoopConfiguration(),
+            self.spark.sparkContext._jsc.hadoopConfiguration(),  # type: ignore
         )
 
     def fix_uri_scheme_availability(self, uri: str) -> str:
@@ -67,7 +70,7 @@ class FileSystemUtils:
         if not scheme:
             return "file://" + uri
         elif drive:
-            if re.sub(r'[^\w]', '', drive).lower() == scheme.lower():
+            if re.sub(r"[^\w]", "", drive).lower() == scheme.lower():
                 return "file://" + uri
         return uri
 
