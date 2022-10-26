@@ -136,8 +136,9 @@ def side_effect_factory(
             return get_mocked_call_result(
                 inspect.signature(origin_callable),
                 mocked_calls,
-                *args,
-                **kwargs,
+                # TODO investigate why mypy failing
+                *args,  # type: ignore
+                **kwargs,  # type: ignore
             )
         except KeyError:
             return origin_callable(*args, **kwargs)
