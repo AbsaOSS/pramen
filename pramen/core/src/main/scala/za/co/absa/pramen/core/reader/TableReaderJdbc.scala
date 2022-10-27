@@ -24,6 +24,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
+import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, TimeUtils}
 
 import java.time.{Instant, LocalDate}
@@ -259,7 +260,8 @@ class TableReaderJdbc(tableName: String,
     log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
     jdbcReaderConfig.limitRecords.foreach(n => log.info(s"Limit records:                $n"))
 
-    ConfigUtils.logExtraOptions("Extra JDBC reader Spark options:", extraOptions)
+    log.info("Extra JDBC reader Spark options:")
+    ConfigUtils.renderExtraOptions(extraOptions, JDBC_WORDS_TO_REDACT)(s => log.info(s))
   }
 }
 
