@@ -73,8 +73,8 @@ class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
     val dateStr = dateFormatterApp.format(date)
 
     sqlConfig.infoDateType match {
-      case SqlColumnType.DATE => s"TO_DATE('$dateStr', '${sqlConfig.dateFormatSql}')"
-      case SqlColumnType.DATETIME => s"TO_DATE('$dateStr', '${sqlConfig.dateFormatSql}')"
+      case SqlColumnType.DATE => s"DATE '$dateStr'"
+      case SqlColumnType.DATETIME => s"DATE '$dateStr'"
       case SqlColumnType.STRING => s"'$dateStr'"
       case SqlColumnType.NUMBER => s"$dateStr"
     }
