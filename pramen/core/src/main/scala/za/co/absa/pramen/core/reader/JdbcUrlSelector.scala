@@ -18,6 +18,8 @@ package za.co.absa.pramen.core.reader
 
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 
 import java.sql.{Connection, DriverManager, SQLException}
 import java.util.Properties
@@ -65,7 +67,7 @@ class JdbcUrlSelector(jdbcConfig: JdbcConfig) {
     }
     if (jdbcConfig.extraOptions.nonEmpty) {
       log.info("JDBC extra properties:")
-      jdbcConfig.extraOptions.foreach{ case (k,v) => log.info(s"$k = $v")}
+      ConfigUtils.renderExtraOptions(jdbcConfig.extraOptions, JDBC_WORDS_TO_REDACT)(s => log.info(s))
     }
   }
 
@@ -90,14 +92,14 @@ class JdbcUrlSelector(jdbcConfig: JdbcConfig) {
       properties.put("user", jdbcConfig.user)
       properties.put("password", jdbcConfig.password)
       jdbcConfig.database.foreach(db => properties.put("database", db))
-      jdbcConfig.extraOptions.foreach{
+      jdbcConfig.extraOptions.foreach {
         case (k, v) => properties.put(k, v)
       }
 
       DriverManager.getConnection(currentUrl, properties)
     } match {
       case Success(connection) => (connection, currentUrl)
-      case Failure(ex) =>
+      case Failure(ex)         =>
         if (retriesLeft > 0) {
           val newUrl = getNextUrl
           log.error(s"JDBC connection error for $currentUrl. Retries left: $retriesLeft. Retrying...", ex)
@@ -114,7 +116,7 @@ class JdbcUrlSelector(jdbcConfig: JdbcConfig) {
       case Some(url) =>
         log.info(s"Selected primary JDBC URL: $url")
         url
-      case None =>
+      case None      =>
         val url = getRandomFallbackUrl
         log.info(s"Selected a JDBC URL from the pool: $url")
         url
