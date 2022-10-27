@@ -68,10 +68,10 @@ class FileSystemUtils:
         scheme = urlparse(uri).scheme
         drive = PurePath(uri).drive
         if not scheme:
-            return "file://" + uri
+            return "file://" + uri.lstrip("/")
         elif drive:
             if re.sub(r"[^\w]", "", drive).lower() == scheme.lower():
-                return "file://" + uri
+                return "file://" + uri.lstrip("/")
         return uri
 
     def list_files(
