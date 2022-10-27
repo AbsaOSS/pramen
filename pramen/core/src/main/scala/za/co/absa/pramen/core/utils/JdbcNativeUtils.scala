@@ -24,6 +24,7 @@ import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 
 import java.sql.{Connection, DriverManager, ResultSet}
 import java.util.Properties
+import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -39,10 +40,12 @@ import scala.util.control.NonFatal
   * - Can be much slower than Spark's JDBC, especially for result sets that don't support scrollable cursors.
   * - Partitioned read (by specifying partitioning column and range) is not supported.
   * - It executes a given query at least 2 times. So, please, do not use it for queries that
-  *   changes state of the database and is not idempotent (inserts, updates, deletes).
+  * changes state of the database and is not idempotent (inserts, updates, deletes).
   */
 object JdbcNativeUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
+
+  final val JDBC_WORDS_TO_REDACT = Set("password", "secret", "pwd")
 
   /** Returns a JDBC URL and connection by a config. */
   def getConnection(jdbcConfig: JdbcConfig, retries: Option[Int] = None): (String, Connection) = {
@@ -50,20 +53,12 @@ object JdbcNativeUtils {
 
     def getConnectionWithRetries(jdbcConfig: JdbcConfig, retriesLeft: Int): (String, Connection) = {
       val currentUrl = urlSelector.getUrl
-      Class.forName(jdbcConfig.driver)
       try {
-        val properties = new Properties()
-        properties.put("driver", jdbcConfig.driver)
-        properties.put("user", jdbcConfig.user)
-        properties.put("password", jdbcConfig.password)
-        jdbcConfig.database.foreach(db => properties.put("database", db))
-        jdbcConfig.extraOptions.foreach{
-          case (k, v) => properties.put(k, v)
-        }
+        val connection = getJdbcConnection(jdbcConfig, currentUrl)
 
-        (currentUrl, DriverManager.getConnection(currentUrl, properties))
+        (currentUrl, connection)
       } catch {
-        case NonFatal(ex) if retriesLeft > 0 =>
+        case NonFatal(ex) if retriesLeft > 0  =>
           val nextUrl = urlSelector.getNextUrl
           log.error(s"Error connecting to $currentUrl. Retries left = $retriesLeft. Retrying with $nextUrl...", ex)
           getConnectionWithRetries(jdbcConfig, retriesLeft - 1)
@@ -73,7 +68,7 @@ object JdbcNativeUtils {
 
     retries match {
       case Some(n) => getConnectionWithRetries(jdbcConfig, n)
-      case None => getConnectionWithRetries(jdbcConfig, urlSelector.getNumberOfUrls - 1)
+      case None    => getConnectionWithRetries(jdbcConfig, urlSelector.getNumberOfUrls - 1)
     }
   }
 
@@ -104,7 +99,7 @@ object JdbcNativeUtils {
     spark.createDataFrame(rdd, schema)
   }
 
-  private [core] def getResultSetCount(resultSet: ResultSet): Long = {
+  private[core] def getResultSetCount(resultSet: ResultSet): Long = {
     val countOpt = Try {
       // The fast way of getting record count from a scrollable cursor
       resultSet.last()
@@ -127,7 +122,8 @@ object JdbcNativeUtils {
                            url: String,
                            query: String): ResultSet = {
     Class.forName(jdbcConfig.driver)
-    val connection = DriverManager.getConnection(url, jdbcConfig.user, jdbcConfig.password)
+    val connection = getJdbcConnection(jdbcConfig, url)
+
     val statement = try {
       connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
     } catch {
@@ -135,11 +131,25 @@ object JdbcNativeUtils {
         // Fallback with more permissible result type.
         // JDBC sources should automatically downgrade result type, but Denodo driver doesn't do that.
         connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
-      case NonFatal(ex) =>
+      case NonFatal(ex)             =>
         throw ex
     }
 
     statement.executeQuery(query)
   }
 
+  private def getJdbcConnection(jdbcConfig: JdbcConfig, url: String): Connection = {
+    Class.forName(jdbcConfig.driver)
+    val properties = new Properties()
+    properties.put("driver", jdbcConfig.driver)
+    properties.put("user", jdbcConfig.user)
+    properties.put("password", jdbcConfig.password)
+    jdbcConfig.database.foreach(db => properties.put("database", db))
+    jdbcConfig.extraOptions.foreach {
+      case (k, v) =>
+        properties.put(k, v)
+    }
+
+    DriverManager.getConnection(url, properties)
+  }
 }
