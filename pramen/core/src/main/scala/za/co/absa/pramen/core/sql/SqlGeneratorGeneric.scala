@@ -25,19 +25,19 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
 
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
-      s"($sql) t"
+      s"($sql) AS t"
     } else {
       sql
     }
   }
 
   override def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) FROM $tableName"
+    s"SELECT COUNT(*) AS CNT FROM $tableName"
   }
 
   override def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) FROM $tableName WHERE $where"
+    s"SELECT COUNT(*) AS CNT FROM $tableName WHERE $where"
   }
 
   override def getDataQuery(tableName: String, limit: Option[Int]): String = {
