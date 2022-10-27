@@ -145,6 +145,7 @@ dmypy.json
 
 # DotENV files
 .env*
+!.env.local
 !.env.example
 !.env.ci
 !*.secret
