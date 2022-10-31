@@ -621,6 +621,107 @@ class SqlGeneratorSuite extends WordSpec with RelationalDbFixture {
     }
   }
 
+  "DB2 SQL generator" should {
+    val genDate = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigDate, config)
+    val genDateTime = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigDateTime, config)
+    val genStr = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigString, config)
+    val genNum = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigNumber, config)
+    val genCol = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigWithListOfColumns, config)
+
+    "generate count queries without date ranges" in {
+      assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A")
+    }
+
+    "generate data queries without date ranges" in {
+      assert(genDate.getDataQuery("A") == "SELECT * FROM A")
+    }
+
+    "generate data queries when list of columns is specified" in {
+      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A")
+    }
+
+    "generate data queries with limit clause date ranges" in {
+      assert(genDate.getDataQuery("A", Some(100)) == "SELECT * FROM A LIMIT 100")
+    }
+
+    "generate ranged count queries" when {
+      "date is in DATE format" in {
+        assert(genDate.getCountQuery("A", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE D = DATE '2020-08-17'")
+        assert(genDate.getCountQuery("A", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE D >= DATE '2020-08-17' AND D <= DATE '2020-08-30'")
+      }
+
+      "date is in DATETIME format" in {
+        assert(genDateTime.getCountQuery("A", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE CAST(D AS DATE) = DATE '2020-08-17'")
+        assert(genDateTime.getCountQuery("A", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE CAST(D AS DATE) >= DATE '2020-08-17' AND CAST(D AS DATE) <= DATE '2020-08-30'")
+      }
+
+      "date is in STRING format" in {
+        assert(genStr.getCountQuery("A", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE D = '2020-08-17'")
+        assert(genStr.getCountQuery("A", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
+      }
+
+      "date is in NUMBER format" in {
+        assert(genNum.getCountQuery("A", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE D = 20200817")
+        assert(genNum.getCountQuery("A", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM A WHERE D >= 20200817 AND D <= 20200830")
+      }
+    }
+
+    "generate ranged data queries" when {
+      "date is in DATE format" in {
+        assert(genDate.getDataQuery("A", date1, date1, None) ==
+          "SELECT * FROM A WHERE D = DATE '2020-08-17'")
+        assert(genDate.getDataQuery("A", date1, date2, None) ==
+          "SELECT * FROM A WHERE D >= DATE '2020-08-17' AND D <= DATE '2020-08-30'")
+      }
+
+      "date is in DATETIME format" in {
+        assert(genDateTime.getDataQuery("A", date1, date1, None) ==
+          "SELECT * FROM A WHERE CAST(D AS DATE) = DATE '2020-08-17'")
+        assert(genDateTime.getDataQuery("A", date1, date2, None) ==
+          "SELECT * FROM A WHERE CAST(D AS DATE) >= DATE '2020-08-17' AND CAST(D AS DATE) <= DATE '2020-08-30'")
+      }
+
+      "date is in STRING format" in {
+        assert(genStr.getDataQuery("A", date1, date1, None) ==
+          "SELECT * FROM A WHERE D = '2020-08-17'")
+        assert(genStr.getDataQuery("A", date1, date2, None) ==
+          "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
+      }
+
+      "date is in NUMBER format" in {
+        assert(genNum.getDataQuery("A", date1, date1, None) ==
+          "SELECT * FROM A WHERE D = 20200817")
+        assert(genNum.getDataQuery("A", date1, date2, None) ==
+          "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
+      }
+
+      "with limit records" in {
+        assert(genDate.getDataQuery("A", date1, date1, Some(100)) ==
+          "SELECT * FROM A WHERE D = DATE '2020-08-17' LIMIT 100")
+        assert(genDate.getDataQuery("A", date1, date2, Some(100)) ==
+          "SELECT * FROM A WHERE D >= DATE '2020-08-17' AND D <= DATE '2020-08-30' LIMIT 100")
+      }
+    }
+
+    "getDtable" should {
+      "return the original table when a table is provided" in {
+        assert(genDate.getDtable("A") == "A")
+      }
+
+      "wrapped query without alias for SQL queries " in {
+        assert(genDate.getDtable("SELECT A FROM B") == "(SELECT A FROM B) AS T")
+      }
+    }
+  }
+
   "Generic SQL generator" should {
     val genDate = fromDriverName("generic", sqlConfigDate, config)
     val genDateTime = fromDriverName("generic", sqlConfigDateTime, config)
