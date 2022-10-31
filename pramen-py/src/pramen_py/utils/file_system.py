@@ -60,8 +60,9 @@ class FileSystemUtils:
         )
 
     def fix_uri_scheme_availability(self, uri: str) -> str:
-        """
-        org.apache.hadoop.fs.FileSystem can`t read uri without scheme.
+        """Ensure schema for local paths
+
+        org.apache.hadoop.fs.FileSystem can`t read uri without schema.
         an example 'C:/somepath'. It parsed 'C:' like schema. This leads to errors.
         LocalFileSystem Path should be: 'file://C:/somepath'.
         """
