@@ -623,13 +623,13 @@ class SqlGeneratorSuite extends WordSpec with RelationalDbFixture {
 
   "Generic SQL generator" should {
     val genDate = fromDriverName("generic", sqlConfigDate, config)
-    val genDateTime = fromDriverName("org.postgresql.Driver", sqlConfigDateTime, config)
+    val genDateTime = fromDriverName("generic", sqlConfigDateTime, config)
     val genStr = fromDriverName("generic", sqlConfigString, config)
     val genNum = fromDriverName("generic", sqlConfigNumber, config)
     val genCol = fromDriverName("generic", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
-      assert(genDate.getCountQuery("A") == "SELECT COUNT(*) FROM A")
+      assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A")
     }
 
     "generate data queries without date ranges" in {
@@ -647,30 +647,30 @@ class SqlGeneratorSuite extends WordSpec with RelationalDbFixture {
     "generate ranged count queries" when {
       "date is in DATE format" in {
         assert(genDate.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
         assert(genDate.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
       }
 
       "date is in DATETIME format" in {
         assert(genDateTime.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS CNT FROM A WHERE CAST(D AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
         assert(genDateTime.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(D AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS CNT FROM A WHERE CAST(D AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(D AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
       }
 
       "date is in STRING format" in {
         assert(genStr.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) FROM A WHERE D = '2020-08-17'")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D = '2020-08-17'")
         assert(genStr.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
         assert(genNum.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) FROM A WHERE D = 20200817")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D = 20200817")
         assert(genNum.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) FROM A WHERE D >= 20200817 AND D <= 20200830")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D >= 20200817 AND D <= 20200830")
       }
     }
 
@@ -717,7 +717,7 @@ class SqlGeneratorSuite extends WordSpec with RelationalDbFixture {
       }
 
       "wrapped query without alias for SQL queries " in {
-        assert(genDate.getDtable("SELECT A FROM B") == "(SELECT A FROM B) t")
+        assert(genDate.getDtable("SELECT A FROM B") == "(SELECT A FROM B) AS t")
       }
     }
   }
