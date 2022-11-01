@@ -11,6 +11,8 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import platform
+
 import pytest
 
 from chispa import assert_column_equality, assert_df_equality
@@ -220,40 +222,43 @@ def test_transformations_ls_basic(monkeypatch):
 
 
 def test_completions_zsh(monkeypatch):
-    runner = CliRunner(mix_stderr=False)
-    results = runner.invoke(
-        main,
-        [
-            "-v",
-            "completions",
-            "zsh",
-        ],
-        catch_exceptions=False,
-    )
-    assert results.exit_code == 0
+    if not platform.system() == "Windows":
+        runner = CliRunner(mix_stderr=False)
+        results = runner.invoke(
+            main,
+            [
+                "-v",
+                "completions",
+                "zsh",
+            ],
+            catch_exceptions=False,
+        )
+        assert results.exit_code == 0
 
 
 def test_completions_bash(monkeypatch):
-    runner = CliRunner(mix_stderr=False)
-    results = runner.invoke(
-        main,
-        [
-            "-v",
-            "completions",
-            "bash",
-        ],
-        catch_exceptions=False,
-    )
-    assert results.exit_code == 0
+    if not platform.system() == "Windows":
+        runner = CliRunner(mix_stderr=False)
+        results = runner.invoke(
+            main,
+            [
+                "-v",
+                "completions",
+                "bash",
+            ],
+            catch_exceptions=False,
+        )
+        assert results.exit_code == 0
 
 
 def test_list_config_options(monkeypatch):
-    runner = CliRunner(mix_stderr=False)
-    results = runner.invoke(
-        main,
-        [
-            "list-configuration-options",
-        ],
-        catch_exceptions=False,
-    )
-    assert results.exit_code == 0
+    if not platform.system() == "Windows":
+        runner = CliRunner(mix_stderr=False)
+        results = runner.invoke(
+            main,
+            [
+                "list-configuration-options",
+            ],
+            catch_exceptions=False,
+        )
+        assert results.exit_code == 0
