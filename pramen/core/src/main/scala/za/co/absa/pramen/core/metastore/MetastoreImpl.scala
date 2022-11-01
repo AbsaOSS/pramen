@@ -71,6 +71,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
         new TableReaderSpark("parquet", None, path, hasInfoDateColumn = true, infoDateColumn = mt.infoDateColumn, infoDateFormat = mt.infoDateFormat)
       case DataFormat.Delta(query, _)  =>
         new TableReaderDelta(query, mt.infoDateColumn, mt.infoDateFormat)
+      case DataFormat.Null() => throw new UnsupportedOperationException(s"The metatable '$tableName' does not support reads.")
     }
   }
 

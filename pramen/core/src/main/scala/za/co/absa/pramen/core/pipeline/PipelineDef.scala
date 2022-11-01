@@ -40,7 +40,7 @@ object PipelineDef {
     val operations = conf.getConfigList(OPERATIONS_KEY)
       .asScala
       .zipWithIndex
-      .flatMap{ case (c, i) => OperationDef.fromConfig(c, infoDateConfig, s"$OPERATIONS_KEY[$i]", defaultDelayDays) }
+      .flatMap{ case (c, i) => OperationDef.fromConfig(c, conf, infoDateConfig, s"$OPERATIONS_KEY[$i]", defaultDelayDays) }
       .toSeq
     PipelineDef(name, environment, operations)
   }

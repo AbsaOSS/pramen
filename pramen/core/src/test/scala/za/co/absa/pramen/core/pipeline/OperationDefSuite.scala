@@ -50,7 +50,7 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, defaults, "path", 0)
+      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0)
 
       assert(op.isEmpty)
     }
@@ -75,7 +75,7 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, defaults, "path", 0).get
+      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0).get
 
       assert(op.name == "dummy_name")
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])
@@ -117,7 +117,7 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, defaults, "path", 0).get
+      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0).get
 
       assert(op.name == "dummy_transformation")
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])
@@ -154,7 +154,7 @@ class OperationDefSuite extends WordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, defaults, "path", 0).get
+      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0).get
 
       assert(op.name == "dummy_name")
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])

@@ -32,7 +32,7 @@ case class SourceTable(
                         transformations: Seq[TransformExpression],
                         filters: Seq[String],
                         columns: Seq[String],
-                        overrideConf: Option[Config]
+                        overrideConf: Option[Config] // ToDo: Add support for arbitrary read options passed to Spark (for cases like mergeSchema etc)
                       )
 
 object SourceTable {
