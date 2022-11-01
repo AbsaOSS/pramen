@@ -59,7 +59,7 @@ object OperationDef {
   val SPARK_CONFIG_PREFIX = "spark.config"
   val EXTRA_OPTIONS_PREFIX = "option"
 
-  def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, parent: String, defaultDelayDays: Int): Option[OperationDef] = {
+  def fromConfig(conf: Config, appConfig: Config, infoDateConfig: InfoDateConfig, parent: String, defaultDelayDays: Int): Option[OperationDef] = {
     ConfigUtils.validatePathsExistence(conf, parent, Seq(NAME_KEY, TYPE_KEY, SCHEDULE_KEY))
 
     val name = conf.getString(NAME_KEY)
@@ -70,7 +70,7 @@ object OperationDef {
       return None
     }
 
-    val operationType = OperationType.fromConfig(conf, parent)
+    val operationType = OperationType.fromConfig(conf, appConfig, parent)
     val schedule = Schedule.fromConfig(conf)
     val expectedDelayDays = ConfigUtils.getOptionInt(conf, EXPECTED_DELAY_DAYS_KEY).getOrElse(defaultDelayDays)
     val dependencies = getDependencies(conf, parent)

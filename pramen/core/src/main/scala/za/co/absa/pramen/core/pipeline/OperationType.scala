@@ -27,6 +27,7 @@ object OperationType {
   case class Transformation(clazz: String, outputTable: String) extends OperationType
   case class PythonTransformation(pythonClass: String, outputTable: String) extends OperationType
   case class Sink(sinkName: String, sinkTables: Seq[SinkTable]) extends OperationType
+  case class Transfer(sourceName: String, sinkName: String, tables: Seq[TransferTable]) extends OperationType
 
   val TYPE_KEY = "type"
   val SOURCE_KEY = "source"
@@ -36,17 +37,17 @@ object OperationType {
   val PYTHON_CLASS_KEY = "python.class"
   val OUTPUT_TABLE_KEY = "output.table"
 
-  def fromConfig(conf: Config, parent: String): OperationType = {
+  def fromConfig(conf: Config, appConfig: Config, parent: String): OperationType = {
     ConfigUtils.validatePathsExistence(conf, parent, Seq(TYPE_KEY))
 
     conf.getString(TYPE_KEY) match {
-      case "ingestion" | "sourcing" =>
+      case "ingestion" | "sourcing" | "extract" =>
         ConfigUtils.validatePathsExistence(conf, parent, Seq(SOURCE_KEY, TABLES_KEY))
         val source = conf.getString(SOURCE_KEY)
 
         val tables = SourceTable.fromConfig(conf, TABLES_KEY)
         Ingestion(source, tables)
-      case "transformation" | "transformer" =>
+      case "transformation" | "transformer" | "transform" =>
         ConfigUtils.validatePathsExistence(conf, parent, Seq(CLASS_KEY, OUTPUT_TABLE_KEY))
 
         val clazz = conf.getString(CLASS_KEY)
@@ -58,12 +59,20 @@ object OperationType {
         val pythonClass = conf.getString(PYTHON_CLASS_KEY)
         val outputTable = conf.getString(OUTPUT_TABLE_KEY)
         PythonTransformation(pythonClass, outputTable)
-      case "sink" =>
+      case "sink" | "load" =>
         ConfigUtils.validatePathsExistence(conf, parent, Seq(SINK_KEY, TABLES_KEY))
         val sink = conf.getString(SINK_KEY)
 
         val tables = SinkTable.fromConfig(conf, TABLES_KEY)
         Sink(sink, tables)
+      case "transfer" | "source2sink" =>
+        ConfigUtils.validatePathsExistence(conf, parent, Seq(SOURCE_KEY, SINK_KEY, TABLES_KEY))
+        val source = conf.getString(SOURCE_KEY)
+        val sink = conf.getString(SINK_KEY)
+
+        val tables = TransferTable.fromConfig(conf, appConfig, TABLES_KEY, sink)
+
+        Transfer(source, sink, tables)
       case _ => throw new IllegalArgumentException(s"Unknown operation type: ${conf.getString(TYPE_KEY)} at $parent")
     }
   }
