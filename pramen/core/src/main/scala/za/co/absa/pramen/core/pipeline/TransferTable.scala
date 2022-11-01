@@ -50,10 +50,10 @@ case class TransferTable(
   }
 
   def getSinkTable: SinkTable = {
-    SinkTable(jobMetaTableName, Option(jobMetaTableName), rangeFromExpr, rangeToExpr, transformations, filters, columns, writeOptions, sourceOverrideConf)
+    SinkTable(jobMetaTableName, Option(jobMetaTableName), rangeFromExpr, rangeToExpr, transformations, filters, columns, writeOptions, sinkOverrideConf)
   }
 
-  def getMetaTable(sinkName: String): MetaTable = {
+  def getMetaTable: MetaTable = {
     MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", None, None, infoDateStart, trackDays, readOptions, writeOptions)
   }
 }
