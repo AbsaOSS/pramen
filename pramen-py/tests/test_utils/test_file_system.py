@@ -15,32 +15,31 @@
 import pytest
 from pyspark.sql import SparkSession
 from pramen_py.utils.file_system import FileSystemUtils
+from loguru import logger
 
-
-def test_fix_uri_scheme_availability() -> None:
-    test_paths = (
-        {"input": "file://C:/Users/AB025F5/example_dependency_table",
-         "output": "file://C:/Users/AB025F5/example_dependency_table"},
-        {"input": "s3a://C:/Users/AB025F5/example_dependency_table",
-         "output": "s3a://C:/Users/AB025F5/example_dependency_table"},
-        {"input": "hdfs://C:/Users/AB025F5/example_dependency_table",
-         "output": "hdfs://C:/Users/AB025F5/example_dependency_table"},
-        {"input": "hdfs://Users/AB025F5/example_dependency_table",
-         "output": "hdfs://Users/AB025F5/example_dependency_table"},
-        {"input": "//C:/Users/AB025F5/example_dependency_table",
-         "output": "file://C:/Users/AB025F5/example_dependency_table"},
-        {"input": "//Users/AB025F5/example_dependency_table",
-         "output": "file://Users/AB025F5/example_dependency_table"},
-        {"input": "/Users/AB025F5/example_dependency_table",
-         "output": "file://Users/AB025F5/example_dependency_table"},
-        {"input": "Users/AB025F5/example_dependency_table",
-         "output": "file://Users/AB025F5/example_dependency_table"},
-        {"input": "//D:/Users/AB025F5/example_dependency_table",
-         "output": "file://D:/Users/AB025F5/example_dependency_table"}
-    )
-    test_spark = SparkSession.builder.master("local[1]") \
-        .appName('SparkByExamples.com') \
-        .getOrCreate()
-    test_fs_utils = FileSystemUtils(spark=test_spark)
-    for path in test_paths:
-        assert test_fs_utils.fix_uri_scheme_availability(path["input"]) == path["output"]
+@pytest.mark.parametrize(
+    ("inputs", "outputs"),
+    (
+        ("file://C:/Users/AB025F5/example_dependency_table",
+         "file://C:/Users/AB025F5/example_dependency_table"),
+        ("s3a://C:/Users/AB025F5/example_dependency_table",
+         "s3a://C:/Users/AB025F5/example_dependency_table"),
+        ("hdfs://C:/Users/AB025F5/example_dependency_table",
+         "hdfs://C:/Users/AB025F5/example_dependency_table"),
+        ("hdfs://Users/AB025F5/example_dependency_table",
+         "hdfs://Users/AB025F5/example_dependency_table"),
+        ("//C:/Users/AB025F5/example_dependency_table",
+         "file://C:/Users/AB025F5/example_dependency_table"),
+        ("//Users/AB025F5/example_dependency_table",
+         "file://Users/AB025F5/example_dependency_table"),
+        ("/Users/AB025F5/example_dependency_table",
+         "file://Users/AB025F5/example_dependency_table"),
+        ("Users/AB025F5/example_dependency_table",
+         "file://Users/AB025F5/example_dependency_table"),
+        ("//D:/Users/AB025F5/example_dependency_table",
+         "file://D:/Users/AB025F5/example_dependency_table")
+    ),
+)
+def test_ensure_proper_schema_for_local_fs(spark, inputs, outputs) -> None:
+    test_fs_utils = FileSystemUtils(spark=spark)
+    assert test_fs_utils.ensure_proper_schema_for_local_fs(inputs) == outputs
