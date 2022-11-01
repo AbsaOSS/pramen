@@ -13,31 +13,49 @@
 #  limitations under the License.
 
 import pytest
-from pyspark.sql import SparkSession
+
 from pramen_py.utils.file_system import FileSystemUtils
-from loguru import logger
+
 
 @pytest.mark.parametrize(
     ("inputs", "outputs"),
     (
-        ("file://C:/Users/AB025F5/example_dependency_table",
-         "file://C:/Users/AB025F5/example_dependency_table"),
-        ("s3a://C:/Users/AB025F5/example_dependency_table",
-         "s3a://C:/Users/AB025F5/example_dependency_table"),
-        ("hdfs://C:/Users/AB025F5/example_dependency_table",
-         "hdfs://C:/Users/AB025F5/example_dependency_table"),
-        ("hdfs://Users/AB025F5/example_dependency_table",
-         "hdfs://Users/AB025F5/example_dependency_table"),
-        ("//C:/Users/AB025F5/example_dependency_table",
-         "file://C:/Users/AB025F5/example_dependency_table"),
-        ("//Users/AB025F5/example_dependency_table",
-         "file://Users/AB025F5/example_dependency_table"),
-        ("/Users/AB025F5/example_dependency_table",
-         "file://Users/AB025F5/example_dependency_table"),
-        ("Users/AB025F5/example_dependency_table",
-         "file://Users/AB025F5/example_dependency_table"),
-        ("//D:/Users/AB025F5/example_dependency_table",
-         "file://D:/Users/AB025F5/example_dependency_table")
+        (
+            "file://C:/Users/AB025F5/example_dependency_table",
+            "file://C:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "s3a://C:/Users/AB025F5/example_dependency_table",
+            "s3a://C:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "hdfs://C:/Users/AB025F5/example_dependency_table",
+            "hdfs://C:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "hdfs://Users/AB025F5/example_dependency_table",
+            "hdfs://Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "//C:/Users/AB025F5/example_dependency_table",
+            "file://C:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "//Users/AB025F5/example_dependency_table",
+            "file://Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "/Users/AB025F5/example_dependency_table",
+            "file://Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "Users/AB025F5/example_dependency_table",
+            "file://Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "//D:/Users/AB025F5/example_dependency_table",
+            "file://D:/Users/AB025F5/example_dependency_table",
+        ),
     ),
 )
 def test_ensure_proper_schema_for_local_fs(spark, inputs, outputs) -> None:

@@ -20,7 +20,6 @@ from pramen_py.test_utils import AsyncMock
 from pramen_py.utils import run_and_retry
 
 
-
 @pytest.mark.parametrize(
     (
         "side_effect",
@@ -127,4 +126,3 @@ async def test_run_and_retry_works_with_sync_async_func():
         exception=ValueError,
         retry_hook=AsyncMock(),
     )
-
