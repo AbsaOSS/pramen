@@ -55,11 +55,11 @@ class FileSystemUtils:
         object (i.e. S3FileSystem, LocalFileSystem etc.)
         """
         return self.FileSystem.get(
-            self.URI(self.fix_uri_scheme_availability(uri)),
+            self.URI(self.ensure_proper_schema_for_local_fs(uri)),
             self.spark.sparkContext._jsc.hadoopConfiguration(),  # type: ignore
         )
 
-    def fix_uri_scheme_availability(self, uri: str) -> str:
+    def ensure_proper_schema_for_local_fs(self, uri: str) -> str:
         """Ensure schema for local paths
 
         org.apache.hadoop.fs.FileSystem can`t read uri without schema.

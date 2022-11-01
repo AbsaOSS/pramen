@@ -142,7 +142,7 @@ def get_or_create_spark_session(
     """
     logger.info("Preparing SparkSession")
 
-    if env.str("PRAMENPY_SPARK_JAVA_HOME", "") != "":
+    if env.str("PRAMENPY_SPARK_JAVA_HOME", ""):
         os.environ.update({"JAVA_HOME": env.str("PRAMENPY_SPARK_JAVA_HOME")})
         logger.info(
             "JAVA_HOME is set to " + env.str("PRAMENPY_SPARK_JAVA_HOME")
