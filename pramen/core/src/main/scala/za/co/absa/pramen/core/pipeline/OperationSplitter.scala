@@ -84,7 +84,7 @@ class OperationSplitter(conf: Config,
 
       val outputTable = transferTable.getMetaTable(sinkName)
 
-      new TransferJob(operationDef, metastore, bookkeeper, source,  transferTable, outputTable, sinkName, sink, specialCharacters)
+      new TransferJob(operationDef, metastore, bookkeeper, source,  transferTable, outputTable, sink, specialCharacters)
     })
   }
 
