@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
 import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
@@ -42,6 +43,8 @@ case class MetaTable(
                     )
 
 object MetaTable {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val NAME_KEY = "name"
   val NAME_DESCRIPTION = "description"
   val HIVE_TABLE_KEY = "hive.table"
@@ -55,7 +58,12 @@ object MetaTable {
     val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DATE_FORMAT_INTERNAL, defaultInfoDateFormat)
     val defaultTrackDays = conf.getInt(InfoDateConfig.TRACK_DAYS)
 
-    val tableConfigs = conf.getConfigList(key).asScala
+    val tableConfigs = if (conf.hasPath(key)) {
+      conf.getConfigList(key).asScala
+    } else {
+      log.warn(s"Config key '$key' not found. The metastore has no tables. The pipeline can run only if it consists of only transfer operations.")
+      Seq.empty[Config]
+    }
 
     val metatables = tableConfigs
       .map(tableConfig => fromConfigSingleEntity(tableConfig, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays))
