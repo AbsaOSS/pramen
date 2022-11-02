@@ -221,44 +221,47 @@ def test_transformations_ls_basic(monkeypatch):
     }
 
 
+@pytest.mark.skipif(platform.system() == "Windows",
+                    reason="does not run on windows")
 def test_completions_zsh(monkeypatch):
-    if not platform.system() == "Windows":
-        runner = CliRunner(mix_stderr=False)
-        results = runner.invoke(
-            main,
-            [
-                "-v",
-                "completions",
-                "zsh",
-            ],
-            catch_exceptions=False,
-        )
-        assert results.exit_code == 0
+    runner = CliRunner(mix_stderr=False)
+    results = runner.invoke(
+        main,
+        [
+            "-v",
+            "completions",
+            "zsh",
+        ],
+        catch_exceptions=False,
+    )
+    assert results.exit_code == 0
 
 
+@pytest.mark.skipif(platform.system() == "Windows",
+                    reason="does not run on windows")
 def test_completions_bash(monkeypatch):
-    if not platform.system() == "Windows":
-        runner = CliRunner(mix_stderr=False)
-        results = runner.invoke(
-            main,
-            [
-                "-v",
-                "completions",
-                "bash",
-            ],
-            catch_exceptions=False,
-        )
-        assert results.exit_code == 0
+    runner = CliRunner(mix_stderr=False)
+    results = runner.invoke(
+        main,
+        [
+            "-v",
+            "completions",
+            "bash",
+        ],
+        catch_exceptions=False,
+    )
+    assert results.exit_code == 0
 
 
+@pytest.mark.skipif(platform.system() == "Windows",
+                    reason="does not run on windows")
 def test_list_config_options(monkeypatch):
-    if not platform.system() == "Windows":
-        runner = CliRunner(mix_stderr=False)
-        results = runner.invoke(
-            main,
-            [
-                "list-configuration-options",
-            ],
-            catch_exceptions=False,
-        )
-        assert results.exit_code == 0
+    runner = CliRunner(mix_stderr=False)
+    results = runner.invoke(
+        main,
+        [
+            "list-configuration-options",
+        ],
+        catch_exceptions=False,
+    )
+    assert results.exit_code == 0
