@@ -13,7 +13,9 @@
 #  limitations under the License.
 
 import pathlib
+import os
 
+from environs import Env
 from functools import partial
 from random import random
 from typing import Callable, Generator, Optional, Type, TypeVar, cast
@@ -47,7 +49,17 @@ from pramen_py.utils import (
 
 T_TRANSFORMATION = TypeVar("T_TRANSFORMATION", bound=Transformation)
 
-TRANSFORMATIONS_DIR = pathlib.Path("./transformations")
+
+def get_transformations_dir() -> pathlib.Path:
+    transformations_dir_path = os.environ.get("PRAMENPY_TRANSFORMATIONS_NAMESPACE")
+    if not transformations_dir_path:
+        env_file = Env(expand_vars=True)
+        env_file.read_env()
+        transformations_dir_path = env_file.str("PRAMENPY_TRANSFORMATIONS_NAMESPACE", "")
+    return pathlib.Path(transformations_dir_path or "./transformations")
+
+
+TRANSFORMATIONS_DIR = get_transformations_dir()
 
 
 def overwrite_info_dates(
