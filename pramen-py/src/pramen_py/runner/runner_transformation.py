@@ -22,6 +22,7 @@ from typing import Callable, Generator, Optional, Type, TypeVar, cast
 import attrs
 import click
 
+from environs import Env
 from loguru import logger
 from py4j.protocol import Py4JJavaError  # type: ignore
 
@@ -48,6 +49,7 @@ from pramen_py.utils import (
 
 T_TRANSFORMATION = TypeVar("T_TRANSFORMATION", bound=Transformation)
 DEFAULT_TRANSFORMATIONS_DIR = pathlib.Path("./transformations")
+TRANSFORMATIONS_DIR_KEY_NAME = "PRAMENPY_TRANSFORMATIONS_NAMESPACE"
 
 
 def overwrite_info_dates(
@@ -67,27 +69,25 @@ def overwrite_info_dates(
     return config
 
 
-def get_transformations_dir() -> pathlib.Path:
-    transformations_dir_path = (
-        os.environ.get("PRAMENPY_TRANSFORMATIONS_NAMESPACE") or ""
-    )
+def get_transformations_dir(dir_key: str, envs: Env) -> pathlib.Path:
+    transformations_dir_path = os.environ.get(dir_key) or ""
     if not transformations_dir_path:
-        transformations_dir_path = env.str(
-            "PRAMENPY_TRANSFORMATIONS_NAMESPACE", ""
-        )
-    return pathlib.Path(transformations_dir_path)
+        transformations_dir_path = envs.str(dir_key, "")
+    return pathlib.Path(
+        transformations_dir_path or DEFAULT_TRANSFORMATIONS_DIR
+    )
 
 
-def discover_transformations(
-    path: pathlib.Path = DEFAULT_TRANSFORMATIONS_DIR,
-) -> Generator[Type[T_TRANSFORMATION], None, None,]:
+def discover_transformations() -> Generator[
+    Type[T_TRANSFORMATION], None, None
+]:
     """Return generator of Transformation subclasses.
 
     In order to provide a set of subclasses we keep track already
     provided class names and do not allow to yield a class with the same
     name more than one time.
     """
-    load_modules(get_transformations_dir() or path)
+    load_modules(get_transformations_dir(TRANSFORMATIONS_DIR_KEY_NAME, env))
     _transformations_names = []
     for cls in Transformation.__subclasses__():
         if cls.__name__ not in _transformations_names:
@@ -143,7 +143,7 @@ class TransformationsRunner(Runner):
     def create_cli_cmd_callback(
         self,
         T: Type[T_TRANSFORMATION],
-    ) -> Callable[[CLI_CALLBACK], None]:
+    ) -> Callable[CLI_CALLBACK, None]:
         async def t_run_wrapper(
             ctx: click.Context,
             config: TransformationConfig,
@@ -171,7 +171,7 @@ class TransformationsRunner(Runner):
                 )
 
         return cast(
-            Callable[[CLI_CALLBACK], None],
+            Callable[CLI_CALLBACK, None],
             click.pass_context(coro(t_run_wrapper)),
         )
 
