@@ -16,7 +16,6 @@ import asyncio
 import importlib
 import os
 import pkgutil
-import platform
 
 from datetime import date, datetime
 from functools import wraps
@@ -122,15 +121,7 @@ def coro(
         *args: object,
         **kwargs: object,
     ) -> OPS_RET:
-
-        if (
-            platform.system() == "Windows"
-            and platform.python_version() < "3.8.0"
-        ):
-            loop = asyncio.ProactorEventLoop()
-            asyncio.set_event_loop(loop)
-        else:
-            loop = asyncio.get_event_loop()
+        loop = asyncio.get_event_loop()
         return loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper

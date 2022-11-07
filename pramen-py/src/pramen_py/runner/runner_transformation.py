@@ -12,7 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import os
 import pathlib
 
 from functools import partial
@@ -47,7 +46,7 @@ from pramen_py.utils import (
 
 
 T_TRANSFORMATION = TypeVar("T_TRANSFORMATION", bound=Transformation)
-DEFAULT_TRANSFORMATIONS_DIR = pathlib.Path("./transformations")
+TRANSFORMATIONS_DIR = pathlib.Path("./transformations")
 
 
 def overwrite_info_dates(
@@ -67,19 +66,8 @@ def overwrite_info_dates(
     return config
 
 
-def get_transformations_dir() -> pathlib.Path:
-    transformations_dir_path = (
-        os.environ.get("PRAMENPY_TRANSFORMATIONS_NAMESPACE") or ""
-    )
-    if not transformations_dir_path:
-        transformations_dir_path = env.str(
-            "PRAMENPY_TRANSFORMATIONS_NAMESPACE", ""
-        )
-    return pathlib.Path(transformations_dir_path)
-
-
 def discover_transformations(
-    path: pathlib.Path = DEFAULT_TRANSFORMATIONS_DIR,
+    path: pathlib.Path = TRANSFORMATIONS_DIR,
 ) -> Generator[Type[T_TRANSFORMATION], None, None,]:
     """Return generator of Transformation subclasses.
 
@@ -87,7 +75,7 @@ def discover_transformations(
     provided class names and do not allow to yield a class with the same
     name more than one time.
     """
-    load_modules(get_transformations_dir() or path)
+    load_modules(path)
     _transformations_names = []
     for cls in Transformation.__subclasses__():
         if cls.__name__ not in _transformations_names:
@@ -143,7 +131,7 @@ class TransformationsRunner(Runner):
     def create_cli_cmd_callback(
         self,
         T: Type[T_TRANSFORMATION],
-    ) -> Callable[[CLI_CALLBACK], None]:
+    ) -> Callable[CLI_CALLBACK, None]:
         async def t_run_wrapper(
             ctx: click.Context,
             config: TransformationConfig,
@@ -171,7 +159,7 @@ class TransformationsRunner(Runner):
                 )
 
         return cast(
-            Callable[[CLI_CALLBACK], None],
+            Callable[CLI_CALLBACK, None],
             click.pass_context(coro(t_run_wrapper)),
         )
 

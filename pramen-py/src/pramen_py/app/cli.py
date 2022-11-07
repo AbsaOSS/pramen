@@ -13,7 +13,6 @@
 #  limitations under the License.
 
 import asyncio
-import platform
 
 import click
 
@@ -160,10 +159,12 @@ async def bash() -> None:
 @coro
 async def list_configuration_options() -> None:
     """List of available environment variables to configure the app."""
-    command = "type" if platform.system() == "Windows" else "cat"
-    proc = await asyncio.subprocess.create_subprocess_shell(
-        f"{command} .env.example",
-        stdout=asyncio.subprocess.PIPE,
-    )
-    res, _ = await proc.communicate()
-    click.echo(res.decode())
+
+    async def example_coroutine_function() -> str:
+        with open(".env.example") as config_options:
+            read_config_options = config_options.read()
+        return read_config_options
+
+    example_config_options = await example_coroutine_function()
+
+    click.echo(example_config_options)
