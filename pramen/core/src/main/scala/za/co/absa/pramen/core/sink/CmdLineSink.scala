@@ -107,11 +107,15 @@ import scala.util.control.NonFatal
   * }}}
   *
   */
-class CmdLineSink(processRunner: ProcessRunner,
+class CmdLineSink(sinkConfig: Config,
+                  processRunner: ProcessRunner,
                   tempHadoopPath: String,
                   format: String,
                   formatOptions: Map[String, String]) extends Sink {
   private val log = LoggerFactory.getLogger(this.getClass)
+
+
+  override val config: Config = sinkConfig
 
   override def connect(): Unit = {}
 
@@ -158,8 +162,8 @@ class CmdLineSink(processRunner: ProcessRunner,
   }
 
   private[core] def getCmdLine(cmdLineTemplate: String,
-                                    dataPath: Path,
-                                    infoDate: LocalDate): String = {
+                               dataPath: Path,
+                               infoDate: LocalDate): String = {
     log.info(s"CmdLine template: $cmdLineTemplate")
 
     cmdLineTemplate.replace("@infoDate", infoDate.toString)
@@ -197,6 +201,6 @@ object CmdLineSink extends ExternalChannelFactory[CmdLineSink] {
 
     val runner = new ProcessRunnerImpl(includeLogLines, true, true, "Cmd", "Cmd", true)
 
-    new CmdLineSink(runner, tempPath, format, extraOptions)
+    new CmdLineSink(conf, runner, tempPath, format, extraOptions)
   }
 }

@@ -16,15 +16,15 @@
 
 package za.co.absa.pramen.core.mocks.job
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Query, Sink, Source, TableReader}
+import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader}
 import za.co.absa.pramen.core.mocks.reader.ReaderSpy
 
-import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
 class SourceSpy(query: Query = Query.Table("table1"),
+                sourceConfig: Config = ConfigFactory.empty(),
                 numberOfRecords: Int = 5,
                 hasInformationDate: Boolean = false,
                 readerCountException: Throwable = null,
@@ -35,6 +35,8 @@ class SourceSpy(query: Query = Query.Table("table1"),
   var writeCalled: Int = 0
   val dfs: ListBuffer[DataFrame] = new ListBuffer()
   var specialOption: Option[String] = None
+
+  override val config: Config = sourceConfig
 
   override def hasInfoDate: Boolean = hasInformationDate
 

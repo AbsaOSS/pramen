@@ -129,11 +129,13 @@ import java.time.{Instant, LocalDate}
   * }}}
   *
   */
-class EnceladusSink(enceladusConfig: EnceladusConfig, conf: Config) extends Sink {
+class EnceladusSink(sinkConfig: Config,
+                    enceladusConfig: EnceladusConfig) extends Sink {
   import za.co.absa.pramen.extras.sink.EnceladusSink._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  override val config: Config = sinkConfig
   override def connect(): Unit = {}
 
   override def close(): Unit = {}
@@ -187,7 +189,7 @@ class EnceladusSink(enceladusConfig: EnceladusConfig, conf: Config) extends Sink
           outputPath,
           infoDate,
           jobStart,
-          jobStart)(spark, conf)
+          jobStart)(spark, sinkConfig)
       }
     } else {
       log.info(s"Nothing to save to the Enceladus raw folder: $outputPathStr")
@@ -203,6 +205,6 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
     val enceladusConfig = EnceladusConfig.fromConfig(conf)
-    new EnceladusSink(enceladusConfig, conf)
+    new EnceladusSink(conf, enceladusConfig)
   }
 }

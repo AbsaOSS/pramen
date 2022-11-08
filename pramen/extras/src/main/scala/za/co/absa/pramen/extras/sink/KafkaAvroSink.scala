@@ -109,7 +109,10 @@ import java.time.LocalDate
   * }}}
   *
   */
-class KafkaAvroSink(val kafkaWriterConfig: KafkaWriterConfig) extends Sink {
+class KafkaAvroSink(sinkConfig: Config,
+                    val kafkaWriterConfig: KafkaWriterConfig) extends Sink {
+
+  override val config: Config = sinkConfig
   override def connect(): Unit = {}
 
   override def close(): Unit = {}
@@ -135,6 +138,6 @@ object KafkaAvroSink extends ExternalChannelFactory[KafkaAvroSink] {
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): KafkaAvroSink = {
     val kafkaWriterConfig = KafkaWriterConfig.fromConfig(conf)
-    new KafkaAvroSink(kafkaWriterConfig)
+    new KafkaAvroSink(conf, kafkaWriterConfig)
   }
 }

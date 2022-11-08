@@ -16,14 +16,15 @@
 
 package za.co.absa.pramen.core.mocks.job
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
-class SinkSpy(val customConfig: String = "",
+class SinkSpy(sinkConfig: Config = ConfigFactory.empty(),
+              val customConfig: String = "",
               connectException: Throwable = null,
               writeException: Throwable = null,
               closeException: Throwable = null) extends Sink {
@@ -32,6 +33,8 @@ class SinkSpy(val customConfig: String = "",
   var writeCalled: Int = 0
   val dfs: ListBuffer[DataFrame] = new ListBuffer()
   var specialOption: Option[String] = None
+
+  override val config: Config = sinkConfig
 
   override def connect(): Unit = {
     connectCalled += 1
@@ -76,6 +79,6 @@ object SinkSpy extends ExternalChannelFactory[SinkSpy] {
     } else {
       ""
     }
-    new SinkSpy(customConfig)
+    new SinkSpy(conf, customConfig)
   }
 }

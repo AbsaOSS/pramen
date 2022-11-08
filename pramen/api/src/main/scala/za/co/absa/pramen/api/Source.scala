@@ -16,8 +16,19 @@
 
 package za.co.absa.pramen.api
 
+import com.typesafe.config.Config
+
 trait Source extends ExternalChannel {
+  /** The configuration used to create the source. */
+  def config: Config
+
+  /**
+    * Does the source has an information date.
+    * If yes, input data is treated as events.
+    * If no, the data is treated as snapshots.
+    */
   def hasInfoDate: Boolean
 
+  /** Returns an object that allows reading a specific table/query based on date ranges. */
   def getReader(query: Query, columns: Seq[String]): TableReader
 }
