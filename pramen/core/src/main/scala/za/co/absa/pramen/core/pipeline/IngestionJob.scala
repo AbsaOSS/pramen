@@ -63,23 +63,35 @@ class IngestionJob(operationDef: OperationDef,
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Souring is not needed.")
           JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings)
         } else {
-          log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs update.")
-          JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
+          if (recordCount >= minimumRecordsOpt.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
+            log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs update.")
+            JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
+          } else {
+            processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, minimumRecordsOpt, Some(chunk.inputRecordCount))
+          }
         }
       case None        =>
         if (recordCount >= minimumRecordsOpt.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount new records. Adding to the processing list.")
           JobPreRunResult(JobPreRunStatus.Ready, Some(recordCount), dependencyWarnings)
         } else {
-          minimumRecordsOpt match {
-            case Some(minimumRecords) =>
-              log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")
-              JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
-            case None                 =>
-              log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
-              JobPreRunResult(JobPreRunStatus.NoData, minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
-          }
+          processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, minimumRecordsOpt, None)
         }
+    }
+  }
+
+  private def processInsufficientDataCase(infoDate: LocalDate,
+                                          dependencyWarnings: Seq[DependencyWarning],
+                                          recordCount: Long,
+                                          minimumRecordsOpt: Option[Int],
+                                          oldRecordCount: Option[Long]) = {
+    minimumRecordsOpt match {
+      case Some(minimumRecords) =>
+        log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")
+        JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords, oldRecordCount), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
+      case None                 =>
+        log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
+        JobPreRunResult(JobPreRunStatus.NoData, minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
     }
   }
 

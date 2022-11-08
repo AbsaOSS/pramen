@@ -47,7 +47,7 @@ object RunStatus {
     val isFailure: Boolean = false
   }
 
-  case class InsufficientData(actual: Long, expected: Long) extends RunStatus {
+  case class InsufficientData(actual: Long, expected: Long, recordCountOld: Option[Long]) extends RunStatus {
     val isFailure: Boolean = true
   }
 

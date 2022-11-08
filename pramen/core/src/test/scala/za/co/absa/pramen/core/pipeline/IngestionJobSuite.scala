@@ -105,14 +105,26 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
         assert(result.status == JobPreRunStatus.AlreadyRan)
       }
 
-      "track needs update" in {
-        val (bk, _, job) = getUseCase()
+      "track needs update" when {
+        "some records, default minimum records" in {
+          val (bk, _, job) = getUseCase()
 
-        bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
 
-        val result = job.preRunCheckJob(infoDate, conf, Nil)
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-        assert(result.status == JobPreRunStatus.NeedsUpdate)
+          assert(result.status == JobPreRunStatus.NeedsUpdate)
+        }
+
+        "some records, custom minimum records" in {
+          val (bk, _, job) = getUseCase(minRecords = Some(3))
+
+          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+          assert(result.status == JobPreRunStatus.NeedsUpdate)
+        }
       }
 
       "track ready" when {
@@ -152,12 +164,22 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
       }
 
       "track insufficient data" when {
-        "some records, custom minimum records" in {
+        "new job, some records, custom minimum records" in {
           val (_, _, job) = getUseCase(minRecords = Some(4))
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-          assert(result.status == JobPreRunStatus.InsufficientData(3, 4))
+          assert(result.status == JobPreRunStatus.InsufficientData(3, 4, None))
+        }
+
+        "needs update, some records, custom minimum records" in {
+          val (bk, _, job) = getUseCase(minRecords = Some(4))
+
+          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+          assert(result.status == JobPreRunStatus.InsufficientData(3, 4, Some(100)))
         }
       }
     }
