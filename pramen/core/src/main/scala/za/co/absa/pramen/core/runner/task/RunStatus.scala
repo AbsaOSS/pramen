@@ -47,6 +47,10 @@ object RunStatus {
     val isFailure: Boolean = false
   }
 
+  case class InsufficientData(actual: Long, expected: Long) extends RunStatus {
+    val isFailure: Boolean = true
+  }
+
   case object NotRan extends RunStatus {
     val isFailure: Boolean = false
   }

@@ -81,9 +81,12 @@ abstract class TaskRunnerBase(conf: Config,
           case NeedsUpdate                  =>
             log.info(s"The table needs update: $outputTable for date: ${task.infoDate}.")
             Right(validationResult)
-          case NoData                       =>
+          case NoData =>
             log.info(s"NO DATA available for the task: $outputTable for date: ${task.infoDate}.")
             Left(TaskResult(task.job, RunStatus.NoData, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
+          case InsufficientData(expected, actual) =>
+            log.info(s"INSUFFICIENT DATA available for the task: $outputTable for date: ${task.infoDate}. Expected = $expected, actual = $actual")
+            Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
           case AlreadyRan                   =>
             if (runtimeConfig.isRerun) {
               log.info(s"RE-RUNNING the task: $outputTable for date: ${task.infoDate}.")

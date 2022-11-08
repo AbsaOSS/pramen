@@ -19,7 +19,6 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
-import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -28,10 +27,10 @@ import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixtu
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
+import za.co.absa.pramen.core.pipeline.IngestionJob._
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.source.SourceManager.getSourceByName
 import za.co.absa.pramen.core.utils.SparkUtils
-import za.co.absa.pramen.core.pipeline.IngestionJob._
 
 import java.sql.SQLSyntaxErrorException
 import java.time.{Instant, LocalDate}
@@ -150,13 +149,15 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
 
           assert(result.status == JobPreRunStatus.NoData)
         }
+      }
 
+      "track insufficient data" when {
         "some records, custom minimum records" in {
           val (_, _, job) = getUseCase(minRecords = Some(4))
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-          assert(result.status == JobPreRunStatus.NoData)
+          assert(result.status == JobPreRunStatus.InsufficientData(3, 4))
         }
       }
     }

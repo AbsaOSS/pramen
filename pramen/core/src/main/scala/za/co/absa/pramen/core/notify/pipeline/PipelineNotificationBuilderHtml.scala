@@ -287,7 +287,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       row.append(TextElement(task.runInfo.map(_.infoDate.toString).getOrElse("")))
 
       if (outputRecordsKnown)
-        row.append(TextElement(getRecordCountText(task)))
+        row.append(getRecordCountText(task))
 
       row.append(TextElement(getElapsedTime(task)))
 
@@ -330,21 +330,24 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def getRecordCountText(task: TaskResult): String = {
+  private def getRecordCountText(task: TaskResult): TextElement = {
     task.runStatus match {
-      case s: Succeeded =>
+      case s: Succeeded                       =>
         val old = s.recordCountOld.getOrElse(0L)
         if (old == 0) {
-          s.recordCount.toString
+          TextElement(s.recordCount.toString)
         } else {
           val difference = s.recordCount - old
-          if (difference > 0) {
+          val str = if (difference > 0) {
             s"${s.recordCount} (+$difference)"
           } else {
             s"${s.recordCount} ($difference)"
           }
+          TextElement(str)
         }
-      case _            => ""
+      case insufficientData: InsufficientData =>
+        TextElement(s"${insufficientData.actual} < ${insufficientData.expected}", Style.Exception)
+      case _                                  => TextElement("")
     }
   }
 
@@ -403,6 +406,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         } else {
           TextElement("Success", successStyle)
         }
+      case _: InsufficientData    => TextElement("Insufficient data", Style.Exception)
       case NoData                 => TextElement("No Data", Style.Warning)
       case _: Skipped             => TextElement("Skipped", successStyle)
       case NotRan                 => TextElement("Skipped", Style.Warning)

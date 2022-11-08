@@ -53,9 +53,9 @@ class IngestionJob(operationDef: OperationDef,
     val reader = source.getReader(sourceTable.query, sourceTable.columns)
     val recordCount = reader.getRecordCount(from, to)
 
-    val minimumRecords = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
+    val minimumRecordsOpt = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
 
-    minimumRecords.foreach(n => log.info(s"Minimum records to expect: $n"))
+    minimumRecordsOpt.foreach(n => log.info(s"Minimum records to expect: $n"))
 
     dataChunk match {
       case Some(chunk) =>
@@ -67,15 +67,18 @@ class IngestionJob(operationDef: OperationDef,
           JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
         }
       case None        =>
-        if (recordCount >= minimumRecords.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
+        if (recordCount >= minimumRecordsOpt.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount new records. Adding to the processing list.")
           JobPreRunResult(JobPreRunStatus.Ready, Some(recordCount), dependencyWarnings)
         } else {
-          minimumRecords match {
-            case Some(min) => log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $min, got $recordCount. Skipping...")
-            case None      => log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
+          minimumRecordsOpt match {
+            case Some(minimumRecords) =>
+              log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")
+              JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
+            case None                 =>
+              log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
+              JobPreRunResult(JobPreRunStatus.NoData, minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
           }
-          JobPreRunResult(JobPreRunStatus.NoData, None, dependencyWarnings)
         }
     }
   }
