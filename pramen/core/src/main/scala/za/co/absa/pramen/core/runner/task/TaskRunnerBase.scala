@@ -84,9 +84,9 @@ abstract class TaskRunnerBase(conf: Config,
           case NoData =>
             log.info(s"NO DATA available for the task: $outputTable for date: ${task.infoDate}.")
             Left(TaskResult(task.job, RunStatus.NoData, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
-          case InsufficientData(expected, actual) =>
+          case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTable for date: ${task.infoDate}. Expected = $expected, actual = $actual")
-            Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
+            Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
           case AlreadyRan                   =>
             if (runtimeConfig.isRerun) {
               log.info(s"RE-RUNNING the task: $outputTable for date: ${task.infoDate}.")
@@ -252,8 +252,10 @@ abstract class TaskRunnerBase(conf: Config,
         log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
       case RunStatus.FailedDependencies(deps)    =>
         log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
-      case RunStatus.NoData                      =>
+      case RunStatus.NoData =>
         log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
+      case _: RunStatus.InsufficientData =>
+        log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")
       case RunStatus.Skipped(msg)                =>
         log.info(s"$WARNING Task '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
       case RunStatus.NotRan                      =>

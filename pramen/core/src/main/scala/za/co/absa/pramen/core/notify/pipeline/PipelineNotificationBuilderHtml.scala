@@ -287,7 +287,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       row.append(TextElement(task.runInfo.map(_.infoDate.toString).getOrElse("")))
 
       if (outputRecordsKnown)
-        row.append(getRecordCountText(task))
+        row.append(TextElement(getRecordCountText(task)))
 
       row.append(TextElement(getElapsedTime(task)))
 
@@ -330,24 +330,34 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def getRecordCountText(task: TaskResult): TextElement = {
+  private def getRecordCountText(task: TaskResult): String = {
     task.runStatus match {
       case s: Succeeded                       =>
         val old = s.recordCountOld.getOrElse(0L)
         if (old == 0) {
-          TextElement(s.recordCount.toString)
+          s.recordCount.toString
         } else {
           val difference = s.recordCount - old
-          val str = if (difference > 0) {
+          if (difference > 0) {
             s"${s.recordCount} (+$difference)"
           } else {
             s"${s.recordCount} ($difference)"
           }
-          TextElement(str)
         }
       case insufficientData: InsufficientData =>
-        TextElement(s"${insufficientData.actual} < ${insufficientData.expected}", Style.Exception)
-      case _                                  => TextElement("")
+        val old = insufficientData.recordCountOld.getOrElse(0L)
+        if (old == 0) {
+          insufficientData.actual.toString
+        } else {
+          val difference = insufficientData.actual - old
+          val str = if (difference > 0) {
+            s"${insufficientData.actual} (+$difference)"
+          } else {
+            s"${insufficientData.actual} ($difference)"
+          }
+          str
+        }
+      case _                                  => ""
     }
   }
 
@@ -371,11 +381,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private def getFailureReason(task: TaskResult): String = {
     task.runStatus match {
-      case Failed(ex)                  => ex.getMessage
-      case ValidationFailed(ex)        => ex.getMessage
-      case MissingDependencies(tables) => s"Dependent job failures: ${tables.mkString(", ")}"
-      case FailedDependencies(deps)    => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
-      case _                           =>
+      case Failed(ex)                            => ex.getMessage
+      case ValidationFailed(ex)                  => ex.getMessage
+      case InsufficientData(actual, expected, _) => s"Got $actual, expected $expected records"
+      case MissingDependencies(tables)           => s"Dependent job failures: ${tables.mkString(", ")}"
+      case FailedDependencies(deps)              => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
+      case _                                     =>
         if (task.dependencyWarnings.isEmpty) {
           ""
         } else {
