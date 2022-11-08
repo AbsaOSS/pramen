@@ -127,7 +127,7 @@ class CmdLineSinkSuite extends WordSpec with SparkTestBase with TempDirFixture {
                  runFunction: () => Unit = () => {}): (CmdLineSink, ProcessRunnerSpy) = {
     val runner = new ProcessRunnerSpy(exitCode = exitCode, runException = runException, runFunction = runFunction)
 
-    (new CmdLineSink(runner, tempDir, format, options), runner)
+    (new CmdLineSink(ConfigFactory.empty(), runner, tempDir, format, options), runner)
   }
 
 }

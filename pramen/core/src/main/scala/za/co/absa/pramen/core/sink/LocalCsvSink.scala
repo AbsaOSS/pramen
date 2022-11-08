@@ -105,8 +105,11 @@ import java.time.{LocalDate, ZonedDateTime}
   * }}}
   *
   */
-class LocalCsvSink(params: CsvConversionParams) extends Sink {
+class LocalCsvSink(sinkConfig: Config,
+                   params: CsvConversionParams) extends Sink {
   private val log = LoggerFactory.getLogger(this.getClass)
+
+  override val config: Config = sinkConfig
 
   override def connect(): Unit = {}
 
@@ -234,6 +237,6 @@ object LocalCsvSink extends ExternalChannelFactory[LocalCsvSink] {
   override def apply(conf: Config, parentPath: String, spark: SparkSession): LocalCsvSink = {
     val params = CsvConversionParams.fromConfig(conf, parentPath)
 
-    new LocalCsvSink(params)
+    new LocalCsvSink(conf: Config, params)
   }
 }
