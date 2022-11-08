@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.pipeline
 
-import com.typesafe.config.{Config, ConfigFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.DataFrame
 import org.scalatest.WordSpec
 import org.slf4j.LoggerFactory
@@ -31,11 +31,13 @@ import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.source.SourceManager.getSourceByName
 import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.core.pipeline.IngestionJob._
 
 import java.sql.SQLSyntaxErrorException
 import java.time.{Instant, LocalDate}
 
 class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonFixture with RelationalDbFixture {
+
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
@@ -114,20 +116,48 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
         assert(result.status == JobPreRunStatus.NeedsUpdate)
       }
 
-      "track ready" in {
-        val (_, _, job) = getUseCase()
+      "track ready" when {
+        "some records, default minimum records" in {
+          val (_, _, job) = getUseCase()
 
-        val result = job.preRunCheckJob(infoDate, conf, Nil)
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-        assert(result.status == JobPreRunStatus.Ready)
+          assert(result.status == JobPreRunStatus.Ready)
+        }
+
+        "some records, custom minimum records" in {
+          val (_, _, job) = getUseCase(minRecords = Some(3))
+
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+          assert(result.status == JobPreRunStatus.Ready)
+        }
+
+        "empty table, custom zero minimum records" in {
+          val (_, _, job) = getUseCase(minRecords = Some(0), sourceTable = "empty")
+
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+          assert(result.status == JobPreRunStatus.Ready)
+        }
       }
 
-      "track no data" in {
-        val (_, _, job) = getUseCase(sourceTable = "empty")
+      "track no data" when {
+        "no records, default minimum records" in {
+          val (_, _, job) = getUseCase(sourceTable = "empty")
 
-        val result = job.preRunCheckJob(infoDate, conf, Nil)
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-        assert(result.status == JobPreRunStatus.NoData)
+          assert(result.status == JobPreRunStatus.NoData)
+        }
+
+        "some records, custom minimum records" in {
+          val (_, _, job) = getUseCase(minRecords = Some(4))
+
+          val result = job.preRunCheckJob(infoDate, conf, Nil)
+
+          assert(result.status == JobPreRunStatus.NoData)
+        }
       }
     }
 
@@ -216,17 +246,17 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
   "postProcessing" should {
     "apply transformations, filters and projections" in {
       val expectedData =
-      """[ {
-        |  "ID" : 2,
-        |  "NAME" : "Company2",
-        |  "NAME_U" : "COMPANY2",
-        |  "EMAIL" : "company2@example.com"
-        |}, {
-        |  "ID" : 3,
-        |  "NAME" : "Company3",
-        |  "NAME_U" : "COMPANY3",
-        |  "EMAIL" : "company3@example.com"
-        |} ]""".stripMargin
+        """[ {
+          |  "ID" : 2,
+          |  "NAME" : "Company2",
+          |  "NAME_U" : "COMPANY2",
+          |  "EMAIL" : "company2@example.com"
+          |}, {
+          |  "ID" : 3,
+          |  "NAME" : "Company3",
+          |  "NAME_U" : "COMPANY3",
+          |  "EMAIL" : "company3@example.com"
+          |} ]""".stripMargin
       val (_, _, job) = getUseCase()
 
       val dfIn = job.run(infoDate, conf)
@@ -256,12 +286,15 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
   def getUseCase(sourceName: String = "jdbc",
                  sourceTable: String = RdbExampleTable.Company.tableName,
                  rangeFromExpr: Option[String] = None,
-                 rangeToExpr: Option[String] = None): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
+                 rangeToExpr: Option[String] = None,
+                 minRecords: Option[Int] = None): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy
     val operationDef = OperationDefFactory.getDummyOperationDef()
 
-    val source = getSourceByName(sourceName, conf, None)
+    val configOverride = minRecords.map(min => ConfigFactory.empty().withValue(MINIMUM_RECORDS_KEY, ConfigValueFactory.fromAnyRef(min)))
+
+    val source = getSourceByName(sourceName, conf, configOverride)
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1")
 
@@ -273,7 +306,7 @@ class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonF
       source,
       SourceTable("table1", Query.Table(sourceTable), rangeFromExpr, rangeToExpr, Seq(
         TransformExpression("NAME_U", "upper(NAME)")
-      ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), None),
+      ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), configOverride),
       outputTable,
       specialCharacters)
 
