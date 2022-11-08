@@ -19,9 +19,6 @@ package za.co.absa.pramen.api
 import com.typesafe.config.Config
 
 trait Source extends ExternalChannel {
-  /** The configuration used to create the source. */
-  def config: Config
-
   /**
     * Does the source has an information date.
     * If yes, input data is treated as events.
