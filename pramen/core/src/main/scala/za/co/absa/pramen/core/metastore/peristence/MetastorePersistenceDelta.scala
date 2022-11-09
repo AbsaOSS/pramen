@@ -27,6 +27,7 @@ import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import scala.util.Try
 
 class MetastorePersistenceDelta(query: Query,
                                 infoDateColumn: String,
@@ -120,7 +121,11 @@ class MetastorePersistenceDelta(query: Query,
     val sizeOpt = query match {
       case Query.Path(path)   =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-        val size = fsUtils.getDirectorySize(getPartitionPath(infoDate).toUri.toString)
+        val size = Try {
+          // When 0 records is saved to a Delta directory, the directory is not created.
+          // But it is not an exceptional situation.
+          fsUtils.getDirectorySize(getPartitionPath(infoDate).toUri.toString)
+        }.getOrElse(0L)
         Some(size)
       case Query.Table(_) =>
         None
