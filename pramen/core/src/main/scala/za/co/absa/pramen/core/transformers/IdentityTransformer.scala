@@ -28,11 +28,13 @@ class IdentityTransformer extends Transformer {
       throw new IllegalArgumentException(s"Option 'table' is not defined")
     }
 
+    val emptyAllowed = options.getOrElse("empty.allowed", "true").toBoolean
+
     val tableName = options("table")
 
     val df = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
 
-    if (df.count() > 0) {
+    if (df.count() > 0 || emptyAllowed) {
       Reason.Ready
     } else {
       Reason.NotReady(s"No data for '$tableName' at $infoDate")
