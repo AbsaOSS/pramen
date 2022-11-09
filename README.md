@@ -347,6 +347,7 @@ built-in sources:
    - PostgreSQL
    - Oracle (a JDBC driver should be provided in the classpath)
    - Microsoft SQL Server
+   - DB2
    - Denodo (a JDBC driver should be provided in the classpath)
    - Hive 1/2
 - **Parquet on Hadoop** - allows fetching data in Parquet format from any Hadoop-compatible store: HDFS, S3, etc.
@@ -370,6 +371,24 @@ pramen.sources = [
     # ...
   }
   ## etc.
+]
+```
+
+You can specify a minimum records require to exist at the source in order to consider a table to have data.
+By default it is set to 1. You can override it for a specific source using `minimum.records` parameter.
+When set to 0, the source will be considered to have data even if it is empty. Therefore ingesting of empty
+tables will be allowed.
+
+You can override this parameter per-table using `minimum.records` parameter in the table definition. See the
+section on [sourcing jobs](#sourcing-jobs) for more details.
+```config
+pramen.sources = [
+  {
+    name = "source1_name"
+    factory.class = "za.co.absa.pramen.core.source.ParquetSource"
+    
+    minimum.records = 0
+  }
 ]
 ```
 
@@ -1442,6 +1461,7 @@ Here is an example configuration for a JDBC source:
       
       # You can override any of source settings here 
       source {
+        minimum.records = 1000 
         has.information.date.column = true
         information.date.column = "info_date"
       }
@@ -1449,6 +1469,9 @@ Here is an example configuration for a JDBC source:
   ]
 }
 ```
+
+The above example also shows how you can add a pre-ingestion validation on the number of records in the table
+using `minimum.records` parameter.
 
 Full example of JDBC ingestion pipelines: [examples/jdbc_sourcing](examples/jdbc_sourcing)
 
