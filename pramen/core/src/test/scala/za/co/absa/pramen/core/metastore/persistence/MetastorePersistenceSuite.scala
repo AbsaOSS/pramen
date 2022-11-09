@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.metastore.persistence
 
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.{Assertion, WordSpec}
 import za.co.absa.pramen.api.Query
@@ -218,6 +218,15 @@ class MetastorePersistenceSuite extends WordSpec with SparkTestBase with TempDir
 
     assert(stats.recordCount == 3)
     assert(stats.dataSizeBytes.exists(_ > 0))
+  }
+
+  def testStatsAvailableForEmptyTable(mtp: MetastorePersistence): Assertion = {
+    mtp.saveTable(infoDate, getDf.filter(col("b") > 10), Some(0))
+
+    val stats = mtp.getStats(infoDate)
+
+    assert(stats.recordCount == 0)
+    assert(stats.dataSizeBytes.contains(0L))
   }
 
   def testStatsNotAvailable(mtp: MetastorePersistence): Assertion = {
