@@ -331,33 +331,25 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   private def getRecordCountText(task: TaskResult): String = {
+    def renderDifference(numRecords: Long, numRecordsOld: Option[Long]): String = {
+      numRecordsOld match {
+        case Some(old) if old > 0 =>
+          val diff = numRecords - old
+          if (diff > 0)
+            s"$numRecords (+$diff)"
+          else if (diff < 0)
+            s"$numRecords (-$diff)"
+          else {
+            numRecords.toString
+          }
+        case _ => numRecords.toString
+      }
+    }
+
     task.runStatus match {
-      case s: Succeeded                       =>
-        val old = s.recordCountOld.getOrElse(0L)
-        if (old == 0) {
-          s.recordCount.toString
-        } else {
-          val difference = s.recordCount - old
-          if (difference > 0) {
-            s"${s.recordCount} (+$difference)"
-          } else {
-            s"${s.recordCount} ($difference)"
-          }
-        }
-      case insufficientData: InsufficientData =>
-        val old = insufficientData.recordCountOld.getOrElse(0L)
-        if (old == 0) {
-          insufficientData.actual.toString
-        } else {
-          val difference = insufficientData.actual - old
-          val str = if (difference > 0) {
-            s"${insufficientData.actual} (+$difference)"
-          } else {
-            s"${insufficientData.actual} ($difference)"
-          }
-          str
-        }
-      case _                                  => ""
+      case s: Succeeded        => renderDifference(s.recordCount, s.recordCountOld)
+      case d: InsufficientData => renderDifference(d.actual, d.recordCountOld)
+      case _                   => ""
     }
   }
 
