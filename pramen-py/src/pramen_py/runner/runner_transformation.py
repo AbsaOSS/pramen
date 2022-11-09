@@ -12,7 +12,6 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-import os
 import pathlib
 
 from functools import partial
@@ -22,7 +21,6 @@ from typing import Callable, Generator, Optional, Type, TypeVar, cast
 import attrs
 import click
 
-from environs import Env
 from loguru import logger
 from py4j.protocol import Py4JJavaError  # type: ignore
 
@@ -69,13 +67,8 @@ def overwrite_info_dates(
     return config
 
 
-def get_transformations_dir(dir_key: str, envs: Env) -> pathlib.Path:
-    transformations_dir_path = os.environ.get(dir_key) or ""
-    if not transformations_dir_path:
-        transformations_dir_path = envs.str(dir_key, "")
-    return pathlib.Path(
-        transformations_dir_path or DEFAULT_TRANSFORMATIONS_DIR
-    )
+def get_transformations_dir() -> pathlib.Path:
+    return env.path(TRANSFORMATIONS_DIR_KEY_NAME, DEFAULT_TRANSFORMATIONS_DIR)  # type: ignore
 
 
 def discover_transformations() -> Generator[
@@ -87,7 +80,7 @@ def discover_transformations() -> Generator[
     provided class names and do not allow to yield a class with the same
     name more than one time.
     """
-    load_modules(get_transformations_dir(TRANSFORMATIONS_DIR_KEY_NAME, env))
+    load_modules(get_transformations_dir())
     _transformations_names = []
     for cls in Transformation.__subclasses__():
         if cls.__name__ not in _transformations_names:
