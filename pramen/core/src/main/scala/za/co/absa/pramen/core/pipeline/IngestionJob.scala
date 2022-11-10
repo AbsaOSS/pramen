@@ -39,7 +39,7 @@ class IngestionJob(operationDef: OperationDef,
                    specialCharacters: String)
                   (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
-  import IngestionJob._
+  import JobBase._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -136,9 +136,4 @@ class IngestionJob(operationDef: OperationDef,
       case None     => throw new RuntimeException(s"Failed to read data from '${sourceTable.query.query}'")
     }
   }
-}
-
-object IngestionJob {
-  val MINIMUM_RECORDS_KEY = "minimum.records"
-  val MINIMUM_RECORDS_DEFAULT = 1
 }

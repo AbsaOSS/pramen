@@ -195,6 +195,16 @@ class LocalCsvSinkSuite extends WordSpec with SparkTestBase with TempDirFixture 
     }
   }
 
+  "getFinalFileName()" should {
+    "add the path and file extension to the file name" in {
+      val sink = getUseCase("/dummy", "A_@tableName_@infoDate")
+
+      val actual = sink.getFinalFileName("table1", infoDate, "/bigdata")
+
+      assert(actual == "/bigdata/A_table1_2022-02-18.csv")
+    }
+  }
+
   "convertDateTimeToString()" should {
     "convert date and timestamp fields to strings of the given format" in {
       val expected =

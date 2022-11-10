@@ -150,6 +150,8 @@ class LocalCsvSink(sinkConfig: Config,
       log.info(s"$count records saved to $fileName.")
       count
     } else {
+      // ToDo - still write a CSV file, just with headers
+      // By default Spark creates an 0 length file if the DataFrame is empty.
       log.info(s"Notting to send to $outputPath.")
       0L
     }
@@ -203,16 +205,13 @@ class LocalCsvSink(sinkConfig: Config,
   }
 
   private[core] def copyToLocal(tableName: String,
-                                     infoDate: LocalDate,
-                                     tempPathWithCSV: Path,
-                                     localPath: String,
-                                     fsUtils: FsUtils)(implicit spark: SparkSession): String = {
+                                infoDate: LocalDate,
+                                tempPathWithCSV: Path,
+                                localPath: String,
+                                fsUtils: FsUtils)(implicit spark: SparkSession): String = {
     val fileInHdfs = fsUtils.getFilesRecursive(tempPathWithCSV, "*.csv").head
 
-
-    val fileBase = getFileName(params.fileNamePattern, params.fileNameTimestampPattern, tableName, infoDate)
-
-    val finalFileName = Paths.get(localPath, s"$fileBase.csv").toString
+    val finalFileName = getFinalFileName(tableName, infoDate, localPath)
 
     log.info(s"Copying $fileInHdfs to $finalFileName...")
     fsUtils.copyToLocal(fileInHdfs, new Path(finalFileName), overwrite = false)
@@ -228,6 +227,14 @@ class LocalCsvSink(sinkConfig: Config,
       .replace("@tableName", tableName)
       .replace("@infoDate", infoDate.toString)
       .replace("@timestamp", ts)
+  }
+
+  private[core] def getFinalFileName(tableName: String,
+                                     infoDate: LocalDate,
+                                     localPath: String): String = {
+    val fileBase = getFileName(params.fileNamePattern, params.fileNameTimestampPattern, tableName, infoDate)
+
+    Paths.get(localPath, s"$fileBase.csv").toString
   }
 }
 

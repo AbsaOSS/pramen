@@ -18,12 +18,14 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus.Ready
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
@@ -38,6 +40,9 @@ class SinkJob(operationDef: OperationDef,
               sinkTable: SinkTable)
              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
+  import JobBase._
+
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 
@@ -53,14 +58,27 @@ class SinkJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
+    val minimumRecordsOpt = ConfigUtils.getOptionInt(sink.config, MINIMUM_RECORDS_KEY)
+
+    minimumRecordsOpt.foreach(n => log.info(s"Minimum records to send: $n"))
+
     val df = getDataDf(infoDate)
 
     val inputRecordCount = df.count()
 
-    if (inputRecordCount > 0) {
-      Reason.Ready
-    } else {
-      Reason.Skip("No records to send")
+    minimumRecordsOpt match {
+      case Some(min) =>
+        if (inputRecordCount >= min) {
+          Reason.Ready
+        } else {
+          Reason.NotReady(s"Not enough records to send. Got $inputRecordCount, expected at least $min records.")
+        }
+      case None      =>
+        if (inputRecordCount > 0) {
+          Reason.Ready
+        } else {
+          Reason.Skip("No records to send")
+        }
     }
   }
 

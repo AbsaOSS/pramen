@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.pipeline
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
 import org.scalatest.WordSpec
@@ -28,6 +28,7 @@ import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.SinkSpy
 import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.mocks.{MetaTableFactory, SinkTableFactory}
+import za.co.absa.pramen.core.pipeline.JobBase.MINIMUM_RECORDS_KEY
 import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.{Instant, LocalDate}
@@ -84,6 +85,28 @@ class SinkJobSuite extends WordSpec with SparkTestBase with TextComparisonFixtur
       val result = job.validate(infoDate, conf)
 
       assert(result.isInstanceOf[Reason.Skip])
+    }
+
+    "return Ready when the data frame satisfies the minimum record count" in {
+      val sinkConf = conf.withValue(MINIMUM_RECORDS_KEY, ConfigValueFactory.fromAnyRef(3))
+      val sink = SinkSpy(sinkConf, "", spark)
+
+      val (job, _) = getUseCase(sink = sink, tableDf = exampleDf)
+
+      val result = job.validate(infoDate, conf)
+
+      assert(result == Reason.Ready)
+    }
+
+    "return NotReady when the data frame does not contain enough records" in {
+      val sinkConf = conf.withValue(MINIMUM_RECORDS_KEY, ConfigValueFactory.fromAnyRef(4))
+      val sink = SinkSpy(sinkConf, "", spark)
+
+      val (job, _) = getUseCase(sink = sink, tableDf = exampleDf)
+
+      val result = job.validate(infoDate, conf)
+
+      assert(result.isInstanceOf[Reason.NotReady])
     }
   }
 

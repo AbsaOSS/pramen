@@ -135,30 +135,25 @@ class CmdLineSink(sinkConfig: Config,
 
     val count = df.count()
 
-    if (count > 0) {
-      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempHadoopPath)
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempHadoopPath)
 
-      fsUtils.withTempDirectory(new Path(tempHadoopPath)) { tempPath =>
-        df.write
-          .format(format)
-          .mode(SaveMode.Overwrite)
-          .options(formatOptions)
-          .save(tempPath.toString)
+    fsUtils.withTempDirectory(new Path(tempHadoopPath)) { tempPath =>
+      df.write
+        .format(format)
+        .mode(SaveMode.Overwrite)
+        .options(formatOptions)
+        .save(tempPath.toString)
 
-        log.info(s"$count records saved to $tempPath.")
+      log.info(s"$count records saved to $tempPath.")
 
-        val cmdLine = getCmdLine(cmdLineTemplate, tempPath, infoDate)
+      val cmdLine = getCmdLine(cmdLineTemplate, tempPath, infoDate)
 
-        runCmd(cmdLine)
+      runCmd(cmdLine)
 
-        log.info(s"$count records sent to the cmd line sink ($cmdLine).")
-      }
-
-      count
-    } else {
-      log.info(s"Notting to send to $cmdLineTemplate.")
-      0L
+      log.info(s"$count records sent to the cmd line sink ($cmdLine).")
     }
+
+    count
   }
 
   private[core] def getCmdLine(cmdLineTemplate: String,
