@@ -30,7 +30,6 @@ import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtil
 import java.time._
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
-import scala.compat.Platform.EOL
 
 object PipelineNotificationBuilderHtml {
   val MIN_RPS_JOB_DURATION_SECONDS = 60
@@ -39,6 +38,8 @@ object PipelineNotificationBuilderHtml {
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
 
   private val timestampFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm Z")
+
+  private val EOL = java.lang.System.lineSeparator
 
   private val zoneId = getZoneId
 
@@ -375,7 +376,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     task.runStatus match {
       case Failed(ex)                            => ex.getMessage
       case ValidationFailed(ex)                  => ex.getMessage
-      case InsufficientData(actual, expected, _) => s"Got $actual, expected $expected records"
+      case InsufficientData(actual, expected, _) => s"Got $actual, expected at least $expected records"
       case MissingDependencies(tables)           => s"Dependent job failures: ${tables.mkString(", ")}"
       case FailedDependencies(deps)              => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
       case _                                     =>

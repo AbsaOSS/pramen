@@ -158,3 +158,8 @@ abstract class JobBase(operationDef: OperationDef,
     (effectiveFrom, effectiveTo)
   }
 }
+
+object JobBase {
+  val MINIMUM_RECORDS_KEY = "minimum.records"
+  val MINIMUM_RECORDS_DEFAULT = 1
+}

@@ -39,5 +39,10 @@ class IdentityTransformer(Transformation):
         # just as example
         df = metastore.get_table(table_name)
 
-        assert df.count() != 0, f"Empty table {table_name} received"
+        empty_allowed = options.get("empty.allowed", "true").lower() == "true"
+
+        assert (
+            empty_allowed or df.count() != 0
+        ), f"Empty table {table_name} received"
+
         return df.withColumn("transform_id", rand())

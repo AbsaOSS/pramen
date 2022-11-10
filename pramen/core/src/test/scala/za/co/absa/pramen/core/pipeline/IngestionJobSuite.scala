@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixtu
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
-import za.co.absa.pramen.core.pipeline.IngestionJob._
+import za.co.absa.pramen.core.pipeline.JobBase._
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.source.SourceManager.getSourceByName
 import za.co.absa.pramen.core.utils.SparkUtils
