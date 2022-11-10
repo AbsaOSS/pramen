@@ -21,17 +21,21 @@ import za.co.absa.pramen.core.sink.{ColumnNameTransform, CsvConversionParams}
 object CsvConversionParamsFactory {
   def getDummyCsvConversionParams(csvOptions: Map[String, String] = Map.empty[String, String],
                                   fileNamePattern: String = "@tableName_@infoDate_@timestamp",
+                                  charsetOpt: Option[String] = None,
                                   tempHadoopPath: String = "/dummy/path",
                                   dateFormat: String = "yyyy-MM-dd",
                                   timestampFormat: String = "yyyy-MM-dd HH:mm:ss Z",
                                   fileNameTimestampPattern: String = "yyyyMMdd_HHmmss",
+                                  createEmptyCsv: Boolean = false,
                                   columnNameTransform: ColumnNameTransform = ColumnNameTransform.NoChange): CsvConversionParams = {
     CsvConversionParams(csvOptions = csvOptions,
       fileNamePattern = fileNamePattern,
+      charsetOpt,
       tempHadoopPath = tempHadoopPath,
       dateFormat = dateFormat,
       timestampFormat = timestampFormat,
       fileNameTimestampPattern = fileNameTimestampPattern,
+      createEmptyCsv,
       columnNameTransform = columnNameTransform)
   }
 }

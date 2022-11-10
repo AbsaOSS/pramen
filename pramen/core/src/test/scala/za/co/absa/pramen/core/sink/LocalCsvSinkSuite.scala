@@ -93,6 +93,94 @@ class LocalCsvSinkSuite extends WordSpec with SparkTestBase with TempDirFixture 
       assert(records == 0L)
     }
 
+    "write an empty CSV file when it is turned on" in {
+      val df = exampleDf.select("str", "int", "date").filter($"int" < 0)
+
+      withTempDirectory("sink_localcsv") { tempDir =>
+        val remoteDir = new Path(tempDir, "remote")
+        val localDir = new Path(tempDir, "local")
+
+        val sink = getUseCase(remoteDir.toString, fileNamePattern = "A_@tableName_@infoDate", createEmptyCsv = true)
+
+        val recordsCount = sink.send(df, "table1", null, infoDate, Map[String, String](
+          "path" -> localDir.toString
+        ))
+
+        val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
+
+        assert(recordsCount == 0)
+        assert(Files.exists(actualFileName))
+
+        val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
+
+        assert(contents.isEmpty)
+      }
+    }
+
+    "write a header-only CSV file when it is turned on" in {
+      val df = exampleDf.select("str", "int", "date").filter($"int" < 0)
+
+      val expectedContent = "str,int,date\n"
+
+      withTempDirectory("sink_localcsv") { tempDir =>
+        val remoteDir = new Path(tempDir, "remote")
+        val localDir = new Path(tempDir, "local")
+
+        val sink = getUseCase(remoteDir.toString,
+          fileNamePattern = "A_@tableName_@infoDate",
+          createEmptyCsv = true,
+          options = Map[String, String](
+            "header" -> "true",
+            "quoteAll" -> "false"
+          ))
+
+        val recordsCount = sink.send(df, "table1", null, infoDate, Map[String, String](
+          "path" -> localDir.toString
+        ))
+
+        val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
+
+        assert(recordsCount == 0)
+        assert(Files.exists(actualFileName))
+
+        val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
+
+        compareText(contents, expectedContent)
+      }
+    }
+
+    "write a quoted header-only CSV file when it is turned on" in {
+      val df = exampleDf.select("str", "int", "date").filter($"int" < 0)
+
+      val expectedContent = "\"str\",\"int\",\"date\"\n"
+
+      withTempDirectory("sink_localcsv") { tempDir =>
+        val remoteDir = new Path(tempDir, "remote")
+        val localDir = new Path(tempDir, "local")
+
+        val sink = getUseCase(remoteDir.toString,
+          fileNamePattern = "A_@tableName_@infoDate",
+          createEmptyCsv = true,
+          options = Map[String, String](
+            "header" -> "true",
+            "quoteAll" -> "true"
+          ))
+
+        val recordsCount = sink.send(df, "table1", null, infoDate, Map[String, String](
+          "path" -> localDir.toString
+        ))
+
+        val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
+
+        assert(recordsCount == 0)
+        assert(Files.exists(actualFileName))
+
+        val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
+
+        compareText(contents, expectedContent)
+      }
+    }
+
     "write a CSV file ot the target directory" in {
       val expectedContent =
         """"str","int","date"
@@ -291,12 +379,14 @@ class LocalCsvSinkSuite extends WordSpec with SparkTestBase with TempDirFixture 
   def getUseCase(tempDirectory: String,
                  fileNamePattern: String = "@tableName_@infoDate_@timestamp",
                  options: Map[String, String] = Map.empty[String, String],
-                 columnNameTransform: ColumnNameTransform = ColumnNameTransform.NoChange
+                 columnNameTransform: ColumnNameTransform = ColumnNameTransform.NoChange,
+                 createEmptyCsv: Boolean = false
                 ): LocalCsvSink = {
     val params = CsvConversionParamsFactory.getDummyCsvConversionParams(csvOptions = options,
       tempHadoopPath = tempDirectory,
       fileNamePattern = fileNamePattern,
-      columnNameTransform = columnNameTransform)
+      columnNameTransform = columnNameTransform,
+      createEmptyCsv = createEmptyCsv)
 
     new LocalCsvSink(ConfigFactory.empty(), params)
   }
