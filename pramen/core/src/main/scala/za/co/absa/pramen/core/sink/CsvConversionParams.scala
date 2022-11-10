@@ -22,10 +22,12 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 case class CsvConversionParams(
                                 csvOptions: Map[String, String],
                                 fileNamePattern: String,
+                                charsetOpt: Option[String],
                                 tempHadoopPath: String,
                                 dateFormat: String,
                                 timestampFormat: String,
                                 fileNameTimestampPattern: String,
+                                createEmptyCsv: Boolean,
                                 columnNameTransform: ColumnNameTransform
                               )
 
@@ -33,6 +35,8 @@ object CsvConversionParams {
   val TEMP_HADOOP_PATH_KEY = "temp.hadoop.path"
   val FILE_NAME_PATTERN_KEY = "file.name.pattern"
   val FILE_NAME_TIMESTAMP_PATTERN_KEY = "file.name.timestamp.pattern"
+  val CHARSET_KEY = "option.encoding"
+  val CREATE_EMPTY_CSV_KEY = "create.empty.csv"
 
   val COLUMN_NAME_TRANSFORM = "column.name.transform"
   val DATE_FORMAT_KEY = "date.format"
@@ -50,6 +54,8 @@ object CsvConversionParams {
 
     val fileNamePattern = ConfigUtils.getOptionString(conf, FILE_NAME_PATTERN_KEY).getOrElse(DEFAULT_FILE_NAME_PATTERN)
     val fileNameTimestampPattern = ConfigUtils.getOptionString(conf, FILE_NAME_TIMESTAMP_PATTERN_KEY).getOrElse(DEFAULT_FILE_NAME_TIMESTAMP_PATTERN)
+    val charset = ConfigUtils.getOptionString(conf, CHARSET_KEY)
+    val createEmptyCsv = ConfigUtils.getOptionBoolean(conf, CREATE_EMPTY_CSV_KEY).getOrElse(false)
 
     val columnNameTransformStr = ConfigUtils.getOptionString(conf, COLUMN_NAME_TRANSFORM).getOrElse("")
     val columnNameTransform = ColumnNameTransform.fromString(columnNameTransformStr)
@@ -58,6 +64,6 @@ object CsvConversionParams {
 
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    CsvConversionParams(options, fileNamePattern, tempHadoopPath, dateFormat, timestampFormat, fileNameTimestampPattern, columnNameTransform)
+    CsvConversionParams(options, fileNamePattern, charset, tempHadoopPath, dateFormat, timestampFormat, fileNameTimestampPattern, createEmptyCsv, columnNameTransform)
   }
 }

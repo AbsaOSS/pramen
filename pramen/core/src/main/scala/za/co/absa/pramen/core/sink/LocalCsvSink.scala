@@ -19,14 +19,15 @@ package za.co.absa.pramen.core.sink
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, date_format}
-import org.apache.spark.sql.types.{DateType, TimestampType}
+import org.apache.spark.sql.types.{DateType, StructType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 import za.co.absa.pramen.core.sink.LocalCsvSink.OUTPUT_PATH_KEY
-import za.co.absa.pramen.core.utils.FsUtils
+import za.co.absa.pramen.core.utils.{FsUtils, LocalFsUtils}
 
-import java.nio.file.Paths
+import java.io.{BufferedWriter, FileOutputStream, OutputStreamWriter}
+import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZonedDateTime}
 
@@ -131,29 +132,76 @@ class LocalCsvSink(sinkConfig: Config,
     val count = df.count()
 
     if (count > 0) {
-      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, params.tempHadoopPath)
-      val tempPath = getTempPath(fsUtils)
-      val effectiveOptions = getEffectiveOptions(params.csvOptions)
-
-      val transformedDf = applyColumnTransformations(df)
-
-      convertDateTimeToString(transformedDf, params.dateFormat, params.timestampFormat)
-        .repartition(1)
-        .write
-        .mode(SaveMode.Overwrite)
-        .options(effectiveOptions)
-        .csv(tempPath.toString)
-
-      val fileName = copyToLocal(tableName, infoDate, tempPath, outputPath, fsUtils)
-
-      fsUtils.deleteDirectoryRecursively(tempPath)
-      log.info(s"$count records saved to $fileName.")
+      createCsvFromDf(df, count, tableName, infoDate, outputPath)
       count
     } else {
-      // ToDo - still write a CSV file, just with headers
-      // By default Spark creates an 0 length file if the DataFrame is empty.
       log.info(s"Notting to send to $outputPath.")
+      if (params.createEmptyCsv) {
+        createEmptyCsv(df.schema, tableName, infoDate, outputPath)
+      }
       0L
+    }
+  }
+
+  private def createCsvFromDf(df: DataFrame, recordCount: Long, tableName: String, infoDate: LocalDate, outputPath: String)(implicit spark: SparkSession): Unit = {
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, params.tempHadoopPath)
+    val tempPath = getTempPath(fsUtils)
+    val effectiveOptions = getEffectiveOptions(params.csvOptions)
+
+    val transformedDf = applyColumnTransformations(df)
+
+    convertDateTimeToString(transformedDf, params.dateFormat, params.timestampFormat)
+      .repartition(1)
+      .write
+      .mode(SaveMode.Overwrite)
+      .options(effectiveOptions)
+      .csv(tempPath.toString)
+
+    Files.createDirectories(Paths.get(outputPath))
+    val fileName = copyToLocal(tableName, infoDate, tempPath, outputPath, fsUtils)
+
+    fsUtils.deleteDirectoryRecursively(tempPath)
+    log.info(s"$recordCount records saved to $fileName.")
+  }
+
+  private[core] def createEmptyCsv(schema: StructType, tableName: String, infoDate: LocalDate, outputPath: String): Unit = {
+    val sep = params.csvOptions.getOrElse("sep", ",")
+    val charset = params.charsetOpt.getOrElse("utf-8")
+    val finalFileName = getFinalFileName(tableName, infoDate, outputPath)
+
+    log.info(s"Creating an empty file: $finalFileName")
+
+    val quoteAll = params.csvOptions.getOrElse("quoteAll", "true").toBoolean
+
+    val content = if (params.csvOptions.getOrElse("header", "false").toBoolean) {
+      val columns = transformColumnNames(schema.map(f => f.name))
+      val quotedColumns = if (quoteAll) {
+        val q = "\""
+        columns.map(s => s"$q$s$q")
+      } else {
+        columns
+      }
+      quotedColumns.mkString(sep) + "\n"
+    } else {
+      ""
+    }
+
+    Files.createDirectories(Paths.get(outputPath))
+    Files.write(Paths.get(finalFileName), content.getBytes(charset))
+  }
+
+  private[core] def transformColumnNames(names: Seq[String]): Seq[String] = {
+    params.columnNameTransform match {
+      case ColumnNameTransform.MakeUpper =>
+        names.map(name => {
+          name.toUpperCase
+        })
+      case ColumnNameTransform.MakeLower =>
+        names.map(name => {
+          name.toLowerCase()
+        })
+      case ColumnNameTransform.NoChange  =>
+        names
     }
   }
 
