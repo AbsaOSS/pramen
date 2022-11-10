@@ -47,7 +47,8 @@ object PipelineSparkSessionBuilder {
   def buildSparkSession(conf: Config): SparkSession = {
     val extraOptions = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
 
-    ConfigUtils.logExtraOptions("Extra Spark Config:", extraOptions)
+    log.info("Extra Spark Config:")
+    ConfigUtils.renderExtraOptions(extraOptions, KEYS_TO_REDACT)(s => log.info(s))
 
     val sparkSessionBuilder =
       SparkSession

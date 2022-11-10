@@ -70,6 +70,19 @@ class MetaTableSuite extends WordSpec {
       assert(metaTables(2).infoDateFormat == "yyyy-MM-dd")
     }
 
+    "create an empty metastore if the config key is missing" in {
+      val conf = ConfigFactory.parseString(
+        """pramen.information.date.column = "INFORMATION_DATE"
+          |pramen.information.date.format = "yyyy-MM-dd"
+          |pramen.information.date.start = "2020-01-31"
+          |pramen.track.days = 2
+          |""".stripMargin)
+
+      val metaTables = MetaTable.fromConfig(conf, "pramen.metastore.tables")
+
+      assert(metaTables.isEmpty)
+    }
+
     "throw an exception if there are multiple tables with the same name" in {
       val conf = ConfigFactory.parseString(
         """pramen.information.date.column = "INFORMATION_DATE"

@@ -19,13 +19,13 @@ package za.co.absa.pramen.core.sql
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
+class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
 
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
-      s"($sql) AS t"
+      s"($sql) AS T"
     } else {
       sql
     }
@@ -73,8 +73,8 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
     val dateStr = dateFormatterApp.format(date)
 
     sqlConfig.infoDateType match {
-      case SqlColumnType.DATE => s"TO_DATE('$dateStr', '${sqlConfig.dateFormatSql}')"
-      case SqlColumnType.DATETIME => s"TO_DATE('$dateStr', '${sqlConfig.dateFormatSql}')"
+      case SqlColumnType.DATE => s"DATE '$dateStr'"
+      case SqlColumnType.DATETIME => s"DATE '$dateStr'"
       case SqlColumnType.STRING => s"'$dateStr'"
       case SqlColumnType.NUMBER => s"$dateStr"
     }

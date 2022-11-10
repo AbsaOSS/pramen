@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.api
 
+import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.time.LocalDate
@@ -26,7 +27,6 @@ import java.time.LocalDate
   * Special Sink jobs are used to write tables from metastore to a sink.
   */
 trait Sink extends ExternalChannel with AutoCloseable {
-
   /** Sinks can optionally have a method to connect to it. */
   @throws[Exception]
   def connect(): Unit

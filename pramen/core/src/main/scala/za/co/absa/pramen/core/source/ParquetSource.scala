@@ -31,6 +31,8 @@ class ParquetSource(hasInfoDateCol: Boolean,
                     options: Map[String, String])(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  override val config: Config = sourceConfig
+
   override def hasInfoDate: Boolean = hasInfoDateCol
 
   override def getReader(query: Query, columns: Seq[String]): TableReader = {

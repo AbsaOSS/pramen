@@ -46,7 +46,8 @@ from pramen_py.utils import (
 
 
 T_TRANSFORMATION = TypeVar("T_TRANSFORMATION", bound=Transformation)
-TRANSFORMATIONS_DIR = pathlib.Path("./transformations")
+DEFAULT_TRANSFORMATIONS_DIR = pathlib.Path("./transformations")
+TRANSFORMATIONS_DIR_KEY_NAME = "PRAMENPY_TRANSFORMATIONS_NAMESPACE"
 
 
 def overwrite_info_dates(
@@ -66,16 +67,20 @@ def overwrite_info_dates(
     return config
 
 
-def discover_transformations(
-    path: pathlib.Path = TRANSFORMATIONS_DIR,
-) -> Generator[Type[T_TRANSFORMATION], None, None,]:
+def get_transformations_dir() -> pathlib.Path:
+    return env.path(TRANSFORMATIONS_DIR_KEY_NAME, DEFAULT_TRANSFORMATIONS_DIR)  # type: ignore
+
+
+def discover_transformations() -> Generator[
+    Type[T_TRANSFORMATION], None, None
+]:
     """Return generator of Transformation subclasses.
 
     In order to provide a set of subclasses we keep track already
     provided class names and do not allow to yield a class with the same
     name more than one time.
     """
-    load_modules(path)
+    load_modules(get_transformations_dir())
     _transformations_names = []
     for cls in Transformation.__subclasses__():
         if cls.__name__ not in _transformations_names:

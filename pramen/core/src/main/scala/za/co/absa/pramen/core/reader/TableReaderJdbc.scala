@@ -22,8 +22,10 @@ import org.apache.spark.sql.types.{DateType, DecimalType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
+import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, TimeUtils}
 
 import java.time.{Instant, LocalDate}
@@ -122,6 +124,10 @@ class TableReaderJdbc(tableName: String,
     log.info(s"JDBC Query: $sql")
     val qry = sqlGen.getDtable(sql)
 
+    if (log.isDebugEnabled) {
+      log.debug(s"Sending to JDBC: $qry")
+    }
+
     val databaseOptions = getOptions("database", jdbcReaderConfig.jdbcConfig.database)
 
     val connectionOptions = Map[String, String](
@@ -134,6 +140,11 @@ class TableReaderJdbc(tableName: String,
       databaseOptions ++
       jdbcReaderConfig.jdbcConfig.extraOptions ++
       extraOptions
+
+    if (log.isDebugEnabled) {
+      log.debug("Connection options:")
+      ConfigUtils.renderExtraOptions(connectionOptions, Keys.KEYS_TO_REDACT)(s => log.debug(s))
+    }
 
     var df = spark
       .read
@@ -259,7 +270,8 @@ class TableReaderJdbc(tableName: String,
     log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
     jdbcReaderConfig.limitRecords.foreach(n => log.info(s"Limit records:                $n"))
 
-    ConfigUtils.logExtraOptions("Extra JDBC reader Spark options:", extraOptions)
+    log.info("Extra JDBC reader Spark options:")
+    ConfigUtils.renderExtraOptions(extraOptions, JDBC_WORDS_TO_REDACT)(s => log.info(s))
   }
 }
 

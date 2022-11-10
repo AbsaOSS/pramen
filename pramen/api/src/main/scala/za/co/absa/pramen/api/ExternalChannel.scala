@@ -16,8 +16,13 @@
 
 package za.co.absa.pramen.api
 
+import com.typesafe.config.Config
+
 /**
-  * This is a marker trait tha allows a unified way of creating new instances of sources and sinks
+  * This is a trait tha allows a unified way of creating new instances of sources and sinks
   * from a fully qualified class name.
   */
-trait ExternalChannel
+trait ExternalChannel {
+  /** The configuration used to create the channel. */
+  def config: Config
+}

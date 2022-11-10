@@ -27,6 +27,7 @@ import java.time.format.DateTimeParseException
 import java.time.{DateTimeException, DayOfWeek, LocalDate}
 import java.util
 import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
 
 class ConfigUtilsSuite extends WordSpec with TempDirFixture with TextComparisonFixture {
   private val testConfig = ConfigFactory.parseResources("test/config/testconfig.conf").resolve()
@@ -425,6 +426,22 @@ class ConfigUtilsSuite extends WordSpec with TempDirFixture with TextComparisonF
         ConfigUtils.getExtraConfig(testConfig, "mytest.extra.options.value1")
       }
       assert(ex.getMessage.contains("has type STRING rather than OBJECT"))
+    }
+  }
+
+  "renderExtraOptions" should {
+    "redact keys that contain words to redact" in {
+      val map = Map("key1" -> "value1", "MyPassword" -> "value2", "SECRET" -> "value3")
+
+      val rendered = new ListBuffer[String]
+      ConfigUtils.renderExtraOptions(map, Set("password", "secret"))(s => {
+        rendered += s
+      })
+
+      assert(rendered.size == 3)
+      assert(rendered.head == "key1 = \"value1\"")
+      assert(rendered(1) == "MyPassword = [redacted]")
+      assert(rendered(2) == "SECRET = [redacted]")
     }
   }
 

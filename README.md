@@ -1659,7 +1659,19 @@ sink operation definition.
 }
 ```
 
-### Enceladus ingestion pipelines for the Data Lake
+### Transfer operations
+Pramen can be used just for data ingestion to a Data Lake. In this case, you don't need to use the metastore. Instead, 
+you can send data directly from a source to a sink. Such operations are called 'transfer operations' in Pramen.
+
+You specify:
+- A source name
+- A sink name
+- And the list of tables/queries/path to transfer
+- [optionally] If the input is not a database table, but a path or a SQL query, you need to specify a metastore table name for job tracking (see the example).
+
+Let's take a look at an example based on the Enceladus sink.
+
+#### Enceladus ingestion pipelines for the Data Lake
 Pramen can help with ingesting data for data lake pipelines of [Enceladus](https://github.com/AbsaOSS/enceladus).
 A special sink (`EnceladusSink`) is used to save data to Enceladus' raw folder.
 
@@ -1668,21 +1680,9 @@ Here is a template for such a pipeline:
   <summary>Click to expand</summary>
 
 ```config
-pramen.metastore {
-  tables = [
-    {
-      name = "table"
-      description = "Some table 1"
-      format = "parquet"
-      path = /datalake/table1/landing
-      information.date.start = "2022-01-01"
-    }
-  ]
-}
-
 pramen.sources = [
   {
-    name = "postgre"
+    name = "my_postgre_rds"
     factory.class = "za.co.absa.pramen.core.source.JdbcSource"
 
     jdbc = {
@@ -1705,7 +1705,7 @@ pramen.sources = [
 
 pramen.sinks = [
   {
-    name = "enceladus_sink"
+    name = "my_data_lake"
     factory.class = "za.co.absa.pramen.extras.sink.EnceladusSink"
 
     format = "json"
@@ -1730,47 +1730,55 @@ pramen.sinks = [
 
 pramen.operations = [
 {
-    name = "Table1 sourcing"
-    type = "ingestion"
+    name = "My database to the data lake load"
+    type = "transfer"
     schedule.type = "daily"
 
-    source = "postgre"
+    source = "my_postgre_rds"
+    sink = "my_data_lake"
 
     expected.delay.days = 1
 
     tables = [
       {
+        # Minimal configuration example
         input.db.table = table1
-        output.metastore.table = table1
+        output.path = /datalake/path/raw/table1
+        output.info.version = 1
+      },
+      {
+        # Full configuration example
+        input.sql = "SELECT * FROM table2 WHERE info_date = date'@infoDate'"
+        job.metastore.table = "table2->my_data_lake" # This is needed the input is not a table
+        output.path = /datalake/path/raw/table2
+        output.info.version = 1
 
+        # The rest of the fields are optional
         date.from = "@infoDate"
         date.to = "@infoDate"
 
         transformations = [
           {col = "last_name_u", expr = "upper(last_name)"}
         ],
+        
         filters = [
           "age > 50"
         ]
-      }
-    ]
-  },
-  {
-    name = "Enceladus sink"
-    type = "sink"
-    sink = "enceladus_sink"
+        
+        columns = [
+          "first_name",
+          "last_name_u",
+          "age"
+        ]
+        
+        # Override any of the source's's options
+        source {
+            option.fetchsize = 10000
+        }
 
-    schedule.type = "daily"
-
-    tables = [
-      {
-        input.metastore.table = table1
-        output.path = "/datalake/table1/raw"
-        output.info.version = 1
-
-        date {
-          from = "@infoDate"
-          to = "@infoDate"
+        # Override any of the sink's's options
+        sink {
+            records.per.partition = 250000
         }
       }
     ]
@@ -1779,7 +1787,9 @@ pramen.operations = [
 ```
 </details>
 
-More can be found at the implementation of the sink itself: [EnceladusSink](pramen/extras/src/main/scala/za/co/absa/pramen/extras/sink/EnceladusSink.scala)
+More on this kind of sink can be found at the implementation of the sink itself: [EnceladusSink](pramen/extras/src/main/scala/za/co/absa/pramen/extras/sink/EnceladusSink.scala)
+
+You can use any source/sink combination in transfer jobs.
 
 ## Schema evolutions patterns
 

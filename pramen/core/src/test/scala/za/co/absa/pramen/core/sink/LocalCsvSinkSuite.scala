@@ -288,6 +288,6 @@ class LocalCsvSinkSuite extends WordSpec with SparkTestBase with TempDirFixture 
       fileNamePattern = fileNamePattern,
       columnNameTransform = columnNameTransform)
 
-    new LocalCsvSink(params)
+    new LocalCsvSink(ConfigFactory.empty(), params)
   }
 }

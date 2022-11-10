@@ -23,18 +23,27 @@ import za.co.absa.pramen.api.TableReader
 
 import scala.collection.mutable.ListBuffer
 
-class ReaderSpy(numRecords: Long)(implicit spark: SparkSession) extends TableReader {
+class ReaderSpy(numRecords: Long,
+                getCountException: Throwable = null,
+                getDataException: Throwable = null)(implicit spark: SparkSession) extends TableReader {
 
   val infoDatePeriodsCountCalled = new ListBuffer[(LocalDate, LocalDate)]
   val infoDatePeriodsDataRead = new ListBuffer[(LocalDate, LocalDate)]
 
   override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    if (getCountException != null) {
+      throw getCountException
+    }
     infoDatePeriodsCountCalled += infoDateBegin -> infoDateEnd
     numRecords
   }
 
   override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = {
     import spark.implicits._
+
+    if (getDataException != null) {
+      throw getDataException
+    }
 
     infoDatePeriodsDataRead += infoDateBegin -> infoDateEnd
 

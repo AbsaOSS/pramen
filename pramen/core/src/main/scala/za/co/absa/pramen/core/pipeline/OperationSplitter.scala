@@ -22,12 +22,15 @@ import za.co.absa.pramen.api.Transformer
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.metastore.Metastore
+import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunnerImpl
 import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
 import za.co.absa.pramen.core.utils.ClassLoaderUtils
+
+import java.time.LocalDate
 
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
@@ -38,6 +41,7 @@ class OperationSplitter(conf: Config,
       case Transformation(clazz, outputTable)             => createTransformation(operationDef, clazz, outputTable)
       case PythonTransformation(pythonClass, outputTable) => createPythonTransformation(operationDef, pythonClass, outputTable)
       case Sink(sinkName, sinkTables)                     => createSink(operationDef, sinkName, sinkTables)
+      case Transfer(sourceName, sinkName, tables)         => createTransfer(operationDef, sourceName, sinkName, tables)
     }
   }
 
@@ -56,6 +60,31 @@ class OperationSplitter(conf: Config,
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
       new IngestionJob(operationDef, metastore, bookkeeper, source, sourceTable, outputTable, specialCharacters)
+    })
+  }
+
+  def createTransfer(operationDef: OperationDef,
+                     sourceName: String,
+                     sinkName: String,
+                     tables: Seq[TransferTable])(implicit spark: SparkSession): Seq[Job] = {
+    val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
+    val sourceBase = SourceManager.getSourceByName(sourceName, conf, None)
+    val sinkBase = SinkManager.getSinkByName(sinkName, conf, None)
+
+    tables.map(transferTable => {
+      val source = transferTable.sourceOverrideConf match {
+        case Some(confOverride) => SourceManager.getSourceByName(sourceName, conf, Some(confOverride))
+        case None               => sourceBase
+      }
+
+      val sink = transferTable.sinkOverrideConf match {
+        case Some(confOverride) => SinkManager.getSinkByName(sinkName, conf, Some(confOverride))
+        case None               => sinkBase
+      }
+
+      val outputTable = transferTable.getMetaTable
+
+      new TransferJob(operationDef, metastore, bookkeeper, source,  transferTable, outputTable, sink, specialCharacters)
     })
   }
 

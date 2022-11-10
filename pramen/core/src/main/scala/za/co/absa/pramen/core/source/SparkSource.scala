@@ -34,6 +34,8 @@ class SparkSource(format: String,
                   options: Map[String, String])(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  override val config: Config = sourceConfig
+
   override def hasInfoDate: Boolean = hasInfoDateCol
 
   override def getReader(query: Query, columns: Seq[String]): TableReader = {
@@ -44,7 +46,8 @@ class SparkSource(format: String,
         throw new IllegalArgumentException(s"Unexpected 'sql' spec for the Spark reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
       case Query.Path(path) =>
         log.info(s"Using TableReaderSpark to read '$format' from: $path")
-        ConfigUtils.logExtraOptions(s"Options passed for '$format':", options, KEYS_TO_REDACT)
+        log.info(s"Options passed for '$format':")
+        ConfigUtils.renderExtraOptions(options, KEYS_TO_REDACT)(s => log.info(s))
         schema.foreach(s => log.info(s"Using schema: $s"))
         new TableReaderSpark(format, schema, path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
     }

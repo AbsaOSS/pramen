@@ -37,7 +37,7 @@ class OperationTypeSuite extends WordSpec {
            |""".stripMargin
       )
 
-      val opType = OperationType.fromConfig(conf, "path").asInstanceOf[Ingestion]
+      val opType = OperationType.fromConfig(conf, conf, "path").asInstanceOf[Ingestion]
 
       assert(opType.sourceName == "jdbc1")
       assert(opType.sourceTables.size == 1)
@@ -53,7 +53,7 @@ class OperationTypeSuite extends WordSpec {
            |""".stripMargin
       )
 
-      val opType = OperationType.fromConfig(conf, "path").asInstanceOf[Transformation]
+      val opType = OperationType.fromConfig(conf, conf, "path").asInstanceOf[Transformation]
 
       assert(opType.clazz == "myclass")
     }
@@ -72,7 +72,7 @@ class OperationTypeSuite extends WordSpec {
            |""".stripMargin
       )
 
-      val opType = OperationType.fromConfig(conf, "path").asInstanceOf[OperationType.Sink]
+      val opType = OperationType.fromConfig(conf, conf, "path").asInstanceOf[OperationType.Sink]
 
       assert(opType.sinkName == "kafka1")
       assert(opType.sinkTables.size == 1)

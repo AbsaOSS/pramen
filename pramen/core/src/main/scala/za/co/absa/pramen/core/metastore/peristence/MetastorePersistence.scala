@@ -39,6 +39,7 @@ object MetastorePersistence {
       case DataFormat.Delta(query, recordsPerPartition) => new MetastorePersistenceDelta(
         query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
       )
+      case DataFormat.Null() => throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
     }
   }
 }

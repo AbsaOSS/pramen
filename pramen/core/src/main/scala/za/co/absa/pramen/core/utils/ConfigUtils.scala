@@ -143,15 +143,17 @@ object ConfigUtils {
     }
   }
 
-  def logExtraOptions(description: String, extraOptions: Map[String, String], redactedKeys: Set[String] = Set.empty[String]): Unit = {
+  def renderExtraOptions(extraOptions: Map[String, String],
+                         redactedWords: Set[String] = Set.empty[String])
+                        (action: String => Unit): Unit = {
     if (extraOptions.nonEmpty) {
       val p = "\""
-      log.info(description)
       extraOptions.foreach { case (key, value) =>
-        if (redactedKeys.contains(key.toLowerCase())) {
-          log.info(s"$key = [redacted]")
+        val lowerCaseKey = key.toLowerCase()
+        if (redactedWords.exists(word => lowerCaseKey.contains(word))) {
+          action(s"$key = [redacted]")
         } else {
-          log.info(s"$key = $p$value$p")
+          action(s"$key = $p$value$p")
         }
       }
     }

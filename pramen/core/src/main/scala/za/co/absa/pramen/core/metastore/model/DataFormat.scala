@@ -34,6 +34,11 @@ object DataFormat {
     override def name: String = "delta"
   }
 
+  // This format is used for metatables which do not support persistence, e.g. for sink or tramsfer jobs
+  case class Null() extends DataFormat {
+    override def name: String = "null"
+  }
+
   val FORMAT_PARQUET = "parquet"
   val FORMAT_DELTA = "delta"
 

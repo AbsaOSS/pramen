@@ -20,7 +20,9 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory}
 
-class ExternalChannelMock(val value1: String, val value2: String) extends ExternalChannel
+class ExternalChannelMock(conf: Config, val value1: String, val value2: String) extends ExternalChannel {
+  def config: Config = conf
+}
 
 object ExternalChannelMock extends ExternalChannelFactory[ExternalChannelMock] {
   val CONFIG_KEY1 = "key1"
@@ -29,6 +31,6 @@ object ExternalChannelMock extends ExternalChannelFactory[ExternalChannelMock] {
   override def apply(conf: Config, parentPath: String, spark: SparkSession): ExternalChannelMock = {
     val value1 = conf.getString(CONFIG_KEY1)
     val value2 = conf.getString(CONFIG_KEY2)
-    new ExternalChannelMock(value1, value2)
+    new ExternalChannelMock(conf, value1, value2)
   }
 }
