@@ -257,10 +257,6 @@ def test_completions_bash(monkeypatch):
     assert results.exit_code == 0
 
 
-@pytest.mark.skipif(
-    platform.system() == "Windows",
-    reason="This test is incompatible with Windows OS",
-)
 def test_list_config_options(monkeypatch):
     runner = CliRunner(mix_stderr=False)
     results = runner.invoke(
