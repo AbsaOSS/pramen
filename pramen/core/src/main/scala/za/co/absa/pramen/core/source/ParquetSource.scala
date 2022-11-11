@@ -33,8 +33,6 @@ class ParquetSource(hasInfoDateCol: Boolean,
 
   override val config: Config = sourceConfig
 
-  override def hasInfoDate: Boolean = hasInfoDateCol
-
   override def getReader(query: Query, columns: Seq[String]): TableReader = {
     query match {
       case Query.Table(_) =>

@@ -26,15 +26,7 @@ import java.time.LocalDate
   *
   * Special Sink jobs are used to write tables from metastore to a sink.
   */
-trait Sink extends ExternalChannel with AutoCloseable {
-  /** Sinks can optionally have a method to connect to it. */
-  @throws[Exception]
-  def connect(): Unit
-
-  /** Sinks can optionally have a method to close it when saving is done or in case of an error. */
-  @throws[Exception]
-  override def close(): Unit
-
+trait Sink extends ExternalChannel {
   /**
     * Sends the given data frame to the sink.
     *
