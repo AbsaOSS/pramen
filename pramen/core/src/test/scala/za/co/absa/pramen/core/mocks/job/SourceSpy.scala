@@ -38,8 +38,6 @@ class SourceSpy(query: Query = Query.Table("table1"),
 
   override val config: Config = sourceConfig
 
-  override def hasInfoDate: Boolean = hasInformationDate
-
   override def getReader(query: Query, columns: Seq[String]): TableReader = new ReaderSpy(numberOfRecords, readerCountException, readerDataException)
 }
 

@@ -46,6 +46,8 @@ class IngestionJob(operationDef: OperationDef,
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
+    source.connect()
+
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate, infoDate)
 
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
@@ -125,7 +127,9 @@ class IngestionJob(operationDef: OperationDef,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): MetaTableStats = {
-    metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
+    val stats = metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
+    source.close()
+    stats
   }
 
   private def getSourcingDataFrame(infoDate: LocalDate): DataFrame = {

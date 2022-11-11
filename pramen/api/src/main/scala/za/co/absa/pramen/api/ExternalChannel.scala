@@ -22,7 +22,16 @@ import com.typesafe.config.Config
   * This is a trait tha allows a unified way of creating new instances of sources and sinks
   * from a fully qualified class name.
   */
-trait ExternalChannel {
+trait ExternalChannel extends AutoCloseable {
+
+  /** Channels can optionally have a method to close it when saving is done or in case of an error. */
+  @throws[Exception]
+  override def close(): Unit = {}
+
+  /** Channels can optionally have a method to connect to it. */
+  @throws[Exception]
+  def connect(): Unit = {}
+
   /** The configuration used to create the channel. */
   def config: Config
 }

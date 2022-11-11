@@ -74,14 +74,12 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
 
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
 
-      assert(src.hasInfoDate)
       assert(src.jdbcReaderConfig.infoDateColumn == "INFO_DATE")
     }
 
     "be able to get a source by its name" in {
       val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "Jdbc2", "source").asInstanceOf[JdbcSource]
 
-      assert(!src.hasInfoDate)
       assert(src.jdbcReaderConfig.limitRecords.contains(100))
       assert(src.jdbcReaderConfig.jdbcConfig.driver == "driver2")
       assert(src.jdbcReaderConfig.jdbcConfig.extraOptions("database") == "mydb")
@@ -90,7 +88,6 @@ class JdbcSourceSuite extends WordSpec with SparkTestBase {
     "be able to get a source by its name from the manager" in {
       val src = SourceManager.getSourceByName("Jdbc2", conf, None).asInstanceOf[JdbcSource]
 
-      assert(!src.hasInfoDate)
       assert(src.jdbcReaderConfig.limitRecords.contains(100))
       assert(src.jdbcReaderConfig.jdbcConfig.driver == "driver2")
       assert(src.jdbcReaderConfig.jdbcConfig.extraOptions("database") == "mydb")
