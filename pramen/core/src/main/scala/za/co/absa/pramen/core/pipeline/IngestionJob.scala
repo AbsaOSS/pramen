@@ -54,10 +54,10 @@ class IngestionJob(operationDef: OperationDef,
     dataChunk match {
       case Some(chunk) =>
         if (chunk.inputRecordCount == recordCount) {
-          log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Souring is not needed.")
+          log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Sourcing is not needed.")
           JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings)
         } else {
-          log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs update.")
+          log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs to be updated.")
           JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
         }
       case None        =>
