@@ -31,7 +31,7 @@ class FsTraverserLocal extends FsTraverser {
 
     def actionFile(file: File): Unit = {
       if (includeHiddenFiles || !isFileHidden(file.getName)) {
-        action(FileStatus(file.getAbsolutePath, file.length()))
+        action(FileStatus(file, file.length()))
       }
     }
 
@@ -49,7 +49,7 @@ class FsTraverserLocal extends FsTraverser {
           }
         }
       } else {
-        action(FileStatus(subPath.getAbsolutePath, subPath.length()))
+        action(FileStatus(subPath, subPath.length()))
       }
     }
 

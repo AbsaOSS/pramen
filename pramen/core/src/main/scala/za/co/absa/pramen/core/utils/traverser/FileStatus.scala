@@ -16,7 +16,9 @@
 
 package za.co.absa.pramen.core.utils.traverser
 
+import java.io.File
+
 case class FileStatus(
-                       path: String,
+                       path: File,
                        size: Long
                      )
