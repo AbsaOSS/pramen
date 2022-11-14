@@ -60,11 +60,11 @@ class IngestionJob(operationDef: OperationDef,
     dataChunk match {
       case Some(chunk) =>
         if (chunk.inputRecordCount == recordCount) {
-          log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Souring is not needed.")
+          log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Re-sourcing is not required.")
           JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings)
         } else {
           if (recordCount >= minimumRecordsOpt.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
-            log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs update.")
+            log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs re-sourced.")
             JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
           } else {
             processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, minimumRecordsOpt, Some(chunk.inputRecordCount))
