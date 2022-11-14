@@ -38,6 +38,6 @@ trait SparkTestBase {
 
   def stripLineEndings(str: String): String = {
     //make testing compatible for windows
-    str.stripMargin.lines.mkString("").trim
+    str.stripMargin.linesIterator.mkString("").trim
   }
 }

@@ -18,9 +18,10 @@ package za.co.absa.pramen.core.tests.utils.traverser
 
 import org.scalatest.{BeforeAndAfterAll, WordSpec}
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.utils.LocalFsUtils
 import za.co.absa.pramen.core.utils.traverser.FsTraverserLocal
 
-import java.io.{File, IOException}
+import java.io.File
 import java.nio.file.{Files, Paths}
 import scala.collection.mutable.ListBuffer
 
@@ -58,16 +59,7 @@ class FsTraverserLocalSuite extends WordSpec with BeforeAndAfterAll with TempDir
   override def afterAll(): Unit = {
     super.afterAll()
 
-    deleteTemp(new File(tempDir))
-  }
-
-  @throws[IOException]
-  def deleteTemp(f: File): Unit = {
-    if (f.isDirectory) {
-      for (c <- f.listFiles) {
-        deleteTemp(c)
-      }
-    }
+    LocalFsUtils.deleteTemp(new File(tempDir))
   }
 
   "traverse" should {
@@ -77,7 +69,7 @@ class FsTraverserLocalSuite extends WordSpec with BeforeAndAfterAll with TempDir
       var count = 0
 
       traverser.traverse(Paths.get(tempDir, "file1.csv").toString, "*", isRecursive = true, includeHiddenFiles = true) { f =>
-        assert(f.path == Paths.get(tempDir, "file1.csv").toString)
+        assert(f.path.getAbsolutePath == Paths.get(tempDir, "file1.csv").toString)
         count += 1
       }
 
@@ -90,7 +82,7 @@ class FsTraverserLocalSuite extends WordSpec with BeforeAndAfterAll with TempDir
       var count = 0
 
       traverser.traverse(Paths.get(tempDir, "_file3.csv").toString, "*", isRecursive = true, includeHiddenFiles = false) { f =>
-        assert(f.path == Paths.get(tempDir, "_file3.csv").toString)
+        assert(f.path.getAbsolutePath == Paths.get(tempDir, "_file3.csv").toString)
         count += 1
       }
 
@@ -165,7 +157,7 @@ class FsTraverserLocalSuite extends WordSpec with BeforeAndAfterAll with TempDir
     val traverser = new FsTraverserLocal()
 
     traverser.traverse(dir, mask, isRecursive, includeHiddenFiles) { f =>
-      listFiles += f.path
+      listFiles += f.path.getAbsolutePath
     }
 
     listFiles.toList

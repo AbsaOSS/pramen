@@ -76,4 +76,48 @@ class LocalFsUtilsSuite extends WordSpec with TempDirFixture {
       }
     }
   }
+
+  "splitPathAndMask()" should {
+    "split nothing when the input string is empty" in {
+      val (path, mask) = LocalFsUtils.splitPathAndMask("")
+      assert(path == ".")
+      assert(mask == "*")
+    }
+
+    "split nothing when there are no wildcards" in {
+      val (path, mask) = LocalFsUtils.splitPathAndMask("/path/subpath")
+      assert(path == "/path/subpath")
+      assert(mask == "*")
+    }
+
+    "remove the trailing slash when there are no wildcards" in {
+      val (path, mask) = LocalFsUtils.splitPathAndMask("/path/subpath/")
+      assert(path == "/path/subpath")
+      assert(mask == "*")
+    }
+
+    "split a path with a wildcard" in {
+      val (path, mask) = LocalFsUtils.splitPathAndMask("/path/subpath/*.csv")
+      assert(path == "/path/subpath")
+      assert(mask == "*.csv")
+    }
+
+    "split a root path with a wildcard" in {
+      val (path, mask) = LocalFsUtils.splitPathAndMask("/*.csv")
+      assert(path == "/")
+      assert(mask == "*.csv")
+    }
+
+    "split a root path without a wildcard" in {
+      val (path, mask) = LocalFsUtils.splitPathAndMask("/")
+      assert(path == "/")
+      assert(mask == "*")
+    }
+
+    "work correctly if only a wildcard is provided" in {
+      val (path, mask) = LocalFsUtils.splitPathAndMask("*.csv")
+      assert(path == ".")
+      assert(mask == "*.csv")
+    }
+  }
 }
