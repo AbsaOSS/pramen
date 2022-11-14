@@ -138,5 +138,16 @@
                 <filtering>true</filtering>
             </testResource>
         </testResources>
+        <plugins>
+            <plugin>
+                <groupId>org.scoverage</groupId>
+                <artifactId>scoverage-maven-plugin</artifactId>
+                <version>${maven.scoverage.version}</version>
+                <configuration>
+                    <minimumCoverage>90</minimumCoverage>
+                    <failOnMinimumCoverage>true</failOnMinimumCoverage>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>
