@@ -21,9 +21,12 @@ jobs:
         uses: actions/setup-java@v1
         with:
           java-version: 1.8
-      - name: Test and license check
+      - name: Test coverage check
         working-directory: ./pramen
-        run: mvn verify --no-transfer-progress -Penable-long-tests
+        run: mvn scoverage:check -Penable-long-tests --no-transfer-progress
+      - name: License check
+        working-directory: ./pramen
+        run: mvn verify --no-transfer-progress 
   build-sbt:
     runs-on: ubuntu-latest
     strategy:
