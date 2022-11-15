@@ -67,6 +67,27 @@ class BookkeeperNullSuite extends WordSpec {
     }
   }
 
+  "getLatestSchema" should {
+    "return nothing" in {
+      val bk = getBookkeeper
+
+      val schemaOpt = bk.getLatestSchema(null, null)
+
+      assert(schemaOpt.isEmpty)
+    }
+  }
+
+  "saveSchema" should {
+    "do nothing" in {
+      val bk = getBookkeeper
+      bk.saveSchema("table", infoDate2, null)
+
+      val schemaOpt = bk.getLatestSchema("table", infoDate2)
+
+      assert(schemaOpt.isEmpty)
+    }
+  }
+
   def getBookkeeper: Bookkeeper = {
     val bk = new BookkeeperNull
     bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)

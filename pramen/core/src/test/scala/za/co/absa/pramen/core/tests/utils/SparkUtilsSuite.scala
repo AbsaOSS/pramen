@@ -52,7 +52,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
 
       val actualDf = sanitizeDfColumns(df, " ")
 
-      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.lines.mkString("").trim
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
 
       assert(stripLineEndings(actual) == stripLineEndings(expected))
     }
@@ -74,7 +74,7 @@ class SparkUtilsSuite extends WordSpec with SparkTestBase {
 
       val actualDf = sanitizeDfColumns(df, " :<>")
 
-      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.lines.mkString("").trim
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
 
       assert(stripLineEndings(actual) == stripLineEndings(expected))
     }
