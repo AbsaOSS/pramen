@@ -488,14 +488,13 @@ For a Spark source you should define:
 - The presence and the format of the information date column. If no information column is
   present, Pramen will take the snapshot of all data at scheduled times.
 
-Here is how you can configure A CSV source:
+Here is how you can configure a CSV source:
 ```config
 {
     name = "my_csv_source"
     factory.class = "za.co.absa.pramen.core.source.SparkSource"
 
     format = "csv"
-    has.information.date.column = false
     
     # You can define a schema for CSV here or directly at the operation level  
     schema = "id int, name string"
@@ -504,15 +503,8 @@ Here is how you can configure A CSV source:
        header = true
        delimiter = ","
     }
-
-    # Specifies if tables of the data source have an information date colunn
-    has.information.date.column = true
     
-    # If information column is present, specify its parameters:
-    information.date {
-      column = "info_date"
-      date.app.format = "yyyy-MM-dd"
-    }
+    has.information.date.column = false
 }
 ```
 
@@ -532,10 +524,10 @@ pramen.operations = [
     tables = [
       {
         input.path = s3a://bucket/path/to/file.csv
-        output.metastore.table = my_table
         source {
           schema = "id int, name string"
         }
+        output.metastore.table = my_table
       }
     ]
   }
@@ -584,6 +576,62 @@ pramen.operations = [
   }
 ]
 ```
+
+#### Local Spark source (CSV example)
+You can use Pramen to load data from the local filesystem of the Spark driver. This is useful only when the pipeline is
+set up to run in client mode (Yarn). Pramen will move local files to a temporary location in HDFS/S3, and then load them.
+The Local Spark Source is a wrapper around the Spark Source. It supports all the same options as the Spark Source.
+Also, it adds a couple of mandatory additional options.
+- A path to a temp folder
+- [Optional] File mask to load.
+- [Optional] A flag for recursive directory search.
+
+Here is how you can configure a source taking data from a local CSV folder:
+```config
+{
+    name = "my_local_csv_source"
+    factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
+    
+    # Options, specific to the Local Spark Source
+    temp.hadoop.path = "/temp/path"
+    file.name.pattern = "*.csv"
+    recursive = false
+
+    # Options for the underlying Spark Source
+    format = "csv"
+    has.information.date.column = false
+    
+    option {
+       header = true
+       delimiter = ","
+    }
+}
+```
+
+At the operation level you can define the path to load files from.
+
+An operation for ingesting CSV files from a local directory can look like this:
+```
+pramen.operations = [
+  {
+    name = "Sourcing of Csome SV files"
+    type = "ingestion"
+    schedule.type = "daily"
+
+    source = "my_local_csv_source"
+    tables = [
+      {
+        input.path = /local/path/to/files
+        source {
+          schema = "id int, name string"
+        }
+        output.metastore.table = my_table
+      }
+    ]
+  }
+]
+```
+
 
 ### Sinks
 Sinks define a way data needs to be sent to a target system. Built-in sinks include:
