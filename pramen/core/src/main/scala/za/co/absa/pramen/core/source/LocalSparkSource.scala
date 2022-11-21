@@ -22,7 +22,7 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader}
 import za.co.absa.pramen.core.utils.traverser.{FsTraverser, FsTraverserLocal}
-import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils, LocalFsUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 class LocalSparkSource(sparkSource: SparkSource,
                        sourceConfig: Config,
