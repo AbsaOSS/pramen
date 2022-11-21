@@ -42,15 +42,11 @@ class MetastoreReader(MetastoreReaderBase):
     a KeyError will be raised.
     """
 
-    @staticmethod
-    def _check_table_formate(table_format: str) -> bool:
-        return table_format.value in [member.value for member in TableFormat]
-
-    def _read_table_in_date_range(
+    def _read_table(
         self,
         metastore_table: MetastoreTable,
-        info_date_from: Optional[datetime.date],
-        info_date_to: Optional[datetime.date],
+        info_date_from: datetime.date,
+        info_date_to: datetime.date,
     ) -> DataFrame:
         return self.spark.read.format(metastore_table.format.value).load(metastore_table.path) \
             .filter(F.col(metastore_table.info_date_settings.column) >= info_date_from,) \
@@ -65,6 +61,7 @@ class MetastoreReader(MetastoreReaderBase):
     ) -> DataFrame:
         """Get the table based on its name and config attributes.
 
+        :param table_name:
         :param info_date_from: optional param with info_date as default
         :param info_date_to: optional param with info_date as default
         :param uppercase_columns: returns a table with uppercase column names
@@ -82,10 +79,8 @@ class MetastoreReader(MetastoreReaderBase):
         logger.info(f"Looking for {table_name} in the metastore.")
         logger.debug(f"info_date range: {info_date_from} - {info_date_to}")
 
-        if self._check_table_formate(table.format):
-            df = self._read_table_in_date_range(table, info_date_from, info_date_to)
-        else:
-            raise NotImplementedError
+        df = self._read_table(table, info_date_from, info_date_to)
+
         logger.info(
             f"Table {table_name} successfully loaded from {table.path}."
         )

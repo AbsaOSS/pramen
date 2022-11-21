@@ -25,7 +25,7 @@ from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import DateType, IntegerType, StructField, StructType
 
-from pramen_py.models import TransformationConfig
+from pramen_py.models import TransformationConfig, TableFormat
 
 
 REPO_ROOT = pathlib.Path(__file__).parents[1]
@@ -35,14 +35,11 @@ REPO_ROOT = pathlib.Path(__file__).parents[1]
 def repo_root() -> pathlib.Path:
     return REPO_ROOT
 
-
 @pytest.fixture
-def create_parquet_data_stubs(
+def data_stubs(
     spark: SparkSession,
-    tmp_path: pathlib.Path,
-) -> Tuple[pathlib.Path, DataFrame]:
-    """Create parquet data stubs partitioned by info_date.
-
+) -> DataFrame:
+    """
     +---+---+----------+
     |  A|  B| info_date|
     +---+---+----------+
@@ -55,13 +52,8 @@ def create_parquet_data_stubs(
     | 13| 14|2022-03-26|
     | 15| 16|2022-03-26|
     +---+---+----------+
-
-    The path is temporary and is removed after tests finishes.
-
-    Returns tuple of the path with the parquet data and dataframe itself.
     """
-    logger.info("Creating sample DataFrame partitioned by info_date")
-    df = spark.createDataFrame(
+    return spark.createDataFrame(
         (
             (1, 2, datetime.date(2022, 3, 23)),
             (3, 4, datetime.date(2022, 3, 23)),
@@ -80,10 +72,32 @@ def create_parquet_data_stubs(
             ],
         ),
     )
+
+
+@pytest.fixture
+def create_data_stubs_and_paths(
+    data_stubs: DataFrame,
+    tmp_path: pathlib.Path,
+):
+    """Create parquet data stubs partitioned by info_date.
+
+    The path is temporary and is removed after tests finishes.
+    Returns tuple of the path with the parquet data and dataframe itself.
+    """
     table_path = tmp_path / "data_lake" / "example_dependency_table"
-    df.write.partitionBy("info_date").parquet(table_path.as_posix())
-    logger.info("Dataframe successfully created")
-    return table_path, df
+    paths = {"output": (table_path / "output").as_posix()}
+    for format_ in TableFormat:
+        format_table_path = (table_path / format_.value).as_posix()
+        if format_.value == "parquet":
+            logger.info("Creating sample DataFrame partitioned by info_date")
+            data_stubs.write.partitionBy("info_date").parquet(format_table_path)
+        else:
+            logger.info(f"Creating sample {format_.value} DataFrame")
+            data_stubs.write.format(format_.value).mode("overwrite").save(format_table_path)
+        logger.info("Dataframe successfully created")
+        paths[format_.value] = format_table_path
+
+    return paths
 
 
 @pytest.fixture
@@ -101,7 +115,7 @@ def config() -> TransformationConfig:
 def load_and_patch_config(
     mocker,
     config,
-    create_parquet_data_stubs,
+    create_data_stubs_and_paths,
 ):
     """Load config and patch tables pathes to use tmp_path from pytest.
 
@@ -121,14 +135,13 @@ def load_and_patch_config(
     object.__setattr__(
         config.metastore_tables[0],
         "path",
-        create_parquet_data_stubs[0].resolve().as_posix(),
+        pathlib.Path(create_data_stubs_and_paths["parquet"]).resolve().as_posix(),
     )
+
     object.__setattr__(
         config.metastore_tables[-1],
         "path",
-        (create_parquet_data_stubs[0].parent / "example_output_table")
-        .resolve()
-        .as_posix(),
+        pathlib.Path(create_data_stubs_and_paths["output"]).resolve().as_posix(),
     )
 
     def cattr_structure_config_side_effect(obj, cls):
