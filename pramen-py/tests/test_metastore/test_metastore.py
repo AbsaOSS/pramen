@@ -116,7 +116,6 @@ def test_metastore_get_latest_available_date(
 
 def test_metastore_raises_valueerror_on_bad_path(
     spark,
-    create_parquet_data_stubs,
     config,
     monkeypatch,
 ):
@@ -424,7 +423,7 @@ def test_metastore_get_latest(
 )
 def test_metastore_get_table(
     spark,
-    load_and_patch_config,
+    create_data_stubs_and_paths,
     info_date,
     info_date_from,
     info_date_to,
@@ -434,17 +433,24 @@ def test_metastore_get_table(
 
     Our data has partitions between 2022-03-23 and 2022-04-26.
     """
-    metastore = MetastoreReader(
-        spark=spark,
-        config=load_and_patch_config.metastore_tables,
-        info_date=info_date,
-    )
-    table = metastore.get_table(
-        "table1_sync",
-        info_date_from=info_date_from,
-        info_date_to=info_date_to,
-    )
-    assert table.count() == exp_num_of_rows
+    for format_ in TableFormat:
+        metastore_table_config = MetastoreTable(
+            name=f"table_{format_.value}",
+            format=format_,
+            path=create_data_stubs_and_paths[format_.value],
+            info_date_settings=InfoDateSettings(column="info_date")
+        )
+        metastore = MetastoreReader(
+            spark=spark,
+            config=[metastore_table_config],
+            info_date=info_date,
+        )
+        table = metastore.get_table(
+            f"table_{format_.value}",
+            info_date_from=info_date_from,
+            info_date_to=info_date_to,
+        )
+        assert table.count() == exp_num_of_rows
 
 
 @pytest.mark.parametrize(
