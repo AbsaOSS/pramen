@@ -114,19 +114,12 @@ class MetastoreReader(MetastoreReaderBase):
             f"{table.info_date_settings.column}={latest_date}",
         )
         logger.debug(f"Path to the latest partition is: {path}")
-        if table.format is TableFormat.parquet:
-            df = self.spark.read.parquet(path).withColumn(
-                table.info_date_settings.column,
-                F.lit(latest_date).cast(T.DateType()),
-            )
-        elif table.format is TableFormat.delta:
-            raise NotImplementedError
-        else:
-            raise NotImplementedError
-        logger.info(
-            f"Table {table_name} with the latest partition {latest_date} "
-            f"loaded"
+
+        df = self.spark.read.format(table.format.value).load(path).withColumn(
+            table.info_date_settings.column,
+            F.lit(latest_date).cast(T.DateType()),
         )
+        logger.info(f"Table {table_name} with the latest partition {latest_date} loaded")
         if uppercase_columns:
             return df.select([F.col(c).alias(c.upper()) for c in df.columns])
         else:

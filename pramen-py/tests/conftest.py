@@ -35,8 +35,9 @@ REPO_ROOT = pathlib.Path(__file__).parents[1]
 def repo_root() -> pathlib.Path:
     return REPO_ROOT
 
+
 @pytest.fixture
-def data_stubs(
+def get_data_stub(
     spark: SparkSession,
 ) -> DataFrame:
     """
@@ -76,7 +77,7 @@ def data_stubs(
 
 @pytest.fixture
 def create_data_stubs_and_paths(
-    data_stubs: DataFrame,
+    get_data_stub: DataFrame,
     tmp_path: pathlib.Path,
 ):
     """Create parquet data stubs partitioned by info_date.
@@ -88,12 +89,8 @@ def create_data_stubs_and_paths(
     paths = {"output": (table_path / "output").as_posix()}
     for format_ in TableFormat:
         format_table_path = (table_path / format_.value).as_posix()
-        if format_.value == "parquet":
-            logger.info("Creating sample DataFrame partitioned by info_date")
-            data_stubs.write.partitionBy("info_date").parquet(format_table_path)
-        else:
-            logger.info(f"Creating sample {format_.value} DataFrame")
-            data_stubs.write.format(format_.value).mode("overwrite").save(format_table_path)
+        logger.info("Creating sample DataFrame partitioned by info_date")
+        get_data_stub.write.partitionBy("info_date").format(format_.value).mode("overwrite").save(format_table_path)
         logger.info("Dataframe successfully created")
         paths[format_.value] = format_table_path
 
