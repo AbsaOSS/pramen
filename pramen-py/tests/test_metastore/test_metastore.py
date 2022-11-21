@@ -356,7 +356,7 @@ def test_metastore_is_data_available(
 )
 def test_metastore_get_latest(
     spark: SparkSession,
-    load_and_patch_config,
+    create_data_stubs_and_paths,
     info_date,
     until,
     exc,
@@ -367,33 +367,39 @@ def test_metastore_get_latest(
     Our data has partitions between 2022-03-23 and 2022-04-26.
     """
 
-    metastore = MetastoreReader(
-        spark=spark,
-        config=load_and_patch_config.metastore_tables,
-        info_date=info_date,
-    )
-    if exc:
-        with pytest.raises(exc, match=exc_msg):
-            metastore.get_latest(
-                "table1_sync",
+    for format_ in TableFormat:
+        path_to_table = create_data_stubs_and_paths[format_.value]
+        metastore_table_config = MetastoreTable(
+            name=f"table_{format_.value}",
+            format=format_,
+            path=path_to_table,
+            info_date_settings=InfoDateSettings(column="info_date")
+        )
+        metastore = MetastoreReader(
+            spark=spark,
+            config=[metastore_table_config],
+            info_date=info_date,
+        )
+        if exc:
+            with pytest.raises(exc, match=exc_msg):
+                metastore.get_latest(
+                    f"table_{format_.value}",
+                    until=until,
+                )
+        else:
+            actual = metastore.get_latest(
+                f"table_{format_.value}",
                 until=until,
             )
-    else:
-        actual = metastore.get_latest(
-            "table1_sync",
-            until=until,
-        )
-        expected = spark.read.parquet(
-            load_and_patch_config.metastore_tables[0].path
-        )
-        latest_date = min(
-            expected.select(F.col("info_date"))
-            .orderBy(F.col("info_date"), ascending=False)
-            .first()[0],
-            until or info_date,
-        )
-        expected = expected.filter(F.col("info_date") == latest_date)
-        assert_df_equality(actual, expected, ignore_row_order=True)
+            expected = spark.read.format(format_.value).load(path_to_table)
+            latest_date = min(
+                expected.select(F.col("info_date"))
+                .orderBy(F.col("info_date"), ascending=False)
+                .first()[0],
+                until or info_date,
+            )
+            expected = expected.filter(F.col("info_date") == latest_date)
+            assert_df_equality(actual, expected, ignore_row_order=True)
 
 
 @pytest.mark.parametrize(
