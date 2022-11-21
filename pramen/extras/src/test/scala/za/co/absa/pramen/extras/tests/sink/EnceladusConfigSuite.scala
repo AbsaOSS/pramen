@@ -55,6 +55,8 @@ class EnceladusConfigSuite extends WordSpec with SparkTestBase {
       assert(enceladusConfig.formatOptions("my.option2") == "2")
       assert(!enceladusConfig.saveEmpty)
       assert(!enceladusConfig.generateInfoFile)
+      assert(enceladusConfig.enceladusMainClass == EnceladusConfig.DEFAULT_ENCELADUS_RUN_MAIN_CLASS)
+      assert(enceladusConfig.enceladusCmdLineTemplate == EnceladusConfig.DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE)
     }
 
     "construct a config with app version and timezone" in {
@@ -64,6 +66,9 @@ class EnceladusConfigSuite extends WordSpec with SparkTestBase {
            |format = "json"
            |mode = "append"
            |save.empty = false
+           |
+           |enceladus.run.main.class = "A"
+           |enceladus.command.line.template = "B"
            |
            |timezone = "Africa/Johannesburg"
            |
@@ -90,6 +95,8 @@ class EnceladusConfigSuite extends WordSpec with SparkTestBase {
       assert(enceladusConfig.formatOptions("my.option2") == "2")
       assert(!enceladusConfig.saveEmpty)
       assert(!enceladusConfig.generateInfoFile)
+      assert(enceladusConfig.enceladusMainClass == "A")
+      assert(enceladusConfig.enceladusCmdLineTemplate == "B")
     }
   }
 }

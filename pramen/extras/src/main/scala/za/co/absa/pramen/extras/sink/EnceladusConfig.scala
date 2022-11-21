@@ -33,7 +33,9 @@ case class EnceladusConfig(
                             mode: String,
                             recordsPerPartition: Option[Int],
                             saveEmpty: Boolean,
-                            generateInfoFile: Boolean
+                            generateInfoFile: Boolean,
+                            enceladusMainClass: String,
+                            enceladusCmdLineTemplate: String
                           )
 
 object EnceladusConfig {
@@ -46,10 +48,15 @@ object EnceladusConfig {
   val GENERATE_INFO_FILE_KEY = "info.file.generate"
   val TIMEZONE_ID_KEY = "timezone"
 
+  val ENCELADUS_RUN_MAIN_CLASS_KEY = "enceladus.run.main.class"
+  val ENCELADUS_COMMAND_LINE_TEMPLATE_KEY = "enceladus.command.line.template"
+
   val DEFAULT_INFO_DATE_COLUMN = "enceladus_info_date"
   val DEFAULT_PARTITION_PATTERN = "{year}/{month}/{day}/v{version}"
   val DEFAULT_FORMAT = "parquet"
   val DEFAULT_MODE = "errorifexists"
+  val DEFAULT_ENCELADUS_RUN_MAIN_CLASS = "za.co.absa.enceladus.standardization_conformance.StandardizationAndConformanceJob"
+  val DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE = "--dataset-name @datasetName --dataset-version @datasetVersion --report-date @infoDate --menas-auth-keytab menas.keytab --raw-format parquet"
 
   def fromConfig(conf: Config): EnceladusConfig = {
     val pramenVersion = Try {
@@ -71,7 +78,9 @@ object EnceladusConfig {
       ConfigUtils.getOptionString(conf, MODE_KEY).getOrElse(DEFAULT_MODE),
       ConfigUtils.getOptionInt(conf, RECORDS_PER_PARTITION),
       ConfigUtils.getOptionBoolean(conf, SAVE_EMPTY_KEY).getOrElse(true),
-      ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true)
+      ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true),
+      ConfigUtils.getOptionString(conf, ENCELADUS_RUN_MAIN_CLASS_KEY).getOrElse(DEFAULT_ENCELADUS_RUN_MAIN_CLASS),
+      ConfigUtils.getOptionString(conf, ENCELADUS_COMMAND_LINE_TEMPLATE_KEY).getOrElse(DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE)
     )
   }
 }
