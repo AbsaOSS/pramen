@@ -14,6 +14,7 @@
 
 import datetime
 import os.path
+import pathlib
 
 from typing import Optional
 
@@ -115,10 +116,11 @@ class MetastoreReader(MetastoreReaderBase):
         )
         logger.debug(f"Path to the latest partition is: {path}")
 
-        df = self.spark.read.format(table.format.value).load(path).withColumn(
-            table.info_date_settings.column,
-            F.lit(latest_date).cast(T.DateType()),
-        )
+        df = self.spark.read.format(table.format.value) \
+            .load(pathlib.Path(path).as_posix()) \
+            .withColumn(table.info_date_settings.column,
+                        F.lit(latest_date).cast(T.DateType()))
+
         logger.info(f"Table {table_name} with the latest partition {latest_date} loaded")
         if uppercase_columns:
             return df.select([F.col(c).alias(c.upper()) for c in df.columns])
