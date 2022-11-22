@@ -927,6 +927,12 @@ Here is an example configuration of a sink:
   # The timezone used for the info file
   timezone = "Africa/Johannesburg"
   
+  # Setup Enceladus main class and command line template if you want to run it from Pramen
+  enceladus.run.main.class = "za.co.absa.enceladus.standardization_conformance.StandardizationAndConformanceJob"
+  # Command line template for Enceladus
+  # You can use the following variables: @datasetName, @datasetName, @datasetVersion, @infoDate, @infoVersion, @rawPath, @rawFormat.
+  enceladus.command.line.template = "--dataset-name @datasetName --dataset-version @datasetVersion --report-date @infoDate --menas-auth-keytab menas.keytab --raw-format @rawFormat"
+  
   # Output format options
   option {
     sep = "|"
@@ -967,6 +973,10 @@ The pipeline operation for this sink could look like this:
       
       # Optional info version (default = 1)
       info.version = 1
+      
+      # Optional for running Enceladus from Pramen
+      dataset.name = "my_dataset"
+      dataset.version = 2
     }
   ]
 }
