@@ -23,6 +23,7 @@ import org.scalatest.WordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY}
 import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.{Files, Paths}
@@ -73,7 +74,6 @@ class EnceladusSinkSuite extends WordSpec with SparkTestBase with TextComparison
         val partitionPath = new Path(outputPath, "2022/02/18/v1")
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
-        println(exampleDf.count)
         "send sends data to the target directory" in {
           val count = sink.send(exampleDf,
             "dummy_table",
@@ -99,6 +99,62 @@ class EnceladusSinkSuite extends WordSpec with SparkTestBase with TextComparison
       "close does nothing" in {
         sink.close()
       }
+    }
+
+  }
+
+  "runEnceladus()" should {
+    "run Enceladus if configured" in {
+      val conf = ConfigFactory.parseString(
+        s"""info.date.column = "info_date"
+           |format = "json"
+           |mode = "overwrite"
+           |
+           |info.file.generate = false
+           |enceladus.run.main.class = "za.co.absa.pramen.extras.mocks.AppMainSilentMock"
+           |
+           |""".stripMargin)
+
+      val sink = EnceladusSink.apply(conf, "", spark)
+
+      sink.runEnceladus("my_table",
+        infoDate,
+        2,
+        new Path("/dummy"),
+        Map(
+          DATASET_NAME_KEY -> "m_dayaset",
+          DATASET_VERSION_KEY -> "22"
+        )
+      )
+    }
+
+    "forward the exception if something goes wrong" in {
+      val conf = ConfigFactory.parseString(
+        s"""info.date.column = "info_date"
+           |format = "json"
+           |mode = "overwrite"
+           |
+           |info.file.generate = false
+           |enceladus.run.main.class = "za.co.absa.pramen.extras.mocks.AppMainMock"
+           |
+           |""".stripMargin)
+
+      val sink = EnceladusSink.apply(conf, "", spark)
+
+      val ex = intercept[RuntimeException] {
+        sink.runEnceladus("my_table",
+          infoDate,
+          2,
+          new Path("/dummy"),
+          Map(
+            DATASET_NAME_KEY -> "m_dataset",
+            DATASET_VERSION_KEY -> "22"
+          )
+        )
+      }
+
+      assert(ex.getCause.getMessage.contains("Main reached"))
+      assert(ex.getCause.getMessage.contains("--dataset-name m_dataset --dataset-version 22 --report-date 2022-02-18 --menas-auth-keytab menas.keytab --raw-format json"))
     }
   }
 
