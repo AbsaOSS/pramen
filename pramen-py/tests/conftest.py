@@ -93,6 +93,7 @@ def create_data_stubs_and_paths(
         get_data_stub.write.partitionBy("info_date").format(format_.value).mode("overwrite").save(format_table_path)
         logger.info("Dataframe successfully created")
         paths[format_.value] = format_table_path
+        paths[f"output_{format_.value}"] = (table_path / f"output_{format_.value}").as_posix()
 
     return paths
 

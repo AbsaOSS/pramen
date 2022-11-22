@@ -506,7 +506,7 @@ def test_get_latest_available_date(
         assert metastore.get_latest_available_date("table1_sync") == expected
 
 
-def test_metastore_writer_write(spark: SparkSession, load_and_patch_config):
+def test_metastore_writer_write(spark: SparkSession, create_data_stubs_and_paths):
     df = spark.createDataFrame(
         (
             (1, 2),
@@ -519,28 +519,34 @@ def test_metastore_writer_write(spark: SparkSession, load_and_patch_config):
             ],
         ),
     )
-    writer = MetastoreWriter(
-        spark=spark,
-        config=load_and_patch_config.metastore_tables,
-        info_date=d(2022, 4, 6),
-    )
-    writer.write(
-        "table_out1",
-        df,
-    )
 
-    actual = spark.read.parquet(
-        load_and_patch_config.metastore_tables[-1].path
-    )
-    expected = df.withColumn(
-        "INFORMATION_DATE",
-        F.lit("2022-04-06").cast(T.DateType()),
-    )
-    assert_df_equality(
-        expected,
-        actual,
-        ignore_row_order=True,
-    )
+    for format_ in TableFormat:
+        if format_ != TableFormat.delta:
+            metastore_table_config = MetastoreTable(
+                name=f"table_{format_.value}_output",
+                format=format_,
+                path=create_data_stubs_and_paths[f"output_{format_.value}"],
+                info_date_settings=InfoDateSettings(column="INFORMATION_DATE")
+            )
+            metastore = MetastoreWriter(
+                spark=spark,
+                config=[metastore_table_config],
+                info_date=d(2022, 4, 6),
+            )
+            metastore.write(f"table_{format_.value}_output", df)
+
+            actual = spark.read.parquet(
+                create_data_stubs_and_paths[f"output_{format_.value}"]
+            )
+            expected = df.withColumn(
+                "INFORMATION_DATE",
+                F.lit("2022-04-06").cast(T.DateType()),
+            )
+            assert_df_equality(
+                expected,
+                actual,
+                ignore_row_order=True,
+            )
 
 
 def test_metastore_reader_get_table_uppercase(
