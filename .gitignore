@@ -26,6 +26,7 @@ temp*
 dist
 test-output
 build.log
+sbt.json
 
 # output not in target directory
 build.log
