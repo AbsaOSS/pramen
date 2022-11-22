@@ -22,9 +22,10 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
-import za.co.absa.pramen.extras.utils.{FsUtils, PartitionUtils}
+import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
 import java.time.{Instant, LocalDate}
+import scala.util.control.NonFatal
 
 /**
   * This sink allows sending data to the raw folder of a data lake for further processing by Enceladus+Menas:
@@ -107,6 +108,10 @@ import java.time.{Instant, LocalDate}
   *        # Info version (default = 1)
   *        info.version = 1
   *
+  *        ## Set this up only if you want to run Standardization and Conformance
+  *        dataset.name = "my_dataset"
+  *        dataset.version = 1
+  *
   *        # Date range to read the source table for. By default the job information date is used.
   *        # But you can define an arbitrary expression based on the information date.
   *        # More: see the section of documentation regarding date expressions, an the list of functions allowed.
@@ -149,17 +154,20 @@ class EnceladusSink(sinkConfig: Config,
     val jobStart = Instant.now()
 
     val infoVersion = getInfoVersion(options)
-    val outputPath = getOutputPath(tableName, infoDate, infoVersion, options)
+    val basePath = getBasePath(tableName, options)
+    val outputPartitionPath = getOutputPartitionPath(basePath, infoDate, infoVersion)
 
     val count = df.count()
 
     if (count > 0 || enceladusConfig.saveEmpty) {
-      writeToRawFolder(df, count, outputPath)
-      generateInfoFile(df, count, outputPath, infoDate, jobStart)
+      writeToRawFolder(df, count, outputPartitionPath)
+      generateInfoFile(df, count, outputPartitionPath, infoDate, jobStart)
     } else {
-      val outputPathStr = outputPath.toUri.toString
+      val outputPathStr = outputPartitionPath.toUri.toString
       log.info(s"Nothing to save to the Enceladus raw folder: $outputPathStr")
     }
+
+    runEnceladus(tableName, infoDate, infoVersion, basePath, options)
 
     count
   }
@@ -169,28 +177,30 @@ class EnceladusSink(sinkConfig: Config,
     options.getOrElse(INFO_VERSION_KEY, "1").toInt
   }
 
-  private[extras] def getOutputPath(tableName: String,
-                                    infoDate: LocalDate,
-                                    infoVersion: Int,
-                                    options: Map[String, String]): Path = {
+  private[extras] def getBasePath(tableName: String,
+                                  options: Map[String, String]): Path = {
     if (!options.contains(OUTPUT_PATH_KEY)) {
       throw new IllegalArgumentException(s"$OUTPUT_PATH_KEY is not specified for Enceladus sink, table: $tableName")
     }
 
-    val basePath = new Path(options(OUTPUT_PATH_KEY))
+    new Path(options(OUTPUT_PATH_KEY))
+  }
 
+  private[extras] def getOutputPartitionPath(basePath: Path,
+                                             infoDate: LocalDate,
+                                             infoVersion: Int): Path = {
     val partition = PartitionUtils.unpackCustomPartitionPattern(enceladusConfig.partitionPattern, enceladusConfig.infoDateColumn, infoDate, infoVersion)
     new Path(basePath, partition)
   }
 
   private[extras] def writeToRawFolder(df: DataFrame,
                                        recordCount: Long,
-                                       outputPath: Path)(implicit spark: SparkSession): Unit = {
-    val outputPathStr = outputPath.toUri.toString
+                                       outputPartitionPath: Path)(implicit spark: SparkSession): Unit = {
+    val outputPathStr = outputPartitionPath.toUri.toString
     log.info(s"Saving $recordCount records to the Enceladus raw folder: $outputPathStr")
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPathStr)
-    fsUtils.createDirectoryRecursiveButLast(outputPath)
+    fsUtils.createDirectoryRecursiveButLast(outputPartitionPath)
 
     val dfToWrite = enceladusConfig.recordsPerPartition match {
       case Some(rpp) =>
@@ -210,7 +220,7 @@ class EnceladusSink(sinkConfig: Config,
 
   private[extras] def generateInfoFile(df: DataFrame,
                                        recordCount: Long,
-                                       outputPath: Path,
+                                       outputPartitionPath: Path,
                                        infoDate: LocalDate,
                                        jobStart: Instant
                                       )(implicit spark: SparkSession): Unit = {
@@ -219,17 +229,62 @@ class EnceladusSink(sinkConfig: Config,
         enceladusConfig.timezoneId,
         recordCount,
         df,
-        outputPath,
+        outputPartitionPath,
         infoDate,
         jobStart,
         jobStart)(spark, sinkConfig)
     }
+  }
+
+  private[extras] def runEnceladus(tableName: String,
+                                   infoDate: LocalDate,
+                                   infoVersion: Int,
+                                   basePath: Path,
+                                   options: Map[String, String]): Unit = {
+    if (!options.contains(DATASET_NAME_KEY) || !options.contains(DATASET_VERSION_KEY)) {
+      log.info(s"Enceladus dataset name and/or version are not specified, skipping the Enceladus execution for $tableName.")
+      return
+    }
+
+    val datasetName = options(DATASET_NAME_KEY)
+    val datasetVersion = options(DATASET_VERSION_KEY).toInt
+    val cmdArgs = applyCommandLineTemplate(
+      enceladusConfig.enceladusCmdLineTemplate,
+      datasetName,
+      datasetVersion,
+      infoDate,
+      infoVersion,
+      basePath)
+
+    try {
+      MainRunner.runMain(enceladusConfig.enceladusMainClass, cmdArgs)
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Enceladus execution failed for $tableName.", ex)
+    }
+  }
+
+  private[extras] def applyCommandLineTemplate(template: String,
+                                               datasetName: String,
+                                               datasetVersion: Int,
+                                               infoDate: LocalDate,
+                                               infoVersion: Int,
+                                               basePath: Path): Array[String] = {
+    template
+      .replaceAll("@datasetName", datasetName)
+      .replaceAll("@datasetVersion", datasetVersion.toString)
+      .replaceAll("@infoDate", infoDate.toString)
+      .replaceAll("@infoVersion", infoVersion.toString)
+      .replaceAll("@rawPath", basePath.toString)
+      .replaceAll("@rawFormat", enceladusConfig.format)
+      .split(' ')
   }
 }
 
 object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
   val OUTPUT_PATH_KEY = "path"
   val INFO_VERSION_KEY = "info.version"
+  val DATASET_NAME_KEY = "dataset.name"
+  val DATASET_VERSION_KEY = "dataset.version"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
     val enceladusConfig = EnceladusConfig.fromConfig(conf)
