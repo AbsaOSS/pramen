@@ -20,9 +20,8 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
-import za.co.absa.pramen.api.ExternalChannelFactory
 import za.co.absa.pramen.extras.utils.{FsUtils, PartitionUtils}
 
 import java.time.{Instant, LocalDate}
@@ -131,11 +130,13 @@ import java.time.{Instant, LocalDate}
   */
 class EnceladusSink(sinkConfig: Config,
                     enceladusConfig: EnceladusConfig) extends Sink {
+
   import za.co.absa.pramen.extras.sink.EnceladusSink._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override val config: Config = sinkConfig
+
   override def connect(): Unit = {}
 
   override def close(): Unit = {}
@@ -145,57 +146,84 @@ class EnceladusSink(sinkConfig: Config,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])(implicit spark: SparkSession): Long = {
-    if (!options.contains(OUTPUT_PATH_KEY)) {
-      throw new IllegalArgumentException(s"$OUTPUT_PATH_KEY is not specified for Enceladus sink, table: $tableName")
-    }
-
     val jobStart = Instant.now()
-    val basePath = new Path(options(OUTPUT_PATH_KEY))
-    val infoVersion = options.getOrElse(INFO_VERSION_KEY, "1").toInt
 
-    val partition = PartitionUtils.unpackCustomPartitionPattern(enceladusConfig.partitionPattern, enceladusConfig.infoDateColumn, infoDate, infoVersion)
-    val outputPath = new Path(basePath, partition)
-    val outputPathStr = outputPath.toUri.toString
+    val infoVersion = getInfoVersion(options)
+    val outputPath = getOutputPath(tableName, infoDate, infoVersion, options)
 
     val count = df.count()
 
     if (count > 0 || enceladusConfig.saveEmpty) {
-      log.info(s"Saving $count records to the Enceladus raw folder: $outputPathStr")
-
-      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPathStr)
-
-      fsUtils.createDirectoryRecursiveButLast(outputPath)
-
-      val dfToWrite = enceladusConfig.recordsPerPartition match {
-        case Some(rpp) =>
-          val n = Math.max(1, Math.ceil(count.toDouble / rpp)).toInt
-          log.info(s"Repartitioning to $n partitions...")
-          df.repartition(n)
-        case None =>
-          df
-      }
-
-      dfToWrite.write
-        .mode(enceladusConfig.mode)
-        .format(enceladusConfig.format)
-        .options(enceladusConfig.formatOptions)
-        .save(outputPathStr)
-
-      if (enceladusConfig.generateInfoFile) {
-        InfoFileGeneration.generateInfoFile(enceladusConfig.pramenVersion,
-          enceladusConfig.timezoneId,
-          count,
-          df,
-          outputPath,
-          infoDate,
-          jobStart,
-          jobStart)(spark, sinkConfig)
-      }
+      writeToRawFolder(df, count, outputPath)
+      generateInfoFile(df, count, outputPath, infoDate, jobStart)
     } else {
+      val outputPathStr = outputPath.toUri.toString
       log.info(s"Nothing to save to the Enceladus raw folder: $outputPathStr")
     }
 
     count
+  }
+
+  private[extras] def getInfoVersion(options: Map[String, String]): Int = {
+    // ToDo This can be improver by automatically determining the version based on the existing folders.
+    options.getOrElse(INFO_VERSION_KEY, "1").toInt
+  }
+
+  private[extras] def getOutputPath(tableName: String,
+                                    infoDate: LocalDate,
+                                    infoVersion: Int,
+                                    options: Map[String, String]): Path = {
+    if (!options.contains(OUTPUT_PATH_KEY)) {
+      throw new IllegalArgumentException(s"$OUTPUT_PATH_KEY is not specified for Enceladus sink, table: $tableName")
+    }
+
+    val basePath = new Path(options(OUTPUT_PATH_KEY))
+
+    val partition = PartitionUtils.unpackCustomPartitionPattern(enceladusConfig.partitionPattern, enceladusConfig.infoDateColumn, infoDate, infoVersion)
+    new Path(basePath, partition)
+  }
+
+  private[extras] def writeToRawFolder(df: DataFrame,
+                                       recordCount: Long,
+                                       outputPath: Path)(implicit spark: SparkSession): Unit = {
+    val outputPathStr = outputPath.toUri.toString
+    log.info(s"Saving $recordCount records to the Enceladus raw folder: $outputPathStr")
+
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPathStr)
+    fsUtils.createDirectoryRecursiveButLast(outputPath)
+
+    val dfToWrite = enceladusConfig.recordsPerPartition match {
+      case Some(rpp) =>
+        val n = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
+        log.info(s"Repartitioning to $n partitions...")
+        df.repartition(n)
+      case None      =>
+        df
+    }
+
+    dfToWrite.write
+      .mode(enceladusConfig.mode)
+      .format(enceladusConfig.format)
+      .options(enceladusConfig.formatOptions)
+      .save(outputPathStr)
+  }
+
+  private[extras] def generateInfoFile(df: DataFrame,
+                                       recordCount: Long,
+                                       outputPath: Path,
+                                       infoDate: LocalDate,
+                                       jobStart: Instant
+                                      )(implicit spark: SparkSession): Unit = {
+    if (enceladusConfig.generateInfoFile) {
+      InfoFileGeneration.generateInfoFile(enceladusConfig.pramenVersion,
+        enceladusConfig.timezoneId,
+        recordCount,
+        df,
+        outputPath,
+        infoDate,
+        jobStart,
+        jobStart)(spark, sinkConfig)
+    }
   }
 }
 
