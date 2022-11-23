@@ -19,9 +19,10 @@ import attrs
 
 from loguru import logger
 from pyspark.sql import DataFrame
+from pyspark.sql.functions import lit
 
 from pramen_py.metastore.writer_base import MetastoreWriterBase
-from pramen_py.models import TableFormat
+from pramen_py.models import TableFormat, MetastoreTable
 from pramen_py.models.utils import get_metastore_table
 
 
@@ -42,26 +43,46 @@ class MetastoreWriter(MetastoreWriterBase):
         logger.info(f"Writing table {table_name} started")
 
         target_table = get_metastore_table(table_name, self.config)
-        target_path = os.path.join(
-            target_table.path,
-            f"{target_table.info_date_settings.column}={self.info_date}",)
-        df_dropped = df.drop(target_table.info_date_settings.column)
-        df_repartitioned = self._apply_repartitioning(df_dropped, target_table.records_per_partition)
         if target_table.format == TableFormat.parquet:
-            self._write_parquet_formate_table(df_repartitioned, pathlib.Path(target_path))
-        #elif target_table.format == TableFormat.delta:
-        #    self._write_delta_formate_table(self, df_repartitioned, pathlib.Path(target_path))
+            save_path = self._write_parquet_format_table(df, target_table)
+        elif target_table.format == TableFormat.delta:
+            save_path = self._write_delta_format_table(df, target_table)
         else:
             raise NotImplementedError
         logger.info(
             f"Successfully written {df.count()} items to {table_name} at "
-            f" {target_path}"
+            f" {save_path}"
         )
 
-    def _write_parquet_formate_table(self, df: DataFrame, path: pathlib.Path):
-        df.write.format("parquet") \
+    def _write_parquet_format_table(self, df: DataFrame, metastore_table: MetastoreTable) -> str:
+        target_path = os.path.join(
+            metastore_table.path,
+            f"{metastore_table.info_date_settings.column}={self.info_date}",)
+        target_path = pathlib.Path(target_path).as_posix()
+        df_dropped = df.drop(metastore_table.info_date_settings.column)
+        df_repartitioned = self._apply_repartitioning(df_dropped, metastore_table.records_per_partition)
+        df_repartitioned.write.format("parquet") \
             .mode("overwrite") \
-            .save(path.as_posix())
+            .save(target_path)
+        return target_path
+
+    def _write_delta_format_table(self, df: DataFrame, metastore_table: MetastoreTable):
+        df_with = df.withColumn(metastore_table.info_date_settings.column, lit(f"{self.info_date}"))
+        df_repartitioned = self._apply_repartitioning(df_with, metastore_table.records_per_partition)
+        df_writer = df_repartitioned.write.format("delta") \
+            .mode("overwrite") \
+            .partitionBy(metastore_table.info_date_settings.column) \
+            .option("mergeSchema", "true") \
+            .option("replaceWhere", f"{metastore_table.info_date_settings.column}='{self.info_date}'")
+        if metastore_table.path:
+            df_writer.save(metastore_table.path)
+            return metastore_table.path
+        elif metastore_table.table:
+            df_writer.saveAsTable(metastore_table.table)
+            return metastore_table.table
+        else:
+            raise NotImplementedError
+
 
     def _apply_repartitioning(self, df: DataFrame, records_per_partition: int) -> DataFrame:
         if records_per_partition > 0:

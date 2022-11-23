@@ -64,8 +64,9 @@ class InfoDateSettings:
 class MetastoreTable:
     name: str = attrs.field()
     format: TableFormat = attrs.field()
-    path: str = attrs.field()
     info_date_settings: InfoDateSettings = attrs.field()
+    path: str = attrs.field(default="")
+    table: str = attrs.field(default="")
     description: str = attrs.field(default="")
     records_per_partition: int = attrs.field(default=500000)
 
