@@ -45,6 +45,13 @@ def test_config_structure_unstructure(repo_root, monkeypatch) -> None:
     # deserialize the config
     t_config_unstructured = cattr.unstructure(t_config_structured)
 
+    for i in range(len(config["metastore_tables"])):
+        if config["metastore_tables"][i].get("table"):
+            t_config_unstructured["metastore_tables"][i].pop("path", None)
+        elif config["metastore_tables"][i].get("path"):
+            a = type(t_config_unstructured["metastore_tables"][i])
+            t_config_unstructured["metastore_tables"][i].pop("table", None)
+
     # ensure they are equal
     assert config == t_config_unstructured
 
@@ -62,6 +69,14 @@ def test_structured_config_is_deserialized_properly(repo_root, monkeypatch):
 
     # deserialize the config
     t_config_unstructured = cattr.unstructure(t_config_structured)
+
+    for i in range(len(config["metastore_tables"])):
+        if config["metastore_tables"][i].get("table"):
+            t_config_unstructured["metastore_tables"][i].pop("path", None)
+        elif config["metastore_tables"][i].get("path"):
+            a = type(t_config_unstructured["metastore_tables"][i])
+            t_config_unstructured["metastore_tables"][i].pop("table", None)
+
     assert t_config_unstructured == {
         "run_transformers": [
             {
