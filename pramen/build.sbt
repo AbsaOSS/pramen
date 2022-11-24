@@ -32,10 +32,13 @@ ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation")
 // Scala shouldn't be packaged so it is explicitly added as a provided dependency below
 ThisBuild / autoScalaLibrary := false
 
-lazy val printSparkVersion = taskKey[Unit]("Print Spark version pramen is building against.")
+lazy val printSparkVersion = taskKey[Unit]("Print Spark version Pramen is building against.")
+
+val shadeBase = "za.co.absa.pramen.shaded"
 
 def itFilter(name: String): Boolean = name endsWith "LongSuite"
 def unitFilter(name: String): Boolean = (name endsWith "Suite") && !itFilter(name)
+def shade(pkg: String): (String, String) = s"$pkg.**" -> s"$shadeBase.$pkg.@1"
 
 lazy val IntegrationTest = config("integration") extend Test
 
@@ -224,8 +227,10 @@ lazy val assemblySettingsExtras = assemblySettingsCommon ++ Seq(assembly / assem
 ))
 
 lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
-  ShadeRule.rename("com.mongodb.**" -> "za.co.absa.pramen.shaded.com.mongodb.@1").inAll,
-  ShadeRule.rename("org.mongodb.**" -> "za.co.absa.pramen.shaded.org.mongodb.@1").inAll,
+  ShadeRule.rename(shade("com.mongodb")).inAll,
+  ShadeRule.rename(shade("org.mongodb")).inAll,
+  ShadeRule.rename(shade("scopt")).inAll,
+  ShadeRule.rename(shade("slick")).inAll,
   ShadeRule.zap("com.github.luben.**").inAll,
   ShadeRule.zap("com.ibm.icu.**").inAll,
   ShadeRule.zap("net.jpountz.**").inAll,
