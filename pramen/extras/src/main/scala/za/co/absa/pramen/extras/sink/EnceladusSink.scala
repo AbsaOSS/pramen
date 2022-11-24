@@ -167,7 +167,7 @@ class EnceladusSink(sinkConfig: Config,
       log.info(s"Nothing to save to the Enceladus raw folder: $outputPathStr")
     }
 
-    runEnceladus(tableName, infoDate, infoVersion, basePath, options)
+    runEnceladusIfNeeded(tableName, infoDate, infoVersion, basePath, options)
 
     count
   }
@@ -236,18 +236,31 @@ class EnceladusSink(sinkConfig: Config,
     }
   }
 
+  private[extras] def runEnceladusIfNeeded(tableName: String,
+                                           infoDate: LocalDate,
+                                           infoVersion: Int,
+                                           basePath: Path,
+                                           options: Map[String, String]): Unit = {
+    if (options.contains(DATASET_NAME_KEY) && options.contains(DATASET_VERSION_KEY)) {
+      runEnceladus(
+        tableName,
+        options(DATASET_NAME_KEY),
+        options(DATASET_VERSION_KEY).toInt,
+        infoDate,
+        infoVersion,
+        basePath
+      )
+    } else {
+      log.info(s"Enceladus dataset name and/or version are not specified, skipping the Enceladus execution for $tableName.")
+    }
+  }
+
   private[extras] def runEnceladus(tableName: String,
+                                   datasetName: String,
+                                   datasetVersion: Int,
                                    infoDate: LocalDate,
                                    infoVersion: Int,
-                                   basePath: Path,
-                                   options: Map[String, String]): Unit = {
-    if (!options.contains(DATASET_NAME_KEY) || !options.contains(DATASET_VERSION_KEY)) {
-      log.info(s"Enceladus dataset name and/or version are not specified, skipping the Enceladus execution for $tableName.")
-      return
-    }
-
-    val datasetName = options(DATASET_NAME_KEY)
-    val datasetVersion = options(DATASET_VERSION_KEY).toInt
+                                   basePath: Path): Unit = {
     val cmdArgs = applyCommandLineTemplate(
       enceladusConfig.enceladusCmdLineTemplate,
       datasetName,
