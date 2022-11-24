@@ -373,7 +373,7 @@ def test_metastore_get_latest(
             name=f"table_{format_.value}",
             format=format_,
             path=path_to_table,
-            info_date_settings=InfoDateSettings(column="info_date")
+            info_date_settings=InfoDateSettings(column="info_date"),
         )
         metastore = MetastoreReader(
             spark=spark,
@@ -444,7 +444,7 @@ def test_metastore_get_table(
             name=f"table_{format_.value}",
             format=format_,
             path=create_data_stubs_and_paths[format_.value],
-            info_date_settings=InfoDateSettings(column="info_date")
+            info_date_settings=InfoDateSettings(column="info_date"),
         )
         metastore = MetastoreReader(
             spark=spark,
@@ -506,7 +506,9 @@ def test_get_latest_available_date(
         assert metastore.get_latest_available_date("table1_sync") == expected
 
 
-def test_metastore_writer_write(spark: SparkSession, create_data_stubs_and_paths):
+def test_metastore_writer_write(
+    spark: SparkSession, create_data_stubs_and_paths
+):
     df = spark.createDataFrame(
         (
             (1, 2),
@@ -525,7 +527,7 @@ def test_metastore_writer_write(spark: SparkSession, create_data_stubs_and_paths
             name=f"table_{format_.value}_output",
             format=format_,
             path=create_data_stubs_and_paths[f"output_{format_.value}"],
-            info_date_settings=InfoDateSettings(column="INFORMATION_DATE")
+            info_date_settings=InfoDateSettings(column="INFORMATION_DATE"),
         )
         metastore = MetastoreWriter(
             spark=spark,

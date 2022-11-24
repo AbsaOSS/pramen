@@ -15,8 +15,6 @@
 import datetime
 import pathlib
 
-from typing import Tuple
-
 import cattr
 import pytest
 import yaml
@@ -25,7 +23,7 @@ from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import DateType, IntegerType, StructField, StructType
 
-from pramen_py.models import TransformationConfig, TableFormat
+from pramen_py.models import TableFormat, TransformationConfig
 
 
 REPO_ROOT = pathlib.Path(__file__).parents[1]
@@ -90,10 +88,14 @@ def create_data_stubs_and_paths(
     for format_ in TableFormat:
         format_table_path = (table_path / format_.value).as_posix()
         logger.info("Creating sample DataFrame partitioned by info_date")
-        get_data_stub.write.partitionBy("info_date").format(format_.value).mode("overwrite").save(format_table_path)
+        get_data_stub.write.partitionBy("info_date").format(
+            format_.value
+        ).mode("overwrite").save(format_table_path)
         logger.info("Dataframe successfully created")
         paths[format_.value] = format_table_path
-        paths[f"output_{format_.value}"] = (table_path / f"output_{format_.value}").as_posix()
+        paths[f"output_{format_.value}"] = (
+            table_path / f"output_{format_.value}"
+        ).as_posix()
 
     return paths
 
@@ -133,13 +135,17 @@ def load_and_patch_config(
     object.__setattr__(
         config.metastore_tables[0],
         "path",
-        pathlib.Path(create_data_stubs_and_paths["parquet"]).resolve().as_posix(),
+        pathlib.Path(create_data_stubs_and_paths["parquet"])
+        .resolve()
+        .as_posix(),
     )
 
     object.__setattr__(
         config.metastore_tables[-1],
         "path",
-        pathlib.Path(create_data_stubs_and_paths["output"]).resolve().as_posix(),
+        pathlib.Path(create_data_stubs_and_paths["output"])
+        .resolve()
+        .as_posix(),
     )
 
     def cattr_structure_config_side_effect(obj, cls):
