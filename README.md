@@ -974,7 +974,7 @@ The pipeline operation for this sink could look like this:
       # Optional info version (default = 1)
       info.version = 1
       
-      # Optional for running Enceladus from Pramen
+      # Optional when running Enceladus from Pramen
       dataset.name = "my_dataset"
       dataset.version = 2
     }
