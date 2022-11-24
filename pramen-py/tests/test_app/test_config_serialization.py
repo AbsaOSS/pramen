@@ -49,7 +49,6 @@ def test_config_structure_unstructure(repo_root, monkeypatch) -> None:
         if config["metastore_tables"][i].get("table"):
             t_config_unstructured["metastore_tables"][i].pop("path", None)
         elif config["metastore_tables"][i].get("path"):
-            a = type(t_config_unstructured["metastore_tables"][i])
             t_config_unstructured["metastore_tables"][i].pop("table", None)
 
     # ensure they are equal
@@ -74,7 +73,6 @@ def test_structured_config_is_deserialized_properly(repo_root, monkeypatch):
         if config["metastore_tables"][i].get("table"):
             t_config_unstructured["metastore_tables"][i].pop("path", None)
         elif config["metastore_tables"][i].get("path"):
-            a = type(t_config_unstructured["metastore_tables"][i])
             t_config_unstructured["metastore_tables"][i].pop("table", None)
 
     assert t_config_unstructured == {

@@ -26,7 +26,7 @@ from loguru import logger
 from pyspark.sql import DataFrame
 
 from pramen_py.metastore.reader_base import MetastoreReaderBase
-from pramen_py.models import TableFormat, MetastoreTable
+from pramen_py.models import TableFormat
 from pramen_py.models.utils import get_metastore_table
 from pramen_py.utils import convert_date_to_str, convert_str_to_date
 
@@ -43,12 +43,8 @@ class MetastoreReader(MetastoreReaderBase):
     a KeyError will be raised.
     """
 
-    def _read_table(
-        self,
-        format: str,
-        path: str
-    ) -> DataFrame:
-        return self.spark.read.format(format).load(path)
+    def _read_table(self, format_value: str, path: str) -> DataFrame:
+        return self.spark.read.format(format_value).load(path)
 
     def get_table(
         self,
@@ -69,24 +65,39 @@ class MetastoreReader(MetastoreReaderBase):
         The data format (and other options) are obtained from the config.
         """
 
-        info_date_from = info_date_from or self.info_date
-        info_date_to = info_date_to or self.info_date
-
         metastore_table = get_metastore_table(table_name, self.config)
+        info_date_from_str = convert_date_to_str(
+            info_date_from or self.info_date,
+            fmt=metastore_table.info_date_settings.format,
+        )
+        info_date_to_str = convert_date_to_str(
+            info_date_to or self.info_date,
+            fmt=metastore_table.info_date_settings.format,
+        )
 
         logger.info(f"Looking for {table_name} in the metastore.")
-        logger.debug(f"info_date range: {info_date_from} - {info_date_to}")
+        logger.debug(
+            f"info_date range: {info_date_from_str} - {info_date_to_str}"
+        )
 
-        df = self._read_table(metastore_table.format.value, metastore_table.path)
-        df_filtered = df \
-            .filter(F.col(metastore_table.info_date_settings.column) >= info_date_from,) \
-            .filter(F.col(metastore_table.info_date_settings.column) <= info_date_to,)
+        df = self._read_table(
+            metastore_table.format.value, metastore_table.path
+        )
+        df_filtered = df.filter(
+            F.col(metastore_table.info_date_settings.column)
+            >= F.lit(info_date_from_str),
+        ).filter(
+            F.col(metastore_table.info_date_settings.column)
+            <= F.lit(info_date_to_str),
+        )
 
         logger.info(
             f"Table {table_name} successfully loaded from {metastore_table.path}."
         )
         if uppercase_columns:
-            return df_filtered.select([F.col(c).alias(c.upper()) for c in df.columns])
+            return df_filtered.select(
+                [F.col(c).alias(c.upper()) for c in df.columns]
+            )
         else:
             return df_filtered
 
@@ -116,16 +127,25 @@ class MetastoreReader(MetastoreReaderBase):
                 metastore_table.path,
                 f"{metastore_table.info_date_settings.column}={latest_date}",
             )
-            df = self._read_table(metastore_table.format.value, pathlib.Path(path).as_posix()) \
-                .withColumn(metastore_table.info_date_settings.column,
-                            F.lit(latest_date).cast(T.DateType()))
+            df = self._read_table(
+                metastore_table.format.value, pathlib.Path(path).as_posix()
+            ).withColumn(
+                metastore_table.info_date_settings.column,
+                F.lit(latest_date).cast(T.DateType()),
+            )
         elif metastore_table.format == TableFormat.delta:
-            df = self._read_table(metastore_table.format.value, metastore_table.path) \
-                .filter(F.col(metastore_table.info_date_settings.column) == latest_date)
+            df = self._read_table(
+                metastore_table.format.value, metastore_table.path
+            ).filter(
+                F.col(metastore_table.info_date_settings.column)
+                == F.lit(latest_date)
+            )
         else:
             raise NotImplementedError
 
-        logger.info(f"Table {table_name} with the latest partition {latest_date} loaded")
+        logger.info(
+            f"Table {table_name} with the latest partition {latest_date} loaded"
+        )
         if uppercase_columns:
             return df.select([F.col(c).alias(c.upper()) for c in df.columns])
         else:
