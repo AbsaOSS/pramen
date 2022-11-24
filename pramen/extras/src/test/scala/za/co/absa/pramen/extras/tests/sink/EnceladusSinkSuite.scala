@@ -117,7 +117,7 @@ class EnceladusSinkSuite extends WordSpec with SparkTestBase with TextComparison
 
       val sink = EnceladusSink.apply(conf, "", spark)
 
-      sink.runEnceladus("my_table",
+      sink.runEnceladusIfNeeded("my_table",
         infoDate,
         2,
         new Path("/dummy"),
@@ -142,7 +142,7 @@ class EnceladusSinkSuite extends WordSpec with SparkTestBase with TextComparison
       val sink = EnceladusSink.apply(conf, "", spark)
 
       val ex = intercept[RuntimeException] {
-        sink.runEnceladus("my_table",
+        sink.runEnceladusIfNeeded("my_table",
           infoDate,
           2,
           new Path("/dummy"),
