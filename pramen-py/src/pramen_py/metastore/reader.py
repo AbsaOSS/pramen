@@ -45,13 +45,10 @@ class MetastoreReader(MetastoreReaderBase):
 
     def _read_table(
         self,
-        metastore_table: MetastoreTable,
-        info_date_from: datetime.date,
-        info_date_to: datetime.date,
+        format: str,
+        path: str
     ) -> DataFrame:
-        return self.spark.read.format(metastore_table.format.value).load(metastore_table.path) \
-            .filter(F.col(metastore_table.info_date_settings.column) >= info_date_from,) \
-            .filter(F.col(metastore_table.info_date_settings.column) <= info_date_to,)
+        return self.spark.read.format(format).load(path)
 
     def get_table(
         self,
@@ -75,20 +72,23 @@ class MetastoreReader(MetastoreReaderBase):
         info_date_from = info_date_from or self.info_date
         info_date_to = info_date_to or self.info_date
 
-        table = get_metastore_table(table_name, self.config)
+        metastore_table = get_metastore_table(table_name, self.config)
 
         logger.info(f"Looking for {table_name} in the metastore.")
         logger.debug(f"info_date range: {info_date_from} - {info_date_to}")
 
-        df = self._read_table(table, info_date_from, info_date_to)
+        df = self._read_table(metastore_table.format.value, metastore_table.path)
+        df_filtered = df \
+            .filter(F.col(metastore_table.info_date_settings.column) >= info_date_from,) \
+            .filter(F.col(metastore_table.info_date_settings.column) <= info_date_to,)
 
         logger.info(
-            f"Table {table_name} successfully loaded from {table.path}."
+            f"Table {table_name} successfully loaded from {metastore_table.path}."
         )
         if uppercase_columns:
-            return df.select([F.col(c).alias(c.upper()) for c in df.columns])
+            return df_filtered.select([F.col(c).alias(c.upper()) for c in df.columns])
         else:
-            return df
+            return df_filtered
 
     def get_latest(
         self,
@@ -105,21 +105,25 @@ class MetastoreReader(MetastoreReaderBase):
         until = until or self.info_date
         logger.info(f"Getting latest partition for {table_name} until {until}")
 
-        table = get_metastore_table(table_name, self.config)
+        metastore_table = get_metastore_table(table_name, self.config)
         latest_date = convert_date_to_str(
             self.get_latest_available_date(table_name, until),
-            fmt=table.info_date_settings.format,
+            fmt=metastore_table.info_date_settings.format,
         )
-        path = os.path.join(
-            table.path,
-            f"{table.info_date_settings.column}={latest_date}",
-        )
-        logger.debug(f"Path to the latest partition is: {path}")
 
-        df = self.spark.read.format(table.format.value) \
-            .load(pathlib.Path(path).as_posix()) \
-            .withColumn(table.info_date_settings.column,
-                        F.lit(latest_date).cast(T.DateType()))
+        if metastore_table.format == TableFormat.parquet:
+            path = os.path.join(
+                metastore_table.path,
+                f"{metastore_table.info_date_settings.column}={latest_date}",
+            )
+            df = self._read_table(metastore_table.format.value, pathlib.Path(path).as_posix()) \
+                .withColumn(metastore_table.info_date_settings.column,
+                            F.lit(latest_date).cast(T.DateType()))
+        elif metastore_table.format == TableFormat.delta:
+            df = self._read_table(metastore_table.format.value, metastore_table.path) \
+                .filter(F.col(metastore_table.info_date_settings.column) == latest_date)
+        else:
+            raise NotImplementedError
 
         logger.info(f"Table {table_name} with the latest partition {latest_date} loaded")
         if uppercase_columns:
