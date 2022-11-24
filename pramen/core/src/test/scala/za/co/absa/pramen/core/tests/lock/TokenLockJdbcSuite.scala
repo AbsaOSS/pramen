@@ -75,11 +75,12 @@ class TokenLockJdbcSuite extends WordSpec with RelationalDbFixture with BeforeAn
 
     "lock pramen should constantly update lock ticket" in {
       val lock1 = new TokenLockJdbc("token1", pramenDb.slickDb) {
-        override val TOKEN_EXPIRES_SECONDS = 1L
+        override val TOKEN_EXPIRES_SECONDS = 2L
       }
       val lock2 = new TokenLockJdbc("token1", pramenDb.slickDb)
       assert(lock1.tryAcquire())
-      Thread.sleep(2000)
+      // Give it enough time to update
+      Thread.sleep(3000)
       assert(!lock2.tryAcquire())
       assert(!lock1.tryAcquire())
       lock1.release()
