@@ -79,6 +79,36 @@ class OperationTypeSuite extends WordSpec {
       assert(opType.sinkTables.head.metaTableName == "table1_sync")
       assert(opType.sinkTables.head.options("topic") == "table1_topic")
     }
-  }
 
+    "should pick up the default operation type" in {
+      val appConfig = ConfigFactory.parseString(
+        s"""pramen.default.operation.type = "transformation"
+           |""".stripMargin
+      )
+
+      val conf = ConfigFactory.parseString(
+        s"""class = "myclass"
+           |output.table = "dummy_table"
+           |""".stripMargin
+      )
+
+      val opType = OperationType.fromConfig(conf, appConfig, "path").asInstanceOf[Transformation]
+
+      assert(opType.clazz == "myclass")
+    }
+
+    "should throw an exception when operation type is not specified" in {
+      val conf = ConfigFactory.parseString(
+        s"""class = "myclass"
+           |output.table = "dummy_table"
+           |""".stripMargin
+      )
+
+      val ex = intercept[IllegalArgumentException] {
+        OperationType.fromConfig(conf, conf, "path").asInstanceOf[Transformation]
+      }
+
+      assert(ex.getMessage.contains("Missing either path.type or pramen.default.operation.type"))
+    }
+  }
 }

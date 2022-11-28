@@ -30,6 +30,7 @@ object OperationType {
   case class Transfer(sourceName: String, sinkName: String, tables: Seq[TransferTable]) extends OperationType
 
   val TYPE_KEY = "type"
+  val DEFAULT_TYPE_KEY = "pramen.default.operation.type"
   val SOURCE_KEY = "source"
   val SINK_KEY = "sink"
   val TABLES_KEY = "tables"
@@ -38,9 +39,23 @@ object OperationType {
   val OUTPUT_TABLE_KEY = "output.table"
 
   def fromConfig(conf: Config, appConfig: Config, parent: String): OperationType = {
-    ConfigUtils.validatePathsExistence(conf, parent, Seq(TYPE_KEY))
+    if (conf.hasPath(TYPE_KEY)) {
+      getOperationTypeFromName(conf.getString(TYPE_KEY), conf, appConfig, parent)
+    } else {
+      getDefaultOperationType(conf, appConfig, parent)
+    }
+  }
 
-    conf.getString(TYPE_KEY) match {
+  private [core] def getDefaultOperationType(conf: Config, appConfig: Config, parent: String): OperationType = {
+    if (appConfig.hasPath(DEFAULT_TYPE_KEY)) {
+      getOperationTypeFromName(appConfig.getString(DEFAULT_TYPE_KEY), conf, appConfig, parent)
+    } else {
+      throw new IllegalArgumentException(s"Missing either $parent.$TYPE_KEY or $DEFAULT_TYPE_KEY")
+    }
+  }
+
+  private[core] def getOperationTypeFromName(name: String, conf: Config, appConfig: Config, parent: String): OperationType = {
+    name match {
       case "ingestion" | "sourcing" | "extract" =>
         ConfigUtils.validatePathsExistence(conf, parent, Seq(SOURCE_KEY, TABLES_KEY))
         val source = conf.getString(SOURCE_KEY)

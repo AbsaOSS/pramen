@@ -165,6 +165,9 @@ $ spark-shell --jars pramen-runner_2.12_3.2.2-1.0.2-SNAPSHOT.jar
 
 # Creating a data pipeline
 
+Pramen is a configuration driven tool. There are plenty of ways you can customize your pipeline. For the definitive set
+of possible options please loot at [reference.conf](pramen/core/src/main/resources/reference.conf).
+
 Let's take a look on components of a data pipeline in more detail.
 
 ## Pipeline components
