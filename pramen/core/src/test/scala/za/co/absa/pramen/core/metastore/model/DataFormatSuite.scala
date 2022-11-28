@@ -26,7 +26,7 @@ class DataFormatSuite extends WordSpec {
     "use 'parquet' as the default format" in {
       val conf = ConfigFactory.parseString("""path = /a/b/c""")
 
-      val format = DataFormat.fromConfig(conf)
+      val format = DataFormat.fromConfig(conf, conf)
 
       assert(format.name == "parquet")
       assert(format.isInstanceOf[Parquet])
@@ -42,7 +42,7 @@ class DataFormatSuite extends WordSpec {
           |records.per.partition = 100
           |""".stripMargin)
 
-      val format = DataFormat.fromConfig(conf)
+      val format = DataFormat.fromConfig(conf, conf)
 
       assert(format.name == "parquet")
       assert(format.isInstanceOf[Parquet])
@@ -58,13 +58,31 @@ class DataFormatSuite extends WordSpec {
           |records.per.partition = 200
           |""".stripMargin)
 
-      val format = DataFormat.fromConfig(conf)
+      val format = DataFormat.fromConfig(conf, conf)
 
       assert(format.name == "delta")
       assert(format.isInstanceOf[Delta])
       assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
       assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
       assert(format.asInstanceOf[Delta].recordsPerPartition.contains(200))
+    }
+
+    "use default records per partition" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |format = delta
+          |path = /a/b/c
+          |""".stripMargin)
+
+      val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
+
+      val format = DataFormat.fromConfig(conf, appConf)
+
+      assert(format.name == "delta")
+      assert(format.isInstanceOf[Delta])
+      assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
+      assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
+      assert(format.asInstanceOf[Delta].recordsPerPartition.contains(100))
     }
 
     "throw an exception on unknown format" in {
@@ -74,7 +92,7 @@ class DataFormatSuite extends WordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        DataFormat.fromConfig(conf)
+        DataFormat.fromConfig(conf, conf)
       }
 
       assert(ex.getMessage.contains("Unknown format: isberg"))
@@ -87,7 +105,7 @@ class DataFormatSuite extends WordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        DataFormat.fromConfig(conf)
+        DataFormat.fromConfig(conf, conf)
       }
 
       assert(ex.getMessage.contains("Mandatory option missing: path"))

@@ -48,17 +48,23 @@ object DataFormat {
   val RECORDS_PER_PARTITION_KEY = "records.per.partition"
   val DEFAULT_FORMAT = "parquet"
 
-  def fromConfig(conf: Config): DataFormat = {
+  val DEFAULT_RECORDS_PER_PARTITION_KEY = "pramen.default.records.per.partition"
+
+  def fromConfig(conf: Config, appConfig: Config): DataFormat = {
     val format = ConfigUtils.getOptionString(conf, FORMAT_KEY).getOrElse(DEFAULT_FORMAT)
+
+    val defaultRecordsPerPartition = ConfigUtils.getOptionLong(appConfig, DEFAULT_RECORDS_PER_PARTITION_KEY)
 
     format match {
       case FORMAT_PARQUET =>
         val path = getPath(conf)
         val recordsPerPartition = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
+          .orElse(defaultRecordsPerPartition)
         Parquet(path, recordsPerPartition)
       case FORMAT_DELTA   =>
         val query = getQuery(conf)
         val recordsPerPartition = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
+          .orElse(defaultRecordsPerPartition)
         Delta(query, recordsPerPartition)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
     }
