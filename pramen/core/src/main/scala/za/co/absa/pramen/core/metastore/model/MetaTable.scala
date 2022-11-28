@@ -66,7 +66,7 @@ object MetaTable {
     }
 
     val metatables = tableConfigs
-      .map(tableConfig => fromConfigSingleEntity(tableConfig, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays))
+      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays))
       .toSeq
 
     val duplicates = AlgorithmicUtils.findDuplicates(metatables.map(_.name))
@@ -77,6 +77,7 @@ object MetaTable {
   }
 
   def fromConfigSingleEntity(conf: Config,
+                             appConf: Config,
                              defaultInfoColumnName: String,
                              defaultInfoDateFormat: String,
                              defaultStartDate: LocalDate,
@@ -91,7 +92,7 @@ object MetaTable {
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
 
     val format = Try {
-      DataFormat.fromConfig(conf)
+      DataFormat.fromConfig(conf, appConf)
     } match {
       case Success(f) => f
       case Failure(ex) => throw new IllegalArgumentException(s"Unable to read data format from config for the metastore table: $name", ex)

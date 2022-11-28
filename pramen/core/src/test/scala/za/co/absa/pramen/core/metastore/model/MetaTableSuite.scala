@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.WordSpec
+import za.co.absa.pramen.core.metastore.model.DataFormat.Parquet
 
 import java.time.LocalDate
 
@@ -127,7 +128,7 @@ class MetaTableSuite extends WordSpec {
           |records.per.partition = 100
           |""".stripMargin)
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0)
 
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "delta")
@@ -157,10 +158,13 @@ class MetaTableSuite extends WordSpec {
           |}
           |""".stripMargin)
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1)
+      val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
+
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1)
 
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "parquet")
+      assert(metaTable.format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
       assert(metaTable.hiveTable.contains("my_hive_table"))
       assert(metaTable.trackDays == 1)
       assert(metaTable.infoDateColumn == "INFORMATION_DATE")
@@ -180,7 +184,7 @@ class MetaTableSuite extends WordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, "", "", LocalDate.parse("2020-01-31"), 0)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0)
       }
 
       assert(ex.getMessage.contains("Mandatory option missing: name"))
@@ -196,7 +200,7 @@ class MetaTableSuite extends WordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, "", "", LocalDate.parse("2020-01-31"), 0)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0)
       }
 
       assert(ex.getMessage.contains("Unable to read data format from config for the metastore table: table1"))
