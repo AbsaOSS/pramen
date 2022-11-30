@@ -356,7 +356,7 @@ def test_metastore_is_data_available(
 )
 def test_metastore_get_latest(
     spark: SparkSession,
-    create_data_stubs_and_paths,
+    generate_test_tables,
     info_date,
     until,
     exc,
@@ -368,9 +368,9 @@ def test_metastore_get_latest(
     """
 
     for format_ in TableFormat:
-        path_to_table = create_data_stubs_and_paths[format_.value]
+        path_to_table = generate_test_tables["read_table"][f"{format_.value}"]
         metastore_table_config = MetastoreTable(
-            name=f"table_{format_.value}",
+            name=f"read_table_{format_.value}",
             format=format_,
             path=path_to_table,
             info_date_settings=InfoDateSettings(column="info_date"),
@@ -383,12 +383,12 @@ def test_metastore_get_latest(
         if exc:
             with pytest.raises(exc, match=exc_msg):
                 metastore.get_latest(
-                    f"table_{format_.value}",
+                    f"read_table_{format_.value}",
                     until=until,
                 )
         else:
             actual = metastore.get_latest(
-                f"table_{format_.value}",
+                f"read_table_{format_.value}",
                 until=until,
             )
             expected = spark.read.format(format_.value).load(path_to_table)
@@ -429,7 +429,7 @@ def test_metastore_get_latest(
 )
 def test_metastore_get_table(
     spark,
-    create_data_stubs_and_paths,
+    generate_test_tables,
     info_date,
     info_date_from,
     info_date_to,
@@ -441,9 +441,9 @@ def test_metastore_get_table(
     """
     for format_ in TableFormat:
         metastore_table_config = MetastoreTable(
-            name=f"table_{format_.value}",
+            name=f"read_table_{format_.value}",
             format=format_,
-            path=create_data_stubs_and_paths[format_.value],
+            path=generate_test_tables["read_table"][f"{format_.value}"],
             info_date_settings=InfoDateSettings(column="info_date"),
         )
         metastore = MetastoreReader(
@@ -452,7 +452,7 @@ def test_metastore_get_table(
             info_date=info_date,
         )
         table = metastore.get_table(
-            f"table_{format_.value}",
+            f"read_table_{format_.value}",
             info_date_from=info_date_from,
             info_date_to=info_date_to,
         )
@@ -506,9 +506,7 @@ def test_get_latest_available_date(
         assert metastore.get_latest_available_date("table1_sync") == expected
 
 
-def test_metastore_writer_write(
-    spark: SparkSession, create_data_stubs_and_paths
-):
+def test_metastore_writer_write(spark: SparkSession, generate_test_tables):
     df = spark.createDataFrame(
         (
             (1, 2),
@@ -524,9 +522,9 @@ def test_metastore_writer_write(
 
     for format_ in TableFormat:
         metastore_table_config = MetastoreTable(
-            name=f"table_{format_.value}_output",
+            name=f"write_table_{format_.value}",
             format=format_,
-            path=create_data_stubs_and_paths[f"output_{format_.value}"],
+            path=generate_test_tables["write_table"][f"{format_.value}"],
             info_date_settings=InfoDateSettings(column="INFORMATION_DATE"),
         )
         metastore = MetastoreWriter(
@@ -534,10 +532,10 @@ def test_metastore_writer_write(
             config=[metastore_table_config],
             info_date=d(2022, 4, 6),
         )
-        metastore.write(f"table_{format_.value}_output", df)
+        metastore.write(f"write_table_{format_.value}", df)
 
         actual = spark.read.parquet(
-            create_data_stubs_and_paths[f"output_{format_.value}"]
+            generate_test_tables["write_table"][f"{format_.value}"]
         )
         expected = df.withColumn(
             "INFORMATION_DATE",

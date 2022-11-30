@@ -579,7 +579,7 @@ sql = ["pandas (>=0.23.2)", "pyarrow (>=1.0.0)"]
 name = "pyspark-stubs"
 version = "2.3.0.post2"
 description = "A collection of the Apache Spark stub files"
-category = "main"
+category = "dev"
 optional = false
 python-versions = "*"
 
@@ -833,7 +833,7 @@ testing = ["func-timeout", "jaraco.itertools", "pytest (>=4.6)", "pytest-black (
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.6.8,<4.0"
-content-hash = "27ecc5f7e1a12a151f4915b25abef51ec97bf0a53f811aa59bc11b41eae59ae0"
+content-hash = "1331d264faf4caaafa24640c93e7dbefca551b42e0728a2e69fa4bf6136a907f"
 
 [metadata.files]
 aiocontextvars = [

@@ -35,7 +35,7 @@ build: install
 	poetry build
 
 test: install .env
-	poetry run pytest -n 1
+	poetry run pytest --cov -n 1
 
 pre-commit: install
 	poetry run pre-commit run --all-files

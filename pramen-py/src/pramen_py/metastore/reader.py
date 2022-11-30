@@ -43,8 +43,8 @@ class MetastoreReader(MetastoreReaderBase):
     a KeyError will be raised.
     """
 
-    def _read_table(self, format_value: str, path: str) -> DataFrame:
-        return self.spark.read.format(format_value).load(path)
+    def _read_table(self, table_format: TableFormat, path: str) -> DataFrame:
+        return self.spark.read.format(table_format.value).load(path)
 
     def get_table(
         self,
@@ -75,14 +75,12 @@ class MetastoreReader(MetastoreReaderBase):
             fmt=metastore_table.info_date_settings.format,
         )
 
-        logger.info(f"Looking for {table_name} in the metastore.")
-        logger.debug(
-            f"info_date range: {info_date_from_str} - {info_date_to_str}"
+        logger.info(
+            f"Looking for {table_name} in the metastore where\n"
+            f"info_date in range: {info_date_from_str} - {info_date_to_str}."
         )
 
-        df = self._read_table(
-            metastore_table.format.value, metastore_table.path
-        )
+        df = self._read_table(metastore_table.format, metastore_table.path)
         df_filtered = df.filter(
             F.col(metastore_table.info_date_settings.column)
             >= F.lit(info_date_from_str),
@@ -128,14 +126,14 @@ class MetastoreReader(MetastoreReaderBase):
                 f"{metastore_table.info_date_settings.column}={latest_date}",
             )
             df = self._read_table(
-                metastore_table.format.value, pathlib.Path(path).as_posix()
+                metastore_table.format, pathlib.Path(path).as_posix()
             ).withColumn(
                 metastore_table.info_date_settings.column,
                 F.lit(latest_date).cast(T.DateType()),
             )
         elif metastore_table.format == TableFormat.delta:
             df = self._read_table(
-                metastore_table.format.value, metastore_table.path
+                metastore_table.format, metastore_table.path
             ).filter(
                 F.col(metastore_table.info_date_settings.column)
                 == F.lit(latest_date)
