@@ -148,7 +148,7 @@ def get_or_create_spark_session(
             "JAVA_HOME is set to " + env.str("PRAMENPY_SPARK_JAVA_HOME")
         )
 
-    maybe_active_session = SparkSession.getActiveSession()
+    maybe_active_session = SparkSession.getActiveSession()  # type: ignore
     if maybe_active_session and force_recreate:
         logger.info("Force recreating a spark session")
         spark = maybe_active_session
@@ -171,7 +171,7 @@ def get_or_create_spark_session(
 
     spark = session.getOrCreate()
     logger.info("SparkSession is ready")
-    return spark
+    return spark  # type: ignore
 
 
 T_FN_ARGS = TypeVar("T_FN_ARGS")
