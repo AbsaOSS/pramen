@@ -46,6 +46,14 @@ class MetastoreReader(MetastoreReaderBase):
     def _read_table(self, table_format: TableFormat, path: str) -> DataFrame:
         return self.spark.read.format(table_format.value).load(path)
 
+    def _apply_uppercase_to_columns_names(
+        self, df: DataFrame, uppercase_columns: bool
+    ) -> DataFrame:
+        if uppercase_columns:
+            return df.select([F.col(c).alias(c.upper()) for c in df.columns])
+        else:
+            return df
+
     def get_table(
         self,
         table_name: str,
@@ -92,12 +100,10 @@ class MetastoreReader(MetastoreReaderBase):
         logger.info(
             f"Table {table_name} successfully loaded from {metastore_table.path}."
         )
-        if uppercase_columns:
-            return df_filtered.select(
-                [F.col(c).alias(c.upper()) for c in df.columns]
-            )
-        else:
-            return df_filtered
+
+        return self._apply_uppercase_to_columns_names(
+            df_filtered, uppercase_columns
+        )
 
     def get_latest(
         self,
@@ -144,10 +150,8 @@ class MetastoreReader(MetastoreReaderBase):
         logger.info(
             f"Table {table_name} with the latest partition {latest_date} loaded"
         )
-        if uppercase_columns:
-            return df.select([F.col(c).alias(c.upper()) for c in df.columns])
-        else:
-            return df
+
+        return self._apply_uppercase_to_columns_names(df, uppercase_columns)
 
     def get_latest_available_date(
         self,

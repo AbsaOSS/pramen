@@ -135,19 +135,26 @@ def load_and_patch_config(
     >>> )
     >>> assert output_table.count() == 8
     """
-    table_path = tmp_path / "data_lake" / "example_dependency_table"
+    dependency_table_path = (
+        (tmp_path / "data_lake" / "example_dependency_table")
+        .resolve()
+        .as_posix()
+    )
+    output_table_path = (
+        (tmp_path / "data_lake" / "example_output_table").resolve().as_posix()
+    )
     get_data_stub.write.partitionBy("info_date").format("parquet").mode(
         "overwrite"
-    ).save(table_path.resolve().as_posix())
+    ).save(dependency_table_path)
     object.__setattr__(
         config.metastore_tables[0],
         "path",
-        table_path.resolve().as_posix(),
+        dependency_table_path,
     )
     object.__setattr__(
         config.metastore_tables[-1],
         "path",
-        (table_path.parent / "example_output_table").resolve().as_posix(),
+        output_table_path,
     )
 
     def cattr_structure_config_side_effect(obj, cls):
