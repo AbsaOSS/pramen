@@ -35,6 +35,8 @@ cattr.register_unstructure_hook(datetime.date, lambda v: str(v))
 
 @enum.unique
 class TableFormat(enum.Enum):
+    """The string name of each format should match Spark format"""
+
     parquet: str = "parquet"
     delta: str = "delta"
 
