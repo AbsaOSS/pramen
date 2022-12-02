@@ -975,7 +975,7 @@ The pipeline operation for this sink could look like this:
       output.path = "/datalake/base/path"
       
       # Optional info version (default = 1)
-      info.version = 1
+      output.info.version = 1
       
       # Optional when running Enceladus from Pramen
       output.dataset.name = "my_dataset"
