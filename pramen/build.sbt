@@ -29,6 +29,8 @@ ThisBuild / crossScalaVersions := Seq(scala211, scala212, scala213)
 
 ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation")
 
+ThisBuild / versionScheme := Some("early-semver")
+
 // Scala shouldn't be packaged so it is explicitly added as a provided dependency below
 ThisBuild / autoScalaLibrary := false
 

@@ -106,11 +106,11 @@ import scala.util.control.NonFatal
   *        # All following settings are OPTIONAL
   *
   *        # Info version (default = 1)
-  *        info.version = 1
+  *        output.info.version = 1
   *
   *        ## Set this up only if you want to run Standardization and Conformance
-  *        dataset.name = "my_dataset"
-  *        dataset.version = 1
+  *        output.dataset.name = "my_dataset"
+  *        output.dataset.version = 1
   *
   *        # Date range to read the source table for. By default the job information date is used.
   *        # But you can define an arbitrary expression based on the information date.
