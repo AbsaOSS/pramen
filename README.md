@@ -86,7 +86,7 @@ In addition to basic error notification, typical operational warnings are genera
 
 2. Define an ingestion pipeline
 
-   Paste the contents of [ingestion_pipeline.conf](examples/ingestion_pipeline/ingestion_pipeline.conf)
+   Paste the contents of [ingestion_pipeline.conf](pramen/examples/ingestion_pipeline/ingestion_pipeline.conf)
    to a local file.
 
 3. Run the pipeline. Depending on the environment the command may vary. Here is an example for Yarn:
