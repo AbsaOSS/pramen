@@ -41,12 +41,16 @@ class FileSystemUtils:
     URI: "_URI" = attrs.field(init=False)
     Path: "_Path" = attrs.field(init=False)
     FileSystem: "_FileSystem" = attrs.field(init=False)
+    IOUtils: "_IOUtils" = attrs.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         sc = self.spark.sparkContext
         self.URI = sc._gateway.jvm.java.net.URI  # type: ignore
         self.Path = sc._gateway.jvm.org.apache.hadoop.fs.Path  # type: ignore
         self.FileSystem = sc._gateway.jvm.org.apache.hadoop.fs.FileSystem  # type: ignore
+        self.IOUtils = sc._gateway.jvm.org.apache.commons.io.IOUtils  # type: ignore
+
+
 
     def get_fs_from_uri(self, uri: str) -> "_FileSystem":
         """Get Type[FileSystem] object from the uri.
@@ -66,13 +70,14 @@ class FileSystemUtils:
         an example 'C:/somepath'. It parsed 'C:' like schema. This leads to errors.
         LocalFileSystem Path should be: 'file://C:/somepath'.
         """
+
         scheme = urlparse(uri).scheme
         drive = PurePath(uri).drive
         if not scheme:
-            return "file://" + uri.lstrip("/")
+            return "file://" + PurePath(uri.lstrip("/")).as_posix()
         elif drive:
             if re.sub(r"[^\w]", "", drive).lower() == scheme.lower():
-                return "file://" + uri.lstrip("/")
+                return "file://" + PurePath(uri.lstrip("/")).as_posix()
         return uri
 
     def list_files(
@@ -94,6 +99,13 @@ class FileSystemUtils:
             )
         ]
 
+    def read_file_from_hadoop(self, path: str) -> str:
+        fs = self.get_fs_from_uri(path)
+        stream = fs.open(self.Path("file:///C:/data/main.conf"))
+        res = self.IOUtils.toString(stream, "UTF-8")
+        fs.close()
+        return res
+
 
 # Typing info for py4j underlying objects
 class _FileSystem(Protocol):
@@ -101,6 +113,12 @@ class _FileSystem(Protocol):
         ...
 
     def globStatus(self, path: "_Path") -> List["_File"]:
+        ...
+
+    def close(self):
+        ...
+
+    def open(self, f: "_Path") -> "_FSDataInputStream":
         ...
 
 
@@ -111,6 +129,27 @@ class _URI(Protocol):
 
 class _Path(Protocol):
     def __call__(self, glob: str) -> "_Path":
+        ...
+
+
+class _IOUtils(Protocol):
+    def __call__(self) -> "_IOUtils":
+        ...
+
+    def toString(self, stream: "_InputStream", charset: str) -> str:
+        ...
+
+
+class _FSDataInputStream(Protocol):
+    def __call__(self, stream: "_InputStream"):
+        ...
+
+    def read(self):
+        ...
+
+
+class _InputStream(Protocol):
+    def __call__(self):
         ...
 
 
