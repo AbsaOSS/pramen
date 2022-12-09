@@ -75,18 +75,20 @@ In addition to basic error notification, typical operational warnings are genera
 
 1. Get Pramen pipeline runner:
 
-   You can download Pramen from Maven by following link: [Pramen]()
+2. You can download Pramen from GitHub by following link: [Pramen for Scala 2.11, Spark 2.4.8](https://github.com/AbsaOSS/pramen/releases/download/v1.1.0/pramen-runner_2.11_2.4.8-1.1.0.jar)
 
-   Or you can build it from source by running:
+   Or you can build it from source for your Spark environment by running:
    ```sh
    git clone https://github.com/AbsaOSS/pramen
-   mvn clean package
+   sbt ++2.11.12 assembly -DSPARK_VERSION=2.4.8
    ```
    (You need JDK 1.8 and Maven installed to run this)
 
+   For all possible build options look see [Building Pramen to suite your environment](#building-pramen-to-suite-your-environment)
+
 2. Define an ingestion pipeline
 
-   Paste the contents of [ingestion_pipeline.conf](examples/ingestion_pipeline/ingestion_pipeline.conf)
+   Paste the contents of [ingestion_pipeline.conf](pramen/examples/ingestion_pipeline/ingestion_pipeline.conf)
    to a local file.
 
 3. Run the pipeline. Depending on the environment the command may vary. Here is an example for Yarn:
