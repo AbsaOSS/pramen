@@ -21,8 +21,14 @@ from urllib.parse import urlparse
 
 import attrs
 
+from pyhocon import ConfigFactory  # type: ignore
 from pyspark.sql import SparkSession
 from typing_extensions import Protocol
+
+from pramen_py.models import InfoDateSettings, MetastoreTable
+
+
+HACON_METASTORE_TABLES_VARIABLE = "pramen.metastore.tables"
 
 
 @attrs.define(auto_attribs=True, slots=True)
@@ -50,8 +56,6 @@ class FileSystemUtils:
         self.FileSystem = sc._gateway.jvm.org.apache.hadoop.fs.FileSystem  # type: ignore
         self.IOUtils = sc._gateway.jvm.org.apache.commons.io.IOUtils  # type: ignore
 
-
-
     def get_fs_from_uri(self, uri: str) -> "_FileSystem":
         """Get Type[FileSystem] object from the uri.
 
@@ -68,16 +72,16 @@ class FileSystemUtils:
 
         org.apache.hadoop.fs.FileSystem can`t read uri without schema.
         an example 'C:/somepath'. It parsed 'C:' like schema. This leads to errors.
-        LocalFileSystem Path should be: 'file://C:/somepath'.
+        LocalFileSystem Path should be: 'file:///C:/somepath'.
         """
 
         scheme = urlparse(uri).scheme
         drive = PurePath(uri).drive
         if not scheme:
-            return "file://" + PurePath(uri.lstrip("/")).as_posix()
+            return "file:///" + PurePath(uri.lstrip("/")).as_posix()
         elif drive:
             if re.sub(r"[^\w]", "", drive).lower() == scheme.lower():
-                return "file://" + PurePath(uri.lstrip("/")).as_posix()
+                return "file:///" + PurePath(uri.lstrip("/")).as_posix()
         return uri
 
     def list_files(
@@ -100,11 +104,43 @@ class FileSystemUtils:
         ]
 
     def read_file_from_hadoop(self, path: str) -> str:
+        """Read file by path from hadoop.
+
+        :param path: path to file in hadoop file system
+        """
         fs = self.get_fs_from_uri(path)
-        stream = fs.open(self.Path("file:///C:/data/main.conf"))
-        res = self.IOUtils.toString(stream, "UTF-8")
+        stream = fs.open(self.Path(path))
+        config_string = self.IOUtils.toString(stream, "UTF-8")  # type: ignore
         fs.close()
-        return res
+        return config_string
+
+    def load_hacon_config_from_hadoop(self, path: str) -> List[MetastoreTable]:
+        """Read and parse hacon config file from hadoop file system .
+
+        :param path: path to file in hadoop file system
+        """
+        config_string = self.read_file_from_hadoop(path)
+        config = ConfigFactory.parse_string(config_string)
+        tables = config.get(HACON_METASTORE_TABLES_VARIABLE)
+        metastore_tables = []
+        for table in tables:
+            metastore = MetastoreTable(
+                name=table.get("name", ""),
+                format=table.get("format", ""),
+                path=table.get("path", ""),
+                table=table.get("table", ""),
+                description=table.get("description", ""),
+                records_per_partition=table.get(
+                    "records_per_partition", 500000
+                ),
+                info_date_settings=InfoDateSettings(
+                    column=table.get("information.date.column", ""),
+                    format=table.get("information.date.format", "yyyy-MM-dd"),
+                    start=table.get("information.date.start", None),
+                ),
+            )
+            metastore_tables.append(metastore)
+        return metastore_tables
 
 
 # Typing info for py4j underlying objects
@@ -115,7 +151,7 @@ class _FileSystem(Protocol):
     def globStatus(self, path: "_Path") -> List["_File"]:
         ...
 
-    def close(self):
+    def close(self) -> None:
         ...
 
     def open(self, f: "_Path") -> "_FSDataInputStream":
@@ -141,15 +177,12 @@ class _IOUtils(Protocol):
 
 
 class _FSDataInputStream(Protocol):
-    def __call__(self, stream: "_InputStream"):
-        ...
-
-    def read(self):
+    def __call__(self, stream: "_InputStream") -> "_FSDataInputStream":
         ...
 
 
 class _InputStream(Protocol):
-    def __call__(self):
+    def __call__(self) -> "_InputStream":
         ...
 
 

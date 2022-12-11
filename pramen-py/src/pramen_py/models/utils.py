@@ -14,9 +14,8 @@
 
 
 from typing import List
-from pyhocon import ConfigFactory
 
-from pramen_py.models import InfoDateSettings, MetastoreTable
+from pramen_py.models import MetastoreTable
 
 
 def get_metastore_table(
@@ -34,31 +33,3 @@ def get_metastore_table(
             f"Available tables are:\n"
             f"{chr(10).join(t.name for t in tables)}"
         ) from err
-
-
-def load_config_from_hadoop(
-        includes: str,
-) -> List[MetastoreTable]:
-    config = ConfigFactory.parse_string("""
-        include "C:/data/common.conf" 
-        include "C:/data/metastore.conf"
-    """)
-    tables = config.get("pramen.metastore.tables")
-    metastore_tables = []
-    for table in tables:
-        metastore = MetastoreTable(
-            name=table.get("name", ""),
-            format=table.get("format", ""),
-            path=table.get("path", ""),
-            table=table.get("table", ""),
-            description=table.get("description", ""),
-            records_per_partition=table.get("records_per_partition", 500000),
-            info_date_settings=InfoDateSettings(
-                column=table.get("information.date.column", ""),
-                format=table.get("information.date.format", "yyyy-MM-dd"),
-                start=table.get("information.date.start", None),
-            ),
-        )
-        metastore_tables.append(metastore)
-    return metastore_tables
-
