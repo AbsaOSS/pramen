@@ -19,8 +19,8 @@ import Versions._
 import BuildInfoTemplateSettings._
 
 val scala211 = "2.11.12"
-val scala212 = "2.12.16"
-val scala213 = "2.13.8"
+val scala212 = "2.12.17"
+val scala213 = "2.13.10"
 
 ThisBuild / organization := "za.co.absa.pramen"
 
@@ -148,6 +148,7 @@ lazy val assemblySettingsCommon = Seq(
     case "reference.conf"                          => MergeStrategy.concat
     case "LICENSE"                                 => MergeStrategy.concat
     case "log4j.properties"                        => MergeStrategy.filterDistinctLines
+    case x if x.endsWith("module-info.class")      => MergeStrategy.discard
     case PathList("include", xs @ _*)              => MergeStrategy.discard
     case PathList("com", "ibm", "icu", xs @ _*)    => MergeStrategy.discard
     case PathList("javax", "json", xs @ _*)        => MergeStrategy.discard
@@ -157,8 +158,11 @@ lazy val assemblySettingsCommon = Seq(
         case ps @ (x :: xs) if ps.last.endsWith(".sf") || ps.last.endsWith(".dsa") => MergeStrategy.discard
         case "dependencies" :: Nil => MergeStrategy.discard
         case "notice" :: Nil       => MergeStrategy.discard
+        case "notice.txt" :: Nil   => MergeStrategy.discard
+        case "notice.md" :: Nil    => MergeStrategy.discard
         case "license" :: Nil      => MergeStrategy.concat
         case "license.txt" :: Nil  => MergeStrategy.concat
+        case "license.md" :: Nil   => MergeStrategy.concat
         case "manifest.mf" :: Nil  => MergeStrategy.discard
         case "maven" :: x          => MergeStrategy.discard
         case "services" :: x       => MergeStrategy.filterDistinctLines

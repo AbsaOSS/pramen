@@ -184,7 +184,7 @@ class TransferJobSuite extends WordSpec with SparkTestBase with TextComparisonFi
         job.postProcessing(dfIn, infoDate, conf)
       }
 
-      assert(ex.getMessage.contains("given input columns: [v]"))
+      assert(ex.getMessage.contains("given input columns: [v]") || ex.getMessage.contains("Column 'x' does not exist"))
     }
   }
 
