@@ -146,17 +146,18 @@ an uber JAR file that contains all dependencies required to run the pipeline on 
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
 sbt ++2.11.12 assembly -DSPARK_VERSION=2.4.8
-sbt ++2.12.16 assembly -DSPARK_VERSION=2.4.8
-sbt ++2.12.16 assembly -DSPARK_VERSION=3.0.3
-sbt ++2.12.16 assembly -DSPARK_VERSION=3.1.3
-sbt ++2.12.16 assembly -DSPARK_VERSION=3.2.2
+sbt ++2.12.17 assembly -DSPARK_VERSION=2.4.8
+sbt ++2.12.17 assembly -DSPARK_VERSION=3.0.3
+sbt ++2.12.17 assembly -DSPARK_VERSION=3.1.3
+sbt ++2.12.17 assembly -DSPARK_VERSION=3.2.2
 
-sbt ++2.13.8 assembly -DSPARK_VERSION=3.2.2
+sbt ++2.13.10 assembly -DSPARK_VERSION=3.2.2
+sbt ++2.13.10 assembly -DSPARK_VERSION=3.3.1
 ```
 
 You can collect the uber jar of `pramen-runner` either at
-- `runner/target/scala-2.11/` or in `runner/target/scala-2.12/` for the pipeline runner.
-- `extras/target/scala-2.11/` or in `extras/target/scala-2.12/` for extra pipeline elements.
+- `runner/target/scala-2.x/` for the pipeline runner.
+- `extras/target/scala-2.x/` for extra pipeline elements.
 
 depending on the Scala version you used.
 

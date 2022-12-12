@@ -66,7 +66,8 @@ object Versions {
       case version if version.startsWith("2.")   => "0.6.1"
       case version if version.startsWith("3.0.") => "0.8.0"
       case version if version.startsWith("3.1.") => "1.0.1"
-      case version if version.startsWith("3.2.") => "2.0.0"
+      case version if version.startsWith("3.2.") => "2.0.1"
+      case version if version.startsWith("3.3.") => "2.2.0"
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
     println(s"Using Delta version $deltaVersion")
