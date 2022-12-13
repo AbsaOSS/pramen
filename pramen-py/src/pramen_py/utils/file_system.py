@@ -15,9 +15,7 @@
 import os.path
 import re
 
-from pathlib import PurePath
 from typing import List
-from urllib.parse import urlparse
 
 import attrs
 
@@ -28,7 +26,7 @@ from typing_extensions import Protocol
 from pramen_py.models import InfoDateSettings, MetastoreTable
 
 
-HACON_METASTORE_TABLES_VARIABLE = "pramen.metastore.tables"
+HOCON_METASTORE_TABLES_VARIABLE = "pramen.metastore.tables"
 
 
 @attrs.define(auto_attribs=True, slots=True)
@@ -73,16 +71,25 @@ class FileSystemUtils:
         org.apache.hadoop.fs.FileSystem can`t read uri without schema.
         an example 'C:/somepath'. It parsed 'C:' like schema. This leads to errors.
         LocalFileSystem Path should be: 'file:///C:/somepath'.
+        Based on pathlib._WindowsFlavour(_Flavour).make_uri() principles
         """
-
-        scheme = urlparse(uri).scheme
-        drive = PurePath(uri).drive
-        if not scheme:
-            return "file:///" + PurePath(uri.lstrip("/")).as_posix()
-        elif drive:
-            if re.sub(r"[^\w]", "", drive).lower() == scheme.lower():
-                return "file:///" + PurePath(uri.lstrip("/")).as_posix()
-        return uri
+        uri_parts = list(filter(None, re.split(r"\\|/", uri)))
+        schema = uri_parts[0]
+        drive = uri_parts[1]
+        if schema[len(schema) - 1] == ":":
+            if len(schema) > 2:
+                schema_separator = (
+                    "///"
+                    if schema == "file:"
+                    and len(drive) == 2
+                    and drive[1] == ":"
+                    else "//"
+                )
+                return f"{schema}{schema_separator}{'/'.join(uri_parts[1:])}"
+            else:
+                return f"file:///{'/'.join(uri_parts)}"
+        else:
+            return f"file://{'/'.join(uri_parts)}"
 
     def list_files(
         self,
@@ -114,14 +121,14 @@ class FileSystemUtils:
         fs.close()
         return config_string
 
-    def load_hacon_config_from_hadoop(self, path: str) -> List[MetastoreTable]:
+    def load_hocon_config_from_hadoop(self, path: str) -> List[MetastoreTable]:
         """Read and parse hacon config file from hadoop file system .
 
         :param path: path to file in hadoop file system
         """
         config_string = self.read_file_from_hadoop(path)
         config = ConfigFactory.parse_string(config_string)
-        tables = config.get(HACON_METASTORE_TABLES_VARIABLE)
+        tables = config.get(HOCON_METASTORE_TABLES_VARIABLE)
         metastore_tables = []
         for table in tables:
             metastore = MetastoreTable(

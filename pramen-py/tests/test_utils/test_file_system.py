@@ -30,16 +30,20 @@ from pramen_py.utils.file_system import FileSystemUtils
             "file:///C:/Users/AB025F5/example_dependency_table",
         ),
         (
-            "s3a:///C:/Users/AB025F5/example_dependency_table",
-            "s3a:///C:/Users/AB025F5/example_dependency_table",
+            "file://C:/Users/AB025F5/example_dependency_table",
+            "file:///C:/Users/AB025F5/example_dependency_table",
         ),
         (
-            "hdfs:///C:/Users/AB025F5/example_dependency_table",
-            "hdfs:///C:/Users/AB025F5/example_dependency_table",
+            "s3a://C:/Users/AB025F5/example_dependency_table",
+            "s3a://C:/Users/AB025F5/example_dependency_table",
         ),
         (
-            "hdfs:///Users/AB025F5/example_dependency_table",
-            "hdfs:///Users/AB025F5/example_dependency_table",
+            "hdfs://C:/Users/AB025F5/example_dependency_table",
+            "hdfs://C:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "hdfs://Users/AB025F5/example_dependency_table",
+            "hdfs://Users/AB025F5/example_dependency_table",
         ),
         (
             "//C:/Users/AB025F5/example_dependency_table",
@@ -47,18 +51,38 @@ from pramen_py.utils.file_system import FileSystemUtils
         ),
         (
             "//Users/AB025F5/example_dependency_table",
-            "file:///Users/AB025F5/example_dependency_table",
+            "file://Users/AB025F5/example_dependency_table",
         ),
         (
             "/Users/AB025F5/example_dependency_table",
-            "file:///Users/AB025F5/example_dependency_table",
+            "file://Users/AB025F5/example_dependency_table",
         ),
         (
             "Users/AB025F5/example_dependency_table",
-            "file:///Users/AB025F5/example_dependency_table",
+            "file://Users/AB025F5/example_dependency_table",
         ),
         (
-            "//D:/Users/AB025F5/example_dependency_table//",
+            "file://Users/AB025F5/example_dependency_table",
+            "file://Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "//D:/Users/AB025F5//example_dependency_table//",
+            "file:///D:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "file:\\\\\\D:\\Users\\AB025F5\\example_dependency_table\\",
+            "file:///D:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "file:\\D:\\Users\\AB025F5\\example_dependency_table\\",
+            "file:///D:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "file:\\D:\\Users\\AB025F5\\example_dependency_table\\",
+            "file:///D:/Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "\\D:\\Users\\AB025F5\\example_dependency_table\\",
             "file:///D:/Users/AB025F5/example_dependency_table",
         ),
         (
@@ -114,7 +138,7 @@ def test_get_config_from_hacon(spark, repo_root) -> None:
     ).as_posix()
     metastore_tables = FileSystemUtils(
         spark=spark
-    ).load_hacon_config_from_hadoop(file_path)
+    ).load_hocon_config_from_hadoop(file_path)
     expected = [
         MetastoreTable(
             name="lookup",
