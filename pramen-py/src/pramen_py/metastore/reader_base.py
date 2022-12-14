@@ -55,10 +55,10 @@ class MetastoreReaderBase(metaclass=abc.ABCMeta):
     def default_info_date(self) -> datetime.date:
         return datetime.date(2022, 1, 1)
 
-    def set_config(self, config: List[MetastoreTable]) -> List[MetastoreTable]:
+    def set_config(self, config: List[MetastoreTable]) -> None:
         self.config = config
 
-    def set_info_date(self, info_date: datetime.date) -> datetime.date:
+    def set_info_date(self, info_date: datetime.date) -> None:
         self.info_date = info_date
 
     @config.validator
