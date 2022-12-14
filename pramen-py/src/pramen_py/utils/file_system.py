@@ -19,14 +19,9 @@ from typing import List
 
 import attrs
 
-from pyhocon import ConfigFactory  # type: ignore
+from pyhocon import ConfigFactory, ConfigTree  # type: ignore
 from pyspark.sql import SparkSession
 from typing_extensions import Protocol
-
-from pramen_py.models import InfoDateSettings, MetastoreTable
-
-
-HOCON_METASTORE_TABLES_VARIABLE = "pramen.metastore.tables"
 
 
 @attrs.define(auto_attribs=True, slots=True)
@@ -110,7 +105,7 @@ class FileSystemUtils:
             )
         ]
 
-    def read_file_from_hadoop(self, path: str) -> str:
+    def load_and_read_file_from_hadoop(self, path: str) -> str:
         """Read file by path from hadoop.
 
         :param path: path to file in hadoop file system
@@ -121,33 +116,14 @@ class FileSystemUtils:
         fs.close()
         return config_string
 
-    def load_hocon_config_from_hadoop(self, path: str) -> List[MetastoreTable]:
+    def load_hocon_config_from_hadoop(self, path: str) -> ConfigTree:
         """Read and parse hacon config file from hadoop file system .
 
         :param path: path to file in hadoop file system
         """
-        config_string = self.read_file_from_hadoop(path)
-        config = ConfigFactory.parse_string(config_string)
-        tables = config.get(HOCON_METASTORE_TABLES_VARIABLE)
-        metastore_tables = []
-        for table in tables:
-            metastore = MetastoreTable(
-                name=table.get("name", ""),
-                format=table.get("format", ""),
-                path=table.get("path", ""),
-                table=table.get("table", ""),
-                description=table.get("description", ""),
-                records_per_partition=table.get(
-                    "records_per_partition", 500000
-                ),
-                info_date_settings=InfoDateSettings(
-                    column=table.get("information.date.column", ""),
-                    format=table.get("information.date.format", "yyyy-MM-dd"),
-                    start=table.get("information.date.start", None),
-                ),
-            )
-            metastore_tables.append(metastore)
-        return metastore_tables
+        return ConfigFactory.parse_string(
+            self.load_and_read_file_from_hadoop(path)
+        )
 
 
 # Typing info for py4j underlying objects

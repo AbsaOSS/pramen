@@ -23,10 +23,11 @@ import pyspark.sql.functions as F
 import pyspark.sql.types as T
 
 from loguru import logger
+from pyhocon import ConfigTree  # type: ignore
 from pyspark.sql import DataFrame
 
 from pramen_py.metastore.reader_base import MetastoreReaderBase
-from pramen_py.models import TableFormat
+from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 from pramen_py.models.utils import get_metastore_table
 from pramen_py.utils import convert_date_to_str, convert_str_to_date
 
@@ -43,8 +44,7 @@ class MetastoreReader(MetastoreReaderBase):
     a KeyError will be raised.
     """
 
-    def _read_table(self, table_format: TableFormat, path: str) -> DataFrame:
-        return self.spark.read.format(table_format.value).load(path)
+    HOCON_METASTORE_TABLES_VARIABLE = "pramen.metastore.tables"
 
     def _apply_uppercase_to_columns_names(
         self, df: DataFrame, uppercase_columns: bool
@@ -54,56 +54,8 @@ class MetastoreReader(MetastoreReaderBase):
         else:
             return df
 
-    def get_table(
-        self,
-        table_name: str,
-        info_date_from: Optional[datetime.date] = None,
-        info_date_to: Optional[datetime.date] = None,
-        uppercase_columns: bool = False,
-    ) -> DataFrame:
-        """Get the table based on its name and config attributes.
-
-        :param table_name:
-        :param info_date_from: optional param with info_date as default
-        :param info_date_to: optional param with info_date as default
-        :param uppercase_columns: returns a table with uppercase column names
-
-        if info_date_* params are provided, the data will be filtered
-            based on it
-        The data format (and other options) are obtained from the config.
-        """
-
-        metastore_table = get_metastore_table(table_name, self.config)
-        info_date_from_str = convert_date_to_str(
-            info_date_from or self.info_date,
-            fmt=metastore_table.info_date_settings.format,
-        )
-        info_date_to_str = convert_date_to_str(
-            info_date_to or self.info_date,
-            fmt=metastore_table.info_date_settings.format,
-        )
-
-        logger.info(
-            f"Looking for {table_name} in the metastore where\n"
-            f"info_date in range: {info_date_from_str} - {info_date_to_str}."
-        )
-
-        df = self._read_table(metastore_table.format, metastore_table.path)
-        df_filtered = df.filter(
-            F.col(metastore_table.info_date_settings.column)
-            >= F.lit(info_date_from_str),
-        ).filter(
-            F.col(metastore_table.info_date_settings.column)
-            <= F.lit(info_date_to_str),
-        )
-
-        logger.info(
-            f"Table {table_name} successfully loaded from {metastore_table.path}."
-        )
-
-        return self._apply_uppercase_to_columns_names(
-            df_filtered, uppercase_columns
-        )
+    def _read_table(self, table_format: TableFormat, path: str) -> DataFrame:
+        return self.spark.read.format(table_format.value).load(path)
 
     def get_latest(
         self,
@@ -208,6 +160,80 @@ class MetastoreReader(MetastoreReaderBase):
         else:
             logger.info(f"Latest date for {table_name} is {latest_date}")
             return latest_date
+
+    def get_table(
+        self,
+        table_name: str,
+        info_date_from: Optional[datetime.date] = None,
+        info_date_to: Optional[datetime.date] = None,
+        uppercase_columns: bool = False,
+    ) -> DataFrame:
+        """Get the table based on its name and config attributes.
+
+        :param table_name:
+        :param info_date_from: optional param with info_date as default
+        :param info_date_to: optional param with info_date as default
+        :param uppercase_columns: returns a table with uppercase column names
+
+        if info_date_* params are provided, the data will be filtered
+            based on it
+        The data format (and other options) are obtained from the config.
+        """
+
+        metastore_table = get_metastore_table(table_name, self.config)
+        info_date_from_str = convert_date_to_str(
+            info_date_from or self.info_date,
+            fmt=metastore_table.info_date_settings.format,
+        )
+        info_date_to_str = convert_date_to_str(
+            info_date_to or self.info_date,
+            fmt=metastore_table.info_date_settings.format,
+        )
+
+        logger.info(
+            f"Looking for {table_name} in the metastore where\n"
+            f"info_date in range: {info_date_from_str} - {info_date_to_str}."
+        )
+
+        df = self._read_table(metastore_table.format, metastore_table.path)
+        df_filtered = df.filter(
+            F.col(metastore_table.info_date_settings.column)
+            >= F.lit(info_date_from_str),
+        ).filter(
+            F.col(metastore_table.info_date_settings.column)
+            <= F.lit(info_date_to_str),
+        )
+
+        logger.info(
+            f"Table {table_name} successfully loaded from {metastore_table.path}."
+        )
+
+        return self._apply_uppercase_to_columns_names(
+            df_filtered, uppercase_columns
+        )
+
+    def from_config(self, config: ConfigTree):  # type: ignore
+        tables = config.get(self.HOCON_METASTORE_TABLES_VARIABLE)
+        metastore_tables = []
+        for table in tables:
+            metastore = MetastoreTable(
+                name=table.get("name", ""),
+                format=table.get("format", ""),
+                path=table.get("path", ""),
+                table=table.get("table", ""),
+                description=table.get("description", ""),
+                records_per_partition=table.get(
+                    "records_per_partition", 500000
+                ),
+                info_date_settings=InfoDateSettings(
+                    column=table.get("information.date.column", ""),
+                    format=table.get("information.date.format", "yyyy-MM-dd"),
+                    start=table.get("information.date.start", None),
+                ),
+            )
+            metastore_tables.append(metastore)
+        self.config = metastore_tables.copy()
+        return self
 
     def is_data_available(
         self,

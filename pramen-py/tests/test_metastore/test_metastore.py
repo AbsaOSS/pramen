@@ -13,6 +13,7 @@
 #  limitations under the License.
 
 from datetime import date as d
+from pathlib import PurePath
 
 import pyspark.sql.functions as F
 import pyspark.sql.types as T
@@ -23,6 +24,7 @@ from pyspark.sql import SparkSession
 
 from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
+from pramen_py.utils.file_system import FileSystemUtils
 
 
 @pytest.mark.parametrize(
@@ -676,3 +678,86 @@ def test_metastore_reader_get_latest_uppercase(
         ignore_row_order=True,
         ignore_column_order=True,
     )
+
+
+def test_metastore_reader_get_from_config(spark, repo_root) -> None:
+    file_path = PurePath(
+        repo_root / "tests/resources/test_metastore.conf"
+    ).as_posix()
+
+    hocon_config = FileSystemUtils(spark).load_hocon_config_from_hadoop(
+        file_path
+    )
+
+    metastore = MetastoreReader(spark).from_config(hocon_config)
+
+    assert metastore.config == [
+        MetastoreTable(
+            name="lookup",
+            format="parquet",
+            info_date_settings=InfoDateSettings(
+                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
+            ),
+            path="test4/lookup",
+            table="",
+            description="A lookup table",
+            records_per_partition=500000,
+        ),
+        MetastoreTable(
+            name="lookup2",
+            format="parquet",
+            info_date_settings=InfoDateSettings(
+                column="", format="yyyy-MM-dd", start=None
+            ),
+            path="test4/lookup2",
+            table="",
+            description="",
+            records_per_partition=500000,
+        ),
+        MetastoreTable(
+            name="users1",
+            format="parquet",
+            info_date_settings=InfoDateSettings(
+                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
+            ),
+            path="test4/users1",
+            table="",
+            description="Test users 2",
+            records_per_partition=500000,
+        ),
+        MetastoreTable(
+            name="users3",
+            format="delta",
+            info_date_settings=InfoDateSettings(
+                column="sync_watcher_date",
+                format="yyyy-MM-dd",
+                start=d(2022, 1, 1),
+            ),
+            path="test4/users3",
+            table="",
+            description="Test users 3",
+            records_per_partition=500000,
+        ),
+        MetastoreTable(
+            name="users4",
+            format="delta",
+            info_date_settings=InfoDateSettings(
+                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
+            ),
+            path="test4/users4",
+            table="",
+            description="Test users 4",
+            records_per_partition=500000,
+        ),
+        MetastoreTable(
+            name="teller",
+            format="delta",
+            info_date_settings=InfoDateSettings(
+                column="", format="yyyy-MM-dd", start=None
+            ),
+            path="transactions_new5/teller",
+            table="",
+            description="",
+            records_per_partition=500000,
+        ),
+    ]
