@@ -72,7 +72,9 @@ class MetastoreReader(MetastoreReaderBase):
         until = until or self.info_date
         logger.info(f"Getting latest partition for {table_name} until {until}")
 
-        metastore_table = get_metastore_table(table_name, self.config)
+        metastore_table = get_metastore_table(
+            table_name, self.metastore_configs_tables
+        )
         latest_date = convert_date_to_str(
             self.get_latest_available_date(table_name, until),
             fmt=metastore_table.info_date_settings.format,
@@ -120,7 +122,7 @@ class MetastoreReader(MetastoreReaderBase):
             f"Getting latest available date for the table: {table_name} "
             f"until {until}"
         )
-        table = get_metastore_table(table_name, self.config)
+        table = get_metastore_table(table_name, self.metastore_configs_tables)
 
         def before_until(date: datetime.date) -> bool:
             return date <= until  # type: ignore
@@ -180,7 +182,9 @@ class MetastoreReader(MetastoreReaderBase):
         The data format (and other options) are obtained from the config.
         """
 
-        metastore_table = get_metastore_table(table_name, self.config)
+        metastore_table = get_metastore_table(
+            table_name, self.metastore_configs_tables
+        )
         info_date_from_str = convert_date_to_str(
             info_date_from or self.info_date,
             fmt=metastore_table.info_date_settings.format,
@@ -232,7 +236,7 @@ class MetastoreReader(MetastoreReaderBase):
                 ),
             )
             metastore_tables.append(metastore)
-        self.config = metastore_tables.copy()
+        self.metastore_configs_tables = metastore_tables.copy()
         return self
 
     def is_data_available(

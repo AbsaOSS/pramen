@@ -16,8 +16,6 @@ from pathlib import PurePath
 
 import pytest
 
-from pyhocon import ConfigTree  # type: ignore
-
 from pramen_py.utils.file_system import FileSystemUtils
 
 
