@@ -680,7 +680,32 @@ def test_metastore_reader_get_latest_uppercase(
     )
 
 
-def test_metastore_reader_get_from_config(spark, repo_root) -> None:
+@pytest.mark.parametrize(
+    ("key", "expected_value"),
+    (
+        ([0, "description"], "A lookup table"),
+        ([1, "name"], "lookup2"),
+        ([2, "path"], "test4/users1"),
+        (
+            [3, "info_date_settings"],
+            InfoDateSettings(
+                column="sync_watcher_date",
+                format="yyyy-MM-dd",
+                start=d(2022, 1, 1),
+            ),
+        ),
+        (
+            [4, "info_date_settings"],
+            InfoDateSettings(
+                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
+            ),
+        ),
+        ([5, "format"], "delta"),
+    ),
+)
+def test_metastore_reader_get_from_config(
+    spark, repo_root, key, expected_value
+) -> None:
     file_path = PurePath(
         repo_root / "tests/resources/test_metastore.conf"
     ).as_posix()
@@ -691,73 +716,6 @@ def test_metastore_reader_get_from_config(spark, repo_root) -> None:
 
     metastore = MetastoreReader(spark).from_config(hocon_config)
 
-    assert metastore.config == [
-        MetastoreTable(
-            name="lookup",
-            format="parquet",
-            info_date_settings=InfoDateSettings(
-                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
-            ),
-            path="test4/lookup",
-            table="",
-            description="A lookup table",
-            records_per_partition=500000,
-        ),
-        MetastoreTable(
-            name="lookup2",
-            format="parquet",
-            info_date_settings=InfoDateSettings(
-                column="", format="yyyy-MM-dd", start=None
-            ),
-            path="test4/lookup2",
-            table="",
-            description="",
-            records_per_partition=500000,
-        ),
-        MetastoreTable(
-            name="users1",
-            format="parquet",
-            info_date_settings=InfoDateSettings(
-                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
-            ),
-            path="test4/users1",
-            table="",
-            description="Test users 2",
-            records_per_partition=500000,
-        ),
-        MetastoreTable(
-            name="users3",
-            format="delta",
-            info_date_settings=InfoDateSettings(
-                column="sync_watcher_date",
-                format="yyyy-MM-dd",
-                start=d(2022, 1, 1),
-            ),
-            path="test4/users3",
-            table="",
-            description="Test users 3",
-            records_per_partition=500000,
-        ),
-        MetastoreTable(
-            name="users4",
-            format="delta",
-            info_date_settings=InfoDateSettings(
-                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
-            ),
-            path="test4/users4",
-            table="",
-            description="Test users 4",
-            records_per_partition=500000,
-        ),
-        MetastoreTable(
-            name="teller",
-            format="delta",
-            info_date_settings=InfoDateSettings(
-                column="", format="yyyy-MM-dd", start=None
-            ),
-            path="transactions_new5/teller",
-            table="",
-            description="",
-            records_per_partition=500000,
-        ),
-    ]
+    assert len(metastore.config) > key[0]
+    metastore_table = metastore.config[key[0]]
+    assert getattr(metastore_table, key[1]) == expected_value

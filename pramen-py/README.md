@@ -160,9 +160,6 @@ hocon_config = FileSystemUtils(spark) \
 metastore = MetastoreReader(spark) \
     .from_config(hocon_config)
 
-# info_date by default "2022-01-01"
-metastore.set_info_date(datetime.date(2022, 2, 1))
-
 df_txn = metastore.get_table(
     "transactions",
     info_date_from=datetime.date(2022, 1, 1),

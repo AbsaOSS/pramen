@@ -48,21 +48,21 @@ class MetastoreReaderBase(metaclass=abc.ABCMeta):
         self.fs_utils = FileSystemUtils(spark=self.spark)
 
     @config.default
-    def default_config(self) -> List[MetastoreTable]:
+    def _default_config(self) -> List[MetastoreTable]:
         return []
 
     @info_date.default
-    def default_info_date(self) -> datetime.date:
-        return datetime.date(2022, 1, 1)
+    def _default_info_date(self) -> datetime.date:
+        return datetime.date.today()
 
-    def set_config(self, config: List[MetastoreTable]) -> None:
+    def _set_config(self, config: List[MetastoreTable]) -> None:
         self.config = config
 
-    def set_info_date(self, info_date: datetime.date) -> None:
+    def _set_info_date(self, info_date: datetime.date) -> None:
         self.info_date = info_date
 
     @config.validator
-    def check_config(
+    def _check_config(
         self,
         _: attrs.Attribute,  # type: ignore
         value: List[MetastoreTable],

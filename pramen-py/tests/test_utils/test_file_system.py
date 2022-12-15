@@ -16,8 +16,6 @@ from pathlib import PurePath
 
 import pytest
 
-from pyhocon import ConfigTree
-
 from pramen_py.utils.file_system import FileSystemUtils
 
 
@@ -112,185 +110,49 @@ def test_load_and_read_file_from_hadoop(spark, repo_root) -> None:
         "  bookkeeping.enabled = true\n"
         "  bookkeeping.jdbc {\n"
         '    driver = "org.postgresql.Driver"\n'
-        '    url = "jdbc:postgresql://oss-vip-1973.corp.dsarena.com:5433/syncwatcher_newpipeline"\n'
+        '    url = "jdbc:postgresql://127.0.0.1:8080/newpipeline"\n'
         '    user = "app_account"\n'
         "  }\n"
         "  warn.throughput.rps = 2000\n"
         "  good.throughput.rps = 40000\n"
         "}\n"
         "mail {\n"
-        '  smtp.host = "smtp.absa.co.za"\n'
-        '  send.from = "Pramen <pramen.noreply@absa.africa>"\n'
-        '  send.to = "ruslan.iushchenko@absa.africa, Dennis.Chu@absa.africa"\n'
+        '  smtp.host = "127.0.0.1"\n'
+        '  send.from = "Pramen <hmbrand.noreply@gmail.com>"\n'
+        '  send.to = "crowl@gmail.com"\n'
         "}\n"
-        'sourcing.base.path = "/projects/lbamodels/datasync/batch/source"\n'
+        'sourcing.base.path = "/projects/batch/source"\n'
     )
 
 
-def test_load_hocon_config_from_hadoop(spark, repo_root) -> None:
+@pytest.mark.parametrize(
+    ("key", "expected_value"),
+    (
+        (["pramen.metastore.tables", 0, "description"], "A lookup table"),
+        (["pramen.metastore.tables", 1, "name"], "lookup2"),
+        (["pramen.metastore.tables", 2, "path"], "test4/users1"),
+        (
+            ["pramen.metastore.tables", 3, "information.date.column"],
+            "sync_watcher_date",
+        ),
+        (
+            ["pramen.metastore.tables", 4, "information.date.start"],
+            "2022-01-01",
+        ),
+        (["pramen.metastore.tables", 5, "format"], "delta"),
+    ),
+)
+def test_load_hocon_config_from_hadoop(
+    spark, repo_root, key, expected_value
+) -> None:
     file_path = PurePath(
         repo_root / "tests/resources/test_metastore.conf"
     ).as_posix()
     hocon_config = FileSystemUtils(spark=spark).load_hocon_config_from_hadoop(
         file_path
     )
-    assert hocon_config == ConfigTree(
-        [
-            (
-                "pramen",
-                ConfigTree(
-                    [
-                        (
-                            "metastore",
-                            ConfigTree(
-                                [
-                                    (
-                                        "tables",
-                                        [
-                                            ConfigTree(
-                                                [
-                                                    ("name", "lookup"),
-                                                    (
-                                                        "description",
-                                                        "A lookup table",
-                                                    ),
-                                                    ("format", "parquet"),
-                                                    ("path", "test4/lookup"),
-                                                    (
-                                                        "information",
-                                                        ConfigTree(
-                                                            [
-                                                                (
-                                                                    "date",
-                                                                    ConfigTree(
-                                                                        [
-                                                                            (
-                                                                                "start",
-                                                                                "2022-01-01",
-                                                                            )
-                                                                        ]
-                                                                    ),
-                                                                )
-                                                            ]
-                                                        ),
-                                                    ),
-                                                ]
-                                            ),
-                                            ConfigTree(
-                                                [
-                                                    ("name", "lookup2"),
-                                                    ("format", "parquet"),
-                                                    ("path", "test4/lookup2"),
-                                                ]
-                                            ),
-                                            ConfigTree(
-                                                [
-                                                    ("name", "users1"),
-                                                    (
-                                                        "description",
-                                                        "Test users 2",
-                                                    ),
-                                                    ("format", "parquet"),
-                                                    ("path", "test4/users1"),
-                                                    (
-                                                        "information",
-                                                        ConfigTree(
-                                                            [
-                                                                (
-                                                                    "date",
-                                                                    ConfigTree(
-                                                                        [
-                                                                            (
-                                                                                "start",
-                                                                                "2022-01-01",
-                                                                            )
-                                                                        ]
-                                                                    ),
-                                                                )
-                                                            ]
-                                                        ),
-                                                    ),
-                                                ]
-                                            ),
-                                            ConfigTree(
-                                                [
-                                                    ("name", "users3"),
-                                                    (
-                                                        "description",
-                                                        "Test users 3",
-                                                    ),
-                                                    ("format", "delta"),
-                                                    ("path", "test4/users3"),
-                                                    (
-                                                        "information",
-                                                        ConfigTree(
-                                                            [
-                                                                (
-                                                                    "date",
-                                                                    ConfigTree(
-                                                                        [
-                                                                            (
-                                                                                "column",
-                                                                                "sync_watcher_date",
-                                                                            ),
-                                                                            (
-                                                                                "start",
-                                                                                "2022-01-01",
-                                                                            ),
-                                                                        ]
-                                                                    ),
-                                                                )
-                                                            ]
-                                                        ),
-                                                    ),
-                                                ]
-                                            ),
-                                            ConfigTree(
-                                                [
-                                                    ("name", "users4"),
-                                                    (
-                                                        "description",
-                                                        "Test users 4",
-                                                    ),
-                                                    ("format", "delta"),
-                                                    ("path", "test4/users4"),
-                                                    (
-                                                        "information",
-                                                        ConfigTree(
-                                                            [
-                                                                (
-                                                                    "date",
-                                                                    ConfigTree(
-                                                                        [
-                                                                            (
-                                                                                "start",
-                                                                                "2022-01-01",
-                                                                            )
-                                                                        ]
-                                                                    ),
-                                                                )
-                                                            ]
-                                                        ),
-                                                    ),
-                                                ]
-                                            ),
-                                            ConfigTree(
-                                                [
-                                                    ("name", "teller"),
-                                                    ("format", "delta"),
-                                                    (
-                                                        "path",
-                                                        "transactions_new5/teller",
-                                                    ),
-                                                ]
-                                            ),
-                                        ],
-                                    )
-                                ]
-                            ),
-                        )
-                    ]
-                ),
-            )
-        ]
-    )
+    assert hocon_config.get(key[0], "") != ""
+    tables = hocon_config[key[0]]
+    assert len(tables) > key[1]
+    table = tables[key[1]]
+    assert table.get(key[2], "") == expected_value
