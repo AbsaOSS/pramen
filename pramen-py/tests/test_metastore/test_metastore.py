@@ -20,6 +20,7 @@ import pyspark.sql.types as T
 import pytest
 
 from chispa import assert_df_equality
+from pyhocon import ConfigFactory  # type: ignore
 from pyspark.sql import SparkSession
 
 from pramen_py import MetastoreReader, MetastoreWriter
@@ -680,42 +681,29 @@ def test_metastore_reader_get_latest_uppercase(
     )
 
 
-@pytest.mark.parametrize(
-    ("key", "expected_value"),
-    (
-        ([0, "description"], "A lookup table"),
-        ([1, "name"], "lookup2"),
-        ([2, "path"], "test4/users1"),
-        (
-            [3, "info_date_settings"],
-            InfoDateSettings(
-                column="sync_watcher_date",
-                format="yyyy-MM-dd",
-                start=d(2022, 1, 1),
-            ),
-        ),
-        (
-            [4, "info_date_settings"],
-            InfoDateSettings(
-                column="", format="yyyy-MM-dd", start=d(2022, 1, 1)
-            ),
-        ),
-        ([5, "format"], "delta"),
-    ),
-)
-def test_metastore_reader_get_from_config(
-    spark, repo_root, key, expected_value
+def test_metastore_reader_from_config(
+    spark,
+    repo_root,
 ) -> None:
     file_path = PurePath(
         repo_root / "tests/resources/test_metastore.conf"
     ).as_posix()
-
-    hocon_config = FileSystemUtils(spark).load_hocon_config_from_hadoop(
-        file_path
-    )
-
+    hocon_config = ConfigFactory.parse_file(file_path)
     metastore = MetastoreReader(spark).from_config(hocon_config)
 
-    assert len(metastore.config) > key[0]
-    metastore_table = metastore.config[key[0]]
-    assert getattr(metastore_table, key[1]) == expected_value
+    assert len(metastore.config) == 6
+    assert getattr(metastore.config[2], "table") == ""
+    assert getattr(metastore.config[5], "table") == "teller"
+    assert metastore.config[0] == MetastoreTable(
+        name="lookup",
+        format="delta",
+        path="test4/lookup",
+        table="",
+        description="A lookup table",
+        records_per_partition=10000,
+        info_date_settings=InfoDateSettings(
+            column="information_date",
+            format="yyyy-MM-dd",
+            start="2022-01-01",
+        ),
+    )
