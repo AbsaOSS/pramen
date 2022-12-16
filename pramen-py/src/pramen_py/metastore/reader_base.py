@@ -40,31 +40,29 @@ class MetastoreReaderBase(metaclass=abc.ABCMeta):
     """
 
     spark: SparkSession = attrs.field()
-    metastore_configs_tables: List[MetastoreTable] = attrs.field()
+    tables: List[MetastoreTable] = attrs.field()
     info_date: datetime.date = attrs.field()
     fs_utils: FileSystemUtils = attrs.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         self.fs_utils = FileSystemUtils(spark=self.spark)
 
-    @metastore_configs_tables.default
-    def _default_metastore_configs_tables(self) -> List[MetastoreTable]:
+    @tables.default
+    def _default_tables(self) -> List[MetastoreTable]:
         return []
 
     @info_date.default
     def _default_info_date(self) -> datetime.date:
         return datetime.date.today()
 
-    def _set_metastore_configs_tables(
-        self, metastore_configs_tables: List[MetastoreTable]
-    ) -> None:
-        self.metastore_configs_tables = metastore_configs_tables
+    def _set_tables(self, tables: List[MetastoreTable]) -> None:
+        self.tables = tables
 
     def _set_info_date(self, info_date: datetime.date) -> None:
         self.info_date = info_date
 
-    @metastore_configs_tables.validator
-    def _check_metastore_configs_tables(
+    @tables.validator
+    def _check_tables(
         self,
         _: attrs.Attribute,  # type: ignore
         value: List[MetastoreTable],

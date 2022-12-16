@@ -20,16 +20,16 @@ from pramen_py.models import MetastoreTable
 
 def get_metastore_table(
     table_name: str,
-    metastore_configs_tables: List[MetastoreTable],
+    tables: List[MetastoreTable],
 ) -> MetastoreTable:
     def filter_func(table: MetastoreTable) -> bool:
         return table.name == table_name
 
     try:
-        return next(filter(filter_func, metastore_configs_tables))
+        return next(filter(filter_func, tables))
     except StopIteration as err:
         raise KeyError(
             f"Table {table_name} missed in the config. "
             f"Available tables are:\n"
-            f"{chr(10).join(t.name for t in metastore_configs_tables)}"
+            f"{chr(10).join(t.name for t in tables)}"
         ) from err
