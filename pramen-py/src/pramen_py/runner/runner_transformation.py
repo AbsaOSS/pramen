@@ -194,12 +194,12 @@ class TransformationsRunner(Runner):
 
         metastore_reader = MetastoreReader(
             spark=self.spark,
-            config=config.metastore_tables,
+            tables=config.metastore_tables,
             info_date=t_cfg.info_date,
         )
         metastore_writer = MetastoreWriter(
             spark=self.spark,
-            config=config.metastore_tables,
+            tables=config.metastore_tables,
             info_date=t_cfg.info_date,
         )
 

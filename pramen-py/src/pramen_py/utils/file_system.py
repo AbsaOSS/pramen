@@ -15,12 +15,11 @@
 import os.path
 import re
 
-from pathlib import PurePath
 from typing import List
-from urllib.parse import urlparse
 
 import attrs
 
+from pyhocon import ConfigFactory, ConfigTree  # type: ignore
 from pyspark.sql import SparkSession
 from typing_extensions import Protocol
 
@@ -41,12 +40,14 @@ class FileSystemUtils:
     URI: "_URI" = attrs.field(init=False)
     Path: "_Path" = attrs.field(init=False)
     FileSystem: "_FileSystem" = attrs.field(init=False)
+    IOUtils: "_IOUtils" = attrs.field(init=False)
 
     def __attrs_post_init__(self) -> None:
         sc = self.spark.sparkContext
         self.URI = sc._gateway.jvm.java.net.URI  # type: ignore
         self.Path = sc._gateway.jvm.org.apache.hadoop.fs.Path  # type: ignore
         self.FileSystem = sc._gateway.jvm.org.apache.hadoop.fs.FileSystem  # type: ignore
+        self.IOUtils = sc._gateway.jvm.org.apache.commons.io.IOUtils  # type: ignore
 
     def get_fs_from_uri(self, uri: str) -> "_FileSystem":
         """Get Type[FileSystem] object from the uri.
@@ -64,16 +65,26 @@ class FileSystemUtils:
 
         org.apache.hadoop.fs.FileSystem can`t read uri without schema.
         an example 'C:/somepath'. It parsed 'C:' like schema. This leads to errors.
-        LocalFileSystem Path should be: 'file://C:/somepath'.
+        LocalFileSystem Path should be: 'file:///C:/somepath'.
+        Based on pathlib._WindowsFlavour(_Flavour).make_uri() principles
         """
-        scheme = urlparse(uri).scheme
-        drive = PurePath(uri).drive
-        if not scheme:
-            return "file://" + uri.lstrip("/")
-        elif drive:
-            if re.sub(r"[^\w]", "", drive).lower() == scheme.lower():
-                return "file://" + uri.lstrip("/")
-        return uri
+        uri_parts = list(filter(None, re.split(r"\\|/", uri)))
+        schema = uri_parts[0]
+        drive = uri_parts[1]
+        if schema[len(schema) - 1] == ":":
+            if len(schema) > 2:
+                schema_separator = (
+                    "///"
+                    if schema == "file:"
+                    and len(drive) == 2
+                    and drive[1] == ":"
+                    else "//"
+                )
+                return f"{schema}{schema_separator}{'/'.join(uri_parts[1:])}"
+            else:
+                return f"file:///{'/'.join(uri_parts)}"
+        else:
+            return f"file://{'/'.join(uri_parts)}"
 
     def list_files(
         self,
@@ -94,6 +105,26 @@ class FileSystemUtils:
             )
         ]
 
+    def load_and_read_file_from_hadoop(self, path: str) -> str:
+        """Read file by path from hadoop.
+
+        :param path: path to file in hadoop file system
+        """
+        fs = self.get_fs_from_uri(path)
+        stream = fs.open(self.Path(path))
+        config_string = self.IOUtils.toString(stream, "UTF-8")  # type: ignore
+        fs.close()
+        return config_string
+
+    def load_hocon_config_from_hadoop(self, path: str) -> ConfigTree:
+        """Read and parse hacon config file from hadoop file system .
+
+        :param path: path to file in hadoop file system
+        """
+        return ConfigFactory.parse_string(
+            self.load_and_read_file_from_hadoop(path)
+        )
+
 
 # Typing info for py4j underlying objects
 class _FileSystem(Protocol):
@@ -101,6 +132,12 @@ class _FileSystem(Protocol):
         ...
 
     def globStatus(self, path: "_Path") -> List["_File"]:
+        ...
+
+    def close(self) -> None:
+        ...
+
+    def open(self, f: "_Path") -> "_FSDataInputStream":
         ...
 
 
@@ -111,6 +148,24 @@ class _URI(Protocol):
 
 class _Path(Protocol):
     def __call__(self, glob: str) -> "_Path":
+        ...
+
+
+class _IOUtils(Protocol):
+    def __call__(self) -> "_IOUtils":
+        ...
+
+    def toString(self, stream: "_InputStream", charset: str) -> str:
+        ...
+
+
+class _FSDataInputStream(Protocol):
+    def __call__(self, stream: "_InputStream") -> "_FSDataInputStream":
+        ...
+
+
+class _InputStream(Protocol):
+    def __call__(self) -> "_InputStream":
         ...
 
 

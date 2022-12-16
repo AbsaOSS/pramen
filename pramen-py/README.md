@@ -144,6 +144,34 @@ pramen-py transformations run TransformationClassName --help
 ```
 where TransformationClassName is the name of the transformation.
 
+## Using as a Library
+Read metastore tables by Pramen-Py API
+```python
+import datetime
+from pyspark.sql import SparkSession
+from pramen_py import MetastoreReader
+from pramen_py.utils.file_system import FileSystemUtils
+
+spark = SparkSession.getOrCreate()
+
+hocon_config = FileSystemUtils(spark) \
+    .load_hocon_config_from_hadoop("uri_or_path_to_file")
+
+metastore = MetastoreReader(spark) \
+    .from_config(hocon_config)
+
+df_txn = metastore.get_table(
+    "transactions",
+    info_date_from=datetime.date(2022, 1, 1),
+    info_date_to=datetime.date(2022, 6, 1)
+)
+
+df_customer = metastore.get_latest("customer")
+
+df_txn.show(truncate=False)
+df_customer.show(truncate=False)
+```
+
 ## Development
 
 Prerequisites:

@@ -13,12 +13,14 @@
 #  limitations under the License.
 
 from datetime import date as d
+from pathlib import PurePath
 
 import pyspark.sql.functions as F
 import pyspark.sql.types as T
 import pytest
 
 from chispa import assert_df_equality
+from pyhocon import ConfigFactory  # type: ignore
 from pyspark.sql import SparkSession
 
 from pramen_py import MetastoreReader, MetastoreWriter
@@ -97,7 +99,7 @@ def test_metastore_get_latest_available_date(
     """
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.metastore_tables,
+        tables=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     if exc:
@@ -132,7 +134,7 @@ def test_metastore_raises_valueerror_on_bad_path(
     )
     metastore = MetastoreReader(
         spark=spark,
-        config=config.metastore_tables,
+        tables=config.metastore_tables,
         info_date=d(2022, 3, 26),
     )
     with pytest.raises(ValueError, match="No partitions"):
@@ -294,7 +296,7 @@ def test_metastore_is_data_available(
     """
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.metastore_tables,
+        tables=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     if exc:
@@ -377,7 +379,7 @@ def test_metastore_get_latest(
         )
         metastore = MetastoreReader(
             spark=spark,
-            config=[metastore_table_config],
+            tables=[metastore_table_config],
             info_date=info_date,
         )
         if exc:
@@ -448,7 +450,7 @@ def test_metastore_get_table(
         )
         metastore = MetastoreReader(
             spark=spark,
-            config=[metastore_table_config],
+            tables=[metastore_table_config],
             info_date=info_date,
         )
         table = metastore.get_table(
@@ -496,7 +498,7 @@ def test_get_latest_available_date(
     """
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.metastore_tables,
+        tables=load_and_patch_config.metastore_tables,
         info_date=info_date,
     )
     if exc:
@@ -529,7 +531,7 @@ def test_metastore_writer_write(spark: SparkSession, generate_test_tables):
         )
         metastore = MetastoreWriter(
             spark=spark,
-            config=[metastore_table_config],
+            tables=[metastore_table_config],
             info_date=d(2022, 4, 6),
         )
         metastore.write(f"write_table_{format_.value}", df)
@@ -555,7 +557,7 @@ def test_metastore_reader_get_table_uppercase(
 ):
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.metastore_tables,
+        tables=load_and_patch_config.metastore_tables,
         info_date=d(2022, 3, 26),
     )
 
@@ -620,7 +622,7 @@ def test_metastore_reader_get_latest_uppercase(
 ):
     metastore = MetastoreReader(
         spark=spark,
-        config=load_and_patch_config.metastore_tables,
+        tables=load_and_patch_config.metastore_tables,
         info_date=d(2022, 8, 1),
     )
 
@@ -675,4 +677,32 @@ def test_metastore_reader_get_latest_uppercase(
         expected,
         ignore_row_order=True,
         ignore_column_order=True,
+    )
+
+
+def test_metastore_reader_from_config(
+    spark,
+    repo_root,
+) -> None:
+    file_path = PurePath(
+        repo_root / "tests/resources/test_metastore.conf"
+    ).as_posix()
+    hocon_config = ConfigFactory.parse_file(file_path)
+    metastore = MetastoreReader(spark).from_config(hocon_config)
+
+    assert len(metastore.tables) == 6
+    assert metastore.tables[2].table == ""
+    assert metastore.tables[5].table == "teller"
+    assert metastore.tables[0] == MetastoreTable(
+        name="lookup",
+        format="delta",
+        path="test4/lookup",
+        table="",
+        description="A lookup table",
+        records_per_partition=10000,
+        info_date_settings=InfoDateSettings(
+            column="information_date",
+            format="yyyy-MM-dd",
+            start="2022-01-01",
+        ),
     )

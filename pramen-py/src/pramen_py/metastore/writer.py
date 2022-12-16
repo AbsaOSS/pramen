@@ -44,7 +44,7 @@ class MetastoreWriter(MetastoreWriterBase):
 
         logger.info(f"Writing table {table_name} started")
 
-        target_table = get_metastore_table(table_name, self.config)
+        target_table = get_metastore_table(table_name, self.tables)
         if target_table.format == TableFormat.parquet:
             save_path, count_df_items = self._write_parquet_format_table(
                 df, target_table

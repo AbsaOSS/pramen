@@ -34,11 +34,11 @@ class MetastoreWriterBase(metaclass=abc.ABCMeta):
     """
 
     spark: SparkSession = attrs.field()
-    config: List[MetastoreTable] = attrs.field()
+    tables: List[MetastoreTable] = attrs.field()
     info_date: datetime.date = attrs.field()
 
-    @config.validator
-    def check_config(  # type: ignore
+    @tables.validator
+    def check_tables(  # type: ignore
         self,
         _,
         value: List[MetastoreTable],
