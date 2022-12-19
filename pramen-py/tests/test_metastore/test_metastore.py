@@ -409,7 +409,7 @@ def test_metastore_get_latest(
             try:
                 assert_df_equality(actual, expected, ignore_row_order=True)
             except (DataFramesNotEqualError, SchemasNotEqualError):
-                logger.info(f"Table formate: {format_.value}")
+                logger.error(f"Failed for format: {format_.value}")
                 raise
 
 
@@ -467,9 +467,9 @@ def test_metastore_get_table(
             info_date_from=info_date_from,
             info_date_to=info_date_to,
         )
-        assert (
-            table.count() == exp_num_of_rows
-        ), f"table format: {format_.value}"
+        assert table.count() == exp_num_of_rows, logger.error(
+            f"Failed for format: {format_.value}"
+        )
 
 
 @pytest.mark.parametrize(
@@ -557,7 +557,7 @@ def test_metastore_writer_write(spark: SparkSession, generate_test_tables):
         try:
             assert_df_equality(actual, expected, ignore_row_order=True)
         except (DataFramesNotEqualError, SchemasNotEqualError):
-            logger.info(f"Table formate: {format_.value}")
+            logger.error(f"Failed for format: {format_.value}")
             raise
 
 
