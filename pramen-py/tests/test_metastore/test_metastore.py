@@ -19,7 +19,12 @@ import pyspark.sql.functions as F
 import pyspark.sql.types as T
 import pytest
 
-from chispa import assert_df_equality
+from chispa.dataframe_comparer import (
+    DataFramesNotEqualError,
+    assert_df_equality,
+)
+from chispa.schema_comparer import SchemasNotEqualError
+from loguru import logger
 from pyhocon import ConfigFactory  # type: ignore
 from pyspark.sql import SparkSession
 
@@ -401,7 +406,11 @@ def test_metastore_get_latest(
                 until or info_date,
             )
             expected = expected.filter(F.col("info_date") == latest_date)
-            assert_df_equality(actual, expected, ignore_row_order=True)
+            try:
+                assert_df_equality(actual, expected, ignore_row_order=True)
+            except (DataFramesNotEqualError, SchemasNotEqualError):
+                logger.info(f"Table formate: {format_.value}")
+                raise
 
 
 @pytest.mark.parametrize(
@@ -458,7 +467,9 @@ def test_metastore_get_table(
             info_date_from=info_date_from,
             info_date_to=info_date_to,
         )
-        assert table.count() == exp_num_of_rows
+        assert (
+            table.count() == exp_num_of_rows
+        ), f"table format: {format_.value}"
 
 
 @pytest.mark.parametrize(
@@ -543,11 +554,11 @@ def test_metastore_writer_write(spark: SparkSession, generate_test_tables):
             "INFORMATION_DATE",
             F.lit("2022-04-06").cast(T.DateType()),
         )
-        assert_df_equality(
-            expected,
-            actual,
-            ignore_row_order=True,
-        )
+        try:
+            assert_df_equality(actual, expected, ignore_row_order=True)
+        except (DataFramesNotEqualError, SchemasNotEqualError):
+            logger.info(f"Table formate: {format_.value}")
+            raise
 
 
 def test_metastore_reader_get_table_uppercase(
