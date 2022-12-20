@@ -40,6 +40,13 @@ class TableFormat(enum.Enum):
     parquet: str = "parquet"
     delta: str = "delta"
 
+    @classmethod
+    def get_key_by_value(cls, value):  # type: ignore
+        if value in cls._value2member_map_:
+            return cls(value)
+        else:
+            return ""
+
 
 @attrs.define(auto_attribs=True, frozen=True, slots=True)
 class InfoDateSettings:

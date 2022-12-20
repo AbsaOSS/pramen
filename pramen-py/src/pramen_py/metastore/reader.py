@@ -218,7 +218,7 @@ class MetastoreReader(MetastoreReaderBase):
         for table in tables:
             metastore = MetastoreTable(
                 name=table.get("name", ""),
-                format=table.get("format", ""),
+                format=TableFormat.get_key_by_value(table.get("format", "")),
                 path=table.get("path", ""),
                 table=table.get("table", ""),
                 description=table.get("description", ""),

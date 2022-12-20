@@ -702,11 +702,12 @@ def test_metastore_reader_from_config(
     metastore = MetastoreReader(spark).from_config(hocon_config)
 
     assert len(metastore.tables) == 6
+    assert metastore.tables[1].format == TableFormat.parquet
     assert metastore.tables[2].table == ""
     assert metastore.tables[5].table == "teller"
     assert metastore.tables[0] == MetastoreTable(
         name="lookup",
-        format="delta",
+        format=TableFormat.delta,
         path="test4/lookup",
         table="",
         description="A lookup table",
