@@ -101,9 +101,10 @@ def test_load_and_read_file_from_hadoop(spark, repo_root) -> None:
     file_path = PurePath(
         repo_root / "tests/resources/test_common.conf"
     ).as_posix()
-    config_string = FileSystemUtils(
-        spark=spark
-    ).load_and_read_file_from_hadoop(file_path)
+    config_string = FileSystemUtils(spark=spark) \
+        .load_and_read_file_from_hadoop(file_path) \
+        .replace("\r\n", "\n")
+
     assert config_string == (
         "pramen {\n"
         '  environment.name = "TestEnv"\n'
