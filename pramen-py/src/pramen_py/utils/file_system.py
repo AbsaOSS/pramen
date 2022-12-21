@@ -60,7 +60,8 @@ class FileSystemUtils:
             self.spark.sparkContext._jsc.hadoopConfiguration(),  # type: ignore
         )
 
-    def ensure_proper_schema_for_local_fs(self, uri: str) -> str:
+    @staticmethod
+    def ensure_proper_schema_for_local_fs(uri: str) -> str:
         """Ensure schema for local paths
 
         org.apache.hadoop.fs.FileSystem can`t read uri without schema.
@@ -69,22 +70,13 @@ class FileSystemUtils:
         Based on pathlib._WindowsFlavour(_Flavour).make_uri() principles
         """
         uri_parts = list(filter(None, re.split(r"\\|/", uri)))
-        schema = uri_parts[0]
-        drive = uri_parts[1]
-        if schema[len(schema) - 1] == ":":
-            if len(schema) > 2:
-                schema_separator = (
-                    "///"
-                    if schema == "file:"
-                    and len(drive) == 2
-                    and drive[1] == ":"
-                    else "//"
-                )
-                return f"{schema}{schema_separator}{'/'.join(uri_parts[1:])}"
-            else:
+        if len(uri_parts) >= 1:
+            drive = uri_parts[0]
+            if len(drive) == 2 and drive[0].isalpha() and drive[1] == ":":
                 return f"file:///{'/'.join(uri_parts)}"
-        else:
-            return f"file://{'/'.join(uri_parts)}"
+            else:
+                return uri.replace("\\", "/")
+        return uri.replace("\\", "/")
 
     def list_files(
         self,
