@@ -27,63 +27,47 @@ from pramen_py.utils.file_system import FileSystemUtils
             "file:///C:/Users/AB025F5/example_dependency_table",
         ),
         (
-            "file://C:/Users/AB025F5/example_dependency_table",
-            "file:///C:/Users/AB025F5/example_dependency_table",
+            "/User",
+            "/User",
         ),
         (
-            "s3a://C:/Users/AB025F5/example_dependency_table",
-            "s3a://C:/Users/AB025F5/example_dependency_table",
+            "User",
+            "User",
         ),
         (
-            "hdfs://C:/Users/AB025F5/example_dependency_table",
-            "hdfs://C:/Users/AB025F5/example_dependency_table",
+            "C:",
+            "file:///C:",
         ),
         (
-            "hdfs://Users/AB025F5/example_dependency_table",
-            "hdfs://Users/AB025F5/example_dependency_table",
+            "C:\\User",
+            "file:///C:/User",
         ),
         (
-            "//C:/Users/AB025F5/example_dependency_table",
-            "file:///C:/Users/AB025F5/example_dependency_table",
-        ),
-        (
-            "//Users/AB025F5/example_dependency_table",
-            "file://Users/AB025F5/example_dependency_table",
-        ),
-        (
-            "/Users/AB025F5/example_dependency_table",
-            "file://Users/AB025F5/example_dependency_table",
+            "hdfs:///Users/AB025F5/example_dependency_table",
+            "hdfs:///Users/AB025F5/example_dependency_table",
         ),
         (
             "Users/AB025F5/example_dependency_table",
-            "file://Users/AB025F5/example_dependency_table",
+            "Users/AB025F5/example_dependency_table",
         ),
         (
-            "file://Users/AB025F5/example_dependency_table",
-            "file://Users/AB025F5/example_dependency_table",
+            "Users/AB025F5/example_dependency_table/text.txt",
+            "Users/AB025F5/example_dependency_table/text.txt"
         ),
         (
-            "//D:/Users/AB025F5//example_dependency_table//",
+            "file:///Users/AB025F5/example_dependency_table",
+            "file:///Users/AB025F5/example_dependency_table",
+        ),
+        (
+            "D:/Users/AB025F5//example_dependency_table/text.txt",
+            "file:///D:/Users/AB025F5/example_dependency_table/text.txt",
+        ),
+        (
+            "file:\\\\\\D:\\Users\\AB025F5\\example_dependency_table",
             "file:///D:/Users/AB025F5/example_dependency_table",
         ),
         (
-            "file:\\\\\\D:\\Users\\AB025F5\\example_dependency_table\\",
-            "file:///D:/Users/AB025F5/example_dependency_table",
-        ),
-        (
-            "file:\\D:\\Users\\AB025F5\\example_dependency_table\\",
-            "file:///D:/Users/AB025F5/example_dependency_table",
-        ),
-        (
-            "file:\\D:\\Users\\AB025F5\\example_dependency_table\\",
-            "file:///D:/Users/AB025F5/example_dependency_table",
-        ),
-        (
-            "\\D:\\Users\\AB025F5\\example_dependency_table\\",
-            "file:///D:/Users/AB025F5/example_dependency_table",
-        ),
-        (
-            "D:\\Users\\AB025F5\\example_dependency_table\\",
+            "D:\\Users\\AB025F5\\example_dependency_table",
             "file:///D:/Users/AB025F5/example_dependency_table",
         ),
         (
