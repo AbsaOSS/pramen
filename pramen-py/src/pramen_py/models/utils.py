@@ -16,6 +16,7 @@
 from typing import List
 
 from pramen_py.models import MetastoreTable
+from pramen_py.models import TableFormat
 
 
 def get_metastore_table(
@@ -33,3 +34,10 @@ def get_metastore_table(
             f"Available tables are:\n"
             f"{chr(10).join(t.name for t in tables)}"
         ) from err
+
+
+def get_table_format_by_value(value) -> TableFormat:
+    if value in TableFormat._value2member_map_:
+        return TableFormat(value)
+    else:
+        return TableFormat("parquet")

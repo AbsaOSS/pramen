@@ -28,7 +28,7 @@ from pyspark.sql import DataFrame
 
 from pramen_py.metastore.reader_base import MetastoreReaderBase
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
-from pramen_py.models.utils import get_metastore_table
+from pramen_py.models.utils import get_metastore_table, get_table_format_by_value
 from pramen_py.utils import convert_date_to_str, convert_str_to_date
 
 
@@ -218,7 +218,7 @@ class MetastoreReader(MetastoreReaderBase):
         for table in tables:
             metastore = MetastoreTable(
                 name=table.get("name", ""),
-                format=TableFormat.get_key_by_value(table.get("format", "")),
+                format=get_table_format_by_value(table.get("format", "")),
                 path=table.get("path", ""),
                 table=table.get("table", ""),
                 description=table.get("description", ""),
@@ -226,7 +226,7 @@ class MetastoreReader(MetastoreReaderBase):
                     "records_per_partition", 500000
                 ),
                 info_date_settings=InfoDateSettings(
-                    column=table.get("information.date.column", ""),
+                    column=table.get("information.date.column", "pramen_info_date"),
                     format=table.get("information.date.format", "yyyy-MM-dd"),
                     start=table.get("information.date.start", None),
                 ),
