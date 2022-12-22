@@ -17,12 +17,12 @@
 package za.co.absa.pramen.core.tests.schedule
 
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.{DayOfWeek, LocalDate}
 
-class ScheduleSuite extends WordSpec {
+class ScheduleSuite extends AnyWordSpec {
   private val beginOfMonth = LocalDate.of(2022, 1, 1)
   private val secondDayOfMonth = LocalDate.of(2022, 1, 2)
   private val secondToEndOfMonth = LocalDate.of(2022, 1, 30)

@@ -19,14 +19,14 @@ package za.co.absa.pramen.core.tests.reader
 import java.time.LocalDate
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.SparkUtils
 
-class TableReaderJdbcNativeSuite extends WordSpec with RelationalDbFixture with SparkTestBase {
+class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase {
   private val tableName = RdbExampleTable.Company.tableName
 
   private val conf = ConfigFactory.parseString(

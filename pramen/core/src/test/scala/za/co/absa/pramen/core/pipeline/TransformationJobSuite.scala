@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 
 import java.time.{Instant, LocalDate}
 
-class TransformationJobSuite extends WordSpec with SparkTestBase {
+class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 1, 18)

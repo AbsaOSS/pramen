@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.tests.runner.orchestrator
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.pipeline.JobDependency
 import za.co.absa.pramen.core.runner.orchestrator.{DependencyResolver, DependencyResolverImpl}
 
-class DependencyResolverSuite extends WordSpec {
+class DependencyResolverSuite extends AnyWordSpec {
 
   "validate" should {
     "do nothing if the pipeline is ok" in {

@@ -16,12 +16,12 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperNull}
 
 import java.time.LocalDate
 
-class BookkeeperNullSuite extends WordSpec {
+class BookkeeperNullSuite extends AnyWordSpec {
   private val infoDate1 = LocalDate.of(2020, 8, 11)
   private val infoDate2 = LocalDate.of(2020, 8, 12)
   private val infoDate3 = LocalDate.of(2020, 8, 13)

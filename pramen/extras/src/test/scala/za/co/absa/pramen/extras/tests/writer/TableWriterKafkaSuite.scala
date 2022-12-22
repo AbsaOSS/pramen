@@ -17,11 +17,11 @@
 package za.co.absa.pramen.extras.tests.writer
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.writer.TableWriterKafka
 
-class TableWriterKafkaSuite extends WordSpec with SparkTestBase {
+class TableWriterKafkaSuite extends AnyWordSpec with SparkTestBase {
   "TableWriterKafka" should {
     import spark.implicits._
 

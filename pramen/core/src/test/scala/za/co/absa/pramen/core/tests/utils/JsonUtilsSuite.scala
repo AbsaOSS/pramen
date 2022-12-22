@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.samples.SampleCaseClass
 import za.co.absa.pramen.core.utils.JsonUtils
 
-class JsonUtilsSuite extends WordSpec {
+class JsonUtilsSuite extends AnyWordSpec {
 
   private val sample = SampleCaseClass.getDummy
   private val sampleJson =

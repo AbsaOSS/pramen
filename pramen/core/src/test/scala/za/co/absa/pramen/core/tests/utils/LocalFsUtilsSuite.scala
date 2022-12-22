@@ -16,13 +16,13 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.LocalFsUtils
 
 import java.nio.file.{Files, Paths}
 
-class LocalFsUtilsSuite extends WordSpec with TempDirFixture {
+class LocalFsUtilsSuite extends AnyWordSpec with TempDirFixture {
   "getListOfFiles()" should {
     "return the list of all files, but not dirs" in {
       withTempDirectory("local_fs_utils") { tempDir =>

@@ -16,13 +16,14 @@
 
 package za.co.absa.pramen.core.tests.lock
 
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, WordSpec}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.lock.{TokenLock, TokenLockJdbc}
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-class TokenLockJdbcSuite extends WordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
+class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, Map.empty[String, String])
   val pramenDb: PramenDb = PramenDb(jdbcConfig)
 

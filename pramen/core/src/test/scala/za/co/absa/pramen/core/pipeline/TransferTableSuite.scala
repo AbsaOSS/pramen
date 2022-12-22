@@ -17,13 +17,13 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.metastore.model.DataFormat
 
 import java.time.LocalDate
 
-class TransferTableSuite extends WordSpec {
+class TransferTableSuite extends AnyWordSpec {
   "fromConfig" should {
     "create a list of transfer tables" in {
       val conf = ConfigFactory.parseString(

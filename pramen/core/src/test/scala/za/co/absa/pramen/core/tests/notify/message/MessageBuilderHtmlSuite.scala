@@ -16,12 +16,12 @@
 
 package za.co.absa.pramen.core.tests.notify.message
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.utils.ResourceUtils
 
-class MessageBuilderHtmlSuite extends WordSpec with TextComparisonFixture {
+class MessageBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
   "EmailBuilderHtml" should {
     "render an email with the requested elements" in {
       val expected = ResourceUtils.getResourceString("/test/notify/expectedMessage.dat")

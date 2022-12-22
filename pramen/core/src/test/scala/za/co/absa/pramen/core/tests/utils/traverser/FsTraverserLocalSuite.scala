@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.core.tests.utils.traverser
 
-import org.scalatest.{BeforeAndAfterAll, WordSpec}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.utils.LocalFsUtils
 import za.co.absa.pramen.core.utils.traverser.FsTraverserLocal
@@ -25,7 +26,7 @@ import java.io.File
 import java.nio.file.{Files, Paths}
 import scala.collection.mutable.ListBuffer
 
-class FsTraverserLocalSuite extends WordSpec with BeforeAndAfterAll with TempDirFixture with TextComparisonFixture {
+class FsTraverserLocalSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFixture with TextComparisonFixture {
   val tempDir: String = createTempDir("fs_traverser")
 
   override def beforeAll(): Unit = {
@@ -148,7 +149,6 @@ class FsTraverserLocalSuite extends WordSpec with BeforeAndAfterAll with TempDir
         }
       }
     }
-
   }
 
   def runTraverser(dir: String, mask: String, isRecursive: Boolean, includeHiddenFiles: Boolean): List[String] = {

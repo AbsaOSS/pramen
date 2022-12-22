@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.tests.utils.hive
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperImpl}
 
-class HiveHelperSuite extends WordSpec with SparkTestBase {
+class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
   "HiveHelper" should {
     "create a default instance of HiveHelper" in {
       val hiveHelper = HiveHelper(spark)

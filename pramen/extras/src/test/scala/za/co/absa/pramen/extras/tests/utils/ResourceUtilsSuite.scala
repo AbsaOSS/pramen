@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.extras.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.utils.ResourceUtils
 
-class ResourceUtilsSuite extends WordSpec {
+class ResourceUtilsSuite extends AnyWordSpec {
   "getResourceString" should {
     "return the content of the resource" in {
       val str = ResourceUtils.getResourceString("/test/testResource.txt")

@@ -32,7 +32,7 @@ object Versions {
   val kafkaClientVersion = "2.5.1"
   val javaXMailVersion = "1.6.2"
   val embeddedMongoDbVersion = "2.2.0"
-  val scalatestVersion = "3.0.9"
+  val scalatestVersion = "3.2.14"
   val mockitoVersion = "2.28.2"
 
   def sparkFallbackVersion(scalaVersion: String): String = {

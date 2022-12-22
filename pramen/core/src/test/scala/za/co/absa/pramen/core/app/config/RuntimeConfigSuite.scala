@@ -17,11 +17,11 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.LocalDate
 
-class RuntimeConfigSuite extends WordSpec {
+class RuntimeConfigSuite extends AnyWordSpec {
   "GeneralConfig" should {
     "deserialize the config properly" in {
       val configStr =

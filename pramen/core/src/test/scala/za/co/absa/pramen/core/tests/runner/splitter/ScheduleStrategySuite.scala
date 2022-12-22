@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.runner.splitter
 
 import org.mockito.Mockito.{mock, when}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.pipeline
@@ -30,7 +30,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{DayOfWeek, LocalDate}
 import scala.language.implicitConversions
 
-class ScheduleStrategySuite extends WordSpec {
+class ScheduleStrategySuite extends AnyWordSpec {
   implicit private def toDate(str: String): LocalDate = {
     LocalDate.parse(str, DateTimeFormatter.ISO_LOCAL_DATE)
   }

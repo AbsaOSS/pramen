@@ -16,13 +16,13 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.utils.StringUtils
 
 import java.time.LocalDate
 
-class StringUtilsSuite extends WordSpec {
+class StringUtilsSuite extends AnyWordSpec {
   import StringUtils._
 
   "substituteVars()" should {

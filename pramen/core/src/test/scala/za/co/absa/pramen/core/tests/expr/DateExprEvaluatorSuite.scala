@@ -19,12 +19,12 @@ package za.co.absa.pramen.core.tests.expr
 import java.time.LocalDate
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.core.model.Constants
 
-class DateExprEvaluatorSuite extends WordSpec {
+class DateExprEvaluatorSuite extends AnyWordSpec {
   private val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)
 
   "evaluate literals" should {

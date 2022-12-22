@@ -17,9 +17,9 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class SinkTableSuite extends WordSpec {
+class SinkTableSuite extends AnyWordSpec {
   "fromConfig" should {
     "create a list of source tables" in {
       val conf = ConfigFactory.parseString(

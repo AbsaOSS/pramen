@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.tests.journal
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.journal.{Journal, JournalNull}
 
-class JournalNullSuite extends WordSpec {
+class JournalNullSuite extends AnyWordSpec {
   import TestCases._
 
   "addEntry()" should {

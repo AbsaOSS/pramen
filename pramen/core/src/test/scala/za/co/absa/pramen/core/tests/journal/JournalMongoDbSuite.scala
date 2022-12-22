@@ -16,11 +16,12 @@
 
 package za.co.absa.pramen.core.tests.journal
 
-import org.scalatest.{BeforeAndAfter, WordSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.MongoDbFixture
 import za.co.absa.pramen.core.journal.{Journal, JournalMongoDb}
 
-class JournalMongoDbSuite extends WordSpec with MongoDbFixture with BeforeAndAfter {
+class JournalMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAndAfter {
   import TestCases._
   import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
   import za.co.absa.pramen.core.journal.JournalMongoDb._

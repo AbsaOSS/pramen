@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.mocks.notify.PipelineNotificationBuilderSpy
 import za.co.absa.pramen.core.mocks.{PipelineNotificationFactory, SchemaDifferenceFactory, TaskResultFactory}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationDirector
@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.runner.task.RunStatus
 
 import java.time.Instant
 
-class PipelineNotificationDirectorSuite extends WordSpec {
+class PipelineNotificationDirectorSuite extends AnyWordSpec {
 
   "build()" should {
     "execute build steps for a notification" in {

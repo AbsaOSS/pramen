@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.runner.task
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -41,7 +41,7 @@ import java.time.{Instant, LocalDate}
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-class TaskRunnerBaseSuite extends WordSpec with SparkTestBase with TextComparisonFixture {
+class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)

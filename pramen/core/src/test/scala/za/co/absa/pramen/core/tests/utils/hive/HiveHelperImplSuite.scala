@@ -18,14 +18,14 @@ package za.co.absa.pramen.core.tests.utils.hive
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.FsUtils
 import za.co.absa.pramen.core.utils.hive.HiveHelperImpl
 
-class HiveHelperImplSuite extends WordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
+class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
 
   import spark.implicits._
 

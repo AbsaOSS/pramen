@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.metastore
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{AnalysisException, DataFrame}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.LocalDate
 
-class MetastoreSuite extends WordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
+class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
   private val infoDate = LocalDate.of(2011, 10, 12)
 
   "getRegisteredTables()" should {

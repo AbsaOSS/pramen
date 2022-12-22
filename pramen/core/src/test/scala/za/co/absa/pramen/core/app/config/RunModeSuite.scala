@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.app.config
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.runner.splitter.RunMode
 
-class RunModeSuite extends WordSpec {
+class RunModeSuite extends AnyWordSpec {
   "RunMode.fromString()" should {
     "correctly convert 'fill_gaps'" in {
       assert(RunMode.fromString("fill_gaps") == RunMode.SkipAlreadyRan)

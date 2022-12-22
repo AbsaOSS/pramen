@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
@@ -32,7 +32,7 @@ import za.co.absa.pramen.core.pipeline.JobPreRunStatus.FailedDependencies
 
 import java.time.LocalDate
 
-class JobBaseSuite extends WordSpec with SparkTestBase with TextComparisonFixture {
+class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
 
   private val infoDate = LocalDate.of(2022, 1, 18)
 

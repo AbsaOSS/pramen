@@ -17,9 +17,9 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class InfoDateConfigSuite extends WordSpec {
+class InfoDateConfigSuite extends AnyWordSpec {
   "InfoDateConfig" should {
     "deserialize the config properly when set" in {
       val configStr =

@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.mocks.sink
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.fixtures.TempDirFixture
@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.sink.CmdLineSink
 
 import java.time.LocalDate
 
-class CmdLineSinkSuite extends WordSpec with SparkTestBase with TempDirFixture {
+class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
 
   import spark.implicits._
 

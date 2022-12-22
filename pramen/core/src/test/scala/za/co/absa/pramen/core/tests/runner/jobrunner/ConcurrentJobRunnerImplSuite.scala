@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.runner.jobrunner
 import com.github.yruslan.channel.Channel
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.RuntimeConfigFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -34,7 +34,7 @@ import za.co.absa.pramen.core.runner.task.TaskRunnerParallel
 
 import java.time.{Instant, LocalDate, Duration => Dur}
 
-class ConcurrentJobRunnerImplSuite extends WordSpec with SparkTestBase {
+class ConcurrentJobRunnerImplSuite extends AnyWordSpec with SparkTestBase {
   import spark.implicits._
 
   private val runDate = LocalDate.of(2022, 2, 18)

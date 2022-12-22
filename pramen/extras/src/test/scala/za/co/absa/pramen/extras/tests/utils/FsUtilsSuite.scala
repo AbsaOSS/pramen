@@ -17,14 +17,14 @@
 package za.co.absa.pramen.extras.tests.utils
 
 import org.apache.hadoop.fs.Path
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.TempDirFixture
 import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.Paths
 
-class FsUtilsSuite extends WordSpec with SparkTestBase with TempDirFixture {
+class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 
   "getDirectorySize" should {

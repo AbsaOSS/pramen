@@ -19,10 +19,11 @@ package za.co.absa.pramen.core.tests.utils
 import java.nio.file.{Files, Paths}
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.{BeforeAndAfter, WordSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.utils.JavaXConfig
 
-class JavaXConfigSuite extends WordSpec with BeforeAndAfter {
+class JavaXConfigSuite extends AnyWordSpec with BeforeAndAfter {
   private val testConfig = ConfigFactory.parseResources("test/config/test_javax.conf")
 
   before {

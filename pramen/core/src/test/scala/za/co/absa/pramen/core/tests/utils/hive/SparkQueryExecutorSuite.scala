@@ -17,11 +17,11 @@
 package za.co.absa.pramen.core.tests.utils.hive
 
 import org.apache.spark.sql.AnalysisException
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.utils.hive.SparkQueryExecutor
 
-class SparkQueryExecutorSuite extends WordSpec with SparkTestBase {
+class SparkQueryExecutorSuite extends AnyWordSpec with SparkTestBase {
 
   import spark.implicits._
 

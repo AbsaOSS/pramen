@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.utils.TimeUtils
 
-class TimeUtilsSuite extends WordSpec {
+class TimeUtilsSuite extends AnyWordSpec {
   "prettyPrintElapsedTime" should {
     "return the number of milliseconds for values less than 1 second" in {
       assert(TimeUtils.prettyPrintElapsedTime(0) == "instantly")

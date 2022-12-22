@@ -17,9 +17,9 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class BookkeeperConfigSuite extends WordSpec {
+class BookkeeperConfigSuite extends AnyWordSpec {
   "BookkeeperConfig" should {
     "deserialize the config properly for disabled bookkeeping" in {
       val configStr =

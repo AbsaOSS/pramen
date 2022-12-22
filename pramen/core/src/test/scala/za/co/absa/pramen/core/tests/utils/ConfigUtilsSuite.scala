@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.tests.utils
 
 import com.typesafe.config.ConfigException.{Missing, WrongType}
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -29,7 +29,7 @@ import java.util
 import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 
-class ConfigUtilsSuite extends WordSpec with TempDirFixture with TextComparisonFixture {
+class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparisonFixture {
   private val testConfig = ConfigFactory.parseResources("test/config/testconfig.conf").resolve()
   private val testMetastoreConfig = ConfigFactory.parseResources("test/config/metastore.conf")
   private val dateFormat = "yyyy-MM-dd"

@@ -16,9 +16,9 @@
 
 package za.co.absa.pramen.core.sink
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class ColumnNameTransformSuite extends WordSpec {
+class ColumnNameTransformSuite extends AnyWordSpec {
   "fromString" should {
     "parse an empty string" in {
       assert(ColumnNameTransform.fromString("") == ColumnNameTransform.NoChange)

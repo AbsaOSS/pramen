@@ -16,12 +16,13 @@
 
 package za.co.absa.pramen.core.tests.lock
 
-import org.scalatest.{BeforeAndAfter, WordSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.MongoDbFixture
 import za.co.absa.pramen.core.lock.TokenLockMongoDb
 import za.co.absa.pramen.core.lock.TokenLockMongoDb.collectionName
 
-class TokenLockMongoDbSuite extends WordSpec with MongoDbFixture with BeforeAndAfter {
+class TokenLockMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAndAfter {
 
   before {
     if (db.doesCollectionExists(collectionName)) {

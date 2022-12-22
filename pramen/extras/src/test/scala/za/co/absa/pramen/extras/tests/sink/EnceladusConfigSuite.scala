@@ -17,13 +17,13 @@
 package za.co.absa.pramen.extras.tests.sink
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusConfig
 
 import java.time.ZoneId
 
-class EnceladusConfigSuite extends WordSpec with SparkTestBase {
+class EnceladusConfigSuite extends AnyWordSpec with SparkTestBase {
   "fromConfig" should {
     "construct a config from minimal settings" in {
       val conf = ConfigFactory.parseString(

@@ -17,11 +17,11 @@
 package za.co.absa.pramen.core
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.mocks.ExternalChannelMock
 
-class ExternalChannelFactorySuite extends WordSpec with SparkTestBase {
+class ExternalChannelFactorySuite extends AnyWordSpec with SparkTestBase {
   "fromConfig" should {
     "be able to construct a channel from factory" in {
       val conf = ConfigFactory.parseString(

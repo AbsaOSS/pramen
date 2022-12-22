@@ -17,11 +17,11 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query.Table
 import za.co.absa.pramen.core.pipeline.OperationType.{Ingestion, Transformation}
 
-class OperationTypeSuite extends WordSpec {
+class OperationTypeSuite extends AnyWordSpec {
   "OperationType.fromConfig()" should {
     "be able to serialize an ingestion operation" in {
       val conf = ConfigFactory.parseString(
