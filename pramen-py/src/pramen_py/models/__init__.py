@@ -43,7 +43,7 @@ class TableFormat(enum.Enum):
 
 @attrs.define(auto_attribs=True, frozen=True, slots=True)
 class InfoDateSettings:
-    column: str = attrs.field()(default="pramen_info_date")
+    column: str = attrs.field()
     format: str = attrs.field(default="yyyy-MM-dd")
     start: Optional[datetime.date] = attrs.field(default=None)
 

@@ -148,14 +148,13 @@ def get_or_create_spark_session(
             "JAVA_HOME is set to " + env.str("PRAMENPY_SPARK_JAVA_HOME")
         )
 
-    if callable(getattr(SparkSession, "getActiveSession", None)):
-        maybe_active_session = SparkSession.getActiveSession()
-    else:
-        maybe_active_session = SparkSession.getOrCreate()
-
-    if maybe_active_session and force_recreate:
+    if force_recreate:
         logger.info("Force recreating a spark session")
-        spark = maybe_active_session
+        spark = (
+            SparkSession.getActiveSession()  # type: ignore
+            if callable(getattr(SparkSession, "getActiveSession", None))
+            else SparkSession.getOrCreate()  # type: ignore
+        )
         logger.info("Stopping active session and waiting for 3s...")
         spark.sparkContext.stop()
         spark.stop()
