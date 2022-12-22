@@ -15,8 +15,7 @@
 
 from typing import List
 
-from pramen_py.models import MetastoreTable
-from pramen_py.models import TableFormat
+from pramen_py.models import MetastoreTable, TableFormat
 
 
 def get_metastore_table(
@@ -36,8 +35,8 @@ def get_metastore_table(
         ) from err
 
 
-def get_table_format_by_value(value) -> TableFormat:
+def get_table_format_by_value(value: str) -> TableFormat:
     if value in TableFormat._value2member_map_:
         return TableFormat(value)
     else:
-        return TableFormat("parquet")
+        raise Exception(f"Table format {value} is not supported by pramen-py")

@@ -18,6 +18,9 @@ from pramen_py.app.logger import setup_logger
 
 
 env = Env(expand_vars=True)
-env.read_env()
+try:
+    env.read_env()
+except OSError:
+    env.read_env(recurse=False)
 
 setup_logger(env=env)
