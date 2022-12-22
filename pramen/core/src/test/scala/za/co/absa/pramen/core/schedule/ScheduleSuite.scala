@@ -18,12 +18,12 @@ package za.co.absa.pramen.core.schedule
 
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.schedule.Schedule._
 
 import java.time.{DayOfWeek, LocalDate}
 
-class ScheduleSuite extends WordSpec {
+class ScheduleSuite extends AnyWordSpec {
 
   "Schedule.fromConfig" should {
     "Deserialize daily jobs" when {

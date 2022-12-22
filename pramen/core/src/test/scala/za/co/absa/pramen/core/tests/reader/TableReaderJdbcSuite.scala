@@ -17,12 +17,12 @@
 package za.co.absa.pramen.core.tests.reader
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.reader.TableReaderJdbc
 import za.co.absa.pramen.core.sql.SqlGeneratorOracle
 
-class TableReaderJdbcSuite extends WordSpec with SparkTestBase {
+class TableReaderJdbcSuite extends AnyWordSpec with SparkTestBase {
   "TableReaderJdbc" should {
     val conf = ConfigFactory.parseString(
       """reader {

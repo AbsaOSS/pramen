@@ -17,9 +17,9 @@
 package za.co.absa.pramen.core.sink
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class CsvConversionParamsSuite extends WordSpec {
+class CsvConversionParamsSuite extends AnyWordSpec {
   "fromConfig" should {
     "construct from config with default values" in {
       val conf = ConfigFactory.parseString(

@@ -19,7 +19,7 @@ package za.co.absa.pramen.extras.tests.sink
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -29,7 +29,7 @@ import za.co.absa.pramen.extras.utils.FsUtils
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 
-class EnceladusSinkSuite extends WordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
+class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
 
   import spark.implicits._
 

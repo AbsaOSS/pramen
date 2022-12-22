@@ -18,7 +18,8 @@ package za.co.absa.pramen.core.source
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
-import org.scalatest.{BeforeAndAfterAll, WordSpec}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{Query, Source}
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -29,7 +30,7 @@ import java.io.{File, IOException}
 import java.nio.file.Paths
 import java.time.LocalDate
 
-class LocalSparkSourceSuite extends WordSpec with BeforeAndAfterAll with TempDirFixture with SparkTestBase {
+class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFixture with SparkTestBase {
   import spark.implicits._
 
   val tempDir: String = createTempDir("local_spark_source")

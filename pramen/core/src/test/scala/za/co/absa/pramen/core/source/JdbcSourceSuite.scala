@@ -17,12 +17,12 @@
 package za.co.absa.pramen.core.source
 
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Source
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
 
-class JdbcSourceSuite extends WordSpec with SparkTestBase {
+class JdbcSourceSuite extends AnyWordSpec with SparkTestBase {
   private val conf: Config = ConfigFactory.parseString(
     s"""
        | pramen {

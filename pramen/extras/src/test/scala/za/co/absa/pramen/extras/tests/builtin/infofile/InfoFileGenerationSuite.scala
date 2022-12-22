@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.tests.builtin.infofile
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration._
@@ -26,7 +26,7 @@ import za.co.absa.pramen.extras.infofile.InfoFileGeneration._
 import java.nio.file.{Files, Paths}
 import java.time.{Instant, LocalDate, ZoneId}
 
-class InfoFileGenerationSuite extends WordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
+class InfoFileGenerationSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
   import spark.implicits._
 
   private val sourceStart = Instant.ofEpochSecond(1640684086L)

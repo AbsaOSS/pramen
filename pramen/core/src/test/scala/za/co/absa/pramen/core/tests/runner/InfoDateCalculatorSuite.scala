@@ -16,13 +16,13 @@
 
 package za.co.absa.pramen.core.tests.runner
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.core.runner.InfoDateCalculator
 
 import java.time.LocalDate
 
-class InfoDateCalculatorSuite extends WordSpec {
+class InfoDateCalculatorSuite extends AnyWordSpec {
   "calculateInformationDate" should {
     "calculate a date expression that has '$date' reference" in {
       val infoDate = InfoDateCalculator.calculateInformationDate("@date - 1", LocalDate.of(2022, 2, 1))

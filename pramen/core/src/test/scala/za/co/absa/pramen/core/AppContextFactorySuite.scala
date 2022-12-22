@@ -17,14 +17,15 @@
 package za.co.absa.pramen.core
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.scalatest.{BeforeAndAfterAll, WordSpec}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.BookkeeperNull
 import za.co.absa.pramen.core.journal.JournalNull
 import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.utils.ResourceUtils
 
-class AppContextFactorySuite extends WordSpec with SparkTestBase {
+class AppContextFactorySuite extends AnyWordSpec with SparkTestBase {
 
   "AppContextFactory" should {
     val configStr = ResourceUtils.getResourceString("/test/config/app_context.conf")

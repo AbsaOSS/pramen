@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.runner
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.{AppContextFactory, RuntimeConfigFactory}
 
 import scala.util.{Failure, Success}
 
-class AppRunnerSuite extends WordSpec with SparkTestBase {
+class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
   "runPipeline()" should {
     "run the mock pipeline" in {
       val conf: Config = getTestConfig()

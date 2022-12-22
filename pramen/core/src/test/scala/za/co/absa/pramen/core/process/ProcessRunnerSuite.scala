@@ -16,13 +16,13 @@
 
 package za.co.absa.pramen.core.process
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.ScriptProcessRunnerFixture
 import za.co.absa.pramen.core.utils.CircularBuffer
 
 import java.io.{BufferedReader, IOException, StringReader}
 
-class ProcessRunnerSuite extends WordSpec with ScriptProcessRunnerFixture {
+class ProcessRunnerSuite extends AnyWordSpec with ScriptProcessRunnerFixture {
   "processExecutionOutput()" should {
     "handle stdout separately from stderr" in {
       withDummyProcessRunner() { runner =>

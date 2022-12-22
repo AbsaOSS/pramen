@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.tests.reader
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-class JdbcUrlSelectorSuite extends WordSpec {
+class JdbcUrlSelectorSuite extends AnyWordSpec {
   "constructor" should {
     "throw an exception if no URLs defined" in {
       val ex = intercept[RuntimeException] {

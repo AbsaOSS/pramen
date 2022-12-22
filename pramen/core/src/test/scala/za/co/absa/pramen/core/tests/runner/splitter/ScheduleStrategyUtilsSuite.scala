@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.runner.splitter
 
 import org.mockito.Mockito.{mock, when}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
@@ -30,7 +30,7 @@ import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.{DayOfWeek, LocalDate}
 
-class ScheduleStrategyUtilsSuite extends WordSpec {
+class ScheduleStrategyUtilsSuite extends AnyWordSpec {
   "ScheduleStrategyCommon" when {
     val date = LocalDate.of(2022, 2, 18)
 

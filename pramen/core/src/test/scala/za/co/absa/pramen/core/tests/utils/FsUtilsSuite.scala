@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.tests.utils
 
 import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
 import org.mockito.Mockito._
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import org.slf4j.{Logger, LoggerFactory}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
@@ -28,7 +28,7 @@ import java.io.IOException
 import java.nio.file.Paths
 import java.time.{Instant, ZoneId}
 
-class FsUtilsSuite extends WordSpec with SparkTestBase with TempDirFixture {
+class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val timezoneId = ZoneId.of("Africa/Johannesburg")
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 

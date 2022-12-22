@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.sink.CsvConversionParamsFactory
@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.utils.{FsUtils, SparkUtils}
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 
-class LocalCsvSinkSuite extends WordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
+class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
 
   import spark.implicits._
 

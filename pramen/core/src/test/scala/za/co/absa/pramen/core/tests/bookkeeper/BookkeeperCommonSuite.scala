@@ -17,13 +17,13 @@
 package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.apache.spark.sql.types._
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
 
-class BookkeeperCommonSuite extends WordSpec {
+class BookkeeperCommonSuite extends AnyWordSpec {
 
   def testBookKeeper(getBookkeeper: () => Bookkeeper): Unit = {
     val infoDate1 = LocalDate.of(2020, 8, 11)

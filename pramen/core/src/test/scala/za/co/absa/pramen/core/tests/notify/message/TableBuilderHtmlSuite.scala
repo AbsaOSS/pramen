@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.tests.notify.message
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.notify.message._
 
-class TableBuilderHtmlSuite extends WordSpec with TextComparisonFixture {
+class TableBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
   "TableBuilderHtml" should {
     "create an empty string if no headers not records" in {
       val builder = new TableBuilderHtml

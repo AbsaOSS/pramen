@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, WordSpec}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.RuntimeConfigFactory
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -27,7 +28,7 @@ import za.co.absa.pramen.core.lock.{TokenLockFactoryHadoop, TokenLockFactoryJdbc
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-class BookkeeperSuite extends WordSpec
+class BookkeeperSuite extends AnyWordSpec
   with MongoDbFixture
   with RelationalDbFixture
   with TempDirFixture

@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.Instant
 
-class PipelineNotificationBuilderHtmlSuite extends WordSpec with TextComparisonFixture {
+class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
   "constructor" should {
     "be able to initialize the builder with the default timezone" in {
       implicit val conf: Config = ConfigFactory.parseString(

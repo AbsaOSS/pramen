@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.samples.SampleCaseClass2
 import za.co.absa.pramen.core.utils.{CsvUtils, SparkUtils}
 
-class CsvUtilsSuite extends WordSpec {
+class CsvUtilsSuite extends AnyWordSpec {
   "getHeaders" should {
     "return CSV headers from a case class" in {
       val expected = """strValue,intValue,longValue"""

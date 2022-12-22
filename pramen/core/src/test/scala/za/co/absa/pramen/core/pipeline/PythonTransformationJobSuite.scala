@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -34,7 +34,7 @@ import za.co.absa.pramen.core.mocks.process.ProcessRunnerSpy
 import java.nio.file.{Files, Paths}
 import java.time.{Instant, LocalDate}
 
-class PythonTransformationJobSuite extends WordSpec with SparkTestBase with TextComparisonFixture {
+class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
 
   import spark.implicits._
 

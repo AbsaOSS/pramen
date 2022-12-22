@@ -17,14 +17,14 @@
 package za.co.absa.pramen.tests
 
 import org.apache.hadoop.conf.Configuration
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.base.{SparkTestBase, TempDirFixture}
 import za.co.absa.pramen.runner.RunnerCommons
 
 import java.nio.file.{Files, Paths}
 import scala.util.control.NonFatal
 
-class RunnerCommonsSuite extends WordSpec with SparkTestBase with TempDirFixture {
+class RunnerCommonsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   "copyFilesToLocal" should {
     "copy files from Hadoop locally" in {
       withTempDirectory("copy_to_local") {tempDir =>

@@ -16,12 +16,12 @@
 
 package za.co.absa.pramen.extras.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.utils.PartitionUtils._
 
 import java.time.LocalDate
 
-class PartitionUtilsSuite extends WordSpec {
+class PartitionUtilsSuite extends AnyWordSpec {
   private val infoDate = LocalDate.of(2021, 12, 29)
 
   "unpackCustomPartitionPattern" should {

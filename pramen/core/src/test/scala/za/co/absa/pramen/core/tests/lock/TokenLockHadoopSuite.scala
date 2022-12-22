@@ -16,12 +16,12 @@
 
 package za.co.absa.pramen.core.tests.lock
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.lock.TokenLockHadoop
 
-class TokenLockHadoopSuite extends WordSpec with SparkTestBase with TempDirFixture {
+class TokenLockHadoopSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val hdfsConfig = spark.sparkContext.hadoopConfiguration
 
   "Token lock" should {

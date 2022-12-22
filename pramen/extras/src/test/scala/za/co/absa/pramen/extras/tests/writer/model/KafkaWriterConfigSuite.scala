@@ -17,9 +17,9 @@
 package za.co.absa.pramen.extras.tests.writer.model
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class KafkaWriterConfigSuite extends WordSpec {
+class KafkaWriterConfigSuite extends AnyWordSpec {
   import za.co.absa.pramen.extras.writer.model.KafkaWriterConfig._
 
   private val conf = ConfigFactory.parseString(

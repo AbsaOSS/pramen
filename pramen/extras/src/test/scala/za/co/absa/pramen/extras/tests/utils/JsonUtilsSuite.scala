@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.extras.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.utils.JsonUtils
 
-class JsonUtilsSuite extends WordSpec {
+class JsonUtilsSuite extends AnyWordSpec {
 
   "prettyJSON" should {
     "prettify a JSON" in {

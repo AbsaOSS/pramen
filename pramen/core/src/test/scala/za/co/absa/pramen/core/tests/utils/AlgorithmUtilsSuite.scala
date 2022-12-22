@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.utils.AlgorithmUtils._
 
-class AlgorithmUtilsSuite extends WordSpec{
+class AlgorithmUtilsSuite extends AnyWordSpec{
   "AlgorithmUtils.findCycle" should {
     "return an empty list if the input is empty" in {
       val m = Seq.empty[(String, String)]

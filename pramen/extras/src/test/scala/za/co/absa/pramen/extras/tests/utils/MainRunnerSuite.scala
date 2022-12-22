@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.extras.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.utils.MainRunner
 
-class MainRunnerSuite extends WordSpec {
+class MainRunnerSuite extends AnyWordSpec {
   "runMain()" should {
     "run a main method of a given class" in {
       val args = Array("arg1", "arg2")

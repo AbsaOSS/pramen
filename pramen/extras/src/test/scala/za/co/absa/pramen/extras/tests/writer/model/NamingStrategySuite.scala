@@ -18,9 +18,9 @@ package za.co.absa.pramen.extras.tests.writer.model
 
 import com.typesafe.config.ConfigException.Missing
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 
-class NamingStrategySuite extends WordSpec {
+class NamingStrategySuite extends AnyWordSpec {
   import za.co.absa.pramen.extras.writer.model.NamingStrategy._
 
   "fromConfigOpt" should {

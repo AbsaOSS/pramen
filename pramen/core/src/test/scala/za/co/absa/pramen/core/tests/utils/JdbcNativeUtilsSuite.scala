@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.apache.spark.sql.types.IntegerType
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.reader.model.JdbcConfig
@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.utils.{JdbcNativeUtils, SparkUtils}
 
 import java.sql.{DriverManager, ResultSet, SQLSyntaxErrorException}
 
-class JdbcNativeUtilsSuite extends WordSpec with RelationalDbFixture with SparkTestBase {
+class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase {
   private val tableName = RdbExampleTable.Company.tableName
   private val jdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, Map.empty[String, String])
 

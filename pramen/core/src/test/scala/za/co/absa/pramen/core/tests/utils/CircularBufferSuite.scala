@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.utils.CircularBuffer
 
-class CircularBufferSuite extends WordSpec {
+class CircularBufferSuite extends AnyWordSpec {
   "add()" should {
     "be able to add a single element" in {
       val cb = new CircularBuffer[String](10)

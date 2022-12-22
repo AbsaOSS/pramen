@@ -16,12 +16,12 @@
 
 package za.co.absa.pramen.core.tests.expr.parser
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.core.expr.lexer.Token._
 import za.co.absa.pramen.core.expr.lexer.{Lexer, Token}
 
-class LexerSuite extends WordSpec {
+class LexerSuite extends AnyWordSpec {
   "Lexer" should {
     "parse a whitespace" in {
       assertTokens(" ", "")

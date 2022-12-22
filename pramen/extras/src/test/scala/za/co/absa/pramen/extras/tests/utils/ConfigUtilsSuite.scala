@@ -18,14 +18,14 @@ package za.co.absa.pramen.extras.tests.utils
 
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.utils.ConfigUtils
 
 import java.util
 import scala.collection.JavaConverters._
 
-class ConfigUtilsSuite extends WordSpec with TempDirFixture with TextComparisonFixture {
+class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparisonFixture {
   private val testConfig = ConfigFactory.parseResources("test/config/testconfig.conf").resolve()
   private val keysToRedact = Set("mytest.password", "no.such.key")
 

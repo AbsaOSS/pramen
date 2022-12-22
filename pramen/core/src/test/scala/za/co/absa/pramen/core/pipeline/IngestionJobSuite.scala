@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.DataFrame
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -35,7 +35,7 @@ import za.co.absa.pramen.core.utils.SparkUtils
 import java.sql.SQLSyntaxErrorException
 import java.time.{Instant, LocalDate}
 
-class IngestionJobSuite extends WordSpec with SparkTestBase with TextComparisonFixture with RelationalDbFixture {
+class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with RelationalDbFixture {
 
   import spark.implicits._
 

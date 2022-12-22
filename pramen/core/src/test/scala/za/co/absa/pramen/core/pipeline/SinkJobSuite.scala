@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -33,7 +33,7 @@ import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.{Instant, LocalDate}
 
-class SinkJobSuite extends WordSpec with SparkTestBase with TextComparisonFixture {
+class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 1, 18)

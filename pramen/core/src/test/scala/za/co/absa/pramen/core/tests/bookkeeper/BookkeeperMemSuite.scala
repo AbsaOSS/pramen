@@ -18,12 +18,13 @@ package za.co.absa.pramen.core.tests.bookkeeper
 
 import java.time.LocalDate
 
-import org.scalatest.{BeforeAndAfter, WordSpec}
+import org.scalatest.BeforeAndAfter
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.model.DataChunk
 
-class BookkeeperMemSuite extends WordSpec with BeforeAndAfter {
+class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
 
   var bk: Bookkeeper = new SyncBookkeeperMock
 

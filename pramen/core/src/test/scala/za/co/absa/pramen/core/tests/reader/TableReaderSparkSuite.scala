@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.reader
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.types.{IntegerType, StringType}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.TableReader
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.utils.FsUtils
 
 import java.time.LocalDate
 
-class TableReaderSparkSuite extends WordSpec with SparkTestBase with TempDirFixture {
+class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val fs = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 
   private val infoDate1 = LocalDate.of(2022, 8, 5)

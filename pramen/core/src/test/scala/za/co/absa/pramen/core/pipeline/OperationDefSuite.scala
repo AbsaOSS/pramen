@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.pipeline.OperationType.{Ingestion, Transformation}
@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.LocalDate
 
-class OperationDefSuite extends WordSpec with TempDirFixture {
+class OperationDefSuite extends AnyWordSpec with TempDirFixture {
   private val defaults = InfoDateConfig("INFO_DATE",
     "yyyy-MM-dd",
     LocalDate.of(2022, 1, 1),

@@ -17,13 +17,13 @@
 package za.co.absa.pramen.tests
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.core.app.config.RuntimeConfig._
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.runner.cmd.CmdLineConfig
 
-class CmdLineLineConfigSuite extends WordSpec {
+class CmdLineLineConfigSuite extends AnyWordSpec {
 
   private val emptyConfig = ConfigFactory.empty
   private val populatedConfig = ConfigFactory.parseString(

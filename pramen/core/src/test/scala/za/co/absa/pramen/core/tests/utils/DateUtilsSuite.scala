@@ -16,12 +16,12 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.utils.DateUtils._
 
 import java.time.{LocalDate, ZoneId}
 
-class DateUtilsSuite extends WordSpec {
+class DateUtilsSuite extends AnyWordSpec {
 
   "convertStrToDate()" should {
     "Use the first pattern if it is parsable" in {

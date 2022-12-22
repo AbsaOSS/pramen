@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.runner.orchestrator
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.AppContextFixture
@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, MissingDependencies, NoData, Succeeded}
 
-class OrchestratorSuite extends WordSpec with SparkTestBase with AppContextFixture {
+class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFixture {
   "runJobs" should {
     val job1 = new JobSpy("Job1", "table1")
     val job2 = new JobSpy("Job2", "table2")

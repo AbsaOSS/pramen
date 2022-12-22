@@ -23,11 +23,11 @@ import org.apache.spark.sql.SparkSession
 import org.mockito.Mockito.{doAnswer, mock, when => whenMock}
 import org.mockito.invocation.InvocationOnMock
 import org.mockito.stubbing.Answer
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.config.Keys._
 import za.co.absa.pramen.core.runner.PipelineSparkSessionBuilder
 
-class PipelineSparkSessionBuilderSuite extends WordSpec {
+class PipelineSparkSessionBuilderSuite extends AnyWordSpec {
   "applyHadoopConfig" should {
     "do nothing for an empty hadoop config" in {
       val conf = ConfigFactory.empty()

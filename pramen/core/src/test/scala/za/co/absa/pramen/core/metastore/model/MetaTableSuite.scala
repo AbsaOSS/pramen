@@ -17,12 +17,12 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.metastore.model.DataFormat.Parquet
 
 import java.time.LocalDate
 
-class MetaTableSuite extends WordSpec {
+class MetaTableSuite extends AnyWordSpec {
   "fromConfig()" should {
     "be able to parse multiple tables" in {
       val conf = ConfigFactory.parseString(

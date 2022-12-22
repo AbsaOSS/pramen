@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.utils.BuildPropertyUtils
 
-class BuildPropertyUtilsSuite extends WordSpec {
+class BuildPropertyUtilsSuite extends AnyWordSpec {
   "buildVersion" should {
     "be replaced by the current version" in {
       assert(!BuildPropertyUtils.instance.buildVersion.contains("$"))

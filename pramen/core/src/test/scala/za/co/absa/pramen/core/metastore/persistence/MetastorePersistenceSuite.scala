@@ -18,7 +18,8 @@ package za.co.absa.pramen.core.metastore.persistence
 
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{AnalysisException, DataFrame}
-import org.scalatest.{Assertion, WordSpec}
+import org.scalatest.Assertion
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -30,7 +31,7 @@ import za.co.absa.pramen.core.utils.{LocalFsUtils, SparkUtils}
 import java.nio.file.Paths
 import java.time.LocalDate
 
-class MetastorePersistenceSuite extends WordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
+class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
   private val infoDateColumn = "info_date"
   private val infoDateFormat = "yyyy-MM-dd"
   private val infoDate = LocalDate.of(2021, 10, 12)

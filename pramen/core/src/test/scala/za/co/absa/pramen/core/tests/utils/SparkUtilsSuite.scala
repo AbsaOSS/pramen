@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.utils
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
-import org.scalatest.WordSpec
+import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.pipeline.TransformExpression
 import za.co.absa.pramen.core.utils.SparkUtils
@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.LocalDate
 
-class SparkUtilsSuite extends WordSpec with SparkTestBase {
+class SparkUtilsSuite extends AnyWordSpec with SparkTestBase {
   import spark.implicits._
 
   private val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
