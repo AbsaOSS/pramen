@@ -17,6 +17,7 @@
 import Dependencies._
 import Versions._
 import BuildInfoTemplateSettings._
+import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
 val scala212 = "2.12.17"
@@ -35,6 +36,15 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / autoScalaLibrary := false
 
 lazy val printSparkVersion = taskKey[Unit]("Print Spark version Pramen is building against.")
+
+lazy val commonJacocoReportSettings: JacocoReportSettings = JacocoReportSettings(
+  formats = Seq(JacocoReportFormats.HTML, JacocoReportFormats.XML)
+)
+
+lazy val commonJacocoExcludes: Seq[String] = Seq(
+  "za.co.absa.pramen.api.*",
+  "za.co.absa.pramen.buildinfo.*"
+)
 
 val shadeBase = "za.co.absa.pramen.shaded"
 
@@ -90,7 +100,9 @@ lazy val core = (project in file("core"))
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     populateBuildInfoTemplate,
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value
+    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
+    jacocoExcludes := commonJacocoExcludes
   )
   .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
@@ -110,6 +122,8 @@ lazy val extras = (project in file("extras"))
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
+    jacocoExcludes := commonJacocoExcludes,
     assemblySettingsExtras
   )
   .dependsOn(core)
@@ -129,6 +143,8 @@ lazy val runner = (project in file("runner"))
       getScalaDependency(scalaVersion.value),
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:runner Jacoco Report"),
+    jacocoExcludes := commonJacocoExcludes,
     assemblySettingsRunner
   )
   .dependsOn(core)
