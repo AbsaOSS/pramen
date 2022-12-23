@@ -16,14 +16,14 @@
 
 package za.co.absa.pramen.extras.tests.sink
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY}
+import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY, HIVE_TABLE__KEY}
 import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.{Files, Paths}
@@ -101,6 +101,34 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
       }
     }
 
+    "getHiveRepairEnceladusQuery()" should {
+      "return a valid query when a db is setup" in {
+        val updatedConf = conf.
+           withValue("hive.database", ConfigValueFactory.fromAnyRef("mydb"))
+
+        val sink = EnceladusSink.apply(updatedConf, "", spark)
+
+        val query = sink.getHiveRepairEnceladusQuery("my_table")
+
+        assert(query == "MSCK REPAIR TABLE mydb.my_table")
+      }
+
+      "return a valid query when a db is not setup" in {
+        val sink = EnceladusSink.apply(conf, "", spark)
+
+        val query = sink.getHiveRepairEnceladusQuery("my_table")
+
+        assert(query == "MSCK REPAIR TABLE my_table")
+      }
+    }
+
+    "getHiveRepairQuery()" should {
+      "return the repair query" in {
+        val sink = EnceladusSink.apply(conf, "", spark)
+
+        assert(sink.getHiveRepairQuery("db1.table1") == "MSCK REPAIR TABLE db1.table1")
+      }
+    }
   }
 
   "runEnceladus()" should {
@@ -123,7 +151,8 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
         new Path("/dummy"),
         Map(
           DATASET_NAME_KEY -> "m_dayaset",
-          DATASET_VERSION_KEY -> "22"
+          DATASET_VERSION_KEY -> "22",
+          HIVE_TABLE__KEY -> "test_table"
         )
       )
     }
@@ -157,5 +186,4 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
       assert(ex.getCause.getMessage.contains("--dataset-name m_dataset --dataset-version 22 --report-date 2022-02-18 --menas-auth-keytab menas.keytab --raw-format json"))
     }
   }
-
 }

@@ -25,6 +25,7 @@ import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
 import java.time.{Instant, LocalDate}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 /**
@@ -240,7 +241,8 @@ class EnceladusSink(sinkConfig: Config,
                                            infoDate: LocalDate,
                                            infoVersion: Int,
                                            basePath: Path,
-                                           options: Map[String, String]): Unit = {
+                                           options: Map[String, String])
+                                          (implicit spark: SparkSession): Unit = {
     if (options.contains(DATASET_NAME_KEY) && options.contains(DATASET_VERSION_KEY)) {
       runEnceladus(
         tableName,
@@ -250,6 +252,16 @@ class EnceladusSink(sinkConfig: Config,
         infoVersion,
         basePath
       )
+      if (options.contains(HIVE_TABLE__KEY)) {
+        Try {
+          repairTable(options(HIVE_TABLE__KEY))
+        } match {
+          case Success(_) =>
+            log.info(s"Hive table '${options(HIVE_TABLE__KEY)}' was repaired successfully.")
+          case Failure(ex) =>
+            log.error(s"Failed to repair Hive table '${options(HIVE_TABLE__KEY)}'.", ex)
+        }
+      }
     } else {
       log.info(s"Enceladus dataset name and/or version are not specified, skipping the Enceladus execution for $tableName.")
     }
@@ -291,6 +303,27 @@ class EnceladusSink(sinkConfig: Config,
       .replaceAll("@rawFormat", enceladusConfig.format)
       .split(' ')
   }
+
+  private[extras] def repairTable(hiveTable: String)(implicit spark: SparkSession): Unit = {
+    val query = getHiveRepairEnceladusQuery(hiveTable)
+    executeQuery(query)
+  }
+
+  private[extras] def getHiveRepairEnceladusQuery(hiveTable: String): String = {
+    enceladusConfig.hiveDatabase match {
+      case Some(db) => getHiveRepairQuery(s"$db.$hiveTable")
+      case None => getHiveRepairQuery(s"$hiveTable")
+    }
+  }
+
+  private[extras] def getHiveRepairQuery(hiveFullTableName: String): String = {
+    s"MSCK REPAIR TABLE $hiveFullTableName"
+  }
+
+  private[extras] def executeQuery(query: String)(implicit spark: SparkSession): Unit = {
+    log.info(s"Executing SQL: $query")
+    spark.sql(query).take(100)
+  }
 }
 
 object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
@@ -298,6 +331,7 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
   val INFO_VERSION_KEY = "info.version"
   val DATASET_NAME_KEY = "dataset.name"
   val DATASET_VERSION_KEY = "dataset.version"
+  val HIVE_TABLE__KEY = "hive.table"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
     val enceladusConfig = EnceladusConfig.fromConfig(conf)
