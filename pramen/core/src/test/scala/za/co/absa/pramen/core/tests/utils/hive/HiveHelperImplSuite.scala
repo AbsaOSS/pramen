@@ -38,7 +38,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
           s"""DROP TABLE IF EXISTS db.tbl
              |CREATE EXTERNAL TABLE IF NOT EXISTS
              |db.tbl (
-             |`a` STRING,`b` INT,`c` INT)
+             |a STRING,b INT,c INT)
              |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
              |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
              |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
@@ -52,7 +52,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
         hiveHelper.createOrUpdateHiveTable(path, Nil, "db", "tbl")
 
-        val actual = qe.queries.mkString("\n")
+        val actual = qe.queries.mkString("\n").replaceAll("`", "")
 
         compareText(actual, expected)
       }
@@ -66,11 +66,11 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
           s"""DROP TABLE IF EXISTS db.tbl
              |CREATE EXTERNAL TABLE IF NOT EXISTS
              |db.tbl (
-             |`c` INT)
+             |c INT)
              |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
              |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
              |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
-             |PARTITIONED BY (`a` STRING,`b` INT)
+             |PARTITIONED BY (a STRING,b INT)
              |LOCATION '$path'
              |MSCK REPAIR TABLE db.tbl
              |""".stripMargin
@@ -81,7 +81,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
         hiveHelper.createOrUpdateHiveTable(path, "a" :: "b" :: Nil, "db", "tbl")
 
-        val actual = qe.queries.mkString("\n")
+        val actual = qe.queries.mkString("\n").replaceAll("`", "")
 
         compareText(actual, expected)
       }
