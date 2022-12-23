@@ -35,7 +35,8 @@ case class EnceladusConfig(
                             saveEmpty: Boolean,
                             generateInfoFile: Boolean,
                             enceladusMainClass: String,
-                            enceladusCmdLineTemplate: String
+                            enceladusCmdLineTemplate: String,
+                            hiveDatabase: Option[String]
                           )
 
 object EnceladusConfig {
@@ -50,6 +51,7 @@ object EnceladusConfig {
 
   val ENCELADUS_RUN_MAIN_CLASS_KEY = "enceladus.run.main.class"
   val ENCELADUS_COMMAND_LINE_TEMPLATE_KEY = "enceladus.command.line.template"
+  val HIVE_DATABASE_KEY = "hive.database"
 
   val DEFAULT_INFO_DATE_COLUMN = "enceladus_info_date"
   val DEFAULT_PARTITION_PATTERN = "{year}/{month}/{day}/v{version}"
@@ -80,7 +82,8 @@ object EnceladusConfig {
       ConfigUtils.getOptionBoolean(conf, SAVE_EMPTY_KEY).getOrElse(true),
       ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true),
       ConfigUtils.getOptionString(conf, ENCELADUS_RUN_MAIN_CLASS_KEY).getOrElse(DEFAULT_ENCELADUS_RUN_MAIN_CLASS),
-      ConfigUtils.getOptionString(conf, ENCELADUS_COMMAND_LINE_TEMPLATE_KEY).getOrElse(DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE)
+      ConfigUtils.getOptionString(conf, ENCELADUS_COMMAND_LINE_TEMPLATE_KEY).getOrElse(DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE),
+      ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY)
     )
   }
 }

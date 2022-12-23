@@ -154,6 +154,11 @@
                     </artifactSet>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.scoverage</groupId>
+                <artifactId>scoverage-maven-plugin</artifactId>
+                <version>${maven.scoverage.version}</version>
+            </plugin>
         </plugins>
     </build>
 </project>
