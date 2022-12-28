@@ -31,14 +31,14 @@ object InfoDateCalculator {
     *
     * For example:
     * - for daily jobs, the expression can be
-    *   - "$date" or "@date -1"
+    *   - "@date" or "@date -1"
     *     - for weekly jobs, say the information date is the last Saturday:
     *   - "lastSaturday(@date)"
     *     - form monthly jobs it can be:
     *   - the first day of the month: "beginOfMonth(@date)"
     *   - the last day of the previous month: "beginOfMonth(@date) - 1"
     *
-    *   Here '$date' and '$runDate' are synonyms.
+    *   Here '@date' and '@runDate' are synonyms.
     *
     * @param infoDateExpression the expression to calculate the information date from the run date
     * @param runDate            the run date
