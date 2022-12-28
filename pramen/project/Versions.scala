@@ -22,10 +22,10 @@ object Versions {
   val defaultSparkVersionForScala213 = "3.2.2"
 
   val typesafeConfigVersion = "1.4.0"
-  val postgreSqlDriverVersion = "42.3.3"
+  val postgreSqlDriverVersion = "42.3.8"
   val msSqlDriverVersion = "1.3.1"
   val mongoDbScalaDriverVersion = "2.7.0"
-  val hsqlDbVersion = "2.5.1"
+  val hsqlDbVersion = "2.7.1"
   val slickVersion = "3.3.3"
   val scoptVersion = "3.7.1"
   val channelsVersion = "0.1.4"
