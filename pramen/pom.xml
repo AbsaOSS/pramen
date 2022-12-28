@@ -216,7 +216,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.3.3</version>
+                <version>42.3.8</version>
             </dependency>
 
             <!-- Oracle JDBC driver -->
@@ -251,7 +251,8 @@
             <dependency>
                 <groupId>org.hsqldb</groupId>
                 <artifactId>hsqldb</artifactId>
-                <version>2.5.1</version>
+                <version>2.7.1</version>
+                <classifier>jdk8</classifier>
             </dependency>
 
             <!-- https://mvnrepository.com/artifact/com.typesafe.slick/slick -->

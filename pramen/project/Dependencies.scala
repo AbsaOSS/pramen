@@ -39,7 +39,7 @@ object Dependencies {
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test,
     "org.mockito"          %  "mockito-core"               % mockitoVersion             % Test,
     "de.flapdoodle.embed"  %  "de.flapdoodle.embed.mongo"  % embeddedMongoDbVersion     % Test,
-    "org.hsqldb"           %  "hsqldb"                     % hsqlDbVersion              % Test
+    "org.hsqldb"           %  "hsqldb"                     % hsqlDbVersion              % Test classifier "jdk8"
   ) :+ getDeltaDependency(sparkVersion(scalaVersion))
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
