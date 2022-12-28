@@ -39,7 +39,7 @@ class TableWriterKafka(topicName: String,
   override def write(df: DataFrame, infoDate: LocalDate, numOfRecordsEstimate: Option[Long]): Long = {
     val dfOut = getOutputDataFrame(df)
 
-    val count = dfOut.count
+    val count = dfOut.count()
 
     if (count > 0) {
       log.info(s"Writing $count records to '$topicName'...")
