@@ -1,0 +1,71 @@
+name: python_publish
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+    working-directory: "./pramen-py"
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        python-version: [ "3.10" ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: setup poetry
+        uses: abatilo/actions-poetry@v2.1.6
+        with:
+          poetry-version: 1.1.15
+      - name: install dependencies
+        run: make --silent install
+      - name: test
+        env:
+          ENV: ci
+        run: make --silent test
+  publish:
+    if: "${{ github.event_name == 'push' }}"
+    needs: [ "test" ]
+    environment: release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: import absa oss ci/cd bot key
+        run: |
+          sudo sh -c "echo 'deb https://gitsecret.jfrog.io/artifactory/git-secret-deb git-secret main' >> /etc/apt/sources.list"
+          wget -qO - 'https://gitsecret.jfrog.io/artifactory/api/gpg/key/public' | sudo apt-key add -
+          sudo apt install -y --no-install-recommends \
+            git-secret
+          echo "${{ secrets.ABSA_OSS_CI_CD_BOT_GPG_KEY }}" | tr ',' '\n' > ./private_key.gpg
+          gpg --batch --yes --pinentry-mode loopback --import private_key.gpg
+          rm private_key.gpg
+      - name: reveal secrets
+        working-directory: "."
+        run: |
+          git config --global --add safe.directory /__w/pramen/pramen
+          git init
+          git add .
+          git secret reveal
+      - name: install project dependencies
+        run: |
+          sudo apt install -y --no-install-recommends \
+            libssl-dev \
+            make
+      - uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+      - uses: abatilo/actions-poetry@v2.1.6
+        with:
+          poetry-version: 1.1.15
+      - name: Install dependencies
+        run: poetry install --no-interaction --no-root
+      - name: build and publish the wheel to jfrog
+        env:
+          ENV: pypi
+        run: make --silent publish
