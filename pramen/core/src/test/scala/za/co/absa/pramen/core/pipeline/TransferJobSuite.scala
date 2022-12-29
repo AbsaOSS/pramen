@@ -223,7 +223,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
     val outputTable = transferTable.getMetaTable
 
-    (new TransferJob(operation, metastore, bk, source, transferTable, outputTable, sink, " "), bk)
+    (new TransferJob(operation, metastore, bk, Nil, source, transferTable, outputTable, sink, " "), bk)
   }
 
 }

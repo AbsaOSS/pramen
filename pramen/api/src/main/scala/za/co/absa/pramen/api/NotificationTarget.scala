@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mq
+package za.co.absa.pramen.api
 
-trait SingleMessageProducer {
-  def send(message: String, numberOrRetries: Int = 3): Unit
-
-  def connect(): Unit
-
-  def close(): Unit
+trait NotificationTarget extends ExternalChannel {
+  def sendNotification(notification: TaskNotification): Unit
 }

@@ -53,12 +53,13 @@ object PythonTransformationJob {
 class PythonTransformationJob(operationDef: OperationDef,
                               metastore: Metastore,
                               bookkeeper: Bookkeeper,
+                              notificationTargets: Seq[JobNotificationTarget],
                               outputTable: MetaTable,
                               pythonClass: String,
                               pramenPyConfig: PramenPyConfig,
                               processRunner: ProcessRunner)
                              (implicit spark: SparkSession)
-  extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
+  extends JobBase(operationDef, metastore, bookkeeper,notificationTargets, outputTable) {
 
   private val log = LoggerFactory.getLogger(this.getClass)
 

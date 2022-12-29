@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mq
+package za.co.absa.pramen.api
 
-trait SingleMessageProducer {
-  def send(message: String, numberOrRetries: Int = 3): Unit
+import java.time.{Instant, LocalDate}
 
-  def connect(): Unit
-
-  def close(): Unit
-}
+case class TaskNotification(
+                             tableName: String,
+                             infoDate: LocalDate,
+                             started: Instant,
+                             finished: Instant,
+                             status: TaskStatus,
+                             options: Map[String, String]
+                           )

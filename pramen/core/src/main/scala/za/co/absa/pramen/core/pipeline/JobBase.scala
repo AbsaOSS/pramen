@@ -23,6 +23,7 @@ import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{MetaTable, MetastoreDependency}
 import za.co.absa.pramen.core.pipeline
+import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji._
 
 import java.time.LocalDate
@@ -30,6 +31,7 @@ import java.time.LocalDate
 abstract class JobBase(operationDef: OperationDef,
                        metastore: Metastore,
                        bookkeeper: Bookkeeper,
+                       jobNotificationTargets: Seq[JobNotificationTarget],
                        outputTableDef: MetaTable
                       ) extends Job {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -39,6 +41,8 @@ abstract class JobBase(operationDef: OperationDef,
   override val outputTable: MetaTable = outputTableDef
 
   override val operation: OperationDef = operationDef
+
+  override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
   def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult
 

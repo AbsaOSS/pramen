@@ -145,6 +145,6 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "test_output_table")
 
-    new JobBaseDummy(operation, metastore, bk, outputTable)
+    new JobBaseDummy(operation, Nil, metastore, bk, outputTable)
   }
 }

@@ -17,8 +17,8 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.Reason
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import za.co.absa.pramen.api.{NotificationTarget, Reason}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
@@ -33,6 +33,8 @@ trait Job {
   val operation: OperationDef
 
   val scheduleStrategy: ScheduleStrategy
+
+  def notificationTargets: Seq[JobNotificationTarget]
 
   def preRunCheck(infoDate: LocalDate,
                   conf: Config): JobPreRunResult

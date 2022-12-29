@@ -16,12 +16,13 @@
 
 package za.co.absa.pramen.core.mocks
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import za.co.absa.pramen.core.pipeline.{SinkTable, TransformExpression}
 
 object SinkTableFactory {
   def getDummySinkTable(metaTableName: String = "table1",
                         outputTableName: Option[String] = None,
+                        conf: Config = ConfigFactory.empty(),
                         sinkFromExpr: Option[String] = None,
                         sinkToExpr: Option[String] = None,
                         transformations: Seq[TransformExpression] = Nil,
@@ -29,6 +30,6 @@ object SinkTableFactory {
                         columns: Seq[String] = Nil,
                         options: Map[String, String] = Map.empty[String, String],
                         overrideConf: Option[Config] = None): SinkTable = {
-    SinkTable(metaTableName, outputTableName, sinkFromExpr, sinkToExpr, transformations, filters, columns, options, overrideConf)
+    SinkTable(metaTableName, outputTableName, conf, sinkFromExpr, sinkToExpr, transformations, filters, columns, options, overrideConf)
   }
 }

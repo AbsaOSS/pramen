@@ -412,6 +412,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
       operationDef,
       metastore,
       bk,
+      Nil,
       outputTable,
       "python_class",
       pramenPyConfig,

@@ -16,22 +16,23 @@
 
 package za.co.absa.pramen.core.mocks.job
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
-import za.co.absa.pramen.core.pipeline.{DependencyWarning, JobBase, JobPreRunResult, OperationDef}
+import za.co.absa.pramen.core.pipeline.{DependencyWarning, JobBase, JobNotificationTarget, JobPreRunResult, OperationDef}
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
 
 import java.time.{Instant, LocalDate}
 
 class JobBaseDummy(operationDef: OperationDef,
+                   jobNotificationTargets: Seq[JobNotificationTarget],
                    metastore: Metastore,
                    bookkeeper: Bookkeeper,
                    outputTableDef: MetaTable)
-  extends JobBase(operationDef, metastore, bookkeeper, outputTableDef) {
+  extends JobBase(operationDef, metastore, bookkeeper, jobNotificationTargets, outputTableDef) {
 
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     JobPreRunResult(null, None, dependencyWarnings)

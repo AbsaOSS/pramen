@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mq
+package za.co.absa.pramen.core.pipeline
 
-trait SingleMessageProducer {
-  def send(message: String, numberOrRetries: Int = 3): Unit
+import za.co.absa.pramen.api.NotificationTarget
 
-  def connect(): Unit
-
-  def close(): Unit
-}
+case class JobNotificationTarget(
+                                  name: String,
+                                  options: Map[String, String],
+                                  target: NotificationTarget
+                                )

@@ -29,15 +29,22 @@ import scala.concurrent.{Await, Future}
 import scala.util.control.NonFatal
 
 class SingleMessageProducerKafka(topic: String, kafkaConfig: Config) extends SingleMessageProducer {
-
   val props: Properties = ConfigUtils.toProperties(kafkaConfig)
 
   props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[org.apache.kafka.common.serialization.StringSerializer])
   props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, classOf[org.apache.kafka.common.serialization.StringSerializer])
 
-  val producer = new KafkaProducer[String, String](props)
+  var producer: KafkaProducer[String, String] = _
+
+  override def connect(): Unit = {
+    producer = new KafkaProducer[String, String](props)
+  }
 
   override def send(message: String, numberOrRetries: Int): Unit = {
+    if (producer == null) {
+      connect()
+    }
+
     val record = new ProducerRecord[String, String](topic, null, message)
     try {
       producer.send(record).get()
@@ -57,4 +64,9 @@ class SingleMessageProducerKafka(topic: String, kafkaConfig: Config) extends Sin
     }
   }
 
+  override def close(): Unit = {
+    producer.flush()
+    producer.close()
+    producer = null
+  }
 }
