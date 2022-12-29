@@ -19,12 +19,12 @@ package za.co.absa.pramen.core.runner.task
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.{Reason, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.ReasonException
 import za.co.absa.pramen.core.metastore.MetaTableStats
-import za.co.absa.pramen.core.notify.SchemaDifference
+import za.co.absa.pramen.core.notify.{NotificationTargetManager, SchemaDifference}
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.utils.Emoji._
@@ -210,6 +210,33 @@ abstract class TaskRunnerBase(conf: Config,
       case Failure(ex)     =>
         TaskResult(task.job, RunStatus.Failed(ex), getRunInfo(task.infoDate, started), Nil,
           validationResult.dependencyWarnings)
+    }
+  }
+
+  private[core] def sendNotifications(task: Task, result: TaskResult): Unit = {
+    task.job.notificationTargets.foreach(notificationTarget => sendNotifications(task, result, notificationTarget) )
+  }
+
+  private[core] def sendNotifications(task: Task, result: TaskResult, notificationTarget: JobNotificationTarget): Unit = {
+    Try {
+      val target = notificationTarget.target
+
+      target.connect()
+      val notification = TaskNotification(
+        task.job.outputTable.name,
+        task.infoDate,
+        result.runInfo.get.started,
+        result.runInfo.get.finished,
+        NotificationTargetManager.runStatusToTaskStatus(result.runStatus),
+        notificationTarget.options
+      )
+
+      target.sendNotification(notification)
+      target.close()
+    } match {
+      case Success(_) =>
+      case Failure(ex) =>
+        log.error(s"Failed to send notifications to '${notificationTarget.name}' for task: ${result.job.outputTable.name} for '${task.infoDate}'.", ex)
     }
   }
 

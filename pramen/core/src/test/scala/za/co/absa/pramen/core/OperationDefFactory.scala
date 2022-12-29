@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core
 
 import com.typesafe.config.{Config, ConfigFactory}
+import za.co.absa.pramen.api.NotificationTarget
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.pipeline.{OperationDef, OperationType, TransformExpression}
 import za.co.absa.pramen.core.schedule.Schedule
@@ -34,6 +35,7 @@ object OperationDefFactory {
                            processingTimestampColumn: Option[String] = None,
                            schemaTransformations: Seq[TransformExpression] = Nil,
                            filters: Seq[String] = Nil,
+                           notificationTargets: Seq[String] = Nil,
                            sparkConfig: Map[String, String] = Map.empty[String, String],
                            extraOptions: Map[String, String] = Map.empty[String, String]): OperationDef = {
     OperationDef(
@@ -48,6 +50,7 @@ object OperationDefFactory {
       processingTimestampColumn,
       schemaTransformations,
       filters,
+      notificationTargets,
       sparkConfig,
       extraOptions)
   }

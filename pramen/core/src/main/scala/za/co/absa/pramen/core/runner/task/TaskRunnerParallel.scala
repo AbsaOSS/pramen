@@ -45,6 +45,7 @@ class TaskRunnerParallel(conf: Config,
       }
       logTaskResult(result)
       pipelineState.addTaskCompletion(Seq(result))
+      sendNotifications(task, result)
       result.runStatus
     })
   }

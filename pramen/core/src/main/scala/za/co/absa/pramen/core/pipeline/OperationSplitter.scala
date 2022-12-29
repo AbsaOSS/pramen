@@ -23,25 +23,28 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunnerImpl
 import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
-import za.co.absa.pramen.core.utils.ClassLoaderUtils
+import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 
 import java.time.LocalDate
 
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
                         bookkeeper: Bookkeeper)(implicit spark: SparkSession) {
+  val NOTIFICATION_TARGET_KEY = "notification.target"
+
   def createJobs(operationDef: OperationDef): Seq[Job] = {
     operationDef.operationType match {
-      case Ingestion(sourceName, sourceTables)            => createIngestion(operationDef, sourceName, sourceTables)
-      case Transformation(clazz, outputTable)             => createTransformation(operationDef, clazz, outputTable)
+      case Ingestion(sourceName, sourceTables) => createIngestion(operationDef, sourceName, sourceTables)
+      case Transformation(clazz, outputTable) => createTransformation(operationDef, clazz, outputTable)
       case PythonTransformation(pythonClass, outputTable) => createPythonTransformation(operationDef, pythonClass, outputTable)
-      case Sink(sinkName, sinkTables)                     => createSink(operationDef, sinkName, sinkTables)
-      case Transfer(sourceName, sinkName, tables)         => createTransfer(operationDef, sourceName, sinkName, tables)
+      case Sink(sinkName, sinkTables) => createSink(operationDef, sinkName, sinkTables)
+      case Transfer(sourceName, sinkName, tables) => createTransfer(operationDef, sourceName, sinkName, tables)
     }
   }
 
@@ -54,12 +57,15 @@ class OperationSplitter(conf: Config,
     sourceTables.map(sourceTable => {
       val source = sourceTable.overrideConf match {
         case Some(confOverride) => SourceManager.getSourceByName(sourceName, conf, Some(confOverride))
-        case None               => sourceBase
+        case None => sourceBase
       }
 
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
-      new IngestionJob(operationDef, metastore, bookkeeper, source, sourceTable, outputTable, specialCharacters)
+      val notificationTargets = operationDef.notificationTargets
+        .map(targetName => getNotificationTargets(targetName, sourceTable.conf))
+
+      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, sourceTable, outputTable, specialCharacters)
     })
   }
 
@@ -74,17 +80,20 @@ class OperationSplitter(conf: Config,
     tables.map(transferTable => {
       val source = transferTable.sourceOverrideConf match {
         case Some(confOverride) => SourceManager.getSourceByName(sourceName, conf, Some(confOverride))
-        case None               => sourceBase
+        case None => sourceBase
       }
 
       val sink = transferTable.sinkOverrideConf match {
         case Some(confOverride) => SinkManager.getSinkByName(sinkName, conf, Some(confOverride))
-        case None               => sinkBase
+        case None => sinkBase
       }
 
       val outputTable = transferTable.getMetaTable
 
-      new TransferJob(operationDef, metastore, bookkeeper, source,  transferTable, outputTable, sink, specialCharacters)
+      val notificationTargets = operationDef.notificationTargets
+        .map(targetName => getNotificationTargets(targetName, transferTable.conf))
+
+      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, source, transferTable, outputTable, sink, specialCharacters)
     })
   }
 
@@ -95,7 +104,10 @@ class OperationSplitter(conf: Config,
 
     val outputMetaTable = metastore.getTableDef(outputTable)
 
-    Seq(new TransformationJob(operationDef, metastore, bookkeeper, outputMetaTable, transformer))
+    val notificationTargets = operationDef.notificationTargets
+      .map(targetName => getNotificationTargets(targetName, operationDef.operationConf))
+
+    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, transformer))
   }
 
   def createPythonTransformation(operationDef: OperationDef,
@@ -117,7 +129,10 @@ class OperationSplitter(conf: Config,
       stdErrLogPrefix = "Pramen-Py(err)",
       redirectErrorStream = false)
 
-    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, outputMetaTable, pythonClass, pramenPyConfig, processRunner))
+    val notificationTargets = operationDef.notificationTargets
+      .map(targetName => getNotificationTargets(targetName, operationDef.operationConf))
+
+    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner))
   }
 
   def createSink(operationDef: OperationDef,
@@ -131,14 +146,25 @@ class OperationSplitter(conf: Config,
 
       val sink = sinkTable.overrideConf match {
         case Some(confOverride) => SinkManager.getSinkByName(sinkName, conf, Some(confOverride))
-        case None               => sinkBase
+        case None => sinkBase
       }
 
       val outputTableName = sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->$sinkName")
 
       val outputTable = inputTable.copy(name = outputTableName)
 
-      new SinkJob(operationDef, metastore, bookkeeper, outputTable, sink, sinkTable)
+      val notificationTargets = operationDef.notificationTargets
+        .map(targetName => getNotificationTargets(targetName, sinkTable.conf))
+
+      new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, outputTable, sink, sinkTable)
     })
+  }
+
+  private def getNotificationTargets(targetName: String,
+                                     tableConf: Config): JobNotificationTarget = {
+    val confOverride = ConfigUtils.getOptionConfig(tableConf, NOTIFICATION_TARGET_KEY)
+    val options = ConfigUtils.getExtraOptions(tableConf, "notification")
+    val target = NotificationTargetManager.getByName(targetName, conf, Option(confOverride))
+    JobNotificationTarget(targetName, options, target)
   }
 }

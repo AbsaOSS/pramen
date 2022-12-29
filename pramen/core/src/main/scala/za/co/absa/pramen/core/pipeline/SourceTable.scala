@@ -27,6 +27,7 @@ import scala.collection.JavaConverters._
 case class SourceTable(
                         metaTableName: String,
                         query: Query,
+                        conf: Config,
                         rangeFromExpr: Option[String],
                         rangeToExpr: Option[String],
                         transformations: Seq[TransformExpression],
@@ -66,7 +67,7 @@ object SourceTable {
       None
     }
 
-    SourceTable(metaTableName, query, dateFromExpr, dateToExpr, transformations, filters, columns, overrideConf)
+    SourceTable(metaTableName, query, conf, dateFromExpr, dateToExpr, transformations, filters, columns, overrideConf)
   }
 
   def fromConfig(conf: Config, arrayPath: String): Seq[SourceTable] = {

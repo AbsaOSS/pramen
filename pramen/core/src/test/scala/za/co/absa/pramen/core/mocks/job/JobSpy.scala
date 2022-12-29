@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.mocks.MetaTableFactory.getDummyMetaTable
-import za.co.absa.pramen.core.pipeline.{Job, JobPreRunResult, JobPreRunStatus, OperationDef}
+import za.co.absa.pramen.core.pipeline.{Job, JobNotificationTarget, JobPreRunResult, JobPreRunStatus, OperationDef}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
@@ -35,8 +35,9 @@ class JobSpy(jobName: String = "DummyJob",
              validationFunction: () => Reason = () => Reason.Ready,
              runFunction: () => DataFrame = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing,
-             saveStats: MetaTableStats = MetaTableStats(0, None)
-             ) extends Job {
+             saveStats: MetaTableStats = MetaTableStats(0, None),
+             jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty
+            ) extends Job {
   var getDatesToRunCount = 0
   var preRunCheckCount = 0
   var validateCount = 0
@@ -52,6 +53,8 @@ class JobSpy(jobName: String = "DummyJob",
   override val operation: OperationDef = operationDef
 
   override val scheduleStrategy: ScheduleStrategy = scheduleStrategyIn
+
+  override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
   def preRunCheck(infoDate: LocalDate,
                   conf: Config): JobPreRunResult = {
@@ -75,10 +78,9 @@ class JobSpy(jobName: String = "DummyJob",
   }
 
   override def save(df: DataFrame, infoDate: LocalDate, jobConfig: Config, jobStarted: Instant, inputRecordCount: Option[Long]): MetaTableStats = {
-    saveDf  = df
+    saveDf = df
     saveCount += 1
 
     saveStats
   }
-
 }

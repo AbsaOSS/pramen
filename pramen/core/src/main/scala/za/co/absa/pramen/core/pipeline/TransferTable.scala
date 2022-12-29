@@ -33,6 +33,7 @@ import scala.collection.JavaConverters._
 case class TransferTable(
                           query: Query,
                           jobMetaTableName: String,
+                          conf: Config,
                           rangeFromExpr: Option[String],
                           rangeToExpr: Option[String],
                           infoDateStart: LocalDate,
@@ -46,11 +47,11 @@ case class TransferTable(
                           sinkOverrideConf: Option[Config]
                         ) {
   def getSourceTable: SourceTable = {
-    SourceTable(jobMetaTableName, query, rangeFromExpr, rangeToExpr, transformations, filters, columns, sourceOverrideConf)
+    SourceTable(jobMetaTableName, query, conf, rangeFromExpr, rangeToExpr, transformations, filters, columns, sourceOverrideConf)
   }
 
   def getSinkTable: SinkTable = {
-    SinkTable(jobMetaTableName, Option(jobMetaTableName), rangeFromExpr, rangeToExpr, transformations, filters, columns, writeOptions, sinkOverrideConf)
+    SinkTable(jobMetaTableName, Option(jobMetaTableName), conf, rangeFromExpr, rangeToExpr, transformations, filters, columns, writeOptions, sinkOverrideConf)
   }
 
   def getMetaTable: MetaTable = {
@@ -103,7 +104,7 @@ object TransferTable {
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val jobMetaTable = getOutputTableName(jobMetaTableOpt, query, sinkName)
 
-    TransferTable(query, jobMetaTable, dateFromExpr, dateToExpr, startDate, trackDays, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
+    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
   }
 
   def fromConfig(conf: Config, appConfig: Config, arrayPath: String, sinkName: String): Seq[TransferTable] = {

@@ -14,12 +14,25 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mq
+package za.co.absa.pramen.api
 
-trait SingleMessageProducer {
-  def send(message: String, numberOrRetries: Int = 3): Unit
+sealed trait TaskStatus
 
-  def connect(): Unit
+object TaskStatus {
+  case class Succeeded(recordCount: Long) extends TaskStatus
 
-  def close(): Unit
+  case class ValidationFailed(ex: Throwable) extends TaskStatus
+
+  case class Failed(ex: Throwable) extends TaskStatus
+
+  case class MissingDependencies(tables: Seq[String]) extends TaskStatus
+
+  case class FailedDependencies(tables: Seq[String]) extends TaskStatus
+
+  case object NoData extends TaskStatus
+
+  case class InsufficientData(actual: Long, expected: Long) extends TaskStatus
+
+  case class Skipped(msg: String) extends TaskStatus
 }
+

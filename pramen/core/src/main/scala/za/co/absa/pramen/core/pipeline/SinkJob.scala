@@ -35,11 +35,12 @@ import scala.util.control.NonFatal
 class SinkJob(operationDef: OperationDef,
               metastore: Metastore,
               bookkeeper: Bookkeeper,
+              notificationTargets: Seq[JobNotificationTarget],
               outputTable: MetaTable,
               sink: Sink,
               sinkTable: SinkTable)
              (implicit spark: SparkSession)
-  extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
+  extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
 
   private val log = LoggerFactory.getLogger(this.getClass)

@@ -29,10 +29,11 @@ import java.time.{Instant, LocalDate}
 class TransformationJob(operationDef: OperationDef,
                         metastore: Metastore,
                         bookkeeper: Bookkeeper,
+                        notificationTargets: Seq[JobNotificationTarget],
                         outputTable: MetaTable,
                         transformer: Transformer)
                        (implicit spark: SparkSession)
-  extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
+  extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
 
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 

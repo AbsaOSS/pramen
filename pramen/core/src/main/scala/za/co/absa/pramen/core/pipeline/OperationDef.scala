@@ -18,8 +18,10 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.NotificationTarget
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -38,6 +40,7 @@ case class OperationDef(
                          processingTimestampColumn: Option[String],
                          schemaTransformations: Seq[TransformExpression],
                          filters: Seq[String],
+                         notificationTargets: Seq[String],
                          sparkConfig: Map[String, String],
                          extraOptions: Map[String, String]
                        )
@@ -56,6 +59,7 @@ object OperationDef {
   val PROCESSING_TIMESTAMP_COLUMN_KEY = "processing.timestamp.column"
   val SCHEMA_TRANSFORMATIONS_KEY = "transformations"
   val FILTERS_KEY = "filters"
+  val NOTIFICATION_TARGETS_KEY = "notification.targets"
   val SPARK_CONFIG_PREFIX = "spark.config"
   val EXTRA_OPTIONS_PREFIX = "option"
 
@@ -79,6 +83,7 @@ object OperationDef {
     val processingTimestampColumn = ConfigUtils.getOptionString(conf, PROCESSING_TIMESTAMP_COLUMN_KEY)
     val schemaTransformations = TransformExpression.fromConfig(conf, SCHEMA_TRANSFORMATIONS_KEY, parent)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
+    val notificationTargets = ConfigUtils.getOptListStrings(conf, NOTIFICATION_TARGETS_KEY)
     val sparkConfigOptions = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
     val extraOptions = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
 
@@ -113,6 +118,7 @@ object OperationDef {
       processingTimestampColumn,
       schemaTransformations,
       filters,
+      notificationTargets,
       sparkConfigOptions,
       extraOptions))
   }

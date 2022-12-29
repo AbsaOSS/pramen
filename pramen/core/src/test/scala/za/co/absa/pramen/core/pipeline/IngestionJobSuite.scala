@@ -323,11 +323,14 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
     val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
 
+    val tableConf = ConfigFactory.empty()
+
     val job = new IngestionJob(operationDef,
       metastore,
       bk,
+      Nil,
       source,
-      SourceTable("table1", Query.Table(sourceTable), rangeFromExpr, rangeToExpr, Seq(
+      SourceTable("table1", Query.Table(sourceTable), tableConf, rangeFromExpr, rangeToExpr, Seq(
         TransformExpression("NAME_U", "upper(NAME)")
       ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), configOverride),
       outputTable,

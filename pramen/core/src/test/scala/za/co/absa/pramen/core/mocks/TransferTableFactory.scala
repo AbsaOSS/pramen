@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.pipeline.{TransferTable, TransformExpression}
 
@@ -25,6 +25,7 @@ import java.time.LocalDate
 object TransferTableFactory {
   def getDummyTransferTable(query: Query = Query.Table("table1"),
                             jobMetaTableName: String = "table1->sink",
+                            conf: Config = ConfigFactory.empty(),
                             rangeFromExpr: Option[String] = None,
                             rangeToExpr: Option[String] = None,
                             infoDateStart: LocalDate = LocalDate.of(2020, 1, 1),
@@ -38,6 +39,7 @@ object TransferTableFactory {
                             sinkOverrideConf: Option[Config] = None): TransferTable = {
     TransferTable(query,
       jobMetaTableName,
+      conf,
       rangeFromExpr,
       rangeToExpr,
       infoDateStart,

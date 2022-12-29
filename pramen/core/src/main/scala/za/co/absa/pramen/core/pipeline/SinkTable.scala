@@ -25,6 +25,7 @@ import scala.collection.JavaConverters._
 case class SinkTable(
                       metaTableName: String,
                       outputTableName: Option[String],
+                      conf: Config,
                       rangeFromExpr: Option[String],
                       rangeToExpr: Option[String],
                       transformations: Seq[TransformExpression],
@@ -67,7 +68,7 @@ object SinkTable {
       None
     }
 
-    SinkTable(metaTableName, outputTableName, dateFromExpr, dateToExpr, transformations, filters, columns, options, overrideConf)
+    SinkTable(metaTableName, outputTableName, conf, dateFromExpr, dateToExpr, transformations, filters, columns, options, overrideConf)
   }
 
   def fromConfig(conf: Config, arrayPath: String): Seq[SinkTable] = {

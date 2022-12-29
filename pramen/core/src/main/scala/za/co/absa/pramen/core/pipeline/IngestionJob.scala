@@ -33,12 +33,13 @@ import java.time.{Instant, LocalDate}
 class IngestionJob(operationDef: OperationDef,
                    metastore: Metastore,
                    bookkeeper: Bookkeeper,
+                   notificationTargets: Seq[JobNotificationTarget],
                    source: Source,
                    sourceTable: SourceTable,
                    outputTable: MetaTable,
                    specialCharacters: String)
                   (implicit spark: SparkSession)
-  extends JobBase(operationDef, metastore, bookkeeper, outputTable) {
+  extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
 
   private val log = LoggerFactory.getLogger(this.getClass)

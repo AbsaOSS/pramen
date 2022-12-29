@@ -29,16 +29,17 @@ import java.time.{Instant, LocalDate}
 class TransferJob(operationDef: OperationDef,
                   metastore: Metastore,
                   bookkeeper: Bookkeeper,
+                  notificationTargets: Seq[JobNotificationTarget],
                   source: Source,
                   table: TransferTable,
                   bookkeepingMetaTable: MetaTable,
                   sink: Sink,
                   specialCharacters: String)
                  (implicit spark: SparkSession)
-  extends JobBase(operationDef, metastore, bookkeeper, bookkeepingMetaTable) {
+  extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable) {
 
-  val ingestionJob = new IngestionJob(operationDef, metastore, bookkeeper, source, table.getSourceTable, bookkeepingMetaTable, specialCharacters)
-  val sinkJob = new SinkJob(operationDef, metastore, bookkeeper, bookkeepingMetaTable, sink, table.getSinkTable)
+  val ingestionJob = new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, table.getSourceTable, bookkeepingMetaTable, specialCharacters)
+  val sinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable, sink, table.getSinkTable)
 
   override val scheduleStrategy: ScheduleStrategy = ingestionJob.scheduleStrategy
 
