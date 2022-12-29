@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mq
+package za.co.absa.pramen.core.notify.pipeline
 
-trait SingleMessageProducer {
-  def send(message: String, numberOrRetries: Int = 3): Unit
+import java.time.LocalDate
 
-  def connect(): Unit
-
-  def close(): Unit
-}
+case class SchemaDifference(
+                          tableName: String,
+                          infoDateOld: LocalDate,
+                          infoDateNew: LocalDate,
+                          changes: List[FieldChange]
+                        )

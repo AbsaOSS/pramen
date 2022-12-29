@@ -14,18 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mq
+package za.co.absa.pramen.core.notify.pipeline
 
-import com.typesafe.config.Config
-import org.slf4j.LoggerFactory
+sealed trait FieldChange
 
-class MqNotifierKafka(topic: String, token: String, kafkaConfig: Config) extends MqNotifier {
-  private val log = LoggerFactory.getLogger(this.getClass)
-  private val producer = new SingleMessageProducerKafka(topic, kafkaConfig)
+object FieldChange {
+  case class NewField(columnName: String, dataType: String) extends FieldChange
 
-  override def sendNotification(): Unit = {
-    log.info(s"Sending '$token' to Kafka topic: '$topic'...")
-    producer.send(token)
-    log.info(s"Successfully send the notification topic to Kafka.")
-  }
+  case class DeletedField(columnName: String, dataType: String) extends FieldChange
+
+  case class ChangedType(columnName: String, oldType: String, newType: String) extends FieldChange
 }

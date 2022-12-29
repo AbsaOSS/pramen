@@ -21,7 +21,6 @@ import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
-import za.co.absa.pramen.core.notify.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.TaskResult

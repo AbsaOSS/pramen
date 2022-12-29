@@ -14,21 +14,19 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mq
-
-import java.util.Properties
-import java.util.concurrent.TimeUnit
+package za.co.absa.pramen.core.notify.mq
 
 import com.typesafe.config.Config
 import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, Future}
+import java.util.Properties
+import java.util.concurrent.TimeUnit
 import scala.util.control.NonFatal
 
-class SingleMessageProducerKafka(topic: String, kafkaConfig: Config) extends SingleMessageProducer {
+class SingleMessageProducerKafka(kafkaConfig: Config) extends SingleMessageProducer {
+  val SEND_TIMEOUT_SECONDS = 120
+
   val props: Properties = ConfigUtils.toProperties(kafkaConfig)
 
   props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, classOf[org.apache.kafka.common.serialization.StringSerializer])
@@ -40,26 +38,20 @@ class SingleMessageProducerKafka(topic: String, kafkaConfig: Config) extends Sin
     producer = new KafkaProducer[String, String](props)
   }
 
-  override def send(message: String, numberOrRetries: Int): Unit = {
+  override def send(topic: String, message: String, numberOrRetries: Int): Unit = {
     if (producer == null) {
       connect()
     }
 
     val record = new ProducerRecord[String, String](topic, null, message)
     try {
-      producer.send(record).get()
+      producer.send(record).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
     } catch {
       case NonFatal(ex) =>
         if (numberOrRetries <= 0) {
           throw ex
         } else {
-          val fut = Future {
-            send(message, numberOrRetries - 1)
-            true
-          }
-
-          // send() can sometime block indefinitely, better to wrap it in a Future and bound the wait.
-          Await.result(fut, Duration.create(120, TimeUnit.SECONDS))
+          send(topic, message, numberOrRetries - 1)
         }
     }
   }

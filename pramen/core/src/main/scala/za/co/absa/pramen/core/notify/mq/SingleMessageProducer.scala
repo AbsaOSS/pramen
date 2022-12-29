@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify
+package za.co.absa.pramen.core.notify.mq
 
-sealed trait FieldChange
+trait SingleMessageProducer {
+  def send(topic: String, message: String, numberOrRetries: Int = 3): Unit
 
-object FieldChange {
-  case class NewField(columnName: String, dataType: String) extends FieldChange
+  def connect(): Unit
 
-  case class DeletedField(columnName: String, dataType: String) extends FieldChange
-
-  case class ChangedType(columnName: String, oldType: String, newType: String) extends FieldChange
+  def close(): Unit
 }

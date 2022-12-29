@@ -24,8 +24,8 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{ArrayType, DataType, StructType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.notify.pipeline.FieldChange
 import za.co.absa.pramen.core.pipeline.TransformExpression
-import za.co.absa.pramen.core.notify.FieldChange
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
