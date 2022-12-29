@@ -3,8 +3,8 @@ package za.co.absa.pramen.core.notify
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, TaskNotification}
-import za.co.absa.pramen.core.mq.{SingleMessageProducer, SingleMessageProducerKafka}
+import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, TaskNotification, TaskStatus}
+import za.co.absa.pramen.core.notify.mq.{SingleMessageProducer, SingleMessageProducerKafka}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 class HyperdriveNotificationTarget(conf: Config,
@@ -24,11 +24,15 @@ class HyperdriveNotificationTarget(conf: Config,
     if (notification.options.contains(TOKEN_KEY)) {
       val token = notification.options(TOKEN_KEY)
 
-      log.info(s"Sending '$token' to the Hyperdrive Kafka topic: '$topic'...")
-      producer.send(token)
-      log.info(s"Successfully send the notification topic to Kafka.")
+      if (notification.status.isInstanceOf[TaskStatus.Skipped]) {
+        log.info(s"Sending '$token' to the Hyperdrive Kafka topic: '$topic'...")
+        producer.send(topic, token)
+        log.info(s"Successfully send the notification topic to Kafka.")
+      } else {
+        log.info(s"Not sending '$token' to the Hyperdrive Kafka topic: '$topic' for the unsuccessful job...")
+      }
     } else {
-      log.warn(s"Token is not configured for ${notification.tableName}. Hyperdrive notification won't be sent.")
+      log.warn(s"Token is not configured for ${notification.tableName}. Hyperdrive notification won't be sent. Please, set 'notification.$TOKEN_KEY' option for the job.")
     }
   }
 
@@ -36,16 +40,16 @@ class HyperdriveNotificationTarget(conf: Config,
 }
 
 object HyperdriveNotificationTarget extends ExternalChannelFactory[NotificationTarget] {
-  val TOPIC_KEY = "topic"
-  val KAFKA_KEY = "kafka"
+  val KAFKA_TOPIC_KEY = "kafka.topic"
+  val KAFKA_OPTION_KEY = "kafka.option"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): HyperdriveNotificationTarget = {
-    ConfigUtils.validatePathsExistence(conf, parentPath, Seq(TOPIC_KEY, KAFKA_KEY))
+    ConfigUtils.validatePathsExistence(conf, parentPath, Seq(KAFKA_TOPIC_KEY, KAFKA_OPTION_KEY))
 
-    val topic = conf.getString(TOPIC_KEY)
-    val kafkaConf = conf.getConfig(KAFKA_KEY)
+    val topic = conf.getString(KAFKA_TOPIC_KEY)
+    val kafkaConf = conf.getConfig(KAFKA_OPTION_KEY)
 
-    val producer = new SingleMessageProducerKafka(topic, kafkaConf)
+    val producer = new SingleMessageProducerKafka(kafkaConf)
 
     new HyperdriveNotificationTarget(conf, producer, topic)
   }

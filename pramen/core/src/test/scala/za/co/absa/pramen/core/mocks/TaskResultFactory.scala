@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job, TaskRunReason}
 import za.co.absa.pramen.core.mocks.job.JobSpy
-import za.co.absa.pramen.core.notify.SchemaDifference
+import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
 import za.co.absa.pramen.core.runner.task.{RunInfo, RunStatus, TaskResult}
 
 import java.time.{Instant, LocalDate}

@@ -37,6 +37,7 @@ class OperationSplitter(conf: Config,
                         metastore: Metastore,
                         bookkeeper: Bookkeeper)(implicit spark: SparkSession) {
   val NOTIFICATION_TARGET_KEY = "notification.target"
+  val NOTIFICATION_KEY = "notification"
 
   def createJobs(operationDef: OperationDef): Seq[Job] = {
     operationDef.operationType match {
@@ -163,7 +164,7 @@ class OperationSplitter(conf: Config,
   private def getNotificationTargets(targetName: String,
                                      tableConf: Config): JobNotificationTarget = {
     val confOverride = ConfigUtils.getOptionConfig(tableConf, NOTIFICATION_TARGET_KEY)
-    val options = ConfigUtils.getExtraOptions(tableConf, "notification")
+    val options = ConfigUtils.getExtraOptions(tableConf, NOTIFICATION_KEY)
     val target = NotificationTargetManager.getByName(targetName, conf, Option(confOverride))
     JobNotificationTarget(targetName, options, target)
   }
