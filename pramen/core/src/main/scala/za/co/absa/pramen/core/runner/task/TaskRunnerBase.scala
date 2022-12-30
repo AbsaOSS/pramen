@@ -239,7 +239,7 @@ abstract class TaskRunnerBase(conf: Config,
     } match {
       case Success(_) =>
       case Failure(ex) =>
-        log.error(s"Failed to send notifications to '${notificationTarget.name}' for task: ${result.job.outputTable.name} for '${task.infoDate}'.", ex)
+        log.error(s"$EXCLAMATION Failed to send notifications to '${notificationTarget.name}' for task: ${result.job.outputTable.name} for '${task.infoDate}'.", ex)
     }
   }
 

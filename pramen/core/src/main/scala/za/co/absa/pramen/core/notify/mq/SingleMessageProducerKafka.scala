@@ -17,7 +17,8 @@
 package za.co.absa.pramen.core.notify.mq
 
 import com.typesafe.config.Config
-import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
+import org.apache.kafka.clients.producer.{Callback, KafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata}
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.util.Properties
@@ -35,17 +36,17 @@ class SingleMessageProducerKafka(kafkaConfig: Config) extends SingleMessageProdu
   var producer: KafkaProducer[String, String] = _
 
   override def connect(): Unit = {
-    producer = new KafkaProducer[String, String](props)
+    if (producer == null) {
+      producer = new KafkaProducer[String, String](props)
+    }
   }
 
   override def send(topic: String, message: String, numberOrRetries: Int): Unit = {
-    if (producer == null) {
-      connect()
-    }
+    connect()
 
     val record = new ProducerRecord[String, String](topic, null, message)
     try {
-      producer.send(record).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+      producer.send(record).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
     } catch {
       case NonFatal(ex) =>
         if (numberOrRetries <= 0) {
@@ -57,8 +58,10 @@ class SingleMessageProducerKafka(kafkaConfig: Config) extends SingleMessageProdu
   }
 
   override def close(): Unit = {
-    producer.flush()
-    producer.close()
-    producer = null
+    if (producer != null) {
+      producer.flush()
+      producer.close()
+      producer = null
+    }
   }
 }

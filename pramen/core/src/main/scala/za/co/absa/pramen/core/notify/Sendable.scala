@@ -84,7 +84,7 @@ trait Sendable {
     // Send it
     try {
       Transport.send(message)
-      log.info(s"$EMAIL2 An email has been sent successfully.")
+      log.info(s"$EMAIL3 An email has been sent successfully.")
     } catch {
       case NonFatal(ex) => log.error(s"$FAILURE Failed to send an email.", ex)
     }
