@@ -84,20 +84,20 @@ abstract class TaskRunnerBase(conf: Config,
             Right(validationResult)
           case NoData =>
             log.info(s"NO DATA available for the task: $outputTable for date: ${task.infoDate}.")
-            Left(TaskResult(task.job, RunStatus.NoData, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
+            Left(TaskResult(task.job, RunStatus.NoData, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
           case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTable for date: ${task.infoDate}. Expected = $expected, actual = $actual")
-            Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
+            Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
           case AlreadyRan =>
             if (runtimeConfig.isRerun) {
               log.info(s"RE-RUNNING the task: $outputTable for date: ${task.infoDate}.")
               Right(validationResult)
             } else {
               log.info(s"SKIPPING already ran job: $outputTable for date: ${task.infoDate}.")
-              Left(TaskResult(task.job, RunStatus.NotRan, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings))
+              Left(TaskResult(task.job, RunStatus.NotRan, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
             }
           case FailedDependencies(failures) =>
-            Left(TaskResult(task.job, RunStatus.FailedDependencies(failures), getRunInfo(task.infoDate, started), Nil, Nil))
+            Left(TaskResult(task.job, RunStatus.FailedDependencies(failures), getRunInfo(task.infoDate, started), Nil, Nil, Nil))
         }
         if (validationResult.dependencyWarnings.nonEmpty) {
           log.warn(s"$WARNING Validation of the task: $outputTable for date: ${task.infoDate} has " +
@@ -105,7 +105,7 @@ abstract class TaskRunnerBase(conf: Config,
         }
         resultToReturn
       case Failure(ex) =>
-        Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), Nil, Nil))
+        Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), Nil, Nil, Nil))
     }
   }
 
@@ -136,16 +136,16 @@ abstract class TaskRunnerBase(conf: Config,
                 Right(status)
               case Reason.NotReady(msg) =>
                 log.info(s"NOT READY validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
-                Left(TaskResult(task.job, RunStatus.ValidationFailed(new ReasonException(Reason.NotReady(msg), msg)), getRunInfo(task.infoDate, started), Nil, status.dependencyWarnings))
+                Left(TaskResult(task.job, RunStatus.ValidationFailed(new ReasonException(Reason.NotReady(msg), msg)), getRunInfo(task.infoDate, started), Nil, status.dependencyWarnings, Nil))
               case Reason.Skip(msg) =>
                 log.info(s"SKIP validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
                 if (bookkeeper.getLatestDataChunk(outputTable, task.infoDate, task.infoDate).isEmpty) {
                   bookkeeper.setRecordCount(outputTable, task.infoDate, task.infoDate, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond)
                 }
-                Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), Nil, status.dependencyWarnings))
+                Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), Nil, status.dependencyWarnings, Nil))
             }
           case Failure(ex) =>
-            Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), Nil, status.dependencyWarnings))
+            Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), Nil, status.dependencyWarnings, Nil))
         }
     }
   }
@@ -204,21 +204,22 @@ abstract class TaskRunnerBase(conf: Config,
         RunStatus.Succeeded(recordCountOldOpt, stats.recordCount, stats.dataSizeBytes, completionReason),
         Some(RunInfo(task.infoDate, started, finished)),
         schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
-        validationResult.dependencyWarnings)
+        validationResult.dependencyWarnings,
+        Seq.empty)
     } match {
       case Success(result) =>
         result
       case Failure(ex) =>
         TaskResult(task.job, RunStatus.Failed(ex), getRunInfo(task.infoDate, started), Nil,
-          validationResult.dependencyWarnings)
+          validationResult.dependencyWarnings, Nil)
     }
   }
 
-  private[core] def sendNotifications(task: Task, result: TaskResult): Unit = {
-    task.job.notificationTargets.foreach(notificationTarget => sendNotifications(task, result, notificationTarget))
+  private[core] def sendNotifications(task: Task, result: TaskResult): Seq[NotificationFailure] = {
+    task.job.notificationTargets.flatMap(notificationTarget => sendNotifications(task, result, notificationTarget))
   }
 
-  private[core] def sendNotifications(task: Task, result: TaskResult, notificationTarget: JobNotificationTarget): Unit = {
+  private[core] def sendNotifications(task: Task, result: TaskResult, notificationTarget: JobNotificationTarget): Option[NotificationFailure] = {
     Try {
       val target = notificationTarget.target
 
@@ -238,8 +239,15 @@ abstract class TaskRunnerBase(conf: Config,
       }
     } match {
       case Success(_) =>
+        None
       case Failure(ex) =>
         log.error(s"$EXCLAMATION Failed to send notifications to '${notificationTarget.name}' for task: ${result.job.outputTable.name} for '${task.infoDate}'.", ex)
+        Option(NotificationFailure(
+          task.job.outputTable.name,
+          notificationTarget.name,
+          task.infoDate,
+          ex
+        ))
     }
   }
 

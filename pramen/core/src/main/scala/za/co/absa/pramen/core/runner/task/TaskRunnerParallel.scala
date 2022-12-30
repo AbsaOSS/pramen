@@ -43,9 +43,12 @@ class TaskRunnerParallel(conf: Config,
         case Left(failedResult)         => failedResult
         case Right(validationResult) => run(task, started, validationResult)
       }
-      logTaskResult(result)
-      pipelineState.addTaskCompletion(Seq(result))
-      sendNotifications(task, result)
+      val notificationTargetErrors = sendNotifications(task, result)
+      val updatedResult = result.copy(notificationTargetErrors = notificationTargetErrors)
+
+      logTaskResult(updatedResult)
+      pipelineState.addTaskCompletion(Seq(updatedResult))
+
       result.runStatus
     })
   }

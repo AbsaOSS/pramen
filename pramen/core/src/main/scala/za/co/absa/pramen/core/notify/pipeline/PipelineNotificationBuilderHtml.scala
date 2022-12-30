@@ -19,11 +19,11 @@ package za.co.absa.pramen.core.notify.pipeline
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
-import za.co.absa.pramen.core.notify.message._
+import za.co.absa.pramen.core.notify.message.{TableHeader, _}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
 import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 import za.co.absa.pramen.core.runner.task.RunStatus._
-import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.core.runner.task.{NotificationFailure, TaskResult}
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
 
 import java.time._
@@ -91,9 +91,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   def renderSubject(): String = {
     val timeCreatedStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+    val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
+
     val dryRunStr = if (isDryRun) "(DRY RUN) " else ""
-    if (appException.isEmpty && !completedTasks.exists(t => t.runStatus.isFailure)) {
+
+    if (!someTasksFailed) {
       s"${dryRunStr}Notification for $appName at $timeCreatedStr"
+    } else if (someTasksSucceeded && someTasksFailed) {
+      s"${dryRunStr}Notification of partial success for $appName at $timeCreatedStr"
     } else {
       s"${dryRunStr}Notification of FAILURE for $appName at $timeCreatedStr"
     }
@@ -121,6 +126,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         }
       })
 
+    val notificationTargetErrors = completedTasks.flatMap(_.notificationTargetErrors)
+
+    if (notificationTargetErrors.nonEmpty) {
+      renderNotificationTargetErrors(builder, notificationTargetErrors)
+    }
+
     builder.withRawParagraph(
       s"""Regards,<br>
          |Pramen<br>
@@ -144,12 +155,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       .withText(envName, Style.Bold)
       .withText(". The job has ")
 
-    val someTasksSucceeded = completedTasks.exists(_.runStatus.isInstanceOf[Succeeded])
-    val someTasksFailed = completedTasks.exists(t => t.runStatus.isFailure)
+    val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
 
     appException match {
-      case None if someTasksFailed && !someTasksSucceeded => introParagraph.withText("FAILED", Style.Error)
       case None if someTasksSucceeded && someTasksFailed  => introParagraph.withText("partially succeeded", Style.Warning)
+      case None if someTasksFailed                        => introParagraph.withText("FAILED", Style.Error)
       case None                                           => introParagraph.withText("succeeded", Style.Success)
       case Some(_)                                        => introParagraph.withText("FAILED", Style.Error)
     }
@@ -179,6 +189,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     appException.foreach(ex => builder.withException("The job has failed with the following exception:", ex))
 
     builder
+  }
+
+  private def getSuccessFlags: (Boolean, Boolean) = {
+    val hasNotificationFailures = completedTasks.exists(t => t.notificationTargetErrors.nonEmpty)
+    val someTasksSucceeded = completedTasks.exists(_.runStatus.isInstanceOf[Succeeded]) && appException.isEmpty
+    val someTasksFailed = completedTasks.exists(t => t.runStatus.isFailure) || hasNotificationFailures || appException.nonEmpty
+    (someTasksSucceeded, someTasksFailed)
   }
 
   private def getZoneId: ZoneId = {
@@ -305,6 +322,43 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     })
 
     builder.withTable(tableBuilder)
+  }
+
+  def renderNotificationTargetErrors(builder: MessageBuilderHtml, notificationTargetErrors: ListBuffer[NotificationFailure]): MessageBuilder = {
+    val tableBuilder = new TableBuilderHtml
+
+    val tableHeaders = new ListBuffer[TableHeader]
+
+    tableHeaders.append(TableHeader(TextElement("Notification target"), Align.Left))
+    tableHeaders.append(TableHeader(TextElement("Table"), Align.Left))
+    tableHeaders.append(TableHeader(TextElement("Date"), Align.Left))
+    tableHeaders.append(TableHeader(TextElement("Error"), Align.Left))
+    tableBuilder.withHeaders(tableHeaders.toSeq)
+
+    notificationTargetErrors.foreach(error => {
+      val row = new ListBuffer[TextElement]
+
+      row.append(TextElement(error.notificationTarget))
+      row.append(TextElement(error.table))
+      row.append(TextElement(error.infoDate.toString))
+      row.append(TextElement(getErrorMessageFromException(error.ex), Style.Error))
+
+      tableBuilder.withRow(row)
+    })
+
+    val notificationErrorsParagraph = ParagraphBuilder()
+      .withText("Failed to send notifications to the following targets:", Style.Exception)
+
+    builder.withParagraph(notificationErrorsParagraph)
+    builder.withTable(tableBuilder)
+  }
+
+  private def getErrorMessageFromException(ex: Throwable): String = {
+    if (ex.getCause == null) {
+      ex.getMessage
+    } else {
+      s"${ex.getMessage} (${ex.getCause.getMessage})"
+    }
   }
 
   private def getThroughputRps(task: TaskResult): TextElement = {

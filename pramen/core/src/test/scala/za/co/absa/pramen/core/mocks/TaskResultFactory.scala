@@ -33,7 +33,8 @@ object TaskResultFactory {
       runStatus,
       runInfo,
       schemaDifferences,
-      dependencyWarnings)
+      dependencyWarnings,
+      Nil)
   }
 
 }
