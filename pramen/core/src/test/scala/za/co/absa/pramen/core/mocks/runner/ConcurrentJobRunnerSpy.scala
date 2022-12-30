@@ -73,7 +73,7 @@ class ConcurrentJobRunnerSpy(includeFails: Boolean = false) extends ConcurrentJo
         RunStatus.NoData
       }
 
-      val taskResult = TaskResult(job, status, Some(RunInfo(infoDate, started, finished)), Nil, Nil)
+      val taskResult = TaskResult(job, status, Some(RunInfo(infoDate, started, finished)), Nil, Nil, Nil)
 
       completedJobsChannel.send((job, taskResult :: Nil, taskResult.runStatus.isInstanceOf[RunStatus.Succeeded] || taskResult.runStatus == RunStatus.NotRan))
 

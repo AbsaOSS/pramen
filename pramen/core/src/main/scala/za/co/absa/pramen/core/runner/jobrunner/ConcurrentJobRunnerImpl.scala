@@ -82,7 +82,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
         completedJobsChannel.send((job, Nil, isSucceeded))
       }.recover({
         case NonFatal(ex) =>
-          completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, Nil, Nil) :: Nil, false))
+          completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, Nil, Nil, Nil) :: Nil, false))
       })
     })
     completedJobsChannel.close()

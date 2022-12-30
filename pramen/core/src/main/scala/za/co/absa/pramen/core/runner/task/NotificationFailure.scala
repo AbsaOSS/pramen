@@ -16,14 +16,11 @@
 
 package za.co.absa.pramen.core.runner.task
 
-import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
-import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job}
+import java.time.LocalDate
 
-case class TaskResult(
-                       job: Job,
-                       runStatus: RunStatus,
-                       runInfo: Option[RunInfo],
-                       schemaChanges: Seq[SchemaDifference],
-                       dependencyWarnings: Seq[DependencyWarning],
-                       notificationTargetErrors: Seq[NotificationFailure]
-                     )
+case class NotificationFailure(
+                                table: String,
+                                notificationTarget: String,
+                                infoDate: LocalDate,
+                                ex: Throwable
+                              )

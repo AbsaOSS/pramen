@@ -82,7 +82,7 @@ class OrchestratorImpl extends Orchestrator {
 
       val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
 
-      val taskResult = TaskResult(job, RunStatus.MissingDependencies(missingTables), None, Nil, Nil)
+      val taskResult = TaskResult(job, RunStatus.MissingDependencies(missingTables), None, Nil, Nil, Nil)
 
       state.addTaskCompletion(taskResult :: Nil)
     })
