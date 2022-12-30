@@ -20,10 +20,12 @@ object Emoji {
   val SUCCESS = "\u2705"
   val WARNING = "\u26A0\uFE0F"
   val FAILURE = "\u274C"
+  val EXCLAMATION = s"\u2757"
 
   val ROCKET = "\uD83D\uDE80"
   val EMAIL1 = "\uD83D\uDCE7"
   val EMAIL2 = "\uD83D\uDCE9"
+  val EMAIL3 = "\u2709"
   val LIGHT_BULB = "\uD83D\uDCA1"
   val STAR = "\u2B50"
 }

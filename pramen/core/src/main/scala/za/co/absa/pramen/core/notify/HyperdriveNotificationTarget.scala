@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 ABSA Group Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package za.co.absa.pramen.core.notify
 
 import com.typesafe.config.Config
@@ -6,6 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, TaskNotification, TaskStatus}
 import za.co.absa.pramen.core.notify.mq.{SingleMessageProducer, SingleMessageProducerKafka}
 import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.Emoji.WARNING
 
 class HyperdriveNotificationTarget(conf: Config,
                                    producer: SingleMessageProducer,
@@ -14,25 +31,23 @@ class HyperdriveNotificationTarget(conf: Config,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  override def config: Config = conf
+  private val NOTIFICATION_SUCCESS = s"\u26a1"
 
-  override def connect(): Unit = {
-    producer.connect()
-  }
+  override def config: Config = conf
 
   override def sendNotification(notification: TaskNotification): Unit = {
     if (notification.options.contains(TOKEN_KEY)) {
       val token = notification.options(TOKEN_KEY)
 
-      if (notification.status.isInstanceOf[TaskStatus.Skipped]) {
+      if (notification.status.isInstanceOf[TaskStatus.Succeeded]) {
         log.info(s"Sending '$token' to the Hyperdrive Kafka topic: '$topic'...")
         producer.send(topic, token)
-        log.info(s"Successfully send the notification topic to Kafka.")
+        log.info(s"$NOTIFICATION_SUCCESS Successfully send the notification topic to Kafka.")
       } else {
         log.info(s"Not sending '$token' to the Hyperdrive Kafka topic: '$topic' for the unsuccessful job...")
       }
     } else {
-      log.warn(s"Token is not configured for ${notification.tableName}. Hyperdrive notification won't be sent. Please, set 'notification.$TOKEN_KEY' option for the job.")
+      log.warn(s"$WARNING Token is not configured for ${notification.tableName}. Hyperdrive notification won't be sent. Please, set 'notification.$TOKEN_KEY' option for the job.")
     }
   }
 
