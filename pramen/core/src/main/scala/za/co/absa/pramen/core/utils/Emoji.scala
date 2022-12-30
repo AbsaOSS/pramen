@@ -28,4 +28,5 @@ object Emoji {
   val EMAIL3 = "\u2709"
   val LIGHT_BULB = "\uD83D\uDCA1"
   val STAR = "\u2B50"
+  val VOLTAGE = "\u26A1"
 }
