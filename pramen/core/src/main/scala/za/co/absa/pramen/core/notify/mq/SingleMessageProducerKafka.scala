@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.notify.mq
 
 import com.typesafe.config.Config
-import org.apache.kafka.clients.producer.{Callback, KafkaProducer, ProducerConfig, ProducerRecord, RecordMetadata}
+import org.apache.kafka.clients.producer.{KafkaProducer, ProducerConfig, ProducerRecord}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -25,8 +25,11 @@ import java.util.Properties
 import java.util.concurrent.TimeUnit
 import scala.util.control.NonFatal
 
-class SingleMessageProducerKafka(kafkaConfig: Config) extends SingleMessageProducer {
-  val SEND_TIMEOUT_SECONDS = 120
+class SingleMessageProducerKafka(conf: Config, kafkaConfig: Config) extends SingleMessageProducer {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
+  val SEND_TIMEOUT_KEY = "timeout.ms"
+  val sendTimeoutMs: Int = ConfigUtils.getOptionInt(conf, SEND_TIMEOUT_KEY).getOrElse(30000)
 
   val props: Properties = ConfigUtils.toProperties(kafkaConfig)
 
@@ -37,6 +40,7 @@ class SingleMessageProducerKafka(kafkaConfig: Config) extends SingleMessageProdu
 
   override def connect(): Unit = {
     if (producer == null) {
+      log.info(s"Connecting to Kafka... (timeout = $sendTimeoutMs seconds)")
       producer = new KafkaProducer[String, String](props)
     }
   }
@@ -46,12 +50,13 @@ class SingleMessageProducerKafka(kafkaConfig: Config) extends SingleMessageProdu
 
     val record = new ProducerRecord[String, String](topic, null, message)
     try {
-      producer.send(record).get(SEND_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+      producer.send(record).get(sendTimeoutMs, TimeUnit.MILLISECONDS)
     } catch {
       case NonFatal(ex) =>
         if (numberOrRetries <= 0) {
           throw ex
         } else {
+          log.error(s"An error has occurred while sending a message to Kafka. Retrying... (remaining retries = $numberOrRetries).", ex)
           send(topic, message, numberOrRetries - 1)
         }
     }
