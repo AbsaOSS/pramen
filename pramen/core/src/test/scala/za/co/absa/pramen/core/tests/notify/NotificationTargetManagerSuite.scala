@@ -33,6 +33,8 @@ class NotificationTargetManagerSuite extends AnyWordSpec {
        |
        |      kafka.topic = "mytopic"
        |
+       |      timeout.seconds = 10
+       |
        |      kafka.option {
        |         bootstrap.servers = "dummy:9092,dummy:9093"
        |         sasl.mechanism = "GSSAPI"

@@ -64,7 +64,7 @@ object HyperdriveNotificationTarget extends ExternalChannelFactory[NotificationT
     val topic = conf.getString(KAFKA_TOPIC_KEY)
     val kafkaConf = conf.getConfig(KAFKA_OPTION_KEY)
 
-    val producer = new SingleMessageProducerKafka(kafkaConf)
+    val producer = new SingleMessageProducerKafka(conf, kafkaConf)
 
     new HyperdriveNotificationTarget(conf, producer, topic)
   }
