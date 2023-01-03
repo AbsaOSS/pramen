@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.sink.CsvConversionParamsFactory
 import za.co.absa.pramen.core.utils.{FsUtils, SparkUtils}
 
+import java.io.File
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 
@@ -267,7 +268,7 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
         val contents = Files.readAllLines(Paths.get(actualFileName)).toArray.mkString("\n")
 
-        assert(actualFileName.contains("local/table1_2022-02-18_"))
+        assert(actualFileName.contains(s"local${File.separator}table1_2022-02-18_"))
         assert(contents == "Test content")
       }
     }
@@ -289,7 +290,8 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
       val actual = sink.getFinalFileName("table1", infoDate, "/bigdata")
 
-      assert(actual == "/bigdata/A_table1_2022-02-18.csv")
+      val expected = s"${File.separator}bigdata${File.separator}A_table1_2022-02-18.csv"
+      assert(actual == expected)
     }
   }
 
