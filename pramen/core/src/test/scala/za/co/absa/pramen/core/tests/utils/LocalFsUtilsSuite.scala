@@ -20,6 +20,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.LocalFsUtils
 
+import java.io.File
 import java.nio.file.{Files, Paths}
 
 class LocalFsUtilsSuite extends AnyWordSpec with TempDirFixture {
@@ -85,32 +86,42 @@ class LocalFsUtilsSuite extends AnyWordSpec with TempDirFixture {
     }
 
     "split nothing when there are no wildcards" in {
-      val (path, mask) = LocalFsUtils.splitPathAndMask("/path/subpath")
-      assert(path == "/path/subpath")
+      val inputPath = s"path${File.separator}subpath"
+      val (path, mask) = LocalFsUtils.splitPathAndMask(inputPath)
+
+      val expectedPath = s"path${File.separator}subpath"
+      assert(path == expectedPath)
       assert(mask == "*")
     }
 
     "remove the trailing slash when there are no wildcards" in {
-      val (path, mask) = LocalFsUtils.splitPathAndMask("/path/subpath/")
-      assert(path == "/path/subpath")
+      val inputPath = s"path${File.separator}subpath${File.separator}"
+      val (path, mask) = LocalFsUtils.splitPathAndMask(inputPath)
+
+      val expectedPath = s"path${File.separator}subpath"
+      assert(path == expectedPath)
       assert(mask == "*")
     }
 
     "split a path with a wildcard" in {
-      val (path, mask) = LocalFsUtils.splitPathAndMask("/path/subpath/*.csv")
-      assert(path == "/path/subpath")
+      val inputPath = s"path${File.separator}subpath${File.separator}*.csv"
+      val (path, mask) = LocalFsUtils.splitPathAndMask(inputPath)
+
+      val expectedPath = s"path${File.separator}subpath"
+      assert(path == expectedPath)
       assert(mask == "*.csv")
     }
 
     "split a root path with a wildcard" in {
-      val (path, mask) = LocalFsUtils.splitPathAndMask("/*.csv")
-      assert(path == "/")
+      val inputPath = s"${File.separator}*.csv"
+      val (path, mask) = LocalFsUtils.splitPathAndMask(inputPath)
+      assert(path == File.separator)
       assert(mask == "*.csv")
     }
 
     "split a root path without a wildcard" in {
-      val (path, mask) = LocalFsUtils.splitPathAndMask("/")
-      assert(path == "/")
+      val (path, mask) = LocalFsUtils.splitPathAndMask(File.separator)
+      assert(path == File.separator)
       assert(mask == "*")
     }
 

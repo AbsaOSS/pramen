@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.{DateUtils, FsUtils}
 
-import java.io.IOException
+import java.io.{File, IOException}
 import java.nio.file.Paths
 import java.time.{Instant, ZoneId}
 
@@ -583,9 +583,10 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val tempSubDir = fsUtils.getTempPath(path)
 
         assert(fsUtils.exists(tempSubDir))
-
         assert(!fsUtils.isFile(tempSubDir))
-        assert(tempSubDir.toString.startsWith(tempDir))
+
+        val tempSubDirWithPlatformSeparator = tempSubDir.toString.replace('/', File.separatorChar)
+        assert(tempSubDirWithPlatformSeparator.startsWith(tempDir))
       }
     }
 
@@ -634,7 +635,9 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
 
           assert(fsUtils.exists(tempSubDir))
           assert(!fsUtils.isFile(tempSubDir))
-          assert(tempSubDir.toString.startsWith(tempDir))
+
+          val tempSubDirWithPlatformSeparator = tempSubDir.toString.replace('/', File.separatorChar)
+          assert(tempSubDirWithPlatformSeparator.startsWith(tempDir))
         }
 
         assert(!fsUtils.exists(subdirOutOfScope))

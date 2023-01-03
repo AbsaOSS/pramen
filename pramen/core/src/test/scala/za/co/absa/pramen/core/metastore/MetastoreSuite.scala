@@ -328,8 +328,10 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
   }
 
   def getTestCase(tempDir: String, undercover: Boolean = false): (Metastore, SyncBookkeeperMock) = {
-    val conf = ConfigFactory.parseString(
-      s"""pramen.temporary.directory = "$tempDir/temp"
+    val tempDirEscaped = tempDir.replace("\\","\\\\")
+
+    val confString =
+      s"""pramen.temporary.directory = "$tempDirEscaped/temp"
          |pramen.information.date.column = "sync_date"
          |pramen.information.date.format = "yyyy-MM-dd"
          |pramen.information.date.start = "2011-01-01"
@@ -340,21 +342,24 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
          |   {
          |     name = "table1"
          |     format = "parquet"
-         |     path = "$tempDir/table1"
+         |     path = "$tempDirEscaped/table1"
          |   },
          |   {
          |     name = "table2"
          |     format = "parquet"
-         |     path = "$tempDir/table2"
+         |     path = "$tempDirEscaped/table2"
          |   },
          |   {
          |     name = "table3"
          |     format = "parquet"
-         |     path = "$tempDir/table3"
+         |     path = "$tempDirEscaped/table3"
          |   }
          | ]
          |}
          |""".stripMargin
+
+    val conf = ConfigFactory.parseString(
+      confString
     )
 
     val bk = new SyncBookkeeperMock

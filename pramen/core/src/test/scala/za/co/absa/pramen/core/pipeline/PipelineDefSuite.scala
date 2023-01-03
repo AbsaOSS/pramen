@@ -83,9 +83,10 @@ class PipelineDefSuite extends AnyWordSpec with TempDirFixture {
 
   def getConfig(basePath: String): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/pipeline_v2.conf")
+    val basePathEscaped = basePath.replace("\\", "\\\\")
 
     val conf = ConfigFactory.parseString(
-      s"""base.path = "$basePath"
+      s"""base.path = "$basePathEscaped"
          |$configContents
          |""".stripMargin
     ).withFallback(ConfigFactory.load())

@@ -30,7 +30,7 @@ class JsonUtilsSuite extends AnyWordSpec {
       |  "longValue" : 10000000000,
       |  "dateValue" : "2020-08-10",
       |  "listStr" : [ "Str1", "Str2" ]
-      |}""".stripMargin.replace("\r\n", "\n")
+      |}""".stripMargin
 
   "asJson" should {
     "return a JSON representation of a case class" in {
