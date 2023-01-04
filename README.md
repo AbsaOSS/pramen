@@ -1878,6 +1878,111 @@ More on this kind of sink can be found at the implementation of the sink itself:
 
 You can use any source/sink combination in transfer jobs.
 
+## Notifications
+If you need to react on a completion event of any job, you can do it using notification targets. A notification target 
+is a component that you can implement and register for any operation or table. The notification target will be called 
+when the operation or job completes. Usually it is used to send an event to trigger actions outside the Pramen pipeline.
+
+Pramen currently support [Hyperdrive Kafka notification topic](https://github.com/AbsaOSS/HyperDrive) target. Basically,
+you can define a string message to be sent to a Kafka topic on success of any job. The message is called a notification
+token. Each token corresponds to a workflow in Hyperdrive which can be triggerred when this token is received.
+
+Here is an example notification target:
+<details>
+  <summary>Click to expand</summary>
+
+```config
+pramen.notification.targets = [
+  {
+    ## Mandatory options
+    name = "hyperdrive_uat"
+    factory.class = "za.co.absa.pramen.core.notify.HyperdriveNotificationTarget"
+
+    ## These options depend on the actual implementation of the notification target
+    
+    ## For Hyperdrive notification target it is
+    
+    # Kafka topic to use for Hyperdrive notification
+    kafka.topic = "pramen-notification-topic"
+
+    #(optional) Maximum time (millis) to block on the sending a token to a Kafka topic 
+    timeout.ms = 10000
+
+    ## The below options go directly to the initializer of the Kafka Producer
+    ## You can use any from https://docs.confluent.io/platform/current/installation/configuration/producer-configs.html
+    kafka.option {
+      bootstrap.servers = "my_broker:9092"
+      max.block.ms = 2000
+
+      sasl.mechanism = "GSSAPI"
+      security.protocol = "SASL_SSL"
+    }
+  }
+]
+```
+</details>
+
+Here is how you can reference notification targets from your pipeline. You can send notification to more than 1 target.
+<details>
+  <summary>Click to expand</summary>
+
+```config
+pramen.operations = [
+  {
+    ## Here is the example of notifications from an ingestion or a sink operation.
+    
+    name = "My sourcing"
+    type = "ingestion"
+    schedule.type = "daily"
+
+    source = "my_source"
+
+    ## Here you can specify notification targets to send notificationt to.
+    notification.targets = [ "hyperdrive1" ]
+
+    tables = [
+      {
+        input.path = /projects/lbamodels/predicated/lookup/accountclassificationtype_202206.csv
+        output.metastore.table = lookup
+        source {
+          schema = "accounttypecode int, acctype string"
+        }
+        
+        ## Here you can define optios for the specific notification target
+        notification {
+          hyperdrive.token = "AAABBBCCC"
+        }
+      }
+    ]
+  },
+  {
+    ## Here is the example of notifications from an transfromation or a Python transformation job.
+  
+    name = "Python transformer"
+    type = "python_transformation"
+    python.class = "IdentityTransformer"
+    schedule.type = "daily"
+
+    info.date.expr = "@runDate"
+
+    output.table = "transformed_table"
+
+    dependencies = [
+      ...
+    ]
+
+    # Here you can specify notification targets to send notifications to.
+    notification.targets = [ "hyperdrive1" ]
+
+    ## Here you can define optios for the specific notification target
+    notification {
+      hyperdrive.token = "PythonTransformer"
+    }
+  }
+]
+```
+</details>
+
 ## Schema evolutions patterns
 
 # Deploying the pipeline
