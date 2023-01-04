@@ -16,7 +16,7 @@ import datetime
 import os.path
 import pathlib
 
-from typing import Optional
+from typing import List, Optional
 
 import attrs
 import pyspark.sql.functions as F
@@ -56,6 +56,28 @@ class MetastoreReader(MetastoreReaderBase):
             return df.select([F.col(c).alias(c.upper()) for c in df.columns])
         else:
             return df
+
+    def _extract_dates_from_files_name(
+        self,
+        files: List[str],
+        date_format: str,
+    ) -> List[datetime.date]:
+        def is_file_hidden(column_name_: str, date_: str) -> bool:
+            if len(column_name_) > 0 and column_name_[0] == "_":
+                return True
+            if len(date_) > 0 and date_[0] == "_":
+                return True
+            return False
+
+        extracted_dates = []
+        for path in files:
+            file_name = path.rsplit("/", 1)[-1]
+            column_name, date = file_name.split("=")
+            if not is_file_hidden(column_name, date):
+                extracted_dates.append(
+                    convert_str_to_date(date, fmt=date_format)
+                )
+        return extracted_dates
 
     def _read_table(self, table_format: TableFormat, path: str) -> DataFrame:
         return self.spark.read.format(table_format.value).load(path)
@@ -123,41 +145,36 @@ class MetastoreReader(MetastoreReaderBase):
             f"Getting latest available date for the table: {table_name} "
             f"until {until}"
         )
-        table = get_metastore_table(table_name, self.tables)
+        metastore_table = get_metastore_table(table_name, self.tables)
+
+        if metastore_table.format == TableFormat.delta:
+            df_select = self._read_table(
+                metastore_table.format, metastore_table.path
+            ).select(f"{metastore_table.info_date_settings.column}")
+            dates_list = [data[0] for data in df_select.distinct().collect()]
+        else:
+            files = self.fs_utils.list_files(
+                metastore_table.path,
+                file_pattern=f"{metastore_table.info_date_settings.column}=*",
+            )
+            logger.debug(
+                f"The following files are in the {metastore_table.path}:\n"
+                f"{chr(10).join(files)}"
+            )
+            dates_list = self._extract_dates_from_files_name(
+                files, metastore_table.info_date_settings.format
+            )
 
         def before_until(date: datetime.date) -> bool:
             return date <= until  # type: ignore
 
-        def extract_dates(file_name: str) -> datetime.date:
-            return convert_str_to_date(
-                file_name.split("=")[1],
-                fmt=table.info_date_settings.format,
-            )
-
-        files = self.fs_utils.list_files(
-            table.path,
-            file_pattern=f"{table.info_date_settings.column}=*",
-        )
-        logger.debug(
-            f"The following files are in the {table.path}:\n"
-            f"{chr(10).join(files)}"
-        )
-
         try:
-            latest_date = max(
-                filter(
-                    before_until,
-                    map(
-                        extract_dates,
-                        files,
-                    ),
-                )
-            )
+            latest_date = max(filter(before_until, dates_list))
         except ValueError as err:
             raise ValueError(
-                f"No partitions are available for the given {table_name}. "
-                f"The content of a table path is:\n"
-                f"{chr(10).join(files)}\n"
+                f"No partitions are available for the given {table_name}.\n"
+                f"The table contains the next dates:\n"
+                f"{dates_list}\n"
                 f"Only partitions earlier than {str(until)} might be included."
             ) from err
         else:
