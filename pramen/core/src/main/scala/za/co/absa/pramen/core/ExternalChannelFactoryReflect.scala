@@ -62,10 +62,10 @@ object ExternalChannelFactoryReflect {
       case Some((cfg, idx)) =>
         val effectiveConf = overrideConf match {
           case Some(oc) => oc.withFallback(cfg)
-          case None => cfg
+          case None     => cfg
         }
         fromConfig(effectiveConf, s"$arrayPath[$idx]", channelType)
-      case None =>
+      case None             =>
         throw new IllegalArgumentException(s"Unknown name of a data $channelType: $name.")
     }
   }
