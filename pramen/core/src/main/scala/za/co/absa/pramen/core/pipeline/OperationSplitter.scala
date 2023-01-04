@@ -22,8 +22,8 @@ import za.co.absa.pramen.api.Transformer
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.metastore.Metastore
-import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 import za.co.absa.pramen.core.notify.NotificationTargetManager
+import za.co.absa.pramen.core.pipeline.OperationSplitter.getNotificationTarget
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunnerImpl
@@ -31,14 +31,9 @@ import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
 import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 
-import java.time.LocalDate
-
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
                         bookkeeper: Bookkeeper)(implicit spark: SparkSession) {
-  val NOTIFICATION_TARGET_KEY = "notification.target"
-  val NOTIFICATION_KEY = "notification"
-
   def createJobs(operationDef: OperationDef): Seq[Job] = {
     operationDef.operationType match {
       case Ingestion(sourceName, sourceTables) => createIngestion(operationDef, sourceName, sourceTables)
@@ -64,7 +59,7 @@ class OperationSplitter(conf: Config,
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
       val notificationTargets = operationDef.notificationTargets
-        .map(targetName => getNotificationTargets(targetName, sourceTable.conf))
+        .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
 
       new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, sourceTable, outputTable, specialCharacters)
     })
@@ -92,7 +87,7 @@ class OperationSplitter(conf: Config,
       val outputTable = transferTable.getMetaTable
 
       val notificationTargets = operationDef.notificationTargets
-        .map(targetName => getNotificationTargets(targetName, transferTable.conf))
+        .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
 
       new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, source, transferTable, outputTable, sink, specialCharacters)
     })
@@ -106,7 +101,7 @@ class OperationSplitter(conf: Config,
     val outputMetaTable = metastore.getTableDef(outputTable)
 
     val notificationTargets = operationDef.notificationTargets
-      .map(targetName => getNotificationTargets(targetName, operationDef.operationConf))
+      .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
     Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, transformer))
   }
@@ -131,7 +126,7 @@ class OperationSplitter(conf: Config,
       redirectErrorStream = false)
 
     val notificationTargets = operationDef.notificationTargets
-      .map(targetName => getNotificationTargets(targetName, operationDef.operationConf))
+      .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
     Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner))
   }
@@ -155,17 +150,23 @@ class OperationSplitter(conf: Config,
       val outputTable = inputTable.copy(name = outputTableName)
 
       val notificationTargets = operationDef.notificationTargets
-        .map(targetName => getNotificationTargets(targetName, sinkTable.conf))
+        .map(targetName => getNotificationTarget(conf, targetName, sinkTable.conf))
 
       new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, outputTable, sink, sinkTable)
     })
   }
+}
 
-  private def getNotificationTargets(targetName: String,
-                                     tableConf: Config): JobNotificationTarget = {
+object OperationSplitter {
+  val NOTIFICATION_TARGET_KEY = "notification.target"
+  val NOTIFICATION_KEY = "notification"
+
+  private[core] def getNotificationTarget(appConf: Config,
+                                          targetName: String,
+                                          tableConf: Config)(implicit sparkSession: SparkSession): JobNotificationTarget = {
     val confOverride = ConfigUtils.getOptionConfig(tableConf, NOTIFICATION_TARGET_KEY)
     val options = ConfigUtils.getExtraOptions(tableConf, NOTIFICATION_KEY)
-    val target = NotificationTargetManager.getByName(targetName, conf, Option(confOverride))
+    val target = NotificationTargetManager.getByName(targetName, appConf, Option(confOverride))
     JobNotificationTarget(targetName, options, target)
   }
 }

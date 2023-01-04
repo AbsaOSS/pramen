@@ -14,9 +14,24 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api
+package za.co.absa.pramen.core.mocks.notify
 
-trait NotificationTarget extends ExternalChannel {
-  /** Sends a notification after completion of a task. */
-  def sendNotification(notification: TaskNotification): Unit
+import za.co.absa.pramen.core.notify.mq.SingleMessageProducer
+
+class SingleMessageProducerSpy extends SingleMessageProducer {
+  var connectInvoked = 0
+  var sendInvoked = 0
+  var closeInvoked = 0
+  var lastTopicName = ""
+  var lastMessage = ""
+
+  override def send(topic: String, message: String, numberOrRetries: Int): Unit = {
+    lastTopicName = topic
+    lastMessage = message
+    sendInvoked += 1
+  }
+
+  override def connect(): Unit = connectInvoked += 1
+
+  override def close(): Unit = closeInvoked += 1
 }

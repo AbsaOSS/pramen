@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, TaskNotification, TaskStatus}
 import za.co.absa.pramen.core.notify.mq.{SingleMessageProducer, SingleMessageProducerKafka}
 import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.utils.Emoji.WARNING
+import za.co.absa.pramen.core.utils.Emoji._
 
 class HyperdriveNotificationTarget(conf: Config,
                                    producer: SingleMessageProducer,
@@ -31,9 +31,12 @@ class HyperdriveNotificationTarget(conf: Config,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val NOTIFICATION_SUCCESS = s"\u26a1"
-
   override def config: Config = conf
+
+  override def connect(): Unit = {
+    // This intentionally left blank. The connect for this notification target is only called if
+    // conditions are met to send a notification.
+  }
 
   override def sendNotification(notification: TaskNotification): Unit = {
     if (notification.options.contains(TOKEN_KEY)) {
@@ -41,8 +44,9 @@ class HyperdriveNotificationTarget(conf: Config,
 
       if (notification.status.isInstanceOf[TaskStatus.Succeeded]) {
         log.info(s"Sending '$token' to the Hyperdrive Kafka topic: '$topic'...")
+        producer.connect()
         producer.send(topic, token)
-        log.info(s"$NOTIFICATION_SUCCESS Successfully send the notification topic to Kafka.")
+        log.info(s"$VOLTAGE Successfully send the notification topic to Kafka.")
       } else {
         log.info(s"Not sending '$token' to the Hyperdrive Kafka topic: '$topic' for the unsuccessful job...")
       }

@@ -18,10 +18,8 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.NotificationTarget
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
-import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.ConfigUtils
 

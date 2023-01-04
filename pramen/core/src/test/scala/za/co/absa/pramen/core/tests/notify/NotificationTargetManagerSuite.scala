@@ -19,11 +19,12 @@ package za.co.absa.pramen.core.tests.notify
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.TaskStatus
-import za.co.absa.pramen.core.notify.NotificationTargetManager
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.notify.{HyperdriveNotificationTarget, NotificationTargetManager}
 import za.co.absa.pramen.core.pipeline.DependencyFailure
 import za.co.absa.pramen.core.runner.task.RunStatus
 
-class NotificationTargetManagerSuite extends AnyWordSpec {
+class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
   private val conf: Config = ConfigFactory.parseString(
     s"""
        | pramen.notification.targets = [
@@ -47,7 +48,17 @@ class NotificationTargetManagerSuite extends AnyWordSpec {
     .resolve()
 
   "getByName()" should {
+    "return a notification target" in {
+      val nt = NotificationTargetManager.getByName("hyperdrive1", conf, None)
 
+      assert(nt.isInstanceOf[HyperdriveNotificationTarget])
+    }
+
+    "throw an exception if the notification target does not exist" in {
+      assertThrows[IllegalArgumentException] {
+        NotificationTargetManager.getByName("nonexistent", conf, None)
+      }
+    }
   }
 
   "runStatusToTaskStatus" should {
