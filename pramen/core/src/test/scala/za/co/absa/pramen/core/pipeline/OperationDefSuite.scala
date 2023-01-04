@@ -71,6 +71,8 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |  }
            |]
            |
+           |notification.targets = [ "hyperdrive1", "custom2" ]
+           |
            |option.myoption1 = "test"
            |""".stripMargin
       )
@@ -83,6 +85,9 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[Ingestion].sourceName == "jdbc1")
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.size == 1)
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.head.metaTableName == "table1_sync")
+      assert(op.notificationTargets.size == 2)
+      assert(op.notificationTargets.head == "hyperdrive1")
+      assert(op.notificationTargets(1) == "custom2")
       assert(op.dependencies.isEmpty)
       assert(op.schemaTransformations.isEmpty)
       assert(op.extraOptions("myoption1") == "test")

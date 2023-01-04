@@ -62,6 +62,8 @@ class PipelineDefSuite extends AnyWordSpec with TempDirFixture {
         assert(op1.processingTimestampColumn.contains("SYNC_TIMESTAMP"))
 
         assert(op1.schemaTransformations.isEmpty)
+        assert(op1.notificationTargets.nonEmpty)
+        assert(op1.notificationTargets.head == "custom1")
 
         assert(op2.expectedDelayDays == 0)
         assert(op2.schemaTransformations.length == 1)

@@ -234,8 +234,11 @@ abstract class TaskRunnerBase(conf: Config,
         )
 
         target.connect()
-        target.sendNotification(notification)
-        target.close()
+        try {
+          target.sendNotification(notification)
+        } finally {
+          target.close()
+        }
       }
     } match {
       case Success(_) =>
