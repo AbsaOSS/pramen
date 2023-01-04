@@ -26,10 +26,54 @@ from chispa.dataframe_comparer import (
 from chispa.schema_comparer import SchemasNotEqualError
 from loguru import logger
 from pyhocon import ConfigFactory  # type: ignore
-from pyspark.sql import SparkSession
+from pyspark.sql import DataFrame, SparkSession
 
 from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
+
+
+def test_metastore_get_latest_available_date_for_delta(
+    spark, get_data_stub, tmp_path
+):
+    def save_delta_table(df: DataFrame, path: str) -> None:
+        df.write.partitionBy("info_date").format("delta").mode(
+            "overwrite"
+        ).save(path)
+
+    table_name = "latest_available_date"
+    table_path = (
+        tmp_path / "data_lake" / "example_test_tables" / table_name
+    ).as_posix()
+
+    df_union = get_data_stub.union(
+        spark.createDataFrame(
+            spark.sparkContext.parallelize([(17, 18, d(2022, 11, 2))]),
+            get_data_stub.schema,
+        )
+    )
+    save_delta_table(df_union, table_path)
+
+    df_modify = df_union.withColumn(
+        "info_date",
+        F.when(
+            df_union.info_date == F.lit("2022-11-02").cast(T.DateType()),
+            F.lit("2022-11-01").cast(T.DateType()),
+        ).otherwise(df_union.info_date),
+    )
+    save_delta_table(df_modify, table_path)
+
+    metastore_table_config = MetastoreTable(
+        name=table_name,
+        format=TableFormat.delta,
+        path=table_path,
+        info_date_settings=InfoDateSettings(column="info_date"),
+    )
+    metastore = MetastoreReader(
+        spark=spark,
+        tables=[metastore_table_config],
+    )
+
+    assert metastore.get_latest_available_date(table_name) == d(2022, 11, 1)
 
 
 @pytest.mark.parametrize(
@@ -87,7 +131,7 @@ from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
         ),
     ),
 )
-def test_metastore_get_latest_available_date(
+def test_metastore_get_latest_available_date_with_until(
     spark,
     load_and_patch_config,
     until,
@@ -119,6 +163,53 @@ def test_metastore_get_latest_available_date(
             until=until,
         )
         assert actual == exp
+
+
+@pytest.mark.parametrize(
+    ("info_date", "expected", "exc", "exc_pattern"),
+    (
+        (
+            d(2022, 3, 26),
+            d(2022, 3, 26),
+            None,
+            None,
+        ),
+        (
+            d(2022, 3, 24),
+            d(2022, 3, 24),
+            None,
+            None,
+        ),
+        (
+            d(2022, 3, 22),
+            d(2022, 3, 24),
+            ValueError,
+            "No partitions are available",
+        ),
+    ),
+)
+def test_get_latest_available_date(
+    spark,
+    load_and_patch_config,
+    info_date,
+    expected,
+    exc,
+    exc_pattern,
+):
+    """Test get_latest_available_date.
+
+    Our data has partitions between 2022-03-23 and 2022-04-26.
+    """
+    metastore = MetastoreReader(
+        spark=spark,
+        tables=load_and_patch_config.metastore_tables,
+        info_date=info_date,
+    )
+    if exc:
+        with pytest.raises(exc, match=exc_pattern):
+            metastore.get_latest_available_date("table1_sync")
+    else:
+        assert metastore.get_latest_available_date("table1_sync") == expected
 
 
 def test_metastore_raises_valueerror_on_bad_path(
@@ -470,53 +561,6 @@ def test_metastore_get_table(
         assert table.count() == exp_num_of_rows, logger.error(
             f"Failed for format: {format_.value}"
         )
-
-
-@pytest.mark.parametrize(
-    ("info_date", "expected", "exc", "exc_pattern"),
-    (
-        (
-            d(2022, 3, 26),
-            d(2022, 3, 26),
-            None,
-            None,
-        ),
-        (
-            d(2022, 3, 24),
-            d(2022, 3, 24),
-            None,
-            None,
-        ),
-        (
-            d(2022, 3, 22),
-            d(2022, 3, 24),
-            ValueError,
-            "No partitions are available",
-        ),
-    ),
-)
-def test_get_latest_available_date(
-    spark,
-    info_date,
-    expected,
-    exc,
-    exc_pattern,
-    load_and_patch_config,
-):
-    """Test get_latest_available_date.
-
-    Our data has partitions between 2022-03-23 and 2022-04-26.
-    """
-    metastore = MetastoreReader(
-        spark=spark,
-        tables=load_and_patch_config.metastore_tables,
-        info_date=info_date,
-    )
-    if exc:
-        with pytest.raises(exc, match=exc_pattern):
-            metastore.get_latest_available_date("table1_sync")
-    else:
-        assert metastore.get_latest_available_date("table1_sync") == expected
 
 
 def test_metastore_writer_write(spark: SparkSession, generate_test_tables):
