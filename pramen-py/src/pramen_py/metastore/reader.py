@@ -171,10 +171,18 @@ class MetastoreReader(MetastoreReaderBase):
         try:
             latest_date = max(filter(before_until, dates_list))
         except ValueError as err:
+            str_date_list = list(
+                map(
+                    lambda date: convert_date_to_str(
+                        date, metastore_table.info_date_settings.format
+                    ),
+                    dates_list,
+                )
+            )
             raise ValueError(
                 f"No partitions are available for the given {table_name}.\n"
                 f"The table contains the next dates:\n"
-                f"{dates_list}\n"
+                f"{str_date_list}\n"
                 f"Only partitions earlier than {str(until)} might be included."
             ) from err
         else:
