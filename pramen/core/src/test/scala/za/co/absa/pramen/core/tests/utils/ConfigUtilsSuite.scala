@@ -221,6 +221,18 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
     }
   }
 
+  "getFlatConfigOfPrimitiveValues()" should {
+    "flatten the config including the arrays and objects" in {
+      val flat = ConfigUtils.getFlatConfigOfPrimitiveValues(testConfig)
+
+      assert(flat("mytest.password") == "xyz")
+      assert(flat("mytest.days.ok").asInstanceOf[util.ArrayList[Int]].asScala.toList == List(1, 2, 3))
+      assert(flat("mytest.object.array[0].numbers").asInstanceOf[util.ArrayList[Int]].asScala.toList == List(1, 2, 3))
+      assert(flat("mytest.object.array[0].options[1].opt2") == 200)
+      assert(flat("mytest.object.array[1].name") == "b")
+    }
+  }
+
   "getRedactedFlatConfig()" should {
     "redact keys containing the list of tokens" in {
       val flat = ConfigUtils.getRedactedFlatConfig(ConfigUtils.getFlatConfig(testConfig),
