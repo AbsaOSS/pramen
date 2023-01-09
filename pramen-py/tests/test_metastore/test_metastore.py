@@ -27,7 +27,6 @@ from chispa.schema_comparer import SchemasNotEqualError
 from loguru import logger
 from pyhocon import ConfigFactory  # type: ignore
 from pyspark.sql import DataFrame, SparkSession
-from pyspark.sql.utils import AnalysisException
 
 from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
@@ -50,7 +49,7 @@ def test_extract_dates_from_file_names(spark):
     ]
 
     metastore_table_config = MetastoreTable(
-        name=f"test_table",
+        name="test_table",
         format=TableFormat.parquet,
         path="User1/pramen-py/tests_table",
         info_date_settings=InfoDateSettings(
@@ -71,7 +70,7 @@ def test_extract_dates_from_file_names(spark):
 def test_metastore_read_table_error_info(spark, tmp_path):
     table_path = (tmp_path / "data_lake" / "example_test_tables").as_posix()
     metastore_table_config = MetastoreTable(
-        name=f"read_table",
+        name="read_table",
         format=TableFormat.parquet,
         path=table_path,
         info_date_settings=InfoDateSettings(column="info_date"),
@@ -265,7 +264,7 @@ def test_get_latest_available_date(
         assert metastore.get_latest_available_date("table1_sync") == expected
 
 
-def test_metastore_raises_valueerror_on_bad_path(
+def test_metastore_raises_value_error_on_bad_path(
     spark,
     config,
     monkeypatch,
@@ -286,7 +285,7 @@ def test_metastore_raises_valueerror_on_bad_path(
         tables=config.metastore_tables,
         info_date=d(2022, 3, 26),
     )
-    with pytest.raises(ValueError, match="No partitions"):
+    with pytest.raises(ValueError, match="No partitions are available"):
         metastore.get_latest_available_date("bad_table")
 
 

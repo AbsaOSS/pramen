@@ -60,7 +60,7 @@ class MetastoreReader(MetastoreReaderBase):
 
     def _extract_dates_from_file_name(
         self, path: str, target_partition_name: str
-    ) -> Optional[datetime.date]:
+    ) -> Optional[str]:
         def is_file_hidden(column_name_: str, date_: str) -> bool:
             if len(column_name_) > 0 and column_name_[0] == "_":
                 return True
@@ -69,15 +69,21 @@ class MetastoreReader(MetastoreReaderBase):
             return False
 
         file_name = path.replace("\\", "/").rsplit("/", 1)[-1]
-        if file_name:
-            name_parts = file_name.split("=")
-            if len(name_parts) == 2:
-                partition_name, date = name_parts
-                if (
-                    not is_file_hidden(partition_name, date)
-                    and target_partition_name == partition_name
-                ):
-                    return date
+        if not file_name:
+            return None
+
+        name_parts = file_name.split("=")
+        if not len(name_parts) == 2:
+            return None
+
+        partition_name, date = name_parts
+        if (
+            is_file_hidden(partition_name, date)
+            or target_partition_name != partition_name
+        ):
+            return None
+
+        return date
 
     def _extract_dates_from_file_names(
         self,
@@ -106,14 +112,14 @@ class MetastoreReader(MetastoreReaderBase):
         until: datetime.date,
     ) -> List[datetime.date]:
         def before_until(date: datetime.date) -> bool:
-            return date <= until  # type: ignore
+            return date <= until
 
         if not dates:
             logger.error(
                 f"The directory does not contain partitions by "
                 f"'{table.info_date_settings.column}': {table.path}"
             )
-            raise
+            raise ValueError("No partitions are available")
 
         filtered_dates = list(filter(before_until, dates))
 
