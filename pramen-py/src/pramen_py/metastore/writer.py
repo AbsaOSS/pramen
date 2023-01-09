@@ -72,9 +72,9 @@ class MetastoreWriter(MetastoreWriterBase):
         df_repartitioned, count_df_items = self._apply_repartitioning(
             df_dropped, metastore_table.records_per_partition
         )
-        df_repartitioned.write.format("parquet").mode("overwrite").save(
-            target_path
-        )
+        df_repartitioned.write.options(
+            **metastore_table.writer_options
+        ).format("parquet").mode("overwrite").save(target_path)
         return target_path, count_df_items
 
     def _write_delta_format_table(
@@ -95,6 +95,7 @@ class MetastoreWriter(MetastoreWriterBase):
                 "replaceWhere",
                 f"{metastore_table.info_date_settings.column}='{self.info_date}'",
             )
+            .options(**metastore_table.writer_options)
         )
         if metastore_table.path:
             df_writer.save(metastore_table.path)

@@ -32,13 +32,16 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    stats: MetaTableStats = MetaTableStats(0, None),
                    statsException: Throwable = null,
                    isTableAvailable: Boolean = true,
-                   isTableEmpty: Boolean = false) extends Metastore {
+                   isTableEmpty: Boolean = false,
+                   readOptions: Map[String, String] = Map.empty[String, String],
+                   writeOptions: Map[String, String] = Map.empty[String, String]) extends Metastore {
 
   val saveTableInvocations = new ListBuffer[(String, LocalDate, DataFrame)]
 
   override def getRegisteredTables: Seq[String] = registeredTables
 
-  override def getRegisteredMetaTables: Seq[MetaTable] = registeredTables.map(t => MetaTableFactory.getDummyMetaTable(t))
+  override def getRegisteredMetaTables: Seq[MetaTable] = registeredTables
+    .map(t => MetaTableFactory.getDummyMetaTable(t, readOptions = readOptions, writeOptions = writeOptions))
 
   override def isTableAvailable(tableName: String, infoDate: LocalDate): Boolean = registeredTables.contains(tableName) && availableDates.contains(infoDate)
 

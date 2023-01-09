@@ -16,7 +16,7 @@ import datetime
 import os.path
 import pathlib
 
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import attrs
 import pyspark.sql.functions as F
@@ -126,9 +126,18 @@ class MetastoreReader(MetastoreReaderBase):
 
         return list(filter(before_until, dates))
 
-    def _read_table(self, table_format: TableFormat, path: str) -> DataFrame:
+    def _read_table(
+        self,
+        table_format: TableFormat,
+        path: str,
+        reader_options: Dict[str, str],
+    ) -> DataFrame:
         try:
-            return self.spark.read.format(table_format.value).load(path)
+            return (
+                self.spark.read.options(**reader_options)
+                .format(table_format.value)
+                .load(path)
+            )
         except AnalysisException:
             raise Exception(f"Unable to access directory: {path}")
 
@@ -162,14 +171,18 @@ class MetastoreReader(MetastoreReaderBase):
                 f"{metastore_table.info_date_settings.column}={latest_date}",
             )
             df = self._read_table(
-                metastore_table.format, pathlib.Path(path).as_posix()
+                metastore_table.format,
+                pathlib.Path(path).as_posix(),
+                metastore_table.reader_options,
             ).withColumn(
                 metastore_table.info_date_settings.column,
                 F.lit(latest_date).cast(T.DateType()),
             )
         else:
             df = self._read_table(
-                metastore_table.format, metastore_table.path
+                metastore_table.format,
+                metastore_table.path,
+                metastore_table.reader_options,
             ).filter(
                 F.col(metastore_table.info_date_settings.column)
                 == F.lit(latest_date)
@@ -211,7 +224,9 @@ class MetastoreReader(MetastoreReaderBase):
                 )
         else:
             df_select = self._read_table(
-                metastore_table.format, metastore_table.path
+                metastore_table.format,
+                metastore_table.path,
+                metastore_table.reader_options,
             ).select(f"{metastore_table.info_date_settings.column}")
             dates_list = [row[0] for row in df_select.distinct().collect()]
 
@@ -278,7 +293,11 @@ class MetastoreReader(MetastoreReaderBase):
             f"info_date in range: {info_date_from_str} - {info_date_to_str}."
         )
 
-        df = self._read_table(metastore_table.format, metastore_table.path)
+        df = self._read_table(
+            metastore_table.format,
+            metastore_table.path,
+            metastore_table.reader_options,
+        )
         df_filtered = df.filter(
             F.col(metastore_table.info_date_settings.column)
             >= F.lit(info_date_from_str),
@@ -319,6 +338,8 @@ class MetastoreReader(MetastoreReaderBase):
                     format=table.get("information.date.format", "yyyy-MM-dd"),
                     start=table.get("information.date.start", None),
                 ),
+                reader_options=table.get("read.option", {}),
+                writer_options=table.get("write.option", {}),
             )
             metastore_tables.append(metastore)
         self.tables = metastore_tables.copy()

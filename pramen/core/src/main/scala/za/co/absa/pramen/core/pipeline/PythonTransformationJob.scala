@@ -220,12 +220,17 @@ class PythonTransformationJob(operationDef: OperationDef,
         case _                     => ""
       }
 
+      val readOptions = addOptions(mt.readOptions, "reader_options")
+      val writeOptions = addOptions(mt.writeOptions, "writer_options")
+
       s"""- name: ${escapeString(mt.name)}$description
          |  format: ${mt.format.name}$path$recordsPerPartition
          |  info_date_settings:
          |    column: ${escapeString(mt.infoDateColumn)}
          |    format: ${escapeString(mt.infoDateFormat)}
-         |    start: ${mt.infoDateStart.toString}""".stripMargin
+         |    start: ${mt.infoDateStart.toString}
+         |$readOptions
+         |$writeOptions""".stripMargin
     }
 
     val sb = new mutable.StringBuilder()

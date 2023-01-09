@@ -280,6 +280,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
         |    column: INFO_DATE
         |    format: yyyy-MM-dd
         |    start: 2020-01-31
+        |  reader_options: {}
+        |  writer_options: {}
         |- name: table2
         |  description: description
         |  format: parquet
@@ -289,6 +291,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
         |    column: INFO_DATE
         |    format: yyyy-MM-dd
         |    start: 2020-01-31
+        |  reader_options: {}
+        |  writer_options: {}
         |""".stripMargin
 
     "creates a temporary config" in {
@@ -321,6 +325,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
           |    start: 2020-01-31
+          |  reader_options: {}
+          |  writer_options: {}
           |- name: table2
           |  description: description
           |  format: parquet
@@ -330,6 +336,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
           |    start: 2020-01-31
+          |  reader_options: {}
+          |  writer_options: {}
           |""".stripMargin
 
       val (_, _, job, _) = getUseCase()
@@ -361,6 +369,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
           |    start: 2020-01-31
+          |  reader_options: {}
+          |  writer_options: {}
           |- name: table2
           |  description: description
           |  format: parquet
@@ -370,6 +380,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
           |    start: 2020-01-31
+          |  reader_options: {}
+          |  writer_options: {}
           |""".stripMargin
 
       val (_, _, job, _) = getUseCase(
@@ -388,6 +400,57 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
       compareText(actual, expected)
     }
+
+    "generate yaml config from the metastore and task definition with extra reader and writer options for metastore tables" in {
+      val expected =
+        """run_transformers:
+          |- info_date: 2022-02-18
+          |  output_table: table2
+          |  name: python_class
+          |  spark_config: {}
+          |  options: {}
+          |metastore_tables:
+          |- name: table1
+          |  description: description
+          |  format: parquet
+          |  path: /tmp/dummy
+          |  records_per_partition: 500000
+          |  info_date_settings:
+          |    column: INFO_DATE
+          |    format: yyyy-MM-dd
+          |    start: 2020-01-31
+          |  reader_options:
+          |    mergeSchema: true
+          |  writer_options:
+          |    compression: snappy
+          |- name: table2
+          |  description: description
+          |  format: parquet
+          |  path: /tmp/dummy
+          |  records_per_partition: 500000
+          |  info_date_settings:
+          |    column: INFO_DATE
+          |    format: yyyy-MM-dd
+          |    start: 2020-01-31
+          |  reader_options:
+          |    mergeSchema: true
+          |  writer_options:
+          |    compression: snappy
+          |""".stripMargin
+
+      val (_, _, job, _) = getUseCase(
+        readOptions = Map[String, String](
+          "mergeSchema" -> "true"
+        ),
+        writeOptions = Map[String, String](
+          "compression" -> "snappy"
+        )
+      )
+
+      val actual = job.getYamlConfig(infoDate)
+
+      compareText(actual, expected)
+    }
   }
 
   def getUseCase(exitCode: Int = 0,
@@ -397,9 +460,18 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
                  stats: MetaTableStats = null,
                  statsException: Throwable = null,
                  sparkConfig: Map[String, String] = Map.empty[String, String],
-                 extraOptions: Map[String, String] = Map.empty[String, String]): (SyncBookkeeperMock, MetastoreSpy, PythonTransformationJob, ProcessRunnerSpy) = {
+                 extraOptions: Map[String, String] = Map.empty[String, String],
+                 readOptions: Map[String, String] = Map.empty[String, String],
+                 writeOptions: Map[String, String] = Map.empty[String, String]): (SyncBookkeeperMock, MetastoreSpy, PythonTransformationJob, ProcessRunnerSpy) = {
     val bk = new SyncBookkeeperMock
-    val metastore = new MetastoreSpy(tableDf = tableDf, tableException = tableException, stats = stats, statsException = statsException)
+    val metastore = new MetastoreSpy(
+      tableDf = tableDf,
+      tableException = tableException,
+      stats = stats,
+      statsException = statsException,
+      readOptions = readOptions,
+      writeOptions = writeOptions
+    )
     val operationDef = OperationDefFactory.getDummyOperationDef(sparkConfig = sparkConfig, extraOptions = extraOptions)
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table2")

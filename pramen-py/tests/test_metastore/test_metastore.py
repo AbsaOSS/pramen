@@ -11,6 +11,7 @@
 #  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
+import pathlib
 
 from datetime import date as d
 from pathlib import PurePath
@@ -27,6 +28,7 @@ from chispa.schema_comparer import SchemasNotEqualError
 from loguru import logger
 from pyhocon import ConfigFactory  # type: ignore
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.utils import AnalysisException
 
 from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
@@ -146,7 +148,11 @@ def test_metastore_read_table_error(spark, tmp_path):
     )
 
     with pytest.raises(Exception, match="Unable to access directory"):
-        metastore._read_table(TableFormat.parquet, "non/existing/table/path")
+        metastore._read_table(
+            TableFormat.parquet,
+            "non/existing/table/path",
+            metastore_table_config.reader_options,
+        )
 
 
 def test_metastore_get_latest_available_date_for_delta(
@@ -724,6 +730,107 @@ def test_metastore_writer_write(spark: SparkSession, generate_test_tables):
             raise
 
 
+def test_metastore_delta_writer_with_additional_options(
+    spark, get_data_stub, tmp_path
+):
+    writer_options = {"mergeSchema": "false"}
+    metastore_table = MetastoreTable(
+        name="test_table",
+        format=TableFormat.delta,
+        path=tmp_path.as_posix(),
+        info_date_settings=InfoDateSettings(column="info_date"),
+        writer_options=writer_options,
+    )
+    metastore_writer = MetastoreWriter(
+        spark=spark,
+        tables=[metastore_table],
+        info_date=d(2022, 3, 24),
+    )
+
+    with pytest.raises(
+        AnalysisException,
+        match="A schema mismatch detected when writing to the Delta table",
+    ):
+        metastore_writer.write(
+            "test_table", get_data_stub.withColumn("C", F.lit(1))
+        )
+        metastore_writer.write(
+            "test_table", get_data_stub.withColumn("D", F.lit("1"))
+        )
+
+
+def test_metastore_parquet_writer_with_additional_options(
+    spark, get_data_stub, tmp_path
+):
+    """
+    Testing additional parquet writer options for MetastoreTable.
+
+    Since parquet writer does not have many meaningful options to specify, we test the 'compression' option.
+    """
+    writer_options = {"compression": "gzip"}
+    table_path = tmp_path / "test_table"
+    metastore_table = MetastoreTable(
+        name="test_table",
+        format=TableFormat.parquet,
+        path=table_path.as_posix(),
+        info_date_settings=InfoDateSettings(column="info_date"),
+        writer_options=writer_options,
+    )
+    metastore_writer = MetastoreWriter(
+        spark=spark,
+        tables=[metastore_table],
+        info_date=d(2022, 3, 24),
+    )
+
+    metastore_writer.write("test_table", get_data_stub)
+
+    snappy_parquets = pathlib.Path(metastore_table.path).rglob(
+        "*.snappy.parquet"
+    )
+    gzipped_parquets = pathlib.Path(metastore_table.path).rglob("*.gz.parquet")
+    assert len(list(snappy_parquets)) == 0
+    assert len(list(gzipped_parquets)) > 0
+
+
+def test_metastore_reader_with_additional_options(
+    spark,
+    get_data_stub,
+    tmp_path,
+):
+    def get_metastore_writer(
+        table: MetastoreTable, info_date: d
+    ) -> MetastoreWriter:
+        return MetastoreWriter(
+            spark=spark,
+            tables=[table],
+            info_date=info_date,
+        )
+
+    reader_options = {"mergeSchema": "true"}
+    metastore_table = MetastoreTable(
+        name="test_table",
+        format=TableFormat.parquet,
+        path=tmp_path.as_posix(),
+        info_date_settings=InfoDateSettings(column="info_date"),
+        reader_options=reader_options,
+    )
+    get_metastore_writer(metastore_table, d(2022, 3, 23)).write(
+        "test_table", get_data_stub.withColumn("C", F.lit(1))
+    )
+    get_metastore_writer(metastore_table, d(2022, 3, 24)).write(
+        "test_table", get_data_stub.withColumn("D", F.lit("1"))
+    )
+
+    metastore_reader = MetastoreReader(spark=spark, tables=[metastore_table])
+    dataframe = metastore_reader.get_table(
+        "test_table",
+        info_date_from=d(2022, 3, 23),
+        info_date_to=d(2022, 3, 24),
+    )
+
+    assert set(dataframe.columns) == {"A", "B", "C", "D", "info_date"}
+
+
 def test_metastore_reader_get_table_uppercase(
     spark,
     generate_df,
@@ -868,6 +975,8 @@ def test_metastore_reader_from_config(
     assert metastore.tables[1].format == TableFormat.parquet
     assert metastore.tables[2].table == ""
     assert metastore.tables[5].table == "teller"
+    assert metastore.tables[5].reader_options == {"mergeSchema": "false"}
+    assert metastore.tables[5].writer_options == {"mergeSchema": "true"}
     assert metastore.tables[0] == MetastoreTable(
         name="lookup",
         format=TableFormat.delta,
