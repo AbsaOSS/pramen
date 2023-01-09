@@ -213,6 +213,57 @@ object ConfigUtils {
   }
 
   /**
+   * Flattens TypeSafe config tree and returns the effective configuration.
+   *
+   * Config objects and lists are - instead of being kept as values - further flattened into keys such
+   * that every key represents a primitive value or an array of primitive values.
+   *
+   * @return the flattened configuration as a map
+   */
+  def getFlatConfigOfPrimitiveValues(conf: Config): Map[String, AnyRef] = {
+    def isConfigValuePrimitive(configValue: ConfigValue): Boolean = {
+      val valueType = configValue.valueType()
+
+      valueType == ConfigValueType.NUMBER || valueType == ConfigValueType.BOOLEAN ||
+      valueType == ConfigValueType.STRING || valueType == ConfigValueType.NULL
+    }
+
+    def isConfigListPrimitive(configList: ConfigList): Boolean = {
+      configList.asScala.forall(isConfigValuePrimitive)
+    }
+
+    def flattenConfigValue(configKey: String, configValue: ConfigValue): Map[String, AnyRef] = {
+      configValue match {
+        case configObject: ConfigObject =>
+          flattenConfigObject(configKey, configObject)
+        case configList: ConfigList if !isConfigListPrimitive(configList) =>
+          flattenConfigList(configKey, configList)
+        case _ =>
+          Map(configKey -> configValue.unwrapped())
+      }
+    }
+
+    def flattenConfigObject(configKey: String, configObject: ConfigObject): Map[String, AnyRef] = {
+      configObject.asScala.toMap
+        .flatMap {
+          case (objectKey, configValue) => flattenConfigValue(s"$configKey.$objectKey", configValue)
+        }
+    }
+
+    def flattenConfigList(configKey: String, configList: ConfigList): Map[String, AnyRef] = {
+      configList.asScala.zipWithIndex
+        .flatMap {
+          case (configValue, index) => flattenConfigValue(s"$configKey[$index]", configValue)
+        }
+        .toMap
+    }
+
+    conf.entrySet().asScala.flatMap({ entry =>
+      flattenConfigValue(entry.getKey, entry.getValue)
+    }).toMap
+  }
+
+  /**
     * Logs the effective configuration while redacting sensitive keys
     * in HOCON format.
     *
@@ -243,7 +294,7 @@ object ConfigUtils {
                               keysToRedact: Set[String] = Set(),
                               tokensToRedact: Set[String] = Set()): Unit = {
     val redactedFlatConfig = getRedactedFlatConfig(
-      getFlatConfig(
+      getFlatConfigOfPrimitiveValues(
         getRedactedConfig(conf, keysToRedact)),
       tokensToRedact)
 
