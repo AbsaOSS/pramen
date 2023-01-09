@@ -27,9 +27,62 @@ from chispa.schema_comparer import SchemasNotEqualError
 from loguru import logger
 from pyhocon import ConfigFactory  # type: ignore
 from pyspark.sql import DataFrame, SparkSession
+from pyspark.sql.utils import AnalysisException
 
 from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
+
+
+def test_extract_dates_from_file_names(spark):
+    file_names = [
+        "pramen-py/tests_table/__HIDDEN_FILE__",
+        "pramen-py/tests_table/pramen_info_date=2022-04-20",
+        "pramen-py\\tests_table\\pramen_info_date=2022-04-21",
+        "pramen-py/tests_table\\pramen_info_date=2022-04-22",
+        "pramen-py/tests_table/pramen_info_date=2022-04-23",
+        "pramen-py/tests_table/test_metastore/pramen_date=2022-04-24",
+    ]
+    expected_dates = [
+        d(2022, 4, 20),
+        d(2022, 4, 21),
+        d(2022, 4, 22),
+        d(2022, 4, 23),
+    ]
+
+    metastore_table_config = MetastoreTable(
+        name=f"test_table",
+        format=TableFormat.parquet,
+        path="User1/pramen-py/tests_table",
+        info_date_settings=InfoDateSettings(
+            column="pramen_info_date", format="yyyy-MM-dd"
+        ),
+    )
+    metastore = MetastoreReader(
+        spark=spark,
+        tables=[metastore_table_config],
+    )
+    dates = metastore._extract_dates_from_file_names(
+        file_names, metastore_table_config
+    )
+
+    assert expected_dates == dates
+
+
+def test_metastore_read_table_error_info(spark, tmp_path):
+    table_path = (tmp_path / "data_lake" / "example_test_tables").as_posix()
+    metastore_table_config = MetastoreTable(
+        name=f"read_table",
+        format=TableFormat.parquet,
+        path=table_path,
+        info_date_settings=InfoDateSettings(column="info_date"),
+    )
+    metastore = MetastoreReader(
+        spark=spark,
+        tables=[metastore_table_config],
+    )
+
+    with pytest.raises(Exception, match="Unable to access directory"):
+        metastore._read_table(TableFormat.parquet, table_path)
 
 
 def test_metastore_get_latest_available_date_for_delta(
@@ -47,7 +100,7 @@ def test_metastore_get_latest_available_date_for_delta(
 
     df_union = get_data_stub.union(
         spark.createDataFrame(
-            spark.sparkContext.parallelize([(17, 18, d(2022, 11, 2))]),
+            [(17, 18, d(2022, 11, 2))],
             get_data_stub.schema,
         )
     )
