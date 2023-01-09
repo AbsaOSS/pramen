@@ -61,9 +61,15 @@
         </developer>
         <developer>
             <id>zhukovgreen</id>
-            <name>Artem/Zhukov</name>
+            <name>Artem Zhukov</name>
             <timezone>Europe/Prague</timezone>
             <url>https://github.com/zhukovgreen</url>
+        </developer>
+        <developer>
+            <id>jirifilip</id>
+            <name>Jiří Filip</name>
+            <timezone>Europe/Prague</timezone>
+            <url>https://github.com/jirifilip</url>
         </developer>
     </developers>
 
