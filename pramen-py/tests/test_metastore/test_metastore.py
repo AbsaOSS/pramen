@@ -32,22 +32,78 @@ from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 
 
-def test_extract_dates_from_file_names(spark):
-    file_names = [
-        "pramen-py/tests_table/__HIDDEN_FILE__",
-        "pramen-py/tests_table/pramen_info_date=2022-04-20",
-        "pramen-py\\tests_table\\pramen_info_date=2022-04-21",
-        "pramen-py/tests_table\\pramen_info_date=2022-04-22",
-        "pramen-py/tests_table/pramen_info_date=2022-04-23",
-        "pramen-py/tests_table/test_metastore/pramen_date=2022-04-24",
-    ]
-    expected_dates = [
-        d(2022, 4, 20),
-        d(2022, 4, 21),
-        d(2022, 4, 22),
-        d(2022, 4, 23),
-    ]
-
+@pytest.mark.parametrize(
+    ("test_path", "expected_date", "exc", "exc_msg"),
+    (
+        ("", None, None, None),
+        (".pramen_info_date=__HIVE__", None, None, None),
+        (
+            "pramen-py/tests_table/.pramen_info_date=2022-04-01",
+            None,
+            None,
+            None,
+        ),
+        (
+            "pramen-py/tests_table/_pramen_info_date=2022-04-02",
+            None,
+            None,
+            None,
+        ),
+        (
+            "pramen-py/tests_table/pramen_info_date=_2022-04-03",
+            None,
+            None,
+            None,
+        ),
+        (
+            "pramen-py/tests_table/pramen_info_date=2022-04-04",
+            d(2022, 4, 4),
+            None,
+            None,
+        ),
+        (
+            "pramen-py\\tests_table\\pramen_info_date=2022-04-05",
+            d(2022, 4, 5),
+            None,
+            None,
+        ),
+        (
+            "pramen-py/tests_table\\pramen_info_date=2022-04-06",
+            d(2022, 4, 6),
+            None,
+            None,
+        ),
+        (
+            "pramen-py/tests_table/test_metastore/pramen_date=2022-04-07",
+            None,
+            ValueError,
+            "Partition name mismatch for path",
+        ),
+        (
+            "pramen-py/tests_table/test_metastore/pramen_info_date=08-04-2022",
+            None,
+            ValueError,
+            "Date format mismatch for path",
+        ),
+        ("pramen_info_date=2022-04-09", d(2022, 4, 9), None, None),
+        ("2022-04-10", None, None, None),
+        ("=2022-04-11=", None, None, None),
+        (
+            "info_date=2022-04-12",
+            None,
+            ValueError,
+            "Partition name mismatch for path",
+        ),
+        ("=2022-04-13", None, ValueError, "Partition name mismatch for path"),
+        (
+            "pramen_info_date=14-04-2022",
+            None,
+            ValueError,
+            "Date format mismatch for path",
+        ),
+    ),
+)
+def test_extract_date_from_path(spark, test_path, expected_date, exc, exc_msg):
     metastore_table_config = MetastoreTable(
         name="test_table",
         format=TableFormat.parquet,
@@ -60,19 +116,28 @@ def test_extract_dates_from_file_names(spark):
         spark=spark,
         tables=[metastore_table_config],
     )
-    dates = metastore._extract_dates_from_file_names(
-        file_names, metastore_table_config
-    )
 
-    assert expected_dates == dates
+    if exc:
+        with pytest.raises(exc, match=exc_msg):
+            metastore._extract_date_from_path(
+                test_path,
+                metastore_table_config.info_date_settings.column,
+                metastore_table_config.info_date_settings.format,
+            )
+    else:
+        date = metastore._extract_date_from_path(
+            test_path,
+            metastore_table_config.info_date_settings.column,
+            metastore_table_config.info_date_settings.format,
+        )
+        assert expected_date == date
 
 
-def test_metastore_read_table_error_info(spark, tmp_path):
-    table_path = (tmp_path / "data_lake" / "example_test_tables").as_posix()
+def test_metastore_read_table_error(spark, tmp_path):
     metastore_table_config = MetastoreTable(
-        name="read_table",
+        name="non_existing_table_name",
         format=TableFormat.parquet,
-        path=table_path,
+        path="non/existing/table/path",
         info_date_settings=InfoDateSettings(column="info_date"),
     )
     metastore = MetastoreReader(
@@ -81,7 +146,7 @@ def test_metastore_read_table_error_info(spark, tmp_path):
     )
 
     with pytest.raises(Exception, match="Unable to access directory"):
-        metastore._read_table(TableFormat.parquet, table_path)
+        metastore._read_table(TableFormat.parquet, "non/existing/table/path")
 
 
 def test_metastore_get_latest_available_date_for_delta(
@@ -811,6 +876,6 @@ def test_metastore_reader_from_config(
         info_date_settings=InfoDateSettings(
             column="information_date",
             format="yyyy-MM-dd",
-            start="2022-01-01",
+            start=d(2022, 1, 1),
         ),
     )
