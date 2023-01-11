@@ -350,7 +350,9 @@ def test_metastore_raises_value_error_on_bad_path(
         tables=config.metastore_tables,
         info_date=d(2022, 3, 26),
     )
-    with pytest.raises(ValueError, match="No partitions are available"):
+    with pytest.raises(
+        ValueError, match="The directory does not contain partitions"
+    ):
         metastore.get_latest_available_date("bad_table")
 
 
