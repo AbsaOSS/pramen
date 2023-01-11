@@ -83,34 +83,24 @@ class MetastoreReader(MetastoreReaderBase):
             return None
 
         if target_partition_name != partition_name:
-            logger.error(
+            raise ValueError(
                 f"Partition name mismatch for path: {path}\n"
                 f"Expected '{target_partition_name}' instead '{partition_name}'"
             )
-            raise ValueError(f"Partition name mismatch for path: {path}")
 
         try:
             return convert_str_to_date(date, fmt=date_format)
         except (KeyError, ValueError):
-            logger.error(
+            raise ValueError(
                 f"Date format mismatch for path: {path}"
                 f"Expected '{date_format}' instead '{date}'"
             )
-            raise ValueError(f"Date format mismatch for path: {path}")
 
     def validate_partitions_paths(
         self,
+        files_paths: List[str],
         table: MetastoreTable,
     ) -> None:
-
-        files_paths = self.fs_utils.list_files(
-            table.path,
-            file_pattern=f"{table.info_date_settings.column}=*",
-        )
-        logger.debug(
-            f"The following files are in the {table.path}:\n"
-            f"{chr(10).join(files_paths)}"
-        )
         extracted_dates = []
         for path in files_paths:
             date = self._extract_date_from_path(
@@ -121,55 +111,26 @@ class MetastoreReader(MetastoreReaderBase):
             if date:
                 extracted_dates.append(date)
         if not extracted_dates:
-            logger.error(
+            raise ValueError(
                 f"The directory does not contain partitions by "
                 f"'{table.info_date_settings.column}': {table.path}"
             )
-            raise ValueError("No partitions are available")
 
     @staticmethod
     def _filter_info_dates_by_until(
         dates: List[datetime.date],
-        table: MetastoreTable,
         until: datetime.date,
     ) -> List[datetime.date]:
         def before_until(date: datetime.date) -> bool:
             return date <= until
 
-        if not dates:
-            logger.error(
-                f"The directory does not contain partitions by "
-                f"'{table.info_date_settings.column}': {table.path}"
-            )
-            raise ValueError("No partitions are available")
-
-        filtered_dates = list(filter(before_until, dates))
-
-        if not filtered_dates:
-            str_date_list = list(
-                map(
-                    lambda date: convert_date_to_str(
-                        date, table.info_date_settings.format
-                    ),
-                    filtered_dates,
-                )
-            )
-            logger.error(
-                f"No partitions are available for the given '{table.name}'.\n"
-                f"The table is available for the following dates:\n"
-                f"{str_date_list}\n"
-                f"Only partitions earlier than {str(until)} might be included."
-            )
-            raise ValueError("No partitions are available")
-        else:
-            return filtered_dates
+        return list(filter(before_until, dates))
 
     def _read_table(self, table_format: TableFormat, path: str) -> DataFrame:
         try:
             return self.spark.read.format(table_format.value).load(path)
         except AnalysisException:
-            logger.error(f"Unable to access directory: {path}")
-            raise Exception(f"Unable to access directory : {path}")
+            raise Exception(f"Unable to access directory: {path}")
 
     def get_latest(
         self,
@@ -185,7 +146,6 @@ class MetastoreReader(MetastoreReaderBase):
 
         until = until or self.info_date
         metastore_table = get_metastore_table(table_name, self.tables)
-        self.validate_partitions_paths(metastore_table)
         logger.info(
             f"Getting latest partition '{metastore_table.info_date_settings.column}'"
             f" for the table: '{table_name}' until {until}"
@@ -207,15 +167,13 @@ class MetastoreReader(MetastoreReaderBase):
                 metastore_table.info_date_settings.column,
                 F.lit(latest_date).cast(T.DateType()),
             )
-        elif metastore_table.format == TableFormat.delta:
+        else:
             df = self._read_table(
                 metastore_table.format, metastore_table.path
             ).filter(
                 F.col(metastore_table.info_date_settings.column)
                 == F.lit(latest_date)
             )
-        else:
-            raise NotImplementedError
 
         logger.info(
             f"Table '{table_name}' successfully loaded for {latest_date} from"
@@ -241,6 +199,7 @@ class MetastoreReader(MetastoreReaderBase):
                 metastore_table.path,
                 file_pattern=f"{metastore_table.info_date_settings.column}=*",
             )
+            self.validate_partitions_paths(files_paths, metastore_table)
             dates_list = []
             for path in files_paths:
                 dates_list.append(
@@ -250,17 +209,38 @@ class MetastoreReader(MetastoreReaderBase):
                         metastore_table.info_date_settings.format,
                     )
                 )
-        elif metastore_table.format == TableFormat.delta:
+        else:
             df_select = self._read_table(
                 metastore_table.format, metastore_table.path
             ).select(f"{metastore_table.info_date_settings.column}")
-            dates_list = [raw[0] for raw in df_select.distinct().collect()]
-        else:
-            raise NotImplementedError
+            dates_list = [row[0] for row in df_select.distinct().collect()]
+
+        if not dates_list:
+            raise ValueError(
+                f"The directory does not contain partitions by "
+                f"'{metastore_table.info_date_settings.column}': {metastore_table.path}"
+            )
 
         filtered_dates_list = self._filter_info_dates_by_until(
-            dates_list, metastore_table, until  # type: ignore
+            dates_list, until  # type: ignore
         )
+
+        if not filtered_dates_list:
+            str_date_list = list(
+                map(
+                    lambda date: convert_date_to_str(
+                        date, metastore_table.info_date_settings.format
+                    ),
+                    filtered_dates_list,
+                )
+            )
+            raise ValueError(
+                f"No partitions are available for the given '{metastore_table.name}'.\n"
+                f"The table is available for the following dates:\n"
+                f"{str_date_list}\n"
+                f"Only partitions earlier than {str(until)} might be included"
+            )
+
         return max(filtered_dates_list)
 
     def get_table(
@@ -283,7 +263,6 @@ class MetastoreReader(MetastoreReaderBase):
         """
 
         metastore_table = get_metastore_table(table_name, self.tables)
-        self.validate_partitions_paths(metastore_table)
 
         info_date_from_str = convert_date_to_str(
             info_date_from or self.info_date,

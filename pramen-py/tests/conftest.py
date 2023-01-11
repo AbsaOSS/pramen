@@ -19,7 +19,6 @@ import cattr
 import pytest
 import yaml
 
-from loguru import logger
 from pyspark.sql import DataFrame, SparkSession
 from pyspark.sql.types import DateType, IntegerType, StructField, StructType
 
@@ -91,16 +90,9 @@ def generate_test_tables(
     for format_ in TableFormat:
         read_table_path = (table_path / f"read_{format_.value}").as_posix()
         write_table_path = (table_path / f"write_{format_.value}").as_posix()
-        logger.info(
-            f"Creating sample DataFrame partitioned by 'info_date'"
-            f" by path: {read_table_path}"
-        )
         get_data_stub.write.partitionBy("info_date").format(
             format_.value
         ).mode("overwrite").save(read_table_path)
-        logger.info(
-            f"Dataframe successfully created by path: {read_table_path}"
-        )
         paths["read_table"][f"{format_.value}"] = read_table_path
         paths["write_table"][f"{format_.value}"] = write_table_path
 
