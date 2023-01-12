@@ -135,7 +135,7 @@ class LocalCsvSink(sinkConfig: Config,
       createCsvFromDf(df, count, tableName, infoDate, outputPath)
       count
     } else {
-      log.info(s"Notting to send to $outputPath.")
+      log.info(s"Nothing to send to $outputPath.")
       if (params.createEmptyCsv) {
         createEmptyCsv(df.schema, tableName, infoDate, outputPath)
       }
