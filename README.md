@@ -644,6 +644,7 @@ Sinks define a way data needs to be sent to a target system. Built-in sinks incl
 - Kafka sink.
 - CSV in a local folder sink.
 - Command Line sink.
+- Spark sink.
 - Dynamic Conformance Engine (Enceladus) sink.
 
 You can define your own sink by implementing `Sink` trait and providing the corresponding class name in pipeline configuration.
@@ -705,7 +706,7 @@ The corresponding pipeline operation could look like this:
   ]
   tables = [
     {
-      metastore.table = metastore_table
+      input.metastore.table = metastore_table
       output.topic.name = "my.topic"
       
       # All following settings are OPTIONAL
@@ -784,7 +785,7 @@ The corresponding pipeline operation could look like this:
   ]
   tables = [
     {
-      metastore.table = metastore_table
+      input.metastore.table = metastore_table
       output.path = "/local/csv/path"
       # Date range to read the source table for. By default the job information date is used.
       # But you can define an arbitrary expression based on the information date.
@@ -895,6 +896,95 @@ The pipeline operation for this sink could look like this:
 ```
 </details>
 
+### Spark sink
+
+This sink allows writing data using Spark, similarly as you would do using `df.write.format(...).save(...)`.
+
+Here is an example of a Spark sink definition:
+<details>
+  <summary>Click to expand</summary>
+
+```config
+{
+    # Define a name to reference from the pipeline:
+    name = "spark_sink"
+    factory.class = "za.co.absa.pramen.core.sink.SparkSink"
+    
+    # Output format. Can be: csv, parquet, json, delta, etc (anything supported by Spark). Default: parquet
+    format = "parquet"
+    
+    # Save mode. Can be overwrite, append, ignore, errorifexists. Default: errorifexists
+    mode = "overwrite"
+    
+    ## Only one of these following two options should be specified
+    # Optionally repartition the dataframe according to the specified number of partitions
+    number.of.partitions = 10
+    # Optionally repartition te dataframe according to the number of records per partition
+    records.per.partition = 1000000
+    
+    # If true (default), the data will be saved even if it does not contain any records. If false, the saving will be skipped
+    save.empty = true
+    
+    # If non-empty, the data will be partitioned by the specified columns at the output path. Default: []
+    partition.by = [ pramen_info_date ]
+    
+    # These are additional option passed to the writer as 'df.write(...).options(...)'
+    option {
+      compression = "gzip"
+    }
+}
+```
+</details>
+
+The corresponding pipeline operation could look like this:
+<details>
+  <summary>Click to expand</summary>
+
+```config
+{
+    name = "Spark sink"
+    type = "sink"
+    sink = "spark_sink"
+    
+    schedule.type = "daily"
+    
+    # Optional dependencies
+    dependencies = [
+      {
+        tables = [ dependent_table ]
+        date.from = "@infoDate"
+      }
+    ]
+    
+    tables = [
+      {
+        input.metastore.table = metastore_table
+        output.path = "/datalake/base/path"
+    
+        # Date range to read the source table for. By default the job information date is used.
+        # But you can define an arbitrary expression based on the information date.
+        # More: see the section of documentation regarding date expressions, an the list of functions allowed.
+        date {
+          from = "@infoDate"
+          to = "@infoDate"
+        }
+    
+        transformations = [
+         { col = "col1", expr = "lower(some_string_column)" }
+        ],
+        filters = [
+          "some_numeric_column > 100"
+        ]
+        columns = [ "col1", "col2", "col2", "some_numeric_column" ]
+      }
+    ]
+}
+```
+
+</details>
+
+
+
 ### Dynamic Conformance Engine (Enceladus) sink
 
 This sink is used to send data to the landing area of the Enceladus Data Lake (also known as 'raw folder'). You can configure
@@ -974,7 +1064,7 @@ The pipeline operation for this sink could look like this:
   
   tables = [
     {
-      metastore.table = metastore_table
+      input.metastore.table = metastore_table
       output.path = "/datalake/base/path"
       
       # Optional info version (default = 1)
