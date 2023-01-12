@@ -28,7 +28,7 @@ import java.time.format.DateTimeFormatter
 import scala.collection.JavaConverters.asJavaIterableConverter
 
 case class CmdLineConfig(
-                          configPathName: String = "",
+                          configPathName: Option[String] = None,
                           files: Seq[String] = Seq.empty[String],
                           operations: Seq[String] = Seq.empty[String],
                           currentDate: Option[LocalDate] = None,
@@ -171,7 +171,7 @@ object CmdLineConfig {
     var rawFormat: Option[String] = None
 
     opt[String]("workflow").optional().action((value, config) =>
-      config.copy(configPathName = value))
+      config.copy(configPathName = Option(value)))
       .text("Path to a workflow configuration")
 
     opt[String]("files").optional().action((value, config) =>
