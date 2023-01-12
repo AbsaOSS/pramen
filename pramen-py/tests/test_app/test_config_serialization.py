@@ -108,6 +108,8 @@ def test_structured_config_is_deserialized_properly(repo_root, monkeypatch):
                     "start": "2017-01-31",
                 },
                 "records_per_partition": 1000000,
+                "reader_options": {},
+                "writer_options": {},
             },
             {
                 "name": "table_out1",
@@ -120,6 +122,8 @@ def test_structured_config_is_deserialized_properly(repo_root, monkeypatch):
                     "start": "2017-01-29",
                 },
                 "records_per_partition": 500000,
+                "reader_options": {"mergeSchema": "false"},
+                "writer_options": {"compression": "snappy"},
             },
         ],
     }

@@ -71,6 +71,8 @@ class MetastoreTable:
     table: str = attrs.field(default="")
     description: str = attrs.field(default="")
     records_per_partition: int = attrs.field(default=500000)
+    reader_options: Dict[str, str] = attrs.field(factory=dict)
+    writer_options: Dict[str, str] = attrs.field(factory=dict)
 
     def __attrs_post_init__(self) -> None:
         default_fs = env.str("PRAMENPY_DEFAULT_FS", "hdfs").strip('"')
