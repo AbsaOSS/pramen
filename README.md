@@ -125,17 +125,15 @@ creating an uber jar containing all the dependencies.
 In order to implement custom sources, transformers and sinks you need to link Pramen API, and sometimes, the core.
 Pramen libraries are available at [Maven Central](https://mvnrepository.com/search?q=pramen)
 
-The latest version is `1.1.2`.
+The latest version is `1.2.0`.
 
 The following Scala and Spark combinations are supported:
 
-| Scala version |    Spark version     |
-|:-------------:|:--------------------:|
-|     2.11      |        2.4.8         |
-|     2.12      | 3.0.x, 3.1.x, 3.2.x  |
-|     2.13      |        3.2.2         |
-
-Spark 3.3.0 is not yet supported since Delta format is not released for Spark 3.3.0 yet (https://docs.delta.io/latest/releases.html).
+| Scala version |    Spark version    |
+|:-------------:|:-------------------:|
+|     2.11      |        2.4.8        |
+|     2.12      | 3.0.x, 3.1.x, 3.2.x |
+|     2.13      |    3.2.x, 3.3.x     |
 
 ## Building Pramen to suite your environment
 
