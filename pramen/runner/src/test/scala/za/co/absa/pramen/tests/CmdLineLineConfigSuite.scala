@@ -46,7 +46,7 @@ class CmdLineLineConfigSuite extends AnyWordSpec {
       "parse workflow location" in {
         val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
         assert(cmd.nonEmpty)
-        assert(cmd.get.configPathName == "dummy.config")
+        assert(cmd.get.configPathName.contains("dummy.config"))
         assert(cmd.get.dryRun.isEmpty)
         assert(cmd.get.undercover.isEmpty)
         assert(cmd.get.useLock.isEmpty)

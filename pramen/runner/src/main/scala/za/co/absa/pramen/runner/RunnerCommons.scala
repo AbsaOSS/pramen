@@ -43,12 +43,7 @@ object RunnerCommons {
       copyFilesToLocal(cmdLineConfig.files, hadoopConfig)
     }
 
-    val conf: Config = if (cmdLineConfig.configPathName.isEmpty) {
-      log.warn("No '--workflow <file.conf>' is provided. Assuming configuration is present in 'application.conf'.")
-      ConfigFactory.load()
-    } else {
-      getConfig(cmdLineConfig.configPathName, cmdLineConfig)
-    }
+    val conf: Config = getConfig(cmdLineConfig.configPathName, cmdLineConfig)
 
     JavaXConfig.setJavaXProperties(conf)
 
@@ -63,12 +58,21 @@ object RunnerCommons {
     conf
   }
 
-  def getConfig(configPath: String, cmd: CmdLineConfig): Config = {
+  def getConfig(configPath: Option[String], cmd: CmdLineConfig): Config = {
     val originalConfig = ConfigFactory.load()
-    log.info(s"Loading $configPath...\n")
-    val conf = ConfigFactory.parseFile(new File(configPath))
-      .withFallback(originalConfig)
-      .resolve()
+
+    val conf = configPath match {
+      case Some(path) =>
+        log.info(s"Loading $path...\n")
+        ConfigFactory
+          .parseFile(new File(path))
+          .withFallback(originalConfig)
+          .resolve()
+      case None =>
+        log.warn("No '--workflow <file.conf>' is provided. Assuming configuration is present in 'application.conf'.")
+        originalConfig
+          .resolve()
+    }
 
     CmdLineConfig.applyCmdLineToConfig(conf, cmd)
   }
