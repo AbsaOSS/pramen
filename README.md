@@ -983,6 +983,9 @@ The pipeline operation for this sink could look like this:
       # Optional when running Enceladus from Pramen
       output.dataset.name = "my_dataset"
       output.dataset.version = 2
+      
+      # Optional Hive table to repair after Enceladus is executed
+      hive.table = "my_database.my_table"
     }
   ]
 }
