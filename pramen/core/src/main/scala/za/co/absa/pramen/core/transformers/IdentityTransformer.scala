@@ -46,8 +46,6 @@ class IdentityTransformer extends Transformer {
                    options: Map[String, String]): DataFrame = {
     val tableName = options("table")
 
-    val df = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
-
-    df.withColumn("transform_id", rand())
+    metastore.getTable(tableName, Option(infoDate), Option(infoDate))
   }
 }

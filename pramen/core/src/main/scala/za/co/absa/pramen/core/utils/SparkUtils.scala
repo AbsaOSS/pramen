@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.notify.pipeline.FieldChange
 import za.co.absa.pramen.core.pipeline.TransformExpression
 
+import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 import scala.reflect.runtime.universe._
@@ -207,6 +208,21 @@ object SparkUtils {
       val u = getActualProcessingTimeUdf
       df.withColumn(timestampCol, u(unix_timestamp()).cast(TimestampType))
     }
+  }
+
+  /**
+    * This helper method returns output of `df.show()` to a string
+    *
+    * @param df      a dataframe to show
+    * @param numRows the maximum number of rows to show
+    * @return
+    */
+  def showString(df: DataFrame, numRows: Int = 20): String = {
+    val outCapture = new ByteArrayOutputStream
+    Console.withOut(outCapture) {
+      df.show(numRows, truncate = false)
+    }
+    new String(outCapture.toByteArray).replace("\r\n", "\n")
   }
 
   private def getActualProcessingTimeUdf: UserDefinedFunction = {
