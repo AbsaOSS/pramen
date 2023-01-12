@@ -161,7 +161,7 @@ depending on the Scala version you used.
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
 ```sh
-$ spark-shell --jars pramen-runner_2.12_3.2.2-1.0.2-SNAPSHOT.jar
+$ spark-shell --jars pramen-runner_2.12_3.2.2-1.2.1-SNAPSHOT.jar
 ```
 
 # Creating a data pipeline
