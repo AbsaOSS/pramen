@@ -2082,13 +2082,14 @@ Specify which dates to run:
 
 Execution options:
 
-| Argument          | Example             | Description                                                                                                                                                                                                         |
-|-------------------|---------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| --dry-run         | `--dry-run`         | If specified the pipeline won't be executed. Pramen will print which job it would have run.                                                                                                                         |
-| --verbose         | `--verbose`         | If specified, application logs will include more Spark execution details.                                                                                                                                           |
-| --check-late-only | `--check-late-only` | If specified, Pramen will do only late data checks and checks for retrospective updates. It won't run jobs that are not yet late. Useful for catch-up job schedules.                                                |
-| --check-new-only  | `--check-new-only`  | If specified, Pramen will not check for late and updated data and will run only jobs scheduled for the current date.                                                                                                |
-| --undercover      | `--undercover`      | If specified, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
+| Argument             | Example                     | Description                                                                                                                                                                                                         |
+|----------------------|-----------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| --dry-run            | `--dry-run`                 | If specified the pipeline won't be executed. Pramen will print which job it would have run.                                                                                                                         |
+| --verbose            | `--verbose`                 | If specified, application logs will include more Spark execution details.                                                                                                                                           |
+| --override-log-level | `--override-log-level INFO` | Overrides environment configured root log level.                                                                                                                                                                    |
+| --check-late-only    | `--check-late-only`         | If specified, Pramen will do only late data checks and checks for retrospective updates. It won't run jobs that are not yet late. Useful for catch-up job schedules.                                                |
+| --check-new-only     | `--check-new-only`          | If specified, Pramen will not check for late and updated data and will run only jobs scheduled for the current date.                                                                                                |
+| --undercover         | `--undercover`              | If specified, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
 
 ### Command line examples
 

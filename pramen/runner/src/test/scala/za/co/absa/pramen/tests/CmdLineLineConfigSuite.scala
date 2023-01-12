@@ -94,6 +94,12 @@ class CmdLineLineConfigSuite extends AnyWordSpec {
         val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--rerun", "16/08/2020"))
         assert(cmd.isEmpty)
       }
+
+      "support log level override" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--override-log-level", "INFO"))
+        assert(cmd.nonEmpty)
+        assert(cmd.get.overrideLogLevel.contains("INFO"))
+      }
     }
   }
 

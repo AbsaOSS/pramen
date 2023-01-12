@@ -32,7 +32,11 @@ object RunnerCommons {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   def getMainContext(args: Array[String]): Config = {
+    val rootLogger = Logger.getRootLogger
+
     val cmdLineConfig = CmdLineConfig(args)
+
+    cmdLineConfig.overrideLogLevel.foreach(level => rootLogger.setLevel(Level.toLevel(level)))
 
     if (cmdLineConfig.files.nonEmpty) {
       val hadoopConfig = new Configuration()

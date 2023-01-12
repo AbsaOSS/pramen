@@ -43,7 +43,8 @@ case class CmdLineConfig(
                           mode: String = "",
                           inverseOrder: Option[Boolean] = None,
                           tableNum: Option[Int] = None,
-                          verbose: Option[Boolean] = None
+                          verbose: Option[Boolean] = None,
+                          overrideLogLevel: Option[String] = None
                         )
 
 object CmdLineConfig {
@@ -75,7 +76,8 @@ object CmdLineConfig {
       "[--date-from <date_from>]" +
       "[--date-to <date_to>]" +
       "[--run-mode { fill_gaps | check_updates | force }]" +
-      "[--inverse-order <true/false>]"
+      "[--inverse-order <true/false>]" +
+      "[--override-log-level <log_level>]"
     )
 
     parser.parse(args, CmdLineConfig())
@@ -236,6 +238,10 @@ object CmdLineConfig {
     opt[Unit]("verbose").optional().action((_, config) =>
       config.copy(verbose = Some(true)))
       .text("When specified, more detailed logs will be generated.")
+
+    opt[String]("override-log-level").optional().action((value, config) =>
+      config.copy(overrideLogLevel = Option(value)))
+      .text("Override environment configured root log level.")
 
     help("help").text("prints this usage text")
   }
