@@ -158,7 +158,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
 
       "return false if a dependency is specified that has no retrospective updates" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
+        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
@@ -171,7 +171,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
 
       "return true if a dependency is specified that has retrospective updates" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
+        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
@@ -184,8 +184,8 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
 
       "return true if 2 dependency is a retrospective update, and other is not" in {
-        val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = true, isOptional = false)
+        val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
+        val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table3", date, date))
@@ -201,8 +201,8 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
 
       "return false if the dependency that has retrospective updates is not tracked" in {
-        val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
-        val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = false, isOptional = false)
+        val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
+        val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = false, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table3", date, date))
@@ -217,7 +217,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
 
     "isDependencyUpdatedRetrospectively" should {
       "return false if the dependency if the job hasn't been ran" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
+        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date)).thenReturn(None)
@@ -229,7 +229,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
 
       "return false if the dependency if the output table is not updated retrospectively" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
+        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
@@ -242,7 +242,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
 
       "return true if the dependency if the output table is updated retrospectively" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false)
+        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestDataChunk("table2", date, date))
@@ -255,7 +255,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
 
       "return false if tracking updates is disabled for the dependency" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = false, isOptional = false)
+        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = false, isOptional = false, isPassive = false)
         val bk = mock(classOf[Bookkeeper])
 
         assert(!isDependencyUpdatedRetrospectively("table2", date, dep, bk))

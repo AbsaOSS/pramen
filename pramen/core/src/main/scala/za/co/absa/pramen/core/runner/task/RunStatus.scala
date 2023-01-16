@@ -35,12 +35,12 @@ object RunStatus {
     val isFailure: Boolean = true
   }
 
-  case class MissingDependencies(tables: Seq[String]) extends RunStatus {
-    val isFailure: Boolean = true
+  case class MissingDependencies(_isFailure: Boolean, tables: Seq[String]) extends RunStatus {
+    val isFailure: Boolean = _isFailure
   }
 
-  case class FailedDependencies(failures: Seq[DependencyFailure]) extends RunStatus {
-    val isFailure: Boolean = true
+  case class FailedDependencies(_isFailure: Boolean, failures: Seq[DependencyFailure]) extends RunStatus {
+    val isFailure: Boolean = _isFailure
   }
 
   case object NoData extends RunStatus {

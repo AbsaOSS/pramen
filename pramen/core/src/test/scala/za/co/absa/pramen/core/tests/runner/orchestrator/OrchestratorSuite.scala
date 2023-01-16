@@ -35,10 +35,10 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
     val job2 = new JobSpy("Job2", "table2")
     val job3 = new JobSpy("Job3", "table3",
       operationDef = getOperation(Seq(
-        MetastoreDependency(Seq("table1", "table2"), "@infoDate", None, triggerUpdates = false, isOptional = false))))
+        MetastoreDependency(Seq("table1", "table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false))))
     val job4 = new JobSpy("Job4", "table4",
       operationDef = getOperation(Seq(
-        MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = false))))
+        MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false))))
 
     "do nothing for empty jobs" in {
       withAppContext(spark) { appContext =>
@@ -106,7 +106,7 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
     "succeed even if tables specified in job definitions are not in metastore" in {
       val job4 = new JobSpy("Job4", "table4",
         operationDef = getOperation(Seq(
-          MetastoreDependency(Seq("table1", "dummy_table1", "dummy_table2"), "@infoDate", None, triggerUpdates = false, isOptional = false))))
+          MetastoreDependency(Seq("table1", "dummy_table1", "dummy_table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false))))
 
       withAppContext(spark) { appContext =>
         val conf = ConfigFactory.empty()

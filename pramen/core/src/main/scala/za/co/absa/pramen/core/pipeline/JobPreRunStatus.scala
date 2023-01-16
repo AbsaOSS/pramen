@@ -24,5 +24,5 @@ object JobPreRunStatus {
   case object NeedsUpdate extends JobPreRunStatus
   case object NoData extends JobPreRunStatus
   case class InsufficientData(actual: Long, expected: Long, oldRecordCount: Option[Long]) extends JobPreRunStatus
-  case class FailedDependencies(failures: Seq[DependencyFailure]) extends JobPreRunStatus
+  case class FailedDependencies(isFailure: Boolean, failures: Seq[DependencyFailure]) extends JobPreRunStatus
 }

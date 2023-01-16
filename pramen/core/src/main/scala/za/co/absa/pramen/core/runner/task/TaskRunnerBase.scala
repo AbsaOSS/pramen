@@ -96,8 +96,8 @@ abstract class TaskRunnerBase(conf: Config,
               log.info(s"SKIPPING already ran job: $outputTable for date: ${task.infoDate}.")
               Left(TaskResult(task.job, RunStatus.NotRan, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
             }
-          case FailedDependencies(failures) =>
-            Left(TaskResult(task.job, RunStatus.FailedDependencies(failures), getRunInfo(task.infoDate, started), Nil, Nil, Nil))
+          case FailedDependencies(isFailure, failures) =>
+            Left(TaskResult(task.job, RunStatus.FailedDependencies(isFailure, failures), getRunInfo(task.infoDate, started), Nil, Nil, Nil))
         }
         if (validationResult.dependencyWarnings.nonEmpty) {
           log.warn(s"$WARNING Validation of the task: $outputTable for date: ${task.infoDate} has " +
@@ -289,10 +289,12 @@ abstract class TaskRunnerBase(conf: Config,
         log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
       case RunStatus.Failed(ex) =>
         log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED", ex)
-      case RunStatus.MissingDependencies(tables) =>
-        log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
-      case RunStatus.FailedDependencies(deps) =>
-        log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
+      case RunStatus.MissingDependencies(isFailure, tables) =>
+        val emoji = if (isFailure) "$FAILURE" else "$WARNING"
+        log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
+      case RunStatus.FailedDependencies(isFailure, deps) =>
+        val emoji = if (isFailure) s"$FAILURE" else s"$WARNING"
+        log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
       case RunStatus.NoData =>
         log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
       case _: RunStatus.InsufficientData =>

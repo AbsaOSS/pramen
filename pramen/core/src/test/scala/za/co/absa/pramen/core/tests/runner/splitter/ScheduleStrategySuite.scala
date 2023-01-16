@@ -365,7 +365,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
   "ScheduleStrategyTransformation" when {
     val outputTable = "output_table"
-    val dependencies = Seq(MetastoreDependency(Seq("table1"), "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false))
+    val dependencies = Seq(MetastoreDependency(Seq("table1"), "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false))
     val runDate = LocalDate.of(2022, 2, 18)
     val minimumDate = LocalDate.of(2022, 2, 1)
     val initialSourcingDateExpr = "@runDate - 2"

@@ -1487,6 +1487,11 @@ Here is a template for a dependency definition:
   
   # If true, dependency failure will cause a warning in the notification instead of error
   optional = true
+
+  # If true, the job won't run on dependency failure, but will not be marked as a failure in notifications.
+  # This is useful for operations that need to happen as soon as dependencies are met, but there no certanty regarding
+  # the exact date.
+  passive = true
 }
 ```
 

@@ -82,12 +82,20 @@ class OrchestratorImpl extends Orchestrator {
 
       val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
 
-      val taskResult = TaskResult(job, RunStatus.MissingDependencies(missingTables), None, Nil, Nil, Nil)
+      val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
+
+      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, Nil, Nil, Nil)
 
       state.addTaskCompletion(taskResult :: Nil)
     })
 
     jobRunner.shutdown()
+  }
+
+  private def hasNonPassiveNonOptionalDeps(job: Job, missingTables: Seq[String]): Boolean = {
+    missingTables.exists(table =>
+      job.operation.dependencies.exists(d => !d.isPassive && !d.isOptional && d.tables.contains(table))
+    )
   }
 
   def sendPendingJobs(runJobsChannel: Channel[Job], dependencyResolver: DependencyResolver): Boolean = {

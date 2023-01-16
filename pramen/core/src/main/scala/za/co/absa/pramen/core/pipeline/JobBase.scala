@@ -62,7 +62,8 @@ abstract class JobBase(operationDef: OperationDef,
 
     if (dependencyErrors.nonEmpty) {
       log.warn(s"Job for table ${outputTableDef.name} at $infoDate has validation failures.")
-      JobPreRunResult(JobPreRunStatus.FailedDependencies(dependencyErrors), None, dependencyWarnings)
+      val isFailure = dependencyErrors.exists(!_.dep.isPassive)
+      JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure, dependencyErrors), None, dependencyWarnings)
     } else {
       if (dependencyWarnings.nonEmpty) {
         log.info(s"Job for table ${outputTableDef.name} at $infoDate has validation warnings: ${dependencyWarnings.map(_.table).mkString(", ")}.")
@@ -106,6 +107,8 @@ abstract class JobBase(operationDef: OperationDef,
       case Some(dateUntil) => s"from '$dateFrom' to '$dateUntil''"
       case None            => s"from '$dateFrom'"
     }
+
+    log.info(s"Validating @infoDate $range")
 
     val failures = dep.tables.flatMap(table => {
       val isAvailable = metastore.isDataAvailable(table, Option(dateFrom), dateUntilOpt)
