@@ -1471,6 +1471,19 @@ order of execution of operations.
 
 You can use any expressions from [the date expression reference](#date-functions).
 
+Dependency configuration options:
+
+| Option            | Is Mandatory | Description                                                                                                                                                                                                                                              |
+|-------------------|--------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `tables`          | Yes          | The list of tables that the operation uses.                                                                                                                                                                                                              |
+| `date.from`       | Yes          | The date expression specifying the oldest date it is acceptable to run the operation.                                                                                                                                                                    |
+| `date.to`         | No           | The date expression specifying the newest date it is acceptable to run the operation.                                                                                                                                                                    |
+| `trigger.updates` | No           | If `true`, updates to the above tables will cause rerun of this operation (default: `false`).                                                                                                                                                            |
+| `optional`        | No           | If `true`, failing the dependency will only trigger a warning, not an error (default: `false`).                                                                                                                                                          |
+| `passive`         | No           | If `true`, failing dependency will not generate an error, the operation won't run, but will be checked next time. This is useful for operations that need to happen as soon as dependencies are met, but there is no certainty regarding the exact date. |
+
+Options `optional` and `passive` are mutually exclusive.
+
 Here is a template for a dependency definition:
 ```config
 {
@@ -1489,8 +1502,8 @@ Here is a template for a dependency definition:
   optional = true
 
   # If true, the job won't run on dependency failure, but will not be marked as a failure in notifications.
-  # This is useful for operations that need to happen as soon as dependencies are met, but there no certanty regarding
-  # the exact date.
+  # This is useful for operations that need to happen as soon as dependencies are met, but there is no
+  # certainty regarding the exact date.
   passive = true
 }
 ```
