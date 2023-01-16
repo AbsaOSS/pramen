@@ -430,8 +430,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case Failed(ex)                            => ex.getMessage
       case ValidationFailed(ex)                  => ex.getMessage
       case InsufficientData(actual, expected, _) => s"Got $actual, expected at least $expected records"
-      case MissingDependencies(tables)           => s"Dependent job failures: ${tables.mkString(", ")}"
-      case FailedDependencies(deps)              => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
+      case MissingDependencies(_, tables)        => s"Dependent job failures: ${tables.mkString(", ")}"
+      case FailedDependencies(_, deps)           => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
       case _                                     =>
         if (task.dependencyWarnings.isEmpty) {
           ""

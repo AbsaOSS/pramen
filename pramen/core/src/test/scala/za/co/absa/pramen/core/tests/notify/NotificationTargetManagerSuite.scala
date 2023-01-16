@@ -79,7 +79,7 @@ class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
     "decode missing dependencies" in {
       val tables = Seq("table1", "table2")
 
-      assert(NotificationTargetManager.runStatusToTaskStatus(RunStatus.MissingDependencies(tables)).contains(TaskStatus.MissingDependencies(tables)))
+      assert(NotificationTargetManager.runStatusToTaskStatus(RunStatus.MissingDependencies(_isFailure = true, tables)).contains(TaskStatus.MissingDependencies(tables)))
     }
 
     "decode failed dependencies" in {
@@ -90,7 +90,7 @@ class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
 
       val failedTables = Seq("table0", "table1", "table2", "table3", "table99")
 
-      assert(NotificationTargetManager.runStatusToTaskStatus(RunStatus.FailedDependencies(failedDependencies)).contains(TaskStatus.FailedDependencies(failedTables)))
+      assert(NotificationTargetManager.runStatusToTaskStatus(RunStatus.FailedDependencies(_isFailure = true, failedDependencies)).contains(TaskStatus.FailedDependencies(failedTables)))
     }
 
     "decode no data" in {

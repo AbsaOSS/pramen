@@ -184,23 +184,23 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "job has failed dependencies" in {
-      val depFailure = DependencyFailure(MetastoreDependency("table1" :: Nil, "@infoDate", None, triggerUpdates = true, isOptional = false), Nil, "table1" :: Nil, "2022-02-18 - 2022-02-19" :: Nil)
-      val (runner, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(depFailure :: Nil), None, Nil))
+      val depFailure = DependencyFailure(MetastoreDependency("table1" :: Nil, "@infoDate", None, triggerUpdates = true, isOptional = false, isPassive = false), Nil, "table1" :: Nil, "2022-02-18 - 2022-02-19" :: Nil)
+      val (runner, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure = true, depFailure :: Nil), None, Nil))
 
       val result = runner.preRunCheck(tasks.head, started)
 
       assert(result.isLeft)
-      assert(result.left.get.runStatus == RunStatus.FailedDependencies(depFailure :: Nil))
+      assert(result.left.get.runStatus == RunStatus.FailedDependencies(_isFailure = true, depFailure :: Nil))
     }
 
     "job has empty tables" in {
-      val depFailure = DependencyFailure(MetastoreDependency("table2" :: Nil, "@infoDate", None, triggerUpdates = true, isOptional = false), "table1" :: Nil, Nil, Nil)
-      val (runner, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(depFailure :: Nil), None, Nil))
+      val depFailure = DependencyFailure(MetastoreDependency("table2" :: Nil, "@infoDate", None, triggerUpdates = true, isOptional = false, isPassive = false), "table1" :: Nil, Nil, Nil)
+      val (runner, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure = false, depFailure :: Nil), None, Nil))
 
       val result = runner.preRunCheck(tasks.head, started)
 
       assert(result.isLeft)
-      assert(result.left.get.runStatus == RunStatus.FailedDependencies(depFailure :: Nil))
+      assert(result.left.get.runStatus == RunStatus.FailedDependencies(_isFailure = false, depFailure :: Nil))
     }
   }
 

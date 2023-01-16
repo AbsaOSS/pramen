@@ -97,7 +97,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
   "preRunCheck()" should {
     "return failure on failed dependencies" in {
       val conf = ConfigFactory.empty()
-      val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = false)
+      val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false)
 
       val actual = job.preRunCheck(infoDate, conf)
@@ -106,11 +106,26 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       assert(actual.status.isInstanceOf[FailedDependencies])
       assert(actual.status.asInstanceOf[FailedDependencies].failures.head.emptyTables.isEmpty)
       assert(actual.status.asInstanceOf[FailedDependencies].failures.head.failedTables.head == "table1")
+      assert(actual.status.asInstanceOf[FailedDependencies].isFailure)
+    }
+
+    "return failure on failed passive dependencies" in {
+      val conf = ConfigFactory.empty()
+      val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = true)
+      val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false)
+
+      val actual = job.preRunCheck(infoDate, conf)
+
+      assert(actual.dependencyWarnings.isEmpty)
+      assert(actual.status.isInstanceOf[FailedDependencies])
+      assert(actual.status.asInstanceOf[FailedDependencies].failures.head.emptyTables.isEmpty)
+      assert(actual.status.asInstanceOf[FailedDependencies].failures.head.failedTables.head == "table1")
+      assert(!actual.status.asInstanceOf[FailedDependencies].isFailure)
     }
 
     "return failure on empty tables" in {
       val conf = ConfigFactory.empty()
-      val dep = MetastoreDependency(Seq("table2"), "@infoDate", None, triggerUpdates = false, isOptional = false)
+      val dep = MetastoreDependency(Seq("table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false, isTableEmpty = true)
 
       val actual = job.preRunCheck(infoDate, conf)
@@ -122,7 +137,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     "return warnings on failed optional dependencies" in {
       val conf = ConfigFactory.empty()
-      val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = true)
+      val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = true, isPassive = false)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false)
 
       val actual = job.preRunCheck(infoDate.plusDays(1), conf)
