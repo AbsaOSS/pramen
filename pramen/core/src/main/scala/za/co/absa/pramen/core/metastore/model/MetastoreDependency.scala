@@ -41,10 +41,10 @@ object MetastoreDependency {
 
   def fromConfig(conf: Config, path: String): MetastoreDependency = {
     if (!conf.hasPath(TABLES_KEY)) {
-      throw new IllegalArgumentException(s"Missing required key '$path.$TABLES_KEY' in config")
+      throw new IllegalArgumentException(s"Missing required key '$path.$TABLES_KEY' in config.")
     }
     if (!conf.hasPath(DATE_FROM_EXPR_KEY)) {
-      throw new IllegalArgumentException(s"Missing required key '$path.$DATE_FROM_EXPR_KEY' in config")
+      throw new IllegalArgumentException(s"Missing required key '$path.$DATE_FROM_EXPR_KEY' in config.")
     }
 
     val tables = conf.getStringList(TABLES_KEY).asScala.toSeq
@@ -52,6 +52,10 @@ object MetastoreDependency {
     val triggerUpdates = Try(conf.getBoolean(TRIGGER_UPDATES_KEY)).getOrElse(false)
     val isOptional = Try(conf.getBoolean(OPTIONAL_KEY)).getOrElse(false)
     val isPassive = ConfigUtils.getOptionBoolean(conf, PASSIVE_KEY).getOrElse(false)
+
+    if (isOptional && isPassive) {
+      throw new IllegalArgumentException(s"Dependency '$path' cannot be both optional and passive.")
+    }
 
     val dateUntilExpr = Try {
       conf.getString(DATE_UNTIL_EXPR_KEY)
