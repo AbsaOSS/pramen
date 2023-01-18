@@ -248,7 +248,7 @@ since they can access data by table names.
 #### How does this work? 
 
 Pramen can store data in folders of file systems supported by Hadoop (HDFS, S3, AzureFS,
-etc.) in Parquet or Delta format, or as tables in Delta Lake. But implementers of transformations do not need to worry
+etc.) in Parquet or Delta format, or as tables in DeltaLake. But implementers of transformations do not need to worry
 about the underlying storage. They can access it using `getTable()` method of a metastore object provided to them. The
 framework will provide them with a Spark DataFrame. 
 
@@ -262,7 +262,7 @@ A metastore is simply a mapping from a _table name_ to a _path_ where the data i
 Currently, the following underlying storage is supported. 
 - Parquet files in Hdfs
 - Delta files in Hdfs
-- Delta Lake tables
+- DeltaLake tables
 
 Here is an example of a metastore configuration with a single table (Parquet format):
 ```config
@@ -287,7 +287,7 @@ Metastore table options:
 | `name`                       | Name of the metastore table                                                       |
 | `format`                     | Storage format (`parquet` or `delta`)                                             |
 | `path`                       | Path to the data in the metastore.                                                |
-| `table`                      | Delta Lake table name (if Delta Lake tables are the underlying storage).          |
+| `table`                      | DataLake table name (if DataLake tables are the underlying storage).              |
 | `records.per.partition`      | Number of records per partition (in order to avoid small files problem).          |
 | `information.date.column`    | Name of the column that contains the information date. *                          |
 | `information.date.format`    | Format of the information date used for partitioning (in Java format notation). * |
@@ -330,7 +330,7 @@ Storage type examples:
   }
   ```
   
-  A config for a Delta Lake table example:
+  A config for a DeltaLake table example:
   ```config
   {
     name = "table_name"
@@ -573,7 +573,7 @@ pramen.operations = [
     source = "parquet_source1"
     tables = [
       {
-        input.path = "hdfs://server/path/to/parquet/data"
+        input.path = hdfs://server/path/to/parquet/data
         output.metastore.table = my_table1
       }
     ]
@@ -1856,7 +1856,7 @@ sink operation definition.
 ```
 
 ### Transfer operations
-Pramen can be used just for data ingestion to a data lake. In this case, you don't need to use the metastore. Instead, 
+Pramen can be used just for data ingestion to a Data Lake. In this case, you don't need to use the metastore. Instead, 
 you can send data directly from a source to a sink. Such operations are called 'transfer operations' in Pramen.
 
 You specify:
