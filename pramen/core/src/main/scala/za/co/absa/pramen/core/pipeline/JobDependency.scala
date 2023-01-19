@@ -22,4 +22,6 @@ package za.co.absa.pramen.core.pipeline
 case class JobDependency(
                           inputTables: Seq[String],
                           outputTable: String
-                        )
+                        ) {
+  lazy val nonRecursiveInputTables: Seq[String] = inputTables.filterNot(inputTable => inputTable == outputTable)
+}
