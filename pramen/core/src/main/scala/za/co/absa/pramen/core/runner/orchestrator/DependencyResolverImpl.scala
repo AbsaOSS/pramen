@@ -62,7 +62,7 @@ class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolve
   }
 
   override def getDag(outputTables: Seq[String]): String = {
-    val tables = if (outputTables.isEmpty) {
+    val tables = if (outputTables.nonEmpty) {
       outputTables.filterNot(tbl => availableTables.contains(tbl))
     } else {
       outputTables
@@ -74,8 +74,9 @@ class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolve
   }
 
   private def getRelevantTables(outputTable: String): Set[String] = {
-    val dependentInputTables = deps.filter(_.outputTable == outputTable)
-      .flatMap(_.inputTables)
+    val dependentInputTables = deps
+      .filter(_.outputTable == outputTable)
+      .flatMap(_.nonRecursiveInputTables)
       .toSet
 
     dependentTables.intersect(dependentInputTables)
@@ -94,7 +95,7 @@ class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolve
       }
     }
 
-    val parentJobs = dep.inputTables.map(table => {
+    val parentJobs = dep.nonRecursiveInputTables.map(table => {
       val parentJob = deps.find(_.outputTable == table)
       parentJob match {
         case Some(j) => renderDag(j)
@@ -116,11 +117,9 @@ class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolve
 
   private def ensureNoCycles(): Seq[String] = {
     val depsMap = deps.flatMap(job => {
-      // Remove a table from input tables if it is the same as the output table
       // A job can depend on the same table it produces
-      val inputTables = job.inputTables.filterNot(t => t == job.outputTable)
-
-      inputTables.map(table => (job.outputTable, table))
+      // so for cycle detection, we use a list of input tables without this table
+      job.nonRecursiveInputTables.map(table => (job.outputTable, table))
     })
 
     val cycle = AlgorithmUtils.findCycle(depsMap)
