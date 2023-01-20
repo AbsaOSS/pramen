@@ -34,6 +34,8 @@ trait Job {
 
   val scheduleStrategy: ScheduleStrategy
 
+  def allowRunningTasksInParallel: Boolean
+
   def notificationTargets: Seq[JobNotificationTarget]
 
   def preRunCheck(infoDate: LocalDate,

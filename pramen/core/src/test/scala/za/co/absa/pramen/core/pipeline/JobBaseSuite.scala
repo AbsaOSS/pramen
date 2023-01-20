@@ -36,6 +36,28 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
   private val infoDate = LocalDate.of(2022, 1, 18)
 
+  "allowRunningTasksInParallel()" should {
+    "be true for jobs that don't have dependencies" in {
+      val job = getUseCase()
+
+      assert(job.allowRunningTasksInParallel)
+    }
+
+    "be true for jobs that don't have self-dependencies" in {
+      val dep = MetastoreDependency(Seq("table1", "table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
+      val job = getUseCase(dependencies = Seq(dep))
+
+      assert(job.allowRunningTasksInParallel)
+    }
+
+    "be false for jobs that have self-dependencies" in {
+      val dep = MetastoreDependency(Seq("table1", "test_output_table"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
+      val job = getUseCase(dependencies = Seq(dep))
+
+      assert(!job.allowRunningTasksInParallel)
+    }
+  }
+
   "getInfoDateRange()" should {
     "return correct range when both from and to are not provided" in {
       val job = getUseCase()

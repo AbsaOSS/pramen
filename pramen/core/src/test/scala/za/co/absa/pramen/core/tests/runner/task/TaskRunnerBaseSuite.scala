@@ -32,8 +32,8 @@ import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.pipeline._
-import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, NotRan, Succeeded}
-import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerBase, TaskRunnerParallel}
+import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, NotRan, Skipped, Succeeded}
+import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerBase, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 
@@ -49,7 +49,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
   private val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
   "runJobTasks" should {
-    "run multiple successful jobs" in {
+    "run multiple successful jobs parallel execution" in {
       val (runner, _, state, tasks) = getUseCase(runFunction = () => exampleDf)
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
@@ -71,7 +71,29 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result(1).runStatus.isInstanceOf[Succeeded])
     }
 
-    "run multiple failure jobs" in {
+    "run multiple successful jobs sequential execution" in {
+      val (runner, _, state, tasks) = getUseCase(allowParallel = false, runFunction = () => exampleDf)
+
+      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
+
+      val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
+
+      Await.result(fut, Duration.Inf)
+
+      val result = state.completedStatuses
+
+      val job = tasks.head.job.asInstanceOf[JobSpy]
+
+      assert(job.validateCount == 2)
+      assert(job.runCount == 2)
+      assert(job.postProcessingCount == 2)
+      assert(job.saveCount == 2)
+      assert(result.length == 2)
+      assert(result.head.runStatus.isInstanceOf[Succeeded])
+      assert(result(1).runStatus.isInstanceOf[Succeeded])
+    }
+
+    "run multiple failure jobs parallel execution" in {
       val (runner, _, state, tasks) = getUseCase(runFunction = () => throw new IllegalStateException("Test exception"))
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
@@ -92,6 +114,28 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.head.runStatus.isInstanceOf[Failed])
       assert(result(1).runStatus.isInstanceOf[Failed])
     }
+  }
+
+  "run multiple failure jobs sequential execution" in {
+    val (runner, _, state, tasks) = getUseCase(allowParallel = false, runFunction = () => throw new IllegalStateException("Test exception"))
+
+    val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
+
+    val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
+
+    Await.result(fut, Duration.Inf)
+
+    val result = state.completedStatuses
+
+    val job = tasks.head.job.asInstanceOf[JobSpy]
+
+    assert(job.validateCount == 1)
+    assert(job.runCount == 1)
+    assert(job.postProcessingCount == 0)
+    assert(job.saveCount == 0)
+    assert(result.length == 2)
+    assert(result.head.runStatus.isInstanceOf[Failed])
+    assert(result(1).runStatus.isInstanceOf[Skipped])
   }
 
   "preRunCheck" when {
@@ -368,7 +412,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  runFunction: () => DataFrame = () => null,
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
-                 bookkeeperIn: Bookkeeper = null
+                 bookkeeperIn: Bookkeeper = null,
+                 allowParallel: Boolean = true
                 ): (TaskRunnerBase, Bookkeeper, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
@@ -385,11 +430,16 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val stats = MetaTableStats(2, Some(100))
 
-    val job = new JobSpy(preRunCheckFunction = preRunCheckFunction, validationFunction = validationFunction, runFunction = runFunction, operationDef = operationDef, saveStats = stats)
+    val job = new JobSpy(preRunCheckFunction = preRunCheckFunction,
+      validationFunction = validationFunction,
+      runFunction = runFunction,
+      operationDef = operationDef,
+      allowParallel = allowParallel,
+      saveStats = stats)
 
     val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
-    val runner = new TaskRunnerParallel(conf, bookkeeper, state, runtimeConfig)
+    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, state, runtimeConfig)
 
     (runner, bookkeeper, state, tasks)
   }

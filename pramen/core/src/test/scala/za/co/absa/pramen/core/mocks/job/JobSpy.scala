@@ -35,6 +35,7 @@ class JobSpy(jobName: String = "DummyJob",
              validationFunction: () => Reason = () => Reason.Ready,
              runFunction: () => DataFrame = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing,
+             allowParallel: Boolean = true,
              saveStats: MetaTableStats = MetaTableStats(0, None),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty
             ) extends Job {
@@ -53,6 +54,8 @@ class JobSpy(jobName: String = "DummyJob",
   override val operation: OperationDef = operationDef
 
   override val scheduleStrategy: ScheduleStrategy = scheduleStrategyIn
+
+  override def allowRunningTasksInParallel: Boolean = allowParallel
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 

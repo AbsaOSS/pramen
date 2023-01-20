@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
-import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerParallel}
+import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl}
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ResourceUtils}
@@ -101,7 +101,7 @@ object AppRunner {
                                           state: PipelineState,
                                           appContext: AppContext): Try[TaskRunner] = {
     handleFailure(Try {
-      new TaskRunnerParallel(conf, appContext.bookkeeper, state, appContext.appConfig.runtimeConfig)
+      new TaskRunnerMultithreaded(conf, appContext.bookkeeper, state, appContext.appConfig.runtimeConfig)
     }, state, "initialization of the task runner")
   }
 
