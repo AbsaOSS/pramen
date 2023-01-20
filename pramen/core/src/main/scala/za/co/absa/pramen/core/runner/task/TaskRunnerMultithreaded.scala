@@ -22,35 +22,33 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.pipeline.Task
 import za.co.absa.pramen.core.state.PipelineState
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors.newFixedThreadPool
 import scala.concurrent.ExecutionContext.fromExecutorService
 import scala.concurrent.{ExecutionContextExecutorService, Future}
 
-class TaskRunnerParallel(conf: Config,
-                         bookkeeper: Bookkeeper,
-                         pipelineState: PipelineState,
-                         runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, runtimeConfig) {
+/**
+  * The responsibility of this class is to handle the execution method.
+  * This class runs tasks in multiple threads.
+  */
+class TaskRunnerMultithreaded(conf: Config,
+                              bookkeeper: Bookkeeper,
+                              pipelineState: PipelineState,
+                              runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, runtimeConfig, pipelineState) {
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)
   implicit private val executionContext: ExecutionContextExecutorService = fromExecutorService(executor)
 
-  def runAllTasks(tasks: Seq[Task]): Seq[Future[RunStatus]] = {
+  def runParallel(tasks: Seq[Task]): Seq[Future[RunStatus]] = {
     tasks.map(task => Future {
-      val started = Instant.now()
-
-      val result = validate(task, started) match {
-        case Left(failedResult)         => failedResult
-        case Right(validationResult) => run(task, started, validationResult)
-      }
-      val notificationTargetErrors = sendNotifications(task, result)
-      val updatedResult = result.copy(notificationTargetErrors = notificationTargetErrors)
-
-      logTaskResult(updatedResult)
-      pipelineState.addTaskCompletion(Seq(updatedResult))
-
-      result.runStatus
+      runTask(task)
     })
+  }
+
+  def runSequential(tasks: Seq[Task]): Future[Seq[RunStatus]] = {
+    Future {
+      runDependentTasks(tasks)
+    }
   }
 
   def shutdown(): Unit = {

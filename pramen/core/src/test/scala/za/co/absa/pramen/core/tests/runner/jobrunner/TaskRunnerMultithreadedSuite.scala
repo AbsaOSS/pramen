@@ -30,11 +30,11 @@ import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, Succeeded}
-import za.co.absa.pramen.core.runner.task.TaskRunnerParallel
+import za.co.absa.pramen.core.runner.task.TaskRunnerMultithreaded
 
 import java.time.{Instant, LocalDate, Duration => Dur}
 
-class ConcurrentJobRunnerImplSuite extends AnyWordSpec with SparkTestBase {
+class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
   import spark.implicits._
 
   private val runDate = LocalDate.of(2022, 2, 18)
@@ -57,7 +57,7 @@ class ConcurrentJobRunnerImplSuite extends AnyWordSpec with SparkTestBase {
       assert(results.head.schemaChanges.isEmpty)
     }
 
-    "handle a successful multiple task job" in {
+    "handle a successful multiple task job parallel execution" in {
       val (runner, bk, state, job) = getUseCase(runDate.plusDays(1))
 
       runner.runJob(job)
@@ -69,8 +69,34 @@ class ConcurrentJobRunnerImplSuite extends AnyWordSpec with SparkTestBase {
       assert(results(1).runInfo.get.infoDate == runDate.plusDays(1))
     }
 
-    "handle a failed job" in {
+    "handle a failed job parallel execution" in {
       val (runner, bk, state, job) = getUseCase(runFunction = () => throw new IllegalStateException("Test exception"))
+
+      runner.runJob(job)
+
+      val results = state.completedStatuses
+
+      assert(results.size == 1)
+      assert(results.head.runStatus.isInstanceOf[Failed])
+      assert(results.head.runInfo.get.infoDate == runDate)
+
+      assert(bk.getDataChunks("table_out", runDate, runDate).isEmpty)
+    }
+
+    "handle a successful multiple task job sequential execution" in {
+      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1), allowParallel = false)
+
+      runner.runJob(job)
+
+      val results = state.completedStatuses
+
+      assert(results.size == 2)
+      assert(results.head.runInfo.get.infoDate == runDate)
+      assert(results(1).runInfo.get.infoDate == runDate.plusDays(1))
+    }
+
+    "handle a failed job sequential execution" in {
+      val (runner, bk, state, job) = getUseCase(runFunction = () => throw new IllegalStateException("Test exception"), allowParallel = false)
 
       runner.runJob(job)
 
@@ -112,7 +138,8 @@ class ConcurrentJobRunnerImplSuite extends AnyWordSpec with SparkTestBase {
 
   def getUseCase(runDateIn: LocalDate = runDate,
                  isRerun: Boolean = false,
-                 runFunction: () => DataFrame = () => exampleDf
+                 runFunction: () => DataFrame = () => exampleDf,
+                 allowParallel: Boolean = true
                 ): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
     val conf = ConfigFactory.empty()
 
@@ -126,9 +153,9 @@ class ConcurrentJobRunnerImplSuite extends AnyWordSpec with SparkTestBase {
 
     val stats = MetaTableStats(2, Some(100))
 
-    val job = new JobSpy(runFunction = runFunction, saveStats = stats)
+    val job = new JobSpy(runFunction = runFunction, saveStats = stats, allowParallel = allowParallel)
 
-    val taskRunner = new TaskRunnerParallel(conf, bookkeeper, state, runtimeConfig)
+    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, state, runtimeConfig)
 
     val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner)
 

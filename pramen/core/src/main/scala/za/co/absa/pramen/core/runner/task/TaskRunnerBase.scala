@@ -28,6 +28,7 @@ import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline._
+import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 
@@ -37,25 +38,79 @@ import scala.util.{Failure, Success, Try}
 
 abstract class TaskRunnerBase(conf: Config,
                               bookkeeper: Bookkeeper,
-                              runtimeConfig: RuntimeConfig) extends TaskRunner {
+                              runtimeConfig: RuntimeConfig,
+                              pipelineState: PipelineState) extends TaskRunner {
   implicit private val ecDefault: ExecutionContext = ExecutionContext.global
+  implicit val localDateOrdering: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
   /**
-    * Runs tasks and returns their futures. Subclasses should override this method.
+    * Runs tasks in parallel (if possible) and returns their futures. Subclasses should override this method.
     *
     * @param tasks Tasks to run.
     * @return A sequence of futures - one for each task.
     */
-  def runAllTasks(tasks: Seq[Task]): Seq[Future[RunStatus]]
+  def runParallel(tasks: Seq[Task]): Seq[Future[RunStatus]]
+
+  /**
+    * Runs tasks only sequentially.
+    *
+    * @param tasks Tasks to run.
+    * @return A sequence of futures - one for each task.
+    */
+  def runSequential(tasks: Seq[Task]): Future[Seq[RunStatus]]
 
   override def runJobTasks(job: Job, infoDates: Seq[TaskPreDef]): Future[Seq[RunStatus]] = {
     val tasks = infoDates.map(p => Task(job, p.infoDate, p.reason))
 
-    val futures = runAllTasks(tasks)
+    if (job.allowRunningTasksInParallel) {
+      val futures = runParallel(tasks)
 
-    Future.sequence(futures)
+      Future.sequence(futures)
+    } else {
+      runSequential(tasks)
+    }
+  }
+
+  /** Runs multiple tasks in the single thread in the order of info dates. If one task fails, the rest will be skipped. */
+  protected def runDependentTasks(tasks: Seq[Task]): Seq[RunStatus] = {
+    val sortedTasks = tasks.sortBy(_.infoDate)
+    var failedInfoDate: Option[LocalDate] = None
+
+    sortedTasks.map(task =>
+      failedInfoDate match {
+        case Some(failedDate) =>
+          skipTask(task, s"Due to failure for $failedDate")
+        case None             =>
+          val status = runTask(task)
+          if (status.isFailure)
+            failedInfoDate = Option(task.infoDate)
+          status
+      }
+    )
+  }
+
+  /** Runs a task in the single thread. Performs all task logging and notification sending activities. */
+  protected def runTask(task: Task): RunStatus = {
+    val started = Instant.now()
+
+    val result: TaskResult = validate(task, started) match {
+      case Left(failedResult)      => failedResult
+      case Right(validationResult) => run(task, started, validationResult)
+    }
+
+    onTaskCompletion(task, result)
+  }
+
+  /** Skips a task. Performs all task logging and notification sending activities. */
+  protected def skipTask(task: Task, reason: String): RunStatus = {
+    val now = Instant.now()
+    val runStatus = RunStatus.Skipped(reason)
+    val runInfo = RunInfo(task.infoDate, now, now)
+    val taskResult = TaskResult(task.job, runStatus, Some(runInfo), Nil, Nil, Nil)
+
+    onTaskCompletion(task, taskResult)
   }
 
   /**
@@ -68,7 +123,7 @@ abstract class TaskRunnerBase(conf: Config,
     * @param started the instant when the job has started executing.
     * @return an instance of TaskResult on the check failure or optional record count on success.
     */
-  def preRunCheck(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
+  private[core] def preRunCheck(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
     val outputTable = task.job.outputTable.name
 
     Try {
@@ -119,7 +174,7 @@ abstract class TaskRunnerBase(conf: Config,
     * @param started the instant when the job has started executing.
     * @return an instance of TaskResult on validation failure or optional record count on success.
     */
-  def validate(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
+  private[core] def validate(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
     val outputTable = task.job.outputTable.name
 
     preRunCheck(task, started) match {
@@ -159,7 +214,7 @@ abstract class TaskRunnerBase(conf: Config,
     * @param started the instant when the job has started executing.
     * @return an instance of TaskResult.
     */
-  def run(task: Task, started: Instant, validationResult: JobPreRunResult): TaskResult = {
+  private[core] def run(task: Task, started: Instant, validationResult: JobPreRunResult): TaskResult = {
     Try {
       val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
 
@@ -215,11 +270,22 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
-  private[core] def sendNotifications(task: Task, result: TaskResult): Seq[NotificationFailure] = {
+  /** Logs task completion and sends corresponding notifications. */
+  private def onTaskCompletion(task: Task, taskResult: TaskResult): RunStatus = {
+    val notificationTargetErrors = sendNotifications(task, taskResult)
+    val updatedResult = taskResult.copy(notificationTargetErrors = notificationTargetErrors)
+
+    logTaskResult(updatedResult)
+    pipelineState.addTaskCompletion(Seq(updatedResult))
+
+    updatedResult.runStatus
+  }
+
+  private def sendNotifications(task: Task, result: TaskResult): Seq[NotificationFailure] = {
     task.job.notificationTargets.flatMap(notificationTarget => sendNotifications(task, result, notificationTarget))
   }
 
-  private[core] def sendNotifications(task: Task, result: TaskResult, notificationTarget: JobNotificationTarget): Option[NotificationFailure] = {
+  private def sendNotifications(task: Task, result: TaskResult, notificationTarget: JobNotificationTarget): Option[NotificationFailure] = {
     Try {
       val target = notificationTarget.target
 
@@ -277,7 +343,7 @@ abstract class TaskRunnerBase(conf: Config,
     Some(RunInfo(infoDate, started, Instant.now()))
   }
 
-  protected def logTaskResult(result: TaskResult): Unit = synchronized {
+  private def logTaskResult(result: TaskResult): Unit = synchronized {
     val infoDateMsg = result.runInfo match {
       case Some(date) => s" for $date"
       case None => ""

@@ -42,6 +42,8 @@ abstract class JobBase(operationDef: OperationDef,
 
   override val operation: OperationDef = operationDef
 
+  override val allowRunningTasksInParallel: Boolean = !operationDef.dependencies.exists(d => d.tables.contains(outputTableDef.name))
+
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
   def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult
