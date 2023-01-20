@@ -143,6 +143,15 @@ class DependencyResolverSuite extends AnyWordSpec {
 
       assert(resolver.getMissingDependencies("table3") == Seq("table1"))
     }
+
+    "if an output table depends on itself, return a list of tables without this recursive dependency" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table10"),
+        JobDependency(Seq("table3", "table10"), "table3")
+      ))
+
+      assert(resolver.getMissingDependencies("table3") == Seq("table10"))
+    }
   }
 
   "getDag" should {
@@ -162,6 +171,16 @@ class DependencyResolverSuite extends AnyWordSpec {
       val graph = resolver.getDag("table3" :: Nil)
 
       assert(graph == "table3 <- (+table1, ?table10)")
+    }
+
+    "if an output table depends on itself, not include this dependency in the visualized graph" in {
+      val testCase = new DependencyResolverImpl(Seq(
+        JobDependency(Seq("table1", "table2"), "table1")
+      ))
+
+      val graph = testCase.getDag("table1" :: Nil)
+
+      assert(graph == "table1 <- (?table2)")
     }
   }
 
