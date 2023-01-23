@@ -1222,7 +1222,6 @@ pramen {
   # This feature is experimental, use more than 1 with caution. 
   parallel.tasks = 1
 
-  
   # Pramen-Py settings
   py {
     # This is mandatory of you want to use Python transformations
@@ -1277,6 +1276,10 @@ pramen.operations = [
     # For weekly jobs the default is:  "lastMonday(@runDate)"
     # For monthly jobs the default is: "beginOfMonth(@runDate)"
     info.date.expr = "@runDate"
+    
+    # If true (default) jobs in this operation is allowed to run in parallel.
+    # It makes sense to set it to false for jobs that take a lot of cluster resources.
+    allow.parallel = true
 
     tables = [
       {

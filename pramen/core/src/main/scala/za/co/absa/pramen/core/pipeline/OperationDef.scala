@@ -32,6 +32,7 @@ case class OperationDef(
                          operationType: OperationType,
                          schedule: Schedule,
                          expectedDelayDays: Int,
+                         allowParallel: Boolean,
                          dependencies: Seq[MetastoreDependency],
                          outputInfoDateExpression: String,
                          initialSourcingDateExpression: String,
@@ -51,6 +52,7 @@ object OperationDef {
   val DISABLED_KEY = "disabled"
   val SCHEDULE_KEY = "schedule"
   val EXPECTED_DELAY_DAYS_KEY = "expected.delay.days"
+  val ALLOW_PARALLEL_KEY = "parallel"
   val DEPENDENCIES_KEY = "dependencies"
   val OUTPUT_INFO_DATE_EXPRESSION_KEY = "info.date.expr"
   val INITIAL_SOURCING_DATE_EXPR = "initial.sourcing.date.expr"
@@ -75,6 +77,7 @@ object OperationDef {
     val operationType = OperationType.fromConfig(conf, appConfig, parent)
     val schedule = Schedule.fromConfig(conf)
     val expectedDelayDays = ConfigUtils.getOptionInt(conf, EXPECTED_DELAY_DAYS_KEY).getOrElse(defaultDelayDays)
+    val allowParallel = ConfigUtils.getOptionBoolean(conf, ALLOW_PARALLEL_KEY).getOrElse(true)
     val dependencies = getDependencies(conf, parent)
     val outputInfoDateExpressionOpt = ConfigUtils.getOptionString(conf, OUTPUT_INFO_DATE_EXPRESSION_KEY)
     val initialSourcingDateExpressionOpt = ConfigUtils.getOptionString(conf, INITIAL_SOURCING_DATE_EXPR)
@@ -110,6 +113,7 @@ object OperationDef {
       operationType,
       schedule,
       expectedDelayDays,
+      allowParallel,
       dependencies,
       outputInfoDateExpression,
       initialSourcingDateExpression,

@@ -42,7 +42,7 @@ abstract class JobBase(operationDef: OperationDef,
 
   override val operation: OperationDef = operationDef
 
-  override val allowRunningTasksInParallel: Boolean = !operationDef.dependencies.exists(d => d.tables.contains(outputTableDef.name))
+  override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
@@ -136,6 +136,10 @@ abstract class JobBase(operationDef: OperationDef,
     } else {
       Some(pipeline.DependencyFailure(dep, emptyTables, failedTables, failedDateRanges))
     }
+  }
+
+  private[core] def hasSelfDependencies: Boolean = {
+    operationDef.dependencies.exists(_.tables.contains(outputTableDef.name))
   }
 
   private[core] def getInfoDateRange(infoDate: LocalDate, fromExpr: Option[String], toExpr: Option[String]): (LocalDate, LocalDate) = {
