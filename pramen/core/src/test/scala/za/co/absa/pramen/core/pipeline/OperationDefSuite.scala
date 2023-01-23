@@ -85,6 +85,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[Ingestion].sourceName == "jdbc1")
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.size == 1)
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.head.metaTableName == "table1_sync")
+      assert(op.allowParallel)
       assert(op.notificationTargets.size == 2)
       assert(op.notificationTargets.head == "hyperdrive1")
       assert(op.notificationTargets(1) == "custom2")
@@ -128,6 +129,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])
       assert(op.outputInfoDateExpression == "@date")
       assert(op.operationType.asInstanceOf[Transformation].clazz == "myclass")
+      assert(op.allowParallel)
       assert(op.dependencies.length == 2)
       assert(op.dependencies.head.tables.contains("table1"))
       assert(op.dependencies.head.dateFromExpr.contains("@infoDate - 1"))
@@ -150,6 +152,8 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |
            |sink = "kafka1"
            |
+           |parallel = false
+           |
            |tables = [
            |  {
            |    input.metastore.table = table1_sync
@@ -167,6 +171,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.size == 1)
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.head.metaTableName == "table1_sync")
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.head.options("topic") == "table1_topic")
+      assert(!op.allowParallel)
     }
   }
 }

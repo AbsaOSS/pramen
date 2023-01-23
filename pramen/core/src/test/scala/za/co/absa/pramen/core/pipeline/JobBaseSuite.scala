@@ -50,6 +50,13 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       assert(job.allowRunningTasksInParallel)
     }
 
+    "be false for jobs that don't allow parallel execution" in {
+      val dep = MetastoreDependency(Seq("table1", "table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
+      val job = getUseCase(allowParallel = false, dependencies = Seq(dep))
+
+      assert(!job.allowRunningTasksInParallel)
+    }
+
     "be false for jobs that have self-dependencies" in {
       val dep = MetastoreDependency(Seq("table1", "test_output_table"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
       val job = getUseCase(dependencies = Seq(dep))
@@ -172,8 +179,10 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
   def getUseCase(tableDf: DataFrame = null,
                  dependencies: Seq[MetastoreDependency] = Nil,
                  isTableAvailable: Boolean = true,
-                 isTableEmpty: Boolean = false): JobBase = {
+                 isTableEmpty: Boolean = false,
+                 allowParallel: Boolean = true): JobBase = {
     val operation = OperationDefFactory.getDummyOperationDef(dependencies = dependencies,
+      allowParallel = allowParallel,
       extraOptions = Map[String, String]("value" -> "7"))
 
     val bk = new SyncBookkeeperMock
