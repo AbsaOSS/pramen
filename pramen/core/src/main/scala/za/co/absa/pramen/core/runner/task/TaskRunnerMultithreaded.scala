@@ -39,19 +39,19 @@ class TaskRunnerMultithreaded(conf: Config,
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)
   implicit private val executionContext: ExecutionContextExecutorService = fromExecutorService(executor)
 
-  def runParallel(tasks: Seq[Task]): Seq[Future[RunStatus]] = {
+  override def runParallel(tasks: Seq[Task]): Seq[Future[RunStatus]] = {
     tasks.map(task => Future {
       runTask(task)
     })
   }
 
-  def runSequential(tasks: Seq[Task]): Future[Seq[RunStatus]] = {
+  override def runSequential(tasks: Seq[Task]): Future[Seq[RunStatus]] = {
     Future {
       runDependentTasks(tasks)
     }
   }
 
-  def shutdown(): Unit = {
+  override def shutdown(): Unit = {
     executionContext.shutdown()
   }
 }
