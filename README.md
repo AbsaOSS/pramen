@@ -80,7 +80,7 @@ In addition to basic error notification, typical operational warnings are genera
    Or you can build it from source for your Spark environment by running:
    ```sh
    git clone https://github.com/AbsaOSS/pramen
-   sbt ++2.11.12 assembly -DSPARK_VERSION=2.4.8
+   sbt -DSPARK_VERSION=2.4.8 ++2.11.12 assembly 
    ```
    (You need JDK 1.8 and Maven installed to run this)
 
@@ -143,14 +143,15 @@ an uber JAR file that contains all dependencies required to run the pipeline on 
 
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
-sbt ++2.11.12 assembly -DSPARK_VERSION=2.4.8
-sbt ++2.12.17 assembly -DSPARK_VERSION=2.4.8
-sbt ++2.12.17 assembly -DSPARK_VERSION=3.0.3
-sbt ++2.12.17 assembly -DSPARK_VERSION=3.1.3
-sbt ++2.12.17 assembly -DSPARK_VERSION=3.2.2
+sbt -DSPARK_VERSION=2.4.8 ++2.11.12 assembly 
 
-sbt ++2.13.10 assembly -DSPARK_VERSION=3.2.2
-sbt ++2.13.10 assembly -DSPARK_VERSION=3.3.1
+sbt -DSPARK_VERSION=2.4.8 ++2.12.17 assembly 
+sbt -DSPARK_VERSION=3.0.3 ++2.12.17 assembly 
+sbt -DSPARK_VERSION=3.1.3 ++2.12.17 assembly 
+sbt -DSPARK_VERSION=3.2.2 ++2.12.17 assembly 
+
+sbt -DSPARK_VERSION=3.2.2 ++2.13.10 assembly
+sbt -DSPARK_VERSION=3.3.1 ++2.13.10 assembly 
 ```
 
 You can collect the uber jar of `pramen-runner` either at
