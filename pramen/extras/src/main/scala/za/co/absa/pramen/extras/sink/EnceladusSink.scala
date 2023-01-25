@@ -259,7 +259,7 @@ class EnceladusSink(sinkConfig: Config,
           case Success(_) =>
             log.info(s"Hive table '${options(HIVE_TABLE__KEY)}' was repaired successfully.")
           case Failure(ex) =>
-            log.error(s"Failed to repair Hive table '${options(HIVE_TABLE__KEY)}'.", ex)
+            throw new IllegalStateException(s"Failed to repair Hive table '${options(HIVE_TABLE__KEY)}'.", ex)
         }
       }
     } else {

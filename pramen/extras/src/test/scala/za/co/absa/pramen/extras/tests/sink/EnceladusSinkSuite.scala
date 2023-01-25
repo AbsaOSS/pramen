@@ -151,10 +151,36 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
         new Path("/dummy"),
         Map(
           DATASET_NAME_KEY -> "m_dayaset",
-          DATASET_VERSION_KEY -> "22",
-          HIVE_TABLE__KEY -> "test_table"
+          DATASET_VERSION_KEY -> "22"
         )
       )
+    }
+
+    "forward Hive Exception" in {
+      val conf = ConfigFactory.parseString(
+        s"""info.date.column = "info_date"
+           |format = "json"
+           |mode = "overwrite"
+           |
+           |info.file.generate = false
+           |enceladus.run.main.class = "za.co.absa.pramen.extras.mocks.AppMainSilentMock"
+           |
+           |""".stripMargin)
+
+      val sink = EnceladusSink.apply(conf, "", spark)
+
+      assertThrows[IllegalStateException] {
+        sink.runEnceladusIfNeeded("my_table",
+          infoDate,
+          2,
+          new Path("/dummy"),
+          Map(
+            DATASET_NAME_KEY -> "m_dayaset",
+            DATASET_VERSION_KEY -> "22",
+            HIVE_TABLE__KEY -> "test_table"
+          )
+        )
+      }
     }
 
     "forward the exception if something goes wrong" in {
