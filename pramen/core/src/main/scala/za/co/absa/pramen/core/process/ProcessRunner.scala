@@ -42,6 +42,13 @@ trait ProcessRunner {
     * @return stdout lines.
     */
   def getLastStderrLines: Array[String]
+
+  /**
+    * Returns the number of records written if such an expression is specified and encountered.
+    *
+    * @return records written (if available).
+    */
+  def recordCount: Option[Long]
 }
 
 object ProcessRunner {
@@ -50,7 +57,20 @@ object ProcessRunner {
             logStdErr: Boolean = true,
             stdOutLogPrefix: String = "CmdOut",
             stdErrLogPrefix: String = "CmdErr",
-            redirectErrorStream: Boolean = false): ProcessRunner = {
-    new ProcessRunnerImpl(includeOutputLines, logStdOut, logStdErr, stdOutLogPrefix, stdErrLogPrefix, redirectErrorStream)
+            redirectErrorStream: Boolean = false,
+            recordCountRegEx: Option[String] = None,
+            zeroRecordsSuccessRegEx: Option[String] = None,
+            failureRegEx: Option[String] = None,
+            outputFilterRegEx: Seq[String] = Seq.empty[String]): ProcessRunner = {
+    new ProcessRunnerImpl(includeOutputLines,
+      logStdOut,
+      logStdErr,
+      stdOutLogPrefix,
+      stdErrLogPrefix,
+      redirectErrorStream,
+      recordCountRegEx,
+      zeroRecordsSuccessRegEx,
+      failureRegEx,
+      outputFilterRegEx)
   }
 }

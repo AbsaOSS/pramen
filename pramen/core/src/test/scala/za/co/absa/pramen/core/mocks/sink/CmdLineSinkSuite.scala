@@ -25,6 +25,7 @@ import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.mocks.process.ProcessRunnerSpy
 import za.co.absa.pramen.core.sink.CmdLineSink
+import za.co.absa.pramen.core.sink.CmdLineSink.CmdLineDataParams
 
 import java.time.LocalDate
 
@@ -82,7 +83,7 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
 
       val cmdTemplate = "--data-path @dataPath --data-uri @dataUri --info-date @infoDate --infoMonth @infoMonth"
 
-      assert(sink.getCmdLine(cmdTemplate, new Path("/dummy/path"), infoDate) ==
+      assert(sink.getCmdLine(cmdTemplate, Some(new Path("/dummy/path")), infoDate) ==
         "--data-path /dummy/path --data-uri /dummy/path --info-date 2021-12-28 --infoMonth 2021-12")
     }
   }
@@ -127,7 +128,13 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
                  runFunction: () => Unit = () => {}): (CmdLineSink, ProcessRunnerSpy) = {
     val runner = new ProcessRunnerSpy(exitCode = exitCode, runException = runException, runFunction = runFunction)
 
-    (new CmdLineSink(ConfigFactory.empty(), runner, tempDir, format, options), runner)
+    val dataParams = if (tempDir != null) {
+      Some(CmdLineDataParams(tempDir, format, options))
+    } else {
+      None
+    }
+
+    (new CmdLineSink(ConfigFactory.empty(), runner, dataParams), runner)
   }
 
 }

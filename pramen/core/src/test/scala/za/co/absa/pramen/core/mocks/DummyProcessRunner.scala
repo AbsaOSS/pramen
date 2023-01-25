@@ -18,16 +18,24 @@ package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.core.process.ProcessRunnerImpl
 
-class DummyProcessRunner(includeOutputLines: Int,
-                         logStdOut: Boolean,
-                         logStdErr: Boolean,
-                         redirectErrorStream: Boolean)
+class DummyProcessRunner(includeOutputLines: Int = 100,
+                         logStdOut: Boolean = true,
+                         logStdErr: Boolean = true,
+                         redirectErrorStream: Boolean = false,
+                         recordCountRegEx: Option[String] = None,
+                         zeroRecordsSuccessRegEx: Option[String] = None,
+                         failureRegEx: Option[String] = None,
+                         outputFilterRegEx: Seq[String] = Nil)
   extends ProcessRunnerImpl(includeOutputLines,
     logStdOut,
     logStdErr,
     "CmdOut",
     "CmdErr",
-    redirectErrorStream) {
+    redirectErrorStream,
+    recordCountRegEx,
+    zeroRecordsSuccessRegEx,
+    failureRegEx,
+    outputFilterRegEx) {
 
   override def run(cmdLine: String): Int = {
     throw new IllegalStateException(s"Cannot run a dummy process.")

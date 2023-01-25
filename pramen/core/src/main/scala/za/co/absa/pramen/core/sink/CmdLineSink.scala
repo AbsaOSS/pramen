@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
-import za.co.absa.pramen.core.sink.CmdLineSink.CMD_LINE_KEY
+import za.co.absa.pramen.core.sink.CmdLineSink.{CMD_LINE_KEY, CmdLineDataParams}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
@@ -33,12 +33,19 @@ import scala.util.control.NonFatal
 /**
   * This sink allows sending data (actually, the path to data) to an command line tool.
   *
-  * Mandatory options:
+  * If you want to prepare data for the sink in a temporary Hadoop location set these options:
   *  - 'temp.hadoop.path' is used to prepare data.
   *  - 'format' ('parquet' by default).
   *
+  * If you don't want data to be prepared, you need to define a RegEx expression to get the number of items written:
+  *  - 'record.count.regex' An expression to extract the number of records written successfully
+  *  - 'zero.records.success.regex' An expression for the success and zero records written
+  *    (if it is different from 'record.count.regex')
+  *  - 'failure.regex' An expression for the explicit failure (in addition to non-zero status code)
+  *
   * Additional options:
   *  - 'include.log.lines' the number of log lines to include in the notification (1000 by default).
+  *  - 'output.filter.regex' A list of RegEx expressions to filter the output and not include in log files.
   *
   * Options that have 'option' prefix will be passed to the writer.
   *
@@ -109,9 +116,8 @@ import scala.util.control.NonFatal
   */
 class CmdLineSink(sinkConfig: Config,
                   processRunner: ProcessRunner,
-                  tempHadoopPath: String,
-                  format: String,
-                  formatOptions: Map[String, String]) extends Sink {
+                  dataParams: Option[CmdLineDataParams]
+                 ) extends Sink {
   private val log = LoggerFactory.getLogger(this.getClass)
 
 
@@ -133,38 +139,55 @@ class CmdLineSink(sinkConfig: Config,
 
     val cmdLineTemplate = options(CMD_LINE_KEY)
 
-    val count = df.count()
+    dataParams match {
+      case Some(d) =>
+        val count = df.count()
 
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempHadoopPath)
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, d.tempHadoopPath)
 
-    fsUtils.withTempDirectory(new Path(tempHadoopPath)) { tempPath =>
-      df.write
-        .format(format)
-        .mode(SaveMode.Overwrite)
-        .options(formatOptions)
-        .save(tempPath.toString)
+        fsUtils.withTempDirectory(new Path(d.tempHadoopPath)) { tempPath =>
+          df.write
+            .format(d.format)
+            .mode(SaveMode.Overwrite)
+            .options(d.formatOptions)
+            .save(tempPath.toString)
 
-      log.info(s"$count records saved to $tempPath.")
+          log.info(s"$count records saved to $tempPath.")
 
-      val cmdLine = getCmdLine(cmdLineTemplate, tempPath, infoDate)
+          val cmdLine = getCmdLine(cmdLineTemplate, Option(tempPath), infoDate)
 
-      runCmd(cmdLine)
+          runCmd(cmdLine)
 
-      log.info(s"$count records sent to the cmd line sink ($cmdLine).")
+          log.info(s"$count records sent to the cmd line sink ($cmdLine).")
+        }
+        count
+      case None    =>
+        val cmdLine = getCmdLine(cmdLineTemplate, None, infoDate)
+
+        runCmd(cmdLine)
+
+        val count = processRunner.recordCount.getOrElse(0L)
+
+        log.info(s"$count records sent to the cmd line sink ($cmdLine).")
+        count
     }
-
-    count
   }
 
   private[core] def getCmdLine(cmdLineTemplate: String,
-                               dataPath: Path,
+                               dataPath: Option[Path],
                                infoDate: LocalDate): String = {
     log.info(s"CmdLine template: $cmdLineTemplate")
 
-    cmdLineTemplate.replace("@infoDate", infoDate.toString)
+    val cmdWithDates = cmdLineTemplate.replace("@infoDate", infoDate.toString)
       .replace("@infoMonth", infoDate.format(DateTimeFormatter.ofPattern("yyyy-MM")))
-      .replace("@dataPath", dataPath.toString)
-      .replace("@dataUri", dataPath.toUri.toString)
+
+    dataPath match {
+      case Some(path) =>
+        cmdWithDates.replace("@dataPath", path.toString)
+          .replace("@dataUri", path.toUri.toString)
+      case None       =>
+        cmdWithDates
+    }
   }
 
   private[core] def runCmd(cmdLine: String): Unit = {
@@ -180,22 +203,55 @@ class CmdLineSink(sinkConfig: Config,
 }
 
 object CmdLineSink extends ExternalChannelFactory[CmdLineSink] {
+  case class CmdLineDataParams(
+                                tempHadoopPath: String,
+                                format: String,
+                                formatOptions: Map[String, String]
+                              )
+
   val TEMP_HADOOP_PATH_KEY = "temp.hadoop.path"
   val FORMAT_KEY = "format"
   val INCLUDE_LOG_LINES = "include.log.lines"
-
   val CMD_LINE_KEY = "cmd.line"
 
+  val RECORD_COUNT_REGEX_KEY = "record.count.regex"
+  val ZERO_RECORDS_SUCCESS_REGEX_KEY = "zero.records.success.regex"
+  val FAILURE_REGEX_KEY = "failure.regex"
+  val OUTPUT_FILTER_REGEX_KEY = "output.filter.regex"
+
   override def apply(conf: Config, parentPath: String, spark: SparkSession): CmdLineSink = {
-    ConfigUtils.validatePathsExistence(conf, parentPath, Seq(TEMP_HADOOP_PATH_KEY, FORMAT_KEY))
+    val dataParams = if (conf.hasPath(TEMP_HADOOP_PATH_KEY)) {
+      ConfigUtils.validatePathsExistence(conf, parentPath, Seq(TEMP_HADOOP_PATH_KEY, FORMAT_KEY))
+      val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
 
-    val tempPath = conf.getString(TEMP_HADOOP_PATH_KEY)
-    val format = conf.getString(FORMAT_KEY)
+      Some(CmdLineDataParams(
+        conf.getString(TEMP_HADOOP_PATH_KEY),
+        conf.getString(FORMAT_KEY),
+        extraOptions
+      ))
+    } else {
+      None
+    }
+
     val includeLogLines = ConfigUtils.getOptionInt(conf, INCLUDE_LOG_LINES).getOrElse(1000)
-    val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
+    val recordCountRegex = ConfigUtils.getOptionString(conf, RECORD_COUNT_REGEX_KEY)
+    val zeroRecordsSuccessRegex = ConfigUtils.getOptionString(conf, ZERO_RECORDS_SUCCESS_REGEX_KEY)
+    val failureRegex = ConfigUtils.getOptionString(conf, FAILURE_REGEX_KEY)
+    val outputFilterRegex = ConfigUtils.getOptListStrings(conf, OUTPUT_FILTER_REGEX_KEY)
 
-    val runner = new ProcessRunnerImpl(includeLogLines, true, true, "Cmd", "Cmd", true)
 
-    new CmdLineSink(conf, runner, tempPath, format, extraOptions)
+    val runner = new ProcessRunnerImpl(includeLogLines,
+      true,
+      true,
+      "Cmd",
+      "Cmd",
+      true,
+      recordCountRegex,
+      zeroRecordsSuccessRegex,
+      failureRegex,
+      outputFilterRegex
+    )
+
+    new CmdLineSink(conf, runner, dataParams)
   }
 }
