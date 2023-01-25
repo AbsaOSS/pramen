@@ -64,7 +64,16 @@ object PipelineSparkSessionBuilder {
       case (builder, (key, value)) => builder.config(key, value)
     }
 
-    val spark = sparkSessionBuilderWithExtraOptApplied.getOrCreate()
+    val isHiveSupportRequired = extraOptions.exists(_._1.contains("hive"))
+
+    val spark = if (isHiveSupportRequired) {
+      sparkSessionBuilderWithExtraOptApplied
+        .enableHiveSupport()
+        .getOrCreate()
+    } else {
+      sparkSessionBuilderWithExtraOptApplied
+        .getOrCreate()
+    }
 
     applyHadoopConfig(spark, conf)
   }
