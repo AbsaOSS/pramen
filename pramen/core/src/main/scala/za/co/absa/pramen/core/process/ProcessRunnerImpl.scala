@@ -26,16 +26,16 @@ import scala.concurrent.{Await, Future}
 import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
-class ProcessRunnerImpl(includeOutputLines: Int,
-                        logStdOut: Boolean,
-                        logStdErr: Boolean,
-                        stdOutLogPrefix: String,
-                        stdErrLogPrefix: String,
-                        redirectErrorStream: Boolean,
-                        recordCountRegEx: Option[String],
-                        zeroRecordsSuccessRegEx: Option[String],
-                        failureRegEx: Option[String],
-                        outputFilterRegEx: Seq[String]
+class ProcessRunnerImpl(val includeOutputLines: Int,
+                        val logStdOut: Boolean,
+                        val logStdErr: Boolean,
+                        val stdOutLogPrefix: String,
+                        val stdErrLogPrefix: String,
+                        val redirectErrorStream: Boolean,
+                        val recordCountRegEx: Option[String],
+                        val zeroRecordsSuccessRegEx: Option[String],
+                        val failureRegEx: Option[String],
+                        val outputFilterRegEx: Seq[String]
                        ) extends ProcessRunner {
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -84,6 +84,8 @@ class ProcessRunnerImpl(includeOutputLines: Int,
 
   override def recordCount: Option[Long] = recordCountParsed
 
+  private[core] def isFailureFound: Boolean = failureFound
+
   private def createCircularBufferOpt(): Option[CircularBuffer[String]] = {
     if (includeOutputLines > 0)
       Some(new CircularBuffer[String](includeOutputLines))
@@ -117,10 +119,10 @@ class ProcessRunnerImpl(includeOutputLines: Int,
       var line: String = reader.readLine
       while (line != null) {
         if (line.nonEmpty) {
-          buffer.foreach(_.add(line))
-          if (logEnabled) {
-            val doSkip = filterRs.exists(_.findFirstIn(line).nonEmpty)
-            if (!doSkip) {
+          val doSkip = filterRs.exists(_.findFirstIn(line).nonEmpty)
+          if (!doSkip) {
+            buffer.foreach(_.add(line))
+            if (logEnabled) {
               cmdOutputLogger.info(line)
             }
           }
@@ -138,9 +140,8 @@ class ProcessRunnerImpl(includeOutputLines: Int,
             case None        =>
           }
           if (recordCountParsed.isEmpty) {
-
+            zeroRecordsSuccessR.foreach(regex => regex.findFirstMatchIn(line).foreach(_ => recordCountParsed = Some(0)))
           }
-          zeroRecordsSuccessR.foreach(regex => regex.findFirstMatchIn(line).foreach(_ => recordCountParsed = Some(0)))
           failureR.foreach(regex => regex.findFirstMatchIn(line).foreach(_ => failureFound = true))
         }
         line = reader.readLine()

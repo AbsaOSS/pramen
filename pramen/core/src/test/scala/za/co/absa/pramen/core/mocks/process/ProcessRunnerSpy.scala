@@ -25,7 +25,7 @@ class ProcessRunnerSpy(exitCode: Int = 0,
                        stdErrLines: Array[String] = new Array[String](0),
                        runException: Throwable = null,
                        runFunction: () => Unit = () => {},
-                       recordsCountToReturn: Option[Long] = None) extends ProcessRunner {
+                       recordCountToReturn: Option[Long] = None) extends ProcessRunner {
   var runCommands = new ListBuffer[String]
   var getLastStdoutLinesCount = 0
   var getLastStderrLinesCount = 0
@@ -56,6 +56,6 @@ class ProcessRunnerSpy(exitCode: Int = 0,
   override def recordCount: Option[Long] = {
     recordCountCalled += 1
 
-    recordsCountToReturn
+    recordCountToReturn
   }
 }

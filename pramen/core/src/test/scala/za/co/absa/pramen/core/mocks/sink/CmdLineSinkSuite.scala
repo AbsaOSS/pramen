@@ -24,6 +24,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.mocks.process.ProcessRunnerSpy
+import za.co.absa.pramen.core.process.ProcessRunnerImpl
 import za.co.absa.pramen.core.sink.CmdLineSink
 import za.co.absa.pramen.core.sink.CmdLineSink.CmdLineDataParams
 
@@ -50,12 +51,27 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
           |    quoteAll = "false"
           |    header = "true"
           |  }
+          |  record.count.regex = "a(.)"
+          |  zero.records.success.regex = "b"
+          |  failure.regex = "c"
+          |  output.filter.regex = [ "d" ]
           |}""".stripMargin
       val conf = ConfigFactory.parseString(configStr)
 
       val sink = CmdLineSink(conf, "parent", spark)
 
       assert(sink.isInstanceOf[CmdLineSink])
+      assert(sink.dataParams.exists(_.format == "csv"))
+      assert(sink.dataParams.exists(_.tempHadoopPath == "/tmp/cmd_line_sink"))
+      assert(sink.dataParams.exists(_.formatOptions("sep") == "|"))
+
+      assert(sink.processRunner.isInstanceOf[ProcessRunnerImpl])
+      val runner = sink.processRunner.asInstanceOf[ProcessRunnerImpl]
+      assert(runner.includeOutputLines == 1000)
+      assert(runner.recordCountRegEx.contains("a(.)"))
+      assert(runner.zeroRecordsSuccessRegEx.contains("b"))
+      assert(runner.failureRegEx.contains("c"))
+      assert(runner.outputFilterRegEx == Seq("d"))
     }
   }
 
@@ -74,6 +90,14 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
 
         assert(count == 3)
       }
+    }
+
+    "work without a temporary path" in {
+      val (sink, _) = getUseCase(null, recordCountToReturn = Some(5))
+
+      val count = sink.send(exampleDf, "table1", null, infoDate, Map[String, String]("cmd.line" -> "dummy @infoDate"))
+
+      assert(count == 5)
     }
   }
 
@@ -125,8 +149,9 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
                  runException: Throwable = null,
                  format: String = "parquet",
                  options: Map[String, String] = Map.empty[String, String],
-                 runFunction: () => Unit = () => {}): (CmdLineSink, ProcessRunnerSpy) = {
-    val runner = new ProcessRunnerSpy(exitCode = exitCode, runException = runException, runFunction = runFunction)
+                 runFunction: () => Unit = () => {},
+                 recordCountToReturn: Option[Long] = None): (CmdLineSink, ProcessRunnerSpy) = {
+    val runner = new ProcessRunnerSpy(exitCode = exitCode, runException = runException, runFunction = runFunction, recordCountToReturn = recordCountToReturn)
 
     val dataParams = if (tempDir != null) {
       Some(CmdLineDataParams(tempDir, format, options))
