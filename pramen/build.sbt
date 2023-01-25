@@ -37,9 +37,9 @@ ThisBuild / autoScalaLibrary := false
 
 lazy val printSparkVersion = taskKey[Unit]("Print Spark version Pramen is building against.")
 
-lazy val commonJacocoReportSettings: JacocoReportSettings = JacocoReportSettings(
-  formats = Seq(JacocoReportFormats.HTML, JacocoReportFormats.XML)
-)
+lazy val commonJacocoReportSettings: JacocoReportSettings = JacocoReportSettings()
+  .withFormats(JacocoReportFormats.HTML, JacocoReportFormats.XML)
+  .withThresholds(JacocoThresholds(line = 60))
 
 lazy val commonJacocoExcludes: Seq[String] = Seq(
   "za.co.absa.pramen.api.*",
@@ -102,7 +102,7 @@ lazy val core = (project in file("core"))
     populateBuildInfoTemplate,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
-    jacocoExcludes := commonJacocoExcludes
+    jacocoExcludes := commonJacocoExcludes,
   )
   .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
