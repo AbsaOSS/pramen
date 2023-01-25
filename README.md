@@ -80,9 +80,9 @@ In addition to basic error notification, typical operational warnings are genera
    Or you can build it from source for your Spark environment by running:
    ```sh
    git clone https://github.com/AbsaOSS/pramen
-   sbt -DSPARK_VERSION=2.4.8 ++2.11.12 assembly 
+   sbt -DSPARK_VERSION="2.4.8" ++2.11.12 assembly 
    ```
-   (You need JDK 1.8 and Maven installed to run this)
+   (You need JDK 1.8 installed to run this)
 
    For all possible build options look see [Building Pramen to suite your environment](#building-pramen-to-suite-your-environment)
 
@@ -106,8 +106,7 @@ In addition to basic error notification, typical operational warnings are genera
 
 # Building the project
 
-The primary build tool for the project is SBT. Maven is used as a fallback for development only and integration with 
-IDEs that have better Maven support. Maven builds should not be used for production builds.
+Pramen is built using SBT.
 
 ## Project structure
 Pramen consists of a few components:
@@ -143,15 +142,15 @@ an uber JAR file that contains all dependencies required to run the pipeline on 
 
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
-sbt -DSPARK_VERSION=2.4.8 ++2.11.12 assembly 
+sbt -DSPARK_VERSION="2.4.8" ++2.11.12 assembly 
 
-sbt -DSPARK_VERSION=2.4.8 ++2.12.17 assembly 
-sbt -DSPARK_VERSION=3.0.3 ++2.12.17 assembly 
-sbt -DSPARK_VERSION=3.1.3 ++2.12.17 assembly 
-sbt -DSPARK_VERSION=3.2.2 ++2.12.17 assembly 
+sbt -DSPARK_VERSION="2.4.8" ++2.12.17 assembly 
+sbt -DSPARK_VERSION="3.0.3" ++2.12.17 assembly 
+sbt -DSPARK_VERSION="3.1.3" ++2.12.17 assembly 
+sbt -DSPARK_VERSION="3.2.2" ++2.12.17 assembly 
 
-sbt -DSPARK_VERSION=3.2.2 ++2.13.10 assembly
-sbt -DSPARK_VERSION=3.3.1 ++2.13.10 assembly 
+sbt -DSPARK_VERSION="3.2.2" ++2.13.10 assembly
+sbt -DSPARK_VERSION="3.3.1" ++2.13.10 assembly 
 ```
 
 You can collect the uber jar of `pramen-runner` either at

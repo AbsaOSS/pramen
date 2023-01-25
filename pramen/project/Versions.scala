@@ -80,7 +80,7 @@ object Versions {
       case version if version.startsWith("2.11.") => "5.1.1"
       case version if version.startsWith("2.12.") => "5.1.1"
       case version if version.startsWith("2.13.") => "6.0.0"
-      case _                                      => throw new IllegalArgumentException(s"Scaka $scalaVersion not supported for Abris dependency.")
+      case _                                      => throw new IllegalArgumentException(s"Scala $scalaVersion not supported for Abris dependency.")
     }
 
     println(s"Using Abris version $abrisVersion")
