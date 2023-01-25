@@ -24,10 +24,12 @@ class ProcessRunnerSpy(exitCode: Int = 0,
                        stdOutLines: Array[String] = new Array[String](0),
                        stdErrLines: Array[String] = new Array[String](0),
                        runException: Throwable = null,
-                       runFunction: () => Unit = () => {}) extends ProcessRunner {
+                       runFunction: () => Unit = () => {},
+                       recordsCountToReturn: Option[Long] = None) extends ProcessRunner {
   var runCommands = new ListBuffer[String]
   var getLastStdoutLinesCount = 0
   var getLastStderrLinesCount = 0
+  var recordCountCalled = 0
 
   override def run(cmdLine: String): Int = {
     runCommands += cmdLine
@@ -49,5 +51,11 @@ class ProcessRunnerSpy(exitCode: Int = 0,
   override def getLastStderrLines: Array[String] = {
     getLastStderrLinesCount += 1
     stdErrLines
+  }
+
+  override def recordCount: Option[Long] = {
+    recordCountCalled += 1
+
+    recordsCountToReturn
   }
 }

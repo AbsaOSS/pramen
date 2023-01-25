@@ -23,6 +23,7 @@ import java.io.{BufferedReader, InputStreamReader}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
+import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
 class ProcessRunnerImpl(includeOutputLines: Int,
@@ -30,11 +31,19 @@ class ProcessRunnerImpl(includeOutputLines: Int,
                         logStdErr: Boolean,
                         stdOutLogPrefix: String,
                         stdErrLogPrefix: String,
-                        redirectErrorStream: Boolean) extends ProcessRunner {
+                        redirectErrorStream: Boolean,
+                        recordCountRegEx: Option[String],
+                        zeroRecordsSuccessRegEx: Option[String],
+                        failureRegEx: Option[String],
+                        outputFilterRegEx: Seq[String]
+                       ) extends ProcessRunner {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val lastStdoutLines = createCircularBufferOpt()
   private val lastStderrLines = createCircularBufferOpt()
+
+  private var recordCountParsed = Option.empty[Long]
+  private var failureFound = false
 
   override def run(cmdLine: String): Int = {
     val processBuilder = new ProcessBuilder(StringUtils.tokenize(cmdLine): _*)
@@ -56,8 +65,13 @@ class ProcessRunnerImpl(includeOutputLines: Int,
     stdout.close()
     stderr.close()
 
-    log.info(s"The command completed with exit status $exitStatus.")
-    exitStatus
+    if (failureFound && exitStatus == 0) {
+      log.info(s"The command contained a message matching the failure expression. The exit status is forced to 1.")
+      1
+    } else {
+      log.info(s"The command completed with exit status $exitStatus.")
+      exitStatus
+    }
   }
 
   override def getLastStdoutLines: Array[String] = {
@@ -67,6 +81,8 @@ class ProcessRunnerImpl(includeOutputLines: Int,
   override def getLastStderrLines: Array[String] = {
     lastStderrLines.map(_.get()).getOrElse(Array.empty[String])
   }
+
+  override def recordCount: Option[Long] = recordCountParsed
 
   private def createCircularBufferOpt(): Option[CircularBuffer[String]] = {
     if (includeOutputLines > 0)
@@ -88,10 +104,14 @@ class ProcessRunnerImpl(includeOutputLines: Int,
   }
 
   private[core] def processReader(reader: BufferedReader,
-                            buffer: Option[CircularBuffer[String]],
-                            prefix: String,
-                            logEnabled: Boolean): Unit = {
+                                  buffer: Option[CircularBuffer[String]],
+                                  prefix: String,
+                                  logEnabled: Boolean): Unit = {
     val cmdOutputLogger: Logger = LoggerFactory.getLogger(prefix)
+    val filterRs = outputFilterRegEx.map(_.r)
+    val recCountR = recordCountRegEx.map(_.r)
+    val zeroRecordsSuccessR = zeroRecordsSuccessRegEx.map(_.r)
+    val failureR = failureRegEx.map(_.r)
 
     try {
       var line: String = reader.readLine
@@ -99,8 +119,29 @@ class ProcessRunnerImpl(includeOutputLines: Int,
         if (line.nonEmpty) {
           buffer.foreach(_.add(line))
           if (logEnabled) {
-            cmdOutputLogger.info(line)
+            val doSkip = filterRs.exists(_.findFirstIn(line).nonEmpty)
+            if (!doSkip) {
+              cmdOutputLogger.info(line)
+            }
           }
+          recCountR match {
+            case Some(regex) =>
+              regex.findFirstMatchIn(line).foreach { matchData =>
+                recordCountParsed = Try(matchData.group(1).toLong)
+                  .recoverWith {
+                    case NonFatal(ex) =>
+                      log.error(s"Failed to match record count using '${recordCountRegEx.get}' from line '$line', group ${matchData.group(1)}.", ex)
+                      Failure(ex)
+                  }
+                  .toOption
+              }
+            case None        =>
+          }
+          if (recordCountParsed.isEmpty) {
+
+          }
+          zeroRecordsSuccessR.foreach(regex => regex.findFirstMatchIn(line).foreach(_ => recordCountParsed = Some(0)))
+          failureR.foreach(regex => regex.findFirstMatchIn(line).foreach(_ => failureFound = true))
         }
         line = reader.readLine()
       }

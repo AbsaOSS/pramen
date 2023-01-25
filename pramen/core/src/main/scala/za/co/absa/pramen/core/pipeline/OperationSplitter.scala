@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.pipeline.OperationSplitter.getNotificationTarget
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
-import za.co.absa.pramen.core.process.ProcessRunnerImpl
+import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
 import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
 import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
@@ -36,11 +36,11 @@ class OperationSplitter(conf: Config,
                         bookkeeper: Bookkeeper)(implicit spark: SparkSession) {
   def createJobs(operationDef: OperationDef): Seq[Job] = {
     operationDef.operationType match {
-      case Ingestion(sourceName, sourceTables) => createIngestion(operationDef, sourceName, sourceTables)
-      case Transformation(clazz, outputTable) => createTransformation(operationDef, clazz, outputTable)
+      case Ingestion(sourceName, sourceTables)            => createIngestion(operationDef, sourceName, sourceTables)
+      case Transformation(clazz, outputTable)             => createTransformation(operationDef, clazz, outputTable)
       case PythonTransformation(pythonClass, outputTable) => createPythonTransformation(operationDef, pythonClass, outputTable)
-      case Sink(sinkName, sinkTables) => createSink(operationDef, sinkName, sinkTables)
-      case Transfer(sourceName, sinkName, tables) => createTransfer(operationDef, sourceName, sinkName, tables)
+      case Sink(sinkName, sinkTables)                     => createSink(operationDef, sinkName, sinkTables)
+      case Transfer(sourceName, sinkName, tables)         => createTransfer(operationDef, sourceName, sinkName, tables)
     }
   }
 
@@ -53,7 +53,7 @@ class OperationSplitter(conf: Config,
     sourceTables.map(sourceTable => {
       val source = sourceTable.overrideConf match {
         case Some(confOverride) => SourceManager.getSourceByName(sourceName, conf, Some(confOverride))
-        case None => sourceBase
+        case None               => sourceBase
       }
 
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
@@ -76,12 +76,12 @@ class OperationSplitter(conf: Config,
     tables.map(transferTable => {
       val source = transferTable.sourceOverrideConf match {
         case Some(confOverride) => SourceManager.getSourceByName(sourceName, conf, Some(confOverride))
-        case None => sourceBase
+        case None               => sourceBase
       }
 
       val sink = transferTable.sinkOverrideConf match {
         case Some(confOverride) => SinkManager.getSinkByName(sinkName, conf, Some(confOverride))
-        case None => sinkBase
+        case None               => sinkBase
       }
 
       val outputTable = transferTable.getMetaTable
@@ -118,12 +118,9 @@ class OperationSplitter(conf: Config,
 
     val keepLogLines = conf.getInt(KEEP_LOG_LINES_KEY)
 
-    val processRunner = new ProcessRunnerImpl(keepLogLines,
-      logStdOut = true,
-      logStdErr = true,
+    val processRunner = ProcessRunner(keepLogLines,
       stdOutLogPrefix = "Pramen-Py(out)",
-      stdErrLogPrefix = "Pramen-Py(err)",
-      redirectErrorStream = false)
+      stdErrLogPrefix = "Pramen-Py(err)")
 
     val notificationTargets = operationDef.notificationTargets
       .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
@@ -142,7 +139,7 @@ class OperationSplitter(conf: Config,
 
       val sink = sinkTable.overrideConf match {
         case Some(confOverride) => SinkManager.getSinkByName(sinkName, conf, Some(confOverride))
-        case None => sinkBase
+        case None               => sinkBase
       }
 
       val outputTableName = sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->$sinkName")
