@@ -115,8 +115,8 @@ import scala.util.control.NonFatal
   *
   */
 class CmdLineSink(sinkConfig: Config,
-                  processRunner: ProcessRunner,
-                  dataParams: Option[CmdLineDataParams]
+                  val processRunner: ProcessRunner,
+                  val dataParams: Option[CmdLineDataParams]
                  ) extends Sink {
   private val log = LoggerFactory.getLogger(this.getClass)
 

@@ -37,8 +37,20 @@ trait ScriptProcessRunnerFixture {
   def withDummyProcessRunner(includeOutputLines: Int = 10,
                              logStdOut: Boolean = true,
                              logStdErr: Boolean = true,
-                             redirectErrorStream: Boolean = false)(f: ProcessRunnerImpl => Unit): Unit = {
-    val runner = new DummyProcessRunner(includeOutputLines, logStdOut, logStdErr, redirectErrorStream)
+                             redirectErrorStream: Boolean = false,
+                             recordCountRegEx: Option[String] = None,
+                             zeroRecordsSuccessRegEx: Option[String] = None,
+                             failureRegEx: Option[String] = None,
+                             outputFilterRegEx: Seq[String] = Nil
+                            )(f: ProcessRunnerImpl => Unit): Unit = {
+    val runner = new DummyProcessRunner(includeOutputLines,
+      logStdOut,
+      logStdErr,
+      redirectErrorStream,
+      recordCountRegEx,
+      zeroRecordsSuccessRegEx,
+      failureRegEx,
+      outputFilterRegEx)
 
     f(runner)
   }

@@ -108,6 +108,62 @@ class ProcessRunnerSuite extends AnyWordSpec with ScriptProcessRunnerFixture {
         assert(buffer.get().length == 2)
         assert(buffer.get().head == "Records:10A")
         assert(buffer.get()(1) == "Last Line")
+        assert(runner.recordCount.isEmpty)
+        assert(!runner.isFailureFound)
+      }
+    }
+
+    "get record count via a regex" in {
+      withDummyProcessRunner(recordCountRegEx = Some("RecordCount=(\\d+)")) { runner =>
+        val reader = new BufferedReader(new StringReader(
+          """First line
+            |Second line
+            |RecordCount=1000
+            |Records:10A
+            |Last Line
+            |""".stripMargin))
+
+        val buffer = new CircularBuffer[String](2)
+        runner.processReader(reader, Some(buffer), "out", logEnabled = true)
+
+        assert(runner.recordCount.contains(1000))
+      }
+    }
+
+    "get failure via a regex" in {
+      withDummyProcessRunner(failureRegEx = Some("FAILED")) { runner =>
+        val reader = new BufferedReader(new StringReader(
+          """First line
+            |Second line
+            |Job FAILED
+            |Records:10A
+            |Last Line
+            |""".stripMargin))
+
+        val buffer = new CircularBuffer[String](2)
+        runner.processReader(reader, Some(buffer), "out", logEnabled = true)
+
+        assert(runner.isFailureFound)
+      }
+    }
+
+    "filters output according to a list of regexp" in {
+      withDummyProcessRunner(outputFilterRegEx = Seq("Filter\\d*", "Delete\\d+")) { runner =>
+        val reader = new BufferedReader(new StringReader(
+          """Filter0
+            |Second line
+            |Filter
+            |Filter1
+            |Delete22
+            |Last Line
+            |""".stripMargin))
+
+        val buffer = new CircularBuffer[String](10)
+        runner.processReader(reader, Some(buffer), "out", logEnabled = true)
+
+        assert(buffer.get().length == 2)
+        assert(buffer.get().head == "Second line")
+        assert(buffer.get()(1) == "Last Line")
       }
     }
 
