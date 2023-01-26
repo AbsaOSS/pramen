@@ -808,14 +808,22 @@ The corresponding pipeline operation could look like this:
 
 #### Command Line sink
 
-Command Line sink allows outputting batch data to an application written in any language as long as it can be ran from a command line.
-The way it works as follows:
+Command Line sink allows outputting batch data to an application written in any language as long as it can be run from a command line.
+The way it works as one of the following scenarios:
+
+Scenario 1.
 1. Data for the sink will be prepared at a temporary path on Hadoop (HDFS, S3, etc.) in a format of user's choice.
 2. Then, a custom command line will be invoked on the edge node passing the temporary path URI as a parameter.
 3. Once the process has finished, the exit code will determine if the sink succeeded (exit code 0 means success, of course).
 4. After the execution the data in the temporary folder will be cleaned up.
 
-Here is an example of a command line sink definition that outputs to a CSV in a temporary folder and runs a command line:
+Scenario 2.
+1. Pramen runs a command line that processes data in the metastore in any way possible.
+2. The command line tool honors exit codes. Returns 0 on success and non-zero on failure.
+3. [Optionally] A RegEx expression is provided to extract number of records written from
+   program's output (both stdin and stdout) 
+
+Here is an example of scenario 1 with a command line sink definition that outputs to a CSV in a temporary folder and runs a command line:
 
 <details>
   <summary>Click to expand</summary>
@@ -888,6 +896,77 @@ The pipeline operation for this sink could look like this:
       ]
       
       columns = [ "col1", "col2", "col2", "some_numeric_column" ]
+    }
+  ]
+}
+```
+</details>
+
+Here is an example of scenario 2 with a command line sink runs a command and record count regex
+expressions are provided. The regex expression searches for "Records written: nnn":
+
+<details>
+  <summary>Click to expand</summary>
+
+```config
+{
+  name = "cmd_line2"
+  factory.class = "za.co.absa.pramen.core.sink.CmdLineSink"
+  
+  # This RegEx ecpression parses the program output for the number of records written.
+  # Example string that would match the expression:
+  # Records written: 1000
+  record.count.regex = "Records\\s*written:\\s*(\d+)"
+  
+  # [Optional] RegEx expressin of the successful execution that does not produce number of records
+  # You can set it if it is different from 'record.count.regex'. 
+  zero.records.success.regex = "The\sjob\shas\ssucceeded\..*"
+  
+  # [Optional] An expression that secified that the job has failed even if the exit status it 0
+  failure.regex = "FAILED"
+  
+  # [Optional] RegEx expressions that specify output filters. If an output line matches any
+  # of the expressions, it will be ignored. This is useful for running legacy programs that 
+  # produce lots of unnecessary output.
+  # For example, it can be used to filter out progress bar from logs.   
+  output.filter.regex = [
+    "Filtered\sout\sline\s1",
+    "Progress:\ssomehting",    
+  ]  
+  
+  # The number of command line log lines to include in email notification in case the job fails.
+  include.log.lines = 1000
+}
+```
+</details>
+
+The pipeline operation for this sink could look like this:
+
+<details>
+  <summary>Click to expand</summary>
+
+```config
+{
+  name = "Command Line sink"
+  type = "sink"
+  sink = "cmd_line2"
+  schedule.type = "daily"
+  
+  # Optional dependency definitions
+  dependencies = [
+    {
+      tables = [ dependent_table ]
+      date.from = "@infoDate"
+    }
+  ]
+  
+  tables = [
+    {
+      # This is still necessary for a sink
+      input.metastore.table = metastore_table
+      
+      # Command line template to run
+      output.cmd.line = "/my_apps/cmd_line_tool --date @infoDate"
     }
   ]
 }
