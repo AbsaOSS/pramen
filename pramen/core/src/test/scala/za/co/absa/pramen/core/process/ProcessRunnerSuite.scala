@@ -179,6 +179,173 @@ class ProcessRunnerSuite extends AnyWordSpec with ScriptProcessRunnerFixture {
     }
   }
 
+  "line transformers" when {
+    "doIf" should {
+      "do the action when the condition is true" in {
+        withDummyProcessRunner() { runner =>
+          val line = "A"
+          var result: String = null
+
+          runner.doIf(line, actionNeeded = true)(a => result = s"${a}B")
+          assert(result == "AB")
+        }
+      }
+      "don't do the action when the condition is false" in {
+        withDummyProcessRunner() { runner =>
+          val line = "A"
+          var result: String = "Original value"
+
+          runner.doIf(line, actionNeeded = false)(a => result = s"${a}B")
+          assert(result == "Original value")
+        }
+      }
+    }
+
+    "filterEmpty()" should {
+      "filter out empty lines" in {
+        withDummyProcessRunner() { runner =>
+          val line = ""
+          val filtered = runner.filterEmpty(line)
+          assert(filtered.isEmpty)
+        }
+      }
+      "keep non-empty lines" in {
+        withDummyProcessRunner() { runner =>
+          val line = "A"
+          val filtered = runner.filterEmpty(line)
+          assert(filtered.contains("A"))
+        }
+      }
+    }
+
+    "skipFilteredOutLines" should {
+      "skip a line if it matches one of regexes" in {
+        withDummyProcessRunner(outputFilterRegEx = Seq("Filter\\d*", "Delete\\d+")) { runner =>
+          val line = "Filter0"
+          val filtered = runner.skipFilteredOutLines(line)
+
+          assert(filtered.isEmpty)
+        }
+
+      }
+
+      "do not skip the line if it does not match any filters" in {
+        withDummyProcessRunner(outputFilterRegEx = Seq("Filter\\d*", "Delete\\d+")) { runner =>
+          val line = "A"
+          val filtered = runner.skipFilteredOutLines(line)
+
+          assert(filtered.contains("A"))
+        }
+      }
+
+      "do not skip the line on an empty list" in {
+        withDummyProcessRunner() { runner =>
+          val line = "A"
+          val filtered = runner.skipFilteredOutLines(line)
+
+          assert(filtered.contains("A"))
+        }
+      }
+    }
+
+    "extractRecordCount" should {
+      "extract record count from a line" in {
+        withDummyProcessRunner() { runner =>
+          val line = "RecordCount=1000"
+          runner.extractRecordCount(line, "RecordCount=(\\d+)".r)
+
+          assert(runner.recordCount.contains(1000))
+        }
+      }
+
+      "return None if the line does not match the regex" in {
+        withDummyProcessRunner() { runner =>
+          val line = "A"
+          val recordCount = runner.extractRecordCount(line, "RecordCount=(\\d+)".r)
+
+          assert(runner.recordCount.isEmpty)
+        }
+      }
+
+      "do not rethrow the number parsing expression" in {
+        withDummyProcessRunner() { runner =>
+          val line = "RecordCount=1000A"
+          runner.extractRecordCount(line, "RecordCount=(.+)".r)
+
+          assert(runner.recordCount.isEmpty)
+        }
+      }
+
+      "failures do not supersede successes" in {
+        withDummyProcessRunner() { runner =>
+          val expr = "RecordCount=(.+)".r
+          val line1 = "RecordCount=2000"
+          val line2 = "RecordCount=1000A"
+          runner.extractRecordCount(line1, expr)
+          runner.extractRecordCount(line2, expr)
+
+          assert(runner.recordCount.contains(2000L))
+        }
+      }
+
+      "new updates supersede the old record count" in {
+        withDummyProcessRunner() { runner =>
+          val expr = "RecordCount=(.+)".r
+          val line1 = "RecordCount=1000"
+          val line2 = "RecordCount=2000A"
+          val line3 = "RecordCount=3000"
+          runner.extractRecordCount(line1, expr)
+          runner.extractRecordCount(line2, expr)
+          runner.extractRecordCount(line3, expr)
+
+          assert(runner.recordCount.contains(3000L))
+        }
+      }
+    }
+
+    "extractZeroRecordSuccess" should {
+      "extract success from a line" in {
+        withDummyProcessRunner() { runner =>
+          val line = "The job has succeeded with 0 records written."
+          runner.extractZeroRecordSuccess(line, ".*succeeded.*".r)
+
+          assert(runner.recordCount.contains(0))
+        }
+      }
+
+      "return None if the line does not match the regex" in {
+        withDummyProcessRunner() { runner =>
+          val line = "The job has failed with 0 records written."
+          runner.extractZeroRecordSuccess(line, ".*succeeded.*".r)
+
+          assert(runner.recordCount.isEmpty)
+        }
+      }
+
+    }
+
+    "extractFailure" should {
+      "return the failure state when the line matches the regex expression" in {
+        withDummyProcessRunner() { runner =>
+          val line = "The job has failed."
+          runner.extractFailure(line, ".*failed.*".r)
+
+          assert(runner.isFailureFound)
+        }
+      }
+
+      "return None if the line does not match the regex" in {
+        withDummyProcessRunner() { runner =>
+          val line = "The job has succeeded."
+          runner.extractFailure(line, ".*failed.*".r)
+
+          assert(!runner.isFailureFound)
+        }
+      }
+
+    }
+  }
+
   "run()" should {
     val os = System.getProperty("os.name").toLowerCase
 
@@ -197,7 +364,6 @@ class ProcessRunnerSuite extends AnyWordSpec with ScriptProcessRunnerFixture {
            |""".stripMargin
 
       "stdout and stderr are combined" in {
-
         if (!os.contains("windows")) {
           withRealScript(script)((runner, cmd) => {
             val exitStatus = runner.run(cmd)
@@ -227,6 +393,35 @@ class ProcessRunnerSuite extends AnyWordSpec with ScriptProcessRunnerFixture {
             assert(stdOutLog.last.contains("E 999 - "))
           })
         }
+      }
+    }
+
+    if (!os.contains("windows")) {
+      "run program with a failure but with 0 exit status" in {
+        val script =
+          s"""#!/bin/bash
+             |echo "The job has failed."
+             |""".stripMargin
+
+        withRealScript(script, failureRegEx = Some(".*failed.*"))((runner, cmd) => {
+          val exitStatus = runner.run(cmd)
+
+          assert(exitStatus == 1)
+        })
+      }
+
+      "run program with a success and zero records written" in {
+        val script =
+          s"""#!/bin/bash
+             |echo "The job has succeeded."
+             |""".stripMargin
+
+        withRealScript(script, zeroRecordSuccessRegEx = Some(".*succeeded.*"), includeOutputLines = 0)((runner, cmd) => {
+          val exitStatus = runner.run(cmd)
+
+          assert(exitStatus == 0)
+          assert(runner.recordCount.contains(0))
+        })
       }
     }
 

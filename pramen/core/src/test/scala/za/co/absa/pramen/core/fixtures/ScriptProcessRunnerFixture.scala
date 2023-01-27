@@ -68,7 +68,9 @@ trait ScriptProcessRunnerFixture {
                      includeOutputLines: Int = 10,
                      logStdOut: Boolean = true,
                      logStdErr: Boolean = true,
-                     redirectErrorStream: Boolean = false
+                     redirectErrorStream: Boolean = false,
+                     zeroRecordSuccessRegEx: Option[String] = None,
+                     failureRegEx: Option[String] = None
                     )(f: (ProcessRunnerImpl, String) => Unit): Unit = {
     val tmpPath = Files.createTempDirectory("ProcessRunner")
     val pathStr = tmpPath.toAbsolutePath.toString
@@ -90,7 +92,9 @@ trait ScriptProcessRunnerFixture {
     val runner = ProcessRunner(includeOutputLines,
       logStdOut,
       logStdErr,
-      redirectErrorStream = redirectErrorStream).asInstanceOf[ProcessRunnerImpl]
+      redirectErrorStream = redirectErrorStream,
+      zeroRecordsSuccessRegEx = zeroRecordSuccessRegEx,
+      failureRegEx = failureRegEx).asInstanceOf[ProcessRunnerImpl]
 
     f(runner, outputFilePath.toAbsolutePath.toString)
 

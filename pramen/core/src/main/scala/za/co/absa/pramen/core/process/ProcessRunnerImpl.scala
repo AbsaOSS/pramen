@@ -23,8 +23,9 @@ import java.io.{BufferedReader, InputStreamReader}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
-import scala.util.{Failure, Try}
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
+import scala.util.matching.Regex
 
 class ProcessRunnerImpl(val includeOutputLines: Int,
                         val logStdOut: Boolean,
@@ -37,6 +38,8 @@ class ProcessRunnerImpl(val includeOutputLines: Int,
                         val failureRegEx: Option[String],
                         val outputFilterRegEx: Seq[String]
                        ) extends ProcessRunner {
+  type LineTransformer = String => Option[String]
+
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val lastStdoutLines = createCircularBufferOpt()
@@ -44,6 +47,11 @@ class ProcessRunnerImpl(val includeOutputLines: Int,
 
   private var recordCountParsed = Option.empty[Long]
   private var failureFound = false
+
+  private val filterRs = outputFilterRegEx.map(_.r)
+  private val recCountR = recordCountRegEx.map(_.r)
+  private val zeroRecordsSuccessR = zeroRecordsSuccessRegEx.map(_.r)
+  private val failureR = failureRegEx.map(_.r)
 
   override def run(cmdLine: String): Int = {
     val processBuilder = new ProcessBuilder(StringUtils.tokenize(cmdLine): _*)
@@ -110,44 +118,88 @@ class ProcessRunnerImpl(val includeOutputLines: Int,
                                   prefix: String,
                                   logEnabled: Boolean): Unit = {
     val cmdOutputLogger: Logger = LoggerFactory.getLogger(prefix)
-    val filterRs = outputFilterRegEx.map(_.r)
-    val recCountR = recordCountRegEx.map(_.r)
-    val zeroRecordsSuccessR = zeroRecordsSuccessRegEx.map(_.r)
-    val failureR = failureRegEx.map(_.r)
+    val lineTransformers = getLineTransformers(buffer, logEnabled, cmdOutputLogger)
 
     try {
       var line: String = reader.readLine
       while (line != null) {
-        if (line.nonEmpty) {
-          val doSkip = filterRs.exists(_.findFirstIn(line).nonEmpty)
-          if (!doSkip) {
-            buffer.foreach(_.add(line))
-            if (logEnabled) {
-              cmdOutputLogger.info(line)
-            }
-          }
-          recCountR match {
-            case Some(regex) =>
-              regex.findFirstMatchIn(line).foreach { matchData =>
-                recordCountParsed = Try(matchData.group(1).toLong)
-                  .recoverWith {
-                    case NonFatal(ex) =>
-                      log.error(s"Failed to match record count using '${recordCountRegEx.get}' from line '$line', group ${matchData.group(1)}.", ex)
-                      Failure(ex)
-                  }
-                  .toOption
-              }
-            case None        =>
-          }
-          if (recordCountParsed.isEmpty) {
-            zeroRecordsSuccessR.foreach(regex => regex.findFirstMatchIn(line).foreach(_ => recordCountParsed = Some(0)))
-          }
-          failureR.foreach(regex => regex.findFirstMatchIn(line).foreach(_ => failureFound = true))
+        lineTransformers.foldLeft(Option(line)) { (lineAcc, f) =>
+          lineAcc.flatMap(f)
         }
         line = reader.readLine()
       }
     } catch {
       case NonFatal(ex) => log.error(s"Process stream ($prefix) thrown an exception.", ex)
     }
+  }
+
+  private[core] def getLineTransformers(buffer: Option[CircularBuffer[String]],
+                                        logEnabled: Boolean,
+                                        logger: Logger): Seq[LineTransformer] = {
+    Seq(
+      // Filters out empty lines
+      Some(filterEmpty(_)),
+      // Extracts record count
+      recCountR.map(regex => extractRecordCount(_: String, regex)),
+      // Extracts success with zero records
+      zeroRecordsSuccessR.map(regex => extractZeroRecordSuccess(_: String, regex)),
+      // Extracts failures
+      failureR.map(regex => extractFailure(_: String, regex)),
+      // Skips filtered out lines
+      Some(skipFilteredOutLines(_: String)),
+      // Logs remaining lines
+      Some(doIf(_: String, logEnabled)(line => logger.info(line))),
+      // Adds remaining lines to the circular buffer
+      Some(doIf(_: String, actionNeeded = true)(line => buffer.foreach(_.add(line))))
+    ).flatten
+  }
+
+  private[core] def doIf(line: String, actionNeeded: Boolean)(action: String => Unit): Option[String] = {
+    if (actionNeeded)
+      action(line)
+    Option(line)
+  }
+
+  private[core] def filterEmpty(line: String): Option[String] = {
+    if (line.isEmpty)
+      None
+    else
+      Option(line)
+  }
+
+  private[core] def skipFilteredOutLines(line: String): Option[String] = {
+    val doSkip = filterRs.exists(_.findFirstIn(line).nonEmpty)
+    if (doSkip)
+      None
+    else
+      Option(line)
+  }
+
+  private[core] def extractRecordCount(line: String, regex: Regex): Option[String] = {
+    regex.findFirstMatchIn(line).foreach { matchData =>
+      val numberOfRecordsStr = matchData.group(1)
+      val recordsOpt = Try(numberOfRecordsStr.toLong) match {
+        case Success(number) =>
+          log.info(s"Record count match found: $number")
+          Some(number)
+        case Failure(ex)     =>
+          log.error(s"Failed to match the extracted record count '$numberOfRecordsStr' as a number from line '$line', expression: '${regex.regex}'.", ex)
+          None
+      }
+      recordCountParsed = recordsOpt.orElse(recordCountParsed)
+    }
+    Option(line)
+  }
+
+  private[core] def extractZeroRecordSuccess(line: String, regex: Regex): Option[String] = {
+    if (recordCountParsed.isEmpty) {
+      regex.findFirstMatchIn(line).foreach(_ => recordCountParsed = Some(0))
+    }
+    Option(line)
+  }
+
+  private[core] def extractFailure(line: String, regex: Regex): Option[String] = {
+    regex.findFirstMatchIn(line).foreach(_ => failureFound = true)
+    Option(line)
   }
 }
