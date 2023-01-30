@@ -249,7 +249,7 @@ class CmdLineLineConfigSuite extends AnyWordSpec {
       assert(!config.getBoolean(USE_LOCK))
     }
 
-    "return the origina config if undercover is not specified" in {
+    "return the original config if undercover is not specified" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 

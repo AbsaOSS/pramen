@@ -71,6 +71,7 @@ trait TempDirFixture {
     val fullPathToTheFile = Paths.get(path, fileName).toString
     val f = new RandomAccessFile(fullPathToTheFile, "rw")
     f.setLength(size)
+    f.close()
   }
 
 }
