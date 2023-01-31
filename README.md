@@ -392,6 +392,7 @@ pramen.sources = [
     factory.class = "za.co.absa.pramen.core.source.ParquetSource"
     
     minimum.records = 0
+    fail.if.no.data = false
   }
 ]
 ```
@@ -433,6 +434,10 @@ is determined by the pipeline configuration.
     # the throughut of the sourcing.
     option.fetchsize = 50000
     option.batchsize = 50000
+    
+    # Consider the pipeline as failed if at least one table has no data at the scheduled time.
+    # Useful for auto-retrying ingestion pipelines.
+    fail.if.no.data = false
 
     # Specifies if tables of the data source have an information date colunn
     has.information.date.column = true
@@ -507,6 +512,9 @@ Here is how you can configure a CSV source:
        header = true
        delimiter = ","
     }
+    
+    minimum.records = 1
+    fail.if.no.data = false
     
     has.information.date.column = false
 }
@@ -1717,6 +1725,7 @@ Here is an example configuration for a JDBC source:
       # You can override any of source settings here 
       source {
         minimum.records = 1000 
+        fail.if.no.data = true
         has.information.date.column = true
         information.date.column = "info_date"
       }

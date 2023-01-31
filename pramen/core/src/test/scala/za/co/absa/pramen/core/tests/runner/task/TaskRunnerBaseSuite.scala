@@ -179,7 +179,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "no data for the job" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData, None, Nil))
+      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(false), None, Nil))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -188,7 +188,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "no data as a failure for the job" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData, None, Nil), failIfNoData = true)
+      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -198,7 +198,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "no data for the job with warnings" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData, None, Seq(DependencyWarning("table1"))))
+      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(false), None, Seq(DependencyWarning("table1"))))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -423,12 +423,11 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
-                 allowParallel: Boolean = true,
-                 failIfNoData: Boolean = false
+                 allowParallel: Boolean = true
                 ): (TaskRunnerBase, Bookkeeper, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
-    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun, failIfNoData = failIfNoData)
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun)
 
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
 

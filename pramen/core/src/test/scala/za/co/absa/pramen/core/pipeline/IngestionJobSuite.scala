@@ -159,7 +159,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-          assert(result.status == JobPreRunStatus.NoData)
+          assert(result.status == JobPreRunStatus.NoData(false))
         }
       }
 
@@ -226,7 +226,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
         val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
 
-        assert(result.status == JobPreRunStatus.NoData)
+        assert(result.status == JobPreRunStatus.NoData(false))
       }
     }
   }
