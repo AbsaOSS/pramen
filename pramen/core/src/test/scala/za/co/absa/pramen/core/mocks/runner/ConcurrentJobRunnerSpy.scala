@@ -29,7 +29,8 @@ import scala.concurrent.ExecutionContext.fromExecutorService
 import scala.concurrent.duration.{Duration, SECONDS}
 import scala.concurrent.{Await, ExecutionContextExecutorService, Future}
 
-class ConcurrentJobRunnerSpy(includeFails: Boolean = false) extends ConcurrentJobRunner {
+class ConcurrentJobRunnerSpy(includeFails: Boolean = false,
+                             isNoDataFailure: Boolean = false) extends ConcurrentJobRunner {
   private val completedJobsChannel = Channel.make[JobRunResults](1)
 
   val infoDate: LocalDate = LocalDate.of(2022, 2, 18)
@@ -70,7 +71,7 @@ class ConcurrentJobRunnerSpy(includeFails: Boolean = false) extends ConcurrentJo
       } else if (idx % 3 == 1) {
         RunStatus.Failed(new RuntimeException("Dummy exception"))
       } else {
-        RunStatus.NoData
+        RunStatus.NoData(isNoDataFailure)
       }
 
       val taskResult = TaskResult(job, status, Some(RunInfo(infoDate, started, finished)), Nil, Nil, Nil)

@@ -184,7 +184,17 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val result = runner.preRunCheck(task.head, started)
 
       assert(result.isLeft)
-      assert(result.left.get.runStatus == RunStatus.NoData)
+      assert(result.left.get.runStatus == RunStatus.NoData(false))
+    }
+
+    "no data as a failure for the job" in {
+      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData, None, Nil), failIfNoData = true)
+
+      val result = runner.preRunCheck(task.head, started)
+
+      assert(result.isLeft)
+      assert(result.left.get.runStatus.isInstanceOf[RunStatus.NoData])
+      assert(result.left.get.runStatus.isFailure)
     }
 
     "no data for the job with warnings" in {
@@ -193,7 +203,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val result = runner.preRunCheck(task.head, started)
 
       assert(result.isLeft)
-      assert(result.left.get.runStatus == RunStatus.NoData)
+      assert(result.left.get.runStatus == RunStatus.NoData(false))
       assert(result.left.get.dependencyWarnings.length == 1)
       assert(result.left.get.dependencyWarnings.head.table == "table1")
     }
@@ -234,7 +244,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val result = runner.preRunCheck(tasks.head, started)
 
       assert(result.isLeft)
-      assert(result.left.get.runStatus == RunStatus.FailedDependencies(_isFailure = true, depFailure :: Nil))
+      assert(result.left.get.runStatus == RunStatus.FailedDependencies(isFailure = true, depFailure :: Nil))
     }
 
     "job has empty tables" in {
@@ -244,7 +254,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val result = runner.preRunCheck(tasks.head, started)
 
       assert(result.isLeft)
-      assert(result.left.get.runStatus == RunStatus.FailedDependencies(_isFailure = false, depFailure :: Nil))
+      assert(result.left.get.runStatus == RunStatus.FailedDependencies(isFailure = false, depFailure :: Nil))
     }
   }
 
@@ -413,11 +423,12 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
-                 allowParallel: Boolean = true
+                 allowParallel: Boolean = true,
+                 failIfNoData: Boolean = false
                 ): (TaskRunnerBase, Bookkeeper, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
-    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun)
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun, failIfNoData = failIfNoData)
 
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
 

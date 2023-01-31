@@ -139,7 +139,7 @@ abstract class TaskRunnerBase(conf: Config,
             Right(validationResult)
           case NoData =>
             log.info(s"NO DATA available for the task: $outputTable for date: ${task.infoDate}.")
-            Left(TaskResult(task.job, RunStatus.NoData, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
+            Left(TaskResult(task.job, RunStatus.NoData(runtimeConfig.failIfNoData), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
           case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTable for date: ${task.infoDate}. Expected = $expected, actual = $actual")
             Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
@@ -361,7 +361,7 @@ abstract class TaskRunnerBase(conf: Config,
       case RunStatus.FailedDependencies(isFailure, deps) =>
         val emoji = if (isFailure) s"$FAILURE" else s"$WARNING"
         log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
-      case RunStatus.NoData =>
+      case _: RunStatus.NoData =>
         log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
       case _: RunStatus.InsufficientData =>
         log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")

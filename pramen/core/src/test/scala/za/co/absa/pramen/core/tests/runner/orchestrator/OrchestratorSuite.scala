@@ -92,7 +92,7 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
 
         assert(task1Status.runStatus.isInstanceOf[Succeeded])
         assert(task2Status.runStatus.isInstanceOf[Failed])
-        assert(task3Status.runStatus == NoData)
+        assert(task3Status.runStatus == NoData(false))
         assert(task4Status.runStatus.isInstanceOf[MissingDependencies])
 
         assert(task1Status.runInfo.exists(info => info.infoDate == runner.infoDate))
