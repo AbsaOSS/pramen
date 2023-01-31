@@ -137,9 +137,9 @@ abstract class TaskRunnerBase(conf: Config,
           case NeedsUpdate =>
             log.info(s"The table needs update: $outputTable for date: ${task.infoDate}.")
             Right(validationResult)
-          case NoData =>
+          case NoData(isFailure) =>
             log.info(s"NO DATA available for the task: $outputTable for date: ${task.infoDate}.")
-            Left(TaskResult(task.job, RunStatus.NoData(runtimeConfig.failIfNoData), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
+            Left(TaskResult(task.job, RunStatus.NoData(isFailure), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
           case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTable for date: ${task.infoDate}. Expected = $expected, actual = $actual")
             Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
@@ -348,6 +348,9 @@ abstract class TaskRunnerBase(conf: Config,
       case Some(date) => s" for $date"
       case None => ""
     }
+
+    val emoji = if (result.runStatus.isFailure) s"$FAILURE" else s"$WARNING"
+
     result.runStatus match {
       case _: RunStatus.Succeeded =>
         log.info(s"$SUCCESS Task '${result.job.name}'$infoDateMsg has SUCCEEDED.")
@@ -355,14 +358,12 @@ abstract class TaskRunnerBase(conf: Config,
         log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
       case RunStatus.Failed(ex) =>
         log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED", ex)
-      case RunStatus.MissingDependencies(isFailure, tables) =>
-        val emoji = if (isFailure) "$FAILURE" else "$WARNING"
+      case RunStatus.MissingDependencies(_, tables) =>
         log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
-      case RunStatus.FailedDependencies(isFailure, deps) =>
-        val emoji = if (isFailure) s"$FAILURE" else s"$WARNING"
+      case RunStatus.FailedDependencies(_, deps) =>
         log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
       case _: RunStatus.NoData =>
-        log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
+        log.info(s"$emoji Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
       case _: RunStatus.InsufficientData =>
         log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")
       case RunStatus.Skipped(msg) =>

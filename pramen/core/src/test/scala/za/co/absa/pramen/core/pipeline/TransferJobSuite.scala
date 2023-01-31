@@ -54,7 +54,15 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.NoData, None, Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.NoData(false), None, Nil))
+    }
+
+    "return NoData with a failure when the input table has no data" in {
+      val (job, _) = getUseCase(numberOfRecords = 0, failOnNoData = true)
+
+      val actual = job.preRunCheckJob(infoDate, conf, Nil)
+
+      assert(actual == JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil))
     }
 
     "return NeedsUpdate when the number of records do not match" in {
@@ -208,16 +216,24 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
   def getUseCase(transferTable: TransferTable = TransferTableFactory.getDummyTransferTable(),
                  numberOfRecords: Int = 5,
                  readerCountException: Throwable = null,
-                 readerDataException: Throwable = null): (TransferJob, SyncBookkeeperMock) = {
+                 readerDataException: Throwable = null,
+                 failOnNoData: Boolean = false): (TransferJob, SyncBookkeeperMock) = {
     val operation = OperationDefFactory.getDummyOperationDef(extraOptions = Map[String, String]("value" -> "7"))
 
     val bk = new SyncBookkeeperMock
 
     val metastore = new MetastoreSpy()
 
+    val sourceConfig = if (failOnNoData) {
+      ConfigFactory.parseString("fail.if.no.data = true")
+    } else {
+      ConfigFactory.empty()
+    }
+
     val source = new SourceSpy(numberOfRecords = numberOfRecords,
       readerCountException = readerCountException,
-      readerDataException = readerDataException)
+      readerDataException = readerDataException,
+      sourceConfig = sourceConfig)
 
     val sink = new SinkSpy()
 

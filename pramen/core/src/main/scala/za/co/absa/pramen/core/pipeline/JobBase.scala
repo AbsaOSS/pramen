@@ -174,5 +174,6 @@ abstract class JobBase(operationDef: OperationDef,
 
 object JobBase {
   val MINIMUM_RECORDS_KEY = "minimum.records"
+  val FAIL_NO_DATA_KEY = "fail.if.no.data"
   val MINIMUM_RECORDS_DEFAULT = 1
 }

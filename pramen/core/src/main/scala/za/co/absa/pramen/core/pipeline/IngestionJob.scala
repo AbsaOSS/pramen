@@ -57,6 +57,7 @@ class IngestionJob(operationDef: OperationDef,
     val recordCount = reader.getRecordCount(from, to)
 
     val minimumRecordsOpt = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
+    val failIfNoData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_DATA_KEY).getOrElse(false)
 
     minimumRecordsOpt.foreach(n => log.info(s"Minimum records to expect: $n"))
 
@@ -70,7 +71,7 @@ class IngestionJob(operationDef: OperationDef,
             log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs re-sourced.")
             JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
           } else {
-            processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, minimumRecordsOpt, Some(chunk.inputRecordCount))
+            processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, failIfNoData, minimumRecordsOpt, Some(chunk.inputRecordCount))
           }
         }
       case None        =>
@@ -78,7 +79,7 @@ class IngestionJob(operationDef: OperationDef,
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount new records. Adding to the processing list.")
           JobPreRunResult(JobPreRunStatus.Ready, Some(recordCount), dependencyWarnings)
         } else {
-          processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, minimumRecordsOpt, None)
+          processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, failIfNoData, minimumRecordsOpt, None)
         }
     }
   }
@@ -86,6 +87,7 @@ class IngestionJob(operationDef: OperationDef,
   private def processInsufficientDataCase(infoDate: LocalDate,
                                           dependencyWarnings: Seq[DependencyWarning],
                                           recordCount: Long,
+                                          failIfNoData: Boolean,
                                           minimumRecordsOpt: Option[Int],
                                           oldRecordCount: Option[Long]) = {
     minimumRecordsOpt match {
@@ -94,7 +96,7 @@ class IngestionJob(operationDef: OperationDef,
         JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords, oldRecordCount), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
       case None                 =>
         log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
-        JobPreRunResult(JobPreRunStatus.NoData, minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
+        JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
     }
   }
 
