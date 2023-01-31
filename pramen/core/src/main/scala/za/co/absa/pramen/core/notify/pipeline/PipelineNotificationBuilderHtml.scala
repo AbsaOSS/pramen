@@ -432,6 +432,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case InsufficientData(actual, expected, _) => s"Got $actual, expected at least $expected records"
       case MissingDependencies(_, tables)        => s"Dependent job failures: ${tables.mkString(", ")}"
       case FailedDependencies(_, deps)           => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
+      case NoData(true)                          => s"No records at the source"
       case _                                     =>
         if (task.dependencyWarnings.isEmpty) {
           ""
@@ -464,7 +465,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           TextElement("Success", successStyle)
         }
       case _: InsufficientData    => TextElement("Insufficient data", Style.Exception)
-      case NoData                 => TextElement("No Data", Style.Warning)
+      case NoData(isFailure)      => TextElement("No Data", if (isFailure) Style.Exception else Style.Warning)
       case _: Skipped             => TextElement("Skipped", successStyle)
       case NotRan                 => TextElement("Skipped", Style.Warning)
       case _: ValidationFailed    => TextElement("Validation failed", Style.Warning)

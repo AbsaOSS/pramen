@@ -37,8 +37,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
            |  track.updates = false
            |  check.only.late.data = true
            |  check.only.new.data = true
-           |  warn.if.no.data = false
-           |  non.zero.exit.code.if.no.data = true
+           |  fail.if.no.data = true
            |  email.if.no.changes = false
            |  current.date = 2020-12-31
            |  load.date.from = 2020-12-31
@@ -63,8 +62,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(!runtimeConfig.useLocks)
       assert(runtimeConfig.checkOnlyLateData)
       assert(runtimeConfig.checkOnlyNewData)
-      assert(!runtimeConfig.warnIfNoData)
-      assert(runtimeConfig.nonZeroExitCodeIfNoData)
+      assert(runtimeConfig.failIfNoData)
       assert(!runtimeConfig.emailIfNoChanges)
       assert(runtimeConfig.runDate.toString == "2020-12-31")
       assert(runtimeConfig.runDateTo.get.toString == "2021-01-10")
@@ -85,8 +83,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.useLocks)
       assert(!runtimeConfig.checkOnlyLateData)
       assert(!runtimeConfig.checkOnlyNewData)
-      assert(runtimeConfig.warnIfNoData)
-      assert(!runtimeConfig.nonZeroExitCodeIfNoData)
+      assert(!runtimeConfig.failIfNoData)
       assert(runtimeConfig.emailIfNoChanges)
       assert(runtimeConfig.runDate.toString == LocalDate.now().toString)
       assert(runtimeConfig.runDateTo.isEmpty)

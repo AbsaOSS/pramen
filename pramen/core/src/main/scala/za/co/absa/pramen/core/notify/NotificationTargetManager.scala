@@ -76,7 +76,7 @@ object NotificationTargetManager {
       case s: RunStatus.ValidationFailed => Some(TaskStatus.ValidationFailed(s.ex))
       case s: RunStatus.MissingDependencies => Some(TaskStatus.MissingDependencies(s.tables))
       case s: RunStatus.FailedDependencies => Some(TaskStatus.FailedDependencies(s.failures.flatMap(d => d.failedTables ++ d.emptyTables).distinct.sorted))
-      case RunStatus.NoData => Some(TaskStatus.NoData)
+      case _: RunStatus.NoData => Some(TaskStatus.NoData)
       case s: RunStatus.InsufficientData => Some(TaskStatus.InsufficientData(s.actual, s.expected))
       case s: RunStatus.Skipped => Some(TaskStatus.Skipped(s.msg))
       case _ => None

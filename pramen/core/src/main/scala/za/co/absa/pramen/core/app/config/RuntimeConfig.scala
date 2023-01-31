@@ -34,8 +34,7 @@ case class RuntimeConfig(
                           useLocks: Boolean, // If true, the pipeline will acquire locks before writing to a metastore table
                           checkOnlyLateData: Boolean,
                           checkOnlyNewData: Boolean,
-                          warnIfNoData: Boolean,
-                          nonZeroExitCodeIfNoData: Boolean,
+                          failIfNoData: Boolean,
                           emailIfNoChanges: Boolean,
                           runDate: LocalDate, // Specifies the date for which the pipeline should run (usually current date)
                           runDateTo: Option[LocalDate], // Specified the end date in case of historical rerun
@@ -59,8 +58,7 @@ object RuntimeConfig {
   val USE_LOCK = "pramen.use.lock"
   val CHECK_ONLY_LATE_DATA = "pramen.check.only.late.data"
   val CHECK_ONLY_NEW_DATA = "pramen.check.only.new.data"
-  val WARN_NO_DATA = "pramen.warn.if.no.data"
-  val NON_ZERO_EXIT_CODE_IF_NO_DATA = "pramen.non.zero.exit.code.if.no.data"
+  val FAIL_NO_DATA = "pramen.fail.if.no.data"
   val EMAIL_IF_NO_CHANGES = "pramen.email.if.no.changes"
   val CURRENT_DATE = "pramen.current.date"
   val LOAD_DATE_FROM = "pramen.load.date.from"
@@ -131,8 +129,7 @@ object RuntimeConfig {
       useLocks = conf.getBoolean(USE_LOCK),
       checkOnlyLateData = checkOnlyLateData,
       checkOnlyNewData = checkOnlyNewData,
-      warnIfNoData = conf.getBoolean(WARN_NO_DATA),
-      nonZeroExitCodeIfNoData = conf.getBoolean(NON_ZERO_EXIT_CODE_IF_NO_DATA),
+      failIfNoData = conf.getBoolean(FAIL_NO_DATA),
       emailIfNoChanges = conf.getBoolean(EMAIL_IF_NO_CHANGES),
       runDate = dateFrom,
       runDateTo = dateTo,
