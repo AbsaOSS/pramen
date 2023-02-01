@@ -101,6 +101,6 @@ object PipelineSparkSessionBuilder {
     } else {
       ""
     }
-    s"SyncWatcher$ingestionSuffix"
+    s"Pramen$ingestionSuffix"
   }
 }
