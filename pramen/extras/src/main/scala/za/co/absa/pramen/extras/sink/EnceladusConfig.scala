@@ -36,7 +36,8 @@ case class EnceladusConfig(
                             generateInfoFile: Boolean,
                             enceladusMainClass: String,
                             enceladusCmdLineTemplate: String,
-                            hiveDatabase: Option[String]
+                            hiveDatabase: Option[String],
+                            publishPartitionTemplate: String
                           )
 
 object EnceladusConfig {
@@ -52,6 +53,7 @@ object EnceladusConfig {
   val ENCELADUS_RUN_MAIN_CLASS_KEY = "enceladus.run.main.class"
   val ENCELADUS_COMMAND_LINE_TEMPLATE_KEY = "enceladus.command.line.template"
   val HIVE_DATABASE_KEY = "hive.database"
+  val PUBLISH_PARTITION_TEMPLATE_KEY = "publish.partition.template"
 
   val DEFAULT_INFO_DATE_COLUMN = "enceladus_info_date"
   val DEFAULT_PARTITION_PATTERN = "{year}/{month}/{day}/v{version}"
@@ -59,6 +61,7 @@ object EnceladusConfig {
   val DEFAULT_MODE = "errorifexists"
   val DEFAULT_ENCELADUS_RUN_MAIN_CLASS = "za.co.absa.enceladus.standardization_conformance.StandardizationAndConformanceJob"
   val DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE = "--dataset-name @datasetName --dataset-version @datasetVersion --report-date @infoDate --menas-auth-keytab menas.keytab --raw-format @rawFormat --autoclean-std-folder true"
+  val DEFAULT_PUBLISH_PARTITION_TEMPLATE = "enceladus_info_date={1}/enceladus_info_version={2}"
 
   def fromConfig(conf: Config): EnceladusConfig = {
     val pramenVersion = Try {
@@ -83,7 +86,8 @@ object EnceladusConfig {
       ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true),
       ConfigUtils.getOptionString(conf, ENCELADUS_RUN_MAIN_CLASS_KEY).getOrElse(DEFAULT_ENCELADUS_RUN_MAIN_CLASS),
       ConfigUtils.getOptionString(conf, ENCELADUS_COMMAND_LINE_TEMPLATE_KEY).getOrElse(DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE),
-      ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY)
+      ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY),
+      ConfigUtils.getOptionString(conf, PUBLISH_PARTITION_TEMPLATE_KEY).getOrElse(DEFAULT_PUBLISH_PARTITION_TEMPLATE)
     )
   }
 }

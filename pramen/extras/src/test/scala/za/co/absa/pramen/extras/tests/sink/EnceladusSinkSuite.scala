@@ -23,7 +23,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY, HIVE_TABLE__KEY}
+import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY, HIVE_TABLE_KEY}
 import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.{Files, Paths}
@@ -177,7 +177,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
           Map(
             DATASET_NAME_KEY -> "m_dayaset",
             DATASET_VERSION_KEY -> "22",
-            HIVE_TABLE__KEY -> "test_table"
+            HIVE_TABLE_KEY -> "test_table"
           )
         )
       }

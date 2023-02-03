@@ -154,7 +154,7 @@ class EnceladusSink(sinkConfig: Config,
                     options: Map[String, String])(implicit spark: SparkSession): Long = {
     val jobStart = Instant.now()
 
-    val infoVersion = getInfoVersion(options)
+    val infoVersion = getInfoVersion(options, tableName)
     val basePath = getBasePath(tableName, options)
     val outputPartitionPath = getOutputPartitionPath(basePath, infoDate, infoVersion)
 
@@ -173,9 +173,18 @@ class EnceladusSink(sinkConfig: Config,
     count
   }
 
-  private[extras] def getInfoVersion(options: Map[String, String]): Int = {
-    // ToDo This can be improver by automatically determining the version based on the existing folders.
-    options.getOrElse(INFO_VERSION_KEY, "1").toInt
+  private[extras] def getInfoVersion(options: Map[String, String],
+                                     metaTable: String)
+                                    (implicit spark: SparkSession): Int = {
+    val publishBasePath = options.get(PUBLISH_BASE_PATH_KEY)
+    val hiveTable = options.get(HIVE_TABLE_KEY)
+
+    val versionStr = options.getOrElse(INFO_VERSION_KEY, INFO_VERSION_AUTO_VALUE)
+    if (versionStr.toLowerCase() == INFO_VERSION_AUTO_VALUE) {
+      autoDetectVersionNumber(metaTable, publishBasePath, hiveTable)
+    } else {
+      versionStr.toInt
+    }
   }
 
   private[extras] def getBasePath(tableName: String,
@@ -252,14 +261,14 @@ class EnceladusSink(sinkConfig: Config,
         infoVersion,
         basePath
       )
-      if (options.contains(HIVE_TABLE__KEY)) {
+      if (options.contains(HIVE_TABLE_KEY)) {
         Try {
-          repairTable(options(HIVE_TABLE__KEY))
+          repairTable(options(HIVE_TABLE_KEY))
         } match {
-          case Success(_) =>
-            log.info(s"Hive table '${options(HIVE_TABLE__KEY)}' was repaired successfully.")
+          case Success(_)  =>
+            log.info(s"Hive table '${options(HIVE_TABLE_KEY)}' was repaired successfully.")
           case Failure(ex) =>
-            throw new IllegalStateException(s"Failed to repair Hive table '${options(HIVE_TABLE__KEY)}'.", ex)
+            throw new IllegalStateException(s"Failed to repair Hive table '${options(HIVE_TABLE_KEY)}'.", ex)
         }
       }
     } else {
@@ -312,7 +321,7 @@ class EnceladusSink(sinkConfig: Config,
   private[extras] def getHiveRepairEnceladusQuery(hiveTable: String): String = {
     enceladusConfig.hiveDatabase match {
       case Some(db) => getHiveRepairQuery(s"$db.$hiveTable")
-      case None => getHiveRepairQuery(s"$hiveTable")
+      case None     => getHiveRepairQuery(s"$hiveTable")
     }
   }
 
@@ -324,6 +333,28 @@ class EnceladusSink(sinkConfig: Config,
     log.info(s"Executing SQL: $query")
     spark.sql(query).take(100)
   }
+
+  private[extras] def autoDetectVersionNumber(metaTable: String,
+                                              publishBasePath: Option[String],
+                                              hiveTable: Option[String])
+                                             (implicit spark: SparkSession): Int = {
+    // ToDo implementation
+    val versionOpt = publishBasePath match {
+      case Some(publishBasePath) => Option(1)
+      case None                  => Some(1)
+        hiveTable match {
+          case Some(db) => Some(1)
+          case None     => Some(1)
+        }
+    }
+    versionOpt match {
+      case Some(version) =>
+        version
+      case None          =>
+        log.warn(s"Could not autodetect Enceladus version for $metaTable. Defaulting to 1.")
+        1
+    }
+  }
 }
 
 object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
@@ -331,7 +362,10 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
   val INFO_VERSION_KEY = "info.version"
   val DATASET_NAME_KEY = "dataset.name"
   val DATASET_VERSION_KEY = "dataset.version"
-  val HIVE_TABLE__KEY = "hive.table"
+  val HIVE_TABLE_KEY = "hive.table"
+  val PUBLISH_BASE_PATH_KEY = "publish.base.path"
+
+  val INFO_VERSION_AUTO_VALUE = "auto"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
     val enceladusConfig = EnceladusConfig.fromConfig(conf)
