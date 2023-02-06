@@ -16,22 +16,23 @@
 
 package za.co.absa.pramen.core.pipeline
 
-sealed trait TaskRunReason
+import org.scalatest.wordspec.AnyWordSpec
 
-object TaskRunReason {
-  case object New extends TaskRunReason {
-    override def toString: String = "New"
-  }
-
-  case object Update extends TaskRunReason {
-    override def toString: String = "Update"
-  }
-
-  case object Rerun extends TaskRunReason {
-    override def toString: String = "Rerun"
-  }
-
-  case object Late extends TaskRunReason {
-    override def toString: String = "Late"
+class TaskRunReasonSuite extends AnyWordSpec {
+  "TaskRunReason" should {
+    "be able to be rendered as a string" when {
+      "new" in {
+        assert(TaskRunReason.New.toString == "New")
+      }
+      "update" in {
+        assert(TaskRunReason.Update.toString == "Update")
+      }
+      "rerun" in {
+        assert(TaskRunReason.Rerun.toString == "Rerun")
+      }
+      "late" in {
+        assert(TaskRunReason.Late.toString == "Late")
+      }
+    }
   }
 }

@@ -21,4 +21,12 @@ import java.lang.management.ManagementFactory
 object JvmUtils {
   // Caching JVM name. In some cases this method can take some time to complete.
   lazy val jvmName: String = ManagementFactory.getRuntimeMXBean.getName
+
+  def getShortExceptionDescription(ex: Throwable): String = {
+    if (ex.getCause == null) {
+      ex.getMessage
+    } else {
+      s"${ex.getMessage} (${ex.getCause.getMessage})"
+    }
+  }
 }

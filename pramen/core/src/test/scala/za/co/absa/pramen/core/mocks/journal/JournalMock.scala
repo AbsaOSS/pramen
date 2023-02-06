@@ -14,24 +14,19 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.pipeline
+package za.co.absa.pramen.core.mocks.journal
 
-sealed trait TaskRunReason
+import za.co.absa.pramen.core.journal.Journal
+import za.co.absa.pramen.core.journal.model.TaskCompleted
 
-object TaskRunReason {
-  case object New extends TaskRunReason {
-    override def toString: String = "New"
-  }
+import java.time.Instant
+import scala.collection.mutable.ListBuffer
 
-  case object Update extends TaskRunReason {
-    override def toString: String = "Update"
-  }
+class JournalMock extends Journal {
+  val entries: ListBuffer[TaskCompleted] = new ListBuffer[TaskCompleted]
 
-  case object Rerun extends TaskRunReason {
-    override def toString: String = "Rerun"
-  }
+  override def addEntry(entry: TaskCompleted): Unit = entries += entry
 
-  case object Late extends TaskRunReason {
-    override def toString: String = "Late"
-  }
+  override def getEntries(from: Instant, to: Instant): Seq[TaskCompleted] =
+    entries.filter(e => e.finishedAt >= from.getEpochSecond && e.finishedAt <= to.getEpochSecond).toSeq
 }

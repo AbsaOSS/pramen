@@ -16,7 +16,11 @@
 
 package za.co.absa.pramen.core.journal.model
 
-import java.time.LocalDate
+import za.co.absa.pramen.core.pipeline.Task
+import za.co.absa.pramen.core.runner.task.RunStatus._
+import za.co.absa.pramen.core.runner.task.TaskResult
+
+import java.time.{Instant, LocalDate}
 
 case class TaskCompleted(
                           jobName: String,
@@ -34,3 +38,39 @@ case class TaskCompleted(
                           status: String,
                           failureReason: Option[String]
                         )
+
+object TaskCompleted {
+  /**
+    * TaskCompleted is a legacy form of a task completion status. This is added for compatibility.
+    * The journal might be eventually deprecated.
+    */
+  def fromTaskResult(task: Task, taskResult: TaskResult): TaskCompleted = {
+    val now = Instant.now().getEpochSecond
+    val taskStarted = taskResult.runInfo.map(_.started.getEpochSecond).getOrElse(now)
+    val taskFinished = taskResult.runInfo.map(_.finished.getEpochSecond).getOrElse(now)
+    val status = taskResult.runStatus.toString
+    val failureReason = taskResult.runStatus.getReason()
+
+    val (recordCountOld, inputRecordCount, outputRecordCount, sizeBytes) = taskResult.runStatus match {
+      case s: Succeeded => (s.recordCountOld, s.recordCount, Some(s.recordCount), s.sizeBytes)
+      case _            => (None, 0L, None, None)
+    }
+
+    TaskCompleted(
+      task.job.name,
+      task.job.outputTable.name,
+      task.infoDate,
+      task.infoDate,
+      task.infoDate,
+      inputRecordCount,
+      recordCountOld.getOrElse(0L),
+      outputRecordCount,
+      recordCountOld,
+      sizeBytes,
+      taskStarted,
+      taskFinished,
+      status,
+      failureReason
+    )
+  }
+}

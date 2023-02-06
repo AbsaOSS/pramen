@@ -17,39 +17,80 @@
 package za.co.absa.pramen.core.runner.task
 
 import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
+import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 
 sealed trait RunStatus {
   val isFailure: Boolean
+
+  def getReason(): Option[String]
 }
 
 object RunStatus {
   case class Succeeded(recordCountOld: Option[Long], recordCount: Long, sizeBytes: Option[Long], reason: TaskRunReason) extends RunStatus {
     val isFailure: Boolean = false
+
+    override def toString: String = reason.toString
+    override def getReason(): Option[String] = None
   }
 
   case class ValidationFailed(ex: Throwable) extends RunStatus {
     val isFailure: Boolean = true
+
+    override def toString: String = "Validation failed"
+
+    override def getReason(): Option[String] = Option(getShortExceptionDescription(ex))
   }
 
   case class Failed(ex: Throwable) extends RunStatus {
     val isFailure: Boolean = true
+
+    override def toString: String = "Failed"
+
+    override def getReason(): Option[String] = Option(getShortExceptionDescription(ex))
   }
 
-  case class MissingDependencies(isFailure: Boolean, tables: Seq[String]) extends RunStatus
+  case class MissingDependencies(isFailure: Boolean, tables: Seq[String]) extends RunStatus {
+    override def toString: String = "Missing dependencies"
 
-  case class FailedDependencies(isFailure: Boolean, failures: Seq[DependencyFailure]) extends RunStatus
+    override def getReason(): Option[String] = Option(s"Missing dependencies: ${tables.mkString(", ")}")
+  }
 
-  case class NoData(isFailure: Boolean) extends RunStatus
+  case class FailedDependencies(isFailure: Boolean, failures: Seq[DependencyFailure]) extends RunStatus {
+    override def toString: String = "Failed dependencies"
+
+    override def getReason(): Option[String] = {
+      val failedTables = failures.flatMap(d => d.failedTables ++ d.emptyTables).distinct.sorted
+      Option(s"Failed dependencies for: ${failedTables.mkString(", ")}")
+    }
+  }
+
+  case class NoData(isFailure: Boolean) extends RunStatus {
+    override def toString: String = "No data"
+
+    override def getReason(): Option[String] = Option("No data at the source")
+  }
 
   case class InsufficientData(actual: Long, expected: Long, recordCountOld: Option[Long]) extends RunStatus {
+    override def toString: String = "Insufficient data"
+
     val isFailure: Boolean = true
+
+    override def getReason(): Option[String] = Option(s"Expected $expected records, but got $actual records")
   }
 
   case object NotRan extends RunStatus {
     val isFailure: Boolean = false
+
+    override def toString: String = "Not ran"
+
+    override def getReason(): Option[String] = None
   }
 
   case class Skipped(msg: String) extends RunStatus {
     val isFailure: Boolean = false
+
+    override def toString: String = "Skipped"
+
+    override def getReason(): Option[String] = Option(msg)
   }
 }
