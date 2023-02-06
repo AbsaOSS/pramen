@@ -51,13 +51,13 @@ class RunStatusSuite extends AnyWordSpec {
     "MissingDependencies" in {
       val status = RunStatus.MissingDependencies(isFailure = false, null)
 
-      assert(status.toString == "Missing dependencies")
+      assert(status.toString == "Dependent job failed")
     }
 
     "FailedDependencies" in {
       val status = RunStatus.FailedDependencies(isFailure = false, null)
 
-      assert(status.toString == "Failed dependencies")
+      assert(status.toString == "Dependency check failed")
     }
 
     "NoData" in {
@@ -187,7 +187,7 @@ class RunStatusSuite extends AnyWordSpec {
     "MissingDependencies" in {
       val status = RunStatus.MissingDependencies(isFailure = false, Seq("table2", "table1"))
 
-      assert(status.getReason().contains("Missing dependencies: table2, table1"))
+      assert(status.getReason().contains("Dependent job failures: table2, table1"))
     }
 
     "FailedDependencies" in {
@@ -196,10 +196,10 @@ class RunStatusSuite extends AnyWordSpec {
           MetastoreDependency(Seq("table2", "table1", "table3"), "", None, triggerUpdates = false, isOptional = false, isPassive = false),
           Seq("table3"),
           Seq("table1"),
-          Nil
+          Seq("2022-01-01")
         )))
 
-      assert(status.getReason().contains("Failed dependencies for: table1, table3"))
+      assert(status.getReason().contains("Dependency check failures: table3 (Empty or wrong name), table1 (2022-01-01)"))
     }
 
     "NoData" in {
@@ -211,7 +211,7 @@ class RunStatusSuite extends AnyWordSpec {
     "InsufficientData" in {
       val status = RunStatus.InsufficientData(100, 200, None)
 
-      assert(status.getReason().contains("Expected 200 records, but got 100 records"))
+      assert(status.getReason().contains("Got 100, expected at least 200 records"))
     }
 
     "NotRan" in {
@@ -220,10 +220,17 @@ class RunStatusSuite extends AnyWordSpec {
       assert(status.getReason().isEmpty)
     }
 
-    "Skipped" in {
-      val status = RunStatus.Skipped("My reason")
+    "Skipped" when {
+      "empty reason" in {
+        val status = RunStatus.Skipped("")
 
-      assert(status.getReason().contains("My reason"))
+        assert(status.getReason().isEmpty)
+      }
+      "non-empty reason" in {
+        val status = RunStatus.Skipped("My reason")
+
+        assert(status.getReason().contains("My reason"))
+      }
     }
   }
 }

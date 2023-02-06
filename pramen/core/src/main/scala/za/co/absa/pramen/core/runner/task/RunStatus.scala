@@ -50,17 +50,16 @@ object RunStatus {
   }
 
   case class MissingDependencies(isFailure: Boolean, tables: Seq[String]) extends RunStatus {
-    override def toString: String = "Missing dependencies"
+    override def toString: String = "Dependent job failed"
 
-    override def getReason(): Option[String] = Option(s"Missing dependencies: ${tables.mkString(", ")}")
+    override def getReason(): Option[String] = Option(s"Dependent job failures: ${tables.mkString(", ")}")
   }
 
   case class FailedDependencies(isFailure: Boolean, failures: Seq[DependencyFailure]) extends RunStatus {
-    override def toString: String = "Failed dependencies"
+    override def toString: String = "Dependency check failed"
 
     override def getReason(): Option[String] = {
-      val failedTables = failures.flatMap(d => d.failedTables ++ d.emptyTables).distinct.sorted
-      Option(s"Failed dependencies for: ${failedTables.mkString(", ")}")
+      Option(s"Dependency check failures: ${failures.map(_.renderText).mkString("; ")}")
     }
   }
 
@@ -75,7 +74,7 @@ object RunStatus {
 
     val isFailure: Boolean = true
 
-    override def getReason(): Option[String] = Option(s"Expected $expected records, but got $actual records")
+    override def getReason(): Option[String] = Option(s"Got $actual, expected at least $expected records")
   }
 
   case object NotRan extends RunStatus {
@@ -91,6 +90,6 @@ object RunStatus {
 
     override def toString: String = "Skipped"
 
-    override def getReason(): Option[String] = Option(msg)
+    override def getReason(): Option[String] = if (msg.isEmpty) None else Option(msg)
   }
 }
