@@ -275,7 +275,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case _            => false
     })
 
-    val haveReasonColumn = tasks.exists(t => t.runStatus.isFailure || t.dependencyWarnings.nonEmpty)
+    val haveReasonColumn = tasks.exists(t => t.runStatus.getReason().nonEmpty || t.dependencyWarnings.nonEmpty)
 
     val tableBuilder = new TableBuilderHtml
 
@@ -419,14 +419,9 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   private def getFailureReason(task: TaskResult): String = {
-    task.runStatus match {
-      case Failed(ex)                            => ex.getMessage
-      case ValidationFailed(ex)                  => ex.getMessage
-      case InsufficientData(actual, expected, _) => s"Got $actual, expected at least $expected records"
-      case MissingDependencies(_, tables)        => s"Dependent job failures: ${tables.mkString(", ")}"
-      case FailedDependencies(_, deps)           => s"Dependency check failures: ${deps.map(_.renderText).mkString("; ")}"
-      case NoData(true)                          => s"No records at the source"
-      case _                                     =>
+    task.runStatus.getReason() match {
+      case Some(reason) => reason
+      case None         =>
         if (task.dependencyWarnings.isEmpty) {
           ""
         } else {
