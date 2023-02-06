@@ -26,10 +26,12 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.ReasonException
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
+import za.co.absa.pramen.core.mocks.journal.JournalMock
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, NotRan, Skipped, Succeeded}
@@ -50,7 +52,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
   "runJobTasks" should {
     "run multiple successful jobs parallel execution" in {
-      val (runner, _, state, tasks) = getUseCase(runFunction = () => exampleDf)
+      val now = Instant.now()
+      val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => exampleDf)
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -69,10 +72,16 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.length == 2)
       assert(result.head.runStatus.isInstanceOf[Succeeded])
       assert(result(1).runStatus.isInstanceOf[Succeeded])
+
+      val journalEntries = journal.getEntries(now, now.plusSeconds(30))
+
+      assert(journalEntries.length == 2)
+      assert(journalEntries.head.status == "New")
     }
 
     "run multiple successful jobs sequential execution" in {
-      val (runner, _, state, tasks) = getUseCase(allowParallel = false, runFunction = () => exampleDf)
+      val now = Instant.now()
+      val (runner, _, journal, state, tasks) = getUseCase(allowParallel = false, runFunction = () => exampleDf)
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -91,10 +100,16 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.length == 2)
       assert(result.head.runStatus.isInstanceOf[Succeeded])
       assert(result(1).runStatus.isInstanceOf[Succeeded])
+
+      val journalEntries = journal.getEntries(now, now.plusSeconds(30))
+
+      assert(journalEntries.length == 2)
+      assert(journalEntries.head.status == "New")
     }
 
     "run multiple failure jobs parallel execution" in {
-      val (runner, _, state, tasks) = getUseCase(runFunction = () => throw new IllegalStateException("Test exception"))
+      val now = Instant.now()
+      val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => throw new IllegalStateException("Test exception"))
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -113,11 +128,17 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.length == 2)
       assert(result.head.runStatus.isInstanceOf[Failed])
       assert(result(1).runStatus.isInstanceOf[Failed])
+
+      val journalEntries = journal.getEntries(now, now.plusSeconds(30))
+
+      assert(journalEntries.length == 2)
+      assert(journalEntries.head.status == "Failed")
     }
   }
 
   "run multiple failure jobs sequential execution" in {
-    val (runner, _, state, tasks) = getUseCase(allowParallel = false, runFunction = () => throw new IllegalStateException("Test exception"))
+    val now = Instant.now()
+    val (runner, _, journal, state, tasks) = getUseCase(allowParallel = false, runFunction = () => throw new IllegalStateException("Test exception"))
 
     val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -136,13 +157,18 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     assert(result.length == 2)
     assert(result.head.runStatus.isInstanceOf[Failed])
     assert(result(1).runStatus.isInstanceOf[Skipped])
+
+    val journalEntries = journal.getEntries(now, now.plusSeconds(30))
+
+    assert(journalEntries.length == 2)
+    assert(journalEntries.head.status == "Failed")
   }
 
   "preRunCheck" when {
     val started = Instant.now()
 
     "job is ready" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.Ready, Some(100), Nil))
+      val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.Ready, Some(100), Nil))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -150,7 +176,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "job is ready with warnings" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.Ready, Some(100), Seq(DependencyWarning("table1"))))
+      val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.Ready, Some(100), Seq(DependencyWarning("table1"))))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -160,7 +186,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "job needs update" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(100), Nil))
+      val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(100), Nil))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -168,7 +194,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "job needs update with warnings" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(100), Seq(DependencyWarning("table1"))))
+      val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(100), Seq(DependencyWarning("table1"))))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -179,7 +205,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "no data for the job" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(false), None, Nil))
+      val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(false), None, Nil))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -188,7 +214,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "no data as a failure for the job" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil))
+      val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -198,7 +224,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "no data for the job with warnings" in {
-      val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(false), None, Seq(DependencyWarning("table1"))))
+      val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.NoData(false), None, Seq(DependencyWarning("table1"))))
 
       val result = runner.preRunCheck(task.head, started)
 
@@ -210,7 +236,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     "job already ran" when {
       "normal run" in {
-        val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil))
+        val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil))
 
         val result = runner.preRunCheck(task.head, started)
 
@@ -219,7 +245,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       }
 
       "rerun" in {
-        val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil),
+        val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil),
           isRerun = true)
 
         val result = runner.preRunCheck(task.head, started)
@@ -228,7 +254,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       }
 
       "historical" in {
-        val (runner, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil))
+        val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil))
 
         val result = runner.preRunCheck(task.head, started)
 
@@ -239,7 +265,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     "job has failed dependencies" in {
       val depFailure = DependencyFailure(MetastoreDependency("table1" :: Nil, "@infoDate", None, triggerUpdates = true, isOptional = false, isPassive = false), Nil, "table1" :: Nil, "2022-02-18 - 2022-02-19" :: Nil)
-      val (runner, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure = true, depFailure :: Nil), None, Nil))
+      val (runner, _, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure = true, depFailure :: Nil), None, Nil))
 
       val result = runner.preRunCheck(tasks.head, started)
 
@@ -249,7 +275,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     "job has empty tables" in {
       val depFailure = DependencyFailure(MetastoreDependency("table2" :: Nil, "@infoDate", None, triggerUpdates = true, isOptional = false, isPassive = false), "table1" :: Nil, Nil, Nil)
-      val (runner, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure = false, depFailure :: Nil), None, Nil))
+      val (runner, _, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure = false, depFailure :: Nil), None, Nil))
 
       val result = runner.preRunCheck(tasks.head, started)
 
@@ -262,7 +288,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     val started = Instant.now()
 
     "job is ready" in {
-      val (runner, _, state, task) = getUseCase(validationFunction = () => Reason.Ready)
+      val (runner, _, _, state, task) = getUseCase(validationFunction = () => Reason.Ready)
 
       val result = runner.validate(task.head, started)
 
@@ -270,7 +296,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "job not ready" in {
-      val (runner, _, state, task) = getUseCase(validationFunction = () => Reason.NotReady("dummy reason"))
+      val (runner, _, _, state, task) = getUseCase(validationFunction = () => Reason.NotReady("dummy reason"))
 
       val result = runner.validate(task.head, started)
 
@@ -280,7 +306,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "job is skipped ready" in {
-      val (runner, _, state, task) = getUseCase(validationFunction = () => Reason.Skip("dummy reason"))
+      val (runner, _, _, state, task) = getUseCase(validationFunction = () => Reason.Skip("dummy reason"))
 
       val result = runner.validate(task.head, started)
 
@@ -290,7 +316,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     "validate threw an exception" in {
       val ex = new IllegalStateException("TestException")
-      val (runner, _, state, tasks) = getUseCase(validationFunction = () => throw ex)
+      val (runner, _, _, state, tasks) = getUseCase(validationFunction = () => throw ex)
 
       val result = runner.validate(tasks.head, started)
 
@@ -312,7 +338,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
           |  "c" : "3"
           |} ]""".stripMargin
 
-      val (runner, bk, state, tasks) = getUseCase(runFunction = () => exampleDf)
+      val (runner, _, _, state, tasks) = getUseCase(runFunction = () => exampleDf)
       val job = tasks.head.job.asInstanceOf[JobSpy]
 
       val started = Instant.now()
@@ -333,7 +359,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "handle a failed task" in {
-      val (runner, bk, state, tasks) = getUseCase(runFunction = () => throw new IllegalStateException("TestException"))
+      val (runner, bk, _, state, tasks) = getUseCase(runFunction = () => throw new IllegalStateException("TestException"))
 
       val started = Instant.now()
 
@@ -348,7 +374,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "handle a dry run" in {
-      val (runner, bk, state, tasks) = getUseCase(runFunction = () => exampleDf, isDryRun = true)
+      val (runner, bk, _, state, tasks) = getUseCase(runFunction = () => exampleDf, isDryRun = true)
 
       val started = Instant.now()
 
@@ -366,7 +392,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
   "handleSchemaChange" should {
     "register a new schema" in {
-      val (runner, bk, state, _) = getUseCase(runFunction = () => exampleDf)
+      val (runner, bk, _, state, _) = getUseCase(runFunction = () => exampleDf)
 
       runner.handleSchemaChange(exampleDf, "table", infoDate)
 
@@ -378,7 +404,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "do nothing if schemas are the same" in {
-      val (runner, bk, state, _) = getUseCase(runFunction = () => exampleDf)
+      val (runner, bk, _, state, _) = getUseCase(runFunction = () => exampleDf)
 
       bk.saveSchema("table", infoDate.minusDays(10), exampleDf.schema)
 
@@ -394,7 +420,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "register schema update" in {
-      val (runner, bk, state, _) = getUseCase(runFunction = () => exampleDf)
+      val (runner, bk, _, state, _) = getUseCase(runFunction = () => exampleDf)
 
       bk.saveSchema("table", infoDate.minusDays(10), exampleDf.schema)
 
@@ -424,12 +450,13 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  isRerun: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
                  allowParallel: Boolean = true
-                ): (TaskRunnerBase, Bookkeeper, PipelineStateSpy, Seq[Task]) = {
+                ): (TaskRunnerBase, Bookkeeper, Journal, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun)
 
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
+    val journal = new JournalMock
 
     val state = new PipelineStateSpy
 
@@ -449,9 +476,9 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
-    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, state, runtimeConfig)
+    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, state, runtimeConfig)
 
-    (runner, bookkeeper, state, tasks)
+    (runner, bookkeeper, journal, state, tasks)
   }
 
 }

@@ -24,6 +24,7 @@ import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.MI
 import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.{NotificationFailure, TaskResult}
+import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
 
 import java.time._
@@ -341,7 +342,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       row.append(TextElement(error.notificationTarget))
       row.append(TextElement(error.table))
       row.append(TextElement(error.infoDate.toString))
-      row.append(TextElement(getErrorMessageFromException(error.ex), Style.Error))
+      row.append(TextElement(getShortExceptionDescription(error.ex), Style.Error))
 
       tableBuilder.withRow(row)
     })
@@ -351,14 +352,6 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     builder.withParagraph(notificationErrorsParagraph)
     builder.withTable(tableBuilder)
-  }
-
-  private def getErrorMessageFromException(ex: Throwable): String = {
-    if (ex.getCause == null) {
-      ex.getMessage
-    } else {
-      s"${ex.getMessage} (${ex.getCause.getMessage})"
-    }
   }
 
   private def getThroughputRps(task: TaskResult): TextElement = {

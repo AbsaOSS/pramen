@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.runner.task
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.pipeline.Task
 import za.co.absa.pramen.core.state.PipelineState
 
@@ -34,8 +35,9 @@ import scala.concurrent.{ExecutionContextExecutorService, Future}
   */
 class TaskRunnerMultithreaded(conf: Config,
                               bookkeeper: Bookkeeper,
+                              journal: Journal,
                               pipelineState: PipelineState,
-                              runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, runtimeConfig, pipelineState) {
+                              runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, journal, runtimeConfig, pipelineState) {
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)
   implicit private val executionContext: ExecutionContextExecutorService = fromExecutorService(executor)
 

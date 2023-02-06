@@ -23,6 +23,8 @@ import za.co.absa.pramen.api.{Reason, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.ReasonException
+import za.co.absa.pramen.core.journal.Journal
+import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
@@ -38,6 +40,7 @@ import scala.util.{Failure, Success, Try}
 
 abstract class TaskRunnerBase(conf: Config,
                               bookkeeper: Bookkeeper,
+                              journal: Journal,
                               runtimeConfig: RuntimeConfig,
                               pipelineState: PipelineState) extends TaskRunner {
   implicit private val ecDefault: ExecutionContext = ExecutionContext.global
@@ -277,8 +280,15 @@ abstract class TaskRunnerBase(conf: Config,
 
     logTaskResult(updatedResult)
     pipelineState.addTaskCompletion(Seq(updatedResult))
+    addJournalEntry(task, updatedResult)
 
     updatedResult.runStatus
+  }
+
+  private def addJournalEntry(task: Task, taskResult: TaskResult): Unit = {
+    val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult)
+
+    journal.addEntry(taskCompleted)
   }
 
   private def sendNotifications(task: Task, result: TaskResult): Seq[NotificationFailure] = {

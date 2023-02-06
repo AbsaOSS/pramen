@@ -27,6 +27,7 @@ import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
+import za.co.absa.pramen.core.mocks.journal.JournalMock
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, Succeeded}
@@ -146,6 +147,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn)
 
     val bookkeeper = new SyncBookkeeperMock
+    val journal = new JournalMock
 
     val state = new PipelineStateSpy
 
@@ -155,7 +157,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     val job = new JobSpy(runFunction = runFunction, saveStats = stats, allowParallel = allowParallel)
 
-    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, state, runtimeConfig)
+    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, state, runtimeConfig)
 
     val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner)
 
