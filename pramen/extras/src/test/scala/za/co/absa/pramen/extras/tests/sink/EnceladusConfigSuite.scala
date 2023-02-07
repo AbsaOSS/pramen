@@ -57,7 +57,7 @@ class EnceladusConfigSuite extends AnyWordSpec with SparkTestBase {
       assert(!enceladusConfig.generateInfoFile)
       assert(enceladusConfig.enceladusMainClass == EnceladusConfig.DEFAULT_ENCELADUS_RUN_MAIN_CLASS)
       assert(enceladusConfig.enceladusCmdLineTemplate == EnceladusConfig.DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE)
-      assert(enceladusConfig.publishPartitionTemplate == "enceladus_info_date={1}/enceladus_info_version={2}")
+      assert(enceladusConfig.publishPartitionPattern == "enceladus_info_date={year}-{month}-{day}/enceladus_info_version={version}")
     }
 
     "construct a config with app version and timezone" in {
@@ -99,7 +99,7 @@ class EnceladusConfigSuite extends AnyWordSpec with SparkTestBase {
       assert(!enceladusConfig.generateInfoFile)
       assert(enceladusConfig.enceladusMainClass == "A")
       assert(enceladusConfig.enceladusCmdLineTemplate == "B")
-      assert(enceladusConfig.publishPartitionTemplate == "aaa")
+      assert(enceladusConfig.publishPartitionPattern == "aaa")
     }
   }
 }
