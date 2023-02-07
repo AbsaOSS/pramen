@@ -37,7 +37,7 @@ case class EnceladusConfig(
                             enceladusMainClass: String,
                             enceladusCmdLineTemplate: String,
                             hiveDatabase: Option[String],
-                            publishPartitionTemplate: String
+                            publishPartitionPattern: String
                           )
 
 object EnceladusConfig {
@@ -61,7 +61,7 @@ object EnceladusConfig {
   val DEFAULT_MODE = "errorifexists"
   val DEFAULT_ENCELADUS_RUN_MAIN_CLASS = "za.co.absa.enceladus.standardization_conformance.StandardizationAndConformanceJob"
   val DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE = "--dataset-name @datasetName --dataset-version @datasetVersion --report-date @infoDate --menas-auth-keytab menas.keytab --raw-format @rawFormat --autoclean-std-folder true"
-  val DEFAULT_PUBLISH_PARTITION_TEMPLATE = "enceladus_info_date={1}/enceladus_info_version={2}"
+  val DEFAULT_PUBLISH_PARTITION_TEMPLATE = "enceladus_info_date={year}-{month}-{day}/enceladus_info_version={version}"
 
   def fromConfig(conf: Config): EnceladusConfig = {
     val pramenVersion = Try {

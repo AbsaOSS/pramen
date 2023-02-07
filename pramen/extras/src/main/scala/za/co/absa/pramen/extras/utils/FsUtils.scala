@@ -136,6 +136,39 @@ class FsUtils(conf: Configuration, pathBase: String) {
   }
 
   /**
+    * Gets the list of directories
+    *
+    * @param path     The base path to search
+    * @return
+    */
+  def getDirectories(path: Path, includeHiddenFiles: Boolean = false): Seq[Path] = {
+    val dirs = new ListBuffer[Path]
+
+    def isHidden(fileName: String): Boolean = {
+      fileName.startsWith("_") || fileName.startsWith(".")
+    }
+
+    def addToListRecursive(searchPath: Path): Unit = {
+      val statuses = fs.globStatus(new Path(searchPath, "*"))
+      statuses.foreach { status =>
+        val p = status.getPath
+        if (status.isDirectory) {
+          if (includeHiddenFiles || !isHidden(p.getName)) {
+            dirs += status.getPath
+          }
+        }
+      }
+    }
+
+    if (isFile(path)) {
+      Nil
+    } else {
+      addToListRecursive(path)
+      dirs.toSeq
+    }
+  }
+
+  /**
     * Appends an UTF-8 string to a file.
     *
     * @param filePath a path to a file.

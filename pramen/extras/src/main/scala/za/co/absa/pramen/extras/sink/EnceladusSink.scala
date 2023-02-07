@@ -154,8 +154,8 @@ class EnceladusSink(sinkConfig: Config,
                     options: Map[String, String])(implicit spark: SparkSession): Long = {
     val jobStart = Instant.now()
 
-    val infoVersion = getInfoVersion(options, tableName)
     val basePath = getBasePath(tableName, options)
+    val infoVersion = getInfoVersion(tableName, infoDate, basePath, options)
     val outputPartitionPath = getOutputPartitionPath(basePath, infoDate, infoVersion)
 
     val count = df.count()
@@ -173,15 +173,17 @@ class EnceladusSink(sinkConfig: Config,
     count
   }
 
-  private[extras] def getInfoVersion(options: Map[String, String],
-                                     metaTable: String)
+  private[extras] def getInfoVersion(metaTable: String,
+                                     infoDate: LocalDate,
+                                     rawBasePath: Path,
+                                     options: Map[String, String])
                                     (implicit spark: SparkSession): Int = {
-    val publishBasePath = options.get(PUBLISH_BASE_PATH_KEY)
+    val publishBasePath = options.get(PUBLISH_BASE_PATH_KEY).map(s => new Path(s))
     val hiveTable = options.get(HIVE_TABLE_KEY)
 
     val versionStr = options.getOrElse(INFO_VERSION_KEY, INFO_VERSION_AUTO_VALUE)
     if (versionStr.toLowerCase() == INFO_VERSION_AUTO_VALUE) {
-      autoDetectVersionNumber(metaTable, publishBasePath, hiveTable)
+      autoDetectVersionNumber(metaTable, infoDate, rawBasePath, publishBasePath, hiveTable)
     } else {
       versionStr.toInt
     }
@@ -335,23 +337,26 @@ class EnceladusSink(sinkConfig: Config,
   }
 
   private[extras] def autoDetectVersionNumber(metaTable: String,
-                                              publishBasePath: Option[String],
+                                              infoDate: LocalDate,
+                                              rawBasePath: Path,
+                                              publishBasePath: Option[Path],
                                               hiveTable: Option[String])
                                              (implicit spark: SparkSession): Int = {
-    // ToDo implementation
-    val versionOpt = publishBasePath match {
-      case Some(publishBasePath) => Option(1)
-      case None                  => Some(1)
-        hiveTable match {
-          case Some(db) => Some(1)
-          case None     => Some(1)
-        }
-    }
+    val versionOpt = EnceladusUtils.getNextEnceladusVersion(hiveTable,
+      rawBasePath,
+      enceladusConfig.partitionPattern,
+      publishBasePath,
+      enceladusConfig.publishPartitionPattern,
+      enceladusConfig.infoDateColumn,
+      infoDate
+    )
+
     versionOpt match {
-      case Some(version) =>
+      case Success(version) =>
+        log.warn(s"Autodetected next info version for $metaTable: $version.")
         version
-      case None          =>
-        log.warn(s"Could not autodetect Enceladus version for $metaTable. Defaulting to 1.")
+      case Failure(ex)      =>
+        log.error(s"Could not autodetect Enceladus version for $metaTable. Defaulting to 1.", ex)
         1
     }
   }
