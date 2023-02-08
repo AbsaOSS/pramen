@@ -22,6 +22,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
+import za.co.absa.pramen.extras.query.{QueryExecutor, QueryExecutorSpark}
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
 import java.time.{Instant, LocalDate}
@@ -152,8 +153,9 @@ class EnceladusSink(sinkConfig: Config,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])(implicit spark: SparkSession): Long = {
-    val jobStart = Instant.now()
+    implicit val queryExecutor: QueryExecutor = new QueryExecutorSpark(spark)
 
+    val jobStart = Instant.now()
     val basePath = getBasePath(tableName, options)
     val infoVersion = getInfoVersion(tableName, infoDate, basePath, options)
     val outputPartitionPath = getOutputPartitionPath(basePath, infoDate, infoVersion)
@@ -177,9 +179,9 @@ class EnceladusSink(sinkConfig: Config,
                                      infoDate: LocalDate,
                                      rawBasePath: Path,
                                      options: Map[String, String])
-                                    (implicit spark: SparkSession): Int = {
+                                    (implicit spark: SparkSession, queryExecutor: QueryExecutor): Int = {
     val publishBasePath = options.get(PUBLISH_BASE_PATH_KEY).map(s => new Path(s))
-    val hiveTable = options.get(HIVE_TABLE_KEY)
+    val hiveTable = options.get(HIVE_TABLE_KEY).map(getHiveTableFullName)
 
     val versionStr = options.getOrElse(INFO_VERSION_KEY, INFO_VERSION_AUTO_VALUE)
     if (versionStr.toLowerCase() == INFO_VERSION_AUTO_VALUE) {
@@ -253,7 +255,7 @@ class EnceladusSink(sinkConfig: Config,
                                            infoVersion: Int,
                                            basePath: Path,
                                            options: Map[String, String])
-                                          (implicit spark: SparkSession): Unit = {
+                                          (implicit queryExecutor: QueryExecutor): Unit = {
     if (options.contains(DATASET_NAME_KEY) && options.contains(DATASET_VERSION_KEY)) {
       runEnceladus(
         tableName,
@@ -315,15 +317,17 @@ class EnceladusSink(sinkConfig: Config,
       .split(' ')
   }
 
-  private[extras] def repairTable(hiveTable: String)(implicit spark: SparkSession): Unit = {
+  private[extras] def repairTable(hiveTable: String)(implicit queryExecutor: QueryExecutor): Unit = {
     val query = getHiveRepairEnceladusQuery(hiveTable)
-    executeQuery(query)
+    queryExecutor.execute(query)
   }
 
-  private[extras] def getHiveRepairEnceladusQuery(hiveTable: String): String = {
+  private[extras] def getHiveRepairEnceladusQuery(hiveTable: String): String = getHiveRepairQuery(getHiveTableFullName(hiveTable))
+
+  private[extras] def getHiveTableFullName(hiveTable: String): String = {
     enceladusConfig.hiveDatabase match {
-      case Some(db) => getHiveRepairQuery(s"$db.$hiveTable")
-      case None     => getHiveRepairQuery(s"$hiveTable")
+      case Some(db) => s"$db.$hiveTable"
+      case None     => s"$hiveTable"
     }
   }
 
@@ -331,24 +335,20 @@ class EnceladusSink(sinkConfig: Config,
     s"MSCK REPAIR TABLE $hiveFullTableName"
   }
 
-  private[extras] def executeQuery(query: String)(implicit spark: SparkSession): Unit = {
-    log.info(s"Executing SQL: $query")
-    spark.sql(query).take(100)
-  }
-
   private[extras] def autoDetectVersionNumber(metaTable: String,
                                               infoDate: LocalDate,
                                               rawBasePath: Path,
                                               publishBasePath: Option[Path],
                                               hiveTable: Option[String])
-                                             (implicit spark: SparkSession): Int = {
-    val versionOpt = EnceladusUtils.getNextEnceladusVersion(hiveTable,
-      rawBasePath,
-      enceladusConfig.partitionPattern,
-      publishBasePath,
+                                             (implicit spark: SparkSession, queryExecutor: QueryExecutor): Int = {
+    val enceladusUtils = new EnceladusUtils(enceladusConfig.partitionPattern,
       enceladusConfig.publishPartitionPattern,
-      enceladusConfig.infoDateColumn,
-      infoDate
+      enceladusConfig.infoDateColumn)
+
+    val versionOpt = enceladusUtils.getNextEnceladusVersion(infoDate,
+      rawBasePath,
+      publishBasePath,
+      hiveTable
     )
 
     versionOpt match {

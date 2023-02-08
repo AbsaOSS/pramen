@@ -19,6 +19,7 @@ package za.co.absa.pramen.extras.sink
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.extras.query.QueryExecutor
 import za.co.absa.pramen.extras.utils.FsUtils
 import za.co.absa.pramen.extras.utils.PartitionUtils.unpackCustomPartitionPattern
 
@@ -26,16 +27,17 @@ import java.time.LocalDate
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-object EnceladusUtils {
+class EnceladusUtils(rawPartitionPattern: String,
+                     publishPartitionPattern: String,
+                     infoDateColumn: String)
+                    (implicit spark: SparkSession,
+                       queryExecutor: QueryExecutor) {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def getNextEnceladusVersion(hiveTableOpt: Option[String],
+  def getNextEnceladusVersion(infoDate: LocalDate,
                               rawBasePath: Path,
-                              rawPartitionPattern: String,
                               publishBasePathOpt: Option[Path],
-                              publishPartitionPattern: String,
-                              infoDateColumn: String,
-                              infoDate: LocalDate)(implicit spark: SparkSession): Try[Int] = {
+                              hiveTableOpt: Option[String]): Try[Int] = {
     val rawMaxVersion = getMaxVersionInRaw(rawBasePath, rawPartitionPattern, infoDateColumn, infoDate).getOrElse(0)
 
     val maxVersionInPublish = publishBasePathOpt match {
@@ -63,7 +65,7 @@ object EnceladusUtils {
   def getMaxVersionInRaw(rawBasePath: Path,
                          partitionPattern: String,
                          infoDateColumn: String,
-                         infoDate: LocalDate)(implicit spark: SparkSession): Option[Int] = {
+                         infoDate: LocalDate): Option[Int] = {
 
     val rawPath = getParentPartitionPath(rawBasePath, partitionPattern, infoDateColumn, infoDate)
 
@@ -82,7 +84,7 @@ object EnceladusUtils {
   def getMaxVersionInPublish(publishBasePath: Path,
                              partitionPattern: String,
                              infoDateColumn: String,
-                             infoDate: LocalDate)(implicit spark: SparkSession): Try[Option[Int]] = {
+                             infoDate: LocalDate): Try[Option[Int]] = {
     val rawPath = getParentPartitionPath(publishBasePath, partitionPattern, infoDateColumn, infoDate)
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, publishBasePath.toString)
@@ -97,7 +99,7 @@ object EnceladusUtils {
     getMaxVersionFromDirs(rawPath, versionR, fsUtils)
   }
 
-  private def getMaxVersionFromDirs(rawPath: Path, versionExtractRegEx: Regex, fsUtils: FsUtils) = {
+  private def getMaxVersionFromDirs(rawPath: Path, versionExtractRegEx: Regex, fsUtils: FsUtils): Try[Option[Int]] = {
     Try {
       val versions = fsUtils.getDirectories(rawPath)
         .flatMap(_.getName match {
@@ -115,7 +117,9 @@ object EnceladusUtils {
   def getMaxVersionInPublish(hiveTable: String,
                              partitionPattern: String,
                              infoDateColumn: String,
-                             infoDate: LocalDate)(implicit spark: SparkSession): Try[Option[Int]] = {
+                             infoDate: LocalDate): Try[Option[Int]] = {
+    // spark.sql("show partitions dm_absa_advantage.behrew_cashsend_daily").filter(col("partition").startsWith("process_date=2021-06")).show(false)
+    val query = s"SHOW PARTITIONS $hiveTable"
     Failure(new NotImplementedError("Not implemented yet"))
   }
 
