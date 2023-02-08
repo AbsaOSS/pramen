@@ -18,6 +18,8 @@ package za.co.absa.pramen.extras.sink
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
+import org.apache.spark.sql.functions.col
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.extras.query.QueryExecutor
 import za.co.absa.pramen.extras.utils.FsUtils
@@ -31,24 +33,25 @@ class EnceladusUtils(rawPartitionPattern: String,
                      publishPartitionPattern: String,
                      infoDateColumn: String)
                     (implicit spark: SparkSession,
-                       queryExecutor: QueryExecutor) {
+                     queryExecutor: QueryExecutor) {
   private val log = LoggerFactory.getLogger(this.getClass)
+
+  val rawVersionRegEx: Regex = "^.*v(\\d+)$".r
+  val publishVersionRegEx: Regex = "^.*=(\\d+)$".r
 
   def getNextEnceladusVersion(infoDate: LocalDate,
                               rawBasePath: Path,
                               publishBasePathOpt: Option[Path],
                               hiveTableOpt: Option[String]): Try[Int] = {
-    val rawMaxVersion = getMaxVersionInRaw(rawBasePath, rawPartitionPattern, infoDateColumn, infoDate).getOrElse(0)
-
     val maxVersionInPublish = publishBasePathOpt match {
       case Some(publishBasePath) =>
         log.info(s"Detecting info version from the publish base path: $publishBasePath")
-        getMaxVersionInPublish(publishBasePath, publishPartitionPattern, infoDateColumn, infoDate)
+        getMaxVersionInPublish(publishBasePath, infoDateColumn, infoDate)
       case None                  =>
         hiveTableOpt match {
           case Some(hiveTable) =>
             log.info(s"Detecting info version from the hive table: $hiveTable")
-            getMaxVersionInPublish(hiveTable, publishPartitionPattern, infoDateColumn, infoDate)
+            getMaxVersionFromHive(hiveTable, infoDateColumn, infoDate)
           case None            =>
             Failure(new IllegalArgumentException(s"No publish path or hive table specified for $rawBasePath."))
         }
@@ -57,70 +60,94 @@ class EnceladusUtils(rawPartitionPattern: String,
     maxVersionInPublish.map {
       case Some(versionInPublish) =>
         versionInPublish + 1
-      case None =>
-        rawMaxVersion + 1
+      case None                   =>
+        1
     }
   }
 
   def getMaxVersionInRaw(rawBasePath: Path,
-                         partitionPattern: String,
                          infoDateColumn: String,
-                         infoDate: LocalDate): Option[Int] = {
+                         infoDate: LocalDate): Try[Option[Int]] = {
 
-    val rawPath = getParentPartitionPath(rawBasePath, partitionPattern, infoDateColumn, infoDate)
+    val rawPath = getParentPartitionPath(rawBasePath, rawPartitionPattern, infoDateColumn, infoDate)
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, rawBasePath.toString)
 
-    if (!fsUtils.exists(rawPath)) {
-      log.info(s"Raw path $rawPath does not exist.")
-      return None
+    if (!fsUtils.exists(rawBasePath)) {
+      return Failure(new IllegalArgumentException(s"Raw path does not exist: $rawBasePath"))
     }
 
-    val versionR = "^v(\\d+)$".r
-
-    getMaxVersionFromDirs(rawPath, versionR, fsUtils).get
-  }
-
-  def getMaxVersionInPublish(publishBasePath: Path,
-                             partitionPattern: String,
-                             infoDateColumn: String,
-                             infoDate: LocalDate): Try[Option[Int]] = {
-    val rawPath = getParentPartitionPath(publishBasePath, partitionPattern, infoDateColumn, infoDate)
-
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, publishBasePath.toString)
-
     if (!fsUtils.exists(rawPath)) {
-      log.info(s"Publish path $rawPath does not exist.")
+      log.info(s"Raw path does not exist: $rawPath")
       return Success(None)
     }
 
-    val versionR = "^.*=(\\d+)$".r
-
-    getMaxVersionFromDirs(rawPath, versionR, fsUtils)
+    getMaxVersionFromDirs(rawPath, rawVersionRegEx, fsUtils)
   }
 
-  private def getMaxVersionFromDirs(rawPath: Path, versionExtractRegEx: Regex, fsUtils: FsUtils): Try[Option[Int]] = {
+  def getMaxVersionInPublish(publishBasePath: Path,
+                             infoDateColumn: String,
+                             infoDate: LocalDate): Try[Option[Int]] = {
+    val publishPath = getParentPartitionPath(publishBasePath, publishPartitionPattern, infoDateColumn, infoDate)
+
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, publishBasePath.toString)
+
+    if (!fsUtils.exists(publishPath.getParent)) {
+      return Failure(new IllegalArgumentException(s"Publish path does not exist: ${publishPath.getParent}"))
+    }
+
+    if (!fsUtils.exists(publishPath)) {
+      log.info(s"Publish path does not exist: $publishPath")
+      return Success(None)
+    }
+
+    getMaxVersionFromDirs(publishPath, publishVersionRegEx, fsUtils)
+  }
+
+  private[extras] def getMaxVersionFromHive(hiveTable: String,
+                                            infoDateColumn: String,
+                                            infoDate: LocalDate): Try[Option[Int]] = {
+    implicit val encoder: ExpressionEncoder[String] = ExpressionEncoder[String]
+    val query = s"SHOW PARTITIONS $hiveTable"
+    val startingWith = s"$infoDateColumn=$infoDate"
+
     Try {
-      val versions = fsUtils.getDirectories(rawPath)
-        .flatMap(_.getName match {
-          case versionExtractRegEx(version) => Some(version.toInt)
-          case _                 => None
-        })
+      queryExecutor
+        .query(query)
+        .filter(col("partition").contains(startingWith))
+        .as[String]
+        .collect()
+    }.flatMap { partitions =>
+      if (partitions.isEmpty) {
+        Success(None)
+      } else {
+        getMaxVersionFromList(partitions, publishVersionRegEx)
+      }
+    }
+  }
+
+  private[extras] def getMaxVersionFromDirs(rawPath: Path,
+                                            versionExtractRegEx: Regex,
+                                            fsUtils: FsUtils): Try[Option[Int]] = {
+    Try {
+      fsUtils.getDirectories(rawPath)
+    }.flatMap { partitions =>
+      getMaxVersionFromList(partitions.map(_.toString), versionExtractRegEx)
+    }
+  }
+
+  private[extras] def getMaxVersionFromList(partitions: Seq[String], versionExtractRegEx: Regex): Try[Option[Int]] = {
+    Try {
+      val versions = partitions.flatMap(partition => partition match {
+        case versionExtractRegEx(version) => Some(version.toInt)
+        case _                            => None
+      })
       if (versions.isEmpty) {
         None
       } else {
         Option(versions.max)
       }
     }
-  }
-
-  def getMaxVersionInPublish(hiveTable: String,
-                             partitionPattern: String,
-                             infoDateColumn: String,
-                             infoDate: LocalDate): Try[Option[Int]] = {
-    // spark.sql("show partitions dm_absa_advantage.behrew_cashsend_daily").filter(col("partition").startsWith("process_date=2021-06")).show(false)
-    val query = s"SHOW PARTITIONS $hiveTable"
-    Failure(new NotImplementedError("Not implemented yet"))
   }
 
   private[extras] def getParentPartitionPath(basePath: Path,

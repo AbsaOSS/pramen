@@ -44,6 +44,7 @@ object Dependencies {
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
+    "org.slf4j"            %  "slf4j-log4j12"              % "1.7.16"                   % Provided,
     "net.sourceforge.jtds" %  "jtds"                       % msSqlDriverVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   ) :+ getAbrisDependency(scalaVersion)

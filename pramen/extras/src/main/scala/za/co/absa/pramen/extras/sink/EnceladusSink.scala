@@ -345,19 +345,18 @@ class EnceladusSink(sinkConfig: Config,
       enceladusConfig.publishPartitionPattern,
       enceladusConfig.infoDateColumn)
 
-    val versionOpt = enceladusUtils.getNextEnceladusVersion(infoDate,
+    val versionTry = enceladusUtils.getNextEnceladusVersion(infoDate,
       rawBasePath,
       publishBasePath,
       hiveTable
     )
 
-    versionOpt match {
+    versionTry match {
       case Success(version) =>
         log.warn(s"Autodetected next info version for $metaTable: $version.")
         version
       case Failure(ex)      =>
-        log.error(s"Could not autodetect Enceladus version for $metaTable. Defaulting to 1.", ex)
-        1
+        throw new IllegalStateException(s"Could not autodetect Enceladus version for $metaTable.", ex)
     }
   }
 }
