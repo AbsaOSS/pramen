@@ -23,9 +23,11 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.extras.mocks.QueryExecutorSpy
 import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY, HIVE_TABLE_KEY}
 import za.co.absa.pramen.extras.utils.FsUtils
 
+import java.lang
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 
@@ -143,6 +145,8 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
            |
            |""".stripMargin)
 
+      implicit val qe: QueryExecutorSpy = new QueryExecutorSpy
+
       val sink = EnceladusSink.apply(conf, "", spark)
 
       sink.runEnceladusIfNeeded("my_table",
@@ -154,6 +158,8 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
           DATASET_VERSION_KEY -> "22"
         )
       )
+
+      assert(qe.executed.isEmpty)
     }
 
     "forward Hive Exception" in {
@@ -166,6 +172,8 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
            |enceladus.run.main.class = "za.co.absa.pramen.extras.mocks.AppMainSilentMock"
            |
            |""".stripMargin)
+
+      implicit val qe: QueryExecutorSpy = new QueryExecutorSpy(throwException = Some(new lang.IllegalStateException))
 
       val sink = EnceladusSink.apply(conf, "", spark)
 
@@ -181,6 +189,10 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
           )
         )
       }
+
+      val actual = qe.executed.head
+
+      assert(actual == "MSCK REPAIR TABLE test_table")
     }
 
     "forward the exception if something goes wrong" in {
@@ -193,6 +205,8 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
            |enceladus.run.main.class = "za.co.absa.pramen.extras.mocks.AppMainMock"
            |
            |""".stripMargin)
+
+      implicit val qe: QueryExecutorSpy = new QueryExecutorSpy
 
       val sink = EnceladusSink.apply(conf, "", spark)
 
