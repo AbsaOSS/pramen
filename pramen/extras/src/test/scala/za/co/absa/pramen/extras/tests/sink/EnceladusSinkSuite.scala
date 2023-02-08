@@ -81,7 +81,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
             "dummy_table",
             null,
             infoDate,
-            Map("path" -> outputPath.toUri.toString)
+            Map("path" -> outputPath.toUri.toString, "info.version" -> "1")
           )
 
           assert(count == 3)
@@ -129,6 +129,28 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
         val sink = EnceladusSink.apply(conf, "", spark)
 
         assert(sink.getHiveRepairQuery("db1.table1") == "MSCK REPAIR TABLE db1.table1")
+      }
+    }
+
+    "autoDetectVersionNumber" should {
+      val sink = EnceladusSink.apply(conf, "", spark)
+
+      withTempDirectory("enceladus_raw") { tempRaw =>
+        withTempDirectory("enceladus_publish") { tempPublish =>
+          Files.createDirectories(Paths.get(tempRaw, "my_table", "2022", "02", "18", "v1"))
+          Files.createDirectories(Paths.get(tempRaw, "my_table", "2022", "02", "18", "v2"))
+
+          Files.createDirectories(Paths.get(tempPublish, "my_table", "enceladus_info_date=2022-02-18", "enceladus_info_version=1"))
+
+          val rawBasePath = new Path(tempRaw, "my_table")
+          val publishBasePath = new Path(tempPublish, "my_table")
+
+          implicit val qe: QueryExecutorSpy = new QueryExecutorSpy()
+
+          val version = sink.autoDetectVersionNumber("my_table", infoDate, rawBasePath, Some(publishBasePath), None)
+
+          assert(version == 2)
+        }
       }
     }
   }

@@ -2038,11 +2038,25 @@ pramen.operations = [
         input.sql = "SELECT * FROM table2 WHERE info_date = date'@infoDate'"
         job.metastore.table = "table2->my_data_lake" # This is needed the input is not a table
         output.path = /datalake/path/raw/table2
-        output.info.version = 1
+        
+        # Autodetect info version based on files in the raw and publish folders
+        # Needs 'output.publish.base.path' or 'output.hive.table' to be set
+        output.info.version = auto
 
         # The rest of the fields are optional
         date.from = "@infoDate"
         date.to = "@infoDate"
+        
+        output {
+           # Optional when running Enceladus from Pramen
+           dataset.name = "my_dataset"
+           dataset.version = 2
+           
+           # Optional publish base path (for detecting version number)
+           publish.base.path = "/bigdata/datalake/publish"
+           # Optional Hive table to repair after Enceladus is executed
+           hive.table = "my_database.my_table"
+        }
 
         transformations = [
           {col = "last_name_u", expr = "upper(last_name)"}
