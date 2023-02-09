@@ -168,7 +168,7 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   /**
-    * Does pre-run checks and vask validations.
+    * Does pre-run checks and task validations.
     *
     * If validation is successful, in instance of JobPreRunResult is returned.
     * If validation failed an instance of TaskResult is returned.

@@ -38,6 +38,11 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
     "@runDate - 6",
     "beginOfMonth(@runDate)"
   )
+  private val appConfig = ConfigFactory.parseString(
+    s"""
+       |pramen.parallel.tasks = 4
+       |""".stripMargin
+  )
 
   "OperationDef.fromConfig()" should {
     "return None for the disabled operation" in {
@@ -50,7 +55,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0)
+      val op = OperationDef.fromConfig(conf, appConfig, defaults, "path", 0)
 
       assert(op.isEmpty)
     }
@@ -77,7 +82,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0).get
+      val op = OperationDef.fromConfig(conf, appConfig, defaults, "path", 0).get
 
       assert(op.name == "dummy_name")
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])
@@ -123,7 +128,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0).get
+      val op = OperationDef.fromConfig(conf, appConfig, defaults, "path", 0).get
 
       assert(op.name == "dummy_transformation")
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])
@@ -142,6 +147,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.schemaTransformations.head.expression == "cast(A as decimal(15,5))")
       assert(op.filters.length == 2)
       assert(op.filters.head == "A > 0")
+      assert(op.consumeThreads == 1)
     }
 
     "be able to serialize an sink operation" in {
@@ -163,7 +169,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |""".stripMargin
       )
 
-      val op = OperationDef.fromConfig(conf, conf, defaults, "path", 0).get
+      val op = OperationDef.fromConfig(conf, appConfig, defaults, "path", 0).get
 
       assert(op.name == "dummy_name")
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])
@@ -173,5 +179,39 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.head.options("topic") == "table1_topic")
       assert(!op.allowParallel)
     }
+
+    "set a correct number of threads to consume by an operation and handles edge cases" in {
+      def getDummyOperation(consumeThreads: Int) = {
+        val conf = ConfigFactory.parseString(
+          s"""name = "dummy_name"
+             |type = "transformer"
+             |schedule.type = "daily"
+             |class = "myclass"
+             |output.table = "dummy_table"
+             |
+             |dependencies = [
+             |  {
+             |    tables = [table1]
+             |    date.from = "@infoDate - 1"
+             |    date.to = "@infoDate"
+             |  }
+             |]
+             |
+             |consume.threads = $consumeThreads
+             |""".stripMargin)
+        OperationDef.fromConfig(conf, appConfig, defaults, "path", 0).get
+      }
+
+      val tooManyThreadsDefined = getDummyOperation(consumeThreads = 999)
+      val negativeThreadsDefined = getDummyOperation(consumeThreads = -15)
+      val zeroThreadsDefined = getDummyOperation(consumeThreads = 0)
+      val okThreadCountDefined = getDummyOperation(consumeThreads = 2)
+
+      assert(tooManyThreadsDefined.consumeThreads == 4)
+      assert(negativeThreadsDefined.consumeThreads == 1)
+      assert(zeroThreadsDefined.consumeThreads == 1)
+      assert(okThreadCountDefined.consumeThreads == 2)
+    }
+
   }
 }

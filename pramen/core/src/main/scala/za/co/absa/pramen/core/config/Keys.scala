@@ -21,6 +21,8 @@ object Keys {
   val INFORMATION_DATE_FORMAT_APP = "pramen.information.date.format"
   val TEMPORARY_DIRECTORY = "pramen.temporary.directory"
 
+  val PARALLEL_TASKS = "pramen.parallel.tasks"
+
   val WARN_THROUGHPUT_RPS = "pramen.warn.throughput.rps"
   val GOOD_THROUGHPUT_RPS = "pramen.good.throughput.rps"
 

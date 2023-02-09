@@ -23,7 +23,6 @@ import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{MetaTable, MetastoreDependency}
 import za.co.absa.pramen.core.pipeline
-import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji._
 
 import java.time.LocalDate

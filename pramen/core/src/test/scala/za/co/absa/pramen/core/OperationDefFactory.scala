@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core
 
 import com.typesafe.config.{Config, ConfigFactory}
-import za.co.absa.pramen.api.NotificationTarget
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.pipeline.{OperationDef, OperationType, TransformExpression}
 import za.co.absa.pramen.core.schedule.Schedule
@@ -30,6 +29,7 @@ object OperationDefFactory {
                            schedule: Schedule = Schedule.EveryDay(),
                            expectedDelayDays: Int = 0,
                            allowParallel: Boolean = true,
+                           consumeThreads: Int = 1,
                            dependencies: Seq[MetastoreDependency] = Nil,
                            outputInfoDateExpression: String = "@date",
                            initialSourcingDateExpression: String = "@runDate",
@@ -46,6 +46,7 @@ object OperationDefFactory {
       schedule,
       expectedDelayDays,
       allowParallel,
+      consumeThreads,
       dependencies,
       outputInfoDateExpression,
       initialSourcingDateExpression,
