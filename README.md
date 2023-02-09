@@ -1367,6 +1367,13 @@ pramen.operations = [
     # If true (default) jobs in this operation is allowed to run in parallel.
     # It makes sense to set it to false for jobs that take a lot of cluster resources.
     allow.parallel = true
+    
+    # You can determine number of tasks running in parallel with 'pramen.parallel.tasks' setting. 
+    # By setting 'consume.threads' to greater value than 1, the task will appear to require more than 1 thread to run. 
+    # Thus, the task will take up multiple "slots" in 'pramen.parallel.tasks' setting.
+    # This is useful if some tasks consume lot of memory and CPU and should not be running with other tasks in parallel.
+    # This feature is experimental. Use with caution.
+    consume.threads = 2
 
     tables = [
       {
@@ -1420,6 +1427,8 @@ pramen.operations = [
 Each operation has the following properties:
 - **Schedule** - (mandatory) defines which days it should run.
 - **Information date expression** - defines an expression to calculate output information date from the date a job actually ran.
+- **Initial sourcing dates** - defines an expression which is evaluated on the initial sourcing of the data. The result is the initial date from which data should be loaded.
+- **Parallelism** - specify if the operation is more or less resource intensive than other operations and if it should be run in parallel or sequentially.
 - **Dependencies** - specify data availability requirements that need to be satisfied for the operation to run.
 - **Filters** - specify post-processing filters for each output table of the operation.
 - **Schema transformations** - specify post-processing operations for the output table, usually related to schema evolution.
@@ -1553,6 +1562,47 @@ pramen.operations = [
   ...
 ]
 ```
+
+#### Parallelism
+
+Pramen has the ability to run tasks in parallel (configured by `pramen.parallel.tasks`). You can further fine-tune this
+configuration using the following options:
+
+
+| Option            | Is Mandatory | Description                                                                                                                                                                                                                                                                                                                                                        |
+|-------------------|--------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `allow.parallel`  | No           | if `false`, tasks derived from this operation will run sequentially and not in parallel. For example, this is useful when a transformation for 'T-1' depends on data it produced on 'T-2' (the transformation has a self-dependency). It this case, running the transformation for 'T-1' and 'T-2' in parallel would produce incorrect results (default: `true`).  |
+| `consume.threads` | No           | Specify how many threads should a certain task consume with regards to the total number of threads set by `pramen.parallel.tasks` (default: `1`).                                                                                                                                                                                                                  |
+
+Here is an example of fine-tuning certain operations:
+
+```
+pramen {
+  # a maximum of 4 tasks running in parallel
+  parallel.tasks = 4
+  # ...
+}
+
+pramen.operations = [
+  {
+    name = "Easy job"
+    
+    # not a resource intensive task, so Pramen can run 4 of these at one time (if no other tasks are running)
+    consume.threads = 1
+    # ...
+  },
+  {
+    name = "Hard job"
+    # run only one instance of this operation at a time (consumes all 4 threads defined by 'pramen.parallel.tasks')
+    consume.threads = 4
+    # ...
+  }
+]
+```
+
+In reality, a task with `consume.threads = 3` does not really run on 3 threads. It still uses only one thread
+but the setting gives an indication to Pramen that it is a resource-intensive task and should be run together with less
+demanding tasks.
 
 #### Dependencies
 Dependencies for an operation allow specifying data availability requirements for a particular operation. For example,

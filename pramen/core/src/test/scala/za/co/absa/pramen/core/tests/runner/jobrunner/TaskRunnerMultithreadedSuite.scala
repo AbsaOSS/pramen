@@ -20,7 +20,7 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.RuntimeConfigFactory
+import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -109,6 +109,38 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
       assert(bk.getDataChunks("table_out", runDate, runDate).isEmpty)
     }
+
+    "run job even if it is asking for more resources than maximum available" in {
+      val (runner, _, state, job) = getUseCase(allowParallel = true, parallelTasks = 2, consumeThreads = 3)
+
+      runner.runJob(job)
+
+      val results = state.completedStatuses
+
+      assert(results.size == 1)
+      assert(results.head.runStatus.isInstanceOf[Succeeded])
+    }
+
+    "run several jobs, each requiring a different number of resources" in {
+      val (runner, _, state, resourceIntensiveJob) = getUseCase(allowParallel = true, parallelTasks = 4, consumeThreads = 4)
+      val regularJob1 = new JobSpy(
+        runFunction = () => exampleDf,
+        operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = 1)
+      )
+      val regularJob2 = new JobSpy(
+        runFunction = () => exampleDf,
+        operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = 2)
+      )
+
+      runner.runJob(regularJob1)
+      runner.runJob(resourceIntensiveJob)
+      runner.runJob(regularJob2)
+
+      val results = state.completedStatuses
+
+      assert(results.size == 3)
+      assert(results.forall(_.runStatus.isInstanceOf[Succeeded]))
+    }
   }
 
   "workerLoop" should {
@@ -140,11 +172,13 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
   def getUseCase(runDateIn: LocalDate = runDate,
                  isRerun: Boolean = false,
                  runFunction: () => DataFrame = () => exampleDf,
-                 allowParallel: Boolean = true
+                 consumeThreads: Int = 1,
+                 allowParallel: Boolean = true,
+                 parallelTasks: Int = 1
                 ): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
     val conf = ConfigFactory.empty()
 
-    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn)
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn, parallelTasks = parallelTasks)
 
     val bookkeeper = new SyncBookkeeperMock
     val journal = new JournalMock
@@ -155,7 +189,8 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     val stats = MetaTableStats(2, Some(100))
 
-    val job = new JobSpy(runFunction = runFunction, saveStats = stats, allowParallel = allowParallel)
+    val operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = consumeThreads)
+    val job = new JobSpy(runFunction = runFunction, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)
 
     val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, state, runtimeConfig)
 

@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -33,6 +34,7 @@ case class OperationDef(
                          schedule: Schedule,
                          expectedDelayDays: Int,
                          allowParallel: Boolean,
+                         consumeThreads: Int,
                          dependencies: Seq[MetastoreDependency],
                          outputInfoDateExpression: String,
                          initialSourcingDateExpression: String,
@@ -53,6 +55,7 @@ object OperationDef {
   val SCHEDULE_KEY = "schedule"
   val EXPECTED_DELAY_DAYS_KEY = "expected.delay.days"
   val ALLOW_PARALLEL_KEY = "parallel"
+  val CONSUME_THREADS_KEY = "consume.threads"
   val DEPENDENCIES_KEY = "dependencies"
   val OUTPUT_INFO_DATE_EXPRESSION_KEY = "info.date.expr"
   val INITIAL_SOURCING_DATE_EXPR = "initial.sourcing.date.expr"
@@ -62,6 +65,8 @@ object OperationDef {
   val NOTIFICATION_TARGETS_KEY = "notification.targets"
   val SPARK_CONFIG_PREFIX = "spark.config"
   val EXTRA_OPTIONS_PREFIX = "option"
+
+  val DEFAULT_CONSUME_THREADS = 1
 
   def fromConfig(conf: Config, appConfig: Config, infoDateConfig: InfoDateConfig, parent: String, defaultDelayDays: Int): Option[OperationDef] = {
     ConfigUtils.validatePathsExistence(conf, parent, Seq(NAME_KEY, TYPE_KEY, SCHEDULE_KEY))
@@ -77,6 +82,7 @@ object OperationDef {
     val operationType = OperationType.fromConfig(conf, appConfig, parent)
     val schedule = Schedule.fromConfig(conf)
     val expectedDelayDays = ConfigUtils.getOptionInt(conf, EXPECTED_DELAY_DAYS_KEY).getOrElse(defaultDelayDays)
+    val consumeThreads = getThreadsToConsume(name, conf, appConfig)
     val allowParallel = ConfigUtils.getOptionBoolean(conf, ALLOW_PARALLEL_KEY).getOrElse(true)
     val dependencies = getDependencies(conf, parent)
     val outputInfoDateExpressionOpt = ConfigUtils.getOptionString(conf, OUTPUT_INFO_DATE_EXPRESSION_KEY)
@@ -114,6 +120,7 @@ object OperationDef {
       schedule,
       expectedDelayDays,
       allowParallel,
+      consumeThreads,
       dependencies,
       outputInfoDateExpression,
       initialSourcingDateExpression,
@@ -123,6 +130,22 @@ object OperationDef {
       notificationTargets,
       sparkConfigOptions,
       extraOptions))
+  }
+
+  private def getThreadsToConsume(operationName: String, config: Config, appConfig: Config): Int = {
+    val maxThreads = appConfig.getInt(Keys.PARALLEL_TASKS)
+    val consumeThreads = ConfigUtils.getOptionInt(config, CONSUME_THREADS_KEY).getOrElse(DEFAULT_CONSUME_THREADS)
+
+    if (consumeThreads <= 0) {
+      log.warn(s"Operation '$operationName' cannot consume negative number of threads. Setting '$CONSUME_THREADS_KEY' to $DEFAULT_CONSUME_THREADS.")
+      DEFAULT_CONSUME_THREADS
+    } else if (consumeThreads > maxThreads) {
+      log.warn(s"Operation '$operationName' cannot consume $consumeThreads threads. Maximum number of threads is $maxThreads ('${Keys.PARALLEL_TASKS}')." +
+        s" Setting '$CONSUME_THREADS_KEY' to $maxThreads.")
+      maxThreads
+    } else {
+      consumeThreads
+    }
   }
 
   private def getDependencies(conf: Config, parent: String): Seq[MetastoreDependency] = {

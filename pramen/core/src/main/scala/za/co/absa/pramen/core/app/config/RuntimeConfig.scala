@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.app.config
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.BookkeeperConfig.BOOKKEEPING_ENABLED
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
 import za.co.absa.pramen.core.runner.splitter.RunMode
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -61,7 +62,6 @@ object RuntimeConfig {
   val CURRENT_DATE = "pramen.current.date"
   val LOAD_DATE_FROM = "pramen.load.date.from"
   val LOAD_DATE_TO = "pramen.load.date.to"
-  val PARALLEL_TASKS = "pramen.parallel.tasks"
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
   val VERBOSE = "pramen.verbose"
 
@@ -131,7 +131,7 @@ object RuntimeConfig {
       runDate = dateFrom,
       runDateTo = dateTo,
       isInverseOrder = ConfigUtils.getOptionBoolean(conf, IS_INVERSE_ORDER).getOrElse(false),
-      parallelTasks = conf.getInt(PARALLEL_TASKS),
+      parallelTasks = conf.getInt(Keys.PARALLEL_TASKS),
       stopSparkSession = conf.getBoolean(STOP_SPARK_SESSION),
       runMode
     )
