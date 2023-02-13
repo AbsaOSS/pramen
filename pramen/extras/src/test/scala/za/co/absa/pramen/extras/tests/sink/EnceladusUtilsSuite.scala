@@ -29,7 +29,7 @@ import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 
 class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
-
+  import za.co.absa.pramen.extras.sink.InfoVersionStatus._
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
@@ -166,7 +166,8 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
         val maxVersionTry = utils.getMaxVersionInRaw(new Path(tempDir, "my_table"), "enceladus_info_date", infoDate)
 
-        assert(maxVersionTry.get.contains(3))
+        assert(maxVersionTry.isInstanceOf[Detected])
+        assert(maxVersionTry.asInstanceOf[Detected].maxVersion == 3)
       }
     }
 
@@ -178,7 +179,7 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
         val maxVersionTry = utils.getMaxVersionInRaw(new Path(tempDir, "my_table"), "enceladus_info_date", infoDate)
 
-        assert(maxVersionTry.get.isEmpty)
+        assert(maxVersionTry == NotPresent)
       }
     }
 
@@ -188,7 +189,7 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
       withTempDirectory("enceladus_utils") { tempDir =>
         val maxVersionTry = utils.getMaxVersionInRaw(new Path(tempDir, "my_table"), "enceladus_info_date", infoDate)
 
-        assert(maxVersionTry.isFailure)
+        assert(maxVersionTry.isInstanceOf[DetectionFailure])
       }
     }
   }
@@ -204,7 +205,8 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
         val maxVersionTry = utils.getMaxVersionInPublish(new Path(tempDir, "my_table"), "enceladus_info_date", infoDate)
 
-        assert(maxVersionTry.get.contains(3))
+        assert(maxVersionTry.isInstanceOf[Detected])
+        assert(maxVersionTry.asInstanceOf[Detected].maxVersion == 3)
       }
     }
 
@@ -216,7 +218,7 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
         val maxVersionTry = utils.getMaxVersionInPublish(new Path(tempDir, "my_table"), "enceladus_info_date", infoDate)
 
-        assert(maxVersionTry.get.isEmpty)
+        assert(maxVersionTry == NotPresent)
       }
     }
 
@@ -226,7 +228,7 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
       withTempDirectory("enceladus_utils") { tempDir =>
         val maxVersionTry = utils.getMaxVersionInPublish(new Path(tempDir, "my_table"), "enceladus_info_date", infoDate)
 
-        assert(maxVersionTry.isFailure)
+        assert(maxVersionTry.isInstanceOf[DetectionFailure])
       }
     }
   }
@@ -241,14 +243,15 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       val (utils, qe) = getUseCase(Option(partitiondDf))
 
-      val maxVersion = utils.getMaxVersionFromHive("mydb.mytable1", "enceladus_info_date", infoDate)
+      val maxVersionTry = utils.getMaxVersionFromHive("mydb.mytable1", "enceladus_info_date", infoDate)
 
       "execute the proper query" in {
         assert(qe.queried.head == "SHOW PARTITIONS mydb.mytable1")
       }
 
       "return the proper result" in {
-        assert(maxVersion.get.contains(5))
+        assert(maxVersionTry.isInstanceOf[Detected])
+        assert(maxVersionTry.asInstanceOf[Detected].maxVersion == 5)
       }
     }
 
@@ -257,14 +260,14 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       val (utils, qe) = getUseCase(Option(partitiondDf))
 
-      val maxVersion = utils.getMaxVersionFromHive("mydb.mytable1", "enceladus_info_date", infoDate)
+      val maxVersionTry = utils.getMaxVersionFromHive("mydb.mytable1", "enceladus_info_date", infoDate)
 
       "execute the proper query" in {
         assert(qe.queried.head == "SHOW PARTITIONS mydb.mytable1")
       }
 
       "return the proper result" in {
-        assert(maxVersion.get.isEmpty)
+        assert(maxVersionTry == NotPresent)
       }
     }
 
@@ -273,15 +276,15 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       val (utils, qe) = getUseCase(Option(partitiondDf), Option(new IllegalStateException("Dummy")))
 
-      val maxVersion = utils.getMaxVersionFromHive("mydb.mytable2", "enceladus_info_date", infoDate)
+      val maxVersionTry = utils.getMaxVersionFromHive("mydb.mytable2", "enceladus_info_date", infoDate)
 
       "execute the proper query" in {
         assert(qe.queried.head == "SHOW PARTITIONS mydb.mytable2")
       }
 
       "return the proper result" in {
-        assert(maxVersion.isFailure)
-        assert(maxVersion.failed.get.getMessage == "Dummy")
+        assert(maxVersionTry.isInstanceOf[DetectionFailure])
+        assert(maxVersionTry.asInstanceOf[DetectionFailure].ex.getMessage == "Dummy")
       }
     }
   }
@@ -299,9 +302,10 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
         val partitionParent = utils.getParentPartitionPath(new Path(tempDir, "my_table"), rawPathPattern, "enceladus_info_date", infoDate)
 
-        val action = utils.getMaxVersionFromDirs(partitionParent, utils.rawVersionRegEx, fsUtils)
+        val actual = utils.getMaxVersionFromDirs(partitionParent, utils.rawVersionRegEx, fsUtils)
 
-        assert(action.get.contains(8))
+        assert(actual.isInstanceOf[Detected])
+        assert(actual.asInstanceOf[Detected].maxVersion == 8)
       }
     }
 
@@ -315,9 +319,9 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
         val partitionParent = utils.getParentPartitionPath(new Path(tempDir, "my_table"), rawPathPattern, "enceladus_info_date", infoDate)
 
-        val action = utils.getMaxVersionFromDirs(partitionParent, utils.rawVersionRegEx, fsUtils)
+        val actual = utils.getMaxVersionFromDirs(partitionParent, utils.rawVersionRegEx, fsUtils)
 
-        assert(action.get.isEmpty)
+        assert(actual == NotPresent)
       }
     }
 
@@ -329,9 +333,9 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
         val partitionParent = utils.getParentPartitionPath(new Path(tempDir, "my_table"), rawPathPattern, "enceladus_info_date", infoDate)
 
-        val action = utils.getMaxVersionFromDirs(partitionParent, utils.rawVersionRegEx, fsUtils)
+        val actual = utils.getMaxVersionFromDirs(partitionParent, utils.rawVersionRegEx, fsUtils)
 
-        assert(action.isFailure)
+        assert(actual.isInstanceOf[DetectionFailure])
       }
     }
   }
@@ -346,9 +350,10 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
         "/bigdata/raw/my_table/2022/02/18/v10"
       )
 
-      val action = utils.getMaxVersionFromList(partitions, utils.rawVersionRegEx)
+      val actual = utils.getMaxVersionFromList(partitions, utils.rawVersionRegEx)
 
-      assert(action.get.contains(10))
+      assert(actual.isInstanceOf[Detected])
+      assert(actual.asInstanceOf[Detected].maxVersion == 10)
     }
 
     "return maximum version in a raw inner folder" in {
@@ -360,9 +365,10 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
         "v10"
       )
 
-      val action = utils.getMaxVersionFromList(partitions, utils.rawVersionRegEx)
+      val actual = utils.getMaxVersionFromList(partitions, utils.rawVersionRegEx)
 
-      assert(action.get.contains(10))
+      assert(actual.isInstanceOf[Detected])
+      assert(actual.asInstanceOf[Detected].maxVersion == 10)
     }
 
 
@@ -375,9 +381,10 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
         "/bigdata/publish/my_table/enceladus_info_date=2022-02-18/enceladus_info_version=11"
       )
 
-      val action = utils.getMaxVersionFromList(partitions, utils.publishVersionRegEx)
+      val actual = utils.getMaxVersionFromList(partitions, utils.publishVersionRegEx)
 
-      assert(action.get.contains(11))
+      assert(actual.isInstanceOf[Detected])
+      assert(actual.asInstanceOf[Detected].maxVersion == 11)
     }
 
     "return maximum version in a Hive table" in {
@@ -389,9 +396,10 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
         "enceladus_info_date=2022-02-18/enceladus_info_version=11"
       )
 
-      val action = utils.getMaxVersionFromList(partitions, utils.publishVersionRegEx)
+      val actual = utils.getMaxVersionFromList(partitions, utils.publishVersionRegEx)
 
-      assert(action.get.contains(11))
+      assert(actual.isInstanceOf[Detected])
+      assert(actual.asInstanceOf[Detected].maxVersion == 11)
     }
 
     "return None for the empty folder" in {
@@ -399,9 +407,9 @@ class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       val partitions = Seq.empty[String]
 
-      val action = utils.getMaxVersionFromList(partitions, utils.publishVersionRegEx)
+      val actual = utils.getMaxVersionFromList(partitions, utils.publishVersionRegEx)
 
-      assert(action.get.isEmpty)
+      assert(actual == NotPresent)
     }
   }
 
