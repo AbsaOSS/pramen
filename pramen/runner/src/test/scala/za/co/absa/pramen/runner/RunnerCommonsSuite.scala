@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.tests
+package za.co.absa.pramen.runner
 
 import org.apache.hadoop.conf.Configuration
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.base.{SparkTestBase, TempDirFixture}
-import za.co.absa.pramen.runner.RunnerCommons
 
 import java.nio.file.{Files, Paths}
 import scala.util.control.NonFatal
