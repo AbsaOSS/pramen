@@ -20,6 +20,7 @@ import com.typesafe.config.{Config, ConfigValueFactory}
 import scopt.OptionParser
 import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.core.app.config.RuntimeConfig._
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.model.Constants
 import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
 
@@ -35,14 +36,14 @@ case class CmdLineConfig(
                           rerunInfoDate: Option[LocalDate] = None,
                           checkOnlyLateData: Option[Boolean] = None,
                           checkOnlyNewData: Option[Boolean] = None,
+                          parallelTasks: Option[Int] = None,
                           dryRun: Option[Boolean] = None,
                           useLock: Option[Boolean] = None,
                           undercover: Option[Boolean] = None,
                           dateFrom: Option[LocalDate] = None,
                           dateTo: Option[LocalDate] = None,
-                          mode: String = "",
+                          mode: Option[String] = None,
                           inverseOrder: Option[Boolean] = None,
-                          tableNum: Option[Int] = None,
                           verbose: Option[Boolean] = None,
                           overrideLogLevel: Option[String] = None
                         )
@@ -60,117 +61,74 @@ object CmdLineConfig {
   }
 
   def parseCmdLine(args: Array[String]): Option[CmdLineConfig] = {
-    val parser = new CmdParser("spark-submit pipeline-runner.jar " +
-      "za.co.absa.pramen.core.runner.PipelineRunner " +
-      "--workflow <Workflow Configuration Path> " +
-      "[--files <comma-separated list of files> " +
-      "[--ops output_table1,output_table2,...]" +
-      "[--date <Current date override (yyyy-MM-dd)>] " +
-      "[--rerun <The date to force rerun (yyyy-MM-dd)>] " +
-      "[--verbose] "  +
-      "[--dry-run] " +
-      "[--check-late-only]" +
-      "[--check-new-only] " +
-      "[--undercover] " +
-      "[--use-lock <true/false>] " +
-      "[--date-from <date_from>]" +
-      "[--date-to <date_to>]" +
-      "[--run-mode { fill_gaps | check_updates | force }]" +
-      "[--inverse-order <true/false>]" +
-      "[--override-log-level <log_level>]"
-    )
+    val parser = new CmdParser("spark-submit pipeline-runner.jar za.co.absa.pramen.core.runner.PipelineRunner")
 
     parser.parse(args, CmdLineConfig())
   }
 
   def applyCmdLineToConfig(conf: Config, cmd: CmdLineConfig): Config = {
     val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)
+    var accumulatedConfig = conf
 
-    val conf2 = if (cmd.operations.nonEmpty) {
-      conf.withValue(RUN_TABLES, ConfigValueFactory.fromIterable(cmd.operations.asJava))
-    } else conf
+    if (cmd.operations.nonEmpty)
+      accumulatedConfig = accumulatedConfig
+        .withValue(RUN_TABLES, ConfigValueFactory.fromIterable(cmd.operations.asJava))
 
-    val conf3 = cmd.rerunInfoDate match {
-      case Some(infoDate) =>
-        conf2
-          .withValue(IS_RERUN, ConfigValueFactory.fromAnyRef(true))
-          .withValue(CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(infoDate)))
-      case None           => conf2
-    }
+    for (infoDate <- cmd.rerunInfoDate)
+      accumulatedConfig = accumulatedConfig
+        .withValue(IS_RERUN, ConfigValueFactory.fromAnyRef(true))
+        .withValue(CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(infoDate)))
 
-    val conf4 = cmd.currentDate match {
-      case Some(date) => conf3
+    for (date <- cmd.currentDate)
+      accumulatedConfig = accumulatedConfig
         .withValue(CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(date)))
-      case None       => conf3
-    }
 
-    val conf5 = cmd.checkOnlyLateData match {
-      case Some(checkLateOnly) => conf4.withValue(CHECK_ONLY_LATE_DATA,
-        ConfigValueFactory.fromAnyRef(checkLateOnly))
-      case None                => conf4
-    }
+    for (checkLateOnly <- cmd.checkOnlyLateData)
+      accumulatedConfig = accumulatedConfig
+        .withValue(CHECK_ONLY_LATE_DATA, ConfigValueFactory.fromAnyRef(checkLateOnly))
 
-    val conf6 = cmd.checkOnlyNewData match {
-      case Some(checkNewOnly) => conf5.withValue(CHECK_ONLY_NEW_DATA,
-        ConfigValueFactory.fromAnyRef(checkNewOnly))
-      case None               => conf5
-    }
+    for (checkNewOnly <- cmd.checkOnlyNewData)
+      accumulatedConfig = accumulatedConfig
+        .withValue(CHECK_ONLY_NEW_DATA, ConfigValueFactory.fromAnyRef(checkNewOnly))
 
-    val conf7 = cmd.dateFrom match {
-      case Some(dateFrom) => conf6
-        .withValue(LOAD_DATE_FROM,
-          ConfigValueFactory.fromAnyRef(dateFormatter.format(dateFrom)))
-      case None           => conf6
-    }
+    for (dateFrom <- cmd.dateFrom)
+      accumulatedConfig = accumulatedConfig
+        .withValue(LOAD_DATE_FROM, ConfigValueFactory.fromAnyRef(dateFormatter.format(dateFrom)))
 
-    val conf8 = cmd.dateTo match {
-      case Some(dateTo) => conf7
-        .withValue(LOAD_DATE_TO,
-          ConfigValueFactory.fromAnyRef(dateFormatter.format(dateTo)))
-        .withValue(CURRENT_DATE,
-          ConfigValueFactory.fromAnyRef(dateFormatter.format(dateTo)))
-        .withValue(TRACK_DAYS,
-          ConfigValueFactory.fromAnyRef(0))
-      case None         => conf7
-    }
+    for (dateTo <- cmd.dateTo)
+      accumulatedConfig = accumulatedConfig
+        .withValue(LOAD_DATE_TO, ConfigValueFactory.fromAnyRef(dateFormatter.format(dateTo)))
+        .withValue(CURRENT_DATE, ConfigValueFactory.fromAnyRef(dateFormatter.format(dateTo)))
+        .withValue(TRACK_DAYS, ConfigValueFactory.fromAnyRef(0))
 
-    val conf9 = cmd.undercover match {
-      case Some(v) => conf8.withValue(UNDERCOVER, ConfigValueFactory.fromAnyRef(v))
-      case None    => conf8
-    }
+    for (undercover <- cmd.undercover)
+      accumulatedConfig = accumulatedConfig.withValue(UNDERCOVER, ConfigValueFactory.fromAnyRef(undercover))
 
-    val conf10 = cmd.dryRun match {
-      case Some(v) => conf9.withValue(DRY_RUN, ConfigValueFactory.fromAnyRef(v))
-      case None    => conf9
-    }
+    for (dryRun <- cmd.dryRun)
+      accumulatedConfig = accumulatedConfig.withValue(DRY_RUN, ConfigValueFactory.fromAnyRef(dryRun))
 
-    val conf11 = cmd.useLock match {
-      case Some(v) => conf10.withValue(USE_LOCK, ConfigValueFactory.fromAnyRef(v))
-      case None    => conf10
-    }
+    for (useLock <- cmd.useLock)
+      accumulatedConfig = accumulatedConfig.withValue(USE_LOCK, ConfigValueFactory.fromAnyRef(useLock))
 
-    val conf12 = cmd.inverseOrder match {
-      case Some(v) => conf11.withValue(IS_INVERSE_ORDER, ConfigValueFactory.fromAnyRef(v))
-      case None    => conf11
-    }
+    for (inverseOrder <- cmd.inverseOrder)
+      accumulatedConfig = accumulatedConfig.withValue(IS_INVERSE_ORDER, ConfigValueFactory.fromAnyRef(inverseOrder))
 
-    val conf13 = cmd.verbose match {
-      case Some(v) => conf12.withValue(VERBOSE, ConfigValueFactory.fromAnyRef(v))
-      case None    => conf12
-    }
+    for (verbose <- cmd.verbose)
+      accumulatedConfig = accumulatedConfig.withValue(VERBOSE, ConfigValueFactory.fromAnyRef(verbose))
 
-    if (cmd.mode.nonEmpty) {
-      conf13.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(cmd.mode))
-    } else {
-      conf13
-    }
+    for (parallelTasks <- cmd.parallelTasks)
+      accumulatedConfig = accumulatedConfig.withValue(Keys.PARALLEL_TASKS, ConfigValueFactory.fromAnyRef(parallelTasks))
+
+    for (mode <- cmd.mode)
+      accumulatedConfig = accumulatedConfig.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(mode))
+
+    accumulatedConfig
   }
 
-  private class CmdParser(programSyntax: String) extends OptionParser[CmdLineConfig](programSyntax) {
-    head("\nPramen Workflow Runner", "")
-    var rawFormat: Option[String] = None
+  private class CmdParser(programName: String) extends OptionParser[CmdLineConfig](programName) {
+    head("\nPramen Workflow Runner")
 
-    opt[String]("workflow").optional().action((value, config) =>
+    opt[String]("workflow").required().action((value, config) =>
       config.copy(configPathName = Option(value)))
       .text("Path to a workflow configuration")
 
@@ -182,6 +140,14 @@ object CmdLineConfig {
     opt[String]("ops").optional().action((value, config) =>
       config.copy(operations = value.split(',').map(_.trim)))
       .text("A comma-separated list of output table names that correspond to operations to run.")
+
+    opt[Int]("parallel-tasks").optional().action((value, config) =>
+      config.copy(parallelTasks = Option(value)))
+      .text("Maximum number of parallel tasks.")
+      .validate { v =>
+        if (v > 0) success
+        else failure("Invalid number of parallel tasks. Must be greater than 0.")
+      }
 
     opt[String]("date").optional().action((value, config) =>
       config.copy(currentDate = Option(LocalDate.parse(value, infoDateFormatter))))
@@ -196,7 +162,7 @@ object CmdLineConfig {
       .text("A date to finish loading data to")
       .children(
         opt[String]("run-mode").optional().action((value, config) =>
-          config.copy(mode = value))
+          config.copy(mode = Option(value)))
           .text("Mode of processing for date ranges. One of 'fill_gaps', 'check_updates', 'force'")
           .validate(v =>
             if (v == "fill_gaps" || v == "check_updates" || v == "force") success
@@ -210,10 +176,6 @@ object CmdLineConfig {
     opt[String]("rerun").optional().action((value, config) =>
       config.copy(rerunInfoDate = Option(LocalDate.parse(value, infoDateFormatter))))
       .text("Information date to recompute (if specified all jobs in the workflow will be re-run)")
-
-    opt[Int]("table-num").optional().action((value, config) =>
-      config.copy(tableNum = Option(value)))
-      .text("Run the job only for the specified table number")
 
     opt[Unit]("dry-run").optional().action((_, config) =>
       config.copy(dryRun = Some(true)))

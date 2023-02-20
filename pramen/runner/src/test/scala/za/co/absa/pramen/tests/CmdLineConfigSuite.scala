@@ -20,10 +20,11 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.core.app.config.RuntimeConfig._
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.runner.cmd.CmdLineConfig
 
-class CmdLineLineConfigSuite extends AnyWordSpec {
+class CmdLineConfigSuite extends AnyWordSpec {
 
   private val emptyConfig = ConfigFactory.empty
   private val populatedConfig = ConfigFactory.parseString(
@@ -37,8 +38,7 @@ class CmdLineLineConfigSuite extends AnyWordSpec {
     "no command line arguments are provided" should {
       "return an empty value" in {
         val cmd = CmdLineConfig.parseCmdLine(Array.empty[String])
-        assert(cmd.isDefined)
-        assert(cmd.exists(c => c.configPathName.isEmpty))
+        assert(cmd.isEmpty)
       }
     }
 
@@ -100,16 +100,42 @@ class CmdLineLineConfigSuite extends AnyWordSpec {
         assert(cmd.nonEmpty)
         assert(cmd.get.overrideLogLevel.contains("INFO"))
       }
+
+      "support specification of parallel tasks" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--parallel-tasks", "2"))
+        assert(cmd.nonEmpty)
+        assert(cmd.get.parallelTasks.get == 2)
+      }
+
+      "return None if number of parallel tasks is invalid" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--parallel-tasks", "-12"))
+        assert(cmd.isEmpty)
+      }
     }
   }
 
   "CmdLineConfig.applyCmdLineToConfig()" should {
-    "return a modified config if the list of operation is specified" in {
+    "return a modified config if the list of operations is specified" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--ops", "table_1,table_2,table_3"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
       assert(config.hasPath(RUN_TABLES))
       assert(ConfigUtils.getOptListStrings(config, RUN_TABLES) == Seq("table_1", "table_2", "table_3"))
+    }
+
+    "return a modified config if number of parallel tasks is specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--parallel-tasks", "2"))
+      val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
+
+      assert(config.hasPath(Keys.PARALLEL_TASKS))
+      assert(config.getInt(Keys.PARALLEL_TASKS) == 2)
+    }
+
+    "return the original config if number of parallel tasks is not specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
+      val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
+
+      assert(!config.hasPath(Keys.PARALLEL_TASKS))
     }
 
     "return the original config if dry-run is not specified" in {
