@@ -240,7 +240,7 @@ class TableReaderJdbc(tableName: String,
         case t: DecimalType if jdbcReaderConfig.correctDecimalsFixPrecision && t.scale > 0 =>
           val fixedPrecision = if (t.precision + t.scale > 38) 38 else t.precision + t.scale
           log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to decimal($fixedPrecision, ${t.scale})")
-          newSchema += s"${field.name} decimal(${fixedPrecision}, ${t.scale})"
+          newSchema += s"${field.name} decimal($fixedPrecision, ${t.scale})"
         case _ =>
           field
       }
@@ -266,7 +266,7 @@ class TableReaderJdbc(tableName: String,
       log.info(s"Info date format (SQL):       ${jdbcReaderConfig.infoDateFormatSql}")
       log.info(s"Info date format (App):       ${jdbcReaderConfig.infoDateFormatApp}")
     }
-    log.info(s"Save timestamp as dated:      ${jdbcReaderConfig.saveTimestampsAsDates}")
+    log.info(s"Save timestamp as dates:      ${jdbcReaderConfig.saveTimestampsAsDates}")
     log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
     jdbcReaderConfig.limitRecords.foreach(n => log.info(s"Limit records:                $n"))
 

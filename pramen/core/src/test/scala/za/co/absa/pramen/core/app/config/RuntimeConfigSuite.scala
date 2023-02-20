@@ -16,13 +16,13 @@
 
 package za.co.absa.pramen.core.app.config
 
-import com.typesafe.config.ConfigFactory
+import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 
 import java.time.LocalDate
 
 class RuntimeConfigSuite extends AnyWordSpec {
-  "GeneralConfig" should {
+  "RuntimeConfig" should {
     "deserialize the config properly" in {
       val configStr =
         s"""pramen {
@@ -46,9 +46,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
            |}
            |""".stripMargin
 
-      val config = ConfigFactory.parseString(configStr)
-        .withFallback(ConfigFactory.load())
-        .resolve()
+      val config = getUseCase(configStr)
 
       val runtimeConfig = RuntimeConfig.fromConfig(config)
 
@@ -88,4 +86,31 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.stopSparkSession)
     }
   }
+
+  "throw RuntimeException when number of parallel tasks is negative" in {
+    val config = getUseCase("pramen.parallel.tasks = -2")
+
+    val ex = intercept[RuntimeException] {
+      RuntimeConfig.fromConfig(config)
+    }
+
+    assert(ex.getMessage.contains("Cannot run negative (or zero) number of tasks in parallel"))
+  }
+
+  "throw RuntimeException when number of parallel tasks is zero" in {
+    val config = getUseCase("pramen.parallel.tasks = 0")
+
+    val ex = intercept[RuntimeException] {
+      RuntimeConfig.fromConfig(config)
+    }
+
+    assert(ex.getMessage.contains("Cannot run negative (or zero) number of tasks in parallel"))
+  }
+
+  def getUseCase(rawConfig: String = ""): Config = {
+    ConfigFactory.parseString(rawConfig)
+      .withFallback(ConfigFactory.load())
+      .resolve()
+  }
+
 }

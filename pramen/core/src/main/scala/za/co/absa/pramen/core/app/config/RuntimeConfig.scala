@@ -87,6 +87,12 @@ object RuntimeConfig {
       log.warn("UNDERCOVER MODE ON - bookkeeping won't be updated")
     }
 
+    val parallelTasks = conf.getInt(Keys.PARALLEL_TASKS)
+
+    if (parallelTasks <= 0) {
+      throw new RuntimeException(s"Cannot run negative (or zero) number of tasks in parallel. The '${Keys.PARALLEL_TASKS}' option should be non-negative.")
+    }
+
     val isRerun = ConfigUtils.getOptionBoolean(conf, IS_RERUN).getOrElse(false) || runMode == RunMode.ForceRun
 
     val currentDate = ConfigUtils.getOptionString(conf, CURRENT_DATE).map(getDate).getOrElse(LocalDate.now())
@@ -131,7 +137,7 @@ object RuntimeConfig {
       runDate = dateFrom,
       runDateTo = dateTo,
       isInverseOrder = ConfigUtils.getOptionBoolean(conf, IS_INVERSE_ORDER).getOrElse(false),
-      parallelTasks = conf.getInt(Keys.PARALLEL_TASKS),
+      parallelTasks = parallelTasks,
       stopSparkSession = conf.getBoolean(STOP_SPARK_SESSION),
       runMode
     )
