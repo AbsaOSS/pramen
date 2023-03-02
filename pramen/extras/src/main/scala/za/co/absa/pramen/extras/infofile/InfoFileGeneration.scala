@@ -38,16 +38,17 @@ object InfoFileGeneration {
   def generateInfoFile(pramenVersion: String,
                        timezoneId: ZoneId,
                        sourceCount: Long,
-                       rawDf: DataFrame,
+                       rawCount: Long,
+                       publishCount: Option[Long],
                        outputPartitionPath: Path,
                        infoDate: LocalDate,
                        sourceStart: Instant,
-                       rawStart: Instant)
+                       rawStart: Instant,
+                       publishStart: Option[Instant])
                       (implicit spark: SparkSession, conf: Config): Unit = {
     val fs = outputPartitionPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
-    val rawCount = rawDf.count()
 
-    val infoFileContents = renderInfoFile(pramenVersion, timezoneId, sourceCount, rawCount, infoDate, sourceStart, rawStart, Instant.now())
+    val infoFileContents = renderInfoFile(pramenVersion, timezoneId, sourceCount, rawCount, publishCount, infoDate, sourceStart, rawStart, Instant.now(), publishStart)
 
     val infoFilePath = new Path(outputPartitionPath, "_INFO")
 
@@ -62,10 +63,12 @@ object InfoFileGeneration {
                      timezoneId: ZoneId,
                      sourceCount: Long,
                      rawCount: Long,
+                     publishCount: Option[Long],
                      infoDate: LocalDate,
                      sourceStart: Instant,
                      rawStart: Instant,
-                     rawFinish: Instant)
+                     jobFinish: Instant,
+                     publishStartOpt: Option[Instant])
                     (implicit conf: Config): String = {
     ConfigUtils.validatePathsExistence(conf, "", Seq(SOURCE_APPLICATION_KEY, COUNTRY_KEY, HISTORY_TYPE_KEY, TIMESTAMP_FORMAT_KEY, DATE_FORMAT_KEY))
 
@@ -82,20 +85,9 @@ object InfoFileGeneration {
 
     val sourceStarted = ZonedDateTime.ofInstant(sourceStart, timezoneId).format(fmtTimestamp)
     val rawStarted = ZonedDateTime.ofInstant(rawStart, timezoneId).format(fmtTimestamp)
-    val rawFinished = ZonedDateTime.ofInstant(rawFinish, timezoneId).format(fmtTimestamp)
+    val jobFinished = ZonedDateTime.ofInstant(jobFinish, timezoneId).format(fmtTimestamp)
 
-    s"""{
-       |  "metadata" : {
-       |    "sourceApplication" : "$sourceApplication",
-       |    "country" : "$country",
-       |    "historyType" : "$historyType",
-       |    "dataFilename" : "JDBC",
-       |    "sourceType" : "Source",
-       |    "version" : 1,
-       |    "informationDate" : "$infoDateStr",
-       |    "additionalInfo" : { }
-       |  },
-       |  "checkpoints" : [ {
+    val landingToRaw = s"""{
        |    "name" : "Source",
        |    "software" : "pramen",
        |    "version" : "$pramenVersion",
@@ -114,7 +106,7 @@ object InfoFileGeneration {
        |    "software" : "pramen",
        |    "version" : "$pramenVersion",
        |    "processStartTime" : "$rawStarted",
-       |    "processEndTime" : "$rawFinished",
+       |    "processEndTime" : "$jobFinished",
        |    "workflowName" : "Source",
        |    "order" : 2,
        |    "controls" : [ {
@@ -123,7 +115,55 @@ object InfoFileGeneration {
        |      "controlCol" : "*",
        |      "controlValue" : "$rawCount"
        |    } ]
-       |  } ]
+       |  }""".stripMargin
+
+    val rawToPublish = publishStartOpt match {
+      case Some(publishStart) =>
+        val publishStarted = ZonedDateTime.ofInstant(publishStart, timezoneId).format(fmtTimestamp)
+        s""", {
+           |    "name" : "Standardization",
+           |    "software" : "pramen",
+           |    "version" : "$pramenVersion",
+           |    "processStartTime" : "$publishStarted",
+           |    "processEndTime" : "$jobFinished",
+           |    "workflowName" : "Standardization",
+           |    "order" : 1,
+           |    "controls" : [ {
+           |      "controlName" : "recordCount",
+           |      "controlType" : "count",
+           |      "controlCol" : "*",
+           |      "controlValue" : "${publishCount.get}"
+           |    } ]
+           |  }, {
+           |    "name" : "Conformance",
+           |    "software" : "pramen",
+           |    "version" : "$pramenVersion",
+           |    "processStartTime" : "$publishStarted",
+           |    "processEndTime" : "$jobFinished",
+           |    "workflowName" : "Standardization",
+           |    "order" : 2,
+           |    "controls" : [ {
+           |      "controlName" : "recordCount",
+           |      "controlType" : "count",
+           |      "controlCol" : "*",
+           |      "controlValue" : "${publishCount.get}"
+           |    } ]
+           |  }""".stripMargin
+      case None => ""
+    }
+
+    s"""{
+       |  "metadata" : {
+       |    "sourceApplication" : "$sourceApplication",
+       |    "country" : "$country",
+       |    "historyType" : "$historyType",
+       |    "dataFilename" : "JDBC",
+       |    "sourceType" : "Source",
+       |    "version" : 1,
+       |    "informationDate" : "$infoDateStr",
+       |    "additionalInfo" : { }
+       |  },
+       |  "checkpoints" : [ $landingToRaw$rawToPublish ]
        |}
        |""".stripMargin
 

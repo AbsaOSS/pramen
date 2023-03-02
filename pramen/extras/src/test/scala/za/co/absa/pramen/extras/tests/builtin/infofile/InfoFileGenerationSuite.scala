@@ -27,17 +27,19 @@ import java.nio.file.{Files, Paths}
 import java.time.{Instant, LocalDate, ZoneId}
 
 class InfoFileGenerationSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
+
   import spark.implicits._
 
   private val sourceStart = Instant.ofEpochSecond(1640684086L)
   private val rawStart = Instant.ofEpochSecond(1640684386L)
-  private val rawFinish = Instant.ofEpochSecond(1640688586L)
+  private val publishStarted = Instant.ofEpochSecond(1640686586L)
+  private val jobFinish = Instant.ofEpochSecond(1640688586L)
   private val infoDate = LocalDate.of(2021, 12, 28)
   private val pramenVersion = "1.0.0"
   private val timezoneId = ZoneId.of("Africa/Johannesburg")
 
   "renderInfoFile" should {
-    "render an Info file" in {
+    "render a source to raw Info file" in {
       val expectedInfoFile =
         """{
           |  "metadata" : {
@@ -83,7 +85,86 @@ class InfoFileGenerationSuite extends AnyWordSpec with SparkTestBase with TextCo
 
       implicit val conf: Config = getConfig
 
-      val infoFile = renderInfoFile(pramenVersion, timezoneId, 100, 200, infoDate, sourceStart, rawStart, rawFinish)
+      val infoFile = renderInfoFile(pramenVersion, timezoneId, 100, 200, None, infoDate, sourceStart, rawStart, jobFinish, None)
+
+      compareText(infoFile, expectedInfoFile)
+    }
+
+    "render a source to publish Info file" in {
+      val expectedInfoFile =
+        """{
+          |  "metadata" : {
+          |    "sourceApplication" : "App1",
+          |    "country" : "Africa",
+          |    "historyType" : "Events",
+          |    "dataFilename" : "JDBC",
+          |    "sourceType" : "Source",
+          |    "version" : 1,
+          |    "informationDate" : "2021-12-28",
+          |    "additionalInfo" : { }
+          |  },
+          |  "checkpoints" : [ {
+          |    "name" : "Source",
+          |    "software" : "pramen",
+          |    "version" : "1.0.0",
+          |    "processStartTime" : "28-12-2021 11:34:46 +0200",
+          |    "processEndTime" : "28-12-2021 11:39:46 +0200",
+          |    "workflowName" : "Source",
+          |    "order" : 1,
+          |    "controls" : [ {
+          |      "controlName" : "recordCount",
+          |      "controlType" : "count",
+          |      "controlCol" : "*",
+          |      "controlValue" : "100"
+          |    } ]
+          |  }, {
+          |    "name" : "Raw",
+          |    "software" : "pramen",
+          |    "version" : "1.0.0",
+          |    "processStartTime" : "28-12-2021 11:39:46 +0200",
+          |    "processEndTime" : "28-12-2021 12:49:46 +0200",
+          |    "workflowName" : "Source",
+          |    "order" : 2,
+          |    "controls" : [ {
+          |      "controlName" : "recordCount",
+          |      "controlType" : "count",
+          |      "controlCol" : "*",
+          |      "controlValue" : "200"
+          |    } ]
+          |  }, {
+          |    "name" : "Standardization",
+          |    "software" : "pramen",
+          |    "version" : "1.0.0",
+          |    "processStartTime" : "28-12-2021 12:16:26 +0200",
+          |    "processEndTime" : "28-12-2021 12:49:46 +0200",
+          |    "workflowName" : "Standardization",
+          |    "order" : 1,
+          |    "controls" : [ {
+          |      "controlName" : "recordCount",
+          |      "controlType" : "count",
+          |      "controlCol" : "*",
+          |      "controlValue" : "300"
+          |    } ]
+          |  }, {
+          |    "name" : "Conformance",
+          |    "software" : "pramen",
+          |    "version" : "1.0.0",
+          |    "processStartTime" : "28-12-2021 12:16:26 +0200",
+          |    "processEndTime" : "28-12-2021 12:49:46 +0200",
+          |    "workflowName" : "Standardization",
+          |    "order" : 2,
+          |    "controls" : [ {
+          |      "controlName" : "recordCount",
+          |      "controlType" : "count",
+          |      "controlCol" : "*",
+          |      "controlValue" : "300"
+          |    } ]
+          |  } ]
+          |}""".stripMargin
+
+      implicit val conf: Config = getConfig
+
+      val infoFile = renderInfoFile(pramenVersion, timezoneId, 100, 200, Some(300), infoDate, sourceStart, rawStart, jobFinish, Some(publishStarted))
 
       compareText(infoFile, expectedInfoFile)
     }
@@ -96,7 +177,7 @@ class InfoFileGenerationSuite extends AnyWordSpec with SparkTestBase with TextCo
           implicit val conf: Config = getConfig.withoutPath(key)
 
           val ex = intercept[IllegalArgumentException] {
-            renderInfoFile(pramenVersion, timezoneId, 100, 200, infoDate, sourceStart, rawStart, rawFinish)
+            renderInfoFile(pramenVersion, timezoneId, 100, 200, None, infoDate, sourceStart, rawStart, jobFinish, None)
           }
 
           assert(ex.getMessage.contains(key))
@@ -112,7 +193,7 @@ class InfoFileGenerationSuite extends AnyWordSpec with SparkTestBase with TextCo
       val rawDf = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
       withTempDirectory("info_file_test") { tempDir =>
-        generateInfoFile(pramenVersion, timezoneId, 100, rawDf, new Path(tempDir), infoDate, sourceStart, rawStart)
+        generateInfoFile(pramenVersion, timezoneId, 100, rawDf.count, None, new Path(tempDir), infoDate, sourceStart, rawStart, None)
 
         assert(Files.exists(Paths.get(tempDir, "_INFO")))
       }

@@ -164,7 +164,7 @@ class EnceladusSink(sinkConfig: Config,
 
     if (count > 0 || enceladusConfig.saveEmpty) {
       writeToRawFolder(df, count, outputPartitionPath)
-      generateInfoFile(df, count, outputPartitionPath, infoDate, jobStart)
+      generateInfoFile(count, count, outputPartitionPath, infoDate, jobStart)
     } else {
       val outputPathStr = outputPartitionPath.toUri.toString
       log.info(s"Nothing to save to the Enceladus raw folder: $outputPathStr")
@@ -232,7 +232,7 @@ class EnceladusSink(sinkConfig: Config,
       .save(outputPathStr)
   }
 
-  private[extras] def generateInfoFile(df: DataFrame,
+  private[extras] def generateInfoFile(sourceCount: Long,
                                        recordCount: Long,
                                        outputPartitionPath: Path,
                                        infoDate: LocalDate,
@@ -241,12 +241,14 @@ class EnceladusSink(sinkConfig: Config,
     if (enceladusConfig.generateInfoFile) {
       InfoFileGeneration.generateInfoFile(enceladusConfig.pramenVersion,
         enceladusConfig.timezoneId,
+        sourceCount,
         recordCount,
-        df,
+        None,
         outputPartitionPath,
         infoDate,
         jobStart,
-        jobStart)(spark, sinkConfig)
+        jobStart,
+        None)(spark, sinkConfig)
     }
   }
 
