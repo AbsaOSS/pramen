@@ -130,8 +130,6 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
             )
           )
 
-          fsUtils.getFilesRecursive(publishPartitionPath, "*", includeHiddenFiles = true).foreach(println)
-
           assert(count == 3)
           assert(fsUtils.exists(publishPartitionPath))
           assert(fsUtils.getFilesRecursive(publishPartitionPath, "*.parquet").nonEmpty)
