@@ -127,7 +127,7 @@ import scala.util.{Failure, Success, Try}
   *
   */
 class StandardizationSink(sinkConfig: Config,
-                          publishConfig: StandardizationConfig) extends Sink {
+                          standardizationConfig: StandardizationConfig) extends Sink {
 
   import za.co.absa.pramen.extras.sink.StandardizationSink._
 
@@ -147,26 +147,34 @@ class StandardizationSink(sinkConfig: Config,
     implicit val queryExecutor: QueryExecutor = new QueryExecutorSpark(spark)
 
     val jobStart = Instant.now()
-    val rawBasePath = getBasePath(tableName, RAW_BASE_PATH_KEY, options)
-    val publishBasePath = getBasePath(tableName, RAW_BASE_PATH_KEY, options)
-    val infoVersion = getInfoVersion(options)
 
-    val outputRawPartitionPath = getPartitionPath(rawBasePath, infoDate, infoVersion)
-    val outputPublishPartitionPath = getPartitionPath(publishBasePath, infoDate, infoVersion)
+    val infoVersion = getInfoVersion(options)
 
     val sourceCount = df.count()
 
     val dfToWrite = repartitionIfNeeded(df, sourceCount)
 
-    writeToRawFolder(dfToWrite, sourceCount, outputRawPartitionPath)
+    val rawCount = if (options.contains(RAW_BASE_PATH_KEY)) {
+      val rawBasePath = getBasePath(tableName, RAW_BASE_PATH_KEY, options)
+      val outputRawPartitionPath = getPartitionPath(rawBasePath, standardizationConfig.rawPartitionPattern, infoDate, infoVersion)
+      writeToRawFolder(dfToWrite, sourceCount, outputRawPartitionPath)
 
-    val rawCount = spark.read.json(outputRawPartitionPath.toUri.toString).count
-    generateInfoFile(sourceCount, rawCount, None, outputRawPartitionPath, infoDate, jobStart, None)
+      val rawCount = spark.read.json(outputRawPartitionPath.toUri.toString).count
+      generateInfoFile(sourceCount, rawCount, None, outputRawPartitionPath, infoDate, jobStart, None)
+      rawCount
+    } else {
+      sourceCount
+    }
 
     val publishStart = Instant.now()
 
+    val publishBasePath = getBasePath(tableName, PUBLISH_BASE_PATH_KEY, options)
+    val outputPublishPartitionPath = getPartitionPath(publishBasePath, standardizationConfig.publishPartitionPattern, infoDate, infoVersion)
+
     writeToPublishFolder(dfToWrite, sourceCount, outputPublishPartitionPath)
+
     val publishCount = spark.read.parquet(outputPublishPartitionPath.toUri.toString).count
+
     generateInfoFile(sourceCount, rawCount, Option(publishCount), outputPublishPartitionPath, infoDate, jobStart, Some(publishStart))
 
     sourceCount
@@ -188,14 +196,15 @@ class StandardizationSink(sinkConfig: Config,
   }
 
   private[extras] def getPartitionPath(basePath: Path,
+                                       partitionPattern: String,
                                        infoDate: LocalDate,
                                        infoVersion: Int): Path = {
-    val partition = PartitionUtils.unpackCustomPartitionPattern(publishConfig.rawPartitionPattern, StandardizationConfig.INFO_DATE_COLUMN, infoDate, infoVersion)
+    val partition = PartitionUtils.unpackCustomPartitionPattern(partitionPattern, StandardizationConfig.INFO_DATE_COLUMN, infoDate, infoVersion)
     new Path(basePath, partition)
   }
 
   private[extras] def repartitionIfNeeded(df: DataFrame, recordCount: Long): DataFrame = {
-    publishConfig.recordsPerPartition match {
+    standardizationConfig.recordsPerPartition match {
       case Some(rpp) =>
         val n = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
         log.info(s"Repartitioning to $n partitions...")
@@ -241,9 +250,9 @@ class StandardizationSink(sinkConfig: Config,
                                        jobStart: Instant,
                                        publishStart: Option[Instant]
                                       )(implicit spark: SparkSession): Unit = {
-    if (publishConfig.generateInfoFile) {
-      InfoFileGeneration.generateInfoFile(publishConfig.pramenVersion,
-        publishConfig.timezoneId,
+    if (standardizationConfig.generateInfoFile) {
+      InfoFileGeneration.generateInfoFile(standardizationConfig.pramenVersion,
+        standardizationConfig.timezoneId,
         sourceCount,
         rawCount,
         publishCount,
@@ -255,19 +264,21 @@ class StandardizationSink(sinkConfig: Config,
     }
   }
 
+  private[extras] def getHiveRepairQuery(hiveTable: String): String = getHiveRepairQueryForFullTable(getHiveTableFullName(hiveTable))
+
   private[extras] def getHiveTableFullName(hiveTable: String): String = {
-    publishConfig.hiveDatabase match {
+    standardizationConfig.hiveDatabase match {
       case Some(db) => s"$db.$hiveTable"
       case None     => s"$hiveTable"
     }
   }
 
-  private[extras] def getHiveRepairQuery(hiveFullTableName: String): String = {
+  private[extras] def getHiveRepairQueryForFullTable(hiveFullTableName: String): String = {
     s"MSCK REPAIR TABLE $hiveFullTableName"
   }
 }
 
-object StandardizationSink extends ExternalChannelFactory[EnceladusSink] {
+object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
   val RAW_BASE_PATH_KEY = "raw.base.path"
   val PUBLISH_BASE_PATH_KEY = "publish.base.path"
   val INFO_VERSION_KEY = "info.version"
@@ -277,8 +288,8 @@ object StandardizationSink extends ExternalChannelFactory[EnceladusSink] {
 
   val INFO_VERSION_AUTO_VALUE = "auto"
 
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
-    val enceladusConfig = EnceladusConfig.fromConfig(conf)
-    new EnceladusSink(conf, enceladusConfig)
+  override def apply(conf: Config, parentPath: String, spark: SparkSession): StandardizationSink = {
+    val standardizationConfig = StandardizationConfig.fromConfig(conf)
+    new StandardizationSink(conf, standardizationConfig)
   }
 }
