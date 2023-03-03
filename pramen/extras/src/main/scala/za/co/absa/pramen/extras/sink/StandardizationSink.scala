@@ -53,6 +53,9 @@ import scala.util.{Failure, Success, Try}
   *    # (optional) A hive database to use for creating/repairing Hive tables
   *    hive.database = mydb
   *
+  *    # (optional) Set timezone for info file fields
+  *    timezone = "Africa/Johannesburg"
+  *
   *    # Info file options
   *    info.file {
   *      generate = true
