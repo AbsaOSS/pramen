@@ -219,12 +219,9 @@ class StandardizationSink(sinkConfig: Config,
 
   private[extras] def writeToRawFolder(df: DataFrame,
                                        recordCount: Long,
-                                       outputPartitionPath: Path)(implicit spark: SparkSession): Unit = {
+                                       outputPartitionPath: Path): Unit = {
     val outputPathStr = outputPartitionPath.toUri.toString
     log.info(s"Saving $recordCount records to the Enceladus raw folder: $outputPathStr")
-
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPathStr)
-    fsUtils.createDirectoryRecursiveButLast(outputPartitionPath)
 
     df.write
       .mode(SaveMode.Overwrite)
@@ -233,12 +230,9 @@ class StandardizationSink(sinkConfig: Config,
 
   private[extras] def writeToPublishFolder(df: DataFrame,
                                            recordCount: Long,
-                                           outputPartitionPath: Path)(implicit spark: SparkSession): Unit = {
+                                           outputPartitionPath: Path): Unit = {
     val outputPathStr = outputPartitionPath.toUri.toString
     log.info(s"Saving $recordCount records to the Enceladus publish folder: $outputPathStr")
-
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPathStr)
-    fsUtils.createDirectoryRecursiveButLast(outputPartitionPath)
 
     df.write
       .mode(SaveMode.Overwrite)
