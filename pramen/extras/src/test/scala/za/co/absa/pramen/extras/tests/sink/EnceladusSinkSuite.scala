@@ -245,7 +245,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
       }
 
       assert(ex.getCause.getMessage.contains("Main reached"))
-      assert(ex.getCause.getMessage.contains("--dataset-name m_dataset --dataset-version 22 --report-date 2022-02-18 --menas-auth-keytab menas.keytab --raw-format json"))
+      assert(ex.getCause.getMessage.contains("--dataset-name m_dataset --dataset-version 22 --report-date 2022-02-18 --report-version 2 --menas-auth-keytab menas.keytab --raw-format json"))
     }
   }
 }
