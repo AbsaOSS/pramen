@@ -63,5 +63,33 @@ class StandardizationConfigSuite extends AnyWordSpec with SparkTestBase {
       assert(!publishConfig.generateInfoFile)
       assert(publishConfig.hiveDatabase.contains("mydb"))
     }
+
+    "construct a config with Hive JDBC connection settings" in {
+      val conf = ConfigFactory.parseString(
+        s"""raw.partition.pattern = "Dummy1"
+           |publish.partition.pattern = "Dummy2"
+           |
+           |hive.jdbc {
+           |   driver = "org.postgresql.Driver"
+           |   url = "jdbc:postgresql://dummyhost:5432/dummy_db"
+           |   user = "dummy_user"
+           |   password = "dummy_password"
+           |}
+           |
+           |hive.database = "dummy_db"
+           |
+           |timezone = "UTC"
+           |""".stripMargin)
+
+      val publishConfig = StandardizationConfig.fromConfig(conf)
+
+      assert(publishConfig.timezoneId == ZoneId.of("UTC"))
+      assert(publishConfig.hiveDatabase.contains("dummy_db"))
+      assert(publishConfig.hiveJdbcConfig.nonEmpty)
+      assert(publishConfig.hiveJdbcConfig.exists(_.driver == "org.postgresql.Driver"))
+      assert(publishConfig.hiveJdbcConfig.exists(_.primaryUrl.contains("jdbc:postgresql://dummyhost:5432/dummy_db")))
+      assert(publishConfig.hiveJdbcConfig.exists(_.user == "dummy_user"))
+      assert(publishConfig.hiveJdbcConfig.exists(_.password == "dummy_password"))
+    }
   }
 }

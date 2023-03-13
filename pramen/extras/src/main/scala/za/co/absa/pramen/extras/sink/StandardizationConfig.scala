@@ -18,7 +18,8 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.buildinfo.BuildPropertiesRetriever
-import za.co.absa.pramen.extras.utils.ConfigUtils
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.ZoneId
 import scala.util.Try
@@ -30,6 +31,7 @@ case class StandardizationConfig(
                                   publishPartitionPattern: String,
                                   recordsPerPartition: Option[Int],
                                   generateInfoFile: Boolean,
+                                  hiveJdbcConfig: Option[JdbcConfig],
                                   hiveDatabase: Option[String]
                                 )
 
@@ -40,6 +42,7 @@ object StandardizationConfig {
   val GENERATE_INFO_FILE_KEY = "info.file.generate"
   val TIMEZONE_ID_KEY = "timezone"
 
+  val HIVE_JDBC_PREFIX = "hive"
   val HIVE_DATABASE_KEY = "hive.database"
 
   val INFO_DATE_COLUMN = "enceladus_info_date"
@@ -59,6 +62,10 @@ object StandardizationConfig {
       case None                        => ZoneId.systemDefault()
     }
 
+    val jdbcConfig = ConfigUtils.getOptionConfig(conf, HIVE_JDBC_PREFIX)
+
+    val hiveJdbcConfig = JdbcConfig.loadOption(jdbcConfig, HIVE_JDBC_PREFIX)
+
     StandardizationConfig(
       pramenVersion,
       timezoneId,
@@ -66,6 +73,7 @@ object StandardizationConfig {
       ConfigUtils.getOptionString(conf, PUBLISH_PARTITION_PATTERN_KEY).getOrElse(DEFAULT_PUBLISH_PARTITION_PATTERN),
       ConfigUtils.getOptionInt(conf, RECORDS_PER_PARTITION),
       ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true),
+      hiveJdbcConfig,
       ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY)
     )
   }
