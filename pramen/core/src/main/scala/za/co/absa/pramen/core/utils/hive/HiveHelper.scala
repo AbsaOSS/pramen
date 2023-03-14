@@ -17,21 +17,23 @@
 package za.co.absa.pramen.core.utils.hive
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.StructType
 
 trait HiveHelper {
   def createOrUpdateHiveTable(parquetPath: String,
                               partitionBy: Seq[String],
                               databaseName: String,
-                              tableName: String): Unit
+                              tableName: String)(implicit spark: SparkSession): Unit
 
   def repairHiveTable(databaseName: String,
                       tableName: String): Unit
 
+  def getSchema(parquetPath: String)(implicit spark: SparkSession): StructType
 }
 
 object HiveHelper {
   def apply(implicit spark: SparkSession): HiveHelper = {
-    val queryExecutor = new SparkQueryExecutor()
+    val queryExecutor = new QueryExecutorSpark()
     new HiveHelperImpl(queryExecutor)
   }
 }

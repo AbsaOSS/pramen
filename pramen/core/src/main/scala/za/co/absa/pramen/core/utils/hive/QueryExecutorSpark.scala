@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
-class SparkQueryExecutor(implicit spark: SparkSession)  extends QueryExecutor {
+class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def doesTableExist(dbName: String, tableName: String): Boolean = {
@@ -31,14 +31,9 @@ class SparkQueryExecutor(implicit spark: SparkSession)  extends QueryExecutor {
     }
   }
 
+  @throws[AnalysisException]
   override def execute(query: String): Unit = {
     log.info(s"Executing SQL: $query")
     spark.sql(query).take(100)
-  }
-
-  override def getSchema(parquetPath: String): StructType = {
-    val df = spark.read.parquet(parquetPath)
-
-    df.schema
   }
 }
