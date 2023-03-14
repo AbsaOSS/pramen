@@ -18,16 +18,16 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.core.utils.hive._
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
-import za.co.absa.pramen.extras.query.{QueryExecutor, QueryExecutorSpark}
-import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
+import za.co.absa.pramen.extras.utils.PartitionUtils
 
 import java.time.{Instant, LocalDate}
-import scala.util.control.NonFatal
-import scala.util.{Failure, Success, Try}
 
 /**
   * This sink allows sending data to the raw and publish folder of a data lake for further processing.
@@ -130,7 +130,8 @@ import scala.util.{Failure, Success, Try}
   *
   */
 class StandardizationSink(sinkConfig: Config,
-                          standardizationConfig: StandardizationConfig) extends Sink {
+                          standardizationConfig: StandardizationConfig,
+                          hiveHelper: HiveHelper) extends Sink {
 
   import za.co.absa.pramen.extras.sink.StandardizationSink._
 
@@ -147,8 +148,6 @@ class StandardizationSink(sinkConfig: Config,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])(implicit spark: SparkSession): Long = {
-    implicit val queryExecutor: QueryExecutor = new QueryExecutorSpark(spark)
-
     val jobStart = Instant.now()
 
     val infoVersion = getInfoVersion(options)
@@ -176,9 +175,31 @@ class StandardizationSink(sinkConfig: Config,
 
     writeToPublishFolder(dfToWrite, sourceCount, outputPublishPartitionPath)
 
-    val publishCount = spark.read.parquet(outputPublishPartitionPath.toUri.toString).count
+    val publishDf = spark.read.parquet(outputPublishPartitionPath.toUri.toString)
+    val publishCount = publishDf.count
 
     generateInfoFile(sourceCount, rawCount, Option(publishCount), outputPublishPartitionPath, infoDate, jobStart, Some(publishStart))
+
+    if (options.contains(HIVE_TABLE_KEY)) {
+      val hiveTable = options(HIVE_TABLE_KEY)
+      val fullTableName = hiveHelper.getFullTable(standardizationConfig.hiveDatabase, hiveTable)
+
+      // Generating schema based on the latest ingested partition
+      val fullSchema = publishDf.withColumn(ENCELADUS_INFO_DATE_COLUMN, lit(infoDate.toString).cast(DateType))
+        .withColumn(ENCELADUS_INFO_VERSION_COLUMN, lit(infoVersion))
+        .schema
+
+      val paritionBy = Seq(ENCELADUS_INFO_DATE_COLUMN, ENCELADUS_INFO_VERSION_COLUMN)
+
+      log.info(s"Updating Hive table $fullTableName...")
+      hiveHelper.createOrUpdateHiveTable(publishBasePath.toUri.toString,
+        fullSchema,
+        paritionBy,
+        standardizationConfig.hiveDatabase,
+        hiveTable)
+    } else {
+      log.info(s"Hive table is not configured for $tableName.")
+    }
 
     sourceCount
   }
@@ -276,6 +297,8 @@ class StandardizationSink(sinkConfig: Config,
 }
 
 object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val RAW_BASE_PATH_KEY = "raw.base.path"
   val PUBLISH_BASE_PATH_KEY = "publish.base.path"
   val INFO_VERSION_KEY = "info.version"
@@ -283,10 +306,22 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
   val DATASET_VERSION_KEY = "dataset.version"
   val HIVE_TABLE_KEY = "hive.table"
 
-  val INFO_VERSION_AUTO_VALUE = "auto"
+  val ENCELADUS_INFO_DATE_COLUMN = "enceladus_info_date"
+  val ENCELADUS_INFO_VERSION_COLUMN = "enceladus_info_version"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): StandardizationSink = {
     val standardizationConfig = StandardizationConfig.fromConfig(conf)
-    new StandardizationSink(conf, standardizationConfig)
+    val hiveConfig = HiveConfig.fromConfig(conf)
+    val queryExecutor = standardizationConfig.hiveJdbcConfig match {
+      case Some(hiveJdbcConfig) =>
+        log.info("Using JDBC to connect to Hive")
+        QueryExecutorJdbc.fromJdbcConfig(hiveJdbcConfig)
+      case None                 =>
+        log.info("Using Spark to connect to Hive")
+        QueryExecutorSpark(spark)
+    }
+    val hiveHelper = new HiveHelperImpl(queryExecutor, hiveConfig)
+
+    new StandardizationSink(conf, standardizationConfig, hiveHelper)
   }
 }

@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
@@ -26,7 +25,7 @@ class HiveHelperImpl(queryExecutor: QueryExecutor, hiveConfig: HiveConfig) exten
   override def createOrUpdateHiveTable(parquetPath: String,
                                        schema: StructType,
                                        partitionBy: Seq[String],
-                                       databaseName: String,
+                                       databaseName: Option[String],
                                        tableName: String): Unit = {
     val fullTableName = getFullTable(databaseName, tableName)
 
@@ -36,19 +35,11 @@ class HiveHelperImpl(queryExecutor: QueryExecutor, hiveConfig: HiveConfig) exten
       repairHiveTable(fullTableName)
     }
   }
-  override def repairHiveTable(databaseName: String,
+  override def repairHiveTable(databaseName: Option[String],
                                tableName: String): Unit = {
     val fullTableName = getFullTable(databaseName, tableName)
 
     repairHiveTable(fullTableName)
-  }
-
-  private def getFullTable(databaseName: String,
-                           tableName: String): String = {
-    if (databaseName.isEmpty)
-      tableName
-    else
-      s"$databaseName.$tableName"
   }
 
   private def dropHiveTable(fullTableName: String): Unit = {
@@ -101,7 +92,9 @@ class HiveHelperImpl(queryExecutor: QueryExecutor, hiveConfig: HiveConfig) exten
     } else {
       val partitionColsLower = partitionBy.map(_.toLowerCase())
       val cols = StructType(schema.filter(field => partitionColsLower.contains(field.name.toLowerCase())))
-      s"PARTITIONED BY (${cols.toDDL})"
+      // Hive required not having nullability flags for partition columns
+      val ddl = cols.toDDL.replace(" NOT NULL", "")
+      s"PARTITIONED BY ($ddl)"
     }
   }
 
