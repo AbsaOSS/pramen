@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core.utils.hive
 
 import org.apache.spark.sql.{AnalysisException, SparkSession}
-import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
 class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
@@ -36,4 +35,10 @@ class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
     log.info(s"Executing SQL: $query")
     spark.sql(query).take(100)
   }
+
+  override def close(): Unit = { }
+}
+
+object QueryExecutorSpark {
+  def apply(sparkSession: SparkSession): QueryExecutorSpark = new QueryExecutorSpark()(sparkSession)
 }

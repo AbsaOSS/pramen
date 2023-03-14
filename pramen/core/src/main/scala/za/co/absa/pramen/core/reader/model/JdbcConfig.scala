@@ -24,11 +24,11 @@ import scala.util.Try
 case class JdbcConfig(
                        driver: String,
                        primaryUrl: Option[String],
-                       fallbackUrls: Seq[String],
-                       database: Option[String],
+                       fallbackUrls: Seq[String] = Nil,
+                       database: Option[String] = None,
                        user: String,
                        password: String,
-                       extraOptions: Map[String, String]
+                       extraOptions: Map[String, String] = Map.empty[String, String]
                      )
 
 object JdbcConfig {

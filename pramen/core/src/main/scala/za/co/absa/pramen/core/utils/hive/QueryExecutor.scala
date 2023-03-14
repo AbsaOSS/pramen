@@ -16,9 +16,7 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-import org.apache.spark.sql.types.StructType
-
-trait QueryExecutor {
+trait QueryExecutor extends AutoCloseable {
   def doesTableExist(dbName: String, tableName: String): Boolean
 
   def execute(query: String): Unit

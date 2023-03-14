@@ -24,6 +24,7 @@ import scala.collection.mutable.ListBuffer
 
 class QueryExecutorMock(tableExists: Boolean)(implicit spark: SparkSession) extends QueryExecutor {
   val queries = new ListBuffer[String]
+  var closeCalled = 0
 
   override def doesTableExist(dbName: String, tableName: String): Boolean = tableExists
 
@@ -34,4 +35,6 @@ class QueryExecutorMock(tableExists: Boolean)(implicit spark: SparkSession) exte
   def getSchema(parquetPath: String): StructType = {
     spark.read.parquet(parquetPath).schema
   }
+
+  override def close(): Unit = closeCalled += 1
 }

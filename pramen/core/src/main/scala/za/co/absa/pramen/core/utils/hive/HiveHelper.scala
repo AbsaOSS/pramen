@@ -20,15 +20,24 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 
-trait HiveHelper {
+abstract class HiveHelper {
   def createOrUpdateHiveTable(parquetPath: String,
                               schema: StructType,
                               partitionBy: Seq[String],
-                              databaseName: String,
+                              databaseName: Option[String],
                               tableName: String): Unit
 
-  def repairHiveTable(databaseName: String,
+  def repairHiveTable(databaseName: Option[String],
                       tableName: String): Unit
+
+  def getFullTable(databaseName: Option[String],
+                   tableName: String): String = {
+
+    databaseName match {
+      case Some(dbName) => s"$dbName.$tableName"
+      case None         => tableName
+    }
+  }
 }
 
 object HiveHelper {

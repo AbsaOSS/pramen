@@ -53,10 +53,13 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
         val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, schema, Nil, "db", "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, schema, Nil, Some("db"), "tbl")
+
+        qe.close()
 
         val actual = qe.queries.mkString("\n").replaceAll("`", "")
 
+        assert(qe.closeCalled == 1)
         compareText(actual, expected)
       }
     }
@@ -82,7 +85,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
         val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, schema, "a" :: "b" :: Nil, "db", "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 
         val actual = qe.queries.mkString("\n").replaceAll("`", "")
 
@@ -96,7 +99,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
       val qe = new QueryExecutorMock(tableExists = true)
       val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
 
-      hiveHelper.repairHiveTable("db", "tbl")
+      hiveHelper.repairHiveTable(Some("db"), "tbl")
 
       val actual = qe.queries.mkString("\n")
 
@@ -109,7 +112,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
       val qe = new QueryExecutorMock(tableExists = true)
       val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
 
-      hiveHelper.repairHiveTable("", "tbl")
+      hiveHelper.repairHiveTable(None, "tbl")
 
       val actual = qe.queries.mkString("\n")
 

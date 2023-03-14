@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.tests.utils.hive
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.hive.QueryExecutorJdbc
 
@@ -37,12 +38,27 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
   }
 
   "QueryExecutorJdbc" should {
+    "be constructed from JdbcConfig" in {
+      val jdbcConfig = JdbcConfig(
+        driver = driver,
+        primaryUrl = Option(url),
+        user = user,
+        password = password
+      )
+
+      val qe = QueryExecutorJdbc.fromJdbcConfig(jdbcConfig)
+
+      qe.execute("SELECT * FROM company")
+      qe.close()
+    }
+
     "execute JDBC queries" in {
       val connection = getConnection
 
       val qe = new QueryExecutorJdbc(connection)
 
       qe.execute("SELECT * FROM company")
+      qe.close()
     }
 
     "execute CREATE TABLE queries" in {
@@ -55,6 +71,8 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       val exist = qe.doesTableExist(database, "my_table")
 
       assert(exist)
+
+      qe.close()
     }
 
     "throw an exception on errors" in {
@@ -73,6 +91,8 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       val exist = qe.doesTableExist(database, "company")
 
       assert(exist)
+
+      qe.close()
     }
 
     "return false if the table is not found" in {
@@ -81,6 +101,8 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       val exist = qe.doesTableExist(database, "does_not_exist")
 
       assert(!exist)
+
+      qe.close()
     }
   }
 }

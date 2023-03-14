@@ -17,6 +17,8 @@
 package za.co.absa.pramen.core.utils.hive
 
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.sql.{Connection, ResultSet, SQLSyntaxErrorException}
 import scala.util.Try
@@ -37,8 +39,24 @@ class QueryExecutorJdbc(connection: Connection) extends QueryExecutor {
     log.info(s"Executing SQL: $query")
     val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
-    val resultSet = statement.executeQuery(query)
+    statement.executeUpdate(query)
 
-    resultSet.close()
+    statement.close()
+  }
+
+  override def close(): Unit = connection.close()
+}
+
+object QueryExecutorJdbc {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
+  def fromJdbcConfig(jdbcConfig: JdbcConfig): QueryExecutorJdbc = {
+    val jdbcUrlSelector = new JdbcUrlSelector(jdbcConfig)
+
+    val (connection, url) = jdbcUrlSelector.getWorkingConnection(jdbcUrlSelector.getNumberOfUrls + 1)
+
+    log.info(s"Hive: Successfully connected to: $url")
+
+    new QueryExecutorJdbc(connection)
   }
 }
