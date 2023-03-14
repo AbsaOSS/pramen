@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.tests.utils.hive
 
+import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
 import org.scalatest.wordspec.AnyWordSpec
@@ -23,11 +24,13 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.FsUtils
-import za.co.absa.pramen.core.utils.hive.HiveHelperImpl
+import za.co.absa.pramen.core.utils.hive.{HiveConfig, HiveHelperImpl}
 
 class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
 
   import spark.implicits._
+
+  private val defaultHiveConfig = HiveConfig.fromConfig(ConfigFactory.empty())
 
   "HiveHelperImpl" should {
     "execute expected queries for non-partitioned table" in {
@@ -37,8 +40,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
         val expected =
           s"""DROP TABLE IF EXISTS db.tbl
              |CREATE EXTERNAL TABLE IF NOT EXISTS
-             |db.tbl (
-             |a STRING,b INT,c INT)
+             |db.tbl ( a STRING,b INT,c INT )
              |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
              |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
              |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
@@ -48,9 +50,10 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
 
         val qe = new QueryExecutorMock(tableExists = false)
-        val hiveHelper = new HiveHelperImpl(qe)
+        val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
+        val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, Nil, "db", "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, schema, Nil, "db", "tbl")
 
         val actual = qe.queries.mkString("\n").replaceAll("`", "")
 
@@ -65,8 +68,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
         val expected =
           s"""DROP TABLE IF EXISTS db.tbl
              |CREATE EXTERNAL TABLE IF NOT EXISTS
-             |db.tbl (
-             |c INT)
+             |db.tbl ( c INT )
              |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
              |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
              |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
@@ -77,9 +79,10 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
 
         val qe = new QueryExecutorMock(tableExists = false)
-        val hiveHelper = new HiveHelperImpl(qe)
+        val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
+        val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, "a" :: "b" :: Nil, "db", "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, schema, "a" :: "b" :: Nil, "db", "tbl")
 
         val actual = qe.queries.mkString("\n").replaceAll("`", "")
 
@@ -91,7 +94,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
       val expected = "MSCK REPAIR TABLE db.tbl"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperImpl(qe)
+      val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
 
       hiveHelper.repairHiveTable("db", "tbl")
 
@@ -104,7 +107,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
       val expected = "MSCK REPAIR TABLE tbl"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperImpl(qe)
+      val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
 
       hiveHelper.repairHiveTable("", "tbl")
 

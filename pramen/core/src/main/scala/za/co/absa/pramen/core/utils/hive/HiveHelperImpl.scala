@@ -20,34 +20,27 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
-class HiveHelperImpl(queryExecutor: QueryExecutor) extends HiveHelper {
+class HiveHelperImpl(queryExecutor: QueryExecutor, hiveConfig: HiveConfig) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def createOrUpdateHiveTable(parquetPath: String,
+                                       schema: StructType,
                                        partitionBy: Seq[String],
                                        databaseName: String,
-                                       tableName: String)
-                                      (implicit spark: SparkSession): Unit = {
+                                       tableName: String): Unit = {
     val fullTableName = getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
-    createHiveTable(fullTableName, parquetPath, partitionBy)
+    createHiveTable(fullTableName, parquetPath, schema, partitionBy)
     if (partitionBy.nonEmpty) {
       repairHiveTable(fullTableName)
     }
   }
-
   override def repairHiveTable(databaseName: String,
                                tableName: String): Unit = {
     val fullTableName = getFullTable(databaseName, tableName)
 
     repairHiveTable(fullTableName)
-  }
-
-  override def getSchema(parquetPath: String)(implicit spark: SparkSession): StructType = {
-    val df = spark.read.parquet(parquetPath)
-
-    df.schema
   }
 
   private def getFullTable(databaseName: String,
@@ -59,35 +52,41 @@ class HiveHelperImpl(queryExecutor: QueryExecutor) extends HiveHelper {
   }
 
   private def dropHiveTable(fullTableName: String): Unit = {
-    val sqlHiveDrop = s"DROP TABLE IF EXISTS $fullTableName"
+    val sqlHiveDrop = applyTemplate(
+      hiveConfig.dropTableTemplate,
+      fullTableName
+    )
+
     queryExecutor.execute(sqlHiveDrop)
   }
 
   private def createHiveTable(fullTableName: String,
                               parquetPath: String,
+                              schema: StructType,
                               partitionBy: Seq[String]
-                             )(implicit spark: SparkSession): Unit = {
+                             ): Unit = {
 
     log.info(s"Creating Hive table: $fullTableName...")
-    val schema = getSchema(parquetPath)
 
-    val sqlHiveCreate =
-      s"""CREATE EXTERNAL TABLE IF NOT EXISTS
-         |$fullTableName (
-         |${getTableDDL(schema, partitionBy)})
-         |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
-         |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
-         |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
-         |${getPartitionDDL(schema, partitionBy)}
-         |LOCATION '$parquetPath'""".stripMargin
+    val sqlHiveCreate = applyTemplate(
+      hiveConfig.createTableTemplate,
+      fullTableName,
+      parquetPath,
+      getTableDDL(schema, partitionBy),
+      getPartitionDDL(schema, partitionBy)
+    )
 
     queryExecutor.execute(sqlHiveCreate)
   }
 
 
   private def repairHiveTable(fullTableName: String): Unit = {
-    val sqlHiveRefresh = s"MSCK REPAIR TABLE $fullTableName"
-    queryExecutor.execute(sqlHiveRefresh)
+    val sqlHiveRepair = applyTemplate(
+      hiveConfig.repairTableTemplate,
+      fullTableName
+    )
+
+    queryExecutor.execute(sqlHiveRepair)
   }
 
   private def getTableDDL(schema: StructType, partitionBy: Seq[String]): String = {
@@ -104,5 +103,16 @@ class HiveHelperImpl(queryExecutor: QueryExecutor) extends HiveHelper {
       val cols = StructType(schema.filter(field => partitionColsLower.contains(field.name.toLowerCase())))
       s"PARTITIONED BY (${cols.toDDL})"
     }
+  }
+
+  private def applyTemplate(template: String,
+                            fullTableName: String,
+                            path: String = "",
+                            schemaDDL: String = "",
+                            partitionDDL: String = ""): String = {
+    template.replace("@fullTableName", fullTableName)
+      .replace("@path", path)
+      .replace("@schema", schemaDDL)
+      .replace("@partitionedBy", partitionDDL)
   }
 }
