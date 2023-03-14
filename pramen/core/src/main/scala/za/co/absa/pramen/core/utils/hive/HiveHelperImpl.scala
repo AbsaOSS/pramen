@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.utils.hive
 
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
@@ -25,7 +26,8 @@ class HiveHelperImpl(queryExecutor: QueryExecutor) extends HiveHelper {
   override def createOrUpdateHiveTable(parquetPath: String,
                                        partitionBy: Seq[String],
                                        databaseName: String,
-                                       tableName: String): Unit = {
+                                       tableName: String)
+                                      (implicit spark: SparkSession): Unit = {
     val fullTableName = getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
@@ -40,6 +42,12 @@ class HiveHelperImpl(queryExecutor: QueryExecutor) extends HiveHelper {
     val fullTableName = getFullTable(databaseName, tableName)
 
     repairHiveTable(fullTableName)
+  }
+
+  override def getSchema(parquetPath: String)(implicit spark: SparkSession): StructType = {
+    val df = spark.read.parquet(parquetPath)
+
+    df.schema
   }
 
   private def getFullTable(databaseName: String,
@@ -58,10 +66,10 @@ class HiveHelperImpl(queryExecutor: QueryExecutor) extends HiveHelper {
   private def createHiveTable(fullTableName: String,
                               parquetPath: String,
                               partitionBy: Seq[String]
-                             ): Unit = {
+                             )(implicit spark: SparkSession): Unit = {
 
     log.info(s"Creating Hive table: $fullTableName...")
-    val schema = queryExecutor.getSchema(parquetPath)
+    val schema = getSchema(parquetPath)
 
     val sqlHiveCreate =
       s"""CREATE EXTERNAL TABLE IF NOT EXISTS

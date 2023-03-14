@@ -19,25 +19,25 @@ package za.co.absa.pramen.core.tests.utils.hive
 import org.apache.spark.sql.AnalysisException
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.utils.hive.SparkQueryExecutor
+import za.co.absa.pramen.core.utils.hive.QueryExecutorSpark
 
-class SparkQueryExecutorSuite extends AnyWordSpec with SparkTestBase {
+class QueryExecutorSparkSuite extends AnyWordSpec with SparkTestBase {
 
   import spark.implicits._
 
-  "SparkQueryExecutor" should {
+  "QueryExecutorSpark" should {
     "execute Spark queries" in {
       val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
       df.createOrReplaceTempView("temp")
 
-      val qe = new SparkQueryExecutor()
+      val qe = new QueryExecutorSpark()
 
       qe.execute("SELECT * FROM temp")
     }
 
     "throw an exception on errors" in {
-      val qe = new SparkQueryExecutor()
+      val qe = new QueryExecutorSpark()
 
       val ex = intercept[AnalysisException] {
         qe.execute("SELECT dummy from dummy")
@@ -47,7 +47,7 @@ class SparkQueryExecutorSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "throw an exception if Hive is not initialized" in {
-      val qe = new SparkQueryExecutor()
+      val qe = new QueryExecutorSpark()
 
       val ex = intercept[IllegalArgumentException] {
         qe.doesTableExist("dummyDb", "dummyTable")
@@ -57,7 +57,7 @@ class SparkQueryExecutorSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "return false if the table is not found" in {
-      val qe = new SparkQueryExecutor()
+      val qe = new QueryExecutorSpark()
 
       val exist = qe.doesTableExist("default", "dummyTable")
 

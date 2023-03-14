@@ -22,6 +22,4 @@ trait QueryExecutor {
   def doesTableExist(dbName: String, tableName: String): Boolean
 
   def execute(query: String): Unit
-
-  def getSchema(parquetPath: String): StructType
 }
