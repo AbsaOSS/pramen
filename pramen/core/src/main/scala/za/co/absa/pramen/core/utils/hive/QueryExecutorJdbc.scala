@@ -39,7 +39,7 @@ class QueryExecutorJdbc(connection: Connection) extends QueryExecutor {
     log.info(s"Executing SQL: $query")
     val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
-    statement.executeUpdate(query)
+    statement.execute(query)
 
     statement.close()
   }
