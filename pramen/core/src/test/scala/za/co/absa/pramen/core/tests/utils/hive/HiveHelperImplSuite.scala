@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.tests.utils.hive
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -41,11 +42,11 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
           s"""DROP TABLE IF EXISTS db.tbl
              |CREATE EXTERNAL TABLE IF NOT EXISTS
              |db.tbl ( a STRING,b INT,c INT )
+             |
              |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
              |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
              |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
-             |
-             |LOCATION '$path'
+             |LOCATION '$path';
              |""".stripMargin
 
 
@@ -72,18 +73,18 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
           s"""DROP TABLE IF EXISTS db.tbl
              |CREATE EXTERNAL TABLE IF NOT EXISTS
              |db.tbl ( c INT )
+             |PARTITIONED BY (a STRING,b INT)
              |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
              |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
              |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
-             |PARTITIONED BY (a STRING,b INT)
-             |LOCATION '$path'
+             |LOCATION '$path';
              |MSCK REPAIR TABLE db.tbl
              |""".stripMargin
 
 
         val qe = new QueryExecutorMock(tableExists = false)
         val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
-        val schema = spark.read.parquet(path).schema
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
         hiveHelper.createOrUpdateHiveTable(path, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 

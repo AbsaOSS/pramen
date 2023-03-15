@@ -20,14 +20,13 @@ import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.utils.hive.{HiveConfig, HiveHelperImpl}
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.extras.mocks.QueryExecutorSpy
-import za.co.absa.pramen.extras.sink.{EnceladusSink, StandardizationSink}
-import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY, HIVE_TABLE_KEY}
+import za.co.absa.pramen.extras.mocks.QueryExecutorMock
+import za.co.absa.pramen.extras.sink.{StandardizationConfig, StandardizationSink}
 import za.co.absa.pramen.extras.utils.FsUtils
 
-import java.lang
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 
@@ -171,6 +170,34 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
         val sink = StandardizationSink.apply(conf, "", spark)
 
         assert(sink.getHiveRepairQuery("db1.table1") == "MSCK REPAIR TABLE db1.table1")
+      }
+    }
+
+    "hive table queries should be executed" in {
+      val stdConfig = StandardizationConfig.fromConfig(conf)
+      val hiveConfig = HiveConfig.fromConfig(conf)
+      val qe = new QueryExecutorMock(tableExists = true)
+      val hiveHelper = new HiveHelperImpl(qe, hiveConfig)
+      val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
+
+      withTempDirectory("std_sink") { tempDir =>
+        val rawPath = new Path(tempDir, "raw")
+        val publishPath = new Path(tempDir, "publish")
+
+        val options = Map(
+          "raw.base.path" -> rawPath.toUri.toString,
+          "publish.base.path" -> publishPath.toUri.toString,
+          "info.version" -> "1",
+          "hive.table" -> "my_table"
+        )
+
+        val count = sink.send(exampleDf, "my_table", null, infoDate, options)
+
+        assert(count == 3)
+        assert(qe.queries.length == 3)
+
+        assert(qe.queries.head == "DROP TABLE IF EXISTS my_table")
+        assert(qe.queries(2) == "MSCK REPAIR TABLE my_table")
       }
     }
   }

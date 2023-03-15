@@ -48,7 +48,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
       val qe = QueryExecutorJdbc.fromJdbcConfig(jdbcConfig)
 
-      qe.execute("SELECT * FROM company")
+      qe.execute("UPDATE company SET id = 200 WHERE id = 100")
       qe.close()
     }
 
