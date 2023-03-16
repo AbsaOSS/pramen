@@ -17,16 +17,30 @@
 package za.co.absa.pramen.runner
 
 import org.apache.hadoop.conf.Configuration
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.base.{SparkTestBase, TempDirFixture}
 
 import java.nio.file.{Files, Paths}
 import scala.util.control.NonFatal
 
-class RunnerCommonsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
+class RunnerCommonsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with BeforeAndAfterAll {
+  private var tempDir: String = _
+  private val configInTheCurrentDirectory = Paths.get("test_current.conf")
+
+  override def afterAll(): Unit = {
+    deleteDir(tempDir)
+
+    if (Files.exists(configInTheCurrentDirectory)) {
+      Files.delete(configInTheCurrentDirectory)
+    }
+
+    super.afterAll()
+  }
+
   "copyFilesToLocal" should {
     "copy files from Hadoop locally" in {
-      withTempDirectory("copy_to_local") {tempDir =>
+      withTempDirectory("copy_to_local") { tempDir =>
         createTextFile(tempDir, "1.dat", "123")
         createTextFile(tempDir, "2.dat", "123")
 
@@ -45,6 +59,55 @@ class RunnerCommonsSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
 
         assert(exists1)
         assert(exists2)
+      }
+    }
+  }
+
+  "getExistingWorkflowPath()" when {
+    tempDir = createTempDir("workflow_test")
+    val innedDir = Paths.get(tempDir, "inner")
+
+    val absolute = Paths.get(innedDir.toString, "absolute.conf").toAbsolutePath
+
+    if (Files.exists(configInTheCurrentDirectory)) {
+      Files.delete(configInTheCurrentDirectory)
+    }
+
+    Files.createDirectory(innedDir)
+    Files.createFile(configInTheCurrentDirectory)
+    Files.createFile(absolute)
+
+    "absolute path provided" should {
+      "return the path if it is available" in {
+        val fileName = RunnerCommons.getExistingWorkflowPath(absolute.toString)
+
+        assert(fileName == absolute.toString)
+      }
+
+      "return the file name if the file is available at the current dir" in {
+        val fileName = RunnerCommons.getExistingWorkflowPath(Paths.get("dummy", configInTheCurrentDirectory.toString).toString)
+
+        assert(fileName == "test_current.conf")
+      }
+
+      "throw an exception if the file does not exist" in {
+        assertThrows[IllegalArgumentException] {
+          RunnerCommons.getExistingWorkflowPath(Paths.get("dummy", "dummy.conf").toString)
+        }
+      }
+    }
+
+    "just file name provided provided" should {
+      "return the file name if it is available" in {
+        val fileName = RunnerCommons.getExistingWorkflowPath(Paths.get("dummy", configInTheCurrentDirectory.toString).toString)
+
+        assert(fileName == "test_current.conf")
+      }
+
+      "throw an exception if the file does not exist" in {
+        assertThrows[IllegalArgumentException] {
+          RunnerCommons.getExistingWorkflowPath(Paths.get("dummy.conf").toString)
+        }
       }
     }
   }

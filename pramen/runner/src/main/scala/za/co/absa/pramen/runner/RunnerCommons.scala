@@ -27,6 +27,7 @@ import za.co.absa.pramen.runner.cmd.CmdLineConfig
 import za.co.absa.pramen.runner.config.Constants
 
 import java.io.File
+import java.nio.file.{FileSystems, Files, Paths}
 
 object RunnerCommons {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -64,8 +65,10 @@ object RunnerCommons {
     val conf = configPath match {
       case Some(path) =>
         log.info(s"Loading $path...\n")
+        val effectivePath = getExistingWorkflowPath(path)
+
         ConfigFactory
-          .parseFile(new File(path))
+          .parseFile(new File(effectivePath))
           .withFallback(originalConfig)
           .resolve()
       case None =>
@@ -75,6 +78,25 @@ object RunnerCommons {
     }
 
     CmdLineConfig.applyCmdLineToConfig(conf, cmd)
+  }
+
+  private[runner] def getExistingWorkflowPath(pathStr: String): String = {
+    val path = Paths.get(pathStr)
+
+    if (Files.exists(path)) {
+      return pathStr
+    }
+
+    val slash = FileSystems.getDefault.getSeparator
+    if (pathStr.contains(slash)) {
+      val fileInCurrentDir = path.getFileName
+      if (Files.exists(fileInCurrentDir)) {
+        log.warn(s"The workflow file $pathStr does not exist. Loading $fileInCurrentDir\n")
+        return fileInCurrentDir.toString
+      }
+    }
+
+    throw new IllegalArgumentException(s"The workflow configuration '$pathStr' does not exist at the driver node.")
   }
 
   def copyFilesToLocal(files: Seq[String], hadoopConfig: Configuration): Unit = {
