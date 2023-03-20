@@ -19,12 +19,16 @@ package za.co.absa.pramen.core.utils.hive
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.hive.QueryExecutorJdbc.DEFAULT_NUMBER_OF_RETRIES
 
 import java.sql.{Connection, ResultSet, SQLSyntaxErrorException}
 import scala.util.Try
+import scala.util.control.NonFatal
 
-class QueryExecutorJdbc(connection: Connection) extends QueryExecutor {
+class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor {
   private val log = LoggerFactory.getLogger(this.getClass)
+  private var connection: Connection = _
+  private val retries = Math.max(jdbcUrlSelector.getNumberOfUrls + 1, DEFAULT_NUMBER_OF_RETRIES)
 
   override def doesTableExist(dbName: String, tableName: String): Boolean = {
     val query = s"SELECT 1 FROM $tableName WHERE 0 = 1"
@@ -37,26 +41,46 @@ class QueryExecutorJdbc(connection: Connection) extends QueryExecutor {
   @throws[SQLSyntaxErrorException]
   override def execute(query: String): Unit = {
     log.info(s"Executing SQL: $query")
-    val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
-    statement.execute(query)
+    executeActionOnConnection { conn =>
+      val statement = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
-    statement.close()
+      try {
+        statement.execute(query)
+      } finally {
+        statement.close()
+      }
+    }
   }
 
-  override def close(): Unit = connection.close()
+  override def close(): Unit = if (connection != null) connection.close()
+
+  private[core] def executeActionOnConnection(action: Connection => Unit): Unit = {
+    try {
+      action(getConnection(forceReconnect = false))
+    } catch {
+      case NonFatal(ex) =>
+        log.warn(s"Got an error on existing connection. Retrying...", ex)
+        action(getConnection(forceReconnect = true))
+    }
+  }
+
+  def getConnection(forceReconnect: Boolean): Connection = {
+    if (connection == null || forceReconnect) {
+      val (newConnection, url) = jdbcUrlSelector.getWorkingConnection(retries)
+      log.info(s"Selected query executor connection: $url")
+      connection = newConnection
+    }
+    connection
+  }
 }
 
 object QueryExecutorJdbc {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val DEFAULT_NUMBER_OF_RETRIES = 3
 
   def fromJdbcConfig(jdbcConfig: JdbcConfig): QueryExecutorJdbc = {
-    val jdbcUrlSelector = new JdbcUrlSelector(jdbcConfig)
+    val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
-    val (connection, url) = jdbcUrlSelector.getWorkingConnection(jdbcUrlSelector.getNumberOfUrls + 1)
-
-    log.info(s"Hive: Successfully connected to: $url")
-
-    new QueryExecutorJdbc(connection)
+    new QueryExecutorJdbc(jdbcUrlSelector)
   }
 }

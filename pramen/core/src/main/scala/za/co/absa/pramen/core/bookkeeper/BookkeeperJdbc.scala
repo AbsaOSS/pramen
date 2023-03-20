@@ -202,7 +202,7 @@ class BookkeeperJdbc(db: Database) extends Bookkeeper {
 object BookkeeperJdbc {
 
   def fromJdbcConfig(jdbcConfig: JdbcConfig): BookkeeperJdbc = {
-    val url = new JdbcUrlSelector(jdbcConfig).getUrl
+    val url = JdbcUrlSelector(jdbcConfig).getUrl
     val db = Database.forURL(url = url, user = jdbcConfig.user, password = jdbcConfig.password, driver = jdbcConfig.driver)
     new BookkeeperJdbc(db)
   }

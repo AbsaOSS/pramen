@@ -45,7 +45,7 @@ class TableReaderJdbc(tableName: String,
 
   private val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
 
-  private val jdbcUrlSelector = new JdbcUrlSelector(jdbcReaderConfig.jdbcConfig)
+  private val jdbcUrlSelector = JdbcUrlSelector(jdbcReaderConfig.jdbcConfig)
 
   private val numberOfRetries = jdbcReaderConfig.connectionRetries.getOrElse(jdbcUrlSelector.getNumberOfUrls - 1)
 
