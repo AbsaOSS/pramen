@@ -16,16 +16,25 @@
 
 package za.co.absa.pramen.core.tests.utils.hive
 
+import org.mockito.ArgumentMatchers.anyInt
+import org.mockito.Mockito.{mock, when => whenMock}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.hive.QueryExecutorJdbc
 
 import java.sql.SQLSyntaxErrorException
 
-class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with RelationalDbFixture  {
+class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with RelationalDbFixture {
+  private val jdbcConfig = JdbcConfig(
+    driver = driver,
+    primaryUrl = Option(url),
+    user = user,
+    password = password
+  )
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -39,13 +48,6 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
   "QueryExecutorJdbc" should {
     "be constructed from JdbcConfig" in {
-      val jdbcConfig = JdbcConfig(
-        driver = driver,
-        primaryUrl = Option(url),
-        user = user,
-        password = password
-      )
-
       val qe = QueryExecutorJdbc.fromJdbcConfig(jdbcConfig)
 
       qe.execute("UPDATE company SET id = 200 WHERE id = 100")
@@ -53,18 +55,14 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "execute JDBC queries" in {
-      val connection = getConnection
-
-      val qe = new QueryExecutorJdbc(connection)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
 
       qe.execute("SELECT * FROM company")
       qe.close()
     }
 
     "execute CREATE TABLE queries" in {
-      val connection = getConnection
-
-      val qe = new QueryExecutorJdbc(connection)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
 
       qe.execute("CREATE TABLE my_table (id INT)")
 
@@ -76,7 +74,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "throw an exception on errors" in {
-      val qe = new QueryExecutorJdbc(getConnection)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
 
       val ex = intercept[SQLSyntaxErrorException] {
         qe.execute("SELECT * FROM does_not_exist")
@@ -86,7 +84,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return true if the table is found" in {
-      val qe = new QueryExecutorJdbc(getConnection)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
 
       val exist = qe.doesTableExist(database, "company")
 
@@ -96,13 +94,72 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return false if the table is not found" in {
-      val qe = new QueryExecutorJdbc(getConnection)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
 
       val exist = qe.doesTableExist(database, "does_not_exist")
 
       assert(!exist)
 
       qe.close()
+    }
+
+    "handle retries" in {
+      val baseSelector = JdbcUrlSelector(jdbcConfig)
+      val (conn, _) = baseSelector.getWorkingConnection(1)
+      val sel = mock(classOf[JdbcUrlSelector])
+
+      whenMock(sel.getWorkingConnection(anyInt())).thenReturn((conn, "dummyurl"))
+
+      val qe = new QueryExecutorJdbc(sel)
+      qe.execute("SELECT * FROM company")
+
+      var execution = 0
+      var actionExecuted = false
+      qe.executeActionOnConnection { conn =>
+        execution += 1
+        if (execution == 1) {
+          throw new RuntimeException("fail the first time")
+        }
+        actionExecuted = true
+        assert(conn != null)
+      }
+
+      qe.close()
+
+      assert(execution == 2)
+      assert(actionExecuted)
+    }
+
+    "fail if retry fails" in {
+      val baseSelector = JdbcUrlSelector(jdbcConfig)
+      val (conn, _) = baseSelector.getWorkingConnection(1)
+      val sel = mock(classOf[JdbcUrlSelector])
+
+      whenMock(sel.getWorkingConnection(anyInt()))
+        .thenReturn((conn, "dummyurl"))
+        .thenThrow(new RuntimeException("fail the second time"))
+
+      val qe = new QueryExecutorJdbc(sel)
+
+      var execution = 0
+      var actionExecuted = false
+
+      val ex = intercept[RuntimeException] {
+        qe.executeActionOnConnection { conn =>
+          execution += 1
+          if (execution == 1) {
+            throw new RuntimeException("fail the first time")
+          }
+          actionExecuted = true
+          assert(conn != null)
+        }
+      }
+
+      qe.close()
+
+      assert(ex.getMessage.contains("fail the second time"))
+      assert(execution == 1)
+      assert(!actionExecuted)
     }
   }
 }

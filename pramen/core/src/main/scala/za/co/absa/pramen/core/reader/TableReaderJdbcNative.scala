@@ -33,7 +33,7 @@ class TableReaderJdbcNative(queryExpression: String,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val jdbcUrlSelector = new JdbcUrlSelector(jdbcConfig)
+  private val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
   private val url = jdbcUrlSelector.getWorkingUrl(numberOfRetries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 

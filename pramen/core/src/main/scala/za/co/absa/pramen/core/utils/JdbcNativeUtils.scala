@@ -24,7 +24,6 @@ import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 
 import java.sql.{Connection, DriverManager, ResultSet}
 import java.util.Properties
-import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -49,7 +48,7 @@ object JdbcNativeUtils {
 
   /** Returns a JDBC URL and connection by a config. */
   def getConnection(jdbcConfig: JdbcConfig, retries: Option[Int] = None): (String, Connection) = {
-    val urlSelector = new JdbcUrlSelector(jdbcConfig)
+    val urlSelector = JdbcUrlSelector(jdbcConfig)
 
     def getConnectionWithRetries(jdbcConfig: JdbcConfig, retriesLeft: Int): (String, Connection) = {
       val currentUrl = urlSelector.getUrl

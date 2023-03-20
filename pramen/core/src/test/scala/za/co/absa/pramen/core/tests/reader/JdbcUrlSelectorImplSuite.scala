@@ -17,10 +17,10 @@
 package za.co.absa.pramen.core.tests.reader
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.reader.JdbcUrlSelector
+import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-class JdbcUrlSelectorSuite extends AnyWordSpec {
+class JdbcUrlSelectorImplSuite extends AnyWordSpec {
   "constructor" should {
     "throw an exception if no URLs defined" in {
       val ex = intercept[RuntimeException] {
@@ -142,8 +142,8 @@ class JdbcUrlSelectorSuite extends AnyWordSpec {
     }
   }
 
-  private def getJdbcUrlSelector(primaryUrl: Option[String], fallbackUrls: Seq[String]): JdbcUrlSelector = {
+  private def getJdbcUrlSelector(primaryUrl: Option[String], fallbackUrls: Seq[String]): JdbcUrlSelectorImpl = {
     val conf = JdbcConfig("testDriver", primaryUrl, fallbackUrls, None, "testUser", "testPassword", Map.empty[String, String])
-    new JdbcUrlSelector(conf)
+    new JdbcUrlSelectorImpl(conf)
   }
 }
