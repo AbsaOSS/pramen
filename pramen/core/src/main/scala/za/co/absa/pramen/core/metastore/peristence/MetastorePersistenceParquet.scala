@@ -27,6 +27,8 @@ import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 import java.sql.Date
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import scala.util.Try
+import scala.util.control.NonFatal
 
 class MetastorePersistenceParquet(path: String,
                                   infoDateColumn: String,
@@ -107,18 +109,38 @@ class MetastorePersistenceParquet(path: String,
 
     val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
 
-    dfRepartitioned
-      .write
-      .mode(SaveMode.Overwrite)
-      .format("parquet")
-      .options(writeOptions)
-      .save(outputDirStr)
+    writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils)
 
     val stats = getStats(infoDate)
 
     log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
 
     stats
+  }
+
+  private [core] def writeAndCleanOnFailure(df: DataFrame,
+                                            outputDirStr: String,
+                                            fsUtils: FsUtils): Unit = {
+    try {
+      df.write
+        .mode(SaveMode.Overwrite)
+        .format("parquet")
+        .options(writeOptions)
+        .save(outputDirStr)
+    } catch {
+      case NonFatal(ex) =>
+        // Failure to date the dataframe here creates an empty directory, which is not a valid partition.
+        // We need to delete it to avoid the an attempt to read it in the future.
+        Try {
+          val partitionPath = new Path(outputDirStr)
+          if (fsUtils.exists(partitionPath)) {
+            log.warn(s"The write failed. Deleting the empty directory: $partitionPath")
+            fsUtils.deleteDirectoryRecursively(partitionPath)
+          }
+        }
+
+        throw ex
+    }
   }
 
   override def getStats(infoDate: LocalDate): MetaTableStats = {
