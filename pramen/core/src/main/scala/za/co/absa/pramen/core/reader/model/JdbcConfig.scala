@@ -28,6 +28,7 @@ case class JdbcConfig(
                        database: Option[String] = None,
                        user: String,
                        password: String,
+                       retries: Option[Int] = None,
                        extraOptions: Map[String, String] = Map.empty[String, String]
                      )
 
@@ -40,6 +41,7 @@ object JdbcConfig {
   val JDBC_DATABASE = "jdbc.database"
   val JDBC_USER = "jdbc.user"
   val JDBC_PASSWORD = "jdbc.password"
+  val JDBC_RETRIES = "jdbc.retries"
   val JDBC_EXTRA_OPTIONS_PREFIX = "jdbc.option"
 
   def load(conf: Config, parent: String = ""): JdbcConfig = {
@@ -66,6 +68,7 @@ object JdbcConfig {
       database = ConfigUtils.getOptionString(conf, JDBC_DATABASE),
       user = conf.getString(JDBC_USER),
       password = conf.getString(JDBC_PASSWORD),
+      retries = ConfigUtils.getOptionInt(conf, JDBC_RETRIES),
       extraOptions = ConfigUtils.getExtraOptions(conf, JDBC_EXTRA_OPTIONS_PREFIX)
     )
   }

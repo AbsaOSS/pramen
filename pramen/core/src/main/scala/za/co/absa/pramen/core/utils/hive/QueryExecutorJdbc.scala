@@ -19,7 +19,6 @@ package za.co.absa.pramen.core.utils.hive
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.hive.QueryExecutorJdbc.DEFAULT_NUMBER_OF_RETRIES
 
 import java.sql.{Connection, ResultSet, SQLSyntaxErrorException}
 import scala.util.Try
@@ -28,7 +27,9 @@ import scala.util.control.NonFatal
 class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor {
   private val log = LoggerFactory.getLogger(this.getClass)
   private var connection: Connection = _
-  private val retries = Math.max(jdbcUrlSelector.getNumberOfUrls + 1, DEFAULT_NUMBER_OF_RETRIES)
+  private val defaultRetries = jdbcUrlSelector.getNumberOfUrls
+  private val retries =
+    jdbcUrlSelector.jdbcConfig.retries.getOrElse(defaultRetries)
 
   override def doesTableExist(dbName: String, tableName: String): Boolean = {
     val query = s"SELECT 1 FROM $tableName WHERE 0 = 1"
@@ -76,8 +77,6 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
 }
 
 object QueryExecutorJdbc {
-  private val DEFAULT_NUMBER_OF_RETRIES = 3
-
   def fromJdbcConfig(jdbcConfig: JdbcConfig): QueryExecutorJdbc = {
     val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 

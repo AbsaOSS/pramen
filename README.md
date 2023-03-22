@@ -421,9 +421,18 @@ is determined by the pipeline configuration.
       # The connection URL 
       url = "jdbc:postgresql://example1.com:5432/test_db"
       
+      # Optional fallback URLs to try in case of a failure of the promary URL
+      jdbc.fallback.url.1 = "jdbc:postgresql://example2.com:5432/test_db"
+      jdbc.fallback.url.2 = "jdbc:postgresql://example3.com:5432/test_db"
+      
       # Authentication credentials
       user = "my_login"
       password = "some_password"
+      
+      # (Optional) The number of times to retry connecting to the server in case of a failure
+      # If multiple URLs are specified, the retry will be attempted on the next URL each time.
+      # 'retries = 1' means that the connection will be attempted only once.
+      retries = 3
       
       # Any option passed as 'option.' will be passed to the JDBC driver. Example:
       #option.database = "test_db"
@@ -472,7 +481,7 @@ is determined by the pipeline configuration.
 
 You can specify more than one JDBC url. Pramen will always try the primary URL first. If connection fails,
 it will try fallback URLs in random order. If the primary URL is not specified, Pramen will try fallback URLs in
-random order. You can also specify the number of retries. By default the number of retries is the same as the number
+random order. You can also specify the number of retries. By default, the number of retries is the same as the number
 of URLs.
 
 ```conf
@@ -481,9 +490,12 @@ of URLs.
       url = "jdbc:postgresql://example1.com:5432/test_db"
       fallback.url.1 = "jdbc:postgresql://example2.com:5432/test_db"
       fallback.url.2 = "jdbc:postgresql://example3.com:5432/test_db"
+   
+      # (Optional) The number of times to retry connecting to the server in case of a failure
+      # If multiple URLs are specified, the retry will be attempted on the next URL each time.
+      # 'retries = 1' means that the connection will be attempted only once.
+      retries = 5
     }
-    # The number of retries (optional)
-    connection.retries = 5
 ```
 
 #### Spark source (CSV example)
@@ -2027,6 +2039,11 @@ pramen.sources = [
       connection.primary.url = "jdbc:postgresql://connection.host/test_db"
       user = "user"
       password = "mypassword"
+      
+      # (Optional) The number of times to retry connecting to the server in case of a failure
+      # If multiple URLs are specified, the retry will be attempted on the next URL each time.
+      # 'retries = 1' means that the connection will be attempted only once.
+      retries = 3
     }
 
     option.fetchsize = 50000

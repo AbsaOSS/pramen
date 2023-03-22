@@ -47,7 +47,7 @@ class TableReaderJdbc(tableName: String,
 
   private val jdbcUrlSelector = JdbcUrlSelector(jdbcReaderConfig.jdbcConfig)
 
-  private val numberOfRetries = jdbcReaderConfig.connectionRetries.getOrElse(jdbcUrlSelector.getNumberOfUrls - 1)
+  private val jdbcRetries = jdbcReaderConfig.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
 
   logConfiguration()
 
@@ -57,7 +57,7 @@ class TableReaderJdbc(tableName: String,
       ConfigUtils.getExtraConfig(conf, "sql"))
 
     if (gen.requiresConnection) {
-      val (connection, url) = jdbcUrlSelector.getWorkingConnection(numberOfRetries)
+      val (connection, url) = jdbcUrlSelector.getWorkingConnection(jdbcRetries)
       gen.setConnection(connection)
     }
     gen
@@ -73,7 +73,7 @@ class TableReaderJdbc(tableName: String,
     }
 
     val start = Instant.now
-    val count = getWithRetry[Long](sql, numberOfRetries)(df =>
+    val count = getWithRetry[Long](sql, jdbcRetries)(df =>
       // Take first column of the first row, use BigDecimal as the most generic numbers parser,
       // and then convert to Long. This is a safe way if the output is like "0E-11".
       BigDecimal(df.collect()(0)(0).toString).toLong
@@ -90,7 +90,7 @@ class TableReaderJdbc(tableName: String,
       sqlGen.getDataQuery(tableName, jdbcReaderConfig.limitRecords)
     }
 
-    val df = getWithRetry[DataFrame](sql, numberOfRetries)(df => {
+    val df = getWithRetry[DataFrame](sql, jdbcRetries)(df => {
       // Make sure connection to the server is made without fetching the data
       log.debug(df.schema.treeString)
       df
@@ -108,9 +108,9 @@ class TableReaderJdbc(tableName: String,
       case Success(result) => result
       case Failure(ex) =>
         val currentUrl = jdbcUrlSelector.getUrl
-        if (retriesLeft > 0) {
+        if (retriesLeft > 1) {
           val nextUrl = jdbcUrlSelector.getNextUrl
-          log.error(s"JDBC connection error for $currentUrl. Retries left: $retriesLeft. Retrying...", ex)
+          log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying...", ex)
           log.info(s"Trying URL: $nextUrl")
           getWithRetry(sql, retriesLeft - 1)(f)
         } else {
@@ -256,7 +256,6 @@ class TableReaderJdbc(tableName: String,
 
   private def logConfiguration(): Unit = {
     jdbcUrlSelector.logConnectionSettings()
-    jdbcReaderConfig.connectionRetries.foreach(n => log.info(s"Retry attempts:               $n"))
 
     log.info(s"JDBC Reader Configuration:")
     log.info(s"Has information date column:  ${jdbcReaderConfig.hasInfoDate}")

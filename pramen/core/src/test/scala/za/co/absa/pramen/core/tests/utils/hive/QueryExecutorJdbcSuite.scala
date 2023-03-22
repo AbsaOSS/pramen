@@ -108,6 +108,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       val (conn, _) = baseSelector.getWorkingConnection(1)
       val sel = mock(classOf[JdbcUrlSelector])
 
+      whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
       whenMock(sel.getWorkingConnection(anyInt())).thenReturn((conn, "dummyurl"))
 
       val qe = new QueryExecutorJdbc(sel)
@@ -135,6 +136,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       val (conn, _) = baseSelector.getWorkingConnection(1)
       val sel = mock(classOf[JdbcUrlSelector])
 
+      whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
       whenMock(sel.getWorkingConnection(anyInt()))
         .thenReturn((conn, "dummyurl"))
         .thenThrow(new RuntimeException("fail the second time"))
