@@ -443,14 +443,18 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     task.runStatus match {
       case s: Succeeded           =>
+        val style = if (s.warning.nonEmpty)
+          Style.Warning
+        else
+          successStyle
         if (s.reason == TaskRunReason.Update) {
           TextElement("Update", Style.Warning)
         } else if (s.reason == TaskRunReason.Rerun) {
-          TextElement("Rerun", successStyle)
+          TextElement("Rerun", style)
         } else if (s.reason == TaskRunReason.Late) {
           TextElement("Late", Style.Warning)
         } else {
-          TextElement("Success", successStyle)
+          TextElement("Success", style)
         }
       case _: InsufficientData    => TextElement("Insufficient data", Style.Exception)
       case NoData(isFailure)      => TextElement("No Data", if (isFailure) Style.Exception else Style.Warning)

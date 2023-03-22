@@ -77,14 +77,14 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
         "send sends data to the target directory" in {
-          val count = sink.send(exampleDf,
+          val sinkResult = sink.send(exampleDf,
             "dummy_table",
             null,
             infoDate,
             Map("path" -> outputPath.toUri.toString, "info.version" -> "1")
           )
 
-          assert(count == 3)
+          assert(sinkResult.recordsSend == 3)
           assert(fsUtils.exists(partitionPath))
           assert(fsUtils.getFilesRecursive(partitionPath, "*.json").nonEmpty)
         }

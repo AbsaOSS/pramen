@@ -154,7 +154,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "save" should {
     "update the bookkeeper" in {
-      val statsIn = MetaTableStats(100, None)
+      val statsIn = MetaTableStats(100, None, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn)
 
@@ -178,7 +178,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "allow no records in the output table" in {
-      val statsIn = MetaTableStats(0, None)
+      val statsIn = MetaTableStats(0, None, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn)
 
@@ -190,7 +190,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throw an exception if no records in the output table" in {
-      val statsIn = MetaTableStats(0, None)
+      val statsIn = MetaTableStats(0, None, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "1"))
 
@@ -204,7 +204,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throw an exception if the number of records is less then expected" in {
-      val statsIn = MetaTableStats(9, None)
+      val statsIn = MetaTableStats(9, None, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "10"))
 

@@ -22,12 +22,14 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.core.utils.Emoji.FAILURE
 import za.co.absa.pramen.core.utils.hive._
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.extras.utils.PartitionUtils
 
 import java.time.{Instant, LocalDate}
+import scala.util.control.NonFatal
 
 /**
   * This sink allows sending data to the raw and publish folder of a data lake for further processing.
@@ -147,7 +149,7 @@ class StandardizationSink(sinkConfig: Config,
                     tableName: String,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
-                    options: Map[String, String])(implicit spark: SparkSession): Long = {
+                    options: Map[String, String])(implicit spark: SparkSession): SinkResult = {
     val jobStart = Instant.now()
 
     val infoVersion = getInfoVersion(options)
@@ -180,7 +182,7 @@ class StandardizationSink(sinkConfig: Config,
 
     generateInfoFile(sourceCount, rawCount, Option(publishCount), outputPublishPartitionPath, infoDate, jobStart, Some(publishStart))
 
-    if (options.contains(HIVE_TABLE_KEY)) {
+    val warning = if (options.contains(HIVE_TABLE_KEY)) {
       val hiveTable = options(HIVE_TABLE_KEY)
       val fullTableName = hiveHelper.getFullTable(standardizationConfig.hiveDatabase, hiveTable)
 
@@ -191,17 +193,29 @@ class StandardizationSink(sinkConfig: Config,
 
       val paritionBy = Seq(ENCELADUS_INFO_DATE_COLUMN, ENCELADUS_INFO_VERSION_COLUMN)
 
-      log.info(s"Updating Hive table $fullTableName...")
-      hiveHelper.createOrUpdateHiveTable(publishBasePath.toUri.toString,
-        fullSchema,
-        paritionBy,
-        standardizationConfig.hiveDatabase,
-        hiveTable)
+      log.info(s"Updating Hive table '$fullTableName'...")
+      try {
+        hiveHelper.createOrUpdateHiveTable(publishBasePath.toUri.toString,
+          fullSchema,
+          paritionBy,
+          standardizationConfig.hiveDatabase,
+          hiveTable)
+        None
+      } catch {
+        case NonFatal(ex) =>
+          if (standardizationConfig.hiveIgnoreFailures) {
+            log.error(s"$FAILURE Unable to update Hive table '$fullTableName'. Ignoring the error.", ex)
+            Some(s"Unable to update Hive table '$fullTableName': ${ex.getMessage}")
+          } else {
+            throw ex
+          }
+      }
     } else {
       log.info(s"Hive table is not configured for $tableName.")
+      None
     }
 
-    sourceCount
+    SinkResult(sourceCount, warning)
   }
 
   private[extras] def getInfoVersion(options: Map[String, String]): Int = {

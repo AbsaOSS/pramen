@@ -29,7 +29,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    availableDates: Seq[LocalDate] = Seq(LocalDate.of(2022, 2, 17)),
                    tableDf: DataFrame = null,
                    tableException: Throwable = null,
-                   stats: MetaTableStats = MetaTableStats(0, None),
+                   stats: MetaTableStats = MetaTableStats(0, None, None),
                    statsException: Throwable = null,
                    isTableAvailable: Boolean = true,
                    isTableEmpty: Boolean = false,
@@ -66,7 +66,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
   override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
     saveTableInvocations.append((tableName, infoDate, df))
-    MetaTableStats(df.count(), None)
+    MetaTableStats(df.count(), None, None)
   }
 
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {

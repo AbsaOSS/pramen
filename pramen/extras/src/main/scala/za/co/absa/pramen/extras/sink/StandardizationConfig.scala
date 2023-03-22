@@ -32,7 +32,8 @@ case class StandardizationConfig(
                                   recordsPerPartition: Option[Int],
                                   generateInfoFile: Boolean,
                                   hiveJdbcConfig: Option[JdbcConfig],
-                                  hiveDatabase: Option[String]
+                                  hiveDatabase: Option[String],
+                                  hiveIgnoreFailures: Boolean
                                 )
 
 object StandardizationConfig {
@@ -44,6 +45,7 @@ object StandardizationConfig {
 
   val HIVE_JDBC_PREFIX = "hive"
   val HIVE_DATABASE_KEY = "hive.database"
+  val HIVE_IGNORE_FAILURES_KEY = "hive.ignore.failures"
 
   val INFO_DATE_COLUMN = "enceladus_info_date"
   val INFO_DATE_STRING_COLUMN = "enceladus_info_date_string"
@@ -74,7 +76,8 @@ object StandardizationConfig {
       ConfigUtils.getOptionInt(conf, RECORDS_PER_PARTITION),
       ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true),
       hiveJdbcConfig,
-      ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY)
+      ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY),
+      ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false)
     )
   }
 }

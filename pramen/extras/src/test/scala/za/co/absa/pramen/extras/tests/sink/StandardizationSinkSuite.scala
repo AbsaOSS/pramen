@@ -72,7 +72,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
         "send sends data to the target directory" in {
-          val count = sink.send(exampleDf,
+          val sinkResult = sink.send(exampleDf,
             "dummy_table",
             null,
             infoDate,
@@ -83,7 +83,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
             )
           )
 
-          assert(count == 3)
+          assert(sinkResult.recordsSend == 3)
           assert(fsUtils.exists(rawPartitionPath))
           assert(fsUtils.getFilesRecursive(rawPartitionPath, "*.json").nonEmpty)
           assert(fsUtils.exists(publishPartitionPath))
@@ -119,7 +119,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
         "send sends data to the target directory" in {
-          val count = sink.send(exampleDf,
+          val sinkResult = sink.send(exampleDf,
             "dummy_table",
             null,
             infoDate,
@@ -129,7 +129,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
             )
           )
 
-          assert(count == 3)
+          assert(sinkResult.recordsSend == 3)
           assert(fsUtils.exists(publishPartitionPath))
           assert(fsUtils.getFilesRecursive(publishPartitionPath, "*.parquet").nonEmpty)
         }
@@ -147,7 +147,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
     "getHiveRepairEnceladusQuery()" should {
       "return a valid query when a db is setup" in {
         val updatedConf = conf.
-           withValue("hive.database", ConfigValueFactory.fromAnyRef("mydb"))
+          withValue("hive.database", ConfigValueFactory.fromAnyRef("mydb"))
 
         val sink = StandardizationSink.apply(updatedConf, "", spark)
 
@@ -191,13 +191,40 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
           "hive.table" -> "my_table"
         )
 
-        val count = sink.send(exampleDf, "my_table", null, infoDate, options)
+        val sinkResult = sink.send(exampleDf, "my_table", null, infoDate, options)
 
-        assert(count == 3)
+        assert(sinkResult.recordsSend == 3)
         assert(qe.queries.length == 3)
 
         assert(qe.queries.head == "DROP TABLE IF EXISTS my_table")
         assert(qe.queries(2) == "MSCK REPAIR TABLE my_table")
+      }
+    }
+
+    "hive warnings should be returned" in {
+      val updatedConf = conf.withValue("hive.ignore.failures", ConfigValueFactory.fromAnyRef(true))
+      val stdConfig = StandardizationConfig.fromConfig(updatedConf)
+      val hiveConfig = HiveConfig.fromConfig(conf)
+      val qe = new QueryExecutorMock(tableExists = true, () => throw new RuntimeException("Hive exception"))
+      val hiveHelper = new HiveHelperImpl(qe, hiveConfig)
+      val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
+
+      withTempDirectory("std_sink") { tempDir =>
+        val rawPath = new Path(tempDir, "raw")
+        val publishPath = new Path(tempDir, "publish")
+
+        val options = Map(
+          "raw.base.path" -> rawPath.toUri.toString,
+          "publish.base.path" -> publishPath.toUri.toString,
+          "info.version" -> "1",
+          "hive.table" -> "my_table"
+        )
+
+        val sinkResult = sink.send(exampleDf, "my_table", null, infoDate, options)
+
+        assert(sinkResult.recordsSend == 3)
+        assert(sinkResult.warningMessage.nonEmpty)
+        assert(sinkResult.warningMessage.get == "Unable to update Hive table 'my_table': Hive exception")
       }
     }
   }

@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.metastore
+package za.co.absa.pramen.api
 
-case class MetaTableStats(
-                           recordCount: Long,
-                           dataSizeBytes: Option[Long],
-                           warning: Option[String]
-                         )
+case class SinkResult(
+                       recordsSend: Long,
+                       warningMessage: Option[String] = None
+                     )

@@ -87,11 +87,11 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
       val sink = getUseCase("/dummy")
 
-      val records = sink.send(df, "table1", null, infoDate, Map[String, String](
+      val sinkResult = sink.send(df, "table1", null, infoDate, Map[String, String](
         "path" -> "/dummy"
       ))
 
-      assert(records == 0L)
+      assert(sinkResult.recordsSend == 0L)
     }
 
     "write an empty CSV file when it is turned on" in {
@@ -103,13 +103,13 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
         val sink = getUseCase(remoteDir.toString, fileNamePattern = "A_@tableName_@infoDate", createEmptyCsv = true)
 
-        val recordsCount = sink.send(df, "table1", null, infoDate, Map[String, String](
+        val sinkResult = sink.send(df, "table1", null, infoDate, Map[String, String](
           "path" -> localDir.toString
         ))
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(recordsCount == 0)
+        assert(sinkResult.recordsSend == 0)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
@@ -135,13 +135,13 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
             "quoteAll" -> "false"
           ))
 
-        val recordsCount = sink.send(df, "table1", null, infoDate, Map[String, String](
+        val sinkResult = sink.send(df, "table1", null, infoDate, Map[String, String](
           "path" -> localDir.toString
         ))
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(recordsCount == 0)
+        assert(sinkResult.recordsSend == 0)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
@@ -167,13 +167,13 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
             "quoteAll" -> "true"
           ))
 
-        val recordsCount = sink.send(df, "table1", null, infoDate, Map[String, String](
+        val sinkResult = sink.send(df, "table1", null, infoDate, Map[String, String](
           "path" -> localDir.toString
         ))
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(recordsCount == 0)
+        assert(sinkResult.recordsSend == 0)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
@@ -197,13 +197,13 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
         val sink = getUseCase(remoteDir.toString, fileNamePattern = "A_@tableName_@infoDate")
 
-        val recordsCount = sink.send(df, "table1", null, infoDate, Map[String, String](
+        val sinkResult = sink.send(df, "table1", null, infoDate, Map[String, String](
           "path" -> localDir.toString
         ))
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(recordsCount == 2)
+        assert(sinkResult.recordsSend == 2)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")

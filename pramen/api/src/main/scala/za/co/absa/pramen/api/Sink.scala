@@ -35,12 +35,12 @@ trait Sink extends ExternalChannel {
     * @param metastore the metastore reader to read other tables from.
     * @param infoDate  the information date to use when reading the table from the metastore.
     * @param options   arbitrary extra options to use for the table (e.g. topic name, etc.)
-    * @return The number of records written if successful, throw an exception otherwise.
+    * @return The object containing information about the successful records sent.
     */
   def send(df: DataFrame,
            tableName: String,
            metastore: MetastoreReader,
            infoDate: LocalDate,
            options: Map[String, String])
-          (implicit spark: SparkSession): Long
+          (implicit spark: SparkSession): SinkResult
 }

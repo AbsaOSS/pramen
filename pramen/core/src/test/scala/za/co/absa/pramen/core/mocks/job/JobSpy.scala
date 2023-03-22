@@ -36,7 +36,7 @@ class JobSpy(jobName: String = "DummyJob",
              runFunction: () => DataFrame = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing,
              allowParallel: Boolean = true,
-             saveStats: MetaTableStats = MetaTableStats(0, None),
+             saveStats: MetaTableStats = MetaTableStats(0, None, None),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty
             ) extends Job {
   var getDatesToRunCount = 0

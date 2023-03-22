@@ -187,7 +187,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0)
 
-    val stats = MetaTableStats(2, Some(100))
+    val stats = MetaTableStats(2, Some(100), None)
 
     val operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = consumeThreads)
     val job = new JobSpy(runFunction = runFunction, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)

@@ -22,7 +22,8 @@ import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
 import scala.collection.mutable.ListBuffer
 
-class QueryExecutorMock(tableExists: Boolean)(implicit spark: SparkSession) extends QueryExecutor {
+class QueryExecutorMock(tableExists: Boolean,
+                        executeFunction: () => Unit = QueryExecutorMock.doNothing)(implicit spark: SparkSession) extends QueryExecutor {
   val queries = new ListBuffer[String]
   var closeCalled = 0
 
@@ -30,6 +31,7 @@ class QueryExecutorMock(tableExists: Boolean)(implicit spark: SparkSession) exte
 
   override def execute(query: String): Unit = {
     queries += query
+    executeFunction()
   }
 
   def getSchema(parquetPath: String): StructType = {
@@ -37,4 +39,8 @@ class QueryExecutorMock(tableExists: Boolean)(implicit spark: SparkSession) exte
   }
 
   override def close(): Unit = closeCalled += 1
+}
+
+object QueryExecutorMock {
+  def doNothing(): Unit = {}
 }

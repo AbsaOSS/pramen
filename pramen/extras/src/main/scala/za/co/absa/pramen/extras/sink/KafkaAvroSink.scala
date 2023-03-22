@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.extras.sink.KafkaAvroSink.TOPIC_NAME_KEY
 import za.co.absa.pramen.extras.writer.TableWriterKafka
 import za.co.absa.pramen.extras.writer.model.KafkaWriterConfig
@@ -121,7 +121,7 @@ class KafkaAvroSink(sinkConfig: Config,
                     tableName: String,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
-                    options: Map[String, String])(implicit spark: SparkSession): Long = {
+                    options: Map[String, String])(implicit spark: SparkSession): SinkResult = {
     if (!options.contains(TOPIC_NAME_KEY)) {
       throw new IllegalArgumentException(s"$TOPIC_NAME_KEY is not specified for Kafka sink, table: $tableName")
     }
@@ -129,7 +129,7 @@ class KafkaAvroSink(sinkConfig: Config,
 
     val writer = new TableWriterKafka(topicName, kafkaWriterConfig, kafkaWriterConfig.extraOptions ++ options)
 
-    writer.write(df, infoDate, None)
+    SinkResult(writer.write(df, infoDate, None))
   }
 }
 

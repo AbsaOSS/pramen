@@ -248,7 +248,7 @@ abstract class TaskRunnerBase(conf: Config,
 
       val stats = if (runtimeConfig.isDryRun) {
         log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
-        MetaTableStats(dfTransformed.count(), None)
+        MetaTableStats(dfTransformed.count(), None, None)
       } else {
         task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
       }
@@ -259,7 +259,7 @@ abstract class TaskRunnerBase(conf: Config,
         TaskRunReason.Update else task.reason
 
       TaskResult(task.job,
-        RunStatus.Succeeded(recordCountOldOpt, stats.recordCount, stats.dataSizeBytes, completionReason),
+        RunStatus.Succeeded(recordCountOldOpt, stats.recordCount, stats.dataSizeBytes, completionReason, stats.warning),
         Some(RunInfo(task.infoDate, started, finished)),
         schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
         validationResult.dependencyWarnings,

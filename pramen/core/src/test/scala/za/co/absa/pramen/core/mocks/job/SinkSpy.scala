@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.mocks.job
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
@@ -55,7 +55,7 @@ class SinkSpy(sinkConfig: Config = ConfigFactory.empty(),
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])
-                   (implicit spark: SparkSession): Long = {
+                   (implicit spark: SparkSession): SinkResult = {
     writeCalled += 1
 
     if (writeException != null) {
@@ -66,7 +66,7 @@ class SinkSpy(sinkConfig: Config = ConfigFactory.empty(),
 
     dfs += df
 
-    df.count()
+    SinkResult(df.count())
   }
 }
 

@@ -22,7 +22,7 @@ import org.apache.spark.sql.functions.{col, date_format}
 import org.apache.spark.sql.types.{DateType, StructType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.sink.LocalCsvSink.OUTPUT_PATH_KEY
 import za.co.absa.pramen.core.utils.{FsUtils, LocalFsUtils}
 
@@ -121,7 +121,7 @@ class LocalCsvSink(sinkConfig: Config,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])
-                   (implicit spark: SparkSession): Long = {
+                   (implicit spark: SparkSession): SinkResult = {
 
     if (!options.contains(OUTPUT_PATH_KEY)) {
       throw new IllegalArgumentException(s"Missing required parameter of LocalCsvSink: 'output.$OUTPUT_PATH_KEY'.")
@@ -133,13 +133,13 @@ class LocalCsvSink(sinkConfig: Config,
 
     if (count > 0) {
       createCsvFromDf(df, count, tableName, infoDate, outputPath)
-      count
+      SinkResult(count)
     } else {
       log.info(s"Nothing to send to $outputPath.")
       if (params.createEmptyCsv) {
         createEmptyCsv(df.schema, tableName, infoDate, outputPath)
       }
-      0L
+      SinkResult(0L)
     }
   }
 

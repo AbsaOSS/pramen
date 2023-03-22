@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -142,7 +142,7 @@ class SparkSink(format: String,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])
-                   (implicit spark: SparkSession): Long = {
+                   (implicit spark: SparkSession): SinkResult = {
     val outputPath = getOutputPath(tableName, options)
     val recordCount = df.count()
 
@@ -157,7 +157,7 @@ class SparkSink(format: String,
       log.info(s"Nothing to save to folder: ${outputPath.toUri.toString}")
     }
 
-    recordCount
+    SinkResult(recordCount)
   }
 
   private[core] def writeData(df: DataFrame, outputPath: Path): Unit = {

@@ -120,7 +120,7 @@ class SinkJob(operationDef: OperationDef,
     }
 
     try {
-      val recordsWritten = sink.send(df,
+      val sinkResult = sink.send(df,
         sinkTable.metaTableName,
         metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, infoDate),
         infoDate,
@@ -132,13 +132,13 @@ class SinkJob(operationDef: OperationDef,
         infoDate,
         infoDate,
         infoDate,
-        inputRecordCount.getOrElse(recordsWritten),
-        recordsWritten,
+        inputRecordCount.getOrElse(sinkResult.recordsSend),
+        sinkResult.recordsSend,
         jobStarted.getEpochSecond,
         jobFinished.getEpochSecond
       )
 
-      MetaTableStats(recordsWritten, None)
+      MetaTableStats(sinkResult.recordsSend, None, sinkResult.warningMessage)
     } catch {
       case NonFatal(ex) => throw new IllegalStateException("Unable to write to the sink.", ex)
     } finally {
