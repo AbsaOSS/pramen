@@ -27,15 +27,14 @@ import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
 class TableReaderJdbcNative(queryExpression: String,
-                            jdbcConfig: JdbcConfig,
-                            numberOfRetries: Option[Int])
+                            jdbcConfig: JdbcConfig)
                            (implicit spark: SparkSession) extends TableReader {
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
-  private val url = jdbcUrlSelector.getWorkingUrl(numberOfRetries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
+  private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 
   logConfiguration()
 
@@ -76,23 +75,18 @@ class TableReaderJdbcNative(queryExpression: String,
 
   private def logConfiguration(): Unit = {
     jdbcUrlSelector.logConnectionSettings()
-    numberOfRetries.foreach(n => log.info(s"Retry attempts:               $n"))
   }
 
   private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 }
 
 object TableReaderJdbcNative {
-  val CONNECTION_RETRIES = "connection.retries"
-
   def apply(expression: String,
             conf: Config,
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
     val jdbcConfig = JdbcConfig.load(conf, parent)
 
-    val numberOfRetries: Option[Int] = ConfigUtils.getOptionInt(conf, CONNECTION_RETRIES)
-
-    new TableReaderJdbcNative(expression, jdbcConfig, numberOfRetries)
+    new TableReaderJdbcNative(expression, jdbcConfig)
   }
 }

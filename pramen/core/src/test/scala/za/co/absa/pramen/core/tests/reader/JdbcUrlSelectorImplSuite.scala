@@ -143,7 +143,7 @@ class JdbcUrlSelectorImplSuite extends AnyWordSpec {
   }
 
   private def getJdbcUrlSelector(primaryUrl: Option[String], fallbackUrls: Seq[String]): JdbcUrlSelectorImpl = {
-    val conf = JdbcConfig("testDriver", primaryUrl, fallbackUrls, None, "testUser", "testPassword", Map.empty[String, String])
+    val conf = JdbcConfig("testDriver", primaryUrl, fallbackUrls, None, "testUser", "testPassword", None, Map.empty[String, String])
     new JdbcUrlSelectorImpl(conf)
   }
 }

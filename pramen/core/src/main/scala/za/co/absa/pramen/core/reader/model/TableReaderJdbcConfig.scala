@@ -29,8 +29,7 @@ case class TableReaderJdbcConfig(
                                   limitRecords: Option[Int] = None,
                                   saveTimestampsAsDates: Boolean = false,
                                   correctDecimalsInSchema: Boolean = false,
-                                  correctDecimalsFixPrecision: Boolean = false,
-                                  connectionRetries: Option[Int] = None
+                                  correctDecimalsFixPrecision: Boolean = false
                                 )
 
 object TableReaderJdbcConfig {
@@ -44,7 +43,6 @@ object TableReaderJdbcConfig {
   val JDBC_TIMESTAMPS_AS_DATES = "save.timestamps.as.dates"
   val CORRECT_DECIMALS_IN_SCHEMA = "correct.decimals.in.schema"
   val CORRECT_DECIMALS_FIX_PRECISION = "correct.decimals.fix.precision"
-  val CONNECTION_RETRIES = "connection.retries"
 
   def load(conf: Config, parent: String = ""): TableReaderJdbcConfig = {
     ConfigUtils.validatePathsExistence(conf, parent, HAS_INFO_DATE :: Nil)
@@ -67,8 +65,7 @@ object TableReaderJdbcConfig {
       limitRecords = ConfigUtils.getOptionInt(conf, JDBC_SYNC_LIMIT_RECORDS),
       saveTimestampsAsDates = ConfigUtils.getOptionBoolean(conf, JDBC_TIMESTAMPS_AS_DATES).getOrElse(false),
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),
-      correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
-      connectionRetries = ConfigUtils.getOptionInt(conf, CONNECTION_RETRIES)
+      correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false)
     )
   }
 }

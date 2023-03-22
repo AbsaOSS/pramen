@@ -23,8 +23,7 @@ import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{TableReaderJdbc, TableReaderJdbcNative}
 
-class JdbcSource(hasInfoDateCol: Boolean,
-                 sourceConfig: Config,
+class JdbcSource(sourceConfig: Config,
                  sourceConfigParentPath: String,
                  val jdbcReaderConfig: TableReaderJdbcConfig)(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -38,7 +37,7 @@ class JdbcSource(hasInfoDateCol: Boolean,
         new TableReaderJdbc(dbTable, columns, jdbcReaderConfig, sourceConfig)
       case Query.Sql(sql)       =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
-        new TableReaderJdbcNative(sql, jdbcReaderConfig.jdbcConfig, jdbcReaderConfig.connectionRetries)
+        new TableReaderJdbcNative(sql, jdbcReaderConfig.jdbcConfig)
       case Query.Path(_)          =>
         throw new IllegalArgumentException(s"Unexpected 'path' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }
@@ -49,6 +48,6 @@ object JdbcSource extends ExternalChannelFactory[JdbcSource] {
   override def apply(conf: Config, parentPath: String, spark: SparkSession): JdbcSource = {
     val tableReaderJdbc = TableReaderJdbcConfig.load(conf)
 
-    new JdbcSource(tableReaderJdbc.hasInfoDate, conf, parentPath, tableReaderJdbc)(spark)
+    new JdbcSource( conf, parentPath, tableReaderJdbc)(spark)
   }
 }

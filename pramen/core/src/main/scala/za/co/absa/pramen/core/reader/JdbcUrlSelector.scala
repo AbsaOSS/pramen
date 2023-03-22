@@ -21,6 +21,9 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 import java.sql.{Connection, SQLException}
 
 trait JdbcUrlSelector {
+  /** The JDBC configuration used for the selector. */
+  def jdbcConfig: JdbcConfig
+
   /** Get current URL to try. */
   def getUrl: String
 

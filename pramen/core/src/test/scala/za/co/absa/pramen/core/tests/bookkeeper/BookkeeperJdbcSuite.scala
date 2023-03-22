@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
 
-  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, Map.empty[String, String])
+  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, None, Map.empty[String, String])
   val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {

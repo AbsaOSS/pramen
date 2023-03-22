@@ -25,7 +25,7 @@ import java.sql.{Connection, DriverManager, SQLException}
 import java.util.Properties
 import scala.util.{Failure, Random, Success, Try}
 
-class JdbcUrlSelectorImpl(jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
+class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
   private val log = LoggerFactory.getLogger(this.getClass)
   private val allUrls = (jdbcConfig.primaryUrl ++ jdbcConfig.fallbackUrls).toSeq
   private val numberOfUrls = allUrls.size
@@ -59,6 +59,8 @@ class JdbcUrlSelectorImpl(jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
     jdbcConfig.database.foreach(d => log.info(s"Database:          $d"))
     log.info(s"User:              ${jdbcConfig.user}")
     log.info(s"Password:          [redacted]")
+
+    jdbcConfig.retries.foreach(n => log.info(s"Retry attempts:    $n"))
 
     if (numberOfUrls > 1) {
       log.info("URL redundancy configuration:")
@@ -98,9 +100,9 @@ class JdbcUrlSelectorImpl(jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
     } match {
       case Success(connection) => (connection, currentUrl)
       case Failure(ex)         =>
-        if (retriesLeft > 0) {
+        if (retriesLeft > 1) {
           val newUrl = getNextUrl
-          log.error(s"JDBC connection error for $currentUrl. Retries left: $retriesLeft. Retrying...", ex)
+          log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying...", ex)
           log.info(s"Trying URL: $newUrl")
           getWorkingConnection(retriesLeft - 1)
         } else {
