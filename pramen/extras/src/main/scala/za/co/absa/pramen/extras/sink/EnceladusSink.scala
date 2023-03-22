@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.extras.query.{QueryExecutor, QueryExecutorSpark}
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
@@ -152,7 +152,7 @@ class EnceladusSink(sinkConfig: Config,
                     tableName: String,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
-                    options: Map[String, String])(implicit spark: SparkSession): Long = {
+                    options: Map[String, String])(implicit spark: SparkSession): SinkResult = {
     implicit val queryExecutor: QueryExecutor = new QueryExecutorSpark(spark)
 
     val jobStart = Instant.now()
@@ -172,7 +172,7 @@ class EnceladusSink(sinkConfig: Config,
 
     runEnceladusIfNeeded(tableName, infoDate, infoVersion, basePath, options)
 
-    count
+    SinkResult(count)
   }
 
   private[extras] def getInfoVersion(metaTable: String,

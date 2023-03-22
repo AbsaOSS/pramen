@@ -95,9 +95,9 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
     "work without a temporary path" in {
       val (sink, _) = getUseCase(null, recordCountToReturn = Some(5))
 
-      val count = sink.send(exampleDf, "table1", null, infoDate, Map[String, String]("cmd.line" -> "dummy @infoDate"))
+      val sinkResult = sink.send(exampleDf, "table1", null, infoDate, Map[String, String]("cmd.line" -> "dummy @infoDate"))
 
-      assert(count == 5)
+      assert(sinkResult.recordsSend == 5)
     }
   }
 

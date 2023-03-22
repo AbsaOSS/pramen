@@ -26,11 +26,15 @@ sealed trait RunStatus {
 }
 
 object RunStatus {
-  case class Succeeded(recordCountOld: Option[Long], recordCount: Long, sizeBytes: Option[Long], reason: TaskRunReason) extends RunStatus {
+  case class Succeeded(recordCountOld: Option[Long],
+                       recordCount: Long,
+                       sizeBytes: Option[Long],
+                       reason: TaskRunReason,
+                       warning: Option[String]) extends RunStatus {
     val isFailure: Boolean = false
 
     override def toString: String = reason.toString
-    override def getReason(): Option[String] = None
+    override def getReason(): Option[String] = warning
   }
 
   case class ValidationFailed(ex: Throwable) extends RunStatus {

@@ -465,7 +465,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       filters = List("b > 1")
     )
 
-    val stats = MetaTableStats(2, Some(100))
+    val stats = MetaTableStats(2, Some(100), None)
 
     val job = new JobSpy(preRunCheckFunction = preRunCheckFunction,
       validationFunction = validationFunction,

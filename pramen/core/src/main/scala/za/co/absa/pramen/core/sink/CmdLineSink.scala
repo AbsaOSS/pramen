@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink}
+import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
 import za.co.absa.pramen.core.sink.CmdLineSink.{CMD_LINE_KEY, CmdLineDataParams}
@@ -132,7 +132,7 @@ class CmdLineSink(sinkConfig: Config,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])
-                   (implicit spark: SparkSession): Long = {
+                   (implicit spark: SparkSession): SinkResult = {
     if (!options.contains(CMD_LINE_KEY)) {
       throw new IllegalArgumentException(s"Missing required parameter: 'output.$CMD_LINE_KEY'.")
     }
@@ -160,7 +160,7 @@ class CmdLineSink(sinkConfig: Config,
 
           log.info(s"$count records sent to the cmd line sink ($cmdLine).")
         }
-        count
+        SinkResult(count, None)
       case None    =>
         val cmdLine = getCmdLine(cmdLineTemplate, None, infoDate)
 
@@ -169,7 +169,7 @@ class CmdLineSink(sinkConfig: Config,
         val count = processRunner.recordCount.getOrElse(0L)
 
         log.info(s"$count records sent to the cmd line sink ($cmdLine).")
-        count
+        SinkResult(count, None)
     }
   }
 

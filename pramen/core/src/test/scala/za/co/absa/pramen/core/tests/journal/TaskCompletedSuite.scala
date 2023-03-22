@@ -35,7 +35,7 @@ class TaskCompletedSuite extends AnyWordSpec {
       val task = Task(job, infoDate, runReason)
       val taskResult = TaskResult(
         job,
-        RunStatus.Succeeded(Some(1000), 2000, Some(3000), runReason),
+        RunStatus.Succeeded(Some(1000), 2000, Some(3000), runReason, None),
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
         Nil,
         Nil,
