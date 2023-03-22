@@ -422,8 +422,8 @@ is determined by the pipeline configuration.
       url = "jdbc:postgresql://example1.com:5432/test_db"
       
       # Optional fallback URLs to try in case of a failure of the promary URL
-      jdbc.fallback.url.1 = "jdbc:postgresql://example2.com:5432/test_db"
-      jdbc.fallback.url.2 = "jdbc:postgresql://example3.com:5432/test_db"
+      fallback.url.1 = "jdbc:postgresql://example2.com:5432/test_db"
+      fallback.url.2 = "jdbc:postgresql://example3.com:5432/test_db"
       
       # Authentication credentials
       user = "my_login"
