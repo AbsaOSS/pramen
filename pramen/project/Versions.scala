@@ -18,8 +18,8 @@ import sbt._
 
 object Versions {
   val defaultSparkVersionForScala211 = "2.4.8"
-  val defaultSparkVersionForScala212 = "3.2.2"
-  val defaultSparkVersionForScala213 = "3.2.2"
+  val defaultSparkVersionForScala212 = "3.2.3"
+  val defaultSparkVersionForScala213 = "3.2.3"
 
   val typesafeConfigVersion = "1.4.0"
   val postgreSqlDriverVersion = "42.3.8"
