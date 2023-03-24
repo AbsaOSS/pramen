@@ -114,7 +114,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "returns a dataframe when it is available" in {
       val (job, _) = getUseCase(tableDf = exampleDf)
 
-      val actual = job.run(infoDate, conf)
+      val actual = job.run(infoDate, conf).data
 
       assert(actual.count() == 3)
     }
@@ -150,7 +150,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(sinkTable = sinkTable, tableDf = exampleDf)
 
-      val dfIn = job.run(infoDate, conf)
+      val dfIn = job.run(infoDate, conf).data
 
       val dfOut = job.postProcessing(dfIn, infoDate, conf).orderBy("b1")
 
@@ -168,7 +168,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(sinkTable = sinkTable, tableDf = exampleDf)
 
-      val dfIn = job.run(infoDate, conf)
+      val dfIn = job.run(infoDate, conf).data
 
       val ex = intercept[IllegalStateException] {
         job.postProcessing(dfIn, infoDate, conf).orderBy("b1")

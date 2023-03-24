@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.MetaTableStats
-import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.pipeline.{Job, RunResult}
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.journal.JournalMock
@@ -124,11 +124,11 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     "run several jobs, each requiring a different number of resources" in {
       val (runner, _, state, resourceIntensiveJob) = getUseCase(allowParallel = true, parallelTasks = 4, consumeThreads = 4)
       val regularJob1 = new JobSpy(
-        runFunction = () => exampleDf,
+        runFunction = () => RunResult(exampleDf),
         operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = 1)
       )
       val regularJob2 = new JobSpy(
-        runFunction = () => exampleDf,
+        runFunction = () => RunResult(exampleDf),
         operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = 2)
       )
 
@@ -171,7 +171,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
   def getUseCase(runDateIn: LocalDate = runDate,
                  isRerun: Boolean = false,
-                 runFunction: () => DataFrame = () => exampleDf,
+                 runFunction: () => RunResult = () => RunResult(exampleDf),
                  consumeThreads: Int = 1,
                  allowParallel: Boolean = true,
                  parallelTasks: Int = 1
@@ -187,7 +187,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0)
 
-    val stats = MetaTableStats(2, Some(100), None)
+    val stats = MetaTableStats(2, Some(100))
 
     val operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = consumeThreads)
     val job = new JobSpy(runFunction = runFunction, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)

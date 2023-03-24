@@ -30,7 +30,7 @@ import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.pipeline.JobBase._
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.source.SourceManager.getSourceByName
-import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.core.utils.{ConfigUtils, SparkUtils}
 
 import java.sql.SQLSyntaxErrorException
 import java.time.{Instant, LocalDate}
@@ -46,6 +46,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
   private val conf: Config = ConfigFactory.parseString(
     s"""
        | pramen {
+       |   special.characters.in.column.names = "' :+-=<>()[]{}*?/\\\""
        |   sources = [
        |    {
        |      name = "jdbc"
@@ -245,7 +246,9 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
     "get the source data frame" in {
       val (_, _, job) = getUseCase()
 
-      val df = job.run(infoDate, conf)
+      val runResult = job.run(infoDate, conf)
+
+      val df = runResult.data
 
       assert(df.count() == 3)
       assert(df.schema.fields.head.name == "ID")
@@ -282,7 +285,9 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
           |} ]""".stripMargin
       val (_, _, job) = getUseCase()
 
-      val dfIn = job.run(infoDate, conf)
+      val runResult = job.run(infoDate, conf)
+
+      val dfIn = runResult.data
 
       val dfOut = job.postProcessing(dfIn, infoDate, conf).orderBy("ID")
 
@@ -296,7 +301,9 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
     "save the dataframe to the metastore" in {
       val (_, mt, job) = getUseCase()
 
-      val stats = job.save(exampleDf, infoDate, conf, Instant.now(), Some(150))
+      val saveResult = job.save(exampleDf, infoDate, conf, Instant.now(), Some(150))
+
+      val stats = saveResult.stats
 
       assert(stats.recordCount == 3)
       assert(mt.saveTableInvocations.length == 1)

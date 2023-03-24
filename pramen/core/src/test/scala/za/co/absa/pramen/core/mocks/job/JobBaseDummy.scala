@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
-import za.co.absa.pramen.core.pipeline.{DependencyWarning, JobBase, JobNotificationTarget, JobPreRunResult, OperationDef}
+import za.co.absa.pramen.core.pipeline.{DependencyWarning, JobBase, JobNotificationTarget, JobPreRunResult, OperationDef, RunResult, SaveResult}
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
 
 import java.time.{Instant, LocalDate}
@@ -42,9 +42,9 @@ class JobBaseDummy(operationDef: OperationDef,
 
   override def validate(infoDate: LocalDate, conf: Config): Reason = null
 
-  override def run(infoDate: LocalDate, conf: Config): DataFrame = null
+  override def run(infoDate: LocalDate, conf: Config): RunResult = null
 
   override def postProcessing(df: DataFrame, infoDate: LocalDate, conf: Config): DataFrame = null
 
-  override def save(df: DataFrame, infoDate: LocalDate, conf: Config, jobStarted: Instant, inputRecordCount: Option[Long]): MetaTableStats = null
+  override def save(df: DataFrame, infoDate: LocalDate, conf: Config, jobStarted: Instant, inputRecordCount: Option[Long]): SaveResult = null
 }

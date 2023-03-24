@@ -47,8 +47,8 @@ class TransformationJob(operationDef: OperationDef,
     transformer.validate(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions)
   }
 
-  override def run(infoDate: LocalDate, conf: Config): DataFrame = {
-    transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions)
+  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions))
   }
 
   def postProcessing(df: DataFrame,
@@ -61,7 +61,7 @@ class TransformationJob(operationDef: OperationDef,
                     infoDate: LocalDate,
                     conf: Config,
                     jobStarted: Instant,
-                    inputRecordCount: Option[Long]): MetaTableStats = {
-    metastore.saveTable(outputTable.name, infoDate, df, None)
+                    inputRecordCount: Option[Long]): SaveResult = {
+    SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
   }
 }

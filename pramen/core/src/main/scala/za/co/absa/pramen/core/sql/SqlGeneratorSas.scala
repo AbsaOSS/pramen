@@ -70,20 +70,20 @@ class SqlGeneratorSas(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGene
     s"SELECT COUNT(*) AS cnt 'cnt' FROM $tableName WHERE $where"
   }
 
-  def getDataQuery(tableName: String, limit: Option[Int]): String = {
-    s"SELECT ${getColumnSql(tableName)} FROM $tableName${getLimit(limit, hasWhere = false)}"
+  def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
+    s"SELECT ${getColumnSql(tableName, columns)} FROM $tableName${getLimit(limit, hasWhere = false)}"
   }
 
-  def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, limit: Option[Int]): String = {
+  def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${getColumnSql(tableName)} FROM $tableName WHERE $where${getLimit(limit, hasWhere = true)}"
+    s"SELECT ${getColumnSql(tableName, columns)} FROM $tableName WHERE $where${getLimit(limit, hasWhere = true)}"
   }
 
-  private def getColumnSql(tableName: String): String = {
-    if (sqlConfig.columns.isEmpty) {
+  private def getColumnSql(tableName: String, columns: Seq[String]): String = {
+    if (columns.isEmpty) {
       getColumns(tableName).map(name => s"$name '$name'").mkString(", ")
     } else {
-      sqlConfig.columns.mkString(", ")
+      columns.mkString(", ")
     }
   }
 

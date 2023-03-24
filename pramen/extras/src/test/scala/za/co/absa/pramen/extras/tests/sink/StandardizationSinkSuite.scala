@@ -83,7 +83,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
             )
           )
 
-          assert(sinkResult.recordsSend == 3)
+          assert(sinkResult.recordsSent == 3)
           assert(fsUtils.exists(rawPartitionPath))
           assert(fsUtils.getFilesRecursive(rawPartitionPath, "*.json").nonEmpty)
           assert(fsUtils.exists(publishPartitionPath))
@@ -129,7 +129,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
             )
           )
 
-          assert(sinkResult.recordsSend == 3)
+          assert(sinkResult.recordsSent == 3)
           assert(fsUtils.exists(publishPartitionPath))
           assert(fsUtils.getFilesRecursive(publishPartitionPath, "*.parquet").nonEmpty)
         }
@@ -193,7 +193,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
 
         val sinkResult = sink.send(exampleDf, "my_table", null, infoDate, options)
 
-        assert(sinkResult.recordsSend == 3)
+        assert(sinkResult.recordsSent == 3)
         assert(qe.queries.length == 3)
 
         assert(qe.queries.head == "DROP TABLE IF EXISTS my_table")
@@ -222,9 +222,9 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
 
         val sinkResult = sink.send(exampleDf, "my_table", null, infoDate, options)
 
-        assert(sinkResult.recordsSend == 3)
-        assert(sinkResult.warningMessage.nonEmpty)
-        assert(sinkResult.warningMessage.get == "Unable to update Hive table 'my_table': Hive exception")
+        assert(sinkResult.recordsSent == 3)
+        assert(sinkResult.warnings.nonEmpty)
+        assert(sinkResult.warnings.head == "Unable to update Hive table 'my_table': Hive exception")
       }
     }
   }

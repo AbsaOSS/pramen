@@ -19,9 +19,11 @@ package za.co.absa.pramen.core.source
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader}
+import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult, TableReader}
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{TableReaderJdbc, TableReaderJdbcNative}
+
+import java.time.LocalDate
 
 class JdbcSource(sourceConfig: Config,
                  sourceConfigParentPath: String,
@@ -30,14 +32,28 @@ class JdbcSource(sourceConfig: Config,
 
   override val config: Config = sourceConfig
 
-  override def getReader(query: Query, columns: Seq[String]): TableReader = {
+  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val reader = getReader(query)
+
+    reader.getRecordCount(query, infoDateBegin, infoDateEnd)
+  }
+
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
+    val reader = getReader(query)
+
+    val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
+
+    SourceResult(df)
+  }
+
+  private def getReader(query: Query): TableReader = {
     query match {
       case Query.Table(dbTable) =>
         log.info(s"Using TableReaderJdbc to read the table: $dbTable")
-        new TableReaderJdbc(dbTable, columns, jdbcReaderConfig, sourceConfig)
+        new TableReaderJdbc(jdbcReaderConfig, sourceConfig)
       case Query.Sql(sql)       =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
-        new TableReaderJdbcNative(sql, jdbcReaderConfig.jdbcConfig)
+        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig)
       case Query.Path(_)          =>
         throw new IllegalArgumentException(s"Unexpected 'path' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }

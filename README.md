@@ -371,7 +371,8 @@ pramen.sources = [
   },
   {
     name = "source2_name"
-    factory.class = "za.co.absa.pramen.core.source.ParquetSource"
+    factory.class = "za.co.absa.pramen.core.source.SparkSource"
+    format = "parquet"
     # ...
   }
   ## etc.
@@ -389,7 +390,9 @@ section on [sourcing jobs](#sourcing-jobs) for more details.
 pramen.sources = [
   {
     name = "source1_name"
-    factory.class = "za.co.absa.pramen.core.source.ParquetSource"
+    factory.class = "za.co.absa.pramen.core.source.SparkSource"
+    
+    format = "parquet"
     
     minimum.records = 0
     fail.if.no.data = false
@@ -399,10 +402,11 @@ pramen.sources = [
 
 Built-in sources:
 
-| Factory Class                                 | Description               |
-|-----------------------------------------------|---------------------------|
-| `za.co.absa.pramen.core.source.JdbcSource`    | JDBC Source               |
-| `za.co.absa.pramen.core.source.ParquetSource` | Parquet on Hadoop source. |
+| Factory Class                                    | Description                                                              |
+|--------------------------------------------------|--------------------------------------------------------------------------|
+| `za.co.absa.pramen.core.source.JdbcSource`       | JDBC Source                                                              |
+| `za.co.absa.pramen.core.source.SparkSource`      | Any format supported by Spark on Hadoop source.                          |
+| `za.co.absa.pramen.core.source.LocalSparkSource` | Any format supported by Spark on a local file system on the driver node. |
 
 Here is how each of these sources can be configured:
 
@@ -552,49 +556,6 @@ pramen.operations = [
           schema = "id int, name string"
         }
         output.metastore.table = my_table
-      }
-    ]
-  }
-]
-```
-
-#### Parquet source
-Here is how you can configure a Parquet source. The exact path to the source is defined in the sourcing job configuration
-of the pipeline.
-
-```config
-{
-    name = "parquet_source1"
-    factory.class = "za.co.absa.pramen.core.source.ParquetSource"
-
-    # Specifies if tables of the data source have an information date colunn
-    has.information.date.column = true
-    
-    # If information column is present, specify its parameters:
-    information.date {
-      column = "info_date"
-      
-      # The format of the information date.
-      # The format should be specified according to `java.time` spec:
-      # https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html
-      date.app.format = "yyyy-MM-dd"
-    }
-}
-```
-
-An operation for sourcing a Parquet directory from HDFS can look like this:
-```
-pramen.operations = [
-  {
-    name = "Sourcing of a Parquet directory"
-    type = "ingestion"
-    schedule.type = "daily"
-
-    source = "parquet_source1"
-    tables = [
-      {
-        input.path = "hdfs://server/path/to/parquet/data"
-        output.metastore.table = my_table1
       }
     ]
   }

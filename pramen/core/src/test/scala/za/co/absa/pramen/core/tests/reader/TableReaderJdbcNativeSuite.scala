@@ -17,9 +17,9 @@
 package za.co.absa.pramen.core.tests.reader
 
 import java.time.LocalDate
-
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.reader.TableReaderJdbcNative
@@ -57,24 +57,24 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     super.afterAll()
   }
 
-  private def getReader(query: String): TableReaderJdbcNative =
-    TableReaderJdbcNative(query, conf.getConfig("reader"), "reader")
+  private def getReader: TableReaderJdbcNative =
+    TableReaderJdbcNative(conf.getConfig("reader"), "reader")
 
   "TableReaderJdbcNative factory" should {
     "construct a reader object" in {
-      assert(getReader("") != null)
+      assert(getReader != null)
     }
 
     "throw an exception if config is missing" in {
       intercept[IllegalArgumentException] {
-        TableReaderJdbcNative(s"SELECT * FROM $tableName", conf)
+        TableReaderJdbcNative(conf)
       }
     }
   }
 
   "getJdbcConfig()" should {
     "return the proper config" in {
-      val reader = getReader("SELECT * FROM $tableName")
+      val reader = getReader
 
       val jdbcConfig = reader.getJdbcConfig
 
@@ -88,25 +88,33 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
 
   "getRecordCount()" should {
     "return the actual count for a single day" in {
-      val reader = getReader(s"SELECT * FROM $tableName WHERE founded = '@infoDateBegin'")
+      val reader = getReader
 
-      val count = reader.getRecordCount(LocalDate.parse("2005-03-29"), LocalDate.parse("2005-03-29"))
+      val count = reader.getRecordCount(Query.Sql(s"SELECT * FROM $tableName WHERE founded = '@infoDateBegin'"),
+        LocalDate.parse("2005-03-29"),
+        LocalDate.parse("2005-03-29")
+      )
 
       assert(count == 1)
     }
 
     "return the actual count for a single end day" in {
-      val reader = getReader(s"SELECT * FROM $tableName WHERE founded = '@date'")
+      val reader = getReader
 
-      val count = reader.getRecordCount(LocalDate.parse("2005-03-29"), LocalDate.parse("2005-03-29"))
+      val count = reader.getRecordCount(Query.Sql(s"SELECT * FROM $tableName WHERE founded = '@date'"),
+        LocalDate.parse("2005-03-29"),
+        LocalDate.parse("2005-03-29"))
 
       assert(count == 1)
     }
 
     "return the actual count for a date range" in {
-      val reader = getReader(s"SELECT * FROM $tableName WHERE founded >= '@infoDateBegin' AND founded <= '@infoDateEnd'")
+      val reader = getReader
 
-      val count = reader.getRecordCount(LocalDate.parse("2000-01-01"), LocalDate.parse("2017-12-31"))
+      val count = reader.getRecordCount(
+        Query.Sql(s"SELECT * FROM $tableName WHERE founded >= '@infoDateBegin' AND founded <= '@infoDateEnd'"),
+        LocalDate.parse("2000-01-01"),
+        LocalDate.parse("2017-12-31"))
 
       assert(count == 3)
     }
@@ -148,13 +156,16 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
         |  "FOUNDED" : "2005-03-29"
         |} ]"""
 
-      val reader = getReader(s"SELECT id, name, email, founded FROM $tableName WHERE founded = '@infoDateBegin'")
+      val reader = getReader
 
-      val df = reader.getData(LocalDate.parse("2005-03-29"), LocalDate.parse("2005-03-29"))
-      assert(df.isDefined)
+      val df = reader.getData(
+        Query.Sql(s"SELECT id, name, email, founded FROM $tableName WHERE founded = '@infoDateBegin'"),
+        LocalDate.parse("2005-03-29"),
+        LocalDate.parse("2005-03-29"),
+        Nil)
 
-      val actualSchema = df.get.schema.prettyJson
-      val actualData = SparkUtils.convertDataFrameToPrettyJSON(df.get)
+      val actualSchema = df.schema.prettyJson
+      val actualData = SparkUtils.convertDataFrameToPrettyJSON(df)
 
       assert(stripLineEndings(actualSchema) == stripLineEndings(expectedSchema))
       assert(stripLineEndings(actualData) == stripLineEndings(expectedData))
@@ -180,12 +191,15 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
         |  "FOUNDED" : "2016-12-30"
         |} ]"""
 
-      val reader = getReader(s"SELECT id, name, email, founded FROM $tableName WHERE founded >= '@dateFrom' AND founded <= '@dateTo'")
+      val reader = getReader
 
-      val df = reader.getData(LocalDate.parse("2000-01-01"), LocalDate.parse("2017-12-31"))
-      assert(df.isDefined)
+      val df = reader.getData(
+        Query.Sql(s"SELECT id, name, email, founded FROM $tableName WHERE founded >= '@dateFrom' AND founded <= '@dateTo'"),
+        LocalDate.parse("2000-01-01"),
+        LocalDate.parse("2017-12-31"),
+        Nil)
 
-      val actualData = SparkUtils.convertDataFrameToPrettyJSON(df.get)
+      val actualData = SparkUtils.convertDataFrameToPrettyJSON(df)
 
       assert(stripLineEndings(actualData) == stripLineEndings(expectedData))
     }

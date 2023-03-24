@@ -86,7 +86,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
     "invoke run() method of the transformer" in {
       val (job, _) = getUseCase(runFunction = () => exampleDf)
 
-      val actual = job.run(infoDate, conf)
+      val actual = job.run(infoDate, conf).data
 
       assert(actual.count() == 3)
     }

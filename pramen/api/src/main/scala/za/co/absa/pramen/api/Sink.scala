@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.api
 
-import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 import java.time.LocalDate
@@ -24,7 +23,8 @@ import java.time.LocalDate
 /**
   * A sink is an entity where jobs can write to and it won't be under metastore control (e.g. Kafka).
   *
-  * Special Sink jobs are used to write tables from metastore to a sink.
+  * Sink jobs are used to write tables from metastore to a sink.
+  * Transfer jobs are used to read data from a source and write it to a sink.
   */
 trait Sink extends ExternalChannel {
   /**

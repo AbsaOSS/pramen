@@ -20,14 +20,13 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.api.{Query, TableReader}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class TableReaderSpark(format: String,
                        schemaOpt: Option[String],
-                       path: String,
                        hasInfoDateColumn: Boolean,
                        infoDateColumn: String,
                        infoDateFormat: String = "yyyy-MM-dd",
@@ -37,52 +36,54 @@ class TableReaderSpark(format: String,
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
 
-  override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     if (hasInfoDateColumn) {
       if (infoDateBegin.equals(infoDateEnd)) {
-        if (hasData(infoDateEnd)) {
-          log.info(s"Reading COUNT(*) FROM $path WHERE $infoDateColumn='${dateFormatter.format(infoDateBegin)}'")
-          getDailyDataFrame(infoDateBegin).count()
-        } else {
-          log.info(s"No partition for $path with $infoDateColumn='${dateFormatter.format(infoDateBegin)}' has been created yet.")
-          0L
-        }
+        log.info(s"Reading COUNT(*) FROM ${query.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateBegin)}'")
+        getDailyDataFrame(query, infoDateBegin).count()
       } else {
-        log.info(s"Reading COUNT(*) FROM $path WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
-        getFilteredDataFrame(infoDateBegin, infoDateEnd).count()
+        log.info(s"Reading COUNT(*) FROM ${query.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
+        getFilteredDataFrame(query, infoDateBegin, infoDateEnd).count()
       }
     } else {
-      getUnfilteredDataFrame.count()
+      getBaseDataFrame(query).count()
     }
   }
 
-  override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = {
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     if (hasInfoDateColumn) {
       if (infoDateBegin.equals(infoDateEnd)) {
-        log.info(s"Reading * FROM $path WHERE $infoDateColumn='${dateFormatter.format(infoDateEnd)}'")
-        if (hasData(infoDateEnd)) {
-          Option(getDailyDataFrame(infoDateEnd))
-        } else {
-          None
-        }
+        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateEnd)}'")
+        getDailyDataFrame(query, infoDateEnd)
       } else {
-        log.info(s"Reading * FROM $path WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
-        Option(getFilteredDataFrame(infoDateBegin, infoDateEnd))
+        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
+        getFilteredDataFrame(query, infoDateBegin, infoDateEnd)
       }
     } else {
-      Option(getUnfilteredDataFrame)
+      getBaseDataFrame(query)
     }
   }
 
-  private def getDailyDataFrame(infoDate: LocalDate): DataFrame = {
+  private def getDailyDataFrame(query: Query, infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)
 
-    if (hasData(infoDate)) {
-      // If the partition folder exists, read directly from it
-      val partitionPath = getPartitionPath(infoDate)
-      log.info(s"Partition column exists, reading from $partitionPath.")
+    val readPartitionDirectly = query match {
+      case Query.Path(path) => hasData(path, infoDate)
+      case _ => false
+    }
 
-      val dfIn = reader.load(partitionPath.toUri.toString)
+    if (readPartitionDirectly) {
+      val path = query.asInstanceOf[Query.Path].path
+
+      // If the partition folder exists, read directly from it
+      val partitionPath = getPartitionPath(path, infoDate)
+
+      val dfIn = if (hasData(path, infoDate)) {
+        log.info(s"Partition column exists, reading from $partitionPath.")
+        getBasePathReader.load(partitionPath.toUri.toString)
+      } else {
+        getFilteredDataFrame(query, infoDate, infoDate)
+      }
 
       if (dfIn.schema.fields.exists(_.name == infoDateColumn)) {
         log.warn(s"Partition column $infoDateColumn is duplicated in data itself for $dateStr.")
@@ -92,29 +93,26 @@ class TableReaderSpark(format: String,
         dfIn.withColumn(infoDateColumn, lit(dateStr))
       }
     } else {
-      log.info(s"Reading data from $path filtered by $infoDateColumn = '$dateStr'.")
-      getFilteredDataFrame(infoDate, infoDate)
+      log.info(s"Reading data from ${query.query} filtered by $infoDateColumn = '$dateStr'.")
+      getFilteredDataFrame(query, infoDate, infoDate)
     }
   }
 
-  private def getFilteredDataFrame(infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+  private def getFilteredDataFrame(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
     val infoDateBeginStr = dateFormatter.format(infoDateBegin)
     val infoDateEndStr = dateFormatter.format(infoDateEnd)
+
     if (infoDateBegin.equals(infoDateEnd)) {
-      reader.load(path)
+      getBaseDataFrame(query)
         .filter(col(s"$infoDateColumn") === lit(infoDateBeginStr))
     } else {
-      reader.load(path)
+      getBaseDataFrame(query)
         .filter(col(s"$infoDateColumn") >= lit(infoDateBeginStr) && col(s"$infoDateColumn") <= lit(infoDateEndStr))
     }
   }
 
-  private def getUnfilteredDataFrame: DataFrame = {
-    reader.load(path)
-  }
-
-  private def hasData(infoDate: LocalDate): Boolean = {
-    val path = getPartitionPath(infoDate)
+  private def hasData(basePath: String, infoDate: LocalDate): Boolean = {
+    val path = getPartitionPath(basePath, infoDate)
     val fs = path.getFileSystem(spark.sparkContext.hadoopConfiguration)
 
     val hasPartition = fs.exists(path)
@@ -124,7 +122,30 @@ class TableReaderSpark(format: String,
     hasPartition
   }
 
-  private def reader: DataFrameReader = {
+  private def getBaseDataFrame(query: Query): DataFrame = {
+    query match {
+      case Query.Sql(sql)   =>
+        spark.sql(sql)
+      case Query.Path(path) =>
+        schemaOpt match {
+          case Some(schema) =>
+            spark.read
+              .format(format)
+              .schema(schema)
+              .options(options)
+              .load(path)
+          case None         =>
+            spark.read
+              .format(format)
+              .options(options)
+              .load(path)
+        }
+      case Query.Table(table) =>
+        spark.table(table)
+    }
+  }
+
+  private def getBasePathReader: DataFrameReader = {
     schemaOpt match {
       case Some(schema) =>
         spark.read
@@ -138,7 +159,7 @@ class TableReaderSpark(format: String,
     }
   }
 
-  private def getPartitionPath(infoDate: LocalDate): Path = {
+  private def getPartitionPath(path: String, infoDate: LocalDate): Path = {
     val partition = s"$infoDateColumn=${dateFormatter.format(infoDate)}"
     new Path(path, partition)
   }

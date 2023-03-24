@@ -160,7 +160,7 @@ class CmdLineSink(sinkConfig: Config,
 
           log.info(s"$count records sent to the cmd line sink ($cmdLine).")
         }
-        SinkResult(count, None)
+        SinkResult(count)
       case None    =>
         val cmdLine = getCmdLine(cmdLineTemplate, None, infoDate)
 
@@ -169,7 +169,7 @@ class CmdLineSink(sinkConfig: Config,
         val count = processRunner.recordCount.getOrElse(0L)
 
         log.info(s"$count records sent to the cmd line sink ($cmdLine).")
-        SinkResult(count, None)
+        SinkResult(count)
     }
   }
 

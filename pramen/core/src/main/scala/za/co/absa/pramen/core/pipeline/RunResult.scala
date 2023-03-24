@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api
+package za.co.absa.pramen.core.pipeline
 
-case class SinkResult(
-                       recordsSent: Long,
-                       filesSent: Seq[String] = Seq.empty[String], // The list of files written. Empty list for non-file based sources.
-                       warnings: Seq[String] = Seq.empty[String]
-                     )
+import org.apache.spark.sql.DataFrame
+
+case class RunResult(
+                      data: DataFrame,
+                      filesRead: Seq[String] = Seq.empty[String], // The list of files read. Empty list for non-file based sources.
+                      warnings: Seq[String] = Seq.empty[String]
+                    )

@@ -83,8 +83,8 @@ class SinkJob(operationDef: OperationDef,
     }
   }
 
-  override def run(infoDate: LocalDate, conf: Config): DataFrame = {
-    getDataDf(infoDate)
+  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+    RunResult(getDataDf(infoDate))
   }
 
   def postProcessing(df: DataFrame,
@@ -112,7 +112,7 @@ class SinkJob(operationDef: OperationDef,
                     infoDate: LocalDate,
                     conf: Config,
                     jobStarted: Instant,
-                    inputRecordCount: Option[Long]): MetaTableStats = {
+                    inputRecordCount: Option[Long]): SaveResult = {
     try {
       sink.connect()
     } catch {
@@ -132,13 +132,14 @@ class SinkJob(operationDef: OperationDef,
         infoDate,
         infoDate,
         infoDate,
-        inputRecordCount.getOrElse(sinkResult.recordsSend),
-        sinkResult.recordsSend,
+        inputRecordCount.getOrElse(sinkResult.recordsSent),
+        sinkResult.recordsSent,
         jobStarted.getEpochSecond,
         jobFinished.getEpochSecond
       )
 
-      MetaTableStats(sinkResult.recordsSend, None, sinkResult.warningMessage)
+      val stats = MetaTableStats(sinkResult.recordsSent, None)
+      SaveResult(stats, sinkResult.filesSent, sinkResult.warnings)
     } catch {
       case NonFatal(ex) => throw new IllegalStateException("Unable to write to the sink.", ex)
     } finally {

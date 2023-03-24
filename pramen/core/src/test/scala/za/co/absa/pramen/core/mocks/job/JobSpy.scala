@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.mocks.MetaTableFactory.getDummyMetaTable
-import za.co.absa.pramen.core.pipeline.{Job, JobNotificationTarget, JobPreRunResult, JobPreRunStatus, OperationDef}
+import za.co.absa.pramen.core.pipeline.{Job, JobNotificationTarget, JobPreRunResult, JobPreRunStatus, OperationDef, RunResult, SaveResult}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
@@ -33,10 +33,10 @@ class JobSpy(jobName: String = "DummyJob",
              operationDef: OperationDef = OperationDefFactory.getDummyOperationDef(),
              preRunCheckFunction: () => JobPreRunResult = () => JobPreRunResult(JobPreRunStatus.Ready, None, Nil),
              validationFunction: () => Reason = () => Reason.Ready,
-             runFunction: () => DataFrame = () => null,
+             runFunction: () => RunResult = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing,
              allowParallel: Boolean = true,
-             saveStats: MetaTableStats = MetaTableStats(0, None, None),
+             saveStats: MetaTableStats = MetaTableStats(0, None),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty
             ) extends Job {
   var getDatesToRunCount = 0
@@ -70,7 +70,7 @@ class JobSpy(jobName: String = "DummyJob",
     validationFunction()
   }
 
-  override def run(infoDate: LocalDate, conf: Config): DataFrame = {
+  override def run(infoDate: LocalDate, conf: Config): RunResult = {
     runCount += 1
     runFunction()
   }
@@ -80,10 +80,10 @@ class JobSpy(jobName: String = "DummyJob",
     df
   }
 
-  override def save(df: DataFrame, infoDate: LocalDate, jobConfig: Config, jobStarted: Instant, inputRecordCount: Option[Long]): MetaTableStats = {
+  override def save(df: DataFrame, infoDate: LocalDate, jobConfig: Config, jobStarted: Instant, inputRecordCount: Option[Long]): SaveResult = {
     saveDf = df
     saveCount += 1
 
-    saveStats
+    SaveResult(saveStats)
   }
 }

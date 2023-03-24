@@ -18,17 +18,16 @@ package za.co.absa.pramen.core.mocks.job
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader}
+import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult}
 import za.co.absa.pramen.core.mocks.reader.ReaderSpy
 
+import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
-class SourceSpy(query: Query = Query.Table("table1"),
-                sourceConfig: Config = ConfigFactory.empty(),
+class SourceSpy(sourceConfig: Config = ConfigFactory.empty(),
                 numberOfRecords: Int = 5,
-                hasInformationDate: Boolean = false,
-                readerCountException: Throwable = null,
-                readerDataException: Throwable = null
+                getCountException: Throwable = null,
+                getDataException: Throwable = null
 )(implicit spark: SparkSession) extends Source {
   var connectCalled: Int = 0
   var closeCalled: Int = 0
@@ -38,7 +37,26 @@ class SourceSpy(query: Query = Query.Table("table1"),
 
   override val config: Config = sourceConfig
 
-  override def getReader(query: Query, columns: Seq[String]): TableReader = new ReaderSpy(numberOfRecords, readerCountException, readerDataException)
+  def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    if (getCountException != null) {
+      throw getCountException
+    }
+
+    numberOfRecords
+  }
+
+  def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
+    import spark.implicits._
+
+    if (getDataException != null) {
+      throw getDataException
+    }
+
+    val generatedList = Range(0, numberOfRecords).toList
+    val df = generatedList.toDF("v")
+
+    SourceResult(df)
+  }
 }
 
 object SourceSpy extends ExternalChannelFactory[SourceSpy] {

@@ -42,13 +42,13 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig, extraConfig: Config) extends SqlG
     s"SELECT COUNT(*) FROM $tableName WHERE $where"
   }
 
-  override def getDataQuery(tableName: String, limit: Option[Int]): String = {
-    s"SELECT $columnExpr FROM $tableName${getLimit(limit)}"
+  override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
+    s"SELECT ${columnExpr(columns)} FROM $tableName${getLimit(limit)}"
   }
 
-  override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, limit: Option[Int]): String = {
+  override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT $columnExpr FROM $tableName WHERE $where${getLimit(limit)}"
+    s"SELECT ${columnExpr(columns)} FROM $tableName WHERE $where${getLimit(limit)}"
   }
 
   private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {

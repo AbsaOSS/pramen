@@ -20,7 +20,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.types.{IntegerType, StringType}
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.reader.TableReaderSpark
@@ -37,41 +37,41 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
     "the table has info date" should {
       "work when the is the same date and there is partition" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          assert(reader.getRecordCount(infoDate1, infoDate1) == 2)
+          assert(reader.getRecordCount(query, infoDate1, infoDate1) == 2)
         }
       }
 
       "work when the is the same date and there is no partition" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          assert(reader.getRecordCount(infoDate1.minusDays(1), infoDate1.minusDays(1)) == 0)
+          assert(reader.getRecordCount(query, infoDate1.minusDays(1), infoDate1.minusDays(1)) == 0)
         }
       }
 
       "work for info date ranges with data" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          assert(reader.getRecordCount(infoDate1.minusDays(1), infoDate1.plusDays(1)) == 2)
+          assert(reader.getRecordCount(query, infoDate1.minusDays(1), infoDate1.plusDays(1)) == 2)
         }
       }
 
       "work for info date ranges with data, different range" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          assert(reader.getRecordCount(infoDate1.minusDays(1), infoDate1.plusDays(10)) == 5)
+          assert(reader.getRecordCount(query, infoDate1.minusDays(1), infoDate1.plusDays(10)) == 5)
         }
       }
 
       "work for info date ranges with no data" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          assert(reader.getRecordCount(infoDate1.minusDays(10), infoDate1.minusDays(5)) == 0)
+          assert(reader.getRecordCount(query, infoDate1.minusDays(10), infoDate1.minusDays(5)) == 0)
         }
       }
 
@@ -80,18 +80,18 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
     "the table doesn't have an info date" should {
       "return all data no matter date range" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir, hasInfoDate = false)
+          val (reader, query) = getUseCase(tempDir, hasInfoDate = false)
 
-          assert(reader.getRecordCount(infoDate1.minusDays(10), infoDate1.minusDays(5)) == 5)
+          assert(reader.getRecordCount(query, infoDate1.minusDays(10), infoDate1.minusDays(5)) == 5)
         }
       }
 
       "throw an exception if data directory does not exist" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir, hasInfoDate = false, createData = false)
+          val (reader, query) = getUseCase(tempDir, hasInfoDate = false, createData = false)
 
           val ex = intercept[AnalysisException] {
-            reader.getRecordCount(infoDate1.minusDays(10), infoDate1.minusDays(5))
+            reader.getRecordCount(query, infoDate1.minusDays(10), infoDate1.minusDays(5))
           }
           assert(ex.getMessage().contains("Path does not exist"))
         }
@@ -103,41 +103,33 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
     "the table has info date" should {
       "work when the is the same date and there is partition" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          val dfOpt = reader.getData(infoDate1, infoDate1)
+          val df = reader.getData(query, infoDate1, infoDate1, Nil)
 
-          assert(dfOpt.isDefined)
+          val actual = df.toJSON.collect().mkString(",")
 
-          dfOpt.foreach(df => {
-            val actual = df.toJSON.collect().mkString(",")
-
-            assert(actual == """{"a":1,"b":"2","c":3,"info_date":"2022-08-05"},{"a":4,"b":"5","c":6,"info_date":"2022-08-05"}""")
-          })
+          assert(actual == """{"a":1,"b":"2","c":3,"info_date":"2022-08-05"},{"a":4,"b":"5","c":6,"info_date":"2022-08-05"}""")
         }
       }
 
       "work when the is the same date and there is partition and no schema" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir, noSchema = true)
+          val (reader, query) = getUseCase(tempDir, noSchema = true)
 
-          val dfOpt = reader.getData(infoDate1, infoDate1)
+          val df = reader.getData(query, infoDate1, infoDate1, Nil)
 
-          assert(dfOpt.isDefined)
+          val actual = df.toJSON.collect().mkString(",")
 
-          dfOpt.foreach(df => {
-            val actual = df.toJSON.collect().mkString(",")
-
-            assert(actual == """{"_c0":"1","_c1":"2","_c2":"3","info_date":"2022-08-05"},{"_c0":"4","_c1":"5","_c2":"6","info_date":"2022-08-05"}""")
-          })
+          assert(actual == """{"_c0":"1","_c1":"2","_c2":"3","info_date":"2022-08-05"},{"_c0":"4","_c1":"5","_c2":"6","info_date":"2022-08-05"}""")
         }
       }
 
       "work when the is the same date and there is no partition" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          val dfOpt = reader.getData(infoDate1.minusDays(1), infoDate1.minusDays(1))
+          val dfOpt = reader.getData(query, infoDate1.minusDays(1), infoDate1.minusDays(1), Nil)
 
           assert(dfOpt.isEmpty)
         }
@@ -145,54 +137,42 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
 
       "work for info date ranges with data" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          val dfOpt = reader.getData(infoDate1.minusDays(1), infoDate1.plusDays(1))
+          val df = reader.getData(query, infoDate1.minusDays(1), infoDate1.plusDays(1), Nil)
 
-          assert(dfOpt.isDefined)
-
-          dfOpt.foreach(df => {
-            val actual = df.toJSON.collect().mkString(",")
-            assert(actual == """{"a":1,"b":"2","c":3,"info_date":"2022-08-05"},{"a":4,"b":"5","c":6,"info_date":"2022-08-05"}""")
-          })
+          val actual = df.toJSON.collect().mkString(",")
+          assert(actual == """{"a":1,"b":"2","c":3,"info_date":"2022-08-05"},{"a":4,"b":"5","c":6,"info_date":"2022-08-05"}""")
         }
       }
 
       "work for info date ranges with data, different range" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          val dfOpt = reader.getData(infoDate1.minusDays(1), infoDate1.plusDays(10))
+          val df = reader.getData(query, infoDate1.minusDays(1), infoDate1.plusDays(10), Nil)
 
-          assert(dfOpt.isDefined)
+          assert(df.count() == 5)
 
-          dfOpt.foreach(df => {
-            assert(df.count() == 5)
-
-            assert(df.schema.fields.head.name == "a")
-            assert(df.schema.fields.head.dataType == IntegerType)
-            assert(df.schema.fields(1).name == "b")
-            assert(df.schema.fields(1).dataType == StringType)
-          })
+          assert(df.schema.fields.head.name == "a")
+          assert(df.schema.fields.head.dataType == IntegerType)
+          assert(df.schema.fields(1).name == "b")
+          assert(df.schema.fields(1).dataType == StringType)
         }
       }
 
       "work for info date ranges with no data" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir)
+          val (reader, query) = getUseCase(tempDir)
 
-          val dfOpt = reader.getData(infoDate1.minusDays(10), infoDate1.minusDays(5))
+          val df = reader.getData(query, infoDate1.minusDays(10), infoDate1.minusDays(5), Nil)
 
-          assert(dfOpt.isDefined)
+          assert(df.count() == 0)
 
-          dfOpt.foreach(df => {
-            assert(df.count() == 0)
-
-            assert(df.schema.fields.head.name == "a")
-            assert(df.schema.fields.head.dataType == IntegerType)
-            assert(df.schema.fields(1).name == "b")
-            assert(df.schema.fields(1).dataType == StringType)
-          })
+          assert(df.schema.fields.head.name == "a")
+          assert(df.schema.fields.head.dataType == IntegerType)
+          assert(df.schema.fields(1).name == "b")
+          assert(df.schema.fields(1).dataType == StringType)
         }
       }
 
@@ -201,48 +181,40 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
     "the table doesn't have an info date" should {
       "return all data no matter date range" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir, hasInfoDate = false)
+          val (reader, query) = getUseCase(tempDir, hasInfoDate = false)
 
-          val dfOpt = reader.getData(infoDate1.minusDays(10), infoDate1.minusDays(5))
+          val df = reader.getData(query, infoDate1.minusDays(10), infoDate1.minusDays(5), Nil)
 
-          assert(dfOpt.isDefined)
+          assert(df.count() == 5)
 
-          dfOpt.foreach(df => {
-            assert(df.count() == 5)
-
-            assert(df.schema.fields.head.name == "a")
-            assert(df.schema.fields.head.dataType == IntegerType)
-            assert(df.schema.fields(1).name == "b")
-            assert(df.schema.fields(1).dataType == StringType)
-          })
+          assert(df.schema.fields.head.name == "a")
+          assert(df.schema.fields.head.dataType == IntegerType)
+          assert(df.schema.fields(1).name == "b")
+          assert(df.schema.fields(1).dataType == StringType)
         }
       }
 
       "return all data no matter date range and no schema" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir, hasInfoDate = false, noSchema = true)
+          val (reader, query) = getUseCase(tempDir, hasInfoDate = false, noSchema = true)
 
-          val dfOpt = reader.getData(infoDate1.minusDays(10), infoDate1.minusDays(5))
+          val df = reader.getData(query, infoDate1.minusDays(10), infoDate1.minusDays(5), Nil)
 
-          assert(dfOpt.isDefined)
+          assert(df.count() == 5)
 
-          dfOpt.foreach(df => {
-            assert(df.count() == 5)
-
-            assert(df.schema.fields.head.name == "_c0")
-            assert(df.schema.fields.head.dataType == StringType)
-            assert(df.schema.fields(1).name == "_c1")
-            assert(df.schema.fields(1).dataType == StringType)
-          })
+          assert(df.schema.fields.head.name == "_c0")
+          assert(df.schema.fields.head.dataType == StringType)
+          assert(df.schema.fields(1).name == "_c1")
+          assert(df.schema.fields(1).dataType == StringType)
         }
       }
 
       "throw an exception if data directory does not exist" in {
         withTempDirectory("spark_source") { tempDir =>
-          val reader = getUseCase(tempDir, hasInfoDate = false, createData = false)
+          val (reader, query) = getUseCase(tempDir, hasInfoDate = false, createData = false)
 
           val ex = intercept[AnalysisException] {
-            reader.getData(infoDate1.minusDays(10), infoDate1.minusDays(5))
+            reader.getData(query, infoDate1.minusDays(10), infoDate1.minusDays(5), Nil)
           }
           assert(ex.getMessage().contains("Path does not exist"))
         }
@@ -254,7 +226,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
                          createData: Boolean = true,
                          hasInfoDate: Boolean = true,
                          noSchema: Boolean = false,
-                         options: Option[Map[String, String]] = None): TableReader = {
+                         options: Option[Map[String, String]] = None): (TableReader, Query) = {
     val pathBase = new Path(tempDir, "test")
     val path1 = new Path(pathBase, "info_date=2022-08-05")
     val path2 = new Path(pathBase, "info_date=2022-08-08")
@@ -268,7 +240,9 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
 
     val schemaOpt = if (noSchema) None else Some("a int, b string, c int")
 
-    new TableReaderSpark("csv", schemaOpt, pathBase.toString, hasInfoDate, "info_date", options = effectiveOptions)
+    val query = Query.Path(pathBase.toString)
+
+    (new TableReaderSpark("csv", schemaOpt, hasInfoDate, "info_date", options = effectiveOptions), query)
   }
 
 }

@@ -20,9 +20,11 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.{Path => HadoopPath}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader}
+import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult, TableReader}
 import za.co.absa.pramen.core.utils.traverser.{FsTraverser, FsTraverserLocal}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
+
+import java.time.LocalDate
 
 class LocalSparkSource(sparkSource: SparkSource,
                        sourceConfig: Config,
@@ -52,7 +54,21 @@ class LocalSparkSource(sparkSource: SparkSource,
 
   override val config: Config = sourceConfig
 
-  override def getReader(query: Query, columns: Seq[String]): TableReader = {
+  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val reader = getReader(query)
+
+    reader.getRecordCount(query, infoDateBegin, infoDateEnd)
+  }
+
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
+    val reader = getReader(query)
+
+    val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
+
+    SourceResult(df)
+  }
+
+  def getReader(query: Query): TableReader = {
     if (!isConnected) {
       isConnected = true
       connect()
@@ -66,7 +82,7 @@ class LocalSparkSource(sparkSource: SparkSource,
 
     val hadoopPathQuery = Query.Path(copyFilesToTempHadoopDir(path.path))
 
-    sparkSource.getReader(hadoopPathQuery, columns)
+    sparkSource.getReader(hadoopPathQuery)
   }
 
   private [core] def copyFilesToTempHadoopDir(localPath: String): String = {

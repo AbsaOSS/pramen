@@ -221,13 +221,13 @@ abstract class TaskRunnerBase(conf: Config,
     Try {
       val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
 
-      val dfOut = task.job.run(task.infoDate, conf)
+      val runResult = task.job.run(task.infoDate, conf)
 
-      val schemaChangesBeforeTransform = handleSchemaChange(dfOut, task.job.outputTable.name, task.infoDate)
+      val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable.name, task.infoDate)
 
       val dfWithTimestamp = task.job.operation.processingTimestampColumn match {
-        case Some(timestampCol) => addProcessingTimestamp(dfOut, timestampCol)
-        case None => dfOut
+        case Some(timestampCol) => addProcessingTimestamp(runResult.data, timestampCol)
+        case None => runResult.data
       }
 
       val postProcessed = task.job.postProcessing(dfWithTimestamp, task.infoDate, conf)
@@ -246,20 +246,24 @@ abstract class TaskRunnerBase(conf: Config,
         Nil
       }
 
-      val stats = if (runtimeConfig.isDryRun) {
+      val saveResult = if (runtimeConfig.isDryRun) {
         log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
-        MetaTableStats(dfTransformed.count(), None, None)
+        SaveResult(MetaTableStats(dfTransformed.count(), None))
       } else {
         task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
       }
+
+      val stats = saveResult.stats
 
       val finished = Instant.now()
 
       val completionReason = if (validationResult.status == NeedsUpdate || (validationResult.status == AlreadyRan && task.reason != TaskRunReason.Rerun))
         TaskRunReason.Update else task.reason
 
+      val warnings = runResult.warnings ++ saveResult.warnings
+
       TaskResult(task.job,
-        RunStatus.Succeeded(recordCountOldOpt, stats.recordCount, stats.dataSizeBytes, completionReason, stats.warning),
+        RunStatus.Succeeded(recordCountOldOpt, stats.recordCount, stats.dataSizeBytes, completionReason, runResult.filesRead, saveResult.filesSent, warnings),
         Some(RunInfo(task.infoDate, started, finished)),
         schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
         validationResult.dependencyWarnings,

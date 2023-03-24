@@ -133,7 +133,7 @@ class MetastorePersistenceDelta(query: Query,
         None
     }
 
-    MetaTableStats(recordCount, sizeOpt, None)
+    MetaTableStats(recordCount, sizeOpt)
   }
 
   def applyRepartitioning(dfIn: DataFrame, recordCount: Long): DataFrame = {

@@ -84,7 +84,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
             Map("path" -> outputPath.toUri.toString, "info.version" -> "1")
           )
 
-          assert(sinkResult.recordsSend == 3)
+          assert(sinkResult.recordsSent == 3)
           assert(fsUtils.exists(partitionPath))
           assert(fsUtils.getFilesRecursive(partitionPath, "*.json").nonEmpty)
         }

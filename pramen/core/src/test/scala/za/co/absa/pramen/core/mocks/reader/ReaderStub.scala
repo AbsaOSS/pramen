@@ -17,12 +17,11 @@
 package za.co.absa.pramen.core.mocks.reader
 
 import java.time.LocalDate
-
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.api.{Query, TableReader}
 
 class ReaderStub extends TableReader {
-  override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = 0
+  override def getRecordCount(query: Query,  infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = 0
 
-  override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = None
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = null
 }

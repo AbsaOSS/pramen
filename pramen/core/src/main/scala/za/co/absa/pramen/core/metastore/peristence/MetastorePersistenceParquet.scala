@@ -152,7 +152,7 @@ class MetastorePersistenceParquet(path: String,
 
     val size = fsUtils.getDirectorySize(outputDirStr)
 
-    MetaTableStats(actualCount, Option(size), None)
+    MetaTableStats(actualCount, Option(size))
   }
 
   def applyRepartitioning(dfIn: DataFrame, recordCount: Long): DataFrame = {

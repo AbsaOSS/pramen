@@ -42,13 +42,13 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig, extraConfig: Config) extends S
     s"SELECT COUNT(*) AS CNT FROM $tableName WITH (NOLOCK) WHERE $where"
   }
 
-  override def getDataQuery(tableName: String, limit: Option[Int]): String = {
-    s"SELECT ${getLimit(limit)}$columnExpr FROM $tableName WITH (NOLOCK)"
+  override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
+    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM $tableName WITH (NOLOCK)"
   }
 
-  override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, limit: Option[Int]): String = {
+  override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${getLimit(limit)}$columnExpr FROM $tableName WITH (NOLOCK) WHERE $where"
+    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM $tableName WITH (NOLOCK) WHERE $where"
   }
 
   private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
