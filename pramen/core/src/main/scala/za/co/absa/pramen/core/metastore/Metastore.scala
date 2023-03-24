@@ -37,8 +37,6 @@ trait Metastore {
 
   def getLatest(tableName: String, until: Option[LocalDate]): DataFrame
 
-  def getReader(tableName: String): TableReader
-
   def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long] = None): MetaTableStats
 
   def getStats(tableName: String, infoDate: LocalDate): MetaTableStats

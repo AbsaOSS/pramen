@@ -21,7 +21,7 @@ import org.apache.spark.sql.DataFrame
 import java.time.LocalDate
 
 trait TableReader {
-  def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
+  def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
 
-  def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame]
+  def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame
 }

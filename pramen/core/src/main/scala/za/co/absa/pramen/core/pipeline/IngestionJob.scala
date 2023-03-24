@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{Reason, Source}
+import za.co.absa.pramen.api.{Reason, Source, SourceResult}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
@@ -29,6 +29,7 @@ import za.co.absa.pramen.core.utils.Emoji.WARNING
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
+import scala.collection.mutable.ListBuffer
 
 class IngestionJob(operationDef: OperationDef,
                    metastore: Metastore,
@@ -53,8 +54,7 @@ class IngestionJob(operationDef: OperationDef,
 
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
-    val reader = source.getReader(sourceTable.query, sourceTable.columns)
-    val recordCount = reader.getRecordCount(from, to)
+    val recordCount = source.getRecordCount(sourceTable.query, from, to)
 
     val minimumRecordsOpt = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
     val failIfNoData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_DATA_KEY).getOrElse(false)
@@ -104,8 +104,10 @@ class IngestionJob(operationDef: OperationDef,
     Reason.Ready
   }
 
-  override def run(infoDate: LocalDate, conf: Config): DataFrame = {
-    getSourcingDataFrame(infoDate)
+  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+    val result = getSourcingResult(infoDate)
+
+    RunResult(result.data, result.filesRead, result.warnings)
   }
 
   def postProcessing(df: DataFrame,
@@ -129,18 +131,20 @@ class IngestionJob(operationDef: OperationDef,
                     infoDate: LocalDate,
                     conf: Config,
                     jobStarted: Instant,
-                    inputRecordCount: Option[Long]): MetaTableStats = {
+                    inputRecordCount: Option[Long]): SaveResult = {
     val stats = metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
     source.close()
-    stats
+
+    SaveResult(stats)
   }
 
-  private def getSourcingDataFrame(infoDate: LocalDate): DataFrame = {
+  private def getSourcingResult(infoDate: LocalDate): SourceResult = {
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
-    source.getReader(sourceTable.query, Nil).getData(from, to) match {
-      case Some(df) => sanitizeDfColumns(df, specialCharacters)
-      case None     => throw new RuntimeException(s"Failed to read data from '${sourceTable.query.query}'")
-    }
+    val sourceResult = source.getData(sourceTable.query, from, to, sourceTable.columns)
+
+    val sanitizedDf = sanitizeDfColumns(sourceResult.data, specialCharacters)
+
+    sourceResult.copy(data = sanitizedDf)
   }
 }

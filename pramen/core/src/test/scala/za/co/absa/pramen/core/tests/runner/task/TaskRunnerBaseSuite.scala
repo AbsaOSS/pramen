@@ -53,7 +53,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
   "runJobTasks" should {
     "run multiple successful jobs parallel execution" in {
       val now = Instant.now()
-      val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => exampleDf)
+      val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf))
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -81,7 +81,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     "run multiple successful jobs sequential execution" in {
       val now = Instant.now()
-      val (runner, _, journal, state, tasks) = getUseCase(allowParallel = false, runFunction = () => exampleDf)
+      val (runner, _, journal, state, tasks) = getUseCase(allowParallel = false, runFunction = () => RunResult(exampleDf))
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -338,7 +338,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
           |  "c" : "3"
           |} ]""".stripMargin
 
-      val (runner, _, _, state, tasks) = getUseCase(runFunction = () => exampleDf)
+      val (runner, _, _, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf))
       val job = tasks.head.job.asInstanceOf[JobSpy]
 
       val started = Instant.now()
@@ -374,7 +374,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "handle a dry run" in {
-      val (runner, bk, _, state, tasks) = getUseCase(runFunction = () => exampleDf, isDryRun = true)
+      val (runner, bk, _, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), isDryRun = true)
 
       val started = Instant.now()
 
@@ -392,7 +392,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
   "handleSchemaChange" should {
     "register a new schema" in {
-      val (runner, bk, _, state, _) = getUseCase(runFunction = () => exampleDf)
+      val (runner, bk, _, state, _) = getUseCase(runFunction = () => RunResult(exampleDf))
 
       runner.handleSchemaChange(exampleDf, "table", infoDate)
 
@@ -404,7 +404,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "do nothing if schemas are the same" in {
-      val (runner, bk, _, state, _) = getUseCase(runFunction = () => exampleDf)
+      val (runner, bk, _, state, _) = getUseCase(runFunction = () => RunResult(exampleDf))
 
       bk.saveSchema("table", infoDate.minusDays(10), exampleDf.schema)
 
@@ -420,7 +420,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     }
 
     "register schema update" in {
-      val (runner, bk, _, state, _) = getUseCase(runFunction = () => exampleDf)
+      val (runner, bk, _, state, _) = getUseCase(runFunction = () => RunResult(exampleDf))
 
       bk.saveSchema("table", infoDate.minusDays(10), exampleDf.schema)
 
@@ -445,7 +445,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
   def getUseCase(infoDates: Seq[LocalDate] = infoDate :: Nil,
                  preRunCheckFunction: () => JobPreRunResult = () => JobPreRunResult(JobPreRunStatus.Ready, None, Nil),
                  validationFunction: () => Reason = () => Reason.Ready,
-                 runFunction: () => DataFrame = () => null,
+                 runFunction: () => RunResult = () => null,
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
@@ -465,7 +465,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       filters = List("b > 1")
     )
 
-    val stats = MetaTableStats(2, Some(100), None)
+    val stats = MetaTableStats(2, Some(100))
 
     val job = new JobSpy(preRunCheckFunction = preRunCheckFunction,
       validationFunction = validationFunction,

@@ -182,7 +182,7 @@ class StandardizationSink(sinkConfig: Config,
 
     generateInfoFile(sourceCount, rawCount, Option(publishCount), outputPublishPartitionPath, infoDate, jobStart, Some(publishStart))
 
-    val warning = if (options.contains(HIVE_TABLE_KEY)) {
+    val warnings = if (options.contains(HIVE_TABLE_KEY)) {
       val hiveTable = options(HIVE_TABLE_KEY)
       val fullTableName = hiveHelper.getFullTable(standardizationConfig.hiveDatabase, hiveTable)
 
@@ -200,22 +200,22 @@ class StandardizationSink(sinkConfig: Config,
           paritionBy,
           standardizationConfig.hiveDatabase,
           hiveTable)
-        None
+        Seq.empty[String]
       } catch {
         case NonFatal(ex) =>
           if (standardizationConfig.hiveIgnoreFailures) {
             log.error(s"$FAILURE Unable to update Hive table '$fullTableName'. Ignoring the error.", ex)
-            Some(s"Unable to update Hive table '$fullTableName': ${ex.getMessage}")
+            Seq(s"Unable to update Hive table '$fullTableName': ${ex.getMessage}")
           } else {
             throw ex
           }
       }
     } else {
       log.info(s"Hive table is not configured for $tableName.")
-      None
+      Seq.empty[String]
     }
 
-    SinkResult(sourceCount, warning)
+    SinkResult(sourceCount, Nil, warnings)
   }
 
   private[extras] def getInfoVersion(options: Map[String, String]): Int = {

@@ -33,10 +33,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
   private val sqlConfigDateTime = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATETIME, infoDateColumn = "D")
   private val sqlConfigString = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, infoDateColumn = "D")
   private val sqlConfigNumber = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.NUMBER, infoDateColumn = "D", dateFormatApp = "yyyyMMdd")
-
-  private val sqlConfigWithListOfColumns = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE,
-    columns = Seq("A", "D", "CAST(E, DATE) AS E"),
-    infoDateColumn = "D")
+  private val columns = Seq("A", "D", "CAST(E, DATE) AS E")
 
   private val date1 = LocalDate.of(2020, 8, 17)
   private val date2 = LocalDate.of(2020, 8, 30)
@@ -72,22 +69,21 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigDate, config)
     val genStr = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigString, config)
     val genNum = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigNumber, config)
-    val genCol = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
     }
 
     "generate data queries without date ranges" in {
-      assert(gen.getDataQuery("A") == "SELECT * FROM A")
+      assert(gen.getDataQuery("A", Nil, None) == "SELECT * FROM A")
     }
 
    "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A")
+      assert(gen.getDataQuery("A", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(gen.getDataQuery("A", Some(100)) == "SELECT * FROM A WHERE ROWNUM <= 100")
+      assert(gen.getDataQuery("A", Nil, Some(100)) == "SELECT * FROM A WHERE ROWNUM <= 100")
     }
 
     "generate ranged count queries" when {
@@ -115,30 +111,30 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(gen.getDataQuery("A", date1, date1, None) ==
+        assert(gen.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = date'2020-08-17'")
-        assert(gen.getDataQuery("A", date1, date2, None) ==
+        assert(gen.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("A", date1, date1, None) ==
+        assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("A", date1, date2, None) ==
+        assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("A", date1, date1, None) ==
+        assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = 20200817")
-        assert(genNum.getDataQuery("A", date1, date2, None) ==
+        assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(gen.getDataQuery("A", date1, date1, Some(100)) ==
+        assert(gen.getDataQuery("A", date1, date1, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D = date'2020-08-17' AND ROWNUM <= 100")
-        assert(gen.getDataQuery("A", date1, date2, Some(100)) ==
+        assert(gen.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30' AND ROWNUM <= 100")
       }
     }
@@ -159,22 +155,21 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genDateTime = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigDateTime, config)
     val genStr = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigString, config)
     val genNum = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigNumber, config)
-    val genCol = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK)")
     }
 
     "generate data queries without date ranges" in {
-      assert(genDate.getDataQuery("A") == "SELECT * FROM A WITH (NOLOCK)")
+      assert(genDate.getDataQuery("A", Nil, None) == "SELECT * FROM A WITH (NOLOCK)")
     }
 
     "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A WITH (NOLOCK)")
+      assert(genDate.getDataQuery("A", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM A WITH (NOLOCK)")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(genDate.getDataQuery("A", Some(100)) == "SELECT TOP 100 * FROM A WITH (NOLOCK)")
+      assert(genDate.getDataQuery("A", Nil, Some(100)) == "SELECT TOP 100 * FROM A WITH (NOLOCK)")
     }
 
     "generate ranged count queries" when {
@@ -209,37 +204,37 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(genDate.getDataQuery("A", date1, date1, None) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17')")
-        assert(genDate.getDataQuery("A", date1, date2, None) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17') AND D <= CONVERT(DATE, '2020-08-30')")
       }
 
       "date is in DATETIME format" in {
-        assert(genDateTime.getDataQuery("A", date1, date1, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) = CONVERT(DATE, '2020-08-17')")
-        assert(genDateTime.getDataQuery("A", date1, date2, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, D) <= CONVERT(DATE, '2020-08-30')")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("A", date1, date1, None) ==
+        assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("A", date1, date2, None) ==
+        assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("A", date1, date1, None) ==
+        assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE D = 20200817")
-        assert(genNum.getDataQuery("A", date1, date2, None) ==
+        assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WITH (NOLOCK) WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(genDate.getDataQuery("A", date1, date1, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, Some(100)) ==
           "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17')")
-        assert(genDate.getDataQuery("A", date1, date2, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17') AND D <= CONVERT(DATE, '2020-08-30')")
       }
     }
@@ -259,22 +254,21 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigDate, config)
     val genStr = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigString, config)
     val genNum = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigNumber, config)
-    val genCol = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
     }
 
     "generate data queries without date ranges" in {
-      assert(gen.getDataQuery("A") == "SELECT * FROM A")
+      assert(gen.getDataQuery("A", Nil, None) == "SELECT * FROM A")
     }
 
     "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A")
+      assert(gen.getDataQuery("A", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(gen.getDataQuery("A", Some(100)) == "SELECT * FROM A")
+      assert(gen.getDataQuery("A", Nil, Some(100)) == "SELECT * FROM A")
     }
 
     "generate ranged count queries" when {
@@ -302,30 +296,30 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(gen.getDataQuery("A", date1, date1, None) ==
+        assert(gen.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = date'2020-08-17'")
-        assert(gen.getDataQuery("A", date1, date2, None) ==
+        assert(gen.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("A", date1, date1, None) ==
+        assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("A", date1, date2, None) ==
+        assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("A", date1, date1, None) ==
+        assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = 20200817")
-        assert(genNum.getDataQuery("A", date1, date2, None) ==
+        assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(gen.getDataQuery("A", date1, date1, Some(100)) ==
+        assert(gen.getDataQuery("A", date1, date1, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D = date'2020-08-17'")
-        assert(gen.getDataQuery("A", date1, date2, Some(100)) ==
+        assert(gen.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
     }
@@ -347,27 +341,25 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("com.sas.rio.MVADriver", sqlConfigDate, config)
     val genStr = fromDriverName("com.sas.rio.MVADriver", sqlConfigString, config)
     val genNum = fromDriverName("com.sas.rio.MVADriver", sqlConfigNumber, config)
-    val genCol = fromDriverName("com.sas.rio.MVADriver", sqlConfigWithListOfColumns, config)
 
     gen.setConnection(connection)
     genStr.setConnection(connection)
     genNum.setConnection(connection)
-    genCol.setConnection(connection)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) AS cnt 'cnt' FROM A")
     }
 
     "generate data queries without date ranges" in {
-      assert(gen.getDataQuery("company") == "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company")
+      assert(gen.getDataQuery("company", Nil, None) == "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company")
     }
 
     "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("company") == "SELECT A, D, CAST(E, DATE) AS E FROM company")
+      assert(gen.getDataQuery("company", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM company")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(gen.getDataQuery("company", Some(100)) == "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company LIMIT 100")
+      assert(gen.getDataQuery("company", Nil, Some(100)) == "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company LIMIT 100")
     }
 
     "generate ranged count queries" when {
@@ -395,30 +387,30 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(gen.getDataQuery("company", date1, date1, None) ==
+        assert(gen.getDataQuery("company", date1, date1, Nil, None) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D = date'2020-08-17'")
-        assert(gen.getDataQuery("company", date1, date2, None) ==
+        assert(gen.getDataQuery("company", date1, date2, Nil, None) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("company", date1, date1, None) ==
+        assert(genStr.getDataQuery("company", date1, date1, Nil, None) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("company", date1, date2, None) ==
+        assert(genStr.getDataQuery("company", date1, date2, Nil, None) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("company", date1, date1, None) ==
+        assert(genNum.getDataQuery("company", date1, date1, Nil, None) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D = 20200817")
-        assert(genNum.getDataQuery("company", date1, date2, None) ==
+        assert(genNum.getDataQuery("company", date1, date2, Nil, None) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(gen.getDataQuery("company", date1, date1, Some(100)) ==
+        assert(gen.getDataQuery("company", date1, date1, Nil, Some(100)) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D = date'2020-08-17' LIMIT 100")
-        assert(gen.getDataQuery("company", date1, date2, Some(100)) ==
+        assert(gen.getDataQuery("company", date1, date2, Nil, Some(100)) ==
           "SELECT ID 'ID', NAME 'NAME', EMAIL 'EMAIL', FOUNDED 'FOUNDED', LAST_UPDATED 'LAST_UPDATED', INFO_DATE 'INFO_DATE' FROM company WHERE D >= date'2020-08-17' AND D <= date'2020-08-30' LIMIT 100")
       }
     }
@@ -438,22 +430,21 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDate, config)
     val genStr = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigString, config)
     val genNum = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigNumber, config)
-    val genCol = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
     }
 
     "generate data queries without date ranges" in {
-      assert(gen.getDataQuery("A") == "SELECT * FROM A")
+      assert(gen.getDataQuery("A", Nil, None) == "SELECT * FROM A")
     }
 
     "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A")
+      assert(gen.getDataQuery("A", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(gen.getDataQuery("A", Some(100)) == "SELECT * FROM A LIMIT 100")
+      assert(gen.getDataQuery("A", Nil, Some(100)) == "SELECT * FROM A LIMIT 100")
     }
 
     "generate ranged count queries" when {
@@ -481,30 +472,30 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(gen.getDataQuery("A", date1, date1, None) ==
+        assert(gen.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = to_date('2020-08-17')")
-        assert(gen.getDataQuery("A", date1, date2, None) ==
+        assert(gen.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= to_date('2020-08-17') AND D <= to_date('2020-08-30')")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("A", date1, date1, None) ==
+        assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("A", date1, date2, None) ==
+        assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("A", date1, date1, None) ==
+        assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = 20200817")
-        assert(genNum.getDataQuery("A", date1, date2, None) ==
+        assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(gen.getDataQuery("A", date1, date1, Some(100)) ==
+        assert(gen.getDataQuery("A", date1, date1, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D = to_date('2020-08-17') LIMIT 100")
-        assert(gen.getDataQuery("A", date1, date2, Some(100)) ==
+        assert(gen.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= to_date('2020-08-17') AND D <= to_date('2020-08-30') LIMIT 100")
       }
     }
@@ -525,22 +516,21 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genDateTime = fromDriverName("org.postgresql.Driver", sqlConfigDateTime, config)
     val genStr = fromDriverName("org.postgresql.Driver", sqlConfigString, config)
     val genNum = fromDriverName("org.postgresql.Driver", sqlConfigNumber, config)
-    val genCol = fromDriverName("org.postgresql.Driver", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) FROM A")
     }
 
     "generate data queries without date ranges" in {
-      assert(genDate.getDataQuery("A") == "SELECT * FROM A")
+      assert(genDate.getDataQuery("A", Nil, None) == "SELECT * FROM A")
     }
 
     "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A")
+      assert(genDate.getDataQuery("A", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(genDate.getDataQuery("A", Some(100)) == "SELECT * FROM A LIMIT 100")
+      assert(genDate.getDataQuery("A", Nil, Some(100)) == "SELECT * FROM A LIMIT 100")
     }
 
     "generate ranged count queries" when {
@@ -575,37 +565,37 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(genDate.getDataQuery("A", date1, date1, None) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
-        assert(genDate.getDataQuery("A", date1, date2, None) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
       }
 
       "date is in DATETIME format" in {
-        assert(genDateTime.getDataQuery("A", date1, date1, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE CAST(D AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
-        assert(genDateTime.getDataQuery("A", date1, date2, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE CAST(D AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(D AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("A", date1, date1, None) ==
+        assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("A", date1, date2, None) ==
+        assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("A", date1, date1, None) ==
+        assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = 20200817")
-        assert(genNum.getDataQuery("A", date1, date2, None) ==
+        assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(genDate.getDataQuery("A", date1, date1, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD') LIMIT 100")
-        assert(genDate.getDataQuery("A", date1, date2, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD') LIMIT 100")
       }
     }
@@ -626,22 +616,21 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genDateTime = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigDateTime, config)
     val genStr = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigString, config)
     val genNum = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigNumber, config)
-    val genCol = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A")
     }
 
     "generate data queries without date ranges" in {
-      assert(genDate.getDataQuery("A") == "SELECT * FROM A")
+      assert(genDate.getDataQuery("A", Nil, None) == "SELECT * FROM A")
     }
 
     "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A")
+      assert(genDate.getDataQuery("A", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(genDate.getDataQuery("A", Some(100)) == "SELECT * FROM A LIMIT 100")
+      assert(genDate.getDataQuery("A", Nil, Some(100)) == "SELECT * FROM A LIMIT 100")
     }
 
     "generate ranged count queries" when {
@@ -676,37 +665,37 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(genDate.getDataQuery("A", date1, date1, None) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = DATE '2020-08-17'")
-        assert(genDate.getDataQuery("A", date1, date2, None) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= DATE '2020-08-17' AND D <= DATE '2020-08-30'")
       }
 
       "date is in DATETIME format" in {
-        assert(genDateTime.getDataQuery("A", date1, date1, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE CAST(D AS DATE) = DATE '2020-08-17'")
-        assert(genDateTime.getDataQuery("A", date1, date2, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE CAST(D AS DATE) >= DATE '2020-08-17' AND CAST(D AS DATE) <= DATE '2020-08-30'")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("A", date1, date1, None) ==
+        assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("A", date1, date2, None) ==
+        assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("A", date1, date1, None) ==
+        assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = 20200817")
-        assert(genNum.getDataQuery("A", date1, date2, None) ==
+        assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(genDate.getDataQuery("A", date1, date1, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D = DATE '2020-08-17' LIMIT 100")
-        assert(genDate.getDataQuery("A", date1, date2, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= DATE '2020-08-17' AND D <= DATE '2020-08-30' LIMIT 100")
       }
     }
@@ -727,22 +716,21 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genDateTime = fromDriverName("generic", sqlConfigDateTime, config)
     val genStr = fromDriverName("generic", sqlConfigString, config)
     val genNum = fromDriverName("generic", sqlConfigNumber, config)
-    val genCol = fromDriverName("generic", sqlConfigWithListOfColumns, config)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A")
     }
 
     "generate data queries without date ranges" in {
-      assert(genDate.getDataQuery("A") == "SELECT * FROM A")
+      assert(genDate.getDataQuery("A", Nil, None) == "SELECT * FROM A")
     }
 
     "generate data queries when list of columns is specified" in {
-      assert(genCol.getDataQuery("A") == "SELECT A, D, CAST(E, DATE) AS E FROM A")
+      assert(genDate.getDataQuery("A", columns, None) == "SELECT A, D, CAST(E, DATE) AS E FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
-      assert(genDate.getDataQuery("A", Some(100)) == "SELECT * FROM A LIMIT 100")
+      assert(genDate.getDataQuery("A", Nil, Some(100)) == "SELECT * FROM A LIMIT 100")
     }
 
     "generate ranged count queries" when {
@@ -777,37 +765,37 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
-        assert(genDate.getDataQuery("A", date1, date1, None) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
-        assert(genDate.getDataQuery("A", date1, date2, None) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
       }
 
       "date is in DATETIME format" in {
-        assert(genDateTime.getDataQuery("A", date1, date1, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE CAST(D AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
-        assert(genDateTime.getDataQuery("A", date1, date2, None) ==
+        assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE CAST(D AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(D AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
       }
 
       "date is in STRING format" in {
-        assert(genStr.getDataQuery("A", date1, date1, None) ==
+        assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = '2020-08-17'")
-        assert(genStr.getDataQuery("A", date1, date2, None) ==
+        assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
       }
 
       "date is in NUMBER format" in {
-        assert(genNum.getDataQuery("A", date1, date1, None) ==
+        assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
           "SELECT * FROM A WHERE D = 20200817")
-        assert(genNum.getDataQuery("A", date1, date2, None) ==
+        assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
       }
 
       "with limit records" in {
-        assert(genDate.getDataQuery("A", date1, date1, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date1, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD') LIMIT 100")
-        assert(genDate.getDataQuery("A", date1, date2, Some(100)) ==
+        assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD') LIMIT 100")
       }
     }

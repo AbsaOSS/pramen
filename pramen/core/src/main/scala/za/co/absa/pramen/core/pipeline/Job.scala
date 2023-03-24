@@ -45,7 +45,7 @@ trait Job {
                conf: Config): Reason
 
   def run(infoDate: LocalDate,
-          conf: Config): DataFrame
+          conf: Config): RunResult
 
   def postProcessing(df: DataFrame,
                      infoDate: LocalDate,
@@ -55,5 +55,5 @@ trait Job {
            infoDate: LocalDate,
            conf: Config,
            jobStarted: Instant,
-           inputRecordCount: Option[Long]): MetaTableStats
+           inputRecordCount: Option[Long]): SaveResult
 }

@@ -27,11 +27,11 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     * An expression for the list of configured columns.
     * @return A part of SQL expression listing column names.
     */
-  protected def columnExpr: String = {
-    if (sqlConfig.columns.isEmpty) {
+  protected def columnExpr(columns: Seq[String]): String = {
+    if (columns.isEmpty) {
       "*"
     } else {
-      sqlConfig.columns.mkString(", ")
+      columns.mkString(", ")
     }
   }
 

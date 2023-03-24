@@ -19,15 +19,14 @@ package za.co.absa.pramen.core.reader
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
-class TableReaderJdbcNative(queryExpression: String,
-                            jdbcConfig: JdbcConfig)
+class TableReaderJdbcNative(jdbcConfig: JdbcConfig)
                            (implicit spark: SparkSession) extends TableReader {
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -40,9 +39,9 @@ class TableReaderJdbcNative(queryExpression: String,
 
   private[core] def getJdbcConfig: JdbcConfig = jdbcConfig
 
-  override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val start = Instant.now()
-    val sql = getSql(infoDateBegin, infoDateEnd)
+    val sql = getSql(getSqlExpression(query), infoDateBegin, infoDateEnd)
     log.info(s"JDBC Native count of: $sql")
     val count = JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
     val finish = Instant.now()
@@ -51,13 +50,20 @@ class TableReaderJdbcNative(queryExpression: String,
     count
   }
 
-  override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = {
-    val df = getDataFrame(getSql(infoDateBegin, infoDateEnd))
-    Option(df)
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
+    getDataFrame(getSql(getSqlExpression(query), infoDateBegin, infoDateEnd))
   }
 
-  private def getSql(infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
-    queryExpression
+  private def getSqlExpression(query: Query): String = {
+    query match {
+      case Query.Sql(sql) => sql
+      case _: Query.Table           => throw new IllegalArgumentException("'table' is not supported by the JDBC Native reader. Use 'sql' instead.")
+      case _: Query.Path          => throw new IllegalArgumentException("'path' is not supported by the JDBC Native reader. Use 'sql' instead.")
+    }
+  }
+
+  private def getSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
+    sqlExpression
       .replaceAll("@dateFrom", dateFormatter.format(infoDateBegin))
       .replaceAll("@dateTo", dateFormatter.format(infoDateEnd))
       .replaceAll("@date", dateFormatter.format(infoDateEnd))
@@ -81,12 +87,11 @@ class TableReaderJdbcNative(queryExpression: String,
 }
 
 object TableReaderJdbcNative {
-  def apply(expression: String,
-            conf: Config,
+  def apply(conf: Config,
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
     val jdbcConfig = JdbcConfig.load(conf, parent)
 
-    new TableReaderJdbcNative(expression, jdbcConfig)
+    new TableReaderJdbcNative(jdbcConfig)
   }
 }

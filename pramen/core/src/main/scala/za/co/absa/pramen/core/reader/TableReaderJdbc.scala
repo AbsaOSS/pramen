@@ -21,7 +21,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{DateType, DecimalType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
@@ -33,9 +33,7 @@ import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
-class TableReaderJdbc(tableName: String,
-                      columns: Seq[String],
-                      jdbcReaderConfig: TableReaderJdbcConfig,
+class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
                       conf: Config
                      )(implicit spark: SparkSession) extends TableReader {
 
@@ -65,7 +63,9 @@ class TableReaderJdbc(tableName: String,
 
   private[core] def getJdbcConfig: TableReaderJdbcConfig = jdbcReaderConfig
 
-  override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val tableName = getTableName(query)
+
     val sql = if (jdbcReaderConfig.hasInfoDate) {
       sqlGen.getCountQuery(tableName, infoDateBegin, infoDateEnd)
     } else {
@@ -83,11 +83,13 @@ class TableReaderJdbc(tableName: String,
     count
   }
 
-  override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = {
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
+    val tableName = getTableName(query)
+
     val sql = if (jdbcReaderConfig.hasInfoDate) {
-      sqlGen.getDataQuery(tableName, infoDateBegin, infoDateEnd, jdbcReaderConfig.limitRecords)
+      sqlGen.getDataQuery(tableName, infoDateBegin, infoDateEnd, Nil, jdbcReaderConfig.limitRecords)
     } else {
-      sqlGen.getDataQuery(tableName, jdbcReaderConfig.limitRecords)
+      sqlGen.getDataQuery(tableName, Nil, jdbcReaderConfig.limitRecords)
     }
 
     val df = getWithRetry[DataFrame](sql, jdbcRetries)(df => {
@@ -96,7 +98,15 @@ class TableReaderJdbc(tableName: String,
       df
     })
 
-    Option(df)
+    df
+  }
+
+  private def getTableName(query: Query): String = {
+    query match {
+      case Query.Table(tableName) => tableName
+      case _: Query.Sql => throw new IllegalArgumentException("'sql' is not supported by the JDBC reader. Use 'table' instead.")
+      case _: Query.Path => throw new IllegalArgumentException("'path' is not supported by the JDBC reader. Use 'table' instead.")
+    }
   }
 
   @tailrec
@@ -191,8 +201,7 @@ class TableReaderJdbc(tableName: String,
     val dateFieldType = SqlColumnType.fromString(jdbcReaderConfig.infoDateType)
     dateFieldType match {
       case Some(infoDateType) =>
-        SqlConfig(columns,
-          jdbcReaderConfig.infoDateColumn,
+        SqlConfig(jdbcReaderConfig.infoDateColumn,
           infoDateType,
           jdbcReaderConfig.infoDateFormatSql,
           jdbcReaderConfig.infoDateFormatApp)
@@ -275,9 +284,9 @@ class TableReaderJdbc(tableName: String,
 }
 
 object TableReaderJdbc {
-  def apply(tableName: String, columns: Seq[String], conf: Config, parent: String = "")(implicit spark: SparkSession): TableReaderJdbc = {
+  def apply(conf: Config, parent: String = "")(implicit spark: SparkSession): TableReaderJdbc = {
     val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, parent)
 
-    new TableReaderJdbc(tableName, columns, jdbcTableReaderConfig, conf)
+    new TableReaderJdbc(jdbcTableReaderConfig, conf)
   }
 }

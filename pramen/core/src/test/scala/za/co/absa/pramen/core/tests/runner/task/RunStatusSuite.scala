@@ -25,12 +25,12 @@ class RunStatusSuite extends AnyWordSpec {
   "toString" should {
     "Succeeded" when {
       "New" in {
-        val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.New, None)
+        val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.New, Nil, Nil, Nil)
 
         assert(status.toString == "New")
       }
       "Update" in {
-        val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.Update, None)
+        val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.Update, Nil, Nil, Nil)
 
         assert(status.toString == "Update")
       }
@@ -87,7 +87,7 @@ class RunStatusSuite extends AnyWordSpec {
 
   "isFailure" should {
     "Succeeded" in {
-       val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.New, None)
+       val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.New, Nil, Nil, Nil)
 
        assert(!status.isFailure)
     }
@@ -167,7 +167,7 @@ class RunStatusSuite extends AnyWordSpec {
 
   "getReason" should {
     "Succeeded" in {
-      val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.New, None)
+      val status = RunStatus.Succeeded(None, 0, None, TaskRunReason.New, Nil, Nil, Nil)
 
       assert(status.getReason().isEmpty)
     }

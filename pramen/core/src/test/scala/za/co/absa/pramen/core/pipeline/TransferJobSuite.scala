@@ -18,7 +18,6 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.{AnalysisException, DataFrame}
-import org.apache.spark.sql.functions.{concat, lit}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.OperationDefFactory
@@ -86,7 +85,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     }
 
     "throw an exception when metastore throws an exception" in {
-      val (job, _) = getUseCase(readerCountException = new RuntimeException("Dummy Exception"))
+      val (job, _) = getUseCase(getCountException = new RuntimeException("Dummy Exception"))
 
       val ex = intercept[RuntimeException] {
         job.preRunCheckJob(infoDate, conf, Nil)
@@ -114,7 +113,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     }
 
     "return Ready even when the reader throws" in {
-      val (job, _) = getUseCase(readerCountException = new RuntimeException("Dummy Exception"))
+      val (job, _) = getUseCase(getDataException = new RuntimeException("Dummy Exception"))
 
       val result = job.validate(infoDate, conf)
 
@@ -126,13 +125,13 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "returns a dataframe when it is available" in {
       val (job, _) = getUseCase()
 
-      val actual = job.run(infoDate, conf)
+      val actual = job.run(infoDate, conf).data
 
       assert(actual.count() == 5)
     }
 
     "throw an exception when the reader throws an exception" in {
-      val (job, _) = getUseCase(readerDataException = new RuntimeException("Dummy Exception"))
+      val (job, _) = getUseCase(getDataException = new RuntimeException("Dummy Exception"))
 
       val ex = intercept[RuntimeException] {
         job.run(infoDate, conf)
@@ -168,7 +167,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val (job, _) = getUseCase(transferTable = transferTable)
 
-      val dfIn = job.run(infoDate, conf)
+      val dfIn = job.run(infoDate, conf).data
 
       val dfOut = job.postProcessing(dfIn, infoDate, conf).orderBy("b1")
 
@@ -186,7 +185,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val (job, _) = getUseCase(transferTable = transferTable)
 
-      val dfIn = job.run(infoDate, conf)
+      val dfIn = job.run(infoDate, conf).data
 
       val ex = intercept[AnalysisException] {
         job.postProcessing(dfIn, infoDate, conf)
@@ -215,8 +214,8 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
   def getUseCase(transferTable: TransferTable = TransferTableFactory.getDummyTransferTable(),
                  numberOfRecords: Int = 5,
-                 readerCountException: Throwable = null,
-                 readerDataException: Throwable = null,
+                 getCountException: Throwable = null,
+                 getDataException: Throwable = null,
                  failOnNoData: Boolean = false): (TransferJob, SyncBookkeeperMock) = {
     val operation = OperationDefFactory.getDummyOperationDef(extraOptions = Map[String, String]("value" -> "7"))
 
@@ -231,8 +230,8 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     }
 
     val source = new SourceSpy(numberOfRecords = numberOfRecords,
-      readerCountException = readerCountException,
-      readerDataException = readerDataException,
+      getCountException = getCountException,
+      getDataException = getDataException,
       sourceConfig = sourceConfig)
 
     val sink = new SinkSpy()

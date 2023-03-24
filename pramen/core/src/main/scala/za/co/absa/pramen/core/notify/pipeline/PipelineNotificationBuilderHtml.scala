@@ -443,7 +443,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     task.runStatus match {
       case s: Succeeded           =>
-        val style = if (s.warning.nonEmpty)
+        val style = if (s.warnings.nonEmpty)
           Style.Warning
         else
           successStyle

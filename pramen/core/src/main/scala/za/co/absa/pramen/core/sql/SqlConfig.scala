@@ -16,9 +16,9 @@
 
 package za.co.absa.pramen.core.sql
 
-case class SqlConfig(columns: Seq[String],
-                     infoDateColumn: String,
-                     infoDateType: SqlColumnType,
-                     dateFormatSql: String,
-                     dateFormatApp: String
+case class SqlConfig(
+                      infoDateColumn: String,
+                      infoDateType: SqlColumnType,
+                      dateFormatSql: String,
+                      dateFormatApp: String
                     )

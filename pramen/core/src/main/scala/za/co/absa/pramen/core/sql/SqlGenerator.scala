@@ -29,9 +29,9 @@ trait SqlGenerator {
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String
 
-  def getDataQuery(tableName: String, limit: Option[Int] = None): String
+  def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String
 
-  def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, limit: Option[Int]): String
+  def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String
 
   def requiresConnection: Boolean = false
 

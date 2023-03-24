@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
@@ -182,45 +183,6 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         assert(ex.getMessage.contains("table1"))
       }
     }
-  }
-
-  "getReader()" should {
-    "return a reader to be able to read the table" in {
-      withTempDirectory("metastore_test") { tempDir =>
-        val expected =
-          """[ {
-            |  "a" : "A",
-            |  "b" : 1,
-            |  "p" : 1,
-            |  "sync_date" : "2011-10-12"
-            |}, {
-            |  "a" : "B",
-            |  "b" : 2,
-            |  "p" : 1,
-            |  "sync_date" : "2011-10-12"
-            |}, {
-            |  "a" : "C",
-            |  "b" : 3,
-            |  "p" : 1,
-            |  "sync_date" : "2011-10-12"
-            |} ]""".stripMargin
-
-        val (m, _) = getTestCase(tempDir)
-
-        m.saveTable("table1", infoDate, getDf.withColumn("p", lit(1)))
-
-        val reader = m.getReader("table1")
-
-        val dfOpt = reader.getData(infoDate, infoDate)
-
-        assert(dfOpt.isDefined)
-
-        val actual = SparkUtils.dataFrameToJson(dfOpt.get.orderBy("A"))
-
-        compareText(actual, expected)
-      }
-    }
-
   }
 
   "saveTable()" should {

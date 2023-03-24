@@ -91,7 +91,7 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
         "path" -> "/dummy"
       ))
 
-      assert(sinkResult.recordsSend == 0L)
+      assert(sinkResult.recordsSent == 0L)
     }
 
     "write an empty CSV file when it is turned on" in {
@@ -109,7 +109,7 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(sinkResult.recordsSend == 0)
+        assert(sinkResult.recordsSent == 0)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
@@ -141,7 +141,7 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(sinkResult.recordsSend == 0)
+        assert(sinkResult.recordsSent == 0)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
@@ -173,7 +173,7 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(sinkResult.recordsSend == 0)
+        assert(sinkResult.recordsSent == 0)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")
@@ -203,7 +203,7 @@ class LocalCsvSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
 
         val actualFileName = Paths.get(localDir.toString, "A_table1_2022-02-18.csv")
 
-        assert(sinkResult.recordsSend == 2)
+        assert(sinkResult.recordsSent == 2)
         assert(Files.exists(actualFileName))
 
         val contents = Files.readAllLines(actualFileName).toArray.mkString("\n")

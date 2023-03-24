@@ -242,13 +242,11 @@ class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
 
       src.connect()
 
-      val reader = src.getReader(Query.Path(filesPath.toString), Nil)
-
-      val cnt = reader.getRecordCount(LocalDate.now(), LocalDate.now())
-      val df = reader.getData(LocalDate.now(), LocalDate.now())
+      val cnt = src.getRecordCount(Query.Path(filesPath.toString), LocalDate.now(), LocalDate.now())
+      val df = src.getData(Query.Path(filesPath.toString), LocalDate.now(), LocalDate.now(), Nil).data
 
       assert(cnt == 10)
-      assert(df.get.count() == 10)
+      assert(df.count() == 10)
 
       val filesBeforeClose = LocalFsUtils.getListOfFiles(Paths.get(sourceTemp.toString), includeDirs = true).length
       src.close()
@@ -264,7 +262,7 @@ class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
       src.connect() // this is intended
 
       val ex = intercept[IllegalArgumentException] {
-        src.getReader(Query.Table("dbtanle"), Nil)
+        src.getRecordCount(Query.Table("dbtanle"), LocalDate.now(), LocalDate.now())
       }
 
       assert(ex.getMessage.contains("Query 'Table(dbtanle)' is not supported."))

@@ -16,9 +16,23 @@
 
 package za.co.absa.pramen.api
 
-import com.typesafe.config.Config
+import java.time.LocalDate
 
+/**
+  * A source is an entity from which data is ingested into the metastore. Data at the source is outside of ownership
+  * boundary of the pipeline.
+  *
+  * Ingestion jobs used to read data from a source and write to the metastore.
+  * Transfer jobs are used to read data from a source and write it to a sink.
+  */
 trait Source extends ExternalChannel {
-  /** Returns an object that allows reading a specific table/query based on date ranges. */
-  def getReader(query: Query, columns: Seq[String]): TableReader
+  /**
+    * Returns the record count based on the particular input period and query.
+    */
+  def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
+
+  /**
+    * Returns the data based on the particular input period and query.
+    */
+  def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult
 }

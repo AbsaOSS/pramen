@@ -19,10 +19,12 @@ package za.co.absa.pramen.core.source
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, TableReader}
+import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult, TableReader}
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderSpark
 import za.co.absa.pramen.core.utils.ConfigUtils
+
+import java.time.LocalDate
 
 class SparkSource(format: String,
                   schema: Option[String],
@@ -36,19 +38,36 @@ class SparkSource(format: String,
 
   override val config: Config = sourceConfig
 
-  override def getReader(query: Query, columns: Seq[String]): TableReader = {
-    query match {
-      case Query.Table(_)   =>
-        throw new IllegalArgumentException(s"Unexpected 'table' spec for the Spark reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
-      case Query.Sql(_)     =>
-        throw new IllegalArgumentException(s"Unexpected 'sql' spec for the Spark reader. Only 'path' is supported. Config path: $sourceConfigParentPath")
+  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val reader = getReader(query)
+
+    reader.getRecordCount(query, infoDateBegin, infoDateEnd)
+  }
+
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
+    val reader = getReader(query)
+
+    val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
+
+    SourceResult(df)
+  }
+
+  def getReader(query: Query): TableReader = {
+    val tableReader = query match {
+      case Query.Table(table)   =>
+        log.info(s"Using TableReaderSpark to read table: $table")
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+      case Query.Sql(sql)     =>
+        log.info(s"Using TableReaderSpark to read SQL for: $sql")
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
       case Query.Path(path) =>
         log.info(s"Using TableReaderSpark to read '$format' from: $path")
-        log.info(s"Options passed for '$format':")
-        ConfigUtils.renderExtraOptions(options, KEYS_TO_REDACT)(s => log.info(s))
-        schema.foreach(s => log.info(s"Using schema: $s"))
-        new TableReaderSpark(format, schema, path, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
     }
+    log.info(s"Options passed for '$format':")
+    ConfigUtils.renderExtraOptions(options, KEYS_TO_REDACT)(s => log.info(s))
+    schema.foreach(s => log.info(s"Using schema: $s"))
+    tableReader
   }
 }
 

@@ -30,11 +30,20 @@ object RunStatus {
                        recordCount: Long,
                        sizeBytes: Option[Long],
                        reason: TaskRunReason,
-                       warning: Option[String]) extends RunStatus {
+                       filesRead: Seq[String],
+                       filesWritten: Seq[String],
+                       warnings: Seq[String]) extends RunStatus {
     val isFailure: Boolean = false
 
     override def toString: String = reason.toString
-    override def getReason(): Option[String] = warning
+
+    override def getReason(): Option[String] = {
+      if (warnings.nonEmpty) {
+        Option(warnings.mkString("\n"))
+      } else {
+        None
+      }
+    }
   }
 
   case class ValidationFailed(ex: Throwable) extends RunStatus {

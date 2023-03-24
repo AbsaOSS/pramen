@@ -43,7 +43,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with SparkTestBase {
         |}""".stripMargin)
 
     "be able to be constructed properly from config" in {
-      val reader = TableReaderJdbc("table", Seq.empty, conf.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(conf.getConfig("reader"), "reader")
 
       val jdbc = reader.getJdbcConfig
 
@@ -61,7 +61,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "ensure sql query generator is properly selected" in {
-      val reader = TableReaderJdbc("table", Seq.empty, conf.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(conf.getConfig("reader"), "reader")
 
       assert(reader.sqlGen.isInstanceOf[SqlGeneratorOracle])
     }
@@ -70,9 +70,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with SparkTestBase {
       val textConfig = conf
         .withValue("reader.save.timestamps.as.dates", ConfigValueFactory.fromAnyRef(true))
         .withValue("reader.correct.decimals.in.schema", ConfigValueFactory.fromAnyRef(true))
-      val reader = TableReaderJdbc("table",
-        Seq.empty,
-        textConfig.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(textConfig.getConfig("reader"), "reader")
 
       val jdbc = reader.getJdbcConfig
 

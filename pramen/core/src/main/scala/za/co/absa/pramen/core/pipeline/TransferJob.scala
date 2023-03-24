@@ -51,7 +51,7 @@ class TransferJob(operationDef: OperationDef,
     ingestionJob.validate(infoDate, jobConfig)
   }
 
-  override def run(infoDate: LocalDate, conf: Config): DataFrame = {
+  override def run(infoDate: LocalDate, conf: Config): RunResult = {
     ingestionJob.run(infoDate, conf)
   }
 
@@ -65,7 +65,7 @@ class TransferJob(operationDef: OperationDef,
                     infoDate: LocalDate,
                     conf: Config,
                     jobStarted: Instant,
-                    inputRecordCount: Option[Long]): MetaTableStats = {
+                    inputRecordCount: Option[Long]): SaveResult = {
     sinkJob.save(df, infoDate, conf, jobStarted, inputRecordCount)
   }
 }

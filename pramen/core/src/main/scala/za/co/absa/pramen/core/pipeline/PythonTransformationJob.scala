@@ -78,11 +78,11 @@ class PythonTransformationJob(operationDef: OperationDef,
       Reason.Ready
   }
 
-  override def run(infoDate: LocalDate, conf: Config): DataFrame = {
+  override def run(infoDate: LocalDate, conf: Config): RunResult = {
     runPythonCmdLine(infoDate, conf)
 
     try {
-      metastore.getTable(outputTable.name, Option(infoDate), Option(infoDate))
+      RunResult(metastore.getTable(outputTable.name, Option(infoDate), Option(infoDate)))
     } catch {
       case ex: AnalysisException => throw new RuntimeException(s"Output data not found in the metastore for $infoDate", ex)
     }
@@ -98,7 +98,7 @@ class PythonTransformationJob(operationDef: OperationDef,
                     infoDate: LocalDate,
                     conf: Config,
                     jobStarted: Instant,
-                    inputRecordCount: Option[Long]): MetaTableStats = {
+                    inputRecordCount: Option[Long]): SaveResult = {
     // Data already saved by Pramen-Py. Just loading the table and getting stats
     val stats = try {
       metastore.getStats(outputTable.name, infoDate)
@@ -125,7 +125,7 @@ class PythonTransformationJob(operationDef: OperationDef,
       jobStarted.getEpochSecond,
       jobFinished.getEpochSecond)
 
-    stats
+    SaveResult(stats)
   }
 
   private[core] def runPythonCmdLine(infoDate: LocalDate, conf: Config): Unit = {

@@ -114,7 +114,9 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     "run the command line script" in {
       val (_, _, job, runner) = getUseCase(tableDf = exampleDf)
 
-      val df = job.run(infoDate, conf)
+      val runResult = job.run(infoDate, conf)
+
+      val df = runResult.data
 
       assert(df.count() == 3)
       assert(runner.runCommands.length == 1)
@@ -154,13 +156,13 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "save" should {
     "update the bookkeeper" in {
-      val statsIn = MetaTableStats(100, None, None)
+      val statsIn = MetaTableStats(100, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn)
 
       val started = Instant.ofEpochSecond(12345678L)
 
-      val statsOut = job.save(exampleDf, infoDate, conf, started, None)
+      val statsOut = job.save(exampleDf, infoDate, conf, started, None).stats
 
       assert(statsOut == statsIn)
     }
@@ -178,19 +180,19 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "allow no records in the output table" in {
-      val statsIn = MetaTableStats(0, None, None)
+      val statsIn = MetaTableStats(0, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn)
 
       val started = Instant.ofEpochSecond(12345678L)
 
-      val statsOut = job.save(exampleDf, infoDate, conf, started, None)
+      val statsOut = job.save(exampleDf, infoDate, conf, started, None).stats
 
       assert(statsOut.recordCount == 0)
     }
 
     "throw an exception if no records in the output table" in {
-      val statsIn = MetaTableStats(0, None, None)
+      val statsIn = MetaTableStats(0, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "1"))
 
@@ -204,7 +206,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throw an exception if the number of records is less then expected" in {
-      val statsIn = MetaTableStats(9, None, None)
+      val statsIn = MetaTableStats(9, None)
 
       val (_, _, job, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "10"))
 

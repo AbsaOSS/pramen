@@ -24,33 +24,32 @@ import za.co.absa.pramen.api.{Query, TableReader}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class TableReaderDelta(query: Query,
-                       infoDateColumn: String,
+class TableReaderDelta(infoDateColumn: String,
                        infoDateFormat: String = "yyyy-MM-dd"
                       )(implicit spark: SparkSession) extends TableReader {
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
 
-  override def getRecordCount(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     if (infoDateBegin.equals(infoDateEnd)) {
       log.info(s"Reading COUNT(*) FROM ${query.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateBegin)}'")
     } else {
       log.info(s"Reading COUNT(*) FROM ${query.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
     }
-    getFilteredDataFrame(infoDateBegin, infoDateEnd).count()
+    getFilteredDataFrame(query, infoDateBegin, infoDateEnd).count()
   }
 
-  override def getData(infoDateBegin: LocalDate, infoDateEnd: LocalDate): Option[DataFrame] = {
+  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     if (infoDateBegin.equals(infoDateEnd)) {
       log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateEnd)}'")
     } else {
       log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
     }
-    Option(getFilteredDataFrame(infoDateBegin, infoDateEnd))
+    getFilteredDataFrame(query, infoDateBegin, infoDateEnd)
   }
 
-  private def getFilteredDataFrame(infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+  private def getFilteredDataFrame(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
     val infoDateBeginStr = dateFormatter.format(infoDateBegin)
     val infoDateEndStr = dateFormatter.format(infoDateEnd)
 

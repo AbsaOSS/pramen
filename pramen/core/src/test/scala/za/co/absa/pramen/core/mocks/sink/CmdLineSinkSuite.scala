@@ -97,7 +97,7 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
 
       val sinkResult = sink.send(exampleDf, "table1", null, infoDate, Map[String, String]("cmd.line" -> "dummy @infoDate"))
 
-      assert(sinkResult.recordsSend == 5)
+      assert(sinkResult.recordsSent == 5)
     }
   }
 

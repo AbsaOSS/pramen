@@ -18,6 +18,5 @@ package za.co.absa.pramen.core.metastore
 
 case class MetaTableStats(
                            recordCount: Long,
-                           dataSizeBytes: Option[Long],
-                           warning: Option[String]
+                           dataSizeBytes: Option[Long]
                          )

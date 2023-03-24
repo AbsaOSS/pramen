@@ -16,8 +16,10 @@
 
 package za.co.absa.pramen.api
 
-case class SinkResult(
-                       recordsSent: Long,
-                       filesSent: Seq[String] = Seq.empty[String], // The list of files written. Empty list for non-file based sources.
-                       warnings: Seq[String] = Seq.empty[String]
-                     )
+import org.apache.spark.sql.DataFrame
+
+case class SourceResult(
+                         data: DataFrame,
+                         filesRead: Seq[String] = Seq.empty[String], // The list of files to read. Empty list for non-file based sources.
+                         warnings: Seq[String] = Seq.empty[String]
+                       )

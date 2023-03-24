@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.model
+package za.co.absa.pramen.core.pipeline
 
-import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.core.metastore.MetaTableStats
 
-case class Table(
-                name: String,
-                reader: TableReader
-                )
+case class SaveResult(
+                       stats: MetaTableStats,
+                       filesSent: Seq[String] = Seq.empty[String], // The list of files written. Empty list for non-file based sources.
+                       warnings: Seq[String] = Seq.empty[String]
+                     )

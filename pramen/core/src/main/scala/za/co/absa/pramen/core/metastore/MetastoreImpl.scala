@@ -63,18 +63,6 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
     }
   }
 
-  override def getReader(tableName: String): TableReader = {
-    val mt = getTableDef(tableName)
-
-    mt.format match {
-      case DataFormat.Parquet(path, _) =>
-        new TableReaderSpark("parquet", None, path, hasInfoDateColumn = true, infoDateColumn = mt.infoDateColumn, infoDateFormat = mt.infoDateFormat)
-      case DataFormat.Delta(query, _)  =>
-        new TableReaderDelta(query, mt.infoDateColumn, mt.infoDateFormat)
-      case DataFormat.Null() => throw new UnsupportedOperationException(s"The metatable '$tableName' does not support reads.")
-    }
-  }
-
   override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
     val mt = getTableDef(tableName)
 
