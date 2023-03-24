@@ -17,13 +17,14 @@
 package za.co.absa.pramen.core.utils
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FileSystem, FileUtil, GlobFilter, Path}
+import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, FileUtil, GlobFilter, Path}
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.IOException
 import java.nio.file.{Files, Paths}
 import java.time._
 import java.time.format.DateTimeFormatter
+import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Random, Success, Try}
@@ -226,19 +227,53 @@ class FsUtils(conf: Configuration, pathBase: String) {
     *
     * @param filePath a path to a file.
     * @param content  content to write.
+    * @param attempts number of attempts to write the file
     */
-  def appendFile(filePath: Path, content: String): Unit = {
+  def appendFile(filePath: Path, content: String, attempts: Int = 5, delaySeconds: Int = 10): Unit = {
+    // It seems not all filesystems support append(). And Filesystem.append() just throws an exception in this case.
+    // This is a workaround for this particular case, so the append can be done anyway.
+    // At the same time, all other exceptions will be re-thrown. Since IOException is too broad, the code relies on
+    // the particular message. It's a hack, sorry. HDFS supports append().
+
+    // The other issue is that for filesystems that support appends (like HDFS), the append() method throwns
+    // the exception:
+    // AlreadyBeingCreatedException): Failed to APPEND_FILE
+    // because DFSClient_NONMAPREDUCE is already the current lease holder.
+    // This is rare, but happens. This is why retries are introduced.
+
+    @tailrec
+    def actionWithRetryAndDelay(retries: Int)(action: () => Unit): Unit = {
+      try {
+        action()
+      } catch {
+        case ex: Throwable =>
+          val retriesLeft = retries - 1
+
+          if (retriesLeft < 1 || (ex.getMessage != null && ex.getMessage.toLowerCase.contains("not supported"))) {
+            throw ex
+          } else {
+            log.warn(s"Attempt failed. Retrying in $delaySeconds seconds...")
+            Thread.sleep(delaySeconds * 1000)
+            actionWithRetryAndDelay(retriesLeft)(action)
+          }
+      }
+    }
+
     try {
-      val out = fs.append(filePath)
       log.info("Appending using the filesystem routine")
-      out.write(content.getBytes())
-      out.close()
+      actionWithRetryAndDelay(attempts) { () =>
+        var out: FSDataOutputStream = null
+        try {
+          out = fs.append(filePath)
+          out.write(content.getBytes())
+        } finally {
+          if (out != null) {
+            out.close()
+          }
+        }
+      }
     } catch {
-      // It seems not all filesystems support append(). And Filesystem.append() just throws an exception in this case.
-      // This is a workaround for this particular case, so the append can be done anyway.
-      // At the same time, all other exceptions will be re-thrown. Since IOException is too broad, the code relies on
-      // the particular message. It's a hack, sorry. HDFS supports append().
-      case ex: Throwable if ex.getMessage != null && ex.getMessage.toLowerCase.contains("not supported") =>
+      case NonFatal(_) =>
         log.info("Appending using full overwrite")
         val originalContent = if (exists(filePath)) {
           readFile(filePath)
