@@ -286,6 +286,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     })
 
     val haveReasonColumn = tasks.exists(t => t.runStatus.getReason().nonEmpty || t.dependencyWarnings.nonEmpty)
+    val haveHiveColumn = tasks.exists(t => t.runStatus.isInstanceOf[Succeeded] && t.runStatus.asInstanceOf[Succeeded].hiveTablesUpdated.nonEmpty)
 
     val tableBuilder = new TableBuilderHtml
 
@@ -293,6 +294,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     tableHeaders.append(TableHeader(TextElement("Job"), Align.Left))
     tableHeaders.append(TableHeader(TextElement("Table"), Align.Left))
+    if (haveHiveColumn)
+      tableHeaders.append(TableHeader(TextElement("Hive"), Align.Left))
     tableHeaders.append(TableHeader(TextElement("Date"), Align.Center))
     if (outputRecordsKnown)
       tableHeaders.append(TableHeader(TextElement("Record Count"), Align.Right))
@@ -312,6 +315,16 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
       row.append(TextElement(task.job.name))
       row.append(TextElement(task.job.outputTable.name))
+
+      if (haveHiveColumn) {
+        val hiveTable = task.runStatus match {
+          case s: Succeeded => s.hiveTablesUpdated.mkString(", ")
+          case _            => "-"
+        }
+
+        row.append(TextElement(hiveTable))
+      }
+
       row.append(TextElement(task.runInfo.map(_.infoDate.toString).getOrElse("")))
 
       if (outputRecordsKnown)

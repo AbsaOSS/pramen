@@ -19,5 +19,6 @@ package za.co.absa.pramen.api
 case class SinkResult(
                        recordsSent: Long,
                        filesSent: Seq[String] = Seq.empty[String], // The list of files written. Empty list for non-file based sources.
+                       hiveTables: Seq[String] = Seq.empty[String], // The list of Hive/Athena/Trino tables updated if any
                        warnings: Seq[String] = Seq.empty[String]
                      )
