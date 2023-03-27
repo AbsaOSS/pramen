@@ -17,23 +17,23 @@
 package za.co.absa.pramen.core.source
 
 import com.typesafe.config.Config
+import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult, TableReader}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderSpark
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
 
-class SparkSource(format: String,
-                  schema: Option[String],
-                  hasInfoDateCol: Boolean,
-                  infoDateColumn: String,
-                  infoDateFormat: String,
-                  sourceConfig: Config,
-                  sourceConfigParentPath: String,
-                  options: Map[String, String])(implicit spark: SparkSession) extends Source {
+class SparkSource(val format: String,
+                  val schema: Option[String],
+                  val hasInfoDateCol: Boolean,
+                  val infoDateColumn: String,
+                  val infoDateFormat: String,
+                  val sourceConfig: Config,
+                  val options: Map[String, String])(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override val config: Config = sourceConfig
@@ -49,7 +49,15 @@ class SparkSource(format: String,
 
     val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
 
-    SourceResult(df)
+    val filesRead = query match {
+      case _: Query.Table   => df.inputFiles
+      case _: Query.Sql     => Array.empty[String]
+      case Query.Path(path) =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+        fsUtils.getHadoopFiles(new Path(path))
+    }
+
+    SourceResult(df, filesRead)
   }
 
   def getReader(query: Query): TableReader = {
@@ -93,6 +101,6 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
 
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, conf, parentPath, options)(spark)
+    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, conf, options)(spark)
   }
 }

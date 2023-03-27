@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.utils
 
 import org.apache.hadoop.conf.Configuration
-import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, FileUtil, GlobFilter, Path}
+import org.apache.hadoop.fs._
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.IOException
@@ -646,6 +646,39 @@ class FsUtils(conf: Configuration, pathBase: String) {
     }
 
     folders.foreach(folder => moveObsoleteHelper(new Path(folder)))
+  }
+
+  /**
+    * Retrieves files from a directory according to the rules of Hadoop Client.
+    *
+    * This simulates path patterns used when using 'spark.read()'
+    *
+    * The glob pattern is supported. Maximum depth of recursivity is 1.
+    */
+  def getHadoopFiles(path: Path): Array[String] = {
+    val stats: Array[FileStatus] = fs.globStatus(path, hiddenFileFilter)
+
+    if (stats == null) {
+      throw new IllegalArgumentException(s"Input path does not exist: $path")
+    }
+
+    val allFiles = stats.iterator.flatMap(stat => {
+      if (stat.isDirectory) {
+        fs.listStatus(stat.getPath, hiddenFileFilter).filter(!_.isDirectory)
+      }
+      else {
+        Array(stat)
+      }
+    })
+
+    allFiles.map(_.getPath.toString).toArray[String]
+  }
+
+  private val hiddenFileFilter = new PathFilter() {
+    def accept(p: Path): Boolean = {
+      val name = p.getName
+      !name.startsWith("_") && !name.startsWith(".")
+    }
   }
 
   protected def getTimedToken: String = {
