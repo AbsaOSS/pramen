@@ -21,5 +21,6 @@ import za.co.absa.pramen.core.metastore.MetaTableStats
 case class SaveResult(
                        stats: MetaTableStats,
                        filesSent: Seq[String] = Seq.empty[String], // The list of files written. Empty list for non-file based sources.
+                       hiveTablesUpdates: Seq[String] = Seq.empty, // The list of Hive/Athena/Trino tables updated if any
                        warnings: Seq[String] = Seq.empty[String]
                      )

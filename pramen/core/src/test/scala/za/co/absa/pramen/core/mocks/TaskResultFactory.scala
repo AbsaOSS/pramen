@@ -16,16 +16,16 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job, TaskRunReason}
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
+import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job, TaskRunReason}
 import za.co.absa.pramen.core.runner.task.{RunInfo, RunStatus, TaskResult}
 
 import java.time.{Instant, LocalDate}
 
 object TaskResultFactory {
   def getDummyTaskResult(job: Job = new JobSpy(),
-                         runStatus: RunStatus = RunStatus.Succeeded(Some(100), 200, Some(1000), TaskRunReason.New, Nil, Nil, Nil),
+                         runStatus: RunStatus = RunStatus.Succeeded(Some(100), 200, Some(1000), TaskRunReason.New, Nil, Nil, Nil, Nil),
                          runInfo: Option[RunInfo] = Some(RunInfo(LocalDate.of(2022, 2, 18), Instant.ofEpochSecond(1234), Instant.ofEpochSecond(5678))),
                          schemaDifferences: Seq[SchemaDifference] = Nil,
                          dependencyWarnings: Seq[DependencyWarning] = Nil): TaskResult = {

@@ -19,7 +19,11 @@ package za.co.absa.pramen.api
 sealed trait TaskStatus
 
 object TaskStatus {
-  case class Succeeded(recordCount: Long) extends TaskStatus
+  case class Succeeded(recordCount: Long,
+                       filesRead: Seq[String],
+                       filesWritten: Seq[String],
+                       hiveTablesUpdated: Seq[String],
+                       warnings: Seq[String]) extends TaskStatus
 
   case class ValidationFailed(ex: Throwable) extends TaskStatus
 

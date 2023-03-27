@@ -25,7 +25,7 @@ object TaskNotificationFactory {
                                infoDate: LocalDate = LocalDate.of(2022, 2, 18),
                                started: Instant = Instant.ofEpochMilli(1613600000000L),
                                finished: Instant = Instant.ofEpochMilli(1672759508000L),
-                               status: TaskStatus = TaskStatus.Succeeded(100),
+                               status: TaskStatus = TaskStatus.Succeeded(100, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
                                options: Map[String, String] = Map.empty[String, String]): TaskNotification = {
     TaskNotification(tableName, infoDate, started, finished, status, options)
   }
