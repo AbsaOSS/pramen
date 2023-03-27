@@ -63,7 +63,9 @@ class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
 
   "runStatusToTaskStatus" should {
     "decode success" in {
-      assert(NotificationTargetManager.runStatusToTaskStatus(RunStatus.Succeeded(None, 100, None, null, Nil, Nil, Nil)).contains(TaskStatus.Succeeded(100)))
+      assert(NotificationTargetManager.runStatusToTaskStatus(
+        RunStatus.Succeeded(None, 100, None, null, Seq("A"), Seq("B"), Seq("C"), Seq("D")))
+          .contains(TaskStatus.Succeeded(100, Seq("A"), Seq("B"), Seq("C"), Seq("D"))))
     }
 
     "decode failure" in {

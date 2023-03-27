@@ -71,7 +71,7 @@ object NotificationTargetManager {
     */
   def runStatusToTaskStatus(status: RunStatus): Option[TaskStatus] = {
     status match {
-      case s: RunStatus.Succeeded => Some(TaskStatus.Succeeded(s.recordCount))
+      case s: RunStatus.Succeeded => Some(TaskStatus.Succeeded(s.recordCount, s.filesRead, s.filesWritten, s.hiveTablesUpdated, s.warnings))
       case s: RunStatus.Failed => Some(TaskStatus.Failed(s.ex))
       case s: RunStatus.ValidationFailed => Some(TaskStatus.ValidationFailed(s.ex))
       case s: RunStatus.MissingDependencies => Some(TaskStatus.MissingDependencies(s.tables))

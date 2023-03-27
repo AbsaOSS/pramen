@@ -32,6 +32,7 @@ object RunStatus {
                        reason: TaskRunReason,
                        filesRead: Seq[String],
                        filesWritten: Seq[String],
+                       hiveTablesUpdated: Seq[String],
                        warnings: Seq[String]) extends RunStatus {
     val isFailure: Boolean = false
 
