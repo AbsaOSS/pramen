@@ -27,5 +27,5 @@ object Constants {
     "sun.java.command"
   )
 
-  final val CONFIG_WORDS_TO_REDACT = Set("password", "secret", "session.token", "auth.user.info")
+  final val CONFIG_WORDS_TO_REDACT = Set("password", "secret", "access.key", "session.token", "auth.user.info")
 }
