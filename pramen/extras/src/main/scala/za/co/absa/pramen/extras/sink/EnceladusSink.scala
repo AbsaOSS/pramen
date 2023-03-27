@@ -26,8 +26,8 @@ import za.co.absa.pramen.extras.query.{QueryExecutor, QueryExecutorSpark}
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
 import java.time.{Instant, LocalDate}
-import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 /**
   * This sink allows sending data to the raw folder of a data lake for further processing by Enceladus+Menas:
@@ -172,7 +172,14 @@ class EnceladusSink(sinkConfig: Config,
 
     runEnceladusIfNeeded(tableName, infoDate, infoVersion, basePath, options)
 
-    SinkResult(count)
+    val hiveTable = options.get(HIVE_TABLE_KEY).map(getHiveTableFullName)
+
+    val hiveTablesExposed = hiveTable match {
+      case Some(table) => Seq(table)
+      case None => Nil
+    }
+
+    SinkResult(count, Nil, hiveTablesExposed)
   }
 
   private[extras] def getInfoVersion(metaTable: String,

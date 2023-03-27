@@ -139,7 +139,7 @@ class SinkJob(operationDef: OperationDef,
       )
 
       val stats = MetaTableStats(sinkResult.recordsSent, None)
-      SaveResult(stats, sinkResult.filesSent, sinkResult.warnings)
+      SaveResult(stats, sinkResult.filesSent, sinkResult.hiveTables, sinkResult.warnings)
     } catch {
       case NonFatal(ex) => throw new IllegalStateException("Unable to write to the sink.", ex)
     } finally {
