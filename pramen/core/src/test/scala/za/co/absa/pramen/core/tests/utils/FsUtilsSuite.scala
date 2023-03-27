@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
-import org.mockito.ArgumentMatchers.{any, anyString}
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito._
 import org.scalatest.wordspec.AnyWordSpec
 import org.slf4j.{Logger, LoggerFactory}
@@ -867,6 +867,72 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
 
         // Moved files should exist
         assert(fsUtils.exists(file1r))
+      }
+    }
+  }
+
+  "getHadoopFiles" should {
+    "thrown an exception if the fiel does not exist" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+        val file = new File(tempDir, "innerDir1").getAbsolutePath
+        val ex = intercept[IllegalArgumentException] {
+          fsUtils.getHadoopFiles(new Path(file))
+        }
+        assert(ex.getMessage.contains("Input path does not exist"))
+      }
+    }
+
+    "not retrieve files starting with . and _" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+
+        val innerPath = new Path(tempDir, "inner")
+
+        fsUtils.createDirectoryRecursive(innerPath)
+
+        createBinFile(innerPath.toString, "data1.bin", 100)
+        createBinFile(innerPath.toString, ".data2.bin", 100)
+        createBinFile(innerPath.toString, "_data3.bin", 100)
+
+        val files = fsUtils.getHadoopFiles(innerPath)
+
+        assert(files.length == 1)
+        assert(files.head.endsWith("data1.bin"))
+      }
+    }
+
+    "retrieve only one level of recursion" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+        val innerPath = new Path(tempDir, "inner")
+        val innerHiddenPath = new Path(tempDir, "_inner2")
+        val innerLevel2Path = new Path(innerPath, "level2")
+
+        fsUtils.createDirectoryRecursive(innerLevel2Path)
+        fsUtils.createDirectoryRecursive(innerHiddenPath)
+
+        createBinFile(innerPath.toString, "data1.bin", 100)
+        createBinFile(innerPath.toString, ".data2.bin", 100)
+        createBinFile(innerPath.toString, "_data3.bin", 100)
+        createBinFile(innerPath.toString, "_SUCCESS", 100)
+        createBinFile(innerPath.toString, "_INFO", 100)
+
+        createBinFile(innerHiddenPath.toString, "data4.bin", 100)
+        createBinFile(innerHiddenPath.toString, ".data5.bin", 100)
+        createBinFile(innerHiddenPath.toString, "_data6.bin", 100)
+        createBinFile(innerHiddenPath.toString, "_SUCCESS", 100)
+        createBinFile(innerHiddenPath.toString, "_INFO", 100)
+
+        createBinFile(innerLevel2Path.toString, "data7.bin", 100)
+        createBinFile(innerLevel2Path.toString, ".data8.bin", 100)
+        createBinFile(innerLevel2Path.toString, "_data9.bin", 100)
+        createBinFile(innerLevel2Path.toString, "_SUCCESS", 100)
+        createBinFile(innerLevel2Path.toString, "_INFO", 100)
+
+        val filesByPath = fsUtils.getHadoopFiles(new Path(tempDir))
+        val filesWithMask = fsUtils.getHadoopFiles(new Path(tempDir, "*"))
+
+        assert(filesByPath.isEmpty)
+        assert(filesWithMask.length == 1)
+        assert(filesWithMask.head.endsWith("data1.bin"))
       }
     }
   }

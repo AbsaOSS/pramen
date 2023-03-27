@@ -19,11 +19,11 @@ package za.co.absa.pramen.core.notify.pipeline
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
-import za.co.absa.pramen.core.notify.message.{TableHeader, _}
+import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
-import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
+import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.RunStatus._
-import za.co.absa.pramen.core.runner.task.{NotificationFailure, TaskResult}
+import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus, TaskResult}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
 
@@ -262,6 +262,16 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     } else {
       renderTaskTable(builder, sortedTasks)
     }
+
+    sortedTasks
+      .filter(_.runStatus.isInstanceOf[RunStatus.Succeeded])
+      .foreach(task => {
+        val success = task.runStatus.asInstanceOf[RunStatus.Succeeded]
+        if (success.filesRead.nonEmpty)
+          renderFilesRead(builder, task, success)
+      })
+
+    builder
   }
 
   private def renderTaskTable(builder: MessageBuilder, tasks: Seq[TaskResult]): MessageBuilder = {
@@ -354,6 +364,28 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withTable(tableBuilder)
   }
 
+  private def renderFilesRead(builder: MessageBuilder, task: TaskResult, runStatus: RunStatus.Succeeded): MessageBuilder = {
+    val tableBuilder = new TableBuilderHtml
+
+    val tableHeaders = new ListBuffer[TableHeader]
+
+    val taskName = s"Files sourced - ${task.job.outputTable.name} - ${task.runInfo.map(_.infoDate.toString).getOrElse(" ")}"
+
+    tableHeaders.append(TableHeader(TextElement(taskName), Align.Center))
+    tableBuilder.withHeaders(tableHeaders.toSeq)
+
+    runStatus.filesRead.sorted.foreach(fileName => {
+      val row = new ListBuffer[TextElement]
+
+      row.append(TextElement(fileName))
+      tableBuilder.withRow(row)
+    })
+
+    val emptyParagraph = ParagraphBuilder()
+    builder.withParagraph(emptyParagraph)
+    builder.withTable(tableBuilder)
+  }
+
   private def getThroughputRps(task: TaskResult): TextElement = {
     val recordCount = task.runStatus match {
       case s: Succeeded => s.recordCount
@@ -439,23 +471,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   private def getStatus(task: TaskResult): TextElement = {
-    val successStyle = if (task.dependencyWarnings.isEmpty) Style.Success else Style.Warning
+    val successStyle = if (task.dependencyWarnings.nonEmpty) Style.Warning else Style.Success
 
     task.runStatus match {
-      case s: Succeeded           =>
-        val style = if (s.warnings.nonEmpty)
-          Style.Warning
-        else
-          successStyle
-        if (s.reason == TaskRunReason.Update) {
-          TextElement("Update", Style.Warning)
-        } else if (s.reason == TaskRunReason.Rerun) {
-          TextElement("Rerun", style)
-        } else if (s.reason == TaskRunReason.Late) {
-          TextElement("Late", Style.Warning)
-        } else {
-          TextElement("Success", style)
-        }
+      case s: Succeeded           => getSuccessTextElement(s, task.dependencyWarnings.nonEmpty)
       case _: InsufficientData    => TextElement("Insufficient data", Style.Exception)
       case NoData(isFailure)      => TextElement("No Data", if (isFailure) Style.Exception else Style.Warning)
       case _: Skipped             => TextElement("Skipped", successStyle)
@@ -464,6 +483,28 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case _: MissingDependencies => TextElement("Skipped", Style.Warning)
       case _: FailedDependencies  => TextElement("Skipped", Style.Warning)
       case _                      => TextElement("Failed", Style.Exception)
+    }
+  }
+
+  private def getSuccessTextElement(status: RunStatus.Succeeded, hasDependencyWarnings: Boolean): TextElement = {
+    val successStyle = if (hasDependencyWarnings) Style.Warning else Style.Success
+
+    val style = if (status.warnings.nonEmpty)
+      Style.Warning
+    else
+      successStyle
+
+    if (status.reason == TaskRunReason.Update) {
+      TextElement("Update", Style.Warning)
+    } else if (status.reason == TaskRunReason.Rerun) {
+      TextElement("Rerun", style)
+    } else if (status.reason == TaskRunReason.Late) {
+      TextElement("Late", Style.Warning)
+    } else {
+      if (status.warnings.nonEmpty)
+        TextElement("Warning", style)
+      else
+        TextElement("Success", style)
     }
   }
 
