@@ -49,7 +49,7 @@ class MetastorePersistenceDelta(query: Query,
           .load(path)
       case Query.Table(table) =>
         spark.table(table)
-      case _                  => throw new IllegalArgumentException(s"Arguments of type ${query.getClass} are not supported for Delta format.")
+      case _                  => throw new IllegalArgumentException(s"Arguments of type '${query.name}' are not supported for Delta format. Use either 'path' or 'table'.")
     }
 
     df.filter(getFilter(infoDateFrom, infoDateTo))

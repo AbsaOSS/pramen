@@ -378,6 +378,19 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
       assert(map("value2") == "100")
     }
 
+    "return a new config even if the prefix is empty" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |value1 = "value1"
+          |value2 = 100
+          |""".stripMargin)
+      val map = ConfigUtils.getExtraOptions(conf, "")
+
+      assert(map.size == 2)
+      assert(map("value1") == "value1")
+      assert(map("value2") == "100")
+    }
+
     "return a new map if the prefix path exists" in {
       val map = ConfigUtils.getExtraOptions(
         Map[String, String]("mytest.extra.options.value1" -> "value1", "mytest.extra.options.value2" -> "100"),

@@ -142,6 +142,7 @@ class TableReaderSpark(format: String,
         }
       case Query.Table(table) =>
         spark.table(table)
+      case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark reader. Use 'path', 'table' or 'sql' instead.")
     }
   }
 

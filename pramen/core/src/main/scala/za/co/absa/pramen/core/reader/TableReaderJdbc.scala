@@ -104,8 +104,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   private def getTableName(query: Query): String = {
     query match {
       case Query.Table(tableName) => tableName
-      case _: Query.Sql => throw new IllegalArgumentException("'sql' is not supported by the JDBC reader. Use 'table' instead.")
-      case _: Query.Path => throw new IllegalArgumentException("'path' is not supported by the JDBC reader. Use 'table' instead.")
+      case other => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' instead.")
     }
   }
 

@@ -20,22 +20,37 @@ package za.co.absa.pramen.api
   * Query is an abstraction that unifies the way data can be retrieved from a source.
   */
 sealed trait Query {
+  def name: String
+
   def query: String
 }
 
 object Query {
   /** A SQL query. */
   case class Sql(sql: String) extends Query {
+    override def name: String = "sql"
+
     override def query: String = sql
   }
 
   /** A database table name. */
   case class Table(dbTable: String) extends Query {
+    override def name: String = "table"
+
     override def query: String = dbTable
   }
 
   /** A path to a directory. */
   case class Path(path: String) extends Query {
+    override def name: String = "path"
+
     override def query: String = path
+  }
+
+  /** A custom way of specifying query options. */
+  case class Custom(options: Map[String, String]) extends Query {
+    override def name: String = "custom"
+
+    override def query: String = options.map { case (k, v) => s"$k=$v" }.mkString("(", ", ", ")")
   }
 }

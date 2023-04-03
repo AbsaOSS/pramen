@@ -114,12 +114,18 @@ object ConfigUtils {
   }
 
   def getExtraOptions(conf: Config, prefix: String): Map[String, String] = {
-    if (conf.hasPath(prefix)) {
-      ConfigUtils.getFlatConfig(conf.getConfig(prefix))
-        .map { case (k, v) => (k, v.toString) }
+    val optionsConfig = if (prefix.isEmpty) {
+      conf
     } else {
-      Map()
+      if (conf.hasPath(prefix)) {
+        conf.getConfig(prefix)
+      } else {
+        ConfigFactory.empty()
+      }
     }
+
+    ConfigUtils.getFlatConfig(optionsConfig)
+      .map { case (k, v) => (k, v.toString) }
   }
 
   def getExtraOptions(options: Map[String, String],
