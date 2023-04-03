@@ -21,7 +21,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{JdbcNativeUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
@@ -57,8 +57,7 @@ class TableReaderJdbcNative(jdbcConfig: JdbcConfig)
   private def getSqlExpression(query: Query): String = {
     query match {
       case Query.Sql(sql) => sql
-      case _: Query.Table           => throw new IllegalArgumentException("'table' is not supported by the JDBC Native reader. Use 'sql' instead.")
-      case _: Query.Path          => throw new IllegalArgumentException("'path' is not supported by the JDBC Native reader. Use 'sql' instead.")
+      case other          => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' instead.")
     }
   }
 

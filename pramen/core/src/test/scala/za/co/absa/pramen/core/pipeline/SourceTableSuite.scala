@@ -116,9 +116,8 @@ class SourceTableSuite extends AnyWordSpec {
         SourceTable.fromConfig(conf, "source.tables")
       }
 
-      assert(ex.getMessage.contains("Either 'input.sql', 'input.path', 'input.table', 'input.db.table' is required at source.tables[0]"))
+      assert(ex.getMessage.contains("No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table' at source.tables[0]."))
     }
-
 
     "throw an exception in case of duplicate entries" in {
       val conf = ConfigFactory.parseString(

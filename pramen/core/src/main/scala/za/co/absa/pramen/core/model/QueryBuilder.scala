@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.model
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 object QueryBuilder {
   val SQL_KEY = "sql"
@@ -31,6 +32,7 @@ object QueryBuilder {
     val hasSql = conf.hasPath(s"$p$SQL_KEY")
     val hasPath = conf.hasPath(s"$p$PATH_KEY")
     val hasDbTable = conf.hasPath(s"$p$TABLE_KEY") || conf.hasPath(s"$p$DB_TABLE_KEY")
+    val hesSomething = if (prefix.isEmpty) !conf.isEmpty else conf.hasPath(prefix)
 
     val tableDef = if (conf.hasPath(s"$p$TABLE_KEY")) {
       Some(conf.getString(s"$p$TABLE_KEY"))
@@ -40,12 +42,17 @@ object QueryBuilder {
       None
     }
 
-    (hasSql, hasPath, hasDbTable) match {
-      case (true, false, false)  => Query.Sql(conf.getString(s"$p$SQL_KEY"))
-      case (false, true, false)  => Query.Path(conf.getString(s"$p$PATH_KEY"))
-      case (false, false, true)  => Query.Table(tableDef.get)
-      case (false, false, false) => throw new IllegalArgumentException(s"Either '$p$SQL_KEY', '$p$PATH_KEY', '$p$TABLE_KEY', '$p$DB_TABLE_KEY' is required at $parentPath.")
-      case _                     => throw new IllegalArgumentException(s"Only one of: '$p$SQL_KEY', '$p$PATH_KEY', '$p$TABLE_KEY', '$p$DB_TABLE_KEY' are allowed at $parentPath.")
+    (hasSql, hasPath, hasDbTable, hesSomething) match {
+      case (true, false, false, _)     => Query.Sql(conf.getString(s"$p$SQL_KEY"))
+      case (false, true, false, _)     => Query.Path(conf.getString(s"$p$PATH_KEY"))
+      case (false, false, true, _)     => Query.Table(tableDef.get)
+      case (false, false, false, true) => Query.Custom(ConfigUtils.getExtraOptions(conf, prefix))
+      case _                           =>
+        val parent = if (parentPath.isEmpty) "" else s" at $parentPath"
+        if (prefix.isEmpty)
+          throw new IllegalArgumentException(s"No options are specified for the query. Usually, it is one of: '$SQL_KEY', '$PATH_KEY', '$TABLE_KEY', '$DB_TABLE_KEY'$parent.")
+        else
+          throw new IllegalArgumentException(s"No options are specified for the '$prefix' query. Usually, it is one of: '$p$SQL_KEY', '$p$PATH_KEY', '$p$TABLE_KEY', '$p$DB_TABLE_KEY'$parent.")
     }
   }
 }
