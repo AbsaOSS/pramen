@@ -91,7 +91,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   def renderSubject(): String = {
-    val timeCreatedStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+    val timeCreatedStr = ZonedDateTime.now(zoneId).format(timestampFmt)
     val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
 
     val dryRunStr = if (isDryRun) "(DRY RUN) " else ""
