@@ -253,4 +253,18 @@ class FsUtils(conf: Configuration, pathBase: String) {
       fs.rename(pathSrc, pathTrg)
     }
   }
+
+  /**
+    * Deletes a directory and all its contents recursively.
+    *
+    * @param path path to a file.
+    */
+  def deleteDirectoryRecursively(path: Path): Boolean = {
+    if (fs.exists(path)) {
+      log.info(s"Deleting recursively '$path'...")
+      fs.delete(path, true)
+    } else {
+      false
+    }
+  }
 }

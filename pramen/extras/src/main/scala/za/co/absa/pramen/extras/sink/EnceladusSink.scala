@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.extras.query.{QueryExecutor, QueryExecutorSpark}
+import za.co.absa.pramen.extras.sink.EnceladusConfig.DEFAULT_PUBLISH_PARTITION_TEMPLATE
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
 import java.time.{Instant, LocalDate}
@@ -232,11 +233,20 @@ class EnceladusSink(sinkConfig: Config,
         df
     }
 
-    dfToWrite.write
-      .mode(enceladusConfig.mode)
-      .format(enceladusConfig.format)
-      .options(enceladusConfig.formatOptions)
-      .save(outputPathStr)
+    try {
+      dfToWrite.write
+        .mode(enceladusConfig.mode)
+        .format(enceladusConfig.format)
+        .options(enceladusConfig.formatOptions)
+        .save(outputPathStr)
+    } catch {
+      case NonFatal(ex) =>
+        log.error(s"Unable to write to: $outputPathStr", ex)
+        throw ex
+    }
+
+    if (!fsUtils.exists(outputPartitionPath))
+      throw new IllegalStateException(s"Unable to write to: $outputPathStr")
   }
 
   private[extras] def generateInfoFile(sourceCount: Long,
