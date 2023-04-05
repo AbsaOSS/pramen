@@ -215,6 +215,13 @@ class EnceladusSink(sinkConfig: Config,
     new Path(basePath, partition)
   }
 
+  private[extras] def getPublishPartitionPath(basePath: Path,
+                                             infoDate: LocalDate,
+                                             infoVersion: Int): Path = {
+    val partition = PartitionUtils.unpackCustomPartitionPattern(DEFAULT_PUBLISH_PARTITION_TEMPLATE, enceladusConfig.infoDateColumn, infoDate, infoVersion)
+    new Path(basePath, partition)
+  }
+
   private[extras] def writeToRawFolder(df: DataFrame,
                                        recordCount: Long,
                                        outputPartitionPath: Path)(implicit spark: SparkSession): Unit = {
@@ -274,8 +281,20 @@ class EnceladusSink(sinkConfig: Config,
                                            infoVersion: Int,
                                            basePath: Path,
                                            options: Map[String, String])
-                                          (implicit queryExecutor: QueryExecutor): Unit = {
+                                          (implicit queryExecutor: QueryExecutor, spark: SparkSession): Unit = {
     if (options.contains(DATASET_NAME_KEY) && options.contains(DATASET_VERSION_KEY)) {
+      val publishBase = basePath.toString.replace("/raw/", "/publish/")
+      val outputPublishPath = getPublishPartitionPath(new Path(publishBase), infoDate, infoVersion)
+
+      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, publishBase)
+
+      log.info(s"Checking existence of $outputPublishPath")
+
+      if (fsUtils.exists(outputPublishPath) && outputPublishPath.toString.contains("/enceladus_info_version")) {
+        log.warn(s"Removing old published data at $outputPublishPath")
+        fsUtils.deleteDirectoryRecursively(outputPublishPath)
+      }
+
       runEnceladus(
         tableName,
         options(DATASET_NAME_KEY),
