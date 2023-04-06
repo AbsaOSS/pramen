@@ -27,6 +27,14 @@ import java.time.LocalDate
   */
 trait Source extends ExternalChannel {
   /**
+    * If true, getRecordCount() won't be used to determine if the data is available.
+    * This saves performance ond double data read for
+    *  - File sources when input files are always available (lookup tables for instance)
+    *  - Snapshot-based sources.
+    */
+  def isDataAlwaysAvailable: Boolean = false
+
+  /**
     * Returns the record count based on the particular input period and query.
     */
   def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
