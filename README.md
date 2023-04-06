@@ -214,7 +214,7 @@ for example,
     <details>
     <summary>Click to expand</summary>
 
-    ```
+    ```hocon
      schedule.type = "weekly"
      schedule.days.of.week = [ 1 ] # Mondays
      info.date.expr = "@runDate - 2" # Saturday previous week
@@ -228,7 +228,7 @@ for example,
     <details>
     <summary>Click to expand</summary>
 
-    ```
+    ```hocon
      schedule.type = "weekly"
      schedule.days.of.week = [ 2 ] # Tuesdays
      info.date.expr = "@runDate - 1" # Monday
@@ -488,7 +488,7 @@ it will try fallback URLs in random order. If the primary URL is not specified, 
 random order. You can also specify the number of retries. By default, the number of retries is the same as the number
 of URLs.
 
-```conf
+```hocon
     jdbc = {
       # The primary connection URL 
       url = "jdbc:postgresql://example1.com:5432/test_db"
@@ -541,7 +541,7 @@ At the operation level you can define
 - You can override schema and other options.
 
 An operation for ingesting a CSV file from S3 can look like this:
-```
+```hocon
 pramen.operations = [
   {
     name = "Sourcing of a CSV file"
@@ -596,7 +596,7 @@ Here is how you can configure a source taking data from a local CSV folder:
 At the operation level you can define the path to load files from.
 
 An operation for ingesting CSV files from a local directory can look like this:
-```
+```hocon
 pramen.operations = [
   {
     name = "Sourcing of Csome SV files"
@@ -1491,7 +1491,7 @@ pramen {
 ```
 
 You can override defaults for specific operations by changing the definition of the operation as follows:
-```
+```hocon
 pramen.operations = [
   ...
   {
@@ -1764,9 +1764,9 @@ Full example of JDBC ingestion pipelines: [examples/jdbc_sourcing](examples/jdbc
 
 
 For example, let's have this range defined for a table:
-```
-   date.from = '@infoDate-2' # 2022-07-01
-   date.to   = '@infoDate'   # 2022-07-03
+```hocon
+   date.from = "@infoDate-2" # 2022-07-01
+   date.to   = "@infoDate"   # 2022-07-03
 ```
 
 When you use `input.sql = "..."` you can refer to the date range defined for the table `date.from` and `date.to` using the
