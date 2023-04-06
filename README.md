@@ -265,7 +265,7 @@ Currently, the following underlying storage is supported.
 - Delta Lake tables
 
 Here is an example of a metastore configuration with a single table (Parquet format):
-```config
+```hocon
 pramen.metastore {
   tables = [
   {  
@@ -311,7 +311,7 @@ Storage type examples:
   <summary>Click to expand</summary>
 
   A config for a Parquet folder example:
-  ```config
+  ```hocon
   {
     name = "table_name"
     format = "parquet"
@@ -321,7 +321,7 @@ Storage type examples:
   ```
   
   A config for a Delta folder example:
-  ```config
+  ```hocon
   {
     name = "table_name"
     format = "delta"
@@ -331,7 +331,7 @@ Storage type examples:
   ```
   
   A config for a Delta Lake table example:
-  ```config
+  ```hocon
   {
     name = "table_name"
     format = "delta"
@@ -359,7 +359,7 @@ built-in sources:
 You can define your own source by implementing the corresponding interface.
 
 Sources are defined like this:
-```config
+```hocon
 pramen.sources = [
   {
     # The name of the source. It will be used to refer to the source in the pipeline.
@@ -386,7 +386,7 @@ tables will be allowed.
 
 You can override this parameter per-table using `minimum.records` parameter in the table definition. See the
 section on [sourcing jobs](#sourcing-jobs) for more details.
-```config
+```hocon
 pramen.sources = [
   {
     name = "source1_name"
@@ -413,7 +413,7 @@ Here is how each of these sources can be configured:
 #### JDBC source
 Here is how you can configure a JDBC source. The source defines an end point. Which exact table to load
 is determined by the pipeline configuration.
-```config
+```hocon
 {
     name = "source1_name"
     factory.class = "za.co.absa.pramen.core.source.JdbcSource"
@@ -514,7 +514,7 @@ For a Spark source you should define:
   present, Pramen will take the snapshot of all data at scheduled times.
 
 Here is how you can configure a CSV source:
-```config
+```hocon
 {
     name = "my_csv_source"
     factory.class = "za.co.absa.pramen.core.source.SparkSource"
@@ -572,7 +572,7 @@ Also, it adds a couple of mandatory additional options.
 - [Optional] A flag for recursive directory search.
 
 Here is how you can configure a source taking data from a local CSV folder:
-```config
+```hocon
 {
     name = "my_local_csv_source"
     factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
@@ -635,7 +635,7 @@ name should be defined in the definition of the pipeline operation.
 
 Here is an example of a Kafka sink definition:
 
-```config
+```hocon
 {
   # Define a name to reference from the pipeline:
   name = "kafka_avro"
@@ -670,7 +670,7 @@ The corresponding pipeline operation could look like this:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "Kafka sink"
   type = "sink"
@@ -717,7 +717,7 @@ Here is an example of a CSV sink definition:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "local_csv"
   factory.class = "za.co.absa.pramen.core.sink.LocalCsvSink"
@@ -750,7 +750,7 @@ The corresponding pipeline operation could look like this:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "CSV sink"
   type = "sink"
@@ -809,7 +809,7 @@ Here is an example of scenario 1 with a command line sink definition that output
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "cmd_line"
   factory.class = "za.co.absa.pramen.core.sink.CmdLineSink"
@@ -838,7 +838,7 @@ The pipeline operation for this sink could look like this:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "Command Line sink"
   type = "sink"
@@ -889,7 +889,7 @@ expressions are provided. The regex expression searches for "Records written: nn
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "cmd_line2"
   factory.class = "za.co.absa.pramen.core.sink.CmdLineSink"
@@ -926,7 +926,7 @@ The pipeline operation for this sink could look like this:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "Command Line sink"
   type = "sink"
@@ -962,7 +962,7 @@ Here is an example of a Spark sink definition:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
     # Define a name to reference from the pipeline:
     name = "spark_sink"
@@ -998,7 +998,7 @@ The corresponding pipeline operation could look like this:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
     name = "Spark sink"
     type = "sink"
@@ -1053,7 +1053,7 @@ Here is an example configuration of a sink:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   # Define a name to reference from the pipeline:
   name = "enceladus_raw"
@@ -1112,7 +1112,7 @@ The pipeline operation for this sink could look like this:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 {
   name = "Enceladus sink"
   type = "sink"
@@ -1270,7 +1270,7 @@ have a pipeline without transformers if data ingestion is all is needed.
 
 Each pipeline has several mandatory options:
 
-```config
+```hocon
 pramen {
   # The environment name and pipeline name are defined to be included in email notifications.
   # You can reference system environment variables if you want your pipeline config to be deployable
@@ -1308,7 +1308,7 @@ started, Pramen splits operations into jobs, jobs into tasks:
 A pipeline is defined as an array of operations. It becomes a DAG (directed acyclic graph) when each operation dependencies
 are evaluated.
 
-```config
+```hocon
 pramen.operations = [
   {
     name = "Source operation"
@@ -1420,43 +1420,43 @@ A schedule can be daily, weekly, or monthly.
 Here are a couple of examples:
 
 Daily:
-```conf
+```hocon
     schedule.type = "daily" 
 ```
 
 Weekly, on Sundays:
-```conf
+```hocon
     schedule.type = weekly
     # 1 - Monday, ..., 7 - Sunday
     schedule.days.of.week = [ 7 ]
 ```
 
 Twice a week, on Mondays and Fridays:
-```conf
+```hocon
     schedule.type = weekly
     schedule.days.of.week = [ 1, 5 ] 
 ```
 
 Monthly (on 1st day of the month):
-```conf
+```hocon
     schedule.type = monthly
     schedule.days.of.month = [ 1 ]
 ```
 
 Monthly (on the last day of the month):
-```conf
+```hocon
     schedule.type = monthly
     schedule.days.of.month = [ LAST ]
 ```
 
 Monthly (on the second to last day of the month, e.g. Jan 30th or Apr 29th):
-```conf
+```hocon
     schedule.type = monthly
     schedule.days.of.month = [ -2 ]
 ```
 
 Twice a month (on 1st and 15th day of each month):
-```conf
+```hocon
     schedule.type = monthly
     schedule.days.of.month = [ 1, 15 ]
 ```
@@ -1477,7 +1477,7 @@ Well-designed pipelines standardize information dates for weekly and monthly job
 so that querying the data is easier.
 
 You can specify default output information date expressions in the config (usually `common.conf`) like this:
-```conf
+```hocon
 pramen {
   # Default information date expression for daily jobs
   default.daily.output.info.date.expr = "@runDate"
@@ -1511,7 +1511,7 @@ sourcing date expression for an operation.
 In the expression you specify an expression that given the current date (@runDate) returns the oldest date to load data for.  
 
 Default values are configured like this:
-```conf
+```hocon
 pramen {
   # Default initial sourcing date expression for daily jobs
   initial.sourcing.date.daily.expr = "@runDate"
@@ -1525,11 +1525,11 @@ pramen {
 ```
 
 You can override defaults for specific operations by changing the definition of the operation as follows:
-```
+```hocon
 pramen.operations = [
   ...
   {
-    ...
+    # ...
     initial.sourcing.date.expr = "@runDate"
   }
   ...
@@ -1549,7 +1549,7 @@ configuration using the following options:
 
 Here is an example of fine-tuning certain operations:
 
-```
+```hocon
 pramen {
   # a maximum of 4 tasks running in parallel
   parallel.tasks = 4
@@ -1598,7 +1598,7 @@ Dependency configuration options:
 Options `optional` and `passive` are mutually exclusive.
 
 Here is a template for a dependency definition:
-```config
+```hocon
 {
   # The list of input tables for which the condition should be satisfied 
   tables = [ table1, table2 ]
@@ -1622,7 +1622,7 @@ Here is a template for a dependency definition:
 ```
 
 Here is an example of dependencies definition:
-```config
+```hocon
 dependencies = [
   {
     # Tables table1 and table2 should current.
@@ -1654,7 +1654,7 @@ The purpose of filters is to load or send only portion of the source table. You 
 in filters.
 
 Example:
-```config
+```hocon
 filters = [
   "some_column1 > 100",
   "some_column2 < 300",
@@ -1671,7 +1671,7 @@ The purpose of schema transformations is to adapt to schema changes on data load
 You can create new columns, modify or delete existing columns. If the expression is empty, the column will be dropped. 
 
 Example:
-```config
+```hocon
 transformations = [
   { col = "new_column", expr = "lower(existing_column)" },
   { col = "existing_column", expr = "upper(existing_column)" },
@@ -1688,7 +1688,7 @@ by schema transformations, but the only way to guarantee the order of columns (f
 column selection.
 
 Example:
-```config
+```hocon
 columns = [ "column1", "column2", "column3", "column4" ]
 ```
 
@@ -1698,7 +1698,7 @@ Sourcing jobs synchronize data at external sources with tables at the metastore.
 between input tables/queries/paths to a table in the metastore. 
 
 Here is an example configuration for a JDBC source:
-```config
+```hocon
 {
   # The name of the ingestion operation will be included in email notifications
   name = "JDBC data sourcing"
@@ -1783,7 +1783,7 @@ this source uses `input.path` rather than `input.db.table` to refer to the sourc
 schema transformations, column selection and source setting overrides can apply for this
 source the same way as for JDBC sources:
 
-```config
+```hocon
 {
   name = "Parquet on Hadoop data sourcing"
   type = "ingestion"
@@ -1805,7 +1805,7 @@ In order to include a Scala transformer in the pipeline you just need to specify
 of the transformer. 
 
 Here is a example:
-```config
+```hocon
 {
   name = "My Scala Transformarion"
   type = "transformer"
@@ -1859,7 +1859,7 @@ included in dependencies. Even an optional dependency allows using a table insid
 Python transformer definition is very similar to Scala transformer definitions. Use 'python_transformer' operation type
 and 'python.class' to refer to the transformer.
 
-```config
+```hocon
 {
   name = "My Python Transformarion"
   type = "python_transformer"
@@ -1919,7 +1919,7 @@ Sink jobs allow sending data from the metastore downstream. The following exampl
 sink operation definition.
 
 #### Kafka sink example
-```config
+```hocon
 {
   name = "Kafka sink"
   type = "sink"
@@ -1944,7 +1944,7 @@ sink operation definition.
 ```
 
 #### Local CSV sink example
-```config
+```hocon
 {
   name = "CSV sink"
   type = "sink"
@@ -1989,7 +1989,7 @@ Here is a template for such a pipeline:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 pramen.sources = [
   {
     name = "my_postgre_rds"
@@ -2133,7 +2133,7 @@ Here is an example notification target:
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 pramen.notification.targets = [
   {
     ## Mandatory options
@@ -2168,7 +2168,7 @@ Here is how you can reference notification targets from your pipeline. You can s
 <details>
   <summary>Click to expand</summary>
 
-```config
+```hocon
 pramen.operations = [
   {
     ## Here is the example of notifications from an ingestion or a sink operation.
