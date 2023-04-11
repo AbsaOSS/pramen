@@ -82,19 +82,23 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates._
   * }
   * }}}
   *
-  * @param database    The database database to use. If omitted, you can use full table names for each table.
-  * @param templates   Query templates for each output format
-  * @param jdbcConfig  Hive JDBC configuration to use instead of Spark metastore if needed
+  * @param database       T he database database to use. If omitted, you can use full table names for each table.
+  * @param templates      Query templates for each output format
+  * @param jdbcConfig     Hive JDBC configuration to use instead of Spark metastore if needed
+  * @param ignoreFailures Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
   */
 case class HiveConfig(
                        database: Option[String],
                        templates: Map[String, HiveQueryTemplates],
-                       jdbcConfig: Option[JdbcConfig]
+                       jdbcConfig: Option[JdbcConfig],
+                       ignoreFailures: Boolean
                      )
 
 object HiveConfig {
   val HIVE_CONFIG_JDBC_PREFIX = "jdbc"
   val HIVE_TEMPLATE_CONFIG_PREFIX = "conf"
+
+  val HIVE_IGNORE_FAILURES_KEY = "ignore.failures"
 
   /**
     * Gets global Hive configuration and query templates for all supported formats.
@@ -107,6 +111,7 @@ object HiveConfig {
     */
   def fromConfig(conf: Config, parent: String = ""): HiveConfig = {
     val database = if (conf.hasPath("database")) Some(conf.getString("database")) else None
+    val ignoreFailures = ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false)
 
     val jdbcConfig = if (conf.hasPath(HIVE_CONFIG_JDBC_PREFIX))
       Option(JdbcConfig.load(conf, parent))
@@ -121,7 +126,7 @@ object HiveConfig {
       (format, HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, prefix)))
     }).toMap
 
-    HiveConfig(database, templates, jdbcConfig)
+    HiveConfig(database, templates, jdbcConfig, ignoreFailures)
   }
 
   /**
@@ -143,6 +148,8 @@ object HiveConfig {
       DEFAULT_DROP_TABLE_TEMPLATE
     ))
 
+    val ignoreFailures = ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(defaults.ignoreFailures)
+
     val createTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$CREATE_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.createTableTemplate)
 
@@ -155,9 +162,10 @@ object HiveConfig {
     HiveConfig(
       database = hiveOverride.database.orElse(defaults.database),
       templates = defaults.templates + (format.name -> HiveQueryTemplates(createTableTemplate, repairTableTemplate, dropTableTemplate)),
-      jdbcConfig = hiveOverride.jdbcConfig.orElse(defaults.jdbcConfig)
+      jdbcConfig = hiveOverride.jdbcConfig.orElse(defaults.jdbcConfig),
+      ignoreFailures
     )
   }
 
-  def getNullConfig: HiveConfig = HiveConfig(None, Map(), None)
+  def getNullConfig: HiveConfig = HiveConfig(None, Map(), None, ignoreFailures = false)
 }
