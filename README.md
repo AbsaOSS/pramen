@@ -2225,6 +2225,65 @@ pramen.operations = [
 ```
 </details>
 
+## Hive tables
+Pramen supports exposing metastore tables as Hive tables. Currently, it works only for Parquet. The support for Delta
+is coming soon.
+
+Hive configuration and query templates can be defined globally:
+```hocon
+pramen {
+  # Hive configuration for the Spark metastore
+  spark.conf.option = {
+    hive.metastore.uris = "thrift://host1:9083,thrift://host2:9083"
+    spark.sql.warehouse.dir = "/hive/warehouse"
+  }
+  
+  hive {
+    database = "my_db"
+
+    # Optional, use only if you want to use JDBC rather than Spark metastore to query Hive
+    hive.jdbc {
+      driver = "com.cloudera.hive.jdbc41.HS2Driver"
+      url = "jdbc:hive2://myhivehost:10000/"
+      user = "..."
+      password = "..."
+    }
+
+    # Optional, use only if you want to override default templates
+    conf.parquet = {
+      create.table.template = "..."
+      repair.table.template = "..."
+     drop.table.template = "..."
+    }
+    conf.delta = {
+      create.table.template = "..."
+      repair.table.template = "..."
+      drop.table.template = "..."
+    }
+  }
+}
+```
+
+But the configuration can be overridden for a metastore table:
+```hocon
+pramen.metastore {
+  tables = [
+     {
+        name = my_table
+        format = parquet
+        path = /a/b/c
+        hive.table = my_hive_table
+        hive.database = my_hive_db
+        # Override the table creation query for this table
+        hive.conf.create.table.template = "..."
+        # Override Hive JDBC for this table
+        hive.jdbc {
+        }
+     }
+  ]
+}
+```
+
 ## Schema evolutions patterns
 
 # Deploying the pipeline

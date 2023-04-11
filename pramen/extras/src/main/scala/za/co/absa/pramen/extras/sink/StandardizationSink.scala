@@ -23,7 +23,9 @@ import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji.FAILURE
+import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates.TEMPLATES_DEFAULT_PREFIX
 import za.co.absa.pramen.core.utils.hive._
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.extras.utils.PartitionUtils
@@ -326,7 +328,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): StandardizationSink = {
     val standardizationConfig = StandardizationConfig.fromConfig(conf)
-    val hiveConfig = HiveConfig.fromConfig(conf)
+    val hiveConfig = HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, TEMPLATES_DEFAULT_PREFIX))
     val queryExecutor = standardizationConfig.hiveJdbcConfig match {
       case Some(hiveJdbcConfig) =>
         log.info("Using JDBC to connect to Hive")

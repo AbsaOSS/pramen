@@ -34,6 +34,7 @@ case class MetaTable(
                       format: DataFormat,
                       infoDateColumn: String,
                       infoDateFormat: String,
+                      hiveConfig: HiveConfig,
                       hiveTable: Option[String],
                       infoDateExpression: Option[String],
                       infoDateStart: LocalDate,
@@ -51,12 +52,15 @@ object MetaTable {
   val TRACK_DAYS_KEY = "track.days"
   val READ_OPTION_KEY = "read.option"
   val WRITE_OPTION_KEY = "write.option"
+  val TABLE_HIVE_CONFIG_PREFIX = "hive"
+  val DEFAULT_HIVE_CONFIG_PREFIX = "pramen.hive"
 
   def fromConfig(conf: Config, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = conf.getString(InfoDateConfig.INFORMATION_DATE_COLUMN_KEY)
     val defaultInfoDateFormat = conf.getString(InfoDateConfig.INFORMATION_DATE_FORMAT_KEY)
     val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DATE_FORMAT_INTERNAL, defaultInfoDateFormat)
     val defaultTrackDays = conf.getInt(InfoDateConfig.TRACK_DAYS)
+    val defaultHiveConfig = HiveConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
 
     val tableConfigs = if (conf.hasPath(key)) {
       conf.getConfigList(key).asScala
@@ -66,7 +70,7 @@ object MetaTable {
     }
 
     val metatables = tableConfigs
-      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays))
+      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays, defaultHiveConfig))
       .toSeq
 
     val duplicates = AlgorithmicUtils.findDuplicates(metatables.map(_.name))
@@ -81,7 +85,8 @@ object MetaTable {
                              defaultInfoColumnName: String,
                              defaultInfoDateFormat: String,
                              defaultStartDate: LocalDate,
-                             defaultTrackDays: Int): MetaTable = {
+                             defaultTrackDays: Int,
+                             defaultHiveConfig: HiveConfig): MetaTable = {
     val name = ConfigUtils.getOptionString(conf, NAME_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $NAME_KEY"))
     val description = ConfigUtils.getOptionString(conf, NAME_DESCRIPTION).getOrElse("")
     val infoDateOverride = InfoDateOverride.fromConfig(conf)
@@ -99,10 +104,17 @@ object MetaTable {
     }
 
     val hiveTable = ConfigUtils.getOptionString(conf, HIVE_TABLE_KEY)
+
+    val hiveConfig = if (hiveTable.isEmpty) {
+      defaultHiveConfig
+    } else {
+      HiveConfig.fromConfigWithDefaults(ConfigUtils.getOptionConfig(conf, TABLE_HIVE_CONFIG_PREFIX), defaultHiveConfig, format)
+    }
+
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
 
-    MetaTable(name, description, format, infoDateColumn, infoDateFormat, hiveTable, infoDateExpressionOpt, startDate, trackDays, readOptions, writeOptions)
+    MetaTable(name, description, format, infoDateColumn, infoDateFormat, hiveConfig, hiveTable, infoDateExpressionOpt, startDate, trackDays, readOptions, writeOptions)
   }
 
 }

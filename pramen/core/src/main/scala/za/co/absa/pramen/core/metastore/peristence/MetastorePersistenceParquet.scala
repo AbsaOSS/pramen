@@ -21,7 +21,9 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.utils.Emoji.SUCCESS
+import za.co.absa.pramen.core.utils.hive.QueryExecutor
 import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.sql.Date
@@ -47,6 +49,63 @@ class MetastorePersistenceParquet(path: String,
     } else {
       loadTableFromRootFolder(infoDateFrom, infoDateTo)
     }
+  }
+
+  override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
+    val outputDir = getPartitionPath(infoDate)
+    val outputDirStr = getPartitionPath(infoDate).toUri.toString
+
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+
+    fsUtils.createDirectoryRecursive(new Path(path))
+
+    val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn))) {
+      df.drop(infoDateColumn)
+    } else {
+      df
+    }
+
+    log.info(s"Writing to '$outputDirStr'...")
+
+    val recordCount = numberOfRecordsEstimate match {
+      case Some(count) => count
+      case None => dfIn.count()
+    }
+
+    val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
+
+    writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils)
+
+    val stats = getStats(infoDate)
+
+    log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+
+    stats
+  }
+
+  override def getStats(infoDate: LocalDate): MetaTableStats = {
+    val outputDirStr = getPartitionPath(infoDate).toUri.toString
+
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+
+    val actualCount = spark.read.parquet(outputDirStr).count()
+
+    val size = fsUtils.getDirectorySize(outputDirStr)
+
+    MetaTableStats(actualCount, Option(size))
+  }
+
+  override def createOrUpdateHiveTable(infoDate: LocalDate,
+                                       hiveTableName: String,
+                                       queryExecutor: QueryExecutor,
+                                       hiveConfig: HiveConfig): Unit = {
+    throw new UnsupportedOperationException("Parquet format does not support Hive tables at the moment.")
+  }
+
+  override def repairHiveTable(hiveTableName: String,
+                               queryExecutor: QueryExecutor,
+                               hiveConfig: HiveConfig): Unit = {
+    throw new UnsupportedOperationException("Parquet format does not support Hive tables at the moment.")
   }
 
   def loadPartitionDirectly(infoDate: LocalDate): DataFrame = {
@@ -86,41 +145,18 @@ class MetastorePersistenceParquet(path: String,
     }
   }
 
-  override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
-    val outputDir = getPartitionPath(infoDate)
-    val outputDirStr = getPartitionPath(infoDate).toUri.toString
-
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-
-    fsUtils.createDirectoryRecursive(new Path(path))
-
-    val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn))) {
-      df.drop(infoDateColumn)
-    } else {
-      df
+  def applyRepartitioning(dfIn: DataFrame, recordCount: Long): DataFrame = {
+    recordsPerPartition match {
+      case None      => dfIn
+      case Some(rpp) =>
+        val numPartitions = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
+        dfIn.repartition(numPartitions)
     }
-
-    log.info(s"Writing to '$outputDirStr'...")
-
-    val recordCount = numberOfRecordsEstimate match {
-      case Some(count) => count
-      case None => dfIn.count()
-    }
-
-    val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
-
-    writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils)
-
-    val stats = getStats(infoDate)
-
-    log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
-
-    stats
   }
 
-  private [core] def writeAndCleanOnFailure(df: DataFrame,
-                                            outputDirStr: String,
-                                            fsUtils: FsUtils): Unit = {
+  private[core] def writeAndCleanOnFailure(df: DataFrame,
+                                           outputDirStr: String,
+                                           fsUtils: FsUtils): Unit = {
     try {
       df.write
         .mode(SaveMode.Overwrite)
@@ -140,27 +176,6 @@ class MetastorePersistenceParquet(path: String,
         }
 
         throw ex
-    }
-  }
-
-  override def getStats(infoDate: LocalDate): MetaTableStats = {
-    val outputDirStr = getPartitionPath(infoDate).toUri.toString
-
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-
-    val actualCount = spark.read.parquet(outputDirStr).count()
-
-    val size = fsUtils.getDirectorySize(outputDirStr)
-
-    MetaTableStats(actualCount, Option(size))
-  }
-
-  def applyRepartitioning(dfIn: DataFrame, recordCount: Long): DataFrame = {
-    recordsPerPartition match {
-      case None      => dfIn
-      case Some(rpp) =>
-        val numPartitions = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
-        dfIn.repartition(numPartitions)
     }
   }
 

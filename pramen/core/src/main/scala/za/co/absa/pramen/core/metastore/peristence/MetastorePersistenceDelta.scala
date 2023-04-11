@@ -22,7 +22,9 @@ import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.utils.Emoji.SUCCESS
+import za.co.absa.pramen.core.utils.hive.QueryExecutor
 import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.time.LocalDate
@@ -53,15 +55,6 @@ class MetastorePersistenceDelta(query: Query,
     }
 
     df.filter(getFilter(infoDateFrom, infoDateTo))
-  }
-
-  def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
-    (infoDateFrom, infoDateTo) match {
-      case (None, None)           => log.warn(s"Reading '${query.query}' without filters. This can have performance impact."); lit(true)
-      case (Some(from), None)     => col(infoDateColumn) >= lit(dateFormatter.format(from))
-      case (None, Some(to))       => col(infoDateColumn) <= lit(dateFormatter.format(to))
-      case (Some(from), Some(to)) => col(infoDateColumn) >= lit(dateFormatter.format(from)) && col(infoDateColumn) <= lit(dateFormatter.format(to))
-    }
   }
 
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
@@ -134,6 +127,28 @@ class MetastorePersistenceDelta(query: Query,
     }
 
     MetaTableStats(recordCount, sizeOpt)
+  }
+
+  override def createOrUpdateHiveTable(infoDate: LocalDate,
+                                       hiveTableName: String,
+                                       queryExecutor: QueryExecutor,
+                                       hiveConfig: HiveConfig): Unit = {
+    throw new UnsupportedOperationException("Delta format does not support Hive tables at the moment.")
+  }
+
+  override def repairHiveTable(hiveTableName: String,
+                                queryExecutor: QueryExecutor,
+                                hiveConfig: HiveConfig): Unit = {
+    throw new UnsupportedOperationException("Delta format does not support Hive tables at the moment.")
+  }
+
+  def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
+    (infoDateFrom, infoDateTo) match {
+      case (None, None)           => log.warn(s"Reading '${query.query}' without filters. This can have performance impact."); lit(true)
+      case (Some(from), None)     => col(infoDateColumn) >= lit(dateFormatter.format(from))
+      case (None, Some(to))       => col(infoDateColumn) <= lit(dateFormatter.format(to))
+      case (Some(from), Some(to)) => col(infoDateColumn) >= lit(dateFormatter.format(from)) && col(infoDateColumn) <= lit(dateFormatter.format(to))
+    }
   }
 
   def applyRepartitioning(dfIn: DataFrame, recordCount: Long): DataFrame = {

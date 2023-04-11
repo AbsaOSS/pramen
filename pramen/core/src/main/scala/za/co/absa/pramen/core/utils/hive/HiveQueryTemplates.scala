@@ -19,16 +19,18 @@ package za.co.absa.pramen.core.utils.hive
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.utils.ConfigUtils
 
-case class HiveConfig(
-                       createTableTemplate: String,
-                       repairTableTemplate: String,
-                       dropTableTemplate: String
-                     )
+case class HiveQueryTemplates(
+                               createTableTemplate: String,
+                               repairTableTemplate: String,
+                               dropTableTemplate: String
+                             )
 
-object HiveConfig {
-  val CREATE_TABLE_TEMPLATE_KEY = "hive.conf.create.table.template"
-  val REPAIR_TABLE_TEMPLATE_KEY = "hive.conf.repair.table.template"
-  val DROP_TABLE_TEMPLATE_KEY = "hive.conf.drop.table.template"
+object HiveQueryTemplates {
+  val TEMPLATES_DEFAULT_PREFIX = "hive.conf"
+
+  val CREATE_TABLE_TEMPLATE_KEY = "create.table.template"
+  val REPAIR_TABLE_TEMPLATE_KEY = "repair.table.template"
+  val DROP_TABLE_TEMPLATE_KEY = "drop.table.template"
 
   val DEFAULT_CREATE_TABLE_TEMPLATE: String =
     """CREATE EXTERNAL TABLE IF NOT EXISTS
@@ -43,7 +45,7 @@ object HiveConfig {
 
   val DEFAULT_DROP_TABLE_TEMPLATE: String = "DROP TABLE IF EXISTS @fullTableName"
 
-  def fromConfig(conf: Config): HiveConfig = {
+  def fromConfig(conf: Config): HiveQueryTemplates = {
     val createTableTemplate = ConfigUtils.getOptionString(conf, CREATE_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_CREATE_TABLE_TEMPLATE)
 
@@ -53,7 +55,7 @@ object HiveConfig {
     val dropTableTemplate = ConfigUtils.getOptionString(conf, DROP_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_DROP_TABLE_TEMPLATE)
 
-    HiveConfig(
+    HiveQueryTemplates(
       createTableTemplate = createTableTemplate,
       repairTableTemplate = repairTableTemplate,
       dropTableTemplate = dropTableTemplate

@@ -25,13 +25,13 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.FsUtils
-import za.co.absa.pramen.core.utils.hive.{HiveConfig, HiveHelperImpl}
+import za.co.absa.pramen.core.utils.hive.{HiveHelperImpl, HiveQueryTemplates}
 
 class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
 
   import spark.implicits._
 
-  private val defaultHiveConfig = HiveConfig.fromConfig(ConfigFactory.empty())
+  private val defaultHiveConfig = HiveQueryTemplates.fromConfig(ConfigFactory.empty())
 
   "HiveHelperImpl" should {
     "execute expected queries for non-partitioned table" in {
