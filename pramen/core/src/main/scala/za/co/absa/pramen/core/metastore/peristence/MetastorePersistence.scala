@@ -18,7 +18,8 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.core.metastore.MetaTableStats
-import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveConfig, MetaTable}
+import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
 import java.time.LocalDate
 
@@ -28,6 +29,15 @@ trait MetastorePersistence {
   def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats
 
   def getStats(infoDate: LocalDate): MetaTableStats
+
+  def createOrUpdateHiveTable(infoDate: LocalDate,
+                              hiveTableName: String,
+                              queryExecutor: QueryExecutor,
+                              hiveConfig: HiveConfig): Unit
+
+  def repairHiveTable(hiveTableName: String,
+                      queryExecutor: QueryExecutor,
+                      hiveConfig: HiveConfig): Unit
 }
 
 object MetastorePersistence {
@@ -36,10 +46,10 @@ object MetastorePersistence {
       case DataFormat.Parquet(path, recordsPerPartition) => new MetastorePersistenceParquet(
         path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
       )
-      case DataFormat.Delta(query, recordsPerPartition) => new MetastorePersistenceDelta(
+      case DataFormat.Delta(query, recordsPerPartition)  => new MetastorePersistenceDelta(
         query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
       )
-      case DataFormat.Null() => throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
+      case DataFormat.Null()                             => throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
     }
   }
 }

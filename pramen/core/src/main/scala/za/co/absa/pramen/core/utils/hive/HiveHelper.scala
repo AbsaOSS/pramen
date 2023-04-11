@@ -43,7 +43,7 @@ abstract class HiveHelper {
 object HiveHelper {
   def apply(conf: Config)(implicit spark: SparkSession): HiveHelper = {
     val queryExecutor = new QueryExecutorSpark()
-    val hiveConfig = HiveConfig.fromConfig(conf)
+    val hiveConfig = HiveQueryTemplates.fromConfig(conf)
     new HiveHelperImpl(queryExecutor, hiveConfig)
   }
 }

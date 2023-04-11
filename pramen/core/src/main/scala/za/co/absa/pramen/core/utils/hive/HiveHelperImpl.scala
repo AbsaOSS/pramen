@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.utils.hive
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
-class HiveHelperImpl(queryExecutor: QueryExecutor, hiveConfig: HiveConfig) extends HiveHelper {
+class HiveHelperImpl(queryExecutor: QueryExecutor, hiveConfig: HiveQueryTemplates) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def createOrUpdateHiveTable(parquetPath: String,

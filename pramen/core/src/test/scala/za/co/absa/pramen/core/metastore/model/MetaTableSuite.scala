@@ -19,6 +19,8 @@ package za.co.absa.pramen.core.metastore.model
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.metastore.model.DataFormat.Parquet
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
 
 import java.time.LocalDate
 
@@ -128,11 +130,15 @@ class MetaTableSuite extends AnyWordSpec {
           |records.per.partition = 100
           |""".stripMargin)
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0)
+      val defaultHiveConfig = HiveConfig.getNullConfig
+
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
 
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "delta")
       assert(metaTable.hiveTable.isEmpty)
+      assert(metaTable.hiveConfig.database.isEmpty)
+      assert(metaTable.hiveConfig.jdbcConfig.isEmpty)
       assert(metaTable.trackDays == 0)
       assert(metaTable.infoDateColumn == "INFO_DATE")
       assert(metaTable.infoDateFormat == "dd-MM-yyyy")
@@ -158,11 +164,19 @@ class MetaTableSuite extends AnyWordSpec {
           |}
           |""".stripMargin)
 
+      val defaultHiveConfig = HiveConfig(Some("mydb"),
+        Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")), Some(JdbcConfig("driver", Some("url"), user = "user", password = "pass")))
+
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig)
 
       assert(metaTable.name == "my_table")
+      assert(metaTable.hiveConfig.database.contains("mydb"))
+      assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver"))
+      assert(metaTable.hiveConfig.templates("parquet").createTableTemplate == "create")
+      assert(metaTable.hiveConfig.templates("parquet").repairTableTemplate == "repair")
+      assert(metaTable.hiveConfig.templates("parquet").dropTableTemplate == "drop")
       assert(metaTable.format.name == "parquet")
       assert(metaTable.format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
       assert(metaTable.hiveTable.contains("my_hive_table"))
@@ -175,6 +189,48 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.writeOptions("y") == "101")
     }
 
+    "load a metatable definition with hive overrides" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |name = my_table
+          |format = parquet
+          |path = /a/b/c
+          |hive {
+          |  database = mydb2
+          |  table = my_hive_table
+          |
+          |  jdbc {
+          |    driver = driver2
+          |    url = url2
+          |    user = user2
+          |    password = pass2
+          |  }
+          |
+          |  conf {
+          |     create.table.template = "create2"
+          |     repair.table.template = "repair2"
+          |     drop.table.template = "drop2"
+          |  }
+          |}
+          |""".stripMargin)
+
+      val defaultHiveConfig = HiveConfig(Some("mydb1"),
+        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")), Some(JdbcConfig("driver1", Some("url1"), user = "user1", password = "pass1")))
+
+      val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
+
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig)
+
+      assert(metaTable.name == "my_table")
+      assert(metaTable.hiveConfig.database.contains("mydb2"))
+      assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver2"))
+      assert(metaTable.hiveConfig.templates("parquet").createTableTemplate == "create2")
+      assert(metaTable.hiveConfig.templates("parquet").repairTableTemplate == "repair2")
+      assert(metaTable.hiveConfig.templates("parquet").dropTableTemplate == "drop2")
+      assert(metaTable.format.name == "parquet")
+      assert(metaTable.hiveTable.contains("my_hive_table"))
+    }
+
     "throw an exception when mandatory the option is missing" in {
       val conf = ConfigFactory.parseString(
         """
@@ -183,8 +239,10 @@ class MetaTableSuite extends AnyWordSpec {
           |hive.table = my_hive_table
           |""".stripMargin)
 
+      val defaultHiveConfig = HiveConfig.getNullConfig
+
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
       }
 
       assert(ex.getMessage.contains("Mandatory option missing: name"))
@@ -199,8 +257,10 @@ class MetaTableSuite extends AnyWordSpec {
           |hive.table = my_hive_table
           |""".stripMargin)
 
+      val defaultHiveConfig = HiveConfig.getNullConfig
+
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
       }
 
       assert(ex.getMessage.contains("Unable to read data format from config for the metastore table: table1"))

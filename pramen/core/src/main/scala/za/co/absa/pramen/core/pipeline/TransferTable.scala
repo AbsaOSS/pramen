@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
-import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveConfig, MetaTable}
 import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
 import za.co.absa.pramen.core.model.QueryBuilder
 import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
@@ -55,7 +55,7 @@ case class TransferTable(
   }
 
   def getMetaTable: MetaTable = {
-    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", None, None, infoDateStart, trackDays, readOptions, writeOptions)
+    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", HiveConfig.getNullConfig, None, None, infoDateStart, trackDays, readOptions, writeOptions)
   }
 }
 

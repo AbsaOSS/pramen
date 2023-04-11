@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.core.metastore.model.DataFormat._
-import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveConfig, MetaTable}
 
 import java.time.LocalDate
 
@@ -27,6 +27,7 @@ object MetaTableFactory {
                         format: DataFormat = Parquet("/tmp/dummy", None),
                         infoDateColumn: String = "INFO_DATE",
                         infoDateFormat: String = "yyyy-MM-dd",
+                        hiveConfig: HiveConfig = HiveConfig.getNullConfig,
                         hiveTable: Option[String] = None,
                         infoDateExpression: Option[String] = None,
                         infoDateStart: LocalDate = LocalDate.of(2020, 1, 31),
@@ -39,6 +40,7 @@ object MetaTableFactory {
       format,
       infoDateColumn,
       infoDateFormat,
+      hiveConfig,
       hiveTable,
       infoDateExpression,
       infoDateStart,
