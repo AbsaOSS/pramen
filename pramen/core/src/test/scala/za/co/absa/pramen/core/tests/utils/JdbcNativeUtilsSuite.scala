@@ -28,7 +28,7 @@ import java.sql.{DriverManager, ResultSet, SQLSyntaxErrorException}
 
 class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase {
   private val tableName = RdbExampleTable.Company.tableName
-  private val jdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, None, Map.empty[String, String])
+  private val jdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password)
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -61,7 +61,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
 
   "getConnection()" should {
     "select working connection when provided a connection pool" in {
-      val jdbcConfig = JdbcConfig(driver, Some("bogus_url"), "bogus_url2" :: url :: Nil, None, user, password, None, Map.empty[String, String])
+      val jdbcConfig = JdbcConfig(driver, Some("bogus_url"), "bogus_url2" :: url :: Nil, None, user, password)
 
       val (actualUrl, conn) = JdbcNativeUtils.getConnection(jdbcConfig)
       conn.close()
@@ -72,7 +72,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
   }
 
   "getJdbcNativeRecordCount()" should {
-    val conf = JdbcConfig(driver, Some(url), Nil, None, user, password, None, Map.empty[String, String])
+    val conf = JdbcConfig(driver, Some(url), Nil, None, user, password)
 
     "return record count when data is available" in {
       val count = JdbcNativeUtils.getJdbcNativeRecordCount(conf, conf.primaryUrl.get, s"SELECT id FROM $tableName WHERE id = 1")

@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.tests.journal
 
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.journal.{Journal, JournalJdbc}
@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll with RelationalDbFixture {
   import TestCases._
 
-  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, None, Map.empty[String, String])
+  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password)
   val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {

@@ -437,6 +437,9 @@ is determined by the pipeline configuration.
       # If multiple URLs are specified, the retry will be attempted on the next URL each time.
       # 'retries = 1' means that the connection will be attempted only once.
       retries = 3
+
+      # (Optional) The timeout for connecting to the JDBC host.
+      connection.timeout = 60
       
       # Any option passed as 'option.' will be passed to the JDBC driver. Example:
       #option.database = "test_db"
@@ -499,7 +502,10 @@ of URLs.
       # If multiple URLs are specified, the retry will be attempted on the next URL each time.
       # 'retries = 1' means that the connection will be attempted only once.
       retries = 5
-    }
+
+      # (Optional) The timeout for connecting to the JDBC host.
+      connection.timeout = 60
+}
 ```
 
 #### Spark source (CSV example)
@@ -2005,6 +2011,9 @@ pramen.sources = [
       # If multiple URLs are specified, the retry will be attempted on the next URL each time.
       # 'retries = 1' means that the connection will be attempted only once.
       retries = 3
+
+      # (Optional) The timeout for connecting to the JDBC host.
+      connection.timeout = 60
     }
 
     option.fetchsize = 50000
