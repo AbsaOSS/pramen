@@ -60,7 +60,7 @@ object MetaTable {
     val defaultInfoDateFormat = conf.getString(InfoDateConfig.INFORMATION_DATE_FORMAT_KEY)
     val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DATE_FORMAT_INTERNAL, defaultInfoDateFormat)
     val defaultTrackDays = conf.getInt(InfoDateConfig.TRACK_DAYS)
-    val defaultHiveConfig = HiveConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
+    val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
 
     val tableConfigs = if (conf.hasPath(key)) {
       conf.getConfigList(key).asScala
@@ -86,7 +86,7 @@ object MetaTable {
                              defaultInfoDateFormat: String,
                              defaultStartDate: LocalDate,
                              defaultTrackDays: Int,
-                             defaultHiveConfig: HiveConfig): MetaTable = {
+                             defaultHiveConfig: HiveDefaultConfig): MetaTable = {
     val name = ConfigUtils.getOptionString(conf, NAME_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $NAME_KEY"))
     val description = ConfigUtils.getOptionString(conf, NAME_DESCRIPTION).getOrElse("")
     val infoDateOverride = InfoDateOverride.fromConfig(conf)
@@ -106,7 +106,7 @@ object MetaTable {
     val hiveTable = ConfigUtils.getOptionString(conf, HIVE_TABLE_KEY)
 
     val hiveConfig = if (hiveTable.isEmpty) {
-      defaultHiveConfig
+      HiveConfig.fromDefaults(defaultHiveConfig, format)
     } else {
       HiveConfig.fromConfigWithDefaults(ConfigUtils.getOptionConfig(conf, TABLE_HIVE_CONFIG_PREFIX), defaultHiveConfig, format)
     }

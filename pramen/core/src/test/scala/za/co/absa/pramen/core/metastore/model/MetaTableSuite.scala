@@ -130,7 +130,7 @@ class MetaTableSuite extends AnyWordSpec {
           |records.per.partition = 100
           |""".stripMargin)
 
-      val defaultHiveConfig = HiveConfig.getNullConfig
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
 
@@ -165,7 +165,7 @@ class MetaTableSuite extends AnyWordSpec {
           |}
           |""".stripMargin)
 
-      val defaultHiveConfig = HiveConfig(Some("mydb"),
+      val defaultHiveConfig = HiveDefaultConfig(Some("mydb"),
         Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")), Some(JdbcConfig("driver", Some("url"), user = "user", password = "pass")), ignoreFailures = true)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
@@ -175,9 +175,9 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.database.contains("mydb"))
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver"))
-      assert(metaTable.hiveConfig.templates("parquet").createTableTemplate == "create")
-      assert(metaTable.hiveConfig.templates("parquet").repairTableTemplate == "repair")
-      assert(metaTable.hiveConfig.templates("parquet").dropTableTemplate == "drop")
+      assert(metaTable.hiveConfig.templates.createTableTemplate == "create")
+      assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair")
+      assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop")
       assert(metaTable.hiveConfig.ignoreFailures)
       assert(metaTable.format.name == "parquet")
       assert(metaTable.format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
@@ -217,7 +217,7 @@ class MetaTableSuite extends AnyWordSpec {
           |}
           |""".stripMargin)
 
-      val defaultHiveConfig = HiveConfig(Some("mydb1"),
+      val defaultHiveConfig = HiveDefaultConfig(Some("mydb1"),
         Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")), Some(JdbcConfig("driver1", Some("url1"), user = "user1", password = "pass1")), ignoreFailures = false)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
@@ -227,9 +227,9 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.database.contains("mydb2"))
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver2"))
-      assert(metaTable.hiveConfig.templates("parquet").createTableTemplate == "create2")
-      assert(metaTable.hiveConfig.templates("parquet").repairTableTemplate == "repair2")
-      assert(metaTable.hiveConfig.templates("parquet").dropTableTemplate == "drop2")
+      assert(metaTable.hiveConfig.templates.createTableTemplate == "create2")
+      assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair2")
+      assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop2")
       assert(metaTable.hiveConfig.ignoreFailures)
       assert(metaTable.format.name == "parquet")
       assert(metaTable.hiveTable.contains("my_hive_table"))
@@ -243,7 +243,7 @@ class MetaTableSuite extends AnyWordSpec {
           |hive.table = my_hive_table
           |""".stripMargin)
 
-      val defaultHiveConfig = HiveConfig.getNullConfig
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
         MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
@@ -261,7 +261,7 @@ class MetaTableSuite extends AnyWordSpec {
           |hive.table = my_hive_table
           |""".stripMargin)
 
-      val defaultHiveConfig = HiveConfig.getNullConfig
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
         MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
