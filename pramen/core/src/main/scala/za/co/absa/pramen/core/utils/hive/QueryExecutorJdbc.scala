@@ -57,8 +57,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
   override def close(): Unit = if (connection != null) connection.close()
 
   private[core] def executeActionOnConnection(action: Connection => Unit): Unit = {
+    val currentConnection = getConnection(forceReconnect = false)
     try {
-      action(getConnection(forceReconnect = false))
+      action(currentConnection)
     } catch {
       case NonFatal(ex) =>
         log.warn(s"Got an error on existing connection. Retrying...", ex)
@@ -67,6 +68,10 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
   }
 
   def getConnection(forceReconnect: Boolean): Connection = {
+    if (connection == null) {
+      jdbcUrlSelector.logConnectionSettings()
+    }
+
     if (connection == null || forceReconnect) {
       val (newConnection, url) = jdbcUrlSelector.getWorkingConnection(retries)
       log.info(s"Selected query executor connection: $url")

@@ -44,6 +44,7 @@ import scala.util.control.NonFatal
 object JdbcNativeUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  final val DEFAULT_CONNECTION_TIMEOUT_SECONDS = 60
   final val JDBC_WORDS_TO_REDACT = Set("password", "secret", "pwd")
 
   /** Returns a JDBC URL and connection by a config. */
@@ -149,6 +150,7 @@ object JdbcNativeUtils {
         properties.put(k, v)
     }
 
+    DriverManager.setLoginTimeout(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))
     DriverManager.getConnection(url, properties)
   }
 }

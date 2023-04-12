@@ -22,11 +22,18 @@ import org.slf4j.LoggerFactory
 class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  override def doesTableExist(dbName: String, tableName: String): Boolean = {
-    if (spark.catalog.databaseExists(dbName)) {
-      spark.catalog.tableExists(dbName, tableName)
-    } else {
-      throw new IllegalArgumentException(s"Database '$dbName' not found")
+  override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
+    val (database, table) = splitTableDatabase(dbName, tableName)
+
+    database match {
+      case Some(db) =>
+        if (spark.catalog.databaseExists(db)) {
+          spark.catalog.tableExists(db, table)
+        } else {
+          throw new IllegalArgumentException(s"Database '$db' not found")
+        }
+      case None     =>
+        spark.catalog.tableExists(tableName)
     }
   }
 
@@ -37,6 +44,20 @@ class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
   }
 
   override def close(): Unit = { }
+
+  /** Ensures that the database name is passed as database, and not embedded into the table name itself. */
+  private [core] def splitTableDatabase(dbName: Option[String], tableName: String): (Option[String], String) = {
+    dbName match {
+      case Some(db) =>
+        (Some(db), tableName)
+      case None     =>
+        if (tableName.contains('.')) {
+          val split = tableName.split('.')
+          (Option(split.head), split.tail.mkString("."))
+        } else
+          (None, tableName)
+    }
+  }
 }
 
 object QueryExecutorSpark {

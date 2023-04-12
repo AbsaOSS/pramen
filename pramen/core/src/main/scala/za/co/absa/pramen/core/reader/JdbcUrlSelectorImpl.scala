@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.reader
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
+import za.co.absa.pramen.core.utils.JdbcNativeUtils.{DEFAULT_CONNECTION_TIMEOUT_SECONDS, JDBC_WORDS_TO_REDACT}
 
 import java.sql.{Connection, DriverManager, SQLException}
 import java.util.Properties
@@ -61,6 +61,7 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
     log.info(s"Password:          [redacted]")
 
     jdbcConfig.retries.foreach(n => log.info(s"Retry attempts:    $n"))
+    jdbcConfig.connectionTimeoutSeconds.foreach(n => log.info(s"Timeout:           $n seconds"))
 
     if (numberOfUrls > 1) {
       log.info("URL redundancy configuration:")
@@ -96,6 +97,7 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
         case (k, v) => properties.put(k, v)
       }
 
+      DriverManager.setLoginTimeout(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))
       DriverManager.getConnection(currentUrl, properties)
     } match {
       case Success(connection) => (connection, currentUrl)
