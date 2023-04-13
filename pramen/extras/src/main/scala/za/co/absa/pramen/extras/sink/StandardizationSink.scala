@@ -186,7 +186,7 @@ class StandardizationSink(sinkConfig: Config,
 
     val (warnings, hiveTables) = if (options.contains(HIVE_TABLE_KEY)) {
       val hiveTable = options(HIVE_TABLE_KEY)
-      val fullTableName = hiveHelper.getFullTable(standardizationConfig.hiveDatabase, hiveTable)
+      val fullTableName = HiveHelper.getFullTable(standardizationConfig.hiveDatabase, hiveTable)
 
       // Generating schema based on the latest ingested partition
       val fullSchema = publishDf.withColumn(ENCELADUS_INFO_DATE_COLUMN, lit(infoDate.toString).cast(DateType))
@@ -212,6 +212,9 @@ class StandardizationSink(sinkConfig: Config,
           } else {
             throw ex
           }
+        case ex: Throwable =>
+          log.error(s"$FAILURE Unexpected error when trying to update Hive table '$fullTableName'. Ignoring the error.", ex)
+          throw ex
       }
     } else {
       log.info(s"Hive table is not configured for $tableName.")

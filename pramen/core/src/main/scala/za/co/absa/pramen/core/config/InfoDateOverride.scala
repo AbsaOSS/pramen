@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.config
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
+import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.LocalDate
@@ -39,7 +39,7 @@ object InfoDateOverride {
     val columnNameOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN_KEY)
     val dateFormatOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_FORMAT_KEY)
     val expressionOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_EXPRESSION_KEY)
-    val startDateOpt = ConfigUtils.getDateOpt(conf, INFORMATION_DATE_START_KEY, DATE_FORMAT_INTERNAL)
+    val startDateOpt = ConfigUtils.getDateOpt(conf, INFORMATION_DATE_START_KEY, DEFAULT_DATE_FORMAT)
 
     InfoDateOverride(columnNameOpt, dateFormatOpt, expressionOpt, startDateOpt)
   }

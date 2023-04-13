@@ -17,8 +17,10 @@
 package za.co.absa.pramen.core.metastore
 
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types.StructType
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.utils.hive.HiveHelper
 
 import java.time.LocalDate
 
@@ -38,6 +40,10 @@ trait Metastore {
   def getLatest(tableName: String, until: Option[LocalDate]): DataFrame
 
   def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long] = None): MetaTableStats
+
+  def getHiveHelper(tableName: String): HiveHelper
+
+  def repairOrCreateHiveTable(tableName: String, infoDate: LocalDate, schema: Option[StructType], hiveHelper: HiveHelper, recreate: Boolean): Unit
 
   def getStats(tableName: String, infoDate: LocalDate): MetaTableStats
 

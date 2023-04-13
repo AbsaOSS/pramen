@@ -19,8 +19,8 @@ package za.co.absa.pramen.core.metastore.model
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.InfoDateOverride
-import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
 import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
 
@@ -58,7 +58,7 @@ object MetaTable {
   def fromConfig(conf: Config, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = conf.getString(InfoDateConfig.INFORMATION_DATE_COLUMN_KEY)
     val defaultInfoDateFormat = conf.getString(InfoDateConfig.INFORMATION_DATE_FORMAT_KEY)
-    val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DATE_FORMAT_INTERNAL, defaultInfoDateFormat)
+    val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DEFAULT_DATE_FORMAT, defaultInfoDateFormat)
     val defaultTrackDays = conf.getInt(InfoDateConfig.TRACK_DAYS)
     val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
 

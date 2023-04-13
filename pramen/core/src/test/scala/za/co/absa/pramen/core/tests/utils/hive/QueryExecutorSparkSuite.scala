@@ -50,7 +50,7 @@ class QueryExecutorSparkSuite extends AnyWordSpec with SparkTestBase {
       val qe = new QueryExecutorSpark()
 
       val ex = intercept[IllegalArgumentException] {
-        qe.doesTableExist("dummyDb", "dummyTable")
+        qe.doesTableExist(Some("dummyDb"), "dummyTable")
       }
 
       assert(ex.getMessage.contains("Database 'dummyDb' not found"))
@@ -59,9 +59,33 @@ class QueryExecutorSparkSuite extends AnyWordSpec with SparkTestBase {
     "return false if the table is not found" in {
       val qe = new QueryExecutorSpark()
 
-      val exist = qe.doesTableExist("default", "dummyTable")
+      val exist = qe.doesTableExist(Some("default"), "dummyTable")
 
       assert(!exist)
+    }
+
+    "return false if the table is not found in the default database" in {
+      val qe = new QueryExecutorSpark()
+
+      val exist = qe.doesTableExist(None, "dummyTable")
+
+      assert(!exist)
+    }
+  }
+
+  "splitTableDatabase()" should {
+    val qe = new QueryExecutorSpark()
+
+    "pass table name with empty database" in {
+      assert(qe.splitTableDatabase(None, "table") == (None, "table"))
+    }
+
+    "pass database name if specified" in {
+      assert(qe.splitTableDatabase(Some("db"), "my.table") == (Some("db"), "my.table"))
+    }
+
+    "split table name into the db name and table name" in {
+      assert(qe.splitTableDatabase(None, "my.table") == (Some("my"), "table"))
     }
   }
 }

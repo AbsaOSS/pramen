@@ -18,13 +18,15 @@ package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.core.utils.hive.{HiveHelperImpl, HiveQueryTemplates, QueryExecutorSpark}
 
 import java.time.LocalDate
 
@@ -38,7 +40,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         val actual = m.getRegisteredTables
 
-        assert(actual.size == 3)
+        assert(actual.size == 6)
         assert(actual.contains("table1"))
         assert(actual.contains("table2"))
         assert(actual.contains("table3"))
@@ -213,6 +215,85 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     }
   }
 
+  "getHiveHelper" should {
+    "get helper Hive helper based on config" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        m.saveTable("table1", infoDate, getDf)
+
+        val hiveHelper = m.getHiveHelper("table1")
+
+        assert(hiveHelper.isInstanceOf[HiveHelperImpl])
+
+        assert(hiveHelper.asInstanceOf[HiveHelperImpl].queryExecutor.isInstanceOf[QueryExecutorSpark])
+      }
+    }
+  }
+
+  "repairOrCreateHiveTable()" should {
+    withTempDirectory("metastore_test") { tempDir =>
+      val (m, _) = getTestCase(tempDir)
+      val defaultTemplates = HiveQueryTemplates.getDefaultQueryTemplates
+
+      val schema = StructType.fromDDL("id int, name string")
+
+      "do nothing if hive table is not defined" in {
+        val qe = new QueryExecutorMock(tableExists = true)
+        val hh = new HiveHelperImpl(qe, defaultTemplates)
+
+        m.repairOrCreateHiveTable("table1", infoDate, Option(schema), hh, recreate = false)
+
+        assert(qe.queries.isEmpty)
+      }
+
+      "repair existing table" in {
+        val qe = new QueryExecutorMock(tableExists = true)
+        val hh = new HiveHelperImpl(qe, defaultTemplates)
+
+        m.repairOrCreateHiveTable("table_hive_delta", infoDate, Option(schema), hh, recreate = false)
+
+        assert(qe.queries.length == 1)
+        assert(qe.queries.exists(_.contains("REPAIR")))
+      }
+
+      "re-create if not exist" in {
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hh = new HiveHelperImpl(qe, defaultTemplates)
+
+        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = false)
+
+        assert(qe.queries.length == 3)
+        assert(qe.queries.exists(_.contains("DROP")))
+        assert(qe.queries.exists(_.contains("CREATE")))
+        assert(qe.queries.exists(_.contains("REPAIR")))
+      }
+
+      "re-create if requested" in {
+        val qe = new QueryExecutorMock(tableExists = true)
+        val hh = new HiveHelperImpl(qe, defaultTemplates)
+
+        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = true)
+
+        assert(qe.queries.length == 3)
+        assert(qe.queries.exists(_.contains("DROP")))
+        assert(qe.queries.exists(_.contains("CREATE")))
+        assert(qe.queries.exists(_.contains("REPAIR")))
+      }
+
+      "throw an exception if query is not supported" in {
+        val qe = new QueryExecutorMock(tableExists = true)
+        val hh = new HiveHelperImpl(qe, defaultTemplates)
+
+        val ex = intercept[IllegalArgumentException] {
+          m.repairOrCreateHiveTable("table_hive_not_supported", infoDate, Option(schema), hh, recreate = false)
+        }
+
+        assert(ex.getMessage.contains("Unsupported query type 'table'"))
+      }
+    }
+  }
+
   "getStats()" should {
     "return stats of the saved table" in {
       withTempDirectory("metastore_test") { tempDir =>
@@ -315,6 +396,24 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
          |     name = "table3"
          |     format = "parquet"
          |     path = "$tempDirEscaped/table3"
+         |   },
+         |   {
+         |     name = "table_hive_parquet"
+         |     format = "parquet"
+         |     path = "$tempDirEscaped/table_hive_parquet"
+         |     hive.table = "hive_table_parquet"
+         |   },
+         |   {
+         |     name = "table_hive_delta"
+         |     format = "delta"
+         |     path = "$tempDirEscaped/table_hive_delta"
+         |     hive.table = "hive_table_delta"
+         |   },
+         |   {
+         |     name = "table_hive_not_supported"
+         |     format = "delta"
+         |     table = "not_supported"
+         |     hive.table = "hive_table_not_supported"
          |   }
          | ]
          |}

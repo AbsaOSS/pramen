@@ -17,22 +17,25 @@
 package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.Config
+import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{MetastoreReader, TableReader}
+import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.{MetastoreReader, Query}
+import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.config.Keys.TEMPORARY_DIRECTORY
 import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
-import za.co.absa.pramen.core.reader.{TableReaderDelta, TableReaderSpark}
 import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.hive.HiveHelper
 
 import java.time.{Instant, LocalDate}
 
 class MetastoreImpl(tableDefs: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
-                    tempPath: String,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
 
   override def getRegisteredMetaTables: Seq[MetaTable] = tableDefs
@@ -59,7 +62,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
     bookkeeper.getLatestProcessedDate(tableName, until) match {
       case Some(infoDate) => getTable(tableName, Some(infoDate), Some(infoDate))
-      case None => throw new NoDataInTable(tableName)
+      case None           => throw new NoDataInTable(tableName)
     }
   }
 
@@ -75,6 +78,56 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
     }
 
     stats
+  }
+
+  override def getHiveHelper(tableName: String): HiveHelper = {
+    val mt = getTableDef(tableName)
+
+    HiveHelper.fromHiveConfig(mt.hiveConfig)
+  }
+
+  override def repairOrCreateHiveTable(tableName: String,
+                                       infoDate: LocalDate,
+                                       schema: Option[StructType],
+                                       hiveHelper: HiveHelper,
+                                       recreate: Boolean): Unit = {
+    val mt = getTableDef(tableName)
+    val hiveTable = mt.hiveTable match {
+      case Some(t) =>
+        t
+      case None    =>
+        log.warn(s"Hive table is not defined for '$tableName'. Skipping Hive table repair/creation.")
+        return
+    }
+
+    val baseSchema = schema.getOrElse(getTable(tableName, Some(infoDate), Some(infoDate)).schema)
+    val effectiveSchema = prepareHiveSchema(baseSchema, mt)
+
+    val path = mt.format match {
+      case f: DataFormat.Delta   =>
+        f.query match {
+          case Query.Path(path) => path
+          case q                => throw new IllegalArgumentException(s"Unsupported query type '${q.name}' for Delta format")
+        }
+      case f: DataFormat.Parquet =>
+        f.path
+      case _: DataFormat.Null => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
+    }
+
+    val fullTableName = HiveHelper.getFullTable(mt.hiveConfig.database, hiveTable)
+
+    if (recreate) {
+      log.info(s"Recreating Hive table '$fullTableName'")
+      hiveHelper.createOrUpdateHiveTable(path, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+    } else {
+      if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
+        log.info(s"The table '$fullTableName' exists. Repairing it.")
+        hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable)
+      } else {
+        log.info(s"The table '$fullTableName' does not exist. Creating it.")
+        hiveHelper.createOrUpdateHiveTable(path, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+      }
+    }
   }
 
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {
@@ -120,6 +173,16 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
       }
     }
   }
+
+  private[core] def prepareHiveSchema(schema: StructType, mt: MetaTable): StructType = {
+    val fieldType = if (mt.infoDateFormat == DEFAULT_DATE_FORMAT) DateType else StringType
+
+    val fieldsWithoutPartitionColumn = schema.fields.filterNot(_.name.equalsIgnoreCase(mt.infoDateColumn))
+
+    val fieldsWithPartitionColumn = fieldsWithoutPartitionColumn :+ StructField(mt.infoDateColumn, fieldType, nullable = false)
+
+    StructType(fieldsWithPartitionColumn)
+  }
 }
 
 object MetastoreImpl {
@@ -127,12 +190,11 @@ object MetastoreImpl {
   val DEFAULT_RECORDS_PER_PARTITION = 500000
 
   def fromConfig(conf: Config, bookkeeper: Bookkeeper)(implicit spark: SparkSession): MetastoreImpl = {
-    val tempPath = conf.getString(TEMPORARY_DIRECTORY)
     val tableDefs = MetaTable.fromConfig(conf, METASTORE_KEY)
 
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
-    new MetastoreImpl(tableDefs, bookkeeper, tempPath, isUndercover)
+    new MetastoreImpl(tableDefs, bookkeeper, isUndercover)
   }
 }
 

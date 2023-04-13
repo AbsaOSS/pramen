@@ -19,8 +19,8 @@ package za.co.absa.pramen.core.app.config
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.BookkeeperConfig.BOOKKEEPING_ENABLED
+import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
 import za.co.absa.pramen.core.runner.splitter.RunMode
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
@@ -69,7 +69,7 @@ object RuntimeConfig {
     val infoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
 
     def getDate(dateStr: String): LocalDate = {
-      convertStrToDate(dateStr, DATE_FORMAT_INTERNAL, infoDateFormat)
+      convertStrToDate(dateStr, DEFAULT_DATE_FORMAT, infoDateFormat)
     }
 
     val runMode = ConfigUtils.getOptionString(conf, RUN_MODE)

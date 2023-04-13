@@ -32,14 +32,8 @@ abstract class HiveHelper {
   def repairHiveTable(databaseName: Option[String],
                       tableName: String): Unit
 
-  def getFullTable(databaseName: Option[String],
-                   tableName: String): String = {
-
-    databaseName match {
-      case Some(dbName) => s"$dbName.$tableName"
-      case None         => tableName
-    }
-  }
+  def doesTableExist(databaseName: Option[String],
+                     tableName: String): Boolean
 }
 
 object HiveHelper {
@@ -56,5 +50,14 @@ object HiveHelper {
       case None             => new QueryExecutorSpark()
     }
     new HiveHelperImpl(queryExecutor, hiveConfig.templates)
+  }
+
+  def getFullTable(databaseName: Option[String],
+                   tableName: String): String = {
+
+    databaseName match {
+      case Some(dbName) => s"$dbName.$tableName"
+      case None         => tableName
+    }
   }
 }

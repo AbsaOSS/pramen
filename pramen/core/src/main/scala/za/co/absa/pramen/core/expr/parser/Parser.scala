@@ -16,13 +16,12 @@
 
 package za.co.absa.pramen.core.expr.parser
 
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.core.expr.lexer.Token
 import za.co.absa.pramen.core.expr.lexer.Token._
-import za.co.absa.pramen.core.model.Constants
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
 
 class Parser(tokens: List[Token], builder: DateExprBuilder) {
@@ -131,5 +130,5 @@ class Parser(tokens: List[Token], builder: DateExprBuilder) {
     }
   }
 
-  private val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)
+  private val dateFormatter = InfoDateConfig.defaultDateFormatter
 }

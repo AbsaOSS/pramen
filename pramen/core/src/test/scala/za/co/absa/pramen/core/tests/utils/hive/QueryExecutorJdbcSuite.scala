@@ -66,7 +66,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
       qe.execute("CREATE TABLE my_table (id INT)")
 
-      val exist = qe.doesTableExist(database, "my_table")
+      val exist = qe.doesTableExist(None, "my_table")
 
       assert(exist)
 
@@ -86,7 +86,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     "return true if the table is found" in {
       val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
 
-      val exist = qe.doesTableExist(database, "company")
+      val exist = qe.doesTableExist(None, "company")
 
       assert(exist)
 
@@ -96,7 +96,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     "return false if the table is not found" in {
       val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
 
-      val exist = qe.doesTableExist(database, "does_not_exist")
+      val exist = qe.doesTableExist(Option(database), "does_not_exist")
 
       assert(!exist)
 
@@ -161,6 +161,37 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
       assert(ex.getMessage.contains("fail the second time"))
       assert(execution == 1)
+      assert(!actionExecuted)
+    }
+
+    "fail if 2 connections fail to connect" in {
+      val baseSelector = JdbcUrlSelector(jdbcConfig)
+      val (conn, _) = baseSelector.getWorkingConnection(1)
+      val sel = mock(classOf[JdbcUrlSelector])
+
+      whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
+      whenMock(sel.getWorkingConnection(anyInt()))
+        .thenThrow(new RuntimeException("fail the first time"))
+        .thenThrow(new RuntimeException("fail the second time"))
+        .thenReturn((conn, "dummyurl"))
+
+      val qe = new QueryExecutorJdbc(sel)
+
+      var execution = 0
+      var actionExecuted = false
+
+      val ex = intercept[RuntimeException] {
+        qe.executeActionOnConnection { conn =>
+          execution += 1
+          actionExecuted = true
+          assert(conn != null)
+        }
+      }
+
+      qe.close()
+
+      assert(ex.getMessage.contains("fail the second time"))
+      assert(execution == 0)
       assert(!actionExecuted)
     }
   }

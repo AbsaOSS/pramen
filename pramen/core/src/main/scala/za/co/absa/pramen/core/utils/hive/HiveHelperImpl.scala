@@ -28,7 +28,7 @@ class HiveHelperImpl(val queryExecutor: QueryExecutor,
                                        partitionBy: Seq[String],
                                        databaseName: Option[String],
                                        tableName: String): Unit = {
-    val fullTableName = getFullTable(databaseName, tableName)
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
     createHiveTable(fullTableName, parquetPath, schema, partitionBy)
@@ -36,9 +36,10 @@ class HiveHelperImpl(val queryExecutor: QueryExecutor,
       repairHiveTable(fullTableName)
     }
   }
+
   override def repairHiveTable(databaseName: Option[String],
                                tableName: String): Unit = {
-    val fullTableName = getFullTable(databaseName, tableName)
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     repairHiveTable(fullTableName)
   }
@@ -51,6 +52,8 @@ class HiveHelperImpl(val queryExecutor: QueryExecutor,
 
     queryExecutor.execute(sqlHiveDrop)
   }
+
+  override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = queryExecutor.doesTableExist(databaseName, tableName)
 
   private def createHiveTable(fullTableName: String,
                               parquetPath: String,
