@@ -283,10 +283,21 @@ class EnceladusSink(sinkConfig: Config,
                                            options: Map[String, String])
                                           (implicit queryExecutor: QueryExecutor, spark: SparkSession): Unit = {
     if (options.contains(DATASET_NAME_KEY) && options.contains(DATASET_VERSION_KEY)) {
+      val datasetName = options(DATASET_NAME_KEY)
+      val datasetVersion = options(DATASET_VERSION_KEY).toInt
+
       val publishBase = basePath.toString.replace("/raw/", "/publish/")
       val outputPublishPath = getPublishPartitionPath(new Path(publishBase), infoDate, infoVersion)
 
       val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, publishBase)
+
+      val stdPath = new Path(s"/tmp/standardization1_output/standardized-$datasetName-$datasetVersion-$infoDate-$infoVersion")
+
+      log.info(s"Checking existence of $stdPath")
+      if (fsUtils.exists(stdPath)) {
+        log.warn(s"Removing old standardization data at $stdPath")
+        fsUtils.deleteDirectoryRecursively(stdPath)
+      }
 
       log.info(s"Checking existence of $outputPublishPath")
 
@@ -297,8 +308,8 @@ class EnceladusSink(sinkConfig: Config,
 
       runEnceladus(
         tableName,
-        options(DATASET_NAME_KEY),
-        options(DATASET_VERSION_KEY).toInt,
+        datasetName,
+        datasetVersion,
         infoDate,
         infoVersion,
         basePath
