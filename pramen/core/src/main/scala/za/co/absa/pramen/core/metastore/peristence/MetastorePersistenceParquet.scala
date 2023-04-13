@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import org.apache.hadoop.fs.{FileSystem, Path}
+import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
@@ -180,9 +180,10 @@ class MetastorePersistenceParquet(path: String,
   }
 
   private def hasData(infoDate: LocalDate): Boolean = {
-    val fs = FileSystem.get(spark.sparkContext.hadoopConfiguration)
-
     val path = getPartitionPath(infoDate)
+
+    val fs = path.getFileSystem(spark.sparkContext.hadoopConfiguration)
+
     val hasPartition = fs.exists(path)
     if (!hasPartition) {
       log.warn(s"No partition: $path")

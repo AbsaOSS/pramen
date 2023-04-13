@@ -22,7 +22,6 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
-import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.hive.QueryExecutorJdbc
 
@@ -164,7 +163,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       assert(!actionExecuted)
     }
 
-    "fail if 2 connections fail to connect" in {
+    "fail the first time when a connection selector can't select a connection" in {
       val baseSelector = JdbcUrlSelector(jdbcConfig)
       val (conn, _) = baseSelector.getWorkingConnection(1)
       val sel = mock(classOf[JdbcUrlSelector])
@@ -190,7 +189,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
       qe.close()
 
-      assert(ex.getMessage.contains("fail the second time"))
+      assert(ex.getMessage.contains("fail the first time"))
       assert(execution == 0)
       assert(!actionExecuted)
     }

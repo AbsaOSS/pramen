@@ -33,6 +33,7 @@ import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
+import za.co.absa.pramen.core.utils.hive.HiveHelper
 
 import java.time.{Instant, LocalDate}
 import scala.concurrent.{ExecutionContext, Future}
@@ -253,6 +254,16 @@ abstract class TaskRunnerBase(conf: Config,
         task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
       }
 
+      val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
+        val recreate = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || task.reason == TaskRunReason.Rerun
+        task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, recreate)
+      } else {
+        Seq.empty
+      }
+
+      val outputMetastoreHiveTable = task.job.outputTable.hiveTable.map(table => HiveHelper.getFullTable(task.job.outputTable.hiveConfig.database, table))
+      val hiveTableUpdates = (saveResult.hiveTablesUpdates ++ outputMetastoreHiveTable).distinct
+
       val stats = saveResult.stats
 
       val finished = Instant.now()
@@ -260,7 +271,7 @@ abstract class TaskRunnerBase(conf: Config,
       val completionReason = if (validationResult.status == NeedsUpdate || (validationResult.status == AlreadyRan && task.reason != TaskRunReason.Rerun))
         TaskRunReason.Update else task.reason
 
-      val warnings = runResult.warnings ++ saveResult.warnings
+      val warnings = runResult.warnings ++ saveResult.warnings ++ hiveWarnings
 
       TaskResult(task.job,
         RunStatus.Succeeded(recordCountOldOpt,
@@ -269,7 +280,7 @@ abstract class TaskRunnerBase(conf: Config,
           completionReason,
           runResult.filesRead,
           saveResult.filesSent,
-          saveResult.hiveTablesUpdates,
+          hiveTableUpdates,
           warnings),
         Some(RunInfo(task.infoDate, started, finished)),
         schemaChangesBeforeTransform ::: schemaChangesAfterTransform,

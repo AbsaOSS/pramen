@@ -18,18 +18,20 @@ package za.co.absa.pramen.core.mocks.job
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.types.StructType
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.mocks.MetaTableFactory.getDummyMetaTable
-import za.co.absa.pramen.core.pipeline.{Job, JobNotificationTarget, JobPreRunResult, JobPreRunStatus, OperationDef, RunResult, SaveResult}
+import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
 
 class JobSpy(jobName: String = "DummyJob",
              outputTableIn: String = "table_out",
+             hiveTable: Option[String] = None,
              operationDef: OperationDef = OperationDefFactory.getDummyOperationDef(),
              preRunCheckFunction: () => JobPreRunResult = () => JobPreRunResult(JobPreRunStatus.Ready, None, Nil),
              validationFunction: () => Reason = () => Reason.Ready,
@@ -46,10 +48,11 @@ class JobSpy(jobName: String = "DummyJob",
   var postProcessingCount = 0
   var saveCount = 0
   var saveDf: DataFrame = _
+  var createHiveTableCount = 0
 
   override val name: String = jobName
 
-  override val outputTable: MetaTable = getDummyMetaTable(outputTableIn)
+  override val outputTable: MetaTable = getDummyMetaTable(outputTableIn, hiveTable = hiveTable)
 
   override val operation: OperationDef = operationDef
 
@@ -85,5 +88,10 @@ class JobSpy(jobName: String = "DummyJob",
     saveCount += 1
 
     SaveResult(saveStats)
+  }
+
+  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String] = {
+    createHiveTableCount += 1
+    Nil
   }
 }

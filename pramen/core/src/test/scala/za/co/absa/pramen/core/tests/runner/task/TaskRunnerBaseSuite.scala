@@ -69,6 +69,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(job.runCount == 2)
       assert(job.postProcessingCount == 2)
       assert(job.saveCount == 2)
+      assert(job.createHiveTableCount == 0)
       assert(result.length == 2)
       assert(result.head.runStatus.isInstanceOf[Succeeded])
       assert(result(1).runStatus.isInstanceOf[Succeeded])
@@ -97,6 +98,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(job.runCount == 2)
       assert(job.postProcessingCount == 2)
       assert(job.saveCount == 2)
+      assert(job.createHiveTableCount == 0)
       assert(result.length == 2)
       assert(result.head.runStatus.isInstanceOf[Succeeded])
       assert(result(1).runStatus.isInstanceOf[Succeeded])
@@ -125,6 +127,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(job.runCount == 2)
       assert(job.postProcessingCount == 0)
       assert(job.saveCount == 0)
+      assert(job.createHiveTableCount == 0)
       assert(result.length == 2)
       assert(result.head.runStatus.isInstanceOf[Failed])
       assert(result(1).runStatus.isInstanceOf[Failed])
@@ -154,6 +157,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     assert(job.runCount == 1)
     assert(job.postProcessingCount == 0)
     assert(job.saveCount == 0)
+    assert(job.createHiveTableCount == 0)
     assert(result.length == 2)
     assert(result.head.runStatus.isInstanceOf[Failed])
     assert(result(1).runStatus.isInstanceOf[Skipped])
@@ -388,6 +392,25 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(success.sizeBytes.isEmpty)
       assert(bk.getDataChunks("table_out", infoDate, infoDate).isEmpty)
     }
+
+    "expose Hive table" in {
+      val (runner, bk, _, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), hiveTable = Some("table_hive"))
+
+      val task = tasks.head
+      val job = task.job.asInstanceOf[JobSpy]
+
+      val started = Instant.now()
+
+      val result = runner.run(task, started, JobPreRunResult(JobPreRunStatus.Ready, Some(150), Nil))
+
+      assert(result.runStatus.isInstanceOf[Succeeded])
+
+      val success = result.runStatus.asInstanceOf[Succeeded]
+
+      assert(job.createHiveTableCount == 1)
+      assert(success.hiveTablesUpdated.length == 1)
+      assert(success.hiveTablesUpdated.head == "table_hive")
+    }
   }
 
   "handleSchemaChange" should {
@@ -449,7 +472,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
-                 allowParallel: Boolean = true
+                 allowParallel: Boolean = true,
+                 hiveTable: Option[String] = None
                 ): (TaskRunnerBase, Bookkeeper, Journal, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
@@ -472,7 +496,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       runFunction = runFunction,
       operationDef = operationDef,
       allowParallel = allowParallel,
-      saveStats = stats)
+      saveStats = stats,
+      hiveTable = hiveTable)
 
     val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
