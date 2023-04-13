@@ -17,10 +17,13 @@
 package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.{MetastoreReader, TableReader}
+import org.apache.spark.sql.types.StructType
+import za.co.absa.pramen.api.MetastoreReader
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
+import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
+import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperImpl, HiveQueryTemplates}
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
@@ -37,6 +40,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    writeOptions: Map[String, String] = Map.empty[String, String]) extends Metastore {
 
   val saveTableInvocations = new ListBuffer[(String, LocalDate, DataFrame)]
+  var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean)]
+  val queryExecutorMock = new QueryExecutorMock(true)
 
   override def getRegisteredTables: Seq[String] = registeredTables
 
@@ -65,6 +70,16 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
     saveTableInvocations.append((tableName, infoDate, df))
     MetaTableStats(df.count(), None)
+  }
+
+  def getHiveHelper(tableName: String): HiveHelper = {
+    val defaultQueryTemplates = HiveQueryTemplates.getDefaultQueryTemplates
+
+    new HiveHelperImpl(new QueryExecutorMock(isTableAvailable), defaultQueryTemplates)
+  }
+
+  override def repairOrCreateHiveTable(tableName: String, infoDate: LocalDate, schema: Option[StructType], hiveHelper: HiveHelper, recreate: Boolean): Unit = {
+    hiveCreationInvocations.append((tableName, infoDate, schema, recreate))
   }
 
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {

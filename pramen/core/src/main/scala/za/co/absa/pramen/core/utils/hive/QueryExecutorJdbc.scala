@@ -31,8 +31,10 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
   private val retries =
     jdbcUrlSelector.jdbcConfig.retries.getOrElse(defaultRetries)
 
-  override def doesTableExist(dbName: String, tableName: String): Boolean = {
-    val query = s"SELECT 1 FROM $tableName WHERE 0 = 1"
+  override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
+    val fullTableName = HiveHelper.getFullTable(dbName, tableName)
+
+    val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
 
     Try {
       execute(query)

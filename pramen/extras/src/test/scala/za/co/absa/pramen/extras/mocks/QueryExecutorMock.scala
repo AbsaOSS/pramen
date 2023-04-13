@@ -27,7 +27,7 @@ class QueryExecutorMock(tableExists: Boolean,
   val queries = new ListBuffer[String]
   var closeCalled = 0
 
-  override def doesTableExist(dbName: String, tableName: String): Boolean = tableExists
+  override def doesTableExist(dbName: Option[String], tableName: String): Boolean = tableExists
 
   override def execute(query: String): Unit = {
     queries += query

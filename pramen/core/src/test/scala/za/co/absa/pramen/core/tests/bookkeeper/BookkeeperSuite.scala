@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.RuntimeConfigFactory
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -38,7 +38,7 @@ class BookkeeperSuite extends AnyWordSpec
 
   import za.co.absa.pramen.core.bookkeeper.BookkeeperMongoDb._
 
-  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, None, Map.empty[String, String])
+  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password)
   val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {

@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.utils.hive
 
 trait QueryExecutor extends AutoCloseable {
-  def doesTableExist(dbName: String, tableName: String): Boolean
+  def doesTableExist(dbName: Option[String], tableName: String): Boolean
 
   def execute(query: String): Unit
 }

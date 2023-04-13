@@ -16,16 +16,16 @@
 
 package za.co.absa.pramen.core.tests.expr
 
-import java.time.LocalDate
-import java.time.format.{DateTimeFormatter, DateTimeParseException}
-
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.core.model.Constants
+
+import java.time.LocalDate
+import java.time.format.DateTimeParseException
 
 class DateExprEvaluatorSuite extends AnyWordSpec {
-  private val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)
+  private val dateFormatter = InfoDateConfig.defaultDateFormatter
 
   "evaluate literals" should {
     val now = LocalDate.of(2020,8, 10)

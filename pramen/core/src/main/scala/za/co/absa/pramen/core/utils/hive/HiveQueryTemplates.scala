@@ -61,4 +61,12 @@ object HiveQueryTemplates {
       dropTableTemplate = dropTableTemplate
     )
   }
+
+  def getDefaultQueryTemplates: HiveQueryTemplates = {
+    HiveQueryTemplates(
+      createTableTemplate = DEFAULT_CREATE_TABLE_TEMPLATE,
+      repairTableTemplate = DEFAULT_REPAIR_TABLE_TEMPLATE,
+      dropTableTemplate = DEFAULT_DROP_TABLE_TEMPLATE
+    )
+  }
 }

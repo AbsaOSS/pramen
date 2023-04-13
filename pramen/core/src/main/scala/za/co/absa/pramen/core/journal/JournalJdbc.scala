@@ -16,21 +16,20 @@
 
 package za.co.absa.pramen.core.journal
 
-import java.time.format.DateTimeFormatter
-import java.time.{Instant, LocalDate}
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.journal.model.{JournalTask, JournalTasks, TaskCompleted}
-import za.co.absa.pramen.core.model.Constants
 import za.co.absa.pramen.core.utils.SlickUtils
 
+import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 
 class JournalJdbc(db: Database) extends Journal {
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)
+  private val dateFormatter = InfoDateConfig.defaultDateFormatter
 
   override def addEntry(entry: TaskCompleted): Unit = {
     val periodBegin = entry.periodBegin.format(dateFormatter)

@@ -18,14 +18,12 @@ package za.co.absa.pramen.runner.cmd
 
 import com.typesafe.config.{Config, ConfigValueFactory}
 import scopt.OptionParser
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.core.app.config.RuntimeConfig._
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.model.Constants
-import za.co.absa.pramen.core.model.Constants.DATE_FORMAT_INTERNAL
 
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import scala.collection.JavaConverters.asJavaIterableConverter
 
 case class CmdLineConfig(
@@ -49,7 +47,7 @@ case class CmdLineConfig(
                         )
 
 object CmdLineConfig {
-  private val infoDateFormatter = DateTimeFormatter.ofPattern(DATE_FORMAT_INTERNAL)
+  private val infoDateFormatter = InfoDateConfig.defaultDateFormatter
 
   def apply(args: Array[String]): CmdLineConfig = {
     val optionCmd = parseCmdLine(args)
@@ -67,7 +65,7 @@ object CmdLineConfig {
   }
 
   def applyCmdLineToConfig(conf: Config, cmd: CmdLineConfig): Config = {
-    val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)
+    val dateFormatter = InfoDateConfig.defaultDateFormatter
     var accumulatedConfig = conf
 
     if (cmd.operations.nonEmpty)

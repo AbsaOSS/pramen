@@ -20,11 +20,10 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.journal.model.{TaskCompleted, TaskCompletedCsv}
-import za.co.absa.pramen.core.model.Constants
 import za.co.absa.pramen.core.utils.{CsvUtils, FsUtils, SparkUtils}
 
-import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
 object JournalHadoop {
@@ -44,7 +43,7 @@ class JournalHadoop(journalPath: String)
   private val headers = CsvUtils.getHeaders[TaskCompletedCsv](separator)
   private val schema = SparkUtils.getStructType[TaskCompletedCsv]
 
-  private val dateFormatter = DateTimeFormatter.ofPattern(Constants.DATE_FORMAT_INTERNAL)
+  private val dateFormatter = InfoDateConfig.defaultDateFormatter
 
   init()
 
