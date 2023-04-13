@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.pipeline.OperationSplitter.getNotificationTarget
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
-import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
+import za.co.absa.pramen.core.process.ProcessRunner
 import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
 import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
@@ -144,7 +144,7 @@ class OperationSplitter(conf: Config,
 
       val outputTableName = sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->$sinkName")
 
-      val outputTable = inputTable.copy(name = outputTableName)
+      val outputTable = inputTable.copy(name = outputTableName, hiveTable = None)
 
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sinkTable.conf))
