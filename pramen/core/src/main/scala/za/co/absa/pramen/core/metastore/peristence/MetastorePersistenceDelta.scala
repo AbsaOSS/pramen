@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
@@ -60,7 +61,7 @@ class MetastorePersistenceDelta(query: Query,
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
     val infoDateStr = dateFormatter.format(infoDate)
 
-    val dfIn = df.withColumn(infoDateColumn, lit(infoDateStr))
+    val dfIn = df.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
 
     val whereCondition = s"$infoDateColumn='$infoDateStr'"
 
