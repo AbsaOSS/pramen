@@ -57,8 +57,8 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
     log.info(s"Driver:            ${jdbcConfig.driver}")
     log.info(s"URL:               $currentUrl")
     jdbcConfig.database.foreach(d => log.info(s"Database:          $d"))
-    log.info(s"User:              ${jdbcConfig.user}")
-    log.info(s"Password:          [redacted]")
+    jdbcConfig.user.foreach(user => log.info(s"User:              $user"))
+    jdbcConfig.password.foreach(_ =>log.info(s"Password:          [redacted]"))
 
     jdbcConfig.retries.foreach(n => log.info(s"Retry attempts:    $n"))
     jdbcConfig.connectionTimeoutSeconds.foreach(n => log.info(s"Timeout:           $n seconds"))
@@ -81,6 +81,19 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
     url
   }
 
+  override def getProperties: Properties = {
+    val properties = new Properties()
+    properties.put("driver", jdbcConfig.driver)
+    jdbcConfig.user.foreach(db => properties.put("user", db))
+    jdbcConfig.password.foreach(db => properties.put("password", db))
+    jdbcConfig.database.foreach(db => properties.put("database", db))
+    jdbcConfig.extraOptions.foreach {
+      case (k, v) => properties.put(k, v)
+    }
+
+    properties
+  }
+
   @throws[SQLException]
   def getWorkingConnection(retriesLeft: Int): (Connection, String) = {
     val currentUrl = getUrl
@@ -88,14 +101,7 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
     Try {
       Class.forName(jdbcConfig.driver)
 
-      val properties = new Properties()
-      properties.put("driver", jdbcConfig.driver)
-      properties.put("user", jdbcConfig.user)
-      properties.put("password", jdbcConfig.password)
-      jdbcConfig.database.foreach(db => properties.put("database", db))
-      jdbcConfig.extraOptions.foreach {
-        case (k, v) => properties.put(k, v)
-      }
+      val properties = getProperties
 
       DriverManager.setLoginTimeout(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))
       DriverManager.getConnection(currentUrl, properties)

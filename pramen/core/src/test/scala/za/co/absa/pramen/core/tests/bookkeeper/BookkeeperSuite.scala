@@ -38,7 +38,7 @@ class BookkeeperSuite extends AnyWordSpec
 
   import za.co.absa.pramen.core.bookkeeper.BookkeeperMongoDb._
 
-  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password)
+  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
   val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {

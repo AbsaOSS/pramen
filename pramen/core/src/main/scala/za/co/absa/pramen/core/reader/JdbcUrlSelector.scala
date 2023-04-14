@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.reader
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.sql.{Connection, SQLException}
+import java.util.Properties
 
 trait JdbcUrlSelector {
   /** The JDBC configuration used for the selector. */
@@ -42,6 +43,9 @@ trait JdbcUrlSelector {
   /** Returns an url only if it can be successfully connected to. */
   @throws[SQLException]
   def getWorkingUrl(retriesLeft: Int): String
+
+  /** Returns properties for the JDBC connection. */
+  def getProperties: Properties
 
   /** Returns an JDBC connection with the URL that has successfully connected. */
   @throws[SQLException]

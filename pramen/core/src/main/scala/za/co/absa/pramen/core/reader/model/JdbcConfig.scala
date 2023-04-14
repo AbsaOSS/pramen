@@ -26,8 +26,8 @@ case class JdbcConfig(
                        primaryUrl: Option[String],
                        fallbackUrls: Seq[String] = Nil,
                        database: Option[String] = None,
-                       user: String,
-                       password: String,
+                       user: Option[String] = None,
+                       password: Option[String] = None,
                        retries: Option[Int] = None,
                        connectionTimeoutSeconds: Option[Int] = None,
                        extraOptions: Map[String, String] = Map.empty[String, String]
@@ -68,8 +68,8 @@ object JdbcConfig {
       primaryUrl = primaryUrl,
       ConfigUtils.getListStringsByPrefix(conf, JDBC_FALLBACK_URL_PREFIX),
       database = ConfigUtils.getOptionString(conf, JDBC_DATABASE),
-      user = conf.getString(JDBC_USER),
-      password = conf.getString(JDBC_PASSWORD),
+      user = ConfigUtils.getOptionString(conf, JDBC_USER),
+      password = ConfigUtils.getOptionString(conf, JDBC_PASSWORD),
       retries = ConfigUtils.getOptionInt(conf, JDBC_RETRIES),
       connectionTimeoutSeconds = ConfigUtils.getOptionInt(conf, JDBC_CONNECTION_TIMEOUT),
       extraOptions = ConfigUtils.getExtraOptions(conf, JDBC_EXTRA_OPTIONS_PREFIX)
@@ -87,6 +87,6 @@ object JdbcConfig {
   private def validateConf(conf: Config, parent: String): Unit = {
     ConfigUtils.validatePathsExistence(conf,
       parent,
-      JDBC_CONNECTION_DRIVER :: JDBC_USER :: JDBC_PASSWORD :: Nil)
+      JDBC_CONNECTION_DRIVER :: Nil)
   }
 }

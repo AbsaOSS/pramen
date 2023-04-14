@@ -28,7 +28,7 @@ import java.sql.{DriverManager, ResultSet, SQLSyntaxErrorException}
 
 class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase {
   private val tableName = RdbExampleTable.Company.tableName
-  private val jdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password)
+  private val jdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -61,7 +61,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
 
   "getConnection()" should {
     "select working connection when provided a connection pool" in {
-      val jdbcConfig = JdbcConfig(driver, Some("bogus_url"), "bogus_url2" :: url :: Nil, None, user, password)
+      val jdbcConfig = JdbcConfig(driver, Some("bogus_url"), "bogus_url2" :: url :: Nil, None, Option(user), Option(password))
 
       val (actualUrl, conn) = JdbcNativeUtils.getConnection(jdbcConfig)
       conn.close()
@@ -72,7 +72,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
   }
 
   "getJdbcNativeRecordCount()" should {
-    val conf = JdbcConfig(driver, Some(url), Nil, None, user, password)
+    val conf = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
 
     "return record count when data is available" in {
       val count = JdbcNativeUtils.getJdbcNativeRecordCount(conf, conf.primaryUrl.get, s"SELECT id FROM $tableName WHERE id = 1")
@@ -81,7 +81,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "return record count even if scrollable cursor is not  available" in {
-      val connection = DriverManager.getConnection(jdbcConfig.primaryUrl.get, jdbcConfig.user, jdbcConfig.password)
+      val connection = DriverManager.getConnection(jdbcConfig.primaryUrl.get, jdbcConfig.user.get, jdbcConfig.password.get)
       val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
       val resultSet = statement.executeQuery(s"SELECT * FROM $tableName")
 

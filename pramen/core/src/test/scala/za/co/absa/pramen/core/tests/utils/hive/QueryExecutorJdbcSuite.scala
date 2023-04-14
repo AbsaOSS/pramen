@@ -22,6 +22,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.hive.QueryExecutorJdbc
 
@@ -31,8 +32,8 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
   private val jdbcConfig = JdbcConfig(
     driver = driver,
     primaryUrl = Option(url),
-    user = user,
-    password = password
+    user = Option(user),
+    password = Option(password)
   )
 
   override protected def beforeAll(): Unit = {

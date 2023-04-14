@@ -23,8 +23,8 @@ import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, SchemaRecord
 import za.co.absa.pramen.core.journal.model.JournalTasks
 import za.co.absa.pramen.core.lock.model.LockTickets
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.JdbcNativeUtils
 
 import java.sql.Connection
 import scala.util.control.NonFatal
@@ -82,6 +82,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
 object PramenDb {
   val MODEL_VERSION = 2
+  val DEFAULT_RETRIES = 3
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
     val (url, conn, database) = openDb(jdbcConfig)
@@ -90,13 +91,14 @@ object PramenDb {
   }
 
   private def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database) = {
-    val (url, conn) = JdbcNativeUtils.getConnection(jdbcConfig)
+    val selector = JdbcUrlSelector(jdbcConfig)
+    val (conn, url) = selector.getWorkingConnection(DEFAULT_RETRIES)
+    val prop = selector.getProperties
 
-    val database = Database.forURL(url = url,
-      user = jdbcConfig.user,
-      password = jdbcConfig.password,
-      driver = jdbcConfig.driver,
-      executor = AsyncExecutor("Rdb", 2, 10))
+    val database = jdbcConfig.user match {
+      case Some(user) => Database.forURL(url = url, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+      case None       => Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+    }
 
     (url, conn, database)
   }

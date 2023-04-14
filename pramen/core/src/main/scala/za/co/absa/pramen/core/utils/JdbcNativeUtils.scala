@@ -142,8 +142,8 @@ object JdbcNativeUtils {
     Class.forName(jdbcConfig.driver)
     val properties = new Properties()
     properties.put("driver", jdbcConfig.driver)
-    properties.put("user", jdbcConfig.user)
-    properties.put("password", jdbcConfig.password)
+    jdbcConfig.user.foreach(db => properties.put("user", db))
+    jdbcConfig.password.foreach(db => properties.put("password", db))
     jdbcConfig.database.foreach(db => properties.put("database", db))
     jdbcConfig.extraOptions.foreach {
       case (k, v) =>

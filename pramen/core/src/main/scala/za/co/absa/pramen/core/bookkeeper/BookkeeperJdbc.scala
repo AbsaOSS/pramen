@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
 import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecord, BookkeepingRecords, SchemaRecord, SchemaRecords}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
+import za.co.absa.pramen.core.rdb.PramenDb.DEFAULT_RETRIES
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.SlickUtils
@@ -200,10 +201,16 @@ class BookkeeperJdbc(db: Database) extends Bookkeeper {
 }
 
 object BookkeeperJdbc {
-
   def fromJdbcConfig(jdbcConfig: JdbcConfig): BookkeeperJdbc = {
-    val url = JdbcUrlSelector(jdbcConfig).getUrl
-    val db = Database.forURL(url = url, user = jdbcConfig.user, password = jdbcConfig.password, driver = jdbcConfig.driver)
+    val selector = JdbcUrlSelector(jdbcConfig)
+    val url = selector.getWorkingUrl(DEFAULT_RETRIES)
+    val prop = selector.getProperties
+
+    val db = if (jdbcConfig.user.nonEmpty) {
+      Database.forURL(url = url, driver = jdbcConfig.driver, user = jdbcConfig.user.get, password = jdbcConfig.password.getOrElse(""), prop = prop)
+    } else {
+      Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop)
+    }
     new BookkeeperJdbc(db)
   }
 
