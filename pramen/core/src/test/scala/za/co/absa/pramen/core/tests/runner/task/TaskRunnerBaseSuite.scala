@@ -32,6 +32,7 @@ import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.journal.JournalMock
+import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, NotRan, Skipped, Succeeded}
@@ -481,6 +482,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
     val journal = new JournalMock
+    val tokenLockFactory = new TokenLockFactoryMock
 
     val state = new PipelineStateSpy
 
@@ -501,7 +503,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
-    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, state, runtimeConfig)
+    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig)
 
     (runner, bookkeeper, journal, state, tasks)
   }

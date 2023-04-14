@@ -25,6 +25,7 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.ReasonException
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
@@ -42,6 +43,7 @@ import scala.util.{Failure, Success, Try}
 abstract class TaskRunnerBase(conf: Config,
                               bookkeeper: Bookkeeper,
                               journal: Journal,
+                              lockFactory: TokenLockFactory,
                               runtimeConfig: RuntimeConfig,
                               pipelineState: PipelineState) extends TaskRunner {
   implicit private val ecDefault: ExecutionContext = ExecutionContext.global
@@ -219,7 +221,12 @@ abstract class TaskRunnerBase(conf: Config,
     * @return an instance of TaskResult.
     */
   private[core] def run(task: Task, started: Instant, validationResult: JobPreRunResult): TaskResult = {
-    Try {
+    val lock = lockFactory.getLock(getTokenName(task))
+
+    val attempt = Try {
+      if (runtimeConfig.useLocks && !lock.tryAcquire())
+        throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+
       val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
 
       val runResult = task.job.run(task.infoDate, conf)
@@ -286,13 +293,23 @@ abstract class TaskRunnerBase(conf: Config,
         schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
         validationResult.dependencyWarnings,
         Seq.empty)
-    } match {
+    }
+
+    if (runtimeConfig.useLocks) {
+      lock.release()
+    }
+
+    attempt match {
       case Success(result) =>
         result
       case Failure(ex) =>
         TaskResult(task.job, RunStatus.Failed(ex), getRunInfo(task.infoDate, started), Nil,
           validationResult.dependencyWarnings, Nil)
     }
+  }
+
+  private def getTokenName(task: Task): String = {
+    s"${task.job.outputTable.name}_${task.infoDate}"
   }
 
   /** Logs task completion and sends corresponding notifications. */

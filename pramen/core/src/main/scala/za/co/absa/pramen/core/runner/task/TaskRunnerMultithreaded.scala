@@ -21,11 +21,12 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
+import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.pipeline.Task
 import za.co.absa.pramen.core.state.PipelineState
 
-import java.util.concurrent.{ExecutorService, Semaphore}
 import java.util.concurrent.Executors.newFixedThreadPool
+import java.util.concurrent.{ExecutorService, Semaphore}
 import scala.concurrent.ExecutionContext.fromExecutorService
 import scala.concurrent.{ExecutionContextExecutorService, Future}
 import scala.util.Try
@@ -37,8 +38,9 @@ import scala.util.Try
 class TaskRunnerMultithreaded(conf: Config,
                               bookkeeper: Bookkeeper,
                               journal: Journal,
+                              lockFactory: TokenLockFactory,
                               pipelineState: PipelineState,
-                              runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, journal, runtimeConfig, pipelineState) {
+                              runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, journal, lockFactory, runtimeConfig, pipelineState) {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)

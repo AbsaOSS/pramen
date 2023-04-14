@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.source
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult, TableReader}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{TableReaderJdbc, TableReaderJdbcNative}
 
@@ -54,8 +54,8 @@ class JdbcSource(sourceConfig: Config,
       case Query.Sql(sql)       =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
         new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig)
-      case Query.Path(_)          =>
-        throw new IllegalArgumentException(s"Unexpected 'path' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
+      case q          =>
+        throw new IllegalArgumentException(s"Unexpected '${q.name}' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }
   }
 }
