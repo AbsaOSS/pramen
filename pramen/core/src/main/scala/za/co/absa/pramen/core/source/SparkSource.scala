@@ -63,15 +63,16 @@ class SparkSource(val format: String,
 
   def getReader(query: Query): TableReader = {
     val tableReader = query match {
-      case Query.Table(table)   =>
+      case Query.Table(table) =>
         log.info(s"Using TableReaderSpark to read table: $table")
         new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
       case Query.Sql(sql)     =>
         log.info(s"Using TableReaderSpark to read SQL for: $sql")
         new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
-      case Query.Path(path) =>
+      case Query.Path(path)   =>
         log.info(s"Using TableReaderSpark to read '$format' from: $path")
         new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+      case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
     log.info(s"Options passed for '$format':")
     ConfigUtils.renderExtraOptions(options, KEYS_TO_REDACT)(s => log.info(s))

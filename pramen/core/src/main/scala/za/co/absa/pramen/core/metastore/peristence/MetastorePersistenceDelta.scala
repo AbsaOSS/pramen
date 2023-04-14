@@ -93,8 +93,8 @@ class MetastorePersistenceDelta(query: Query,
       case Query.Table(table) =>
         writer.saveAsTable(table)
         log.info(s"Writing to table '$table' WHERE $whereCondition...")
-      case Query.Sql(_) =>
-        throw new IllegalStateException(s"An sql expression is not supported as a write target for Delta.")
+      case q =>
+        throw new IllegalStateException(s"The '${q.name}' option is not supported as a write target for Delta.")
     }
 
     val stats = getStats(infoDate)

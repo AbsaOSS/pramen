@@ -22,6 +22,7 @@ import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.core.schedule.Schedule
+import za.co.absa.pramen.core.utils.Emoji.WARNING
 
 import java.time.LocalDate
 import scala.collection.mutable
@@ -163,8 +164,19 @@ object ScheduleStrategyUtils {
       datesWithAlreadyRanSkipped
     }
 
-    val beforeMinDate = minimumDate.minusDays(1)
-    datesWithProperOrder.filter(t => t.infoDate.isAfter(beforeMinDate))
+    filterOutPastMinimumDates(outputTable, datesWithProperOrder, minimumDate)
+  }
+
+  private[core] def filterOutPastMinimumDates(tableName: String, dates: List[TaskPreDef], minimumDate: LocalDate): List[TaskPreDef] = {
+    val dayBeforeMinimum = minimumDate.minusDays(1)
+
+    dates.filter { taskPreDef =>
+      val isOk = taskPreDef.infoDate.isAfter(dayBeforeMinimum)
+      if (!isOk) {
+        log.warn(s"$WARNING '${taskPreDef.infoDate}' is before the minimum date '$minimumDate' for the table '$tableName'. The task is skipped.")
+      }
+      isOk
+    }
   }
 
   private[core] def anyDependencyUpdatedRetrospectively(outputTable: String,

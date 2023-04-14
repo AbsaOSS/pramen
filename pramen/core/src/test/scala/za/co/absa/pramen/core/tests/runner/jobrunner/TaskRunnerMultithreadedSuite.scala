@@ -20,18 +20,19 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.MetaTableStats
-import za.co.absa.pramen.core.pipeline.{Job, RunResult}
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.journal.JournalMock
+import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.core.pipeline.{Job, RunResult}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, Succeeded}
 import za.co.absa.pramen.core.runner.task.TaskRunnerMultithreaded
+import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 
 import java.time.{Instant, LocalDate, Duration => Dur}
 
@@ -182,6 +183,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     val bookkeeper = new SyncBookkeeperMock
     val journal = new JournalMock
+    val tokenLockFactory = new TokenLockFactoryMock
 
     val state = new PipelineStateSpy
 
@@ -192,7 +194,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     val operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = consumeThreads)
     val job = new JobSpy(runFunction = runFunction, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)
 
-    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, state, runtimeConfig)
+    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig)
 
     val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner)
 

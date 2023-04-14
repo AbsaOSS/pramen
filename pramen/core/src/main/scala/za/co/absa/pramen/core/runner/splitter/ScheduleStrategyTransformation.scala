@@ -66,8 +66,6 @@ class ScheduleStrategyTransformation extends ScheduleStrategy {
         getHistorical(outputTable, dateFrom, dateTo, schedule, mode, infoDateExpression, minimumDate, inverseDateOrder, bookkeeper)
     }
 
-    val dayBeforeMinimum = minimumDate.minusDays(1)
-
-    dates.filter(_.infoDate.isAfter(dayBeforeMinimum))
+    filterOutPastMinimumDates(outputTable, dates, minimumDate)
   }
 }
