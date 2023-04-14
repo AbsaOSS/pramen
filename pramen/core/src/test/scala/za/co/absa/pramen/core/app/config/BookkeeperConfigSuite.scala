@@ -62,8 +62,8 @@ class BookkeeperConfigSuite extends AnyWordSpec {
       assert(bookkeeperConfig.bookkeepingJdbcConfig.nonEmpty)
       assert(bookkeeperConfig.bookkeepingJdbcConfig.get.driver == "org.postgresql.Driver")
       assert(bookkeeperConfig.bookkeepingJdbcConfig.get.primaryUrl.contains("jdbc:postgresql://dummurl"))
-      assert(bookkeeperConfig.bookkeepingJdbcConfig.get.user == "user")
-      assert(bookkeeperConfig.bookkeepingJdbcConfig.get.password == "12345")
+      assert(bookkeeperConfig.bookkeepingJdbcConfig.get.user.get == "user")
+      assert(bookkeeperConfig.bookkeepingJdbcConfig.get.password.get == "12345")
     }
 
     "deserialize the config properly for Hadoop" in {

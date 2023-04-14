@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.tests.reader
 
-import java.time.LocalDate
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
@@ -25,6 +24,8 @@ import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.SparkUtils
+
+import java.time.LocalDate
 
 class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase {
   private val tableName = RdbExampleTable.Company.tableName
@@ -80,8 +81,8 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
 
       assert(jdbcConfig.driver == driver)
       assert(jdbcConfig.primaryUrl.get == url)
-      assert(jdbcConfig.user == user)
-      assert(jdbcConfig.password == password)
+      assert(jdbcConfig.user.contains(user))
+      assert(jdbcConfig.user.contains(password))
       assert(jdbcConfig.database.isEmpty)
     }
   }

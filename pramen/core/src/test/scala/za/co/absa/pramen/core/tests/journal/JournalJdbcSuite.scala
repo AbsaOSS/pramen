@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll with RelationalDbFixture {
   import TestCases._
 
-  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password)
+  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
   val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {

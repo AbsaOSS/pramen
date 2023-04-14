@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
-  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, user, password, None)
+  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
   val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {

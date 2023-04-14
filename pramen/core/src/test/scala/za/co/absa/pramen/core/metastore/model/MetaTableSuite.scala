@@ -166,7 +166,7 @@ class MetaTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val defaultHiveConfig = HiveDefaultConfig(Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")), Some(JdbcConfig("driver", Some("url"), user = "user", password = "pass")), ignoreFailures = true)
+        Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")), Some(JdbcConfig("driver", Some("url"), user = Some("user"), password = Some("pass"))), ignoreFailures = true)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
@@ -218,7 +218,7 @@ class MetaTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val defaultHiveConfig = HiveDefaultConfig(Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")), Some(JdbcConfig("driver1", Some("url1"), user = "user1", password = "pass1")), ignoreFailures = false)
+        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")), Some(JdbcConfig("driver1", Some("url1"), user = Some("user1"), password = Some("pass1"))), ignoreFailures = false)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 

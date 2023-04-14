@@ -138,14 +138,16 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     val databaseOptions = getOptions("database", jdbcReaderConfig.jdbcConfig.database)
+    val userOptions = getOptions("user", jdbcReaderConfig.jdbcConfig.user)
+    val passwordOptions = getOptions("password", jdbcReaderConfig.jdbcConfig.password)
 
     val connectionOptions = Map[String, String](
       "url" -> jdbcUrlSelector.getUrl,
       "driver" -> jdbcReaderConfig.jdbcConfig.driver,
-      "user" -> jdbcReaderConfig.jdbcConfig.user,
-      "password" -> jdbcReaderConfig.jdbcConfig.password,
       "dbtable" -> qry
     ) ++
+      userOptions ++
+      passwordOptions ++
       databaseOptions ++
       jdbcReaderConfig.jdbcConfig.extraOptions ++
       extraOptions
