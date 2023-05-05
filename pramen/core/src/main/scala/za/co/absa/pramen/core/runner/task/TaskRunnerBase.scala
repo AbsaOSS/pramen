@@ -404,19 +404,19 @@ abstract class TaskRunnerBase(conf: Config,
       case _: RunStatus.Succeeded =>
         log.info(s"$SUCCESS Task '${result.job.name}'$infoDateMsg has SUCCEEDED.")
       case RunStatus.ValidationFailed(ex) =>
-        log.warn(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
+        log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
       case RunStatus.Failed(ex) =>
         log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED", ex)
       case RunStatus.MissingDependencies(_, tables) =>
-        log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
+        log.error(s"$emoji Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
       case RunStatus.FailedDependencies(_, deps) =>
-        log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
+        log.error(s"$emoji Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
       case _: RunStatus.NoData =>
-        log.info(s"$emoji Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
+        log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
       case _: RunStatus.InsufficientData =>
-        log.info(s"$FAILURE Task '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")
+        log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")
       case RunStatus.Skipped(msg) =>
-        log.info(s"$WARNING Task '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
+        log.warn(s"$WARNING Task '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
       case RunStatus.NotRan =>
         log.info(s"Task '${result.job.name}'$infoDateMsg is SKIPPED.")
     }
