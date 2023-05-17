@@ -23,6 +23,9 @@ object Reason {
   /** The transformation is ready to run */
   case object Ready extends Reason
 
+  /** The transformation is ready to run, but has some warnings to be displayed in notifications. */
+  case class Warning(warnings: Seq[String]) extends Reason
+
   /** Data required to run the job is absent or not up to date. */
   case class NotReady(message: String) extends Reason
 

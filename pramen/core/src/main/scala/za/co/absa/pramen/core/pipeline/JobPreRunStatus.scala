@@ -22,6 +22,7 @@ object JobPreRunStatus {
   case object Ready extends JobPreRunStatus
   case object AlreadyRan extends JobPreRunStatus
   case object NeedsUpdate extends JobPreRunStatus
+  case class Skip(msg: String) extends JobPreRunStatus
   case class NoData(isFailure: Boolean) extends JobPreRunStatus
   case class InsufficientData(actual: Long, expected: Long, oldRecordCount: Option[Long]) extends JobPreRunStatus
   case class FailedDependencies(isFailure: Boolean, failures: Seq[DependencyFailure]) extends JobPreRunStatus

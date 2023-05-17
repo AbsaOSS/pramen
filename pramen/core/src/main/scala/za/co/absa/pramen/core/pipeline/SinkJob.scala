@@ -53,7 +53,7 @@ class SinkJob(operationDef: OperationDef,
     val alreadyRanStatus = preRunTransformationCheck(infoDate, dependencyWarnings)
 
     alreadyRanStatus.status match {
-      case JobPreRunStatus.Ready => JobPreRunResult(Ready, Some(getDataDf(infoDate).count()), dependencyWarnings)
+      case JobPreRunStatus.Ready => JobPreRunResult(Ready, Some(getDataDf(infoDate).count()), dependencyWarnings, alreadyRanStatus.warnings)
       case _                     => alreadyRanStatus
     }
   }

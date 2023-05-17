@@ -66,7 +66,7 @@ abstract class JobBase(operationDef: OperationDef,
     if (dependencyErrors.nonEmpty) {
       log.warn(s"Job for table ${outputTableDef.name} at $infoDate has validation failures.")
       val isFailure = dependencyErrors.exists(!_.dep.isPassive)
-      JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure, dependencyErrors), None, dependencyWarnings)
+      JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure, dependencyErrors), None, dependencyWarnings, Seq.empty[String])
     } else {
       if (dependencyWarnings.nonEmpty) {
         log.info(s"Job for table ${outputTableDef.name} at $infoDate has validation warnings: ${dependencyWarnings.map(_.table).mkString(", ")}.")
@@ -81,14 +81,14 @@ abstract class JobBase(operationDef: OperationDef,
   protected def preRunTransformationCheck(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
       case Some(result) => result
-      case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings)
+      case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
     }
   }
 
   protected def validateTransformationAlreadyRanCases(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning]): Option[JobPreRunResult] = {
     if (bookkeeper.getLatestDataChunk(outputTableDef.name, infoDate, infoDate).isDefined) {
       log.info(s"Job for table ${outputTableDef.name} as already ran for $infoDate.")
-      Some(JobPreRunResult(JobPreRunStatus.AlreadyRan, None, dependencyWarnings))
+      Some(JobPreRunResult(JobPreRunStatus.AlreadyRan, None, dependencyWarnings, Seq.empty[String]))
     } else {
       log.info(s"Job for table ${outputTableDef.name} has not yet ran $infoDate.")
       None
