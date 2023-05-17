@@ -47,7 +47,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.Ready, Some(3), Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.Ready, Some(3), Nil, Nil))
     }
 
     "return Ready when the input table has no data" in {
@@ -55,7 +55,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.Ready, Some(0), Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.Ready, Some(0), Nil, Nil))
     }
 
     "throw an exception when metastore throws an exception" in {

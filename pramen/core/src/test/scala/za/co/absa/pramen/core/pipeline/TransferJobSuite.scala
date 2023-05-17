@@ -45,7 +45,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.Ready, Some(5), Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.Ready, Some(5), Nil, Nil))
     }
 
     "return NoData when the input table has no data" in {
@@ -53,7 +53,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.NoData(false), None, Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.NoData(false), None, Nil, Nil))
     }
 
     "return NoData with a failure when the input table has no data" in {
@@ -61,7 +61,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil, Nil))
     }
 
     "return NeedsUpdate when the number of records do not match" in {
@@ -71,7 +71,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(7), Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(7), Nil, Nil))
     }
 
     "return AlreadyRan when the number of records didn't change" in {
@@ -81,7 +81,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val actual = job.preRunCheckJob(infoDate, conf, Nil)
 
-      assert(actual == JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(7), Nil))
+      assert(actual == JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(7), Nil, Nil))
     }
 
     "throw an exception when metastore throws an exception" in {

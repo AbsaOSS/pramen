@@ -35,6 +35,11 @@ trait Source extends ExternalChannel {
   def isDataAlwaysAvailable: Boolean = false
 
   /**
+    * Validates if the source is okay and the ingestion can proceed.
+    */
+  def validate(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Reason = Reason.Ready
+
+  /**
     * Returns the record count based on the particular input period and query.
     */
   def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long

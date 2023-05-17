@@ -21,15 +21,14 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Reason, Source, SourceResult}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji.WARNING
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
-import scala.collection.mutable.ListBuffer
 
 class IngestionJob(operationDef: OperationDef,
                    metastore: Metastore,
@@ -54,6 +53,20 @@ class IngestionJob(operationDef: OperationDef,
 
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
+    val validationResult = source.validate(sourceTable.query, from, to)
+
+    val warnings = validationResult match {
+      case Reason.Ready =>
+        log.info(s"Validation of '${outputTable.name}' for $from..$to has succeeded.")
+        Seq.empty[String]
+      case Reason.Warning(warnings) =>
+        warnings
+      case Reason.NotReady(msg) =>
+        return JobPreRunResult(JobPreRunStatus.NoData(true), None, dependencyWarnings, Seq(msg))
+      case Reason.Skip(msg) =>
+        return JobPreRunResult(JobPreRunStatus.Skip(msg), None, dependencyWarnings, Nil)
+    }
+
     val recordCount = source.getRecordCount(sourceTable.query, from, to)
 
     val minimumRecordsOpt = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
@@ -65,11 +78,11 @@ class IngestionJob(operationDef: OperationDef,
       case Some(chunk) =>
         if (chunk.inputRecordCount == recordCount) {
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount records (not changed). Re-sourcing is not required.")
-          JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings)
+          JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings, warnings)
         } else {
           if (recordCount >= minimumRecordsOpt.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
             log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs re-sourced.")
-            JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings)
+            JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings, warnings)
           } else {
             processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, failIfNoData, minimumRecordsOpt, Some(chunk.inputRecordCount))
           }
@@ -77,7 +90,7 @@ class IngestionJob(operationDef: OperationDef,
       case None        =>
         if (recordCount >= minimumRecordsOpt.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
           log.info(s"Table '${outputTable.name}' for $infoDate has $recordCount new records. Adding to the processing list.")
-          JobPreRunResult(JobPreRunStatus.Ready, Some(recordCount), dependencyWarnings)
+          JobPreRunResult(JobPreRunStatus.Ready, Some(recordCount), dependencyWarnings, warnings)
         } else {
           processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, failIfNoData, minimumRecordsOpt, None)
         }
@@ -93,10 +106,10 @@ class IngestionJob(operationDef: OperationDef,
     minimumRecordsOpt match {
       case Some(minimumRecords) =>
         log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")
-        JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords, oldRecordCount), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
+        JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords, oldRecordCount), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
       case None                 =>
         log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
-        JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings)
+        JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
     }
   }
 

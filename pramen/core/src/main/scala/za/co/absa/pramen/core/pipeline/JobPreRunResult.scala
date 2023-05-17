@@ -19,5 +19,6 @@ package za.co.absa.pramen.core.pipeline
 case class JobPreRunResult(
                             status: JobPreRunStatus,
                             inputRecordsCount: Option[Long],
-                            dependencyWarnings: Seq[DependencyWarning]
+                            dependencyWarnings: Seq[DependencyWarning],
+                            warnings: Seq[String]
                           )

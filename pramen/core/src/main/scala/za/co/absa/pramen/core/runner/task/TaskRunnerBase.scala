@@ -157,6 +157,9 @@ abstract class TaskRunnerBase(conf: Config,
               log.info(s"SKIPPING already ran job: $outputTable for date: ${task.infoDate}.")
               Left(TaskResult(task.job, RunStatus.NotRan, getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
             }
+          case Skip(msg) =>
+            log.info(s"SKIPPING job: $outputTable for date: ${task.infoDate}. Reason: msg")
+            Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), Nil, validationResult.dependencyWarnings, Nil))
           case FailedDependencies(isFailure, failures) =>
             Left(TaskResult(task.job, RunStatus.FailedDependencies(isFailure, failures), getRunInfo(task.infoDate, started), Nil, Nil, Nil))
         }
@@ -195,6 +198,9 @@ abstract class TaskRunnerBase(conf: Config,
               case Reason.Ready =>
                 log.info(s"VALIDATION is SUCCESSFUL for the task: $outputTable for date: ${task.infoDate}.")
                 Right(status)
+              case reason: Reason.Warning =>
+                log.info(s"VALIDATION is SUCCESSFUL with WARNINGS for the task: $outputTable for date: ${task.infoDate}.")
+                Right(status.copy(warnings = reason.warnings))
               case Reason.NotReady(msg) =>
                 log.info(s"NOT READY validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
                 Left(TaskResult(task.job, RunStatus.ValidationFailed(new ReasonException(Reason.NotReady(msg), msg)), getRunInfo(task.infoDate, started), Nil, status.dependencyWarnings, Nil))

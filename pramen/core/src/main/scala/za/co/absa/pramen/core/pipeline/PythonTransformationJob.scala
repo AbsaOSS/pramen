@@ -22,10 +22,10 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.ProcessFailedException
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
-import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
+import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
 import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 import za.co.absa.pramen.core.utils.StringUtils.escapeString
@@ -70,7 +70,7 @@ class PythonTransformationJob(operationDef: OperationDef,
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
       case Some(result) => result
-      case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings)
+      case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
     }
   }
 
