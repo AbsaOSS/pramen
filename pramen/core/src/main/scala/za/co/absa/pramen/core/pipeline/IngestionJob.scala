@@ -102,7 +102,7 @@ class IngestionJob(operationDef: OperationDef,
                                           recordCount: Long,
                                           failIfNoData: Boolean,
                                           minimumRecordsOpt: Option[Int],
-                                          oldRecordCount: Option[Long]) = {
+                                          oldRecordCount: Option[Long]): JobPreRunResult = {
     minimumRecordsOpt match {
       case Some(minimumRecords) =>
         log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")

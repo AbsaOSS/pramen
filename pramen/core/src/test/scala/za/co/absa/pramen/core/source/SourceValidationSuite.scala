@@ -20,30 +20,34 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.{Query, Source}
-import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.metastore.model.DataFormat
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.journal.JournalMock
+import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock
+import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
+import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.core.mocks.{MetaTableFactory, SourceTableFactory}
+import za.co.absa.pramen.core.pipeline.{IngestionJob, Job, OperationType}
+import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
+import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.utils.LocalFsUtils
+import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 
 import java.io.File
-import java.nio.file.Paths
 import java.time.LocalDate
 
 class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFixture with SparkTestBase {
-  import spark.implicits._
+  private val runDate = LocalDate.of(2022, 2, 18)
 
-  val tempDir: String = createTempDir("local_spark_source")
+  val tempDir: String = createTempDir("source_validation")
   val sourceTemp = new Path(tempDir, "temp")
   val filesPath = new Path(tempDir, "files")
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-
-    Range(0, 10).toDF("id")
-      .write
-      .option("sep", "|")
-      .csv(filesPath.toString)
   }
 
   override def afterAll(): Unit = {
@@ -57,217 +61,104 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
        | pramen {
        |   sources = [
        |    {
-       |      name = "spark1"
-       |      factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
-       |
-       |      temp.hadoop.path = "$sourceTemp"
-       |      file.name.pattern = "*.csv"
-       |
-       |      format = "csv"
-       |
-       |      has.information.date.column = true
-       |      information.date.column = "INFO_DATE"
-       |      information.date.type = "date"
-       |      information.date.app.format = "yyyy-MM-DD"
-       |      information.date.sql.format = "YYYY-mm-DD"
+       |      name = "source_mock1"
+       |      factory.class = "za.co.absa.pramen.core.mocks.source.SourceMock"
        |    },
        |    {
-       |      name = "spark2"
-       |      factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
+       |      name = "source_mock2"
+       |      factory.class = "za.co.absa.pramen.core.mocks.source.SourceMock"
        |
-       |      temp.hadoop.path = "$sourceTemp"
-       |      file.name.pattern = "*.csv"
-       |      recursive = true
+       |      validation.warning = "Dummy Warning"
+       |    },
+       |    {
+       |      name = "source_mock3"
+       |      factory.class = "za.co.absa.pramen.core.mocks.source.SourceMock"
        |
-       |      format = "csv"
-       |
-       |      has.information.date.column = false
-       |      limit.records = 3
-       |      information.date.column = "INFO_DATE"
-       |      information.date.type = "date"
-       |      information.date.app.format = "yyyy-MM-DD"
-       |      information.date.sql.format = "YYYY-mm-DD"
-       |    }
+       |      throw.validation.exception = true
+       |    },
        |  ]
        | }
        |""".stripMargin)
     .withFallback(ConfigFactory.load())
     .resolve()
 
-  "the factory" should {
-    "be able to create a proper Source job object" in {
-      val srcConfig = conf.getConfigList("pramen.sources")
-      val src1Config = srcConfig.get(0)
+  "Source" should {
+    "be usable from an ingestion job" in {
+      val (runner, _, state, job) = getIngestionUseCase()
 
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source")
+      runner.runJob(job)
 
-      assert(src.isInstanceOf[LocalSparkSource])
-      assert(src.asInstanceOf[LocalSparkSource].hadoopTempPath == sourceTemp.toString)
-      assert(src.asInstanceOf[LocalSparkSource].fileNamePattern == "*.csv")
-      assert(!src.asInstanceOf[LocalSparkSource].isRecursive)
+      val results = state.completedStatuses
+
+      val taskResult = results.head
+      val status = taskResult.runStatus
+
+      assert(status.isInstanceOf[RunStatus.Succeeded])
+      assert(status.asInstanceOf[RunStatus.Succeeded].warnings.isEmpty)
     }
 
-    "be able to get a source by its name" in {
-      val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "spark2", "source")
+    "pass validation warnings to the end result" in {
+      val (runner, _, state, job) = getIngestionUseCase(sourceName = "source_mock2")
 
-      assert(src.isInstanceOf[LocalSparkSource])
-      assert(src.asInstanceOf[LocalSparkSource].hadoopTempPath == sourceTemp.toString)
-      assert(src.asInstanceOf[LocalSparkSource].fileNamePattern == "*.csv")
-      assert(src.asInstanceOf[LocalSparkSource].isRecursive)
+      runner.runJob(job)
+
+      val results = state.completedStatuses
+
+      val taskResult = results.head
+      val status = taskResult.runStatus
+
+      assert(status.isInstanceOf[RunStatus.Succeeded])
+      assert(status.asInstanceOf[RunStatus.Succeeded].warnings.contains("Dummy Warning"))
     }
 
-    "be able to get a source by its name from the manager" in {
-      val src = SourceManager.getSourceByName("spark1", conf, None)
+    "pass validation exception to the end result" in {
+      val (runner, _, state, job) = getIngestionUseCase(sourceName = "source_mock3")
 
-      assert(src.isInstanceOf[LocalSparkSource])
-      assert(src.asInstanceOf[LocalSparkSource].hadoopTempPath == sourceTemp.toString)
-      assert(src.asInstanceOf[LocalSparkSource].fileNamePattern == "*.csv")
-      assert(!src.asInstanceOf[LocalSparkSource].isRecursive)
-    }
+      runner.runJob(job)
 
-    "throw an exception if a source is not found" in {
-      val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "Dummy", "source").asInstanceOf[JdbcSource]
-      }
+      val results = state.completedStatuses
 
-      assert(ex.getMessage.contains("Unknown name of a data source: Dummy"))
-    }
+      val taskResult = results.head
+      val status = taskResult.runStatus
 
-    "throw an exception when a source name is not configured" in {
-      val conf = ConfigFactory.parseString(
-        s"""
-           | pramen {
-           |   sources = [
-           |    {
-           |      factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
-           |    },
-           |    {
-           |      factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
-           |      has.information.date.column = false
-           |    }
-           |  ]
-           | }
-           |""".stripMargin)
-        .withFallback(ConfigFactory.load())
-        .resolve()
-
-      val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
-      }
-
-      assert(ex.getMessage.contains("A name is not configured for 2 source(s)"))
-    }
-
-    "throw an exception when a format is not configured" in {
-      val conf = ConfigFactory.parseString(
-        s"""
-           | pramen {
-           |   sources = [
-           |    {
-           |      name = "test"
-           |      factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
-           |
-           |      temp.hadoop.path = "$sourceTemp"
-           |      file.name.pattern = "*.csv"
-           |
-           |      has.information.date.column = false
-           |    }
-           |  ]
-           | }
-           |""".stripMargin)
-        .withFallback(ConfigFactory.load())
-        .resolve()
-
-      val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
-      }
-
-      assert(ex.getMessage.contains("Mandatory configuration options are missing: pramen.sources[0].format"))
-    }
-
-    "throw an exception when a factory class is not configured" in {
-      val conf = ConfigFactory.parseString(
-        s"""
-           | pramen {
-           |   sources = [
-           |    {
-           |      name = "mysource1"
-           |    },
-           |    {
-           |      name = "mysource2"
-           |    }
-           |  ]
-           | }
-           |""".stripMargin)
-        .withFallback(ConfigFactory.load())
-        .resolve()
-
-      val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
-      }
-
-      assert(ex.getMessage.contains("Factory class is not configured for 2 source(s)"))
-    }
-
-    "throw an exception when there are duplicate source names" in {
-      val conf = ConfigFactory.parseString(
-        s"""
-           | pramen {
-           |   sources = [
-           |    {
-           |      name = "mysource1"
-           |      factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
-           |    },
-           |    {
-           |      name = "MYsource1"
-           |      factory.class = "za.co.absa.pramen.core.source.LocalSparkSource"
-           |    }
-           |  ]
-           | }
-           |""".stripMargin)
-        .withFallback(ConfigFactory.load())
-        .resolve()
-
-      val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
-      }
-
-      assert(ex.getMessage.contains("Duplicate source names: mysource1, MYsource1"))
+      assert(status.isInstanceOf[RunStatus.ValidationFailed])
+      assert(status.asInstanceOf[RunStatus.ValidationFailed].ex.getMessage == "Validation test exception")
     }
   }
 
-  "getReader()" should {
-    "work according to the access pattern" in {
-      val src = SourceManager.getSourceByName("spark2", conf, None)
+  def getIngestionUseCase(runDateIn: LocalDate = runDate, sourceName: String = "source_mock1"): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(runDate = runDateIn)
 
-      src.connect()
+    val metastore = new MetastoreSpy()
+    val bookkeeper = new SyncBookkeeperMock
+    val journal = new JournalMock
+    val tokenLockFactory = new TokenLockFactoryMock
 
-      val cnt = src.getRecordCount(Query.Path(filesPath.toString), LocalDate.now(), LocalDate.now())
-      val df = src.getData(Query.Path(filesPath.toString), LocalDate.now(), LocalDate.now(), Nil).data
+    val state = new PipelineStateSpy
 
-      assert(cnt == 10)
-      assert(df.count() == 10)
+    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0)
 
-      val filesBeforeClose = LocalFsUtils.getListOfFiles(Paths.get(sourceTemp.toString), includeDirs = true).length
-      src.close()
-      val filesAfterClose = LocalFsUtils.getListOfFiles(Paths.get(sourceTemp.toString), includeDirs = true).length
+    val sourceTable = SourceTableFactory.getDummySourceTable()
 
-      assert(filesBeforeClose == 1)
-      assert(filesAfterClose == 0)
-    }
-    "throw an exception on a non-path query" in {
-      val src = SourceManager.getSourceByName("spark2", conf, None)
+    val table1Path = new Path(tempDir, "table1")
+    val table1Format = DataFormat.Parquet(table1Path.toString, None)
 
-      src.connect()
-      src.connect() // this is intended
+    val metaTable = MetaTableFactory.getDummyMetaTable(name = "table1", format = table1Format)
 
-      val ex = intercept[IllegalArgumentException] {
-        src.getRecordCount(Query.Table("dbtanle"), LocalDate.now(), LocalDate.now())
-      }
+    val operationDef = OperationDefFactory.getDummyOperationDef(
+      name = "Dummy ingestion",
+      operationType = OperationType.Ingestion(sourceName, Seq(sourceTable))
+    )
 
-      assert(ex.getMessage.contains("Query 'Table(dbtanle)' is not supported."))
+    val source = SourceManager.getSourceByName(sourceName, conf, None)
 
-      src.close()
-    }
+    val job = new IngestionJob(operationDef, metastore, bookkeeper, Nil, source, sourceTable, metaTable, "")
+
+    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig)
+
+    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner)
+
+    (jobRunner, bookkeeper, state, job)
   }
+
 }

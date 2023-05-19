@@ -16,21 +16,22 @@
 
 package za.co.absa.pramen.core.mocks.source
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api._
-import za.co.absa.pramen.core.source.{LocalSparkSource, SparkSource}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.LocalDate
 
 class SourceMock(
+                  conf: Config = ConfigFactory.empty(),
                   mockDataAlwaysAvailable: Boolean = false,
-                  connectException: Option[Throwable] = None,
-                  closedException: Option[Throwable] = None,
-                  getRecordCountFunction: () => Long = () => 0L,
-                  getDataFunction: () => SourceResult = () => null
-                ) extends Source {
+                  throwConnectionException: Boolean = false,
+                  throwValidationException: Boolean = false,
+                  throwCloseException: Boolean = false,
+                  recordCountToReturn: Int = 1,
+                  validationReasonToReturn: Reason = Reason.Ready
+                )(implicit spark: SparkSession) extends Source {
   var connectCalled = 0
   var closeCaller = 0
   var getRecordCountCalled = 0
@@ -41,46 +42,70 @@ class SourceMock(
   @throws[Exception]
   override def connect(): Unit = {
     connectCalled += 1
-    connectException.foreach(throw _)
+    if (throwConnectionException)
+      throw new RuntimeException("Connection test exception")
   }
 
   override def close(): Unit = {
     closeCaller += 1
-    closedException.foreach(throw _)
+    if (throwCloseException)
+      throw new RuntimeException("Close test exception")
   }
 
-  override def config: Config = null
+  override def config: Config = conf
 
   override def validate(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Reason = {
-    Reason.Ready
+    if (throwValidationException)
+      throw new RuntimeException("Validation test exception")
+    validationReasonToReturn
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     getRecordCountCalled += 1
-    getRecordCountFunction()
+    recordCountToReturn
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
     getDataCalled += 1
-    getDataFunction()
+
+    import spark.implicits._
+
+    val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+    SourceResult(df, Nil, Nil)
   }
 }
 
-object SourceMock extends ExternalChannelFactory[LocalSparkSource] {
-  val TEMP_HADOOP_PATH_KEY = "temp.hadoop.path"
-  val FILE_NAME_PATTERN_KEY = "file.name.pattern"
-  val RECURSIVE_KEY = "recursive"
-  val DEFAULT_FILE_NAME_PATTERN = "*"
+object SourceMock extends ExternalChannelFactory[SourceMock] {
+  val MOCK_ALWAYS_AVAILABLE = "mock.always.available"
 
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): LocalSparkSource = {
-    ConfigUtils.validatePathsExistence(conf, parentPath, Seq(TEMP_HADOOP_PATH_KEY))
+  val THROW_CONNECTION_EXCEPTION = "throw.connection.exception"
+  val THROW_CLOSE_EXCEPTION = "throw.close.exception"
+  val THROW_VALIDATION_EXCEPTION = "throw.validation.exception"
+  val RECORD_COUNT_TO_RETURN = "record.count.to.return"
+  val VALIDATION_WARNING = "validation.warning"
 
-    val tempHadoopPath = conf.getString(TEMP_HADOOP_PATH_KEY)
-    val fileNamePattern = ConfigUtils.getOptionString(conf, FILE_NAME_PATTERN_KEY).getOrElse(DEFAULT_FILE_NAME_PATTERN)
-    val isRecursive = ConfigUtils.getOptionBoolean(conf, RECURSIVE_KEY).getOrElse(false)
+  override def apply(conf: Config, parentPath: String, spark: SparkSession): SourceMock = {
+    val mockAlwaysAvailable = ConfigUtils.getOptionBoolean(conf, MOCK_ALWAYS_AVAILABLE).getOrElse(false)
 
-    val sparkSource = SparkSource(conf, parentPath, spark)
+    val throwConnectionException = ConfigUtils.getOptionBoolean(conf, THROW_CONNECTION_EXCEPTION).getOrElse(false)
+    val throwCloseException = ConfigUtils.getOptionBoolean(conf, THROW_CLOSE_EXCEPTION).getOrElse(false)
+    val throwValidationException = ConfigUtils.getOptionBoolean(conf, THROW_VALIDATION_EXCEPTION).getOrElse(false)
+    val recordCountToReturn = ConfigUtils.getOptionInt(conf, RECORD_COUNT_TO_RETURN).getOrElse(1)
 
-    new LocalSparkSource(sparkSource, conf, tempHadoopPath, fileNamePattern, isRecursive)(spark)
+    val validationReasonToReturn = ConfigUtils.getOptionString(conf, VALIDATION_WARNING) match {
+      case Some(warning) => Reason.Warning(Seq(warning))
+      case None => Reason.Ready
+    }
+
+    val source = new SourceMock(
+      conf,
+      mockAlwaysAvailable,
+      throwConnectionException,
+      throwValidationException,
+      throwCloseException,
+      recordCountToReturn,
+      validationReasonToReturn)(spark)
+
+    source
   }
 }
