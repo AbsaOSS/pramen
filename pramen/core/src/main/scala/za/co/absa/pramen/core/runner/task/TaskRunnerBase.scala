@@ -284,7 +284,7 @@ abstract class TaskRunnerBase(conf: Config,
       val completionReason = if (validationResult.status == NeedsUpdate || (validationResult.status == AlreadyRan && task.reason != TaskRunReason.Rerun))
         TaskRunReason.Update else task.reason
 
-      val warnings = runResult.warnings ++ saveResult.warnings ++ hiveWarnings
+      val warnings = validationResult.warnings ++ runResult.warnings ++ saveResult.warnings ++ hiveWarnings
 
       TaskResult(task.job,
         RunStatus.Succeeded(recordCountOldOpt,
