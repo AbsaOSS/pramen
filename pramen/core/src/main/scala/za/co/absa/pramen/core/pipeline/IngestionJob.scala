@@ -49,6 +49,9 @@ class IngestionJob(operationDef: OperationDef,
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     source.connect()
 
+    val minimumRecordsOpt = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
+    val failIfNoData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_DATA_KEY).getOrElse(false)
+
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate, infoDate)
 
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
@@ -60,17 +63,17 @@ class IngestionJob(operationDef: OperationDef,
         log.info(s"Validation of '${outputTable.name}' for $from..$to has succeeded.")
         Seq.empty[String]
       case Reason.Warning(warnings) =>
+        log.warn(s"Validation of '${outputTable.name}' for $from..$to returned warnings: ${warnings.mkString("\n")}.")
         warnings
       case Reason.NotReady(msg) =>
-        return JobPreRunResult(JobPreRunStatus.NoData(true), None, dependencyWarnings, Seq(msg))
+        log.warn(s"Validation of '${outputTable.name}' for $from..$to returned 'not ready'. Reason: $msg.")
+        return JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), None, dependencyWarnings, Seq(msg))
       case Reason.Skip(msg) =>
+        log.warn(s"Validation of '${outputTable.name}' for $from..$to requested to skip the task. Reason: $msg.")
         return JobPreRunResult(JobPreRunStatus.Skip(msg), None, dependencyWarnings, Nil)
     }
 
     val recordCount = source.getRecordCount(sourceTable.query, from, to)
-
-    val minimumRecordsOpt = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
-    val failIfNoData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_DATA_KEY).getOrElse(false)
 
     minimumRecordsOpt.foreach(n => log.info(s"Minimum records to expect: $n"))
 
