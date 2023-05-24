@@ -120,7 +120,7 @@ Line 2
 <pre>za.co.absa.pramen.core.tests.notify.message.CustomException: Dummy Exception
 
 
-Caused by za.co.absa.pramen.core.tests.notify.message.CustomException: Dummy Cause
+  Caused by za.co.absa.pramen.core.tests.notify.message.CustomException: Dummy Cause
 
 </pre>
 

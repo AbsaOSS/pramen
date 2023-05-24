@@ -179,4 +179,27 @@ class StringUtilsSuite extends AnyWordSpec {
     }
   }
 
+  "renderThrowable" should {
+    "render a throwable" in {
+      val ex = new RuntimeException("test")
+      val s = renderThrowable(ex)
+      assert(s.contains("java.lang.RuntimeException: test"))
+    }
+
+    "render a throwable with a cause" in {
+      val ex = new RuntimeException("test", new RuntimeException("cause"))
+      val s = renderThrowable(ex)
+      assert(s.contains("java.lang.RuntimeException: test"))
+      assert(s.contains("  Caused by java.lang.RuntimeException: cause"))
+    }
+
+    "render a throwable with a nested cause" in {
+      val ex = new RuntimeException("test", new RuntimeException("cause", new RuntimeException("nested")))
+      val s = renderThrowable(ex)
+      assert(s.contains("java.lang.RuntimeException: test"))
+      assert(s.contains("  Caused by java.lang.RuntimeException: cause"))
+      assert(s.contains("    Caused by java.lang.RuntimeException: nested"))
+    }
+  }
+
 }
