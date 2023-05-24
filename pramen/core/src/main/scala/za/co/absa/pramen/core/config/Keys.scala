@@ -50,6 +50,8 @@ object Keys {
 
   val EXTRA_OPTIONS_PREFIX = "pramen.spark.conf.option"
 
+  val ENABLE_HIVE_SUPPORT = "pramen.enable.hive"
+
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
 
   val EXIT_CODE_ENABLED = "pramen.exit.code.enabled"
