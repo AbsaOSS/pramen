@@ -24,5 +24,6 @@ case class TaskNotification(
                              started: Instant,
                              finished: Instant,
                              status: TaskStatus,
+                             applicationId: String,
                              options: Map[String, String]
                            )

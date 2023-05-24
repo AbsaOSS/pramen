@@ -27,11 +27,13 @@ object TaskResultFactory {
   def getDummyTaskResult(job: Job = new JobSpy(),
                          runStatus: RunStatus = RunStatus.Succeeded(Some(100), 200, Some(1000), TaskRunReason.New, Nil, Nil, Nil, Nil),
                          runInfo: Option[RunInfo] = Some(RunInfo(LocalDate.of(2022, 2, 18), Instant.ofEpochSecond(1234), Instant.ofEpochSecond(5678))),
+                         applicationId: String = "app_123",
                          schemaDifferences: Seq[SchemaDifference] = Nil,
                          dependencyWarnings: Seq[DependencyWarning] = Nil): TaskResult = {
     TaskResult(job,
       runStatus,
       runInfo,
+      applicationId,
       schemaDifferences,
       dependencyWarnings,
       Nil)

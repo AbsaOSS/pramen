@@ -41,6 +41,7 @@ class OrchestratorImpl extends Orchestrator {
                               appContext: AppContext,
                               jobRunner: ConcurrentJobRunner,
                               spark: SparkSession): Unit = {
+    val applicationId = spark.sparkContext.applicationId
     val allOutputTables = jobs.map(_.outputTable.name)
 
     if (jobs.isEmpty) {
@@ -84,7 +85,7 @@ class OrchestratorImpl extends Orchestrator {
 
       val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
 
-      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, Nil, Nil, Nil)
+      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, applicationId, Nil, Nil, Nil)
 
       state.addTaskCompletion(taskResult :: Nil)
     })
