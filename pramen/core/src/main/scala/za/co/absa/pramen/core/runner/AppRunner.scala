@@ -54,7 +54,7 @@ object AppRunner {
       spark      <- getSparkSession
       _          <- logBanner(spark)
       appContext <- createAppContext(conf, state, spark)
-      taskRunner <- createTaskRunner(conf, state, appContext)
+      taskRunner <- createTaskRunner(conf, state, appContext, spark.sparkContext.applicationId)
       pipeline   <- getPipelineDef(conf, state, appContext)
       jobsOrig   <- splitJobs(conf, pipeline, state, appContext, spark)
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
@@ -90,18 +90,19 @@ object AppRunner {
   }
 
   private[core] def createAppContext(implicit conf: Config,
-                                          state: PipelineState,
-                                          spark: SparkSession): Try[AppContext] = {
+                                     state: PipelineState,
+                                     spark: SparkSession): Try[AppContext] = {
     handleFailure(Try {
       AppContextFactory.getOrCreate(conf)
     }, state, "initialization of the pipeline")
   }
 
   private[core] def createTaskRunner(implicit conf: Config,
-                                          state: PipelineState,
-                                          appContext: AppContext): Try[TaskRunner] = {
+                                     state: PipelineState,
+                                     appContext: AppContext,
+                                     applicationId: String): Try[TaskRunner] = {
     handleFailure(Try {
-      new TaskRunnerMultithreaded(conf, appContext.bookkeeper, appContext.journal, appContext.tokenLockFactory, state, appContext.appConfig.runtimeConfig)
+      new TaskRunnerMultithreaded(conf, appContext.bookkeeper, appContext.journal, appContext.tokenLockFactory, state, appContext.appConfig.runtimeConfig, applicationId)
     }, state, "initialization of the task runner")
   }
 
@@ -179,7 +180,8 @@ object AppRunner {
       implicit val jobRunner: ConcurrentJobRunner = new ConcurrentJobRunnerImpl(
         appContext.appConfig.runtimeConfig,
         appContext.bookkeeper,
-        taskRunner)
+        taskRunner,
+        spark.sparkContext.applicationId)
 
       val orchestrator = new OrchestratorImpl()
 

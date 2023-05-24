@@ -40,7 +40,8 @@ class TaskRunnerMultithreaded(conf: Config,
                               journal: Journal,
                               lockFactory: TokenLockFactory,
                               pipelineState: PipelineState,
-                              runtimeConfig: RuntimeConfig) extends TaskRunnerBase(conf, bookkeeper, journal, lockFactory, runtimeConfig, pipelineState) {
+                              runtimeConfig: RuntimeConfig,
+                              applicationId: String) extends TaskRunnerBase(conf, bookkeeper, journal, lockFactory, runtimeConfig, pipelineState, applicationId) {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)

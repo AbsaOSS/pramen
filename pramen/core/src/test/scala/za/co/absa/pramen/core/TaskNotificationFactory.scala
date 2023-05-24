@@ -26,8 +26,9 @@ object TaskNotificationFactory {
                                started: Instant = Instant.ofEpochMilli(1613600000000L),
                                finished: Instant = Instant.ofEpochMilli(1672759508000L),
                                status: TaskStatus = TaskStatus.Succeeded(100, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
+                               applicationId: String = "app_12345",
                                options: Map[String, String] = Map.empty[String, String]): TaskNotification = {
-    TaskNotification(tableName, infoDate, started, finished, status, options)
+    TaskNotification(tableName, infoDate, started, finished, status, applicationId, options)
   }
 
 }

@@ -23,6 +23,7 @@ case class TaskResult(
                        job: Job,
                        runStatus: RunStatus,
                        runInfo: Option[RunInfo],
+                       applicationId: String,
                        schemaChanges: Seq[SchemaDifference],
                        dependencyWarnings: Seq[DependencyWarning],
                        notificationTargetErrors: Seq[NotificationFailure]

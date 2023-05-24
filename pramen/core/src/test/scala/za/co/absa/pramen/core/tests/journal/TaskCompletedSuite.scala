@@ -37,6 +37,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         job,
         RunStatus.Succeeded(Some(1000), 2000, Some(3000), runReason, Nil, Nil, Nil, Nil),
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
+        "app_123",
         Nil,
         Nil,
         Nil)
@@ -68,6 +69,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         job,
         RunStatus.Failed(new IllegalStateException("Dummy Exception")),
         None,
+        "app_123",
         Nil,
         Nil,
         Nil)

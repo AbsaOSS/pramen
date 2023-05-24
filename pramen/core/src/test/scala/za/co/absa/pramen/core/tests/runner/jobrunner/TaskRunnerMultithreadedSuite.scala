@@ -194,9 +194,9 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     val operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = consumeThreads)
     val job = new JobSpy(runFunction = runFunction, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)
 
-    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig)
+    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
 
-    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner)
+    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner, "app_123")
 
     (jobRunner, bookkeeper, state, job)
   }

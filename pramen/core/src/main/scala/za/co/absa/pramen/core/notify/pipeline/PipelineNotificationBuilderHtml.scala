@@ -167,6 +167,17 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     introParagraph.withText(".")
 
+    val applicationIds = completedTasks.map(_.applicationId.trim).filter(_.nonEmpty).distinct
+
+    // This handles the case when all tasks are run under the same Spark Session.
+    // When Pramen support runners that run tasks in different Spark Sessions (via Yarn, Glue etc APIs), this will need
+    // to be revisited with adding application_id to the table of task results.
+    if (applicationIds.length == 1) {
+         introParagraph.withText(" Application ID: ")
+        .withText(applicationIds.head, Style.Bold)
+        .withText(".")
+    }
+
     val jobStartedStr = ZonedDateTime.ofInstant(appStarted, zoneId).format(timestampFmt)
     val jobFinishedStr = ZonedDateTime.ofInstant(appFinished, zoneId).format(timestampFmt)
     val jobDurationMillis = Duration.between(appStarted, appFinished).toMillis

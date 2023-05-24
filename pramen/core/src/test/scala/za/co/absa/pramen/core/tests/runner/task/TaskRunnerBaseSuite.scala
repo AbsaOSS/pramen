@@ -503,7 +503,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
-    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig)
+    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
 
     (runner, bookkeeper, journal, state, tasks)
   }
