@@ -45,8 +45,10 @@ object PipelineSparkSessionBuilder {
     * }}}
     */
   def buildSparkSession(conf: Config): SparkSession = {
-    val extraOptions = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
+    val isHiveEnabled = conf.getBoolean(ENABLE_HIVE_SUPPORT)
+    log.info(s"Hive support enabled = $isHiveEnabled")
 
+    val extraOptions = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
     log.info("Extra Spark Config:")
     ConfigUtils.renderExtraOptions(extraOptions, KEYS_TO_REDACT)(s => log.info(s))
 
@@ -64,9 +66,7 @@ object PipelineSparkSessionBuilder {
       case (builder, (key, value)) => builder.config(key, value)
     }
 
-    val isHiveSupportRequired = extraOptions.exists(_._1.contains("hive"))
-
-    val spark = if (isHiveSupportRequired) {
+    val spark = if (isHiveEnabled) {
       sparkSessionBuilderWithExtraOptApplied
         .enableHiveSupport()
         .getOrCreate()
