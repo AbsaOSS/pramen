@@ -95,12 +95,19 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "render a notification body with an exception" in {
       val builder = getBuilder
 
-      builder.addFailureException(new IllegalArgumentException("MyTest exception"))
+      val nestedCause1 = new RuntimeException("Cause 1")
+      val nestedCause2 = new RuntimeException("Cause 2", nestedCause1)
+
+      builder.addFailureException(new IllegalArgumentException("MyTest exception", nestedCause2))
 
       val actual = builder.renderBody()
 
+      println(actual)
+
       // Can't test the full body since stack trace depends on the runner of the unit test
       assert(actual.contains("<pre>java.lang.IllegalArgumentException: MyTest exception"))
+      assert(actual.contains("Cause 1"))
+      assert(actual.contains("Cause 2"))
     }
   }
 

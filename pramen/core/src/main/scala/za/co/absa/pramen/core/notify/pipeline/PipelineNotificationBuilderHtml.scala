@@ -25,6 +25,7 @@ import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus, TaskResult}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
+import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
 
 import java.time._
@@ -251,12 +252,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         val stderrMsg = if (stderr.isEmpty) "" else s"""Last <b>stderr</b> lines:\n${stderr.mkString("", EOL, EOL)}"""
         s"$msg\n$stdoutMsg\n$stderrMsg"
       case ex: Throwable                     =>
-        val base = s"""${ex.toString}\n${ex.getStackTrace.map(s => s"  $s").mkString("", EOL, EOL)}"""
-        val cause = Option(ex.getCause) match {
-          case Some(c) => s"""\nCaused by ${c.toString}\n${c.getStackTrace.map(s => s"    $s").mkString("", EOL, EOL)}"""
-          case None    => ""
-        }
-        base + cause
+        renderThrowable(ex)
     }
 
     builder.withUnformattedText(text)

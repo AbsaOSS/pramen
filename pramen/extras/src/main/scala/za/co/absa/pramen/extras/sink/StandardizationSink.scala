@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji.FAILURE
+import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates.TEMPLATES_DEFAULT_PREFIX
 import za.co.absa.pramen.core.utils.hive._
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
@@ -207,7 +208,8 @@ class StandardizationSink(sinkConfig: Config,
         case NonFatal(ex) =>
           if (standardizationConfig.hiveIgnoreFailures) {
             log.error(s"$FAILURE Unable to update Hive table '$fullTableName'. Ignoring the error.", ex)
-            val warnings = Seq(s"Unable to update Hive table '$fullTableName': ${ex.getMessage}")
+            val msg = getShortExceptionDescription(ex)
+            val warnings = Seq(s"Unable to update Hive table '$fullTableName': $msg")
             (warnings, Seq(fullTableName))
           } else {
             throw ex

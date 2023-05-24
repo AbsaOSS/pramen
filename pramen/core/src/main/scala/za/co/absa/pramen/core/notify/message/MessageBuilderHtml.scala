@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.notify.message
 
 import za.co.absa.pramen.core.utils.ResourceUtils
+import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 
 import scala.collection.mutable.ListBuffer
 import scala.compat.Platform.EOL
@@ -49,14 +50,10 @@ class MessageBuilderHtml extends MessageBuilder {
   }
 
   override def withException(description: String, ex: Throwable): MessageBuilderHtml = {
-    val base = s"""${ex.toString}$EOL${ex.getStackTrace.map(s => s"  $s").mkString("", EOL, EOL)}"""
-    val cause = Option(ex.getCause) match {
-      case Some(c) => s"""\nCaused by ${c.toString}$EOL${c.getStackTrace.map(s => s"    $s").mkString("", EOL, EOL)}"""
-      case None => ""
-    }
+    val rendered = renderThrowable(ex)
 
     withParagraph(Seq(TextElement(description, Style.Exception)))
-    withUnformattedText(base + cause)
+    withUnformattedText(rendered)
     this
   }
 
