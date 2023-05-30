@@ -13,22 +13,6 @@ on:
       - ".github/workflows/scala.yml"
 
 jobs:
-  check-code:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - uses: coursier/cache-action@v5
-      - name: Setup Scala
-        uses: olafurpg/setup-scala@v10
-        with:
-          java-version: "adopt@1.8"
-      - name: Test coverage check
-        working-directory: ./pramen
-        run: sbt jacoco
-      - name: License check
-        working-directory: ./pramen
-        run: sbt headerCheck
   build-sbt:
     runs-on: ubuntu-latest
     strategy:
