@@ -187,11 +187,9 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val dfIn = job.run(infoDate, conf).data
 
-      val ex = intercept[AnalysisException] {
+      assertThrows[AnalysisException] {
         job.postProcessing(dfIn, infoDate, conf)
       }
-
-      assert(ex.getMessage.contains("given input columns: [v]") || ex.getMessage.contains("Column 'x' does not exist"))
     }
   }
 

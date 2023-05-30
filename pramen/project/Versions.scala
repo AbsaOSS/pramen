@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import sbt._
+import sbt.*
 
 object Versions {
   val defaultSparkVersionForScala211 = "2.4.8"
@@ -68,6 +68,7 @@ object Versions {
       case version if version.startsWith("3.1.") => "1.0.1"
       case version if version.startsWith("3.2.") => "2.0.1"
       case version if version.startsWith("3.3.") => "2.2.0"
+      case version if version.startsWith("3.4.") => "2.4.0"
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
     println(s"Using Delta version $deltaVersion")

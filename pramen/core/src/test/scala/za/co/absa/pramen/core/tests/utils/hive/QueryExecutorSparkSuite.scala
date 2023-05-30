@@ -39,11 +39,9 @@ class QueryExecutorSparkSuite extends AnyWordSpec with SparkTestBase {
     "throw an exception on errors" in {
       val qe = new QueryExecutorSpark()
 
-      val ex = intercept[AnalysisException] {
+      assertThrows[AnalysisException] {
         qe.execute("SELECT dummy from dummy")
       }
-
-      assert(ex.getMessage.contains("Table or view not found"))
     }
 
     "throw an exception if Hive is not initialized" in {
