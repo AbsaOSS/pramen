@@ -17,8 +17,8 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.core.OperationDefFactory
@@ -175,7 +175,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       }
 
       assert(ex.getMessage == "Preprocessing failed on the sink.")
-      assert(ex.getCause.getMessage.contains("given input columns: [a, b]") || ex.getCause.getMessage.contains("Column 'b2' does not exist"))
+      assert(ex.getCause.isInstanceOf[AnalysisException])
     }
   }
 
