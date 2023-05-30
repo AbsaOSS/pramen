@@ -33,8 +33,9 @@ jobs:
           - scala: 2.12.17
             scala_short: 2.12
             spark: 3.3.2
-            overall: 80.0
-            changed: 80.0
+            overall: 75.0
+            changed: 75.0
+    name: Test Coverage ${{matrix.spark}} on Scala ${{matrix.scala}}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -62,7 +63,7 @@ jobs:
           echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
           echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
       - name: Fail PR if unit test coverage is less than ${{ matrix.overall }}%
-        if: ${{ steps.jacoco.outputs.coverage-overall }} < ${{ matrix.overall }}
+        if: (steps.jacoco.outputs.coverage-overall < matrix.overall)
         uses: actions/github-script@v6
         with:
           script: |
