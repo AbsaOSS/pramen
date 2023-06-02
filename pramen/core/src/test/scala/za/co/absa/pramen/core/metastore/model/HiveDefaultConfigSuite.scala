@@ -26,6 +26,7 @@ class HiveDefaultConfigSuite extends AnyWordSpec {
 
       val hiveDefaultConfig = HiveDefaultConfig.fromConfig(conf)
 
+      assert(hiveDefaultConfig.hiveApi == HiveApi.Sql)
       assert(hiveDefaultConfig.database.isEmpty)
       assert(hiveDefaultConfig.jdbcConfig.isEmpty)
       assert(!hiveDefaultConfig.ignoreFailures)
@@ -37,6 +38,7 @@ class HiveDefaultConfigSuite extends AnyWordSpec {
     "return overridden config" in {
       val conf = ConfigFactory.parseString(
         """pramen.hive {
+          |  api = spark_catalog
           |  database = mydb
           |
           |  table = my_hive_table
@@ -62,6 +64,7 @@ class HiveDefaultConfigSuite extends AnyWordSpec {
 
       val hiveDefaultConfig = HiveDefaultConfig.fromConfig(conf.getConfig("pramen.hive"))
 
+      assert(hiveDefaultConfig.hiveApi == HiveApi.SparkCatalog)
       assert(hiveDefaultConfig.database.contains("mydb"))
       assert(hiveDefaultConfig.jdbcConfig.map(_.driver).contains("driver"))
       assert(hiveDefaultConfig.ignoreFailures)

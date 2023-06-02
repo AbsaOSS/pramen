@@ -25,13 +25,16 @@ class HiveConfigSuite extends AnyWordSpec {
     "return the default config if not overridden" in {
       val conf = ConfigFactory.empty()
 
-      val defaultConfig = HiveDefaultConfig(Some("mydb1"),
+      val defaultConfig = HiveDefaultConfig(
+        HiveApi.SparkCatalog,
+        Some("mydb1"),
         Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")),
         None,
         ignoreFailures = true)
 
       val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy", None))
 
+      assert(hiveConfig.hiveApi == HiveApi.SparkCatalog)
       assert(hiveConfig.database.contains("mydb1"))
       assert(hiveConfig.jdbcConfig.isEmpty)
       assert(hiveConfig.ignoreFailures)
@@ -42,7 +45,8 @@ class HiveConfigSuite extends AnyWordSpec {
 
     "return the overridden config" in {
       val conf = ConfigFactory.parseString(
-        """database = mydb2
+        """api = spark_catalog
+          |database = mydb2
           |
           |ignore.failures = true
           |
@@ -60,13 +64,16 @@ class HiveConfigSuite extends AnyWordSpec {
           |}
           |""".stripMargin)
 
-      val defaultConfig = HiveDefaultConfig(Some("mydb1"),
+      val defaultConfig = HiveDefaultConfig(
+        HiveApi.Sql,
+        Some("mydb1"),
         Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")),
         None,
         ignoreFailures = false)
 
       val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy", None))
 
+      assert(hiveConfig.hiveApi == HiveApi.SparkCatalog)
       assert(hiveConfig.database.contains("mydb2"))
       assert(hiveConfig.jdbcConfig.nonEmpty)
       assert(hiveConfig.jdbcConfig.map(_.driver).contains("driver2"))
@@ -79,13 +86,16 @@ class HiveConfigSuite extends AnyWordSpec {
 
   "fromDefaults()" should {
     "return the default config" in {
-      val defaultConfig = HiveDefaultConfig(Some("mydb"),
+      val defaultConfig = HiveDefaultConfig(
+        HiveApi.Sql,
+        Some("mydb"),
         Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")),
         None,
         ignoreFailures = true)
 
       val hiveConfig = HiveConfig.fromDefaults(defaultConfig, DataFormat.Parquet("dummy", None))
 
+      assert(hiveConfig.hiveApi == HiveApi.Sql)
       assert(hiveConfig.database.contains("mydb"))
       assert(hiveConfig.jdbcConfig.isEmpty)
       assert(hiveConfig.ignoreFailures)

@@ -19,10 +19,12 @@ package za.co.absa.pramen.core.utils
 import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.catalyst.ScalaReflection
+import org.apache.spark.sql.catalyst.catalog.{CatalogTable, CatalogTableType}
+import org.apache.spark.sql.execution.datasources.{CreateTable, DataSource}
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{ArrayType, DataType, StructType, TimestampType}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.notify.pipeline.FieldChange
 import za.co.absa.pramen.core.pipeline.TransformExpression
@@ -223,6 +225,26 @@ object SparkUtils {
       df.show(numRows, truncate = false)
     }
     new String(outCapture.toByteArray).replace("\r\n", "\n")
+  }
+
+  def createExternalTable(tableName: String,
+                          location: String,
+                          schema: StructType,
+                          partitionCols: Seq[String], source: String)
+                         (implicit spark: SparkSession): Unit = {
+    val tableIdent = spark.sessionState.sqlParser.parseTableIdentifier(tableName)
+    val storage = DataSource.buildStorageFormatFromOptions(Map("path" -> location))
+    val tableDesc = CatalogTable(
+      identifier = tableIdent,
+      tableType = CatalogTableType.EXTERNAL,
+      storage = storage,
+      schema = schema,
+      partitionColumnNames = partitionCols,
+      provider = Some(source)
+    )
+
+    val plan = CreateTable(tableDesc, SaveMode.ErrorIfExists, None)
+    spark.sessionState.executePlan(plan).toRdd
   }
 
   private def getActualProcessingTimeUdf: UserDefinedFunction = {

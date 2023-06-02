@@ -81,12 +81,14 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
   * }
   * }}}
   *
+  * @param hiveApi        The Hive API to use (SQL or Spark Catalog).
   * @param database       T he database database to use. If omitted, you can use full table names for each table.
   * @param templates      Query templates for each output format
   * @param jdbcConfig     Hive JDBC configuration to use instead of Spark metastore if needed
   * @param ignoreFailures Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
   */
 case class HiveDefaultConfig(
+                              hiveApi: HiveApi,
                               database: Option[String],
                               templates: Map[String, HiveQueryTemplates],
                               jdbcConfig: Option[JdbcConfig],
@@ -97,6 +99,7 @@ object HiveDefaultConfig {
   val HIVE_CONFIG_JDBC_PREFIX = "jdbc"
   val HIVE_TEMPLATE_CONFIG_PREFIX = "conf"
 
+  val HIVE_API_KEY = "api"
   val HIVE_IGNORE_FAILURES_KEY = "ignore.failures"
   val HIVE_DATABASE_KEY = "database"
 
@@ -110,6 +113,7 @@ object HiveDefaultConfig {
     * @return
     */
   def fromConfig(conf: Config, parent: String = ""): HiveDefaultConfig = {
+    val hiveApi = if (conf.hasPath(HIVE_DATABASE_KEY)) HiveApi.fromString(conf.getString(HIVE_API_KEY)) else HiveApi.Sql
     val database = if (conf.hasPath(HIVE_DATABASE_KEY)) Some(conf.getString(HIVE_DATABASE_KEY)) else None
     val ignoreFailures = ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false)
 
@@ -126,8 +130,8 @@ object HiveDefaultConfig {
       (format, HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, prefix)))
     }).toMap
 
-    HiveDefaultConfig(database, templates, jdbcConfig, ignoreFailures)
+    HiveDefaultConfig(hiveApi, database, templates, jdbcConfig, ignoreFailures)
   }
 
-  def getNullConfig: HiveDefaultConfig = HiveDefaultConfig(None, Map(), None, ignoreFailures = false)
+  def getNullConfig: HiveDefaultConfig = HiveDefaultConfig(HiveApi.Sql, None, Map(), None, ignoreFailures = false)
 }
