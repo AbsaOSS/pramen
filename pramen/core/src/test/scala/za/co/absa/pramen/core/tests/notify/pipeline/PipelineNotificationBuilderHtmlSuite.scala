@@ -102,8 +102,6 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       val actual = builder.renderBody()
 
-      println(actual)
-
       // Can't test the full body since stack trace depends on the runner of the unit test
       assert(actual.contains("<pre>java.lang.IllegalArgumentException: MyTest exception"))
       assert(actual.contains("Cause 1"))

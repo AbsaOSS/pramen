@@ -32,6 +32,7 @@ class MetaTableSuite extends AnyWordSpec {
           |pramen.information.date.format = "yyyy-MM-dd"
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 2
+          |pramen.hive.api = sql
           |
           |pramen.metastore.tables = [
           |  {
@@ -67,6 +68,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTables(1).format.name == "delta")
       assert(metaTables(1).infoDateColumn == "INFORMATION_DATE")
       assert(metaTables(1).infoDateFormat == "yyyy-MM-dd")
+      assert(metaTables(1).hiveConfig.hiveApi == HiveApi.Sql)
       assert(metaTables(2).name == "table3")
       assert(metaTables(2).format.name == "delta")
       assert(metaTables(2).infoDateColumn == "INFORMATION_DATE")
@@ -79,6 +81,7 @@ class MetaTableSuite extends AnyWordSpec {
           |pramen.information.date.format = "yyyy-MM-dd"
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 2
+          |pramen.hive.api = sql
           |""".stripMargin)
 
       val metaTables = MetaTable.fromConfig(conf, "pramen.metastore.tables")
@@ -92,6 +95,7 @@ class MetaTableSuite extends AnyWordSpec {
           |pramen.information.date.format = "yyyy-MM-dd"
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 1
+          |pramen.hive.api = sql
           |
           |pramen.metastore.tables = [
           |  {
@@ -137,6 +141,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "delta")
       assert(metaTable.hiveTable.isEmpty)
+      assert(metaTable.hiveConfig.hiveApi == HiveApi.Sql)
       assert(metaTable.hiveConfig.database.isEmpty)
       assert(metaTable.hiveConfig.jdbcConfig.isEmpty)
       assert(!metaTable.hiveConfig.ignoreFailures)
@@ -165,14 +170,20 @@ class MetaTableSuite extends AnyWordSpec {
           |}
           |""".stripMargin)
 
-      val defaultHiveConfig = HiveDefaultConfig(Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")), Some(JdbcConfig("driver", Some("url"), user = Some("user"), password = Some("pass"))), ignoreFailures = true)
+      val defaultHiveConfig = HiveDefaultConfig(HiveApi.Sql,
+        Some("mydb"),
+        Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")),
+        Some(JdbcConfig("driver", Some("url"),
+          user = Some("user"),
+          password = Some("pass")
+        )), ignoreFailures = true)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
       val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig)
 
       assert(metaTable.name == "my_table")
+      assert(metaTable.hiveConfig.hiveApi == HiveApi.Sql)
       assert(metaTable.hiveConfig.database.contains("mydb"))
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver"))
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create")
@@ -198,6 +209,7 @@ class MetaTableSuite extends AnyWordSpec {
           |format = parquet
           |path = /a/b/c
           |hive {
+          |  api = spark_catalog
           |  database = mydb2
           |  table = my_hive_table
           |  ignore.failures = true
@@ -217,14 +229,21 @@ class MetaTableSuite extends AnyWordSpec {
           |}
           |""".stripMargin)
 
-      val defaultHiveConfig = HiveDefaultConfig(Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")), Some(JdbcConfig("driver1", Some("url1"), user = Some("user1"), password = Some("pass1"))), ignoreFailures = false)
+      val defaultHiveConfig = HiveDefaultConfig(
+        HiveApi.Sql,
+        Some("mydb1"),
+        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")),
+        Some(JdbcConfig("driver1", Some("url1"),
+          user = Some("user1"),
+          password = Some("pass1")
+        )), ignoreFailures = false)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
       val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig)
 
       assert(metaTable.name == "my_table")
+      assert(metaTable.hiveConfig.hiveApi == HiveApi.SparkCatalog)
       assert(metaTable.hiveConfig.database.contains("mydb2"))
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver2"))
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create2")

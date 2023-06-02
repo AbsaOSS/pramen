@@ -51,12 +51,14 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates._
   * }
   * }}}
   *
+  * @param hiveApi        The Hive API to use (SQL or Spark Catalog).
   * @param database       T he database database to use. If omitted, you can use full table names for each table.
   * @param templates      Query templates for generating Hive queries.
   * @param jdbcConfig     Hive JDBC configuration to use instead of Spark metastore if needed
   * @param ignoreFailures Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
   */
 case class HiveConfig(
+                       hiveApi: HiveApi,
                        database: Option[String],
                        templates: HiveQueryTemplates,
                        jdbcConfig: Option[JdbcConfig],
@@ -81,6 +83,11 @@ object HiveConfig {
       DEFAULT_DROP_TABLE_TEMPLATE
     ))
 
+    val hiveApi = if (conf.hasPath(HIVE_API_KEY))
+      HiveApi.fromString(conf.getString(HIVE_API_KEY))
+    else
+      defaults.hiveApi
+
     val database = ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY).orElse(defaults.database)
     val ignoreFailures = ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(defaults.ignoreFailures)
 
@@ -100,6 +107,7 @@ object HiveConfig {
       .getOrElse(defaultTemplates.dropTableTemplate)
 
     HiveConfig(
+      hiveApi = hiveApi,
       database = database,
       templates = HiveQueryTemplates(createTableTemplate, repairTableTemplate, dropTableTemplate),
       jdbcConfig = jdbcConfig,
@@ -121,10 +129,12 @@ object HiveConfig {
       DEFAULT_DROP_TABLE_TEMPLATE
     ))
 
-    HiveConfig(defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures)
+    HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures)
   }
 
-  def getNullConfig: HiveConfig = HiveConfig(None,
+  def getNullConfig: HiveConfig = HiveConfig(
+    HiveApi.Sql,
+    None,
     HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
     None,
     ignoreFailures = false)
