@@ -19,11 +19,12 @@ package za.co.absa.pramen.core.utils.hive
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
-class HiveHelperImpl(val queryExecutor: QueryExecutor,
-                     hiveConfig: HiveQueryTemplates) extends HiveHelper {
+class HiveHelperSql(val queryExecutor: QueryExecutor,
+                    hiveConfig: HiveQueryTemplates) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  override def createOrUpdateHiveTable(parquetPath: String,
+  override def createOrUpdateHiveTable(path: String,
+                                       format: HiveFormat,
                                        schema: StructType,
                                        partitionBy: Seq[String],
                                        databaseName: Option[String],
@@ -31,7 +32,7 @@ class HiveHelperImpl(val queryExecutor: QueryExecutor,
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
-    createHiveTable(fullTableName, parquetPath, schema, partitionBy)
+    createHiveTable(fullTableName, path, format, schema, partitionBy)
     if (partitionBy.nonEmpty) {
       repairHiveTable(fullTableName)
     }
@@ -56,7 +57,8 @@ class HiveHelperImpl(val queryExecutor: QueryExecutor,
   override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = queryExecutor.doesTableExist(databaseName, tableName)
 
   private def createHiveTable(fullTableName: String,
-                              parquetPath: String,
+                              path: String,
+                              format: HiveFormat,
                               schema: StructType,
                               partitionBy: Seq[String]
                              ): Unit = {
@@ -66,7 +68,8 @@ class HiveHelperImpl(val queryExecutor: QueryExecutor,
     val sqlHiveCreate = applyTemplate(
       hiveConfig.createTableTemplate,
       fullTableName,
-      parquetPath,
+      path,
+      format,
       getTableDDL(schema, partitionBy),
       getPartitionDDL(schema, partitionBy)
     )
@@ -105,10 +108,12 @@ class HiveHelperImpl(val queryExecutor: QueryExecutor,
   private def applyTemplate(template: String,
                             fullTableName: String,
                             path: String = "",
+                            format: HiveFormat = HiveFormat.Parquet,
                             schemaDDL: String = "",
                             partitionDDL: String = ""): String = {
     template.replace("@fullTableName", fullTableName)
       .replace("@path", path)
+      .replace("@format", format.name)
       .replace("@schema", schemaDDL)
       .replace("@partitionedBy", partitionDDL)
   }

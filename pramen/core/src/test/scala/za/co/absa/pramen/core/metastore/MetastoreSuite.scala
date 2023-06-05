@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.SparkUtils
-import za.co.absa.pramen.core.utils.hive.{HiveHelperImpl, HiveQueryTemplates, QueryExecutorSpark}
+import za.co.absa.pramen.core.utils.hive.{HiveHelperSql, HiveQueryTemplates, QueryExecutorSpark}
 
 import java.time.LocalDate
 
@@ -224,9 +224,9 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         val hiveHelper = m.getHiveHelper("table1")
 
-        assert(hiveHelper.isInstanceOf[HiveHelperImpl])
+        assert(hiveHelper.isInstanceOf[HiveHelperSql])
 
-        assert(hiveHelper.asInstanceOf[HiveHelperImpl].queryExecutor.isInstanceOf[QueryExecutorSpark])
+        assert(hiveHelper.asInstanceOf[HiveHelperSql].queryExecutor.isInstanceOf[QueryExecutorSpark])
       }
     }
   }
@@ -240,7 +240,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
       "do nothing if hive table is not defined" in {
         val qe = new QueryExecutorMock(tableExists = true)
-        val hh = new HiveHelperImpl(qe, defaultTemplates)
+        val hh = new HiveHelperSql(qe, defaultTemplates)
 
         m.repairOrCreateHiveTable("table1", infoDate, Option(schema), hh, recreate = false)
 
@@ -249,7 +249,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
       "repair existing table" in {
         val qe = new QueryExecutorMock(tableExists = true)
-        val hh = new HiveHelperImpl(qe, defaultTemplates)
+        val hh = new HiveHelperSql(qe, defaultTemplates)
 
         m.repairOrCreateHiveTable("table_hive_delta", infoDate, Option(schema), hh, recreate = false)
 
@@ -259,7 +259,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
       "re-create if not exist" in {
         val qe = new QueryExecutorMock(tableExists = false)
-        val hh = new HiveHelperImpl(qe, defaultTemplates)
+        val hh = new HiveHelperSql(qe, defaultTemplates)
 
         m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = false)
 
@@ -271,7 +271,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
       "re-create if requested" in {
         val qe = new QueryExecutorMock(tableExists = true)
-        val hh = new HiveHelperImpl(qe, defaultTemplates)
+        val hh = new HiveHelperSql(qe, defaultTemplates)
 
         m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = true)
 
@@ -283,7 +283,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
       "throw an exception if query is not supported" in {
         val qe = new QueryExecutorMock(tableExists = true)
-        val hh = new HiveHelperImpl(qe, defaultTemplates)
+        val hh = new HiveHelperSql(qe, defaultTemplates)
 
         val ex = intercept[IllegalArgumentException] {
           m.repairOrCreateHiveTable("table_hive_not_supported", infoDate, Option(schema), hh, recreate = false)

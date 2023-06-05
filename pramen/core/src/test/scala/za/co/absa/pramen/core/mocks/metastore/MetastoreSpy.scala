@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
-import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperImpl, HiveQueryTemplates}
+import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperSql, HiveQueryTemplates}
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
@@ -75,7 +75,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   def getHiveHelper(tableName: String): HiveHelper = {
     val defaultQueryTemplates = HiveQueryTemplates.getDefaultQueryTemplates
 
-    new HiveHelperImpl(new QueryExecutorMock(isTableAvailable), defaultQueryTemplates)
+    new HiveHelperSql(new QueryExecutorMock(isTableAvailable), defaultQueryTemplates)
   }
 
   override def repairOrCreateHiveTable(tableName: String, infoDate: LocalDate, schema: Option[StructType], hiveHelper: HiveHelper, recreate: Boolean): Unit = {

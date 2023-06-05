@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
 import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.utils.hive.HiveHelper
+import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 
 import java.time.{Instant, LocalDate}
 
@@ -114,18 +114,24 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
       case _: DataFormat.Null => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
     }
 
+    val format: HiveFormat = mt.format match {
+      case _: DataFormat.Delta   => HiveFormat.Delta
+      case _: DataFormat.Parquet => HiveFormat.Parquet
+      case _: DataFormat.Null    => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
+    }
+
     val fullTableName = HiveHelper.getFullTable(mt.hiveConfig.database, hiveTable)
 
     if (recreate) {
       log.info(s"Recreating Hive table '$fullTableName'")
-      hiveHelper.createOrUpdateHiveTable(path, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+      hiveHelper.createOrUpdateHiveTable(path, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
         log.info(s"The table '$fullTableName' exists. Repairing it.")
         hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable)
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
-        hiveHelper.createOrUpdateHiveTable(path, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+        hiveHelper.createOrUpdateHiveTable(path, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
       }
     }
   }

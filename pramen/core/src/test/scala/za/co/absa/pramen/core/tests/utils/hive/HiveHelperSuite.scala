@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveConfig, HiveDefaultConfig}
-import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperImpl, QueryExecutorJdbc, QueryExecutorSpark}
+import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperSql, QueryExecutorJdbc, QueryExecutorSpark}
 
 class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
   "HiveHelper" should {
@@ -28,7 +28,7 @@ class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
       val hiveHelper = HiveHelper(ConfigFactory.empty())(spark)
 
       assert(hiveHelper != null)
-      assert(hiveHelper.isInstanceOf[HiveHelperImpl])
+      assert(hiveHelper.isInstanceOf[HiveHelperSql])
     }
   }
 
@@ -36,7 +36,7 @@ class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
     "return the helper backed by Spark metastore" in {
       val hiveConfig = HiveConfig.getNullConfig
 
-      val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig).asInstanceOf[HiveHelperImpl]
+      val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig).asInstanceOf[HiveHelperSql]
 
       assert(hiveHelper.queryExecutor.isInstanceOf[QueryExecutorSpark])
     }
@@ -55,7 +55,7 @@ class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
 
       val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, hiveDefaultConfig, DataFormat.Parquet("Dummy", None))
 
-      val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig).asInstanceOf[HiveHelperImpl]
+      val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig).asInstanceOf[HiveHelperSql]
 
       assert(hiveHelper.queryExecutor.isInstanceOf[QueryExecutorJdbc])
     }

@@ -199,6 +199,7 @@ class StandardizationSink(sinkConfig: Config,
       log.info(s"Updating Hive table '$fullTableName'...")
       try {
         hiveHelper.createOrUpdateHiveTable(publishBasePath.toUri.toString,
+          HiveFormat.Parquet,
           fullSchema,
           paritionBy,
           standardizationConfig.hiveDatabase,
@@ -342,7 +343,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
         log.info("Using Spark to connect to Hive")
         QueryExecutorSpark(spark)
     }
-    val hiveHelper = new HiveHelperImpl(queryExecutor, hiveConfig)
+    val hiveHelper = new HiveHelperSql(queryExecutor, hiveConfig)
 
     new StandardizationSink(conf, standardizationConfig, hiveHelper)
   }
