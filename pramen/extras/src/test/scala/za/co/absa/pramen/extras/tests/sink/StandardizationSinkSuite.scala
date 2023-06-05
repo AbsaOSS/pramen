@@ -20,7 +20,7 @@ import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.utils.hive.{HiveHelperImpl, HiveQueryTemplates}
+import za.co.absa.pramen.core.utils.hive.{HiveHelperSql, HiveQueryTemplates}
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.mocks.QueryExecutorMock
@@ -177,7 +177,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       val stdConfig = StandardizationConfig.fromConfig(conf)
       val hiveConfig = HiveQueryTemplates.fromConfig(conf)
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperImpl(qe, hiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, hiveConfig)
       val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
 
       withTempDirectory("std_sink") { tempDir =>
@@ -206,7 +206,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       val stdConfig = StandardizationConfig.fromConfig(updatedConf)
       val hiveConfig = HiveQueryTemplates.fromConfig(conf)
       val qe = new QueryExecutorMock(tableExists = true, () => throw new RuntimeException("Hive exception"))
-      val hiveHelper = new HiveHelperImpl(qe, hiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, hiveConfig)
       val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
 
       withTempDirectory("std_sink") { tempDir =>

@@ -25,9 +25,9 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.FsUtils
-import za.co.absa.pramen.core.utils.hive.{HiveHelperImpl, HiveQueryTemplates}
+import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelperSql, HiveQueryTemplates}
 
-class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
+class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
 
   import spark.implicits._
 
@@ -51,10 +51,10 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
 
         val qe = new QueryExecutorMock(tableExists = false)
-        val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, schema, Nil, Some("db"), "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl")
 
         qe.close()
 
@@ -83,10 +83,10 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
 
         val qe = new QueryExecutorMock(tableExists = false)
-        val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 
         val actual = qe.queries.mkString("\n").replaceAll("`", "")
 
@@ -98,7 +98,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
       val expected = "MSCK REPAIR TABLE db.tbl"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
 
       hiveHelper.repairHiveTable(Some("db"), "tbl")
 
@@ -111,7 +111,7 @@ class HiveHelperImplSuite extends AnyWordSpec with SparkTestBase with TempDirFix
       val expected = "MSCK REPAIR TABLE tbl"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperImpl(qe, defaultHiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
 
       hiveHelper.repairHiveTable(None, "tbl")
 

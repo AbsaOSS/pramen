@@ -23,7 +23,8 @@ import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 
 abstract class HiveHelper {
-  def createOrUpdateHiveTable(parquetPath: String,
+  def createOrUpdateHiveTable(path: String,
+                              format: HiveFormat,
                               schema: StructType,
                               partitionBy: Seq[String],
                               databaseName: Option[String],
@@ -40,7 +41,7 @@ object HiveHelper {
   def apply(conf: Config)(implicit spark: SparkSession): HiveHelper = {
     val queryExecutor = new QueryExecutorSpark()
     val hiveTemplates = HiveQueryTemplates.fromConfig(conf)
-    new HiveHelperImpl(queryExecutor, hiveTemplates)
+    new HiveHelperSql(queryExecutor, hiveTemplates)
   }
 
   def fromHiveConfig(hiveConfig: HiveConfig)
@@ -49,7 +50,7 @@ object HiveHelper {
       case Some(jdbcConfig) => new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
       case None             => new QueryExecutorSpark()
     }
-    new HiveHelperImpl(queryExecutor, hiveConfig.templates)
+    new HiveHelperSql(queryExecutor, hiveConfig.templates)
   }
 
   def getFullTable(databaseName: Option[String],
