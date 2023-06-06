@@ -44,6 +44,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   private val conf: Config = ConfigFactory.parseString(
     s"""
+       |pramen.py.backend = "cmd"
+       |
        |//pramen.sources = [ ]
        |pramen.metastore {
        |  tables = [
