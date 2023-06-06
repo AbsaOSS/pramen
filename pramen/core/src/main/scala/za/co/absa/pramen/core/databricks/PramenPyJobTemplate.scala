@@ -35,7 +35,7 @@ class PramenPyJobTemplate(config: Config, pythonClass: String, metastoreConfigLo
 
     val baseParameters = notebookTaskDefinition("base_parameters") match {
       case parameters: Map[String, String] => parameters.mapValues(replaceParameters)
-      case _ => _
+      case other => other
     }
 
     notebookTaskDefinition ++ Map("base_paramaters" -> baseParameters)
