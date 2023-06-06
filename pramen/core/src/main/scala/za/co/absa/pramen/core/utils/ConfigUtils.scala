@@ -333,6 +333,24 @@ object ConfigUtils {
     }).toMap
   }
 
+  def unwrap(conf: Config): Map[String, AnyRef] = {
+    def unwrapConfigValue(configValue: ConfigValue): AnyRef = {
+      configValue match {
+        case configObject: ConfigObject => configObject.asScala
+          .map {
+            case (key, value: ConfigValue) => key -> unwrapConfigValue(value)
+          }
+          .toMap
+        case configList: ConfigList => configList.asScala.map(unwrapConfigValue)
+        case _ => configValue.unwrapped()
+      }
+    }
+
+    conf.entrySet().asScala.map { entry =>
+      entry.getKey -> unwrapConfigValue(entry.getValue)
+    }.toMap
+  }
+
   /**
     * Logs the effective configuration while redacting sensitive keys
     * in HOCON format.

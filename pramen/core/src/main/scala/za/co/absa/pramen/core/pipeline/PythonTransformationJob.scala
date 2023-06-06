@@ -21,6 +21,8 @@ import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.databricks.{DatabricksClient, PramenPyJobTemplate}
 import za.co.absa.pramen.core.exceptions.ProcessFailedException
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
@@ -33,12 +35,15 @@ import za.co.absa.pramen.core.utils.StringUtils.escapeString
 import java.io.{BufferedWriter, File, FileWriter}
 import java.time.{Instant, LocalDate}
 import scala.collection.mutable
+import scala.util.Random
 import scala.util.control.NonFatal
 
 object PythonTransformationJob {
   val PRAMEN_PY_CMD_LINE_TEMPLATE_KEY = "pramen.py.cmd.line.template"
   val PRAMEN_PY_LOCATION_KEY = "pramen.py.location"
   val PRAMEN_PY_EXECUTABLE_KEY = "pramen.py.executable"
+  val PRAMEN_PY_BACKEND_KEY = "pramen.py.backend"
+
   val KEEP_LOG_LINES_KEY = "pramen.py.keep.log.lines"
 
   val MINIMUM_RECORDS_OPTION = "minimum.records"
@@ -48,6 +53,23 @@ object PythonTransformationJob {
   val PYTHON_CLASS_VAR = "@pythonClass"
   val METASTORE_CONFIG_VAR = "@metastoreConfig"
   val INFO_DATE_VAR = "@infoDate"
+
+  val DATABRICKS_BACKEND_OPTION = "databricks"
+
+  private def shouldRunOnDatabricks(conf: Config) = {
+    conf.getString(PRAMEN_PY_BACKEND_KEY) == DATABRICKS_BACKEND_OPTION
+  }
+
+  private def getTemporaryPathForYamlConfig(conf: Config) = {
+    val temporaryDirectoryBase = conf.getString(Keys.TEMPORARY_DIRECTORY)
+    val randomNumber = Random.nextInt(1000000)
+
+    val pathForConfig = s"$temporaryDirectoryBase/pramen_py_configs/$randomNumber/config.yaml"
+      .stripPrefix("/dbfs")
+      .stripPrefix("dbfs:")
+
+    s"dbfs:$pathForConfig"
+  }
 }
 
 class PythonTransformationJob(operationDef: OperationDef,
@@ -79,7 +101,11 @@ class PythonTransformationJob(operationDef: OperationDef,
   }
 
   override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    runPythonCmdLine(infoDate, conf)
+    if (shouldRunOnDatabricks(conf)) {
+      runPythonOnDatabricks(infoDate, conf)
+    } else {
+      runPythonCmdLine(infoDate, conf)
+    }
 
     try {
       RunResult(metastore.getTable(outputTable.name, Option(infoDate), Option(infoDate)))
@@ -239,5 +265,16 @@ class PythonTransformationJob(operationDef: OperationDef,
     sb.append(addMetastore())
 
     sb.toString
+  }
+
+  private[core] def runPythonOnDatabricks(infoDate: LocalDate, conf: Config): Unit = {
+    val metastoreConfig = getYamlConfig(infoDate)
+    val configPath = getTemporaryPathForYamlConfig(conf)
+    val databricksClient = DatabricksClient.fromConfig(conf)
+
+    val jobDefinition = new PramenPyJobTemplate(conf, pythonClass, configPath, infoDate).render()
+
+    databricksClient.createFile(metastoreConfig, configPath, overwrite = true)
+    databricksClient.runTransientJob(jobDefinition)
   }
 }
