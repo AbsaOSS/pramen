@@ -36,6 +36,7 @@ object Dependencies {
     "com.github.yruslan"   %% "channel_scala"              % channelsVersion,
     "org.apache.kafka"     %  "kafka-clients"              % kafkaClientVersion,
     "com.sun.mail"         %  "javax.mail"                 % javaXMailVersion,
+    "com.lihaoyi"          %% "requests"                   % "0.8.0",
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test,
     "org.mockito"          %  "mockito-core"               % mockitoVersion             % Test,
     "de.flapdoodle.embed"  %  "de.flapdoodle.embed.mongo"  % embeddedMongoDbVersion     % Test,
