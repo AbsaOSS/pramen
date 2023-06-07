@@ -95,7 +95,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
     }
 
     "repair table with database" in {
-      val expected = "MSCK REPAIR TABLE db.tbl"
+      val expected = "MSCK REPAIR TABLE `db`.`tbl`"
 
       val qe = new QueryExecutorMock(tableExists = true)
       val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
