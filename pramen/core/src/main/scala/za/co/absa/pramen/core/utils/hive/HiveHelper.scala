@@ -57,7 +57,7 @@ object HiveHelper {
                    tableName: String): String = {
 
     databaseName match {
-      case Some(dbName) => s"$dbName.$tableName"
+      case Some(dbName) => s"`$dbName`.`$tableName`"
       case None         => tableName
     }
   }
