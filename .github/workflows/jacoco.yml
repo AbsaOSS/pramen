@@ -51,7 +51,7 @@ jobs:
         uses: madrapps/jacoco-report@v1.3
         with:
           paths: >
-            ${{ github.workspace }}/pramen/runner/target/scala-${{ matrix.scala_short }}/jacoco/report/jacoco.xml,
+            ${{ github.workspace }}/pramen/core/target/scala-${{ matrix.scala_short }}/jacoco/report/jacoco.xml,
             ${{ github.workspace }}/pramen/extras/target/scala-${{ matrix.scala_short }}/jacoco/report/jacoco.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: ${{ matrix.overall }}
