@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
-import za.co.absa.pramen.core.metastore.model.HiveConfig
+import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.metastore.model.{HiveApi, HiveConfig}
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 
 abstract class HiveHelper {
@@ -31,26 +31,33 @@ abstract class HiveHelper {
                               tableName: String): Unit
 
   def repairHiveTable(databaseName: Option[String],
-                      tableName: String): Unit
+                      tableName: String,
+                      format: HiveFormat): Unit
 
   def doesTableExist(databaseName: Option[String],
                      tableName: String): Boolean
 }
 
 object HiveHelper {
-  def apply(conf: Config)(implicit spark: SparkSession): HiveHelper = {
-    val queryExecutor = new QueryExecutorSpark()
-    val hiveTemplates = HiveQueryTemplates.fromConfig(conf)
-    new HiveHelperSql(queryExecutor, hiveTemplates)
-  }
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   def fromHiveConfig(hiveConfig: HiveConfig)
                     (implicit spark: SparkSession): HiveHelper = {
-    val queryExecutor = hiveConfig.jdbcConfig match {
-      case Some(jdbcConfig) => new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
-      case None             => new QueryExecutorSpark()
+    hiveConfig.hiveApi match {
+      case HiveApi.Sql          =>
+        val queryExecutor = hiveConfig.jdbcConfig match {
+          case Some(jdbcConfig) =>
+            log.info(s"Using Hive SQL API by connecting to the Hive metastore via JDBC.")
+            new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
+          case None             =>
+            log.info(s"Using Hive SQL API by connecting to the Hive metastore via Spark.")
+            new QueryExecutorSpark()
+        }
+        new HiveHelperSql(queryExecutor, hiveConfig.templates)
+      case HiveApi.SparkCatalog =>
+        log.info(s"Using Hive via Spark Catalog API and configuration.")
+        new HiveHelperSparkCatalog(spark)
     }
-    new HiveHelperSql(queryExecutor, hiveConfig.templates)
   }
 
   def getFullTable(databaseName: Option[String],

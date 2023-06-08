@@ -128,7 +128,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
         log.info(s"The table '$fullTableName' exists. Repairing it.")
-        hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable)
+        hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
         hiveHelper.createOrUpdateHiveTable(path, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
