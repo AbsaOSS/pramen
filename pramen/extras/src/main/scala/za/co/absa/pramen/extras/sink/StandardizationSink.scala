@@ -23,6 +23,7 @@ import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.core.metastore.model.HiveApi
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji.FAILURE
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
@@ -328,6 +329,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
   val DATASET_NAME_KEY = "dataset.name"
   val DATASET_VERSION_KEY = "dataset.version"
   val HIVE_TABLE_KEY = "hive.table"
+  val HIVE_API_SINK_KEY = "hive.api"
 
   val ENCELADUS_INFO_DATE_COLUMN = "enceladus_info_date"
   val ENCELADUS_INFO_VERSION_COLUMN = "enceladus_info_version"
@@ -335,15 +337,27 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
   override def apply(conf: Config, parentPath: String, spark: SparkSession): StandardizationSink = {
     val standardizationConfig = StandardizationConfig.fromConfig(conf)
     val hiveConfig = HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, TEMPLATES_DEFAULT_PREFIX))
-    val queryExecutor = standardizationConfig.hiveJdbcConfig match {
-      case Some(hiveJdbcConfig) =>
-        log.info("Using JDBC to connect to Hive")
-        QueryExecutorJdbc.fromJdbcConfig(hiveJdbcConfig)
-      case None                 =>
-        log.info("Using Spark to connect to Hive")
-        QueryExecutorSpark(spark)
+
+    val hiveApi = if (conf.hasPath(HIVE_API_SINK_KEY))
+      HiveApi.fromString(conf.getString(HIVE_API_SINK_KEY))
+    else
+      HiveApi.Sql
+
+    val hiveHelper = hiveApi match {
+      case HiveApi.Sql          =>
+        val queryExecutor = standardizationConfig.hiveJdbcConfig match {
+          case Some(hiveJdbcConfig) =>
+            log.info(s"Using Hive SQL API by connecting to the Hive metastore via JDBC.")
+            QueryExecutorJdbc.fromJdbcConfig(hiveJdbcConfig)
+          case None                 =>
+            log.info(s"Using Hive SQL API by connecting to the Hive metastore via Spark.")
+            QueryExecutorSpark(spark)
+        }
+        new HiveHelperSql(queryExecutor, hiveConfig)
+      case HiveApi.SparkCatalog =>
+        log.info(s"Using Hive via Spark Catalog API and configuration.")
+        new HiveHelperSparkCatalog(spark)
     }
-    val hiveHelper = new HiveHelperSql(queryExecutor, hiveConfig)
 
     new StandardizationSink(conf, standardizationConfig, hiveHelper)
   }

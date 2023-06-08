@@ -100,7 +100,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       val qe = new QueryExecutorMock(tableExists = true)
       val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
 
-      hiveHelper.repairHiveTable(Some("db"), "tbl")
+      hiveHelper.repairHiveTable(Some("db"), "tbl", HiveFormat.Parquet)
 
       val actual = qe.queries.mkString("\n")
 
@@ -113,11 +113,20 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       val qe = new QueryExecutorMock(tableExists = true)
       val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
 
-      hiveHelper.repairHiveTable(None, "tbl")
+      hiveHelper.repairHiveTable(None, "tbl", HiveFormat.Parquet)
 
       val actual = qe.queries.mkString("\n")
 
       compareText(actual, expected)
+    }
+
+    "not repair table for Delta" in {
+      val qe = new QueryExecutorMock(tableExists = true)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+
+      hiveHelper.repairHiveTable(Some("db"), "tbl", HiveFormat.Delta)
+
+      assert(qe.queries.isEmpty)
     }
   }
 

@@ -18,14 +18,20 @@ package za.co.absa.pramen.core.utils.hive
 
 trait HiveFormat {
   def name: String
+
+  def repairPartitionsRequired: Boolean
 }
 
 object HiveFormat {
   case object Parquet extends HiveFormat {
     override def name: String = "parquet"
+
+    override def repairPartitionsRequired: Boolean = true
   }
 
   case object Delta extends HiveFormat {
     override def name: String = "delta"
+
+    override def repairPartitionsRequired: Boolean = false
   }
 }

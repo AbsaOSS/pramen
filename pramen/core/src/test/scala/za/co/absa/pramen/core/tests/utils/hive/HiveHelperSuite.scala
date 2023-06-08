@@ -19,26 +19,29 @@ package za.co.absa.pramen.core.tests.utils.hive
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveConfig, HiveDefaultConfig}
-import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperSql, QueryExecutorJdbc, QueryExecutorSpark}
+import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveApi, HiveConfig, HiveDefaultConfig}
+import za.co.absa.pramen.core.utils.hive._
 
 class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
-  "HiveHelper" should {
-    "create a default instance of HiveHelper" in {
-      val hiveHelper = HiveHelper(ConfigFactory.empty())(spark)
-
-      assert(hiveHelper != null)
-      assert(hiveHelper.isInstanceOf[HiveHelperSql])
-    }
-  }
-
   "fromHiveConfig()" should {
     "return the helper backed by Spark metastore" in {
       val hiveConfig = HiveConfig.getNullConfig
 
-      val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig).asInstanceOf[HiveHelperSql]
+      val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig)
 
-      assert(hiveHelper.queryExecutor.isInstanceOf[QueryExecutorSpark])
+      assert(hiveHelper.isInstanceOf[HiveHelperSql])
+
+      val hiveHelperSql = hiveHelper.asInstanceOf[HiveHelperSql]
+
+      assert(hiveHelperSql.queryExecutor.isInstanceOf[QueryExecutorSpark])
+    }
+
+    "return the helper backed by Spark Catalog" in {
+      val hiveConfig = HiveConfig.getNullConfig.copy(hiveApi = HiveApi.SparkCatalog)
+
+      val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig)
+
+      assert(hiveHelper.isInstanceOf[HiveHelperSparkCatalog])
     }
 
     "return the helper backed by a JDBC connection" in {

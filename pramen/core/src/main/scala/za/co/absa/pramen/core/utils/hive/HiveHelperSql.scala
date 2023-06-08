@@ -39,10 +39,13 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
   }
 
   override def repairHiveTable(databaseName: Option[String],
-                               tableName: String): Unit = {
-    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+                               tableName: String,
+                               format: HiveFormat): Unit = {
+    if (format.repairPartitionsRequired) {
+      val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
-    repairHiveTable(fullTableName)
+      repairHiveTable(fullTableName)
+    }
   }
 
   private def dropHiveTable(fullTableName: String): Unit = {

@@ -41,15 +41,22 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     createCatalogTable(fullTableName, path, format)
 
     if (partitionBy.nonEmpty) {
-      repairCatalogTable(fullTableName)
+      repairHiveTable(databaseName, tableName, format)
+    }
+
+    if (!spark.catalog.tableExists(fullTableName)) {
+      throw new IllegalStateException(s"Unable to create Spark Catalog table: $fullTableName")
     }
   }
 
   override def repairHiveTable(databaseName: Option[String],
-                               tableName: String): Unit = {
-    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+                               tableName: String,
+                               format: HiveFormat): Unit = {
+    if (format.repairPartitionsRequired) {
+      val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
-    repairCatalogTable(fullTableName)
+      repairCatalogTable(fullTableName)
+    }
   }
 
   private def dropCatalogTable(fullTableName: String): Unit = {
@@ -63,11 +70,10 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
                               format: HiveFormat
                              ): Unit = {
 
-    log.info(s"Creating Spark Catalog table: $fullTableName...")
+    log.info(s"Creating Spark Catalog table: $fullTableName (format = ${format.name}, path=${path})...")
 
     spark.catalog.createTable(fullTableName, path, format.name).collect()
   }
-
 
   private def repairCatalogTable(fullTableName: String): Unit = {
     try {
