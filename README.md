@@ -1109,6 +1109,14 @@ Here is an example configuration of a sink:
     timestamp.format = "dd-MM-yyyy HH:mm:ss Z"
     date.format = "yyyy-MM-dd"
   }
+
+  # Hive properties
+  hive = {
+    # The API to use to query Hive. Valid values are: "sql" (default), "spark_catalog"
+    api = "sql"
+    database = "my_hive_db"
+    ignore.failures = false
+  }
 }
 ```
 </details>
@@ -2248,6 +2256,9 @@ pramen {
   }
   
   hive {
+    # The API to use to query Hive. Valid values are: "sql" (default), "spark_catalog"
+    hive.api = "sql"
+
     database = "my_db"
 
     # Optional, use only if you want to use JDBC rather than Spark metastore to query Hive
@@ -2281,11 +2292,18 @@ pramen.metastore {
         name = my_table
         format = parquet
         path = /a/b/c
-        hive.table = my_hive_table
+       
+        ## [Optional]  Hive oprions (if they are different from global defaults)
+        # The API to use to query Hive. Valid values are: "sql", "spark_catalog"
+        hive.api = "sql"
         hive.database = my_hive_db
-        # Override the table creation query for this table
+       
+        # [Optional] Hive table to create/repair after writes to this metastore table
+        hive.table = my_hive_table
+        
+        # [Optional] Override the table creation query for this table
         hive.conf.create.table.template = "..."
-        # Override Hive JDBC for this table
+        # [Optional] Override Hive JDBC for this table
         hive.jdbc {
         }
      }
