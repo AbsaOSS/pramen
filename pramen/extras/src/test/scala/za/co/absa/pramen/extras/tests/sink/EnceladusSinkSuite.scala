@@ -16,14 +16,14 @@
 
 package za.co.absa.pramen.extras.tests.sink
 
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
-import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.mocks.QueryExecutorSpy
+import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY, HIVE_TABLE_KEY}
 import za.co.absa.pramen.extras.utils.FsUtils
 
@@ -100,35 +100,6 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
 
       "close does nothing" in {
         sink.close()
-      }
-    }
-
-    "getHiveRepairEnceladusQuery()" should {
-      "return a valid query when a db is setup" in {
-        val updatedConf = conf.
-           withValue("hive.database", ConfigValueFactory.fromAnyRef("mydb"))
-
-        val sink = EnceladusSink.apply(updatedConf, "", spark)
-
-        val query = sink.getHiveRepairEnceladusQuery("my_table")
-
-        assert(query == "MSCK REPAIR TABLE mydb.my_table")
-      }
-
-      "return a valid query when a db is not setup" in {
-        val sink = EnceladusSink.apply(conf, "", spark)
-
-        val query = sink.getHiveRepairEnceladusQuery("my_table")
-
-        assert(query == "MSCK REPAIR TABLE my_table")
-      }
-    }
-
-    "getHiveRepairQuery()" should {
-      "return the repair query" in {
-        val sink = EnceladusSink.apply(conf, "", spark)
-
-        assert(sink.getHiveRepairQuery("db1.table1") == "MSCK REPAIR TABLE db1.table1")
       }
     }
 
@@ -212,9 +183,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
         )
       }
 
-      val actual = qe.executed.head
-
-      assert(actual == "MSCK REPAIR TABLE test_table")
+      assert(qe.executed.isEmpty)
     }
 
     "forward the exception if something goes wrong" in {
