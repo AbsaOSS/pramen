@@ -23,6 +23,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
@@ -191,7 +192,13 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   private def getOptions(optionName: String, optionValue: Option[Any]): Map[String, String] = {
     optionValue match {
       case Some(value) =>
-        log.info(s"JDBC reader $optionName = $value")
+        val keyLowercase = optionName
+        val redactedValue = if (KEYS_TO_REDACT.exists(k => keyLowercase.contains(k))) {
+          "[redacted]"
+        } else {
+          value.toString
+        }
+        log.info(s"JDBC reader $optionName = $redactedValue")
         Map[String, String](optionName -> value.toString)
       case None =>
         Map[String, String]()
