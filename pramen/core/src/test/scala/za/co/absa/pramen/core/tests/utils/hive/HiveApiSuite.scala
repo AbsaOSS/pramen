@@ -14,17 +14,23 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.metastore.model
+package za.co.absa.pramen.core.tests.utils.hive
 
-sealed trait HiveApi
+import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.metastore.model.HiveApi
 
-object HiveApi {
-  case object Sql extends HiveApi
-  case object SparkCatalog extends HiveApi
+class HiveApiSuite extends AnyWordSpec {
+  "fromString()" should {
+    "properly parse 'sql'" in {
+      assert(HiveApi.fromString("SqL") == HiveApi.Sql)
+    }
 
-  def fromString(s: String): HiveApi = s.toLowerCase() match {
-    case "sql" => Sql
-    case "spark_catalog" => SparkCatalog
-    case _ => throw new IllegalArgumentException(s"Unknown Hive API config: '$s'. Only 'sql' and 'spark_catalog' are supported.")
+    "properly parse 'spark_catalog'" in {
+      assert(HiveApi.fromString("spark_catalog") == HiveApi.SparkCatalog)
+    }
+
+    "throw on an invalid value" in {
+      assertThrows[IllegalArgumentException](HiveApi.fromString("dummy"))
+    }
   }
 }
