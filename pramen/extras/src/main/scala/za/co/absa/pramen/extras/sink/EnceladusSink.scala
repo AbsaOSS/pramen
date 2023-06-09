@@ -21,8 +21,11 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates.TEMPLATES_DEFAULT_PREFIX
+import za.co.absa.pramen.core.utils.hive._
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
-import za.co.absa.pramen.extras.query.{QueryExecutor, QueryExecutorSpark}
+import za.co.absa.pramen.extras.query.{QueryExecutor => EnceladusQueryExecutor, QueryExecutorSpark => EnceladusQueryExecutorSpark}
 import za.co.absa.pramen.extras.sink.EnceladusConfig.DEFAULT_PUBLISH_PARTITION_TEMPLATE
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
@@ -137,7 +140,8 @@ import scala.util.{Failure, Success, Try}
   *
   */
 class EnceladusSink(sinkConfig: Config,
-                    enceladusConfig: EnceladusConfig) extends Sink {
+                    enceladusConfig: EnceladusConfig,
+                    hiveHelper: HiveHelper) extends Sink {
 
   import za.co.absa.pramen.extras.sink.EnceladusSink._
 
@@ -154,7 +158,7 @@ class EnceladusSink(sinkConfig: Config,
                     metastore: MetastoreReader,
                     infoDate: LocalDate,
                     options: Map[String, String])(implicit spark: SparkSession): SinkResult = {
-    implicit val queryExecutor: QueryExecutor = new QueryExecutorSpark(spark)
+    implicit val queryExecutor: EnceladusQueryExecutor = new EnceladusQueryExecutorSpark(spark)
 
     val jobStart = Instant.now()
     val basePath = getBasePath(tableName, options)
@@ -187,7 +191,7 @@ class EnceladusSink(sinkConfig: Config,
                                      infoDate: LocalDate,
                                      rawBasePath: Path,
                                      options: Map[String, String])
-                                    (implicit spark: SparkSession, queryExecutor: QueryExecutor): Int = {
+                                    (implicit spark: SparkSession, queryExecutor: EnceladusQueryExecutor): Int = {
     val publishBasePath = options.get(PUBLISH_BASE_PATH_KEY).map(s => new Path(s))
     val hiveTable = options.get(HIVE_TABLE_KEY).map(getHiveTableFullName)
 
@@ -281,12 +285,16 @@ class EnceladusSink(sinkConfig: Config,
                                            infoVersion: Int,
                                            basePath: Path,
                                            options: Map[String, String])
-                                          (implicit queryExecutor: QueryExecutor, spark: SparkSession): Unit = {
+                                          (implicit spark: SparkSession): Unit = {
     if (options.contains(DATASET_NAME_KEY) && options.contains(DATASET_VERSION_KEY)) {
       val datasetName = options(DATASET_NAME_KEY)
       val datasetVersion = options(DATASET_VERSION_KEY).toInt
 
-      val publishBase = basePath.toString.replace("/raw/", "/publish/")
+      val publishBase = if (options.contains(PUBLISH_BASE_PATH_KEY)) {
+        options(PUBLISH_BASE_PATH_KEY)
+      } else {
+        basePath.toString.replace("/raw/", "/publish/")
+      }
       val outputPublishPath = getPublishPartitionPath(new Path(publishBase), infoDate, infoVersion)
 
       val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, publishBase)
@@ -316,7 +324,7 @@ class EnceladusSink(sinkConfig: Config,
       )
       if (options.contains(HIVE_TABLE_KEY)) {
         Try {
-          repairTable(options(HIVE_TABLE_KEY))
+          updateTable(options(HIVE_TABLE_KEY), publishBase)
         } match {
           case Success(_)  =>
             log.info(s"Hive table '${options(HIVE_TABLE_KEY)}' was repaired successfully.")
@@ -366,12 +374,19 @@ class EnceladusSink(sinkConfig: Config,
       .split(' ')
   }
 
-  private[extras] def repairTable(hiveTable: String)(implicit queryExecutor: QueryExecutor): Unit = {
-    val query = getHiveRepairEnceladusQuery(hiveTable)
-    queryExecutor.execute(query)
-  }
+  private[extras] def updateTable(hiveTable: String, publishBase: String)(implicit spark: SparkSession): Unit = {
+    if (hiveHelper.doesTableExist(enceladusConfig.hiveDatabase, hiveTable)) {
+      log.info(s"Table ${getHiveTableFullName(hiveTable)} exists. Repairing partitions...")
+      hiveHelper.repairHiveTable(enceladusConfig.hiveDatabase, hiveTable, HiveFormat.Parquet)
+    } else {
+      log.info(s"Table ${getHiveTableFullName(hiveTable)} does not exist. Creating...")
+      val df = spark.read.option("mergeSchema", "true").parquet(publishBase)
 
-  private[extras] def getHiveRepairEnceladusQuery(hiveTable: String): String = getHiveRepairQuery(getHiveTableFullName(hiveTable))
+      val schema = df.schema
+
+      hiveHelper.createOrUpdateHiveTable(publishBase, HiveFormat.Parquet, schema, Seq("enceladus_info_date", "enceladus_info_version"), enceladusConfig.hiveDatabase, hiveTable)
+    }
+  }
 
   private[extras] def getHiveTableFullName(hiveTable: String): String = {
     enceladusConfig.hiveDatabase match {
@@ -380,16 +395,12 @@ class EnceladusSink(sinkConfig: Config,
     }
   }
 
-  private[extras] def getHiveRepairQuery(hiveFullTableName: String): String = {
-    s"MSCK REPAIR TABLE $hiveFullTableName"
-  }
-
   private[extras] def autoDetectVersionNumber(metaTable: String,
                                               infoDate: LocalDate,
                                               rawBasePath: Path,
                                               publishBasePath: Option[Path],
                                               hiveTable: Option[String])
-                                             (implicit spark: SparkSession, queryExecutor: QueryExecutor): Int = {
+                                             (implicit spark: SparkSession, queryExecutor: EnceladusQueryExecutor): Int = {
     val enceladusUtils = new EnceladusUtils(enceladusConfig.partitionPattern,
       enceladusConfig.publishPartitionPattern,
       enceladusConfig.infoDateColumn)
@@ -422,6 +433,12 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
     val enceladusConfig = EnceladusConfig.fromConfig(conf)
-    new EnceladusSink(conf, enceladusConfig)
+
+    val hiveConfig = HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, TEMPLATES_DEFAULT_PREFIX))
+    val queryExecutor = QueryExecutorSpark(spark)
+
+    val hiveHelper = new HiveHelperSql(queryExecutor, hiveConfig)
+
+    new EnceladusSink(conf, enceladusConfig, hiveHelper)
   }
 }
