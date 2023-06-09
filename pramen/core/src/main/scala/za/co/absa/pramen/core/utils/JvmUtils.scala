@@ -26,7 +26,12 @@ object JvmUtils {
     if (ex.getCause == null) {
       ex.getMessage
     } else {
-      s"${ex.getMessage} (${ex.getCause.getMessage})"
+      val cause = ex.getCause
+      if (cause.getCause == null) {
+        s"${ex.getMessage} (${ex.getCause.getMessage})"
+      } else {
+        s"${ex.getMessage} (${cause.getMessage} caused by ${cause.getCause.getMessage})"
+      }
     }
   }
 }
