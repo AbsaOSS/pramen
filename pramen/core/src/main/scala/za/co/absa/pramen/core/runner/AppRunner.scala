@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.AppContextFactory
-import za.co.absa.pramen.core.app.AppContext
+import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
@@ -93,7 +93,7 @@ object AppRunner {
                                      state: PipelineState,
                                      spark: SparkSession): Try[AppContext] = {
     handleFailure(Try {
-      AppContextFactory.getOrCreate(conf)
+      AppContextImpl(conf)
     }, state, "initialization of the pipeline")
   }
 
