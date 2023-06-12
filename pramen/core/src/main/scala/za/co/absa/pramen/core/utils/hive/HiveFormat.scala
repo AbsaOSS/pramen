@@ -24,14 +24,22 @@ trait HiveFormat {
 
 object HiveFormat {
   case object Parquet extends HiveFormat {
-    override def name: String = "parquet"
+    override val name: String = "parquet"
 
     override def repairPartitionsRequired: Boolean = true
   }
 
   case object Delta extends HiveFormat {
-    override def name: String = "delta"
+    override val name: String = "delta"
 
     override def repairPartitionsRequired: Boolean = false
+  }
+
+  def fromString(format: String): HiveFormat = {
+    format.toLowerCase match {
+      case Parquet.name => Parquet
+      case Delta.name => Delta
+      case _ => throw new IllegalArgumentException(s"Unsupported Hive format: $format")
+    }
   }
 }

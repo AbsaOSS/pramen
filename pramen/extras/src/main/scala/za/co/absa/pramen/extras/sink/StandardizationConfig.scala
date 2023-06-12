@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import za.co.absa.pramen.buildinfo.BuildPropertiesRetriever
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.hive.HiveFormat
 
 import java.time.ZoneId
 import scala.util.Try
@@ -31,6 +32,7 @@ case class StandardizationConfig(
                                   publishPartitionPattern: String,
                                   recordsPerPartition: Option[Int],
                                   generateInfoFile: Boolean,
+                                  publishFormat: HiveFormat,
                                   hiveJdbcConfig: Option[JdbcConfig],
                                   hiveDatabase: Option[String],
                                   hiveIgnoreFailures: Boolean
@@ -39,6 +41,7 @@ case class StandardizationConfig(
 object StandardizationConfig {
   val RAW_PARTITION_PATTERN_KEY = "raw.partition.pattern"
   val PUBLISH_PARTITION_PATTERN_KEY = "publish.partition.pattern"
+  val PUBLISH_FORMAT_KEY = "publish.format"
   val RECORDS_PER_PARTITION = "records.per.partition"
   val GENERATE_INFO_FILE_KEY = "info.file.generate"
   val TIMEZONE_ID_KEY = "timezone"
@@ -68,6 +71,8 @@ object StandardizationConfig {
 
     val hiveJdbcConfig = JdbcConfig.loadOption(jdbcConfig, HIVE_JDBC_PREFIX)
 
+    val publishFormat = HiveFormat.fromString(ConfigUtils.getOptionString(conf, PUBLISH_FORMAT_KEY).getOrElse("parquet"))
+
     StandardizationConfig(
       pramenVersion,
       timezoneId,
@@ -75,6 +80,7 @@ object StandardizationConfig {
       ConfigUtils.getOptionString(conf, PUBLISH_PARTITION_PATTERN_KEY).getOrElse(DEFAULT_PUBLISH_PARTITION_PATTERN),
       ConfigUtils.getOptionInt(conf, RECORDS_PER_PARTITION),
       ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true),
+      publishFormat,
       hiveJdbcConfig,
       ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY),
       ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false)
