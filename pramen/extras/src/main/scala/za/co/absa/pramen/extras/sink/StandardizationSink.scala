@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
@@ -179,10 +179,16 @@ class StandardizationSink(sinkConfig: Config,
     val publishBasePath = getBasePath(tableName, PUBLISH_BASE_PATH_KEY, options)
     val outputPublishPartitionPath = getPartitionPath(publishBasePath, standardizationConfig.publishPartitionPattern, infoDate, infoVersion)
 
-    writeToPublishFolder(dfToWrite, sourceCount, outputPublishPartitionPath)
+    val publishDf = standardizationConfig.publishFormat match {
+      case HiveFormat.Parquet =>
+        writeToPublishFolderParquet(dfToWrite, sourceCount, outputPublishPartitionPath)
+      case HiveFormat.Delta   =>
+        writeToPublishFolderDelta(dfToWrite, sourceCount, publishBasePath, infoDate, infoVersion)
+      case format             =>
+        throw new IllegalArgumentException(s"Unsupported publish format: ${format.name}")
+    }
 
-    val publishDf = spark.read.parquet(outputPublishPartitionPath.toUri.toString)
-    val publishCount = publishDf.count
+    val publishCount = publishDf.count()
 
     generateInfoFile(sourceCount, rawCount, Option(publishCount), outputPublishPartitionPath, infoDate, jobStart, Some(publishStart))
 
@@ -195,14 +201,14 @@ class StandardizationSink(sinkConfig: Config,
         .withColumn(ENCELADUS_INFO_VERSION_COLUMN, lit(infoVersion))
         .schema
 
-      val paritionBy = Seq(ENCELADUS_INFO_DATE_COLUMN, ENCELADUS_INFO_VERSION_COLUMN)
+      val partitionBy = Seq(ENCELADUS_INFO_DATE_COLUMN, ENCELADUS_INFO_VERSION_COLUMN)
 
       log.info(s"Updating Hive table '$fullTableName'...")
       try {
         hiveHelper.createOrUpdateHiveTable(publishBasePath.toUri.toString,
           HiveFormat.Parquet,
           fullSchema,
-          paritionBy,
+          partitionBy,
           standardizationConfig.hiveDatabase,
           hiveTable)
         (Seq.empty[String], Seq(fullTableName))
@@ -273,15 +279,43 @@ class StandardizationSink(sinkConfig: Config,
       .json(outputPathStr)
   }
 
-  private[extras] def writeToPublishFolder(df: DataFrame,
-                                           recordCount: Long,
-                                           outputPartitionPath: Path): Unit = {
+  private[extras] def writeToPublishFolderParquet(df: DataFrame,
+                                                  recordCount: Long,
+                                                  outputPartitionPath: Path): DataFrame = {
+    implicit val spark: SparkSession = df.sparkSession
+
     val outputPathStr = outputPartitionPath.toUri.toString
-    log.info(s"Saving $recordCount records to the Enceladus publish folder: $outputPathStr")
+    log.info(s"Saving $recordCount records to the Enceladus publish parquet folder: $outputPathStr")
 
     df.write
       .mode(SaveMode.Overwrite)
       .parquet(outputPathStr)
+
+    spark.read.parquet(outputPartitionPath.toUri.toString)
+  }
+
+  private[extras] def writeToPublishFolderDelta(df: DataFrame,
+                                                recordCount: Long,
+                                                outputBasePath: Path,
+                                                infoDate: LocalDate,
+                                                infoVersion: Int): DataFrame = {
+    implicit val spark: SparkSession = df.sparkSession
+
+    log.info(s"Saving $recordCount records to the Enceladus publish delta folder: $outputBasePath")
+
+    df.withColumn(StandardizationConfig.INFO_VERSION_COLUMN, lit(infoVersion))
+      .write
+      .format("delta")
+      .mode(SaveMode.Overwrite)
+      .partitionBy("enceladus_info_date")
+      .option("mergeSchema", "true")
+      .option("replaceWhere", s"${StandardizationConfig.INFO_DATE_COLUMN}='$infoDate'")
+      .save(outputBasePath.toString)
+
+    spark.read
+      .format("delta")
+      .load(outputBasePath.toString)
+      .filter(col(StandardizationConfig.INFO_DATE_COLUMN) === infoDate)
   }
 
   private[extras] def generateInfoFile(sourceCount: Long,
