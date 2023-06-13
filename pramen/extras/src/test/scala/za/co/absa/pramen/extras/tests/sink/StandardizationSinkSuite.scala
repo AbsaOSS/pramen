@@ -85,7 +85,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
 
           assert(sinkResult.recordsSent == 3)
           assert(fsUtils.exists(rawPartitionPath))
-          assert(fsUtils.getFilesRecursive(rawPartitionPath, "*.json").nonEmpty)
+          assert(fsUtils.getFilesRecursive(rawPartitionPath, "*.parquet").nonEmpty)
           assert(fsUtils.exists(publishPartitionPath))
           assert(fsUtils.getFilesRecursive(publishPartitionPath, "*.parquet").nonEmpty)
         }
@@ -104,7 +104,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       }
     }
 
-    "work for publish only" when {
+    "work for publish only to delta format" when {
       var sink: StandardizationSink = null
 
       "constructed from a config" in {

@@ -171,16 +171,16 @@ class StandardizationSink(sinkConfig: Config,
 
     val dfToWrite = repartitionIfNeeded(df, sourceCount)
 
-    val rawCount = if (options.contains(RAW_BASE_PATH_KEY)) {
+    val (rawCount, rawDf) = if (options.contains(RAW_BASE_PATH_KEY)) {
       val rawBasePath = getBasePath(tableName, RAW_BASE_PATH_KEY, options)
       val outputRawPartitionPath = getParquetPartitionPath(rawBasePath, standardizationConfig.rawPartitionPattern, infoDate, infoVersion)
-      writeToRawFolder(dfToWrite, sourceCount, outputRawPartitionPath)
+      val rawDf = writeToRawFolder(dfToWrite, sourceCount, outputRawPartitionPath)
 
-      val rawCount = spark.read.json(outputRawPartitionPath.toUri.toString).count
+      val rawCount = rawDf.count
       generateInfoFile(sourceCount, rawCount, None, outputRawPartitionPath, infoDate, jobStart, None)
-      rawCount
+      (rawCount, rawDf)
     } else {
-      sourceCount
+      (sourceCount, dfToWrite)
     }
 
     val publishStart = Instant.now()
@@ -190,9 +190,9 @@ class StandardizationSink(sinkConfig: Config,
 
     val publishDf = standardizationConfig.publishFormat match {
       case HiveFormat.Parquet =>
-        writeToPublishFolderParquet(dfToWrite, sourceCount, outputPublishPartitionPath)
+        writeToPublishFolderParquet(rawDf, sourceCount, outputPublishPartitionPath)
       case HiveFormat.Delta   =>
-        writeToPublishFolderDelta(dfToWrite, sourceCount, publishBasePath, infoDate, infoVersion)
+        writeToPublishFolderDelta(rawDf, sourceCount, publishBasePath, infoDate, infoVersion)
       case format             =>
         throw new IllegalArgumentException(s"Unsupported publish format: ${format.name}")
     }
@@ -279,13 +279,15 @@ class StandardizationSink(sinkConfig: Config,
 
   private[extras] def writeToRawFolder(df: DataFrame,
                                        recordCount: Long,
-                                       outputPartitionPath: Path): Unit = {
+                                       outputPartitionPath: Path): DataFrame = {
     val outputPathStr = outputPartitionPath.toUri.toString
     log.info(s"Saving $recordCount records to the Enceladus raw folder: $outputPathStr")
 
     df.write
       .mode(SaveMode.Overwrite)
-      .json(outputPathStr)
+      .parquet(outputPathStr)
+
+    df.sparkSession.read.parquet(outputPathStr)
   }
 
   private[extras] def writeToPublishFolderParquet(df: DataFrame,
