@@ -108,6 +108,21 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       var sink: StandardizationSink = null
 
       "constructed from a config" in {
+        val conf = ConfigFactory.parseString(
+          s"""info.file {
+             |  generate = true
+             |
+             |  source.application = "MyApp"
+             |  country = "Africa"
+             |  history.type = "Snapshot"
+             |  timestamp.format = "dd-MM-yyyy HH:mm:ss Z"
+             |  date.format = "yyyy-MM-dd"
+             |}
+             |
+             |hive.api = "spark_catalog"
+             |publish.format = "delta"
+             |""".stripMargin)
+
         sink = StandardizationSink.apply(conf, "", spark)
 
         assert(sink.isInstanceOf[StandardizationSink])
@@ -132,6 +147,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
           assert(sinkResult.recordsSent == 3)
           assert(fsUtils.exists(publishPartitionPath))
           assert(fsUtils.getFilesRecursive(publishPartitionPath, "*.parquet").nonEmpty)
+          assert(fsUtils.getFilesRecursive(publishPath, "*", includeHiddenFiles = true).exists(_.toString.contains("_delta_log")))
         }
 
         "info file should be as expected" in {

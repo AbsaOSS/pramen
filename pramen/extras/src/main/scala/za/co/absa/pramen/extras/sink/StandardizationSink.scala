@@ -32,6 +32,7 @@ import za.co.absa.pramen.core.utils.hive._
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.extras.utils.PartitionUtils
 
+import java.sql.Date
 import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 
@@ -56,8 +57,16 @@ import scala.util.control.NonFatal
   *    # (optional) Repartition te dataframe according to the number of records per partition
   *    records.per.partition = 1000000
   *
-  *    # (optional) A hive database to use for creating/repairing Hive tables
-  *    hive.database = mydb
+  *    hive = {
+  *      # (optional) A hive database to use for creating/repairing Hive tables
+  *      database = mydb
+  *
+  *      # For parquet:
+  *      api = "sql"
+  *      # For delta:
+  *      # api = "spark_catalog"
+  *      ignore.failures = false
+  *    }
   *
   *    # (optional) Set timezone for info file fields
   *    timezone = "Africa/Johannesburg"
@@ -164,7 +173,7 @@ class StandardizationSink(sinkConfig: Config,
 
     val rawCount = if (options.contains(RAW_BASE_PATH_KEY)) {
       val rawBasePath = getBasePath(tableName, RAW_BASE_PATH_KEY, options)
-      val outputRawPartitionPath = getPartitionPath(rawBasePath, standardizationConfig.rawPartitionPattern, infoDate, infoVersion)
+      val outputRawPartitionPath = getParquetPartitionPath(rawBasePath, standardizationConfig.rawPartitionPattern, infoDate, infoVersion)
       writeToRawFolder(dfToWrite, sourceCount, outputRawPartitionPath)
 
       val rawCount = spark.read.json(outputRawPartitionPath.toUri.toString).count
@@ -177,7 +186,7 @@ class StandardizationSink(sinkConfig: Config,
     val publishStart = Instant.now()
 
     val publishBasePath = getBasePath(tableName, PUBLISH_BASE_PATH_KEY, options)
-    val outputPublishPartitionPath = getPartitionPath(publishBasePath, standardizationConfig.publishPartitionPattern, infoDate, infoVersion)
+    val outputPublishPartitionPath = getParquetPartitionPath(publishBasePath, standardizationConfig.publishPartitionPattern, infoDate, infoVersion)
 
     val publishDf = standardizationConfig.publishFormat match {
       case HiveFormat.Parquet =>
@@ -249,10 +258,10 @@ class StandardizationSink(sinkConfig: Config,
     new Path(options(configKey))
   }
 
-  private[extras] def getPartitionPath(basePath: Path,
-                                       partitionPattern: String,
-                                       infoDate: LocalDate,
-                                       infoVersion: Int): Path = {
+  private[extras] def getParquetPartitionPath(basePath: Path,
+                                              partitionPattern: String,
+                                              infoDate: LocalDate,
+                                              infoVersion: Int): Path = {
     val partition = PartitionUtils.unpackCustomPartitionPattern(partitionPattern, StandardizationConfig.INFO_DATE_COLUMN, infoDate, infoVersion)
     new Path(basePath, partition)
   }
@@ -303,19 +312,20 @@ class StandardizationSink(sinkConfig: Config,
 
     log.info(s"Saving $recordCount records to the Enceladus publish delta folder: $outputBasePath")
 
-    df.withColumn(StandardizationConfig.INFO_VERSION_COLUMN, lit(infoVersion))
+    df.withColumn(StandardizationConfig.INFO_DATE_COLUMN, lit(Date.valueOf(infoDate)))
+      .withColumn(StandardizationConfig.INFO_VERSION_COLUMN, lit(infoVersion))
       .write
       .format("delta")
       .mode(SaveMode.Overwrite)
-      .partitionBy("enceladus_info_date")
+      .partitionBy(StandardizationConfig.INFO_DATE_COLUMN, StandardizationConfig.INFO_VERSION_COLUMN)
       .option("mergeSchema", "true")
-      .option("replaceWhere", s"${StandardizationConfig.INFO_DATE_COLUMN}='$infoDate'")
+      .option("replaceWhere", s"${StandardizationConfig.INFO_DATE_COLUMN}='$infoDate' AND ${StandardizationConfig.INFO_VERSION_COLUMN}=$infoVersion")
       .save(outputBasePath.toString)
 
     spark.read
       .format("delta")
       .load(outputBasePath.toString)
-      .filter(col(StandardizationConfig.INFO_DATE_COLUMN) === infoDate)
+      .filter(col(StandardizationConfig.INFO_DATE_COLUMN) === Date.valueOf(infoDate))
   }
 
   private[extras] def generateInfoFile(sourceCount: Long,
