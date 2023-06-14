@@ -28,7 +28,11 @@ trait SparkTestBase {
     .master("local[2]")
     .appName("test")
     .config("spark.ui.enabled", "false")
-    .config("spark.driver.bindAddress","127.0.0.1")
+    .config("spark.driver.bindAddress", "127.0.0.1")
     .config("spark.driver.host", "127.0.0.1")
+    .config("spark.sql.session.timeZone", "Africa/Johannesburg")
+    .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
+    .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+    .config("spark.sql.shuffle.partitions", "1")
     .getOrCreate()
 }
