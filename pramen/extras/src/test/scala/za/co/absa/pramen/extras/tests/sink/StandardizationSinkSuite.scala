@@ -161,6 +161,60 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       }
     }
 
+    "work for publish only with custom partition template" when {
+      var sink: StandardizationSink = null
+
+      "constructed from a config" in {
+        val conf = ConfigFactory.parseString(
+          s"""info.file {
+             |  generate = true
+             |
+             |  source.application = "MyApp"
+             |  country = "Africa"
+             |  history.type = "Snapshot"
+             |  timestamp.format = "dd-MM-yyyy HH:mm:ss Z"
+             |  date.format = "yyyy-MM-dd"
+             |}
+             |publish.partition.pattern = "enceladus_info_date={year}-{month}-{day}"
+             |publish.format = "parquet"
+             |""".stripMargin)
+
+        sink = StandardizationSink.apply(conf, "", spark)
+
+        assert(sink.isInstanceOf[StandardizationSink])
+      }
+
+      withTempDirectory("std_sink") { tempDir =>
+        val publishPath = new Path(tempDir, "publish")
+        val publishPartitionPath = new Path(publishPath, s"enceladus_info_date=$infoDate")
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        "send sends data to the target directory" in {
+          val sinkResult = sink.send(exampleDf,
+            "dummy_table",
+            null,
+            infoDate,
+            Map(
+              "publish.base.path" -> publishPath.toUri.toString,
+              "info.version" -> "1"
+            )
+          )
+
+          assert(sinkResult.recordsSent == 3)
+          assert(fsUtils.exists(publishPartitionPath))
+          assert(fsUtils.getFilesRecursive(publishPartitionPath, "*.parquet").nonEmpty)
+        }
+
+        "info file should be as expected" in {
+          val infoFileContents = Files.readAllLines(Paths.get(publishPartitionPath.toString, "_INFO")).toArray.mkString("\n")
+
+          assert(infoFileContents.contains(""""software" : "pramen","""))
+          assert(infoFileContents.contains(""""controlValue" : "3""""))
+          assert(infoFileContents.contains(""""informationDate" : "2022-02-18","""))
+        }
+      }
+    }
+
     "getHiveRepairEnceladusQuery()" should {
       "return a valid query when a db is setup" in {
         val updatedConf = conf.

@@ -36,7 +36,10 @@ case class StandardizationConfig(
                                   publishFormat: HiveFormat,
                                   hiveJdbcConfig: Option[JdbcConfig],
                                   hiveDatabase: Option[String],
-                                  hiveIgnoreFailures: Boolean
+                                  hiveIgnoreFailures: Boolean,
+                                  infoDateColumn: String,
+                                  infoDateStringColumn: String,
+                                  infoVersionColumn: String
                                 )
 
 object StandardizationConfig {
@@ -53,12 +56,16 @@ object StandardizationConfig {
   val HIVE_DATABASE_KEY = "hive.database"
   val HIVE_IGNORE_FAILURES_KEY = "hive.ignore.failures"
 
-  val INFO_DATE_COLUMN = "enceladus_info_date"
-  val INFO_DATE_STRING_COLUMN = "enceladus_info_date_string"
-  val INFO_VERSION_COLUMN = "enceladus_info_version"
+  val INFO_DATE_COLUMN_KEY = "info.date.column"
+  val INFO_DATE_STRING_COLUMN_KEY = "info.date.str.column"
+  val INFO_VERSION_COLUMN_KEY = "info.version.column"
+
+  val INFO_DATE_COLUMN_DEFAULT = "enceladus_info_date"
+  val INFO_DATE_STRING_COLUMN_DEFAULT = "enceladus_info_date_string"
+  val INFO_VERSION_COLUMN_DEFAULT = "enceladus_info_version"
 
   val DEFAULT_RAW_PARTITION_PATTERN = "{year}/{month}/{day}/v{version}"
-  val DEFAULT_PUBLISH_PARTITION_PATTERN = s"$INFO_DATE_COLUMN={year}-{month}-{day}/$INFO_VERSION_COLUMN={version}"
+  val DEFAULT_PUBLISH_PARTITION_PATTERN = s"$INFO_DATE_COLUMN_DEFAULT={year}-{month}-{day}/$INFO_VERSION_COLUMN_DEFAULT={version}"
 
   def fromConfig(conf: Config): StandardizationConfig = {
     val pramenVersion = Try {
@@ -76,6 +83,10 @@ object StandardizationConfig {
 
     val publishFormat = HiveFormat.fromString(ConfigUtils.getOptionString(conf, PUBLISH_FORMAT_KEY).getOrElse("parquet"))
 
+    val infoDateColumn = ConfigUtils.getOptionString(conf, INFO_DATE_COLUMN_KEY).getOrElse(INFO_DATE_COLUMN_DEFAULT)
+    val infoDateStringColumn = ConfigUtils.getOptionString(conf, INFO_DATE_STRING_COLUMN_KEY).getOrElse(INFO_DATE_STRING_COLUMN_DEFAULT)
+    val infoVersionColumn = ConfigUtils.getOptionString(conf, INFO_VERSION_COLUMN_KEY).getOrElse(INFO_VERSION_COLUMN_DEFAULT)
+
     StandardizationConfig(
       pramenVersion,
       timezoneId,
@@ -87,7 +98,10 @@ object StandardizationConfig {
       publishFormat,
       hiveJdbcConfig,
       ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY),
-      ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false)
+      ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false),
+      infoDateColumn,
+      infoDateStringColumn,
+      infoVersionColumn
     )
   }
 }
