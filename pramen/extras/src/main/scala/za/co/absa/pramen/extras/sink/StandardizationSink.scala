@@ -19,7 +19,7 @@ package za.co.absa.pramen.extras.sink
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, lit}
-import org.apache.spark.sql.types.DateType
+import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
@@ -56,6 +56,11 @@ import scala.util.control.NonFatal
   *
   *    # (optional) Repartition te dataframe according to the number of records per partition
   *    records.per.partition = 1000000
+  *
+  *    # Enceladus additional columns
+  *    info.date.column = "enceladus_info_date"
+  *    info.date.str.column = "enceladus_info_date_string"
+  *    info.version.column = "enceladus_info_version"
   *
   *    hive = {
   *      # (optional) A hive database to use for creating/repairing Hive tables
@@ -152,6 +157,12 @@ class StandardizationSink(sinkConfig: Config,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  private val partitionBy = if (standardizationConfig.publishPartitionPattern.contains(standardizationConfig.infoVersionColumn)) {
+    Seq(standardizationConfig.infoDateColumn, standardizationConfig.infoVersionColumn)
+  } else {
+    Seq(standardizationConfig.infoDateColumn)
+  }
+
   override val config: Config = sinkConfig
 
   override def connect(): Unit = {}
@@ -169,12 +180,13 @@ class StandardizationSink(sinkConfig: Config,
 
     val sourceCount = df.count()
 
-    val dfToWrite = repartitionIfNeeded(df, sourceCount)
+    val dfToWrite = addExtraFields(repartitionIfNeeded(df, sourceCount), infoDate, infoVersion)
 
     val (rawCount, rawDf) = if (options.contains(RAW_BASE_PATH_KEY)) {
       val rawBasePath = getBasePath(tableName, RAW_BASE_PATH_KEY, options)
       val outputRawPartitionPath = getParquetPartitionPath(rawBasePath, standardizationConfig.rawPartitionPattern, infoDate, infoVersion)
-      val rawDf = writeToRawFolder(dfToWrite, sourceCount, outputRawPartitionPath)
+      val rawDfToWrite = dfToWrite.drop(partitionBy: _*)
+      val rawDf = writeToRawFolder(rawDfToWrite, sourceCount, outputRawPartitionPath)
 
       val rawCount = rawDf.count
       generateInfoFile(sourceCount, rawCount, None, outputRawPartitionPath, infoDate, jobStart, None)
@@ -190,7 +202,8 @@ class StandardizationSink(sinkConfig: Config,
 
     val publishDf = standardizationConfig.publishFormat match {
       case HiveFormat.Parquet =>
-        writeToPublishFolderParquet(rawDf, sourceCount, outputPublishPartitionPath)
+        val publishDfToWrite = rawDf.drop(partitionBy: _*)
+        writeToPublishFolderParquet(publishDfToWrite, sourceCount, outputPublishPartitionPath)
       case HiveFormat.Delta   =>
         writeToPublishFolderDelta(rawDf, sourceCount, publishBasePath, infoDate, infoVersion)
       case format             =>
@@ -206,16 +219,12 @@ class StandardizationSink(sinkConfig: Config,
       val fullTableName = HiveHelper.getFullTable(standardizationConfig.hiveDatabase, hiveTable)
 
       // Generating schema based on the latest ingested partition
-      val fullSchema = publishDf.withColumn(ENCELADUS_INFO_DATE_COLUMN, lit(infoDate.toString).cast(DateType))
-        .withColumn(ENCELADUS_INFO_VERSION_COLUMN, lit(infoVersion))
-        .schema
-
-      val partitionBy = Seq(ENCELADUS_INFO_DATE_COLUMN, ENCELADUS_INFO_VERSION_COLUMN)
+      val fullSchema = addExtraFields(publishDf, infoDate, infoVersion).schema
 
       log.info(s"Updating Hive table '$fullTableName'...")
       try {
         hiveHelper.createOrUpdateHiveTable(publishBasePath.toUri.toString,
-          HiveFormat.Parquet,
+          standardizationConfig.publishFormat,
           fullSchema,
           partitionBy,
           standardizationConfig.hiveDatabase,
@@ -262,7 +271,7 @@ class StandardizationSink(sinkConfig: Config,
                                               partitionPattern: String,
                                               infoDate: LocalDate,
                                               infoVersion: Int): Path = {
-    val partition = PartitionUtils.unpackCustomPartitionPattern(partitionPattern, StandardizationConfig.INFO_DATE_COLUMN, infoDate, infoVersion)
+    val partition = PartitionUtils.unpackCustomPartitionPattern(partitionPattern, standardizationConfig.infoDateColumn, infoDate, infoVersion)
     new Path(basePath, partition)
   }
 
@@ -318,20 +327,39 @@ class StandardizationSink(sinkConfig: Config,
 
     log.info(s"Saving $recordCount records to the Enceladus publish delta folder: $outputBasePath")
 
-    df.withColumn(StandardizationConfig.INFO_DATE_COLUMN, lit(Date.valueOf(infoDate)))
-      .withColumn(StandardizationConfig.INFO_VERSION_COLUMN, lit(infoVersion))
+    // Publish layer can be partitioned by either enceladus_info_date & enceladus_info_version or just by enceladus_info_date
+    val (replaceWhere, readFilter) = if (standardizationConfig.publishPartitionPattern.contains(standardizationConfig.infoVersionColumn)) {
+      val replaceWhere = s"${standardizationConfig.infoDateColumn}='$infoDate' AND ${standardizationConfig.infoVersionColumn}=$infoVersion"
+
+      val filter = col(standardizationConfig.infoDateColumn) === Date.valueOf(infoDate) && col(standardizationConfig.infoVersionColumn) === infoVersion
+      (replaceWhere, filter)
+    } else {
+      val replaceWhere = s"${standardizationConfig.infoDateColumn}='$infoDate'"
+
+      val filter = col(standardizationConfig.infoDateColumn) === Date.valueOf(infoDate)
+
+      (replaceWhere, filter)
+    }
+
+    addExtraFields(df, infoDate, infoVersion)
       .write
       .format("delta")
       .mode(SaveMode.Overwrite)
-      .partitionBy(StandardizationConfig.INFO_DATE_COLUMN, StandardizationConfig.INFO_VERSION_COLUMN)
+      .partitionBy(partitionBy: _*)
       .option("mergeSchema", "true")
-      .option("replaceWhere", s"${StandardizationConfig.INFO_DATE_COLUMN}='$infoDate' AND ${StandardizationConfig.INFO_VERSION_COLUMN}=$infoVersion")
+      .option("replaceWhere", replaceWhere)
       .save(outputBasePath.toString)
 
     spark.read
       .format("delta")
       .load(outputBasePath.toString)
-      .filter(col(StandardizationConfig.INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      .filter(readFilter)
+  }
+
+  private[extras] def addExtraFields(df: DataFrame, infoDate: LocalDate, infoVersion: Int): DataFrame = {
+    df.withColumn(standardizationConfig.infoDateStringColumn, lit(Date.valueOf(infoDate)).cast(StringType))
+      .withColumn(standardizationConfig.infoDateColumn, lit(Date.valueOf(infoDate)))
+      .withColumn(standardizationConfig.infoVersionColumn, lit(infoVersion))
   }
 
   private[extras] def generateInfoFile(sourceCount: Long,
