@@ -336,10 +336,12 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
         """[ {
           |  "a" : "B",
           |  "b" : 2,
+          |  "INFO_DATE" : "2022-02-18",
           |  "c" : "2"
           |}, {
           |  "a" : "C",
           |  "b" : 3,
+          |  "INFO_DATE" : "2022-02-18",
           |  "c" : "3"
           |} ]""".stripMargin
 

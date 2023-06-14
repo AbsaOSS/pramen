@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.runner.task
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Reason, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
@@ -36,6 +37,7 @@ import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.hive.HiveHelper
 
+import java.sql.Date
 import java.time.{Instant, LocalDate}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -245,7 +247,13 @@ abstract class TaskRunnerBase(conf: Config,
         case None => runResult.data
       }
 
-      val postProcessed = task.job.postProcessing(dfWithTimestamp, task.infoDate, conf)
+      val dfWithInfoDate = if (dfWithTimestamp.schema.exists(f => f.name.equals(task.job.outputTable.infoDateColumn))) {
+        dfWithTimestamp
+      } else {
+        dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
+      }
+
+      val postProcessed = task.job.postProcessing(dfWithInfoDate, task.infoDate, conf)
 
       val dfTransformed = applyFilters(
         applyTransformations(postProcessed, task.job.operation.schemaTransformations),
