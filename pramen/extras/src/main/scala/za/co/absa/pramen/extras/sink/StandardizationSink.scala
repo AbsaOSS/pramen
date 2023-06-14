@@ -285,9 +285,13 @@ class StandardizationSink(sinkConfig: Config,
 
     df.write
       .mode(SaveMode.Overwrite)
-      .parquet(outputPathStr)
+      .format(standardizationConfig.rawFormat)
+      .save(outputPathStr)
 
-    df.sparkSession.read.parquet(outputPathStr)
+    df.sparkSession
+      .read
+      .format(standardizationConfig.rawFormat)
+      .load(outputPathStr)
   }
 
   private[extras] def writeToPublishFolderParquet(df: DataFrame,
