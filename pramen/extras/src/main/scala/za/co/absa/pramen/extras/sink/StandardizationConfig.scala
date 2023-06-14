@@ -28,6 +28,7 @@ import scala.util.Try
 case class StandardizationConfig(
                                   pramenVersion: String,
                                   timezoneId: ZoneId,
+                                  rawFormat: String,
                                   rawPartitionPattern: String,
                                   publishPartitionPattern: String,
                                   recordsPerPartition: Option[Int],
@@ -39,6 +40,8 @@ case class StandardizationConfig(
                                 )
 
 object StandardizationConfig {
+  val RAW_FORMAT_KEY = "raw.format"
+  val RAW_FORMAT_DEFAULT = "parquet"
   val RAW_PARTITION_PATTERN_KEY = "raw.partition.pattern"
   val PUBLISH_PARTITION_PATTERN_KEY = "publish.partition.pattern"
   val PUBLISH_FORMAT_KEY = "publish.format"
@@ -76,6 +79,7 @@ object StandardizationConfig {
     StandardizationConfig(
       pramenVersion,
       timezoneId,
+      ConfigUtils.getOptionString(conf, RAW_FORMAT_KEY).getOrElse(RAW_FORMAT_DEFAULT),
       ConfigUtils.getOptionString(conf, RAW_PARTITION_PATTERN_KEY).getOrElse(DEFAULT_RAW_PARTITION_PATTERN),
       ConfigUtils.getOptionString(conf, PUBLISH_PARTITION_PATTERN_KEY).getOrElse(DEFAULT_PUBLISH_PARTITION_PATTERN),
       ConfigUtils.getOptionInt(conf, RECORDS_PER_PARTITION),
