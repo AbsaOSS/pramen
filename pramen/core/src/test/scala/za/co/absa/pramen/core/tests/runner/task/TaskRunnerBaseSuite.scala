@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.{Reason, TaskNotification, TaskStatus}
 import za.co.absa.pramen.core
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -33,6 +33,7 @@ import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.journal.JournalMock
 import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock
+import za.co.absa.pramen.core.mocks.notify.NotificationTargetSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, NotRan, Skipped, Succeeded}
@@ -54,7 +55,9 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
   "runJobTasks" should {
     "run multiple successful jobs parallel execution" in {
       val now = Instant.now()
-      val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf))
+      val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskNotification) => ())
+      val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
+      val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), jobNotificationTargets = Seq(jobNotificationTarget))
 
       val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -74,6 +77,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.length == 2)
       assert(result.head.runStatus.isInstanceOf[Succeeded])
       assert(result(1).runStatus.isInstanceOf[Succeeded])
+      assert(notificationTarget.notificationsSent.length == 2)
+      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[TaskStatus.Succeeded])
 
       val journalEntries = journal.getEntries(now, now.plusSeconds(30))
 
@@ -142,7 +147,9 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
   "run multiple failure jobs sequential execution" in {
     val now = Instant.now()
-    val (runner, _, journal, state, tasks) = getUseCase(allowParallel = false, runFunction = () => throw new IllegalStateException("Test exception"))
+    val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskNotification) => ())
+    val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
+    val (runner, _, journal, state, tasks) = getUseCase(allowParallel = false, runFunction = () => throw new IllegalStateException("Test exception"), jobNotificationTargets = Seq(jobNotificationTarget))
 
     val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
 
@@ -167,6 +174,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     assert(journalEntries.length == 2)
     assert(journalEntries.head.status == "Failed")
+    assert(notificationTarget.notificationsSent.length == 2)
+    assert(notificationTarget.notificationsSent.head.status.isInstanceOf[TaskStatus.Failed])
   }
 
   "preRunCheck" when {
@@ -239,6 +248,16 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.left.get.dependencyWarnings.head.table == "table1")
     }
 
+    "insufficient data" in {
+      val (runner, _, _, _, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.InsufficientData(100, 200, None), None, Nil, Nil))
+
+      val result = runner.preRunCheck(task.head, started)
+
+      assert(result.isLeft)
+      assert(result.left.get.runStatus == RunStatus.InsufficientData(100, 200, None))
+      assert(result.left.get.dependencyWarnings.isEmpty)
+    }
+
     "job already ran" when {
       "normal run" in {
         val (runner, _, _, state, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(100), Nil, Nil))
@@ -268,6 +287,15 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       }
     }
 
+    "skipped" in {
+      val (runner, _, _, _, task) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.Skip("test"), None, Nil, Nil))
+
+      val result = runner.preRunCheck(task.head, started)
+
+      assert(result.isLeft)
+      assert(result.left.get.runStatus == Skipped("test"))
+    }
+
     "job has failed dependencies" in {
       val depFailure = DependencyFailure(MetastoreDependency("table1" :: Nil, "@infoDate", None, triggerUpdates = true, isOptional = false, isPassive = false), Nil, "table1" :: Nil, "2022-02-18 - 2022-02-19" :: Nil)
       val (runner, _, _, state, tasks) = getUseCase(preRunCheckFunction = () => JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure = true, depFailure :: Nil), None, Nil, Nil))
@@ -287,6 +315,15 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.isLeft)
       assert(result.left.get.runStatus == RunStatus.FailedDependencies(isFailure = false, depFailure :: Nil))
     }
+
+    "job had failed" in {
+      val (runner, _, _, _, tasks) = getUseCase(preRunCheckFunction = () => throw new IllegalStateException("test exception"))
+
+      val result = runner.preRunCheck(tasks.head, started)
+
+      assert(result.isLeft)
+      assert(result.left.get.runStatus.isInstanceOf[RunStatus.ValidationFailed])
+    }
   }
 
   "validate" when {
@@ -298,6 +335,16 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val result = runner.validate(task.head, started)
 
       assert(result.isRight)
+    }
+
+    "job is ready with warnings ready" in {
+      val (runner, _, _, _, task) = getUseCase(validationFunction = () => Reason.Warning(Seq("dummy warning")))
+
+      val result = runner.validate(task.head, started)
+
+      assert(result.isRight)
+      assert(result.right.get.status == JobPreRunStatus.Ready)
+      assert(result.right.get.warnings.contains("dummy warning"))
     }
 
     "job not ready" in {
@@ -327,6 +374,15 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       assert(result.isLeft)
       assert(result.left.get.runStatus == RunStatus.ValidationFailed(ex))
+    }
+
+    "pass the failure from pre-run check" in {
+      val (runner, _, _, _, tasks) = getUseCase(preRunCheckFunction = () => throw new IllegalStateException("test exception"))
+
+      val result = runner.validate(tasks.head, started)
+
+      assert(result.isLeft)
+      assert(result.left.get.runStatus.isInstanceOf[RunStatus.ValidationFailed])
     }
   }
 
@@ -476,7 +532,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  isRerun: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
                  allowParallel: Boolean = true,
-                 hiveTable: Option[String] = None
+                 hiveTable: Option[String] = None,
+                 jobNotificationTargets: Seq[JobNotificationTarget] = Nil
                 ): (TaskRunnerBase, Bookkeeper, Journal, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
@@ -501,7 +558,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       operationDef = operationDef,
       allowParallel = allowParallel,
       saveStats = stats,
-      hiveTable = hiveTable)
+      hiveTable = hiveTable,
+      jobNotificationTargets = jobNotificationTargets)
 
     val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
