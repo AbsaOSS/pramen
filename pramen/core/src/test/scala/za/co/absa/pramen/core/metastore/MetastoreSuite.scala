@@ -390,12 +390,16 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
          |pramen.track.days = 4
          |pramen.undercover = $undercover
          |pramen.metastore {
-         |  tables = [
+         |  tables.1 = [
          |   {
          |     name = "table1"
          |     format = "parquet"
          |     path = "$tempDirEscaped/table1"
-         |   },
+         |   }
+         | ]
+         |}
+         |pramen.metastore {
+         |  tables.2 = [
          |   {
          |     name = "table2"
          |     format = "parquet"

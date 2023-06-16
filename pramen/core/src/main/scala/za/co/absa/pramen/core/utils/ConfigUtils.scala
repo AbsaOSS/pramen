@@ -71,8 +71,54 @@ object ConfigUtils {
     }
   }
 
+  /**
+    * Parses an array of objects and returns a sequence of Config objects.
+    * If the path does not exist, returns an empty Seq.
+    * {{{
+    *   my.path = [
+    *     { ... },
+    *     { ... }
+    *   ]
+    * }}}
+    *
+    * The above example is similar to the behavior of `Config.getConfigList(path)`
+    *
+    * If the path contains named subkeys, they get merged into a single list, e.g.:
+    * {{{
+    *   my.path.abc = [
+    *     { ... },
+    *     { ... }
+    *   ]
+    *   my.path.def = [
+    *     { ... },
+    *     { ... }
+    *   ]
+    * }}}
+    *
+    * In the above example the result will be 4 objects by mergins 'abc' and 'def' nodes.
+    *
+    * @param conf The configuration object.
+    * @param path The path to the array in the configuration tree.
+    * @return The sequence of Config objects corresponding to elements on the array.
+    */
   def getOptionConfigList(conf: Config, path: String): Seq[Config] = {
     if (conf.hasPath(path)) {
+      // The path should contain either
+      // my.path = [
+      //   { ... },
+      //   { ... }
+      // ]
+      // or
+      // my.path.abc = = [
+      //   { ... },
+      //   { ... }
+      // ]
+      // my.path.def = = [
+      //   { ... },
+      //   { ... }
+      // ]
+      // e.g - either an array of Object or an object that has subkeys of 'abc' and 'def'.
+      // There is no way to check it in advance, so the exception handling is used in this case.
       try {
         val subArrays = conf.getObject(path).keySet().toArray
 
