@@ -71,6 +71,24 @@ object ConfigUtils {
     }
   }
 
+  def getOptionConfigList(conf: Config, path: String): Seq[Config] = {
+    if (conf.hasPath(path)) {
+      try {
+        val subArrays = conf.getObject(path).keySet().toArray
+
+        subArrays.flatMap(key => {
+          val subPath = s"$path.$key"
+          conf.getConfigList(subPath).asScala.toSeq
+        }).toSeq
+      } catch {
+        case _: Throwable =>
+          conf.getConfigList(path).asScala.toSeq
+      }
+    } else {
+      Seq.empty[Config]
+    }
+  }
+
   def getDate(conf: Config, path: String, format: String): LocalDate = {
     val dateString = conf.getString(path)
     val fmt = DateTimeFormatter.ofPattern(format)

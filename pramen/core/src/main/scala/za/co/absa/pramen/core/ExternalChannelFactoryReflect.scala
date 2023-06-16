@@ -19,9 +19,8 @@ package za.co.absa.pramen.core
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory}
-import za.co.absa.pramen.core.utils.ClassLoaderUtils
+import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
@@ -54,7 +53,7 @@ object ExternalChannelFactoryReflect {
                                                                           (implicit spark: SparkSession): T = {
     validateConfig(conf, arrayPath, channelType)
 
-    val srcConfig = conf.getConfigList(arrayPath).asScala
+    val srcConfig = ConfigUtils.getOptionConfigList(conf, arrayPath)
     val src1Config = srcConfig.zipWithIndex
       .find { case (cfg, _) => cfg.hasPath(NAME_KEY) && cfg.getString(NAME_KEY).equalsIgnoreCase(name) }
 
@@ -73,7 +72,7 @@ object ExternalChannelFactoryReflect {
   def validateConfig(conf: Config,
                      arrayPath: String,
                      channelType: String): Unit = {
-    val channelConfigs = conf.getConfigList(arrayPath).asScala
+    val channelConfigs = ConfigUtils.getOptionConfigList(conf, arrayPath)
 
     val emptyNameChannelsCnt = channelConfigs.filterNot(cfg => cfg.hasPath(NAME_KEY)).size
     val emptyFactoryClassesCnt = channelConfigs.filterNot(cfg => cfg.hasPath(FACTORY_CLASS_KEY)).size

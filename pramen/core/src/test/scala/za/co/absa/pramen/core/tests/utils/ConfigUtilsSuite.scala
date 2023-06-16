@@ -107,6 +107,78 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
     }
   }
 
+  "getOptionConfigList" should {
+    "return an empty seq if the key not found" in {
+      val v = ConfigUtils.getOptionConfigList(testConfig, "mytest.array.bogus")
+      assert(v.isEmpty)
+    }
+
+    "return a seq of config values for a single object array" in {
+      val configList = ConfigUtils.getOptionConfigList(testConfig, "mytest.object.array")
+
+      assert(configList.length == 3)
+      assert(configList.head.getString("name") == "a")
+      assert(configList(1).getString("name") == "b")
+      assert(configList(2).getString("name") == "c")
+    }
+
+    "return a seq of config values for multiple object arrays" in {
+      val conf1 = ConfigFactory.parseString(
+        """my.array.1 = [
+          |  { name = "a", id = 1 },
+          |  { name = "b", id = 2 },
+          |  { name = "c", id = 3 }
+          |]
+          |""".stripMargin)
+      val conf2 = ConfigFactory.parseString(
+        """my.array.2 = [
+          |  { name = "d", id = 4 },
+          |  { name = "e", id = 5 },
+          |  { name = "f", id = 6 }
+          |]
+          |""".stripMargin)
+      val conf3 = ConfigFactory.parseString(
+        """my.array.3 = [
+          |  { name = "g", id = 7 },
+          |  { name = "h", id = 8 },
+          |  { name = "i", id = 9 }
+          |]
+          |""".stripMargin)
+
+      // Even with the gap list or a non-numeric section, will not be skipped
+      val conf4 = ConfigFactory.parseString(
+        """my.array.abs = [
+          |  { name = "q", id = 10 }
+          |]
+          |""".stripMargin)
+
+      val configList = ConfigUtils.getOptionConfigList(conf1.withFallback(conf2).withFallback(conf3).withFallback(conf4), "my.array")
+
+      assert(configList.length == 10)
+      assert(configList.head.getString("name") == "a")
+      assert(configList(1).getString("name") == "b")
+      assert(configList(2).getString("name") == "c")
+      assert(configList(3).getString("name") == "d")
+      assert(configList(4).getString("name") == "e")
+      assert(configList(5).getString("name") == "f")
+      assert(configList(6).getString("name") == "g")
+      assert(configList(7).getString("name") == "h")
+      assert(configList(8).getString("name") == "i")
+      assert(configList(9).getString("name") == "q")
+
+      assert(configList.head.getInt("id") == 1)
+      assert(configList(1).getInt("id") == 2)
+      assert(configList(2).getInt("id") == 3)
+      assert(configList(3).getInt("id") == 4)
+      assert(configList(4).getInt("id") == 5)
+      assert(configList(5).getInt("id") == 6)
+      assert(configList(6).getInt("id") == 7)
+      assert(configList(7).getInt("id") == 8)
+      assert(configList(8).getInt("id") == 9)
+      assert(configList(9).getInt("id") == 10)
+    }
+  }
+
   "getDate" should {
     "return a date value when a date field is specified" in {
       val v = ConfigUtils.getDate(testConfig, "mytest.date.value", dateFormat)
