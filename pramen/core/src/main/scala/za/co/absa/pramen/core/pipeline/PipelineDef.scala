@@ -19,8 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.EXPECTED_DELAY_DAYS
-
-import scala.collection.JavaConverters._
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class PipelineDef(
                         name: String,
@@ -37,8 +36,7 @@ object PipelineDef {
     val defaultDelayDays = conf.getInt(EXPECTED_DELAY_DAYS)
     val name = conf.getString(PIPELINE_NAME_KEY)
     val environment = conf.getString(ENVIRONMENT_NAME)
-    val operations = conf.getConfigList(OPERATIONS_KEY)
-      .asScala
+    val operations = ConfigUtils.getOptionConfigList(conf, OPERATIONS_KEY)
       .zipWithIndex
       .flatMap{ case (c, i) => OperationDef.fromConfig(c, conf, infoDateConfig, s"$OPERATIONS_KEY[$i]", defaultDelayDays) }
       .toSeq

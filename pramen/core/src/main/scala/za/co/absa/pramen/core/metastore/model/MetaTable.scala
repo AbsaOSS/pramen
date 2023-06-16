@@ -25,7 +25,6 @@ import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
 
 import java.time.LocalDate
-import scala.collection.JavaConverters.iterableAsScalaIterableConverter
 import scala.util.{Failure, Success, Try}
 
 case class MetaTable(
@@ -62,11 +61,10 @@ object MetaTable {
     val defaultTrackDays = conf.getInt(InfoDateConfig.TRACK_DAYS)
     val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
 
-    val tableConfigs = if (conf.hasPath(key)) {
-      conf.getConfigList(key).asScala
-    } else {
+    val tableConfigs = ConfigUtils.getOptionConfigList(conf, key)
+
+    if (tableConfigs.isEmpty) {
       log.warn(s"Config key '$key' not found. The metastore has no tables. The pipeline can run only if it consists of only transfer operations.")
-      Seq.empty[Config]
     }
 
     val metatables = tableConfigs
