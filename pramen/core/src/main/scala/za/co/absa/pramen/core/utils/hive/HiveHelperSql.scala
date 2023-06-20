@@ -93,7 +93,12 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
   private def getTableDDL(schema: StructType, partitionBy: Seq[String]): String = {
     val partitionColsLower = partitionBy.map(_.toLowerCase())
 
-    StructType(schema.filter(field => !partitionColsLower.contains(field.name.toLowerCase()))).toDDL
+    val nonPartitionFields = schema
+      .filter(field => !partitionColsLower.contains(field.name.toLowerCase()))
+      .filter(field => field.name.trim.nonEmpty)
+
+    StructType(nonPartitionFields).toDDL
+      .replace(" NOT NULL", "")
   }
 
   private def getPartitionDDL(schema: StructType, partitionBy: Seq[String]): String = {
