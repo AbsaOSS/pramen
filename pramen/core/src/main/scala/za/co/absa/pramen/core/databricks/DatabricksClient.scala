@@ -28,17 +28,17 @@ object DatabricksClient {
   val PRAMEN_PY_DATABRICKS_HOST_KEY = "pramen.py.databricks.host"
   val PRAMEN_PY_DATABRICKS_TOKEN_KEY = "pramen.py.databricks.token"
 
-  val PRAMEN_PY_DATABRICKS_CLIENT_TYPE_KEY = "pramen.py.databricks.client.type"
+  def canCreate(conf: Config): Boolean = {
+    val hasHost = conf.hasPath(PRAMEN_PY_DATABRICKS_HOST_KEY)
+    val hasToken = conf.hasPath(PRAMEN_PY_DATABRICKS_TOKEN_KEY)
+
+    hasHost && hasToken
+  }
 
   def fromConfig(conf: Config): DatabricksClient = {
-    val clientType = conf.getString(PRAMEN_PY_DATABRICKS_CLIENT_TYPE_KEY)
+    val host = conf.getString(PRAMEN_PY_DATABRICKS_HOST_KEY)
+    val token = conf.getString(PRAMEN_PY_DATABRICKS_TOKEN_KEY)
 
-    clientType match {
-      case "databricks" => new DatabricksClientImpl(
-          conf.getString(PRAMEN_PY_DATABRICKS_HOST_KEY),
-          conf.getString(PRAMEN_PY_DATABRICKS_TOKEN_KEY)
-      )
-      case "mock" => new DatabricksClientMock()
-    }
+    new DatabricksClientImpl(host, token)
   }
 }

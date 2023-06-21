@@ -21,9 +21,10 @@ import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.Transformer
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
+import za.co.absa.pramen.core.databricks.DatabricksClient
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.notify.NotificationTargetManager
-import za.co.absa.pramen.core.pipeline.OperationSplitter.getNotificationTarget
+import za.co.absa.pramen.core.pipeline.OperationSplitter.{getDatabricksClient, getNotificationTarget}
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
@@ -122,10 +123,12 @@ class OperationSplitter(conf: Config,
       stdOutLogPrefix = "Pramen-Py(out)",
       stdErrLogPrefix = "Pramen-Py(err)")
 
+    val databricksClientOpt = getDatabricksClient(conf)
+
     val notificationTargets = operationDef.notificationTargets
       .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
-    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner))
+    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner, databricksClientOpt))
   }
 
   def createSink(operationDef: OperationDef,
@@ -165,5 +168,14 @@ object OperationSplitter {
     val options = ConfigUtils.getExtraOptions(tableConf, NOTIFICATION_KEY)
     val target = NotificationTargetManager.getByName(targetName, appConf, Option(confOverride))
     JobNotificationTarget(targetName, options, target)
+  }
+
+  private[core] def getDatabricksClient(conf: Config): Option[DatabricksClient] = {
+    if (DatabricksClient.canCreate(conf)) {
+      val client = DatabricksClient.fromConfig(conf)
+      Some(client)
+    } else {
+      None
+    }
   }
 }

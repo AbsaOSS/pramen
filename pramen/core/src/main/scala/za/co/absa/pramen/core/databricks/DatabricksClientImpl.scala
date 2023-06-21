@@ -18,10 +18,8 @@ package za.co.absa.pramen.core.databricks
 
 import org.slf4j.LoggerFactory
 import requests.RequestAuth
-import za.co.absa.pramen.core.databricks.Schema.{RunJobResponse, RunStatusResponse}
-import za.co.absa.pramen.core.utils.JsonUtils
-
-import java.util.Base64
+import za.co.absa.pramen.core.databricks.Responses.{RunJobResponse, RunStatusResponse}
+import za.co.absa.pramen.core.utils.{JsonUtils, StringUtils}
 
 class DatabricksClientImpl(host: String, token: String) extends DatabricksClient {
   import DatabricksClientImpl._
@@ -30,9 +28,11 @@ class DatabricksClientImpl(host: String, token: String) extends DatabricksClient
 
   private val auth = RequestAuth.Bearer(token)
 
+  private val baseUrl = host.stripSuffix("/")
+
   override def createFile(content: String, destination: String, overwrite: Boolean = false): Unit = {
-    val url = getCreateFileUrl(host)
-    val encodedContent = encodeString(content)
+    val url = getCreateFileUrl(baseUrl)
+    val encodedContent = StringUtils.encodeToBase64(content)
 
     val payload = requests.MultiPart(
       requests.MultiItem("path", destination),
@@ -40,11 +40,15 @@ class DatabricksClientImpl(host: String, token: String) extends DatabricksClient
       requests.MultiItem("overwrite", overwrite.toString)
     )
 
-    requests.post(url, data = payload, auth = auth)
+    val response = requests.post(url, data = payload, auth = auth)
+
+    if (response.is4xx) {
+      throw new RuntimeException(s"Failed to create file at $destination: ${response.data}")
+    }
   }
 
   override def runTransientJob(jobDefinition: Map[String, Any]): Unit = {
-    val url = getRunSubmitUrl(host)
+    val url = getRunSubmitUrl(baseUrl)
     val serializedJobDefinition = JsonUtils.asJson(jobDefinition)
 
     val response = requests.post(url, auth = auth, data = serializedJobDefinition)
@@ -53,18 +57,18 @@ class DatabricksClientImpl(host: String, token: String) extends DatabricksClient
       val responseContent = response.data.toString()
       val runStatus = JsonUtils.fromJson[RunJobResponse](responseContent)
 
-      waitForSuccessfulFinish(runStatus.runId)
+      waitForSuccessfulFinish(runStatus.run_id)
     } else {
       throw new RuntimeException(s"Could not submit a run to Databricks. Response: ${response.data.toString()}")
     }
   }
 
-  private def waitForSuccessfulFinish(runId: String): Unit = {
+  private[databricks] def waitForSuccessfulFinish(runId: Long): Unit = {
     var runStatus = getRunStatus(runId)
 
-    while (runStatus.isPending) {
-      log.info(s"Waiting for: ${runStatus.pretty}.")
-      Thread.sleep(5000)
+    while (runStatus.isJobPending) {
+      log.info(s"Waiting for job to finish: ${runStatus.pretty}.")
+      Thread.sleep(JOB_STATUS_SLEEP_MS)
 
       runStatus = getRunStatus(runId)
     }
@@ -74,8 +78,8 @@ class DatabricksClientImpl(host: String, token: String) extends DatabricksClient
     }
   }
 
-  private def getRunStatus(runId: String): RunStatusResponse = {
-    val url = getRunStatusUrl(host, runId)
+  private[databricks] def getRunStatus(runId: Long): RunStatusResponse = {
+    val url = getRunStatusUrl(baseUrl, runId)
     val response = requests.get(url, auth = auth)
 
     val responseContent = response.data.toString()
@@ -84,19 +88,17 @@ class DatabricksClientImpl(host: String, token: String) extends DatabricksClient
 }
 
 object DatabricksClientImpl {
-  private def getCreateFileUrl(host: String): String = {
-    s"$host/api/2.0/dbfs/put"
+  private val JOB_STATUS_SLEEP_MS = 5000
+
+  private[databricks] def getCreateFileUrl(baseUrl: String): String = {
+    s"$baseUrl/api/2.0/dbfs/put"
   }
 
-  private def getRunSubmitUrl(host: String): String = {
-    s"$host/api/2.1/jobs/runs/submit"
+  private[databricks] def getRunSubmitUrl(baseUrl: String): String = {
+    s"$baseUrl/api/2.1/jobs/runs/submit"
   }
 
-  private def getRunStatusUrl(host: String, runId: String): String = {
-    s"$host/api/2.1/jobs/runs/get?run_id=$runId"
-  }
-
-  private def encodeString(string: String) = {
-    Base64.getEncoder.encodeToString(string.getBytes)
+  private[databricks] def getRunStatusUrl(baseUrl: String, runId: Long): String = {
+    s"$baseUrl/api/2.1/jobs/runs/get?run_id=${runId.toString}"
   }
 }

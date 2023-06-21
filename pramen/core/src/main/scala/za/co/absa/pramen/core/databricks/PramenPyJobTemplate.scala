@@ -9,49 +9,52 @@ import java.time.LocalDate
 class PramenPyJobTemplate(config: Config, pythonClass: String, metastoreConfigLocation: String, infoDate: LocalDate) {
   import PramenPyJobTemplate._
 
-  def render(): Map[String, Any] = {
-    createBaseDefinition ++ createNotebookTaskDefinition ++ createClusterDefinition
+  private[databricks] def render(): Map[String, Any] = {
+    val jobConfig = config.getConfig(JOB_KEY)
+    val jobMap = ConfigUtils.convertToMap(jobConfig)
+    val jobWithResolvedVariables = replaceVariablesInMap(jobMap)
+
+    jobWithResolvedVariables
   }
 
-  private def createBaseDefinition: Map[String, Any] = {
-    Map(
-      "run_name" -> s"Pramen-Py $pythonClass ($infoDate)"
-    )
-  }
+  private[databricks] def replaceVariablesInMap(map: Map[String, Any]): Map[String, Any] = {
+    def isNull(x: Any): Boolean = x == null
 
-  private def createClusterDefinition: Map[String, Any] = {
-    if (config.hasPath(EXISTING_CLUSTER_ID_KEY)) {
-      Map(
-        "existing_cluster_id" -> config.getString(EXISTING_CLUSTER_ID_KEY)
-      )
-    } else {
-      val newClusterDefinition = config.getConfig(NEW_CLUSTER_KEY)
-      ConfigUtils.unwrap(newClusterDefinition)
-    }
-  }
-
-  private def createNotebookTaskDefinition: Map[String, Any] = {
-    val notebookTaskDefinition = ConfigUtils.unwrap(config.getConfig(NOTEBOOK_TASK_KEY))
-
-    val baseParameters = notebookTaskDefinition("base_parameters") match {
-      case parameters: Map[String, String] => parameters.mapValues(replaceParameters)
-      case other => other
+    def replaceVariablesInText(text: String): String = {
+      text
+        .replace(PYTHON_CLASS_VAR, pythonClass)
+        .replace(METASTORE_CONFIG_VAR, metastoreConfigLocation)
+        .replace(INFO_DATE_VAR, infoDate.toString)
     }
 
-    notebookTaskDefinition ++ Map("base_paramaters" -> baseParameters)
-  }
+    def replaceVariables(value: Any): Any = {
+      value match {
+        case map: Map[_, _] => map
+          .filterNot(keyVal => isNull(keyVal._2))
+          .mapValues(replaceVariables)
+          .toMap
+        case seq: Seq[_] => seq
+          .map(replaceVariables)
+          .filterNot(isNull)
+          .toList
+        case string: String => replaceVariablesInText(string)
+        case other: Any => other
+      }
+    }
 
-  private def replaceParameters(template: String): String = {
-    template
-      .replace(PYTHON_CLASS_VAR, pythonClass)
-      .replace(METASTORE_CONFIG_VAR, metastoreConfigLocation)
-      .replace(INFO_DATE_VAR, infoDate.toString)
+    map
+      .filterNot(keyVal => isNull(keyVal._2))
+      .mapValues(replaceVariables)
   }
 
 }
 
 object PramenPyJobTemplate {
-  val NEW_CLUSTER_KEY = "pramen.py.databricks.new.cluster"
-  val EXISTING_CLUSTER_ID_KEY = "pramen.py.databricks.existing.cluster.id"
-  val NOTEBOOK_TASK_KEY = "pramen.py.notebook.task"
+  val JOB_KEY = "pramen.py.databricks.job"
+
+  def render(config: Config, pythonClass: String, metastoreConfigLocation: String, infoDate: LocalDate): Map[String, Any] = {
+    val template = new PramenPyJobTemplate(config, pythonClass, metastoreConfigLocation, infoDate)
+
+    template.render()
+  }
 }
