@@ -1,3 +1,17 @@
+#  Copyright 2022 ABSA Group Limited
+#
+#  Licensed under the Apache License, Version 2.0 (the "License");
+#  you may not use this file except in compliance with the License.
+#  You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+#  Unless required by applicable law or agreed to in writing, software
+#  distributed under the License is distributed on an "AS IS" BASIS,
+#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#  See the License for the specific language governing permissions and
+#  limitations under the License.
+
 import pathlib
 from datetime import date as d
 
@@ -54,9 +68,7 @@ def test_write(spark: SparkSession, generate_test_tables):
             raise
 
 
-def test_write_delta_with_options(
-    spark, get_data_stub, tmp_path
-):
+def test_write_delta_with_options(spark, get_data_stub, tmp_path):
     writer_options = {"mergeSchema": "false"}
     metastore_table = MetastoreTable(
         name="test_table",
@@ -83,9 +95,7 @@ def test_write_delta_with_options(
         )
 
 
-def test_write_parquet_with_options(
-    spark, get_data_stub, tmp_path
-):
+def test_write_parquet_with_options(spark, get_data_stub, tmp_path):
     """
     Testing additional parquet writer options for MetastoreTable.
 
