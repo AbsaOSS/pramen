@@ -42,7 +42,6 @@ object PythonTransformationJob {
   val PRAMEN_PY_CMD_LINE_TEMPLATE_KEY = "pramen.py.cmd.line.template"
   val PRAMEN_PY_LOCATION_KEY = "pramen.py.location"
   val PRAMEN_PY_EXECUTABLE_KEY = "pramen.py.executable"
-  val PRAMEN_PY_BACKEND_KEY = "pramen.py.backend"
 
   val KEEP_LOG_LINES_KEY = "pramen.py.keep.log.lines"
 
@@ -54,22 +53,6 @@ object PythonTransformationJob {
   val METASTORE_CONFIG_VAR = "@metastoreConfig"
   val INFO_DATE_VAR = "@infoDate"
 
-  val DATABRICKS_BACKEND_OPTION = "databricks"
-
-  private def shouldRunOnDatabricks(conf: Config) = {
-    conf.getString(PRAMEN_PY_BACKEND_KEY) == DATABRICKS_BACKEND_OPTION
-  }
-
-  private def getTemporaryPathForYamlConfig(conf: Config) = {
-    val temporaryDirectoryBase = conf.getString(Keys.TEMPORARY_DIRECTORY)
-    val randomNumber = Random.nextInt(1000000)
-
-    val pathForConfig = s"$temporaryDirectoryBase/pramen_py_configs/$randomNumber/config.yaml"
-      .stripPrefix("/dbfs")
-      .stripPrefix("dbfs:")
-
-    s"dbfs:$pathForConfig"
-  }
 }
 
 class PythonTransformationJob(operationDef: OperationDef,
@@ -79,7 +62,8 @@ class PythonTransformationJob(operationDef: OperationDef,
                               outputTable: MetaTable,
                               pythonClass: String,
                               pramenPyConfig: PramenPyConfig,
-                              processRunner: ProcessRunner)
+                              processRunner: ProcessRunner,
+                              databricksClientOpt: Option[DatabricksClient])
                              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper,notificationTargets, outputTable) {
 
@@ -101,8 +85,8 @@ class PythonTransformationJob(operationDef: OperationDef,
   }
 
   override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    if (shouldRunOnDatabricks(conf)) {
-      runPythonOnDatabricks(infoDate, conf)
+    if (databricksClientOpt.isDefined) {
+      runPythonOnDatabricks(databricksClientOpt.get, infoDate, conf)
     } else {
       runPythonCmdLine(infoDate, conf)
     }
@@ -175,6 +159,20 @@ class PythonTransformationJob(operationDef: OperationDef,
       throw ProcessFailedException(s"The process has exited with error code $exitCode.", processRunner.getLastStdoutLines, processRunner.getLastStderrLines)
   }
 
+  private[core] def runPythonOnDatabricks(databricksClient: DatabricksClient, infoDate: LocalDate, conf: Config): Unit = {
+    val metastoreConfig = getYamlConfig(infoDate)
+    val configPath = getTemporaryPathForYamlConfig(conf)
+
+    val jobDefinition = PramenPyJobTemplate.render(conf, pythonClass, configPath, infoDate)
+
+    try {
+      databricksClient.createFile(metastoreConfig, configPath, overwrite = true)
+      databricksClient.runTransientJob(jobDefinition)
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"The Databricks job has failed.", ex)
+    }
+  }
+
   private[core] def getMetastoreConfig(infoDate: LocalDate, conf: Config): String = {
     val tempFile = File.createTempFile("metastore", ".yaml")
 
@@ -236,14 +234,14 @@ class PythonTransformationJob(operationDef: OperationDef,
       val description = if (mt.description.isEmpty) "" else s"\n  description: ${escapeString(mt.description)}"
       val recordsPerPartition = mt.format match {
         case f: DataFormat.Parquet => s"\n  records_per_partition: ${f.recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION)}"
-        case f: DataFormat.Delta   => s"\n  records_per_partition: ${f.recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION)}"
-        case _                     => ""
+        case f: DataFormat.Delta => s"\n  records_per_partition: ${f.recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION)}"
+        case _ => ""
       }
 
       val path = mt.format match {
         case f: DataFormat.Parquet => s"\n  path: ${f.path}"
-        case f: DataFormat.Delta   => s"\n  path: ${f.query.query}"
-        case _                     => ""
+        case f: DataFormat.Delta => s"\n  path: ${f.query.query}"
+        case _ => ""
       }
 
       val readOptions = addOptions(mt.readOptions, "reader_options")
@@ -267,14 +265,14 @@ class PythonTransformationJob(operationDef: OperationDef,
     sb.toString
   }
 
-  private[core] def runPythonOnDatabricks(infoDate: LocalDate, conf: Config): Unit = {
-    val metastoreConfig = getYamlConfig(infoDate)
-    val configPath = getTemporaryPathForYamlConfig(conf)
-    val databricksClient = DatabricksClient.fromConfig(conf)
+  private[core] def getTemporaryPathForYamlConfig(conf: Config) = {
+    val temporaryDirectoryBase = conf.getString(Keys.TEMPORARY_DIRECTORY).stripSuffix("/")
+    val randomNumber = Random.nextInt(1000000)
 
-    val jobDefinition = new PramenPyJobTemplate(conf, pythonClass, configPath, infoDate).render()
+    val pathForConfig = s"$temporaryDirectoryBase/pramen_py_configs/$randomNumber/config.yaml"
+      .stripPrefix("/dbfs")
+      .stripPrefix("dbfs:")
 
-    databricksClient.createFile(metastoreConfig, configPath, overwrite = true)
-    databricksClient.runTransientJob(jobDefinition)
+    s"dbfs:$pathForConfig"
   }
 }

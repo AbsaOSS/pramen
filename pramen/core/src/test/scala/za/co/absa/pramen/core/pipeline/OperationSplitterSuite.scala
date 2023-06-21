@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.databricks.DatabricksClient
 import za.co.absa.pramen.core.mocks.notify.NotificationTargetSpy
 
 class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
@@ -76,6 +77,29 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
       assertThrows[IllegalArgumentException] {
         OperationSplitter.getNotificationTarget(appConfig, "does_not_exist", tableConf)
       }
+    }
+  }
+
+  "getDatabricksClient()" should {
+    "create a databricks client" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |pramen.py.databricks.host = "some_host"
+          |pramen.py.databricks.token = "some_token"
+          |""".stripMargin)
+
+      val client = OperationSplitter.getDatabricksClient(conf)
+
+      assert(client.isDefined)
+      assert(client.get.isInstanceOf[DatabricksClient])
+    }
+
+    "return None if databricks options are not defined" in {
+      val conf = ConfigFactory.empty()
+
+      val client = OperationSplitter.getDatabricksClient(conf)
+
+      assert(client.isEmpty)
     }
   }
 }

@@ -329,6 +329,67 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
     }
   }
 
+  "convertToMap()" should {
+    "convert a simple config" in {
+      val conf = ConfigFactory.parseString(
+        s"""
+           |a = 2
+           |b = 3
+           |c = "string"
+           |""".stripMargin
+      )
+
+      val map = ConfigUtils.convertToMap(conf)
+      val expectedMap = Map(
+        "a" -> 2,
+        "b" -> 3,
+        "c" -> "string"
+      )
+      assert(map == expectedMap)
+    }
+
+    "convert a complex config" in {
+      val conf = ConfigFactory.parseString(
+        s"""
+           |this {
+           |  field {
+           |    is {
+           |      a_list = [
+           |        1,
+           |        "2",
+           |        [3, 4],
+           |        { "5" = "6" }
+           |      ]
+           |      and_a_simple_value = 3
+           |    }
+           |  }
+           |}
+           |another_field = 2
+           |""".stripMargin
+      )
+
+      val map = ConfigUtils.convertToMap(conf)
+
+      val expectedMap = Map(
+        "this" -> Map(
+          "field" -> Map(
+            "is" -> Map (
+              "a_list" -> Seq(
+                1,
+                "2",
+                Seq(3, 4),
+                Map("5" -> "6")
+              ),
+              "and_a_simple_value" -> 3
+            )
+          )
+        ),
+        "another_field" -> 2
+      )
+      assert(map == expectedMap)
+    }
+  }
+
   "setSystemPropertyStringFallback()" should {
     "set nothing if a value is already set" in {
       System.setProperty("mytest.str.value", "test2")

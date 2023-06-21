@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.utils
 
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 
-import java.util.StringTokenizer
+import java.util.{Base64, StringTokenizer}
 import scala.compat.Platform.EOL
 import scala.util.control.NonFatal
 
@@ -159,6 +159,10 @@ object StringUtils {
         .replaceAll("\n", "\\\\n")
       s"$q$str$q"
     }
+  }
+
+  def encodeToBase64(string: String): String = {
+    Base64.getEncoder.encodeToString(string.getBytes)
   }
 
   /** Renders an exception as a string */

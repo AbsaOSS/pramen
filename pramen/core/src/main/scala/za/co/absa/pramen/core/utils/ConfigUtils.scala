@@ -333,22 +333,18 @@ object ConfigUtils {
     }).toMap
   }
 
-  def unwrap(conf: Config): Map[String, AnyRef] = {
-    def unwrapConfigValue(configValue: ConfigValue): AnyRef = {
+  def convertToMap(conf: Config): Map[String, AnyRef] = {
+    def convertValue(configValue: ConfigValue): AnyRef = {
       configValue match {
-        case configObject: ConfigObject => configObject.asScala
-          .map {
-            case (key, value: ConfigValue) => key -> unwrapConfigValue(value)
-          }
-          .toMap
-        case configList: ConfigList => configList.asScala.map(unwrapConfigValue)
+        case configObject: ConfigObject => configObject.asScala.mapValues(convertValue).toMap
+        case configList: ConfigList => configList.asScala.map(convertValue)
         case _ => configValue.unwrapped()
       }
     }
 
-    conf.entrySet().asScala.map { entry =>
-      entry.getKey -> unwrapConfigValue(entry.getValue)
-    }.toMap
+    val rootConfigObject = conf.root().asScala
+
+    rootConfigObject.mapValues(convertValue).toMap
   }
 
   /**
