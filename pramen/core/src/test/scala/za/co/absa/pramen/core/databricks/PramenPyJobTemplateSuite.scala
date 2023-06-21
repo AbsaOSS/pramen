@@ -24,7 +24,7 @@ import java.time.LocalDate
 class PramenPyJobTemplateSuite extends AnyWordSpec {
 
   "render()" should {
-    "prepares a job configuration to a map" in {
+    "prepare a job configuration to a map" in {
       val conf = ConfigFactory.parseString(
         s"""
            |pramen.py {
@@ -91,7 +91,7 @@ class PramenPyJobTemplateSuite extends AnyWordSpec {
       assert(jobDefinition == expectedJobDefinition)
     }
 
-    "correctly resolves config when overwriting cluster configuration" in {
+    "correctly resolve config when overwriting cluster configuration" in {
       val conf = ConfigFactory.parseString(
         """
           |cluster.definition = {

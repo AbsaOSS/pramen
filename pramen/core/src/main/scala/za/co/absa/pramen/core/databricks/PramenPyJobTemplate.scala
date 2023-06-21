@@ -47,7 +47,6 @@ class PramenPyJobTemplate(config: Config, pythonClass: String, metastoreConfigLo
       value match {
         case map: Map[_, _] => map
           .filterNot(keyVal => isNull(keyVal._2))
-          .toMap
           .mapValues(replaceVariables)
           .toMap
         case seq: Seq[_] => seq
