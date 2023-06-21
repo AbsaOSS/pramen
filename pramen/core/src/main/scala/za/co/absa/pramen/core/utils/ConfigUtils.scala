@@ -337,7 +337,7 @@ object ConfigUtils {
     def convertValue(configValue: ConfigValue): AnyRef = {
       configValue match {
         case configObject: ConfigObject => configObject.asScala.mapValues(convertValue).toMap
-        case configList: ConfigList => configList.asScala.map(convertValue)
+        case configList: ConfigList => configList.asScala.map(convertValue).toList
         case _ => configValue.unwrapped()
       }
     }
