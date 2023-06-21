@@ -41,12 +41,6 @@ class TableFormat(enum.Enum):
     delta: str = "delta"
 
 
-@enum.unique
-class Query(enum.Enum):
-    path: str = enum.auto()
-    table: str = enum.auto()
-
-
 @attrs.define(auto_attribs=True, frozen=True, slots=True)
 class InfoDateSettings:
     column: str = attrs.field()
