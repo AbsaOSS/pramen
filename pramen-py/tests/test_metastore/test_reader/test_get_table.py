@@ -85,7 +85,7 @@ def test_get_table(
 
 def test_with_reader_options(
     spark,
-    get_data_stub,
+    test_dataframe,
     tmp_path,
 ):
     def get_metastore_writer(
@@ -106,10 +106,10 @@ def test_with_reader_options(
         reader_options=reader_options,
     )
     get_metastore_writer(metastore_table, d(2022, 3, 23)).write(
-        "test_table", get_data_stub.withColumn("C", F.lit(1))
+        "test_table", test_dataframe.withColumn("C", F.lit(1))
     )
     get_metastore_writer(metastore_table, d(2022, 3, 24)).write(
-        "test_table", get_data_stub.withColumn("D", F.lit("1"))
+        "test_table", test_dataframe.withColumn("D", F.lit("1"))
     )
 
     metastore_reader = MetastoreReader(spark=spark, tables=[metastore_table])

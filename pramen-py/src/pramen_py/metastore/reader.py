@@ -206,45 +206,53 @@ class MetastoreReader(MetastoreReaderBase):
 
         until = until or self.info_date
         metastore_table = get_metastore_table(table_name, self.tables)
+        info_date_settings = metastore_table.info_date_settings
 
         if metastore_table.format == TableFormat.parquet:
-            files_paths = self.fs_utils.list_files(
+            file_paths = self.fs_utils.list_files(
                 metastore_table.path,
-                file_pattern=f"{metastore_table.info_date_settings.column}=*",
+                file_pattern=f"{info_date_settings.column}=*",
             )
-            self.validate_partitions_paths(files_paths, metastore_table)
-            dates_list = []
-            for path in files_paths:
-                dates_list.append(
-                    self._extract_date_from_path(
-                        path,
-                        metastore_table.info_date_settings.column,
-                        metastore_table.info_date_settings.format,
-                    )
+            self.validate_partitions_paths(file_paths, metastore_table)
+            info_dates = [
+                self._extract_date_from_path(
+                    path, info_date_settings.column, info_date_settings.format
                 )
+                for path in file_paths
+            ]
         else:
-            df_select = self._read_table(
-                metastore_table.format,
-                metastore_table.path,
-                metastore_table.reader_options,
-            ).select(f"{metastore_table.info_date_settings.column}")
-            dates_list = [row[0] for row in df_select.distinct().collect()]
+            distinct_info_dates_df = (
+                self._read_table(
+                    metastore_table.format,
+                    metastore_table.path,
+                    metastore_table.reader_options,
+                )
+                .withColumn(
+                    info_date_settings.column,
+                    F.to_date(
+                        info_date_settings.column, info_date_settings.format
+                    ),
+                )
+                .select(info_date_settings.column)
+                .distinct()
+            )
+            info_dates = [row[0] for row in distinct_info_dates_df.collect()]
 
-        if not dates_list:
+        if not info_dates:
             raise ValueError(
                 f"The directory does not contain partitions by "
-                f"'{metastore_table.info_date_settings.column}': {metastore_table.path}"
+                f"'{info_date_settings.column}': {metastore_table.path}"
             )
 
         filtered_dates_list = self._filter_info_dates_by_until(
-            dates_list, until  # type: ignore
+            info_dates, until  # type: ignore
         )
 
         if not filtered_dates_list:
             str_date_list = list(
                 map(
                     lambda date: convert_date_to_str(
-                        date, metastore_table.info_date_settings.format
+                        date, info_date_settings.format
                     ),
                     filtered_dates_list,
                 )

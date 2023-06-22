@@ -34,7 +34,7 @@ def repo_root() -> pathlib.Path:
 
 
 @pytest.fixture
-def get_data_stub(
+def test_dataframe(
     spark: SparkSession,
 ) -> DataFrame:
     """
@@ -74,7 +74,7 @@ def get_data_stub(
 
 @pytest.fixture
 def generate_test_tables(
-    get_data_stub: DataFrame,
+    test_dataframe,
     tmp_path: pathlib.Path,
 ):
     """Create different format data stubs partitioned by info_date.
@@ -90,7 +90,7 @@ def generate_test_tables(
     for format_ in TableFormat:
         read_table_path = (table_path / f"read_{format_.value}").as_posix()
         write_table_path = (table_path / f"write_{format_.value}").as_posix()
-        get_data_stub.write.partitionBy("info_date").format(
+        test_dataframe.write.partitionBy("info_date").format(
             format_.value
         ).mode("overwrite").save(read_table_path)
         paths["read_table"][f"{format_.value}"] = read_table_path
@@ -114,7 +114,7 @@ def config() -> TransformationConfig:
 def load_and_patch_config(
     mocker,
     config,
-    get_data_stub: DataFrame,
+    test_dataframe,
     tmp_path: pathlib.Path,
 ):
     """Load config and patch tables pathes to use tmp_path from pytest.
@@ -140,7 +140,7 @@ def load_and_patch_config(
     output_table_path = (
         (tmp_path / "data_lake" / "example_output_table").resolve().as_posix()
     )
-    get_data_stub.write.partitionBy("info_date").format("parquet").mode(
+    test_dataframe.write.partitionBy("info_date").format("parquet").mode(
         "overwrite"
     ).save(dependency_table_path)
     object.__setattr__(
