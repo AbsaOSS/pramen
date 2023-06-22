@@ -71,9 +71,9 @@ def get_transformations_dir() -> pathlib.Path:
     return env.path(TRANSFORMATIONS_DIR_KEY_NAME, DEFAULT_TRANSFORMATIONS_DIR)  # type: ignore
 
 
-def discover_transformations() -> Generator[
-    Type[T_TRANSFORMATION], None, None
-]:
+def discover_transformations() -> (
+    Generator[Type[T_TRANSFORMATION], None, None]
+):
     """Return generator of Transformation subclasses.
 
     In order to provide a set of subclasses we keep track already
@@ -136,7 +136,7 @@ class TransformationsRunner(Runner):
     def create_cli_cmd_callback(
         self,
         T: Type[T_TRANSFORMATION],
-    ) -> Callable[CLI_CALLBACK, None]:
+    ) -> Callable[[CLI_CALLBACK], None]:
         async def t_run_wrapper(
             ctx: click.Context,
             config: TransformationConfig,
@@ -164,7 +164,7 @@ class TransformationsRunner(Runner):
                 )
 
         return cast(
-            Callable[CLI_CALLBACK, None],
+            Callable[[CLI_CALLBACK], None],
             click.pass_context(coro(t_run_wrapper)),
         )
 

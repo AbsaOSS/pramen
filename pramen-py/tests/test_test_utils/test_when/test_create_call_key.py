@@ -24,7 +24,6 @@ def call(a_arg, b_arg, *, c_kw, d_kw):
 
 
 def test_should_build_a_key_from_non_empty_call():
-
     actual = create_call_key(
         inspect.signature(call),
         Markers.any,
