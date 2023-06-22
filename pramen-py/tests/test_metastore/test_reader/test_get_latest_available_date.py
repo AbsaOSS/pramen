@@ -135,7 +135,7 @@ def test_returns_date_type(spark, tmp_path, test_dataframe, table_format):
         "test_table"
     )
 
-    assert latest_available_date == d(2022, 3, 23)
+    assert latest_available_date == d(2023, 3, 23)
 
 
 @pytest.mark.parametrize(
