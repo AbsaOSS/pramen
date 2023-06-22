@@ -29,4 +29,4 @@ class AsyncMock:
         return getattr(self.mock, item)
 
 
-mock.AsyncMock = cast(mock.Mock, AsyncMock)
+mock.AsyncMock = cast(mock.Mock, AsyncMock)  # type: ignore

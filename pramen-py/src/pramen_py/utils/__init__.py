@@ -151,7 +151,7 @@ def get_or_create_spark_session(
     if force_recreate:
         logger.info("Force recreating a spark session")
         spark = (
-            SparkSession.getActiveSession()  # type: ignore
+            SparkSession.getActiveSession()
             if callable(getattr(SparkSession, "getActiveSession", None))
             else SparkSession.getOrCreate()  # type: ignore
         )
