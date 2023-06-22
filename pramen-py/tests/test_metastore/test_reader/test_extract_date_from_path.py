@@ -17,7 +17,7 @@ from datetime import date as d
 import pytest
 
 from pramen_py import MetastoreReader
-from pramen_py.models import MetastoreTable, TableFormat, InfoDateSettings
+from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 
 
 @pytest.mark.parametrize(

@@ -274,7 +274,6 @@ class When(
         cls: _TargetClsType,
         method: str,
     ) -> "When":  # type: ignore
-
         if inspect.ismethod(getattr(cls, method)):
             raise NotImplementedError(
                 "See https://github.com/python/cpython/issues/67267 "
