@@ -51,7 +51,7 @@ jobs:
       - name: setup poetry
         uses: abatilo/actions-poetry@v2.1.6
         with:
-          poetry-version: 1.1.15
+          poetry-version: 1.4.2
       - name: install dependencies
         run: make --silent install
       - name: test
