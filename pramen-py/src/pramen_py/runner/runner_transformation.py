@@ -136,7 +136,7 @@ class TransformationsRunner(Runner):
     def create_cli_cmd_callback(
         self,
         T: Type[T_TRANSFORMATION],
-    ) -> Callable[[CLI_CALLBACK], None]:
+    ) -> Callable[CLI_CALLBACK, None]:
         async def t_run_wrapper(
             ctx: click.Context,
             config: TransformationConfig,
@@ -164,7 +164,7 @@ class TransformationsRunner(Runner):
                 )
 
         return cast(
-            Callable[[CLI_CALLBACK], None],
+            Callable[CLI_CALLBACK, None],
             click.pass_context(coro(t_run_wrapper)),
         )
 
