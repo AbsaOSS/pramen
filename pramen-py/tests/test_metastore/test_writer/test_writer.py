@@ -72,7 +72,7 @@ def test_write(spark: SparkSession, generate_test_tables):
             raise
 
 
-def test_write_delta_with_options(spark, get_data_stub, tmp_path):
+def test_write_delta_with_options(spark, test_dataframe, tmp_path):
     writer_options = {"mergeSchema": "false"}
     metastore_table = MetastoreTable(
         name="test_table",
@@ -92,14 +92,14 @@ def test_write_delta_with_options(spark, get_data_stub, tmp_path):
         match="A schema mismatch detected when writing to the Delta table",
     ):
         metastore_writer.write(
-            "test_table", get_data_stub.withColumn("C", F.lit(1))
+            "test_table", test_dataframe.withColumn("C", F.lit(1))
         )
         metastore_writer.write(
-            "test_table", get_data_stub.withColumn("D", F.lit("1"))
+            "test_table", test_dataframe.withColumn("D", F.lit("1"))
         )
 
 
-def test_write_parquet_with_options(spark, get_data_stub, tmp_path):
+def test_write_parquet_with_options(spark, test_dataframe, tmp_path):
     """
     Testing additional parquet writer options for MetastoreTable.
 
@@ -120,7 +120,7 @@ def test_write_parquet_with_options(spark, get_data_stub, tmp_path):
         info_date=d(2022, 3, 24),
     )
 
-    metastore_writer.write("test_table", get_data_stub)
+    metastore_writer.write("test_table", test_dataframe)
 
     snappy_parquets = pathlib.Path(metastore_table.path).rglob(
         "*.snappy.parquet"

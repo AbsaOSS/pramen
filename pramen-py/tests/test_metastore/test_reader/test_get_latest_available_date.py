@@ -20,7 +20,7 @@ from pyspark.sql import DataFrame
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 
-from pramen_py import MetastoreReader
+from pramen_py import MetastoreReader, MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 
 
@@ -71,7 +71,7 @@ def test_get_latest_available_date(
         assert metastore.get_latest_available_date("table1_sync") == expected
 
 
-def test_for_delta_format(spark, get_data_stub, tmp_path):
+def test_for_delta_format(spark, test_dataframe, tmp_path):
     def save_delta_table(df: DataFrame, path: str) -> None:
         df.write.partitionBy("info_date").format("delta").mode(
             "overwrite"
@@ -82,10 +82,10 @@ def test_for_delta_format(spark, get_data_stub, tmp_path):
         tmp_path / "data_lake" / "example_test_tables" / table_name
     ).as_posix()
 
-    df_union = get_data_stub.union(
+    df_union = test_dataframe.union(
         spark.createDataFrame(
             [(17, 18, d(2022, 11, 2))],
-            get_data_stub.schema,
+            test_dataframe.schema,
         )
     )
     save_delta_table(df_union, table_path)
@@ -111,6 +111,31 @@ def test_for_delta_format(spark, get_data_stub, tmp_path):
     )
 
     assert metastore.get_latest_available_date(table_name) == d(2022, 11, 1)
+
+
+@pytest.mark.parametrize(
+    "table_format", (TableFormat.parquet, TableFormat.delta)
+)
+def test_returns_date_type(spark, tmp_path, test_dataframe, table_format):
+    metastore_table = MetastoreTable(
+        name="test_table",
+        format=table_format,
+        path=tmp_path.as_posix(),
+        info_date_settings=InfoDateSettings(column="info_date"),
+    )
+    writer = MetastoreWriter(
+        spark=spark,
+        tables=[metastore_table],
+        info_date=d(2023, 3, 23),
+    )
+    writer.write("test_table", test_dataframe)
+    metastore_reader = MetastoreReader(spark=spark, tables=[metastore_table])
+
+    latest_available_date = metastore_reader.get_latest_available_date(
+        "test_table"
+    )
+
+    assert latest_available_date == d(2022, 3, 23)
 
 
 @pytest.mark.parametrize(
