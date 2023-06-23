@@ -122,6 +122,26 @@ def test_with_reader_options(
     assert set(dataframe.columns) == {"A", "B", "C", "D", "info_date"}
 
 
+def test_read_delta_table_from_catalog(spark, test_dataframe):
+    metastore_table = MetastoreTable(
+        name="test_table",
+        format=TableFormat.delta,
+        table="test_table",
+        info_date_settings=InfoDateSettings(column="info_date"),
+    )
+    writer = MetastoreWriter(
+        spark=spark,
+        tables=[metastore_table],
+        info_date=d(2022, 3, 23),
+    )
+    writer.write("test_table", test_dataframe)
+
+    metastore_reader = MetastoreReader(spark=spark, tables=[metastore_table])
+    dataframe = metastore_reader.get_table("test_table")
+
+    assert set(dataframe.columns) == {"A", "B", "info_date"}
+
+
 def test_columns_get_converted_to_uppercase(
     spark,
     generate_df,

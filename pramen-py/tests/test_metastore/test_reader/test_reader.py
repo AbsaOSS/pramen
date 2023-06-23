@@ -24,7 +24,7 @@ from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 
 
 def test_raises_exception_on_bad_path(spark, tmp_path):
-    metastore_table_config = MetastoreTable(
+    metastore_table = MetastoreTable(
         name="non_existing_table_name",
         format=TableFormat.parquet,
         path="non/existing/table/path",
@@ -32,15 +32,11 @@ def test_raises_exception_on_bad_path(spark, tmp_path):
     )
     metastore = MetastoreReader(
         spark=spark,
-        tables=[metastore_table_config],
+        tables=[metastore_table],
     )
 
-    with pytest.raises(Exception, match="Unable to access directory"):
-        metastore._read_table(
-            TableFormat.parquet,
-            "non/existing/table/path",
-            metastore_table_config.reader_options,
-        )
+    with pytest.raises(Exception, match="Unable to access directory: non/existing/table/path"):
+        metastore._read_parquet_table(metastore_table)
 
 
 def test_from_config(
