@@ -240,9 +240,6 @@ class StandardizationSink(sinkConfig: Config,
           } else {
             throw ex
           }
-        case ex: Throwable =>
-          log.error(s"$FAILURE Unexpected error when trying to update Hive table '$fullTableName'. Ignoring the error.", ex)
-          throw ex
       }
     } else {
       log.info(s"Hive table is not configured for $tableName.")
