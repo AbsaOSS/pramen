@@ -22,10 +22,12 @@ import attrs
 from loguru import logger
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import lit
+from pyspark.sql.types import DateType
 
 from pramen_py.metastore.writer_base import MetastoreWriterBase
 from pramen_py.models import MetastoreTable, TableFormat
 from pramen_py.models.utils import get_metastore_table
+from pramen_py.utils import convert_date_to_str
 
 
 @attrs.define(auto_attribs=True, slots=True)
@@ -80,11 +82,13 @@ class MetastoreWriter(MetastoreWriterBase):
     def _write_delta_format_table(
         self, df: DataFrame, metastore_table: MetastoreTable
     ) -> Tuple[str, int]:
-        df_with = df.withColumn(
-            metastore_table.info_date_settings.column, lit(f"{self.info_date}")
+        info_date_str = convert_date_to_str(self.info_date, fmt=metastore_table.info_date_settings.format)
+
+        df_with_info_date = df.withColumn(
+            metastore_table.info_date_settings.column, lit(info_date_str).cast(DateType())
         )
         df_repartitioned, count_df_items = self._apply_repartitioning(
-            df_with, metastore_table.records_per_partition
+            df_with_info_date, metastore_table.records_per_partition
         )
         df_writer = (
             df_repartitioned.write.format("delta")
@@ -93,7 +97,7 @@ class MetastoreWriter(MetastoreWriterBase):
             .option("mergeSchema", "true")
             .option(
                 "replaceWhere",
-                f"{metastore_table.info_date_settings.column}='{self.info_date}'",
+                f"{metastore_table.info_date_settings.column}='{info_date_str}'",
             )
             .options(**metastore_table.writer_options)
         )

@@ -18,10 +18,7 @@ from datetime import date as d
 
 import pytest
 
-from chispa import DataFramesNotEqualError, assert_df_equality
-from chispa.schema_comparer import SchemasNotEqualError
-from loguru import logger
-from pyspark.sql import SparkSession
+from chispa import assert_df_equality
 from pyspark.sql import functions as F
 from pyspark.sql import types as T
 from pyspark.sql.utils import AnalysisException
@@ -30,46 +27,29 @@ from pramen_py import MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 
 
-def test_write(spark: SparkSession, generate_test_tables):
-    df = spark.createDataFrame(
-        (
-            (1, 2),
-            (3, 4),
-        ),
-        T.StructType(
-            [
-                T.StructField("A", T.IntegerType()),
-                T.StructField("B", T.IntegerType()),
-            ],
-        ),
+@pytest.mark.parametrize("table_format", (TableFormat.parquet, TableFormat.delta))
+def test_write(spark, test_dataframe, tmp_path_builder, table_format):
+    table_path = tmp_path_builder().as_posix()
+    metastore_table_config = MetastoreTable(
+        name="table_name",
+        format=table_format,
+        path=table_path,
+        info_date_settings=InfoDateSettings(column="INFORMATION_DATE"),
     )
+    metastore = MetastoreWriter(
+        spark=spark,
+        tables=[metastore_table_config],
+        info_date=d(2022, 4, 6),
+    )
+    metastore.write("table_name", test_dataframe)
 
-    for format_ in TableFormat:
-        metastore_table_config = MetastoreTable(
-            name=f"write_table_{format_.value}",
-            format=format_,
-            path=generate_test_tables["write_table"][f"{format_.value}"],
-            info_date_settings=InfoDateSettings(column="INFORMATION_DATE"),
-        )
-        metastore = MetastoreWriter(
-            spark=spark,
-            tables=[metastore_table_config],
-            info_date=d(2022, 4, 6),
-        )
-        metastore.write(f"write_table_{format_.value}", df)
+    actual = spark.read.format(table_format.value).load(table_path)
 
-        actual = spark.read.parquet(
-            generate_test_tables["write_table"][f"{format_.value}"]
-        )
-        expected = df.withColumn(
-            "INFORMATION_DATE",
-            F.lit("2022-04-06").cast(T.DateType()),
-        )
-        try:
-            assert_df_equality(actual, expected, ignore_row_order=True)
-        except (DataFramesNotEqualError, SchemasNotEqualError):
-            logger.error(f"Failed for format: {format_.value}")
-            raise
+    expected = test_dataframe.withColumn(
+        "INFORMATION_DATE",
+        F.lit("2022-04-06").cast(T.DateType()),
+    )
+    assert_df_equality(actual, expected, ignore_row_order=True)
 
 
 def test_write_delta_with_options(spark, test_dataframe, tmp_path):
