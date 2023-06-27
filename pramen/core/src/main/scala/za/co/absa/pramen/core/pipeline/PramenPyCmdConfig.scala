@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.pipeline
 
-case class PramenPyConfig(
+case class PramenPyCmdConfig(
                            location: String,
                            executable: String,
                            cmdLineTemplate: String

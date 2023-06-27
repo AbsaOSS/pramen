@@ -18,13 +18,14 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Transformer
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.databricks.DatabricksClient
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.notify.NotificationTargetManager
-import za.co.absa.pramen.core.pipeline.OperationSplitter.{getDatabricksClient, getNotificationTarget}
+import za.co.absa.pramen.core.pipeline.OperationSplitter.{getDatabricksClient, getNotificationTarget, getPramenPyCmdlineConfig}
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
@@ -111,11 +112,6 @@ class OperationSplitter(conf: Config,
                                  pythonClass: String,
                                  outputTable: String)(implicit spark: SparkSession): Seq[Job] = {
     val outputMetaTable = metastore.getTableDef(outputTable)
-    val pramenPyLocation = conf.getString(PRAMEN_PY_LOCATION_KEY)
-    val pramenPyExecutable = conf.getString(PRAMEN_PY_EXECUTABLE_KEY)
-    val cmdLineTemplate = conf.getString(PRAMEN_PY_CMD_LINE_TEMPLATE_KEY)
-
-    val pramenPyConfig = PramenPyConfig(pramenPyLocation, pramenPyExecutable, cmdLineTemplate)
 
     val keepLogLines = conf.getInt(KEEP_LOG_LINES_KEY)
 
@@ -124,6 +120,7 @@ class OperationSplitter(conf: Config,
       stdErrLogPrefix = "Pramen-Py(err)")
 
     val databricksClientOpt = getDatabricksClient(conf)
+    val pramenPyConfig = getPramenPyCmdlineConfig(conf)
 
     val notificationTargets = operationDef.notificationTargets
       .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
@@ -161,6 +158,8 @@ object OperationSplitter {
   val NOTIFICATION_TARGET_KEY = "notification.target"
   val NOTIFICATION_KEY = "notification"
 
+  private val logger = LoggerFactory.getLogger(this.getClass)
+
   private[core] def getNotificationTarget(appConf: Config,
                                           targetName: String,
                                           tableConf: Config)(implicit sparkSession: SparkSession): JobNotificationTarget = {
@@ -170,11 +169,26 @@ object OperationSplitter {
     JobNotificationTarget(targetName, options, target)
   }
 
+  private[core] def getPramenPyCmdlineConfig(conf: Config): Option[PramenPyCmdConfig] = {
+    if (conf.hasPath(PRAMEN_PY_LOCATION_KEY)) {
+      val pramenPyLocation = conf.getString(PRAMEN_PY_LOCATION_KEY)
+      val pramenPyExecutable = conf.getString(PRAMEN_PY_EXECUTABLE_KEY)
+      val cmdLineTemplate = conf.getString(PRAMEN_PY_CMD_LINE_TEMPLATE_KEY)
+
+      val pramenPyConfig = PramenPyCmdConfig(pramenPyLocation, pramenPyExecutable, cmdLineTemplate)
+      Some(pramenPyConfig)
+    } else {
+      logger.info(s"Could not create command line config for Pramen-Py. Missing '$PRAMEN_PY_LOCATION_KEY' option.")
+      None
+    }
+  }
+
   private[core] def getDatabricksClient(conf: Config): Option[DatabricksClient] = {
     if (DatabricksClient.canCreate(conf)) {
       val client = DatabricksClient.fromConfig(conf)
       Some(client)
     } else {
+      logger.info("Could not create databricks client for Pramen-Py. Missing mandatory options.")
       None
     }
   }

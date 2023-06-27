@@ -102,7 +102,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "preRunCheckJob" should {
     "always return Ready" in {
-      val (_, _, job, _, _) = getUseCase()
+      val (job, _, _, _) = getUseCase()
 
       val result = job.preRunCheckJob(infoDate, conf, Nil)
 
@@ -112,7 +112,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "validate" should {
     "return Ready" in {
-      val (_, _, job, _, _) = getUseCase()
+      val (job, _, _, _) = getUseCase()
 
       val result = job.validate(infoDate, conf)
 
@@ -122,7 +122,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "run" should {
     "run the command line script" in {
-      val (_, _, job, runner, _) = getUseCase(tableDf = exampleDf)
+      val (job, runner, _, _) = getUseCase(tableDf = exampleDf)
 
       val runResult = job.run(infoDate, conf)
 
@@ -134,10 +134,14 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "run the transformation on databricks" in {
-      val (_, _, job, _, databricksClientOpt) = getUseCase(tableDf = exampleDf, useDatabricks = true)
+      val (job, _, _, databricksClientOpt) = getUseCase(
+        tableDf = exampleDf,
+        useDatabricks = true,
+        useCommandLine = false
+      )
       val databricksClient = databricksClientOpt.get
 
-      val _ = job.run(infoDate, conf)
+      job.run(infoDate, conf)
 
       val (contents, filename, overwrite) = databricksClient.createFileInvocations.head
       val expectedSubmittedJob = Map("job_setting_1" -> "spark-3.3.1")
@@ -151,8 +155,22 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
       assert(databricksClient.runTransientJobInvocations.head == expectedSubmittedJob)
     }
 
+    "throw an exception if neither command line configuration or databricks client are available" in {
+      val (job, _, _, _) = getUseCase(
+        tableDf = exampleDf,
+        useCommandLine = false,
+        useDatabricks = false
+      )
+
+      val ex = intercept[RuntimeException] {
+        job.run(infoDate, conf)
+      }
+
+      assert(ex.getMessage == "Neither command line options nor databricks client configured correctly for Pramen-Py.")
+    }
+
     "throw an exception if the command throws an exception" in {
-      val (_, _, job, _, _) = getUseCase(tableDf = exampleDf, runException = new IllegalStateException(s"Dummy exception"))
+      val (job, _, _, _) = getUseCase(tableDf = exampleDf, runException = new IllegalStateException(s"Dummy exception"))
 
       val ex = intercept[RuntimeException] {
         job.run(infoDate, conf)
@@ -162,7 +180,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throw an exception if output table is not created in the metastore" in {
-      val (_, _, job, _, _) = getUseCase(tableDf = exampleDf, tableException = new NoSuchDatabaseException("Dummy"))
+      val (job, _, _, _) = getUseCase(tableDf = exampleDf, tableException = new NoSuchDatabaseException("Dummy"))
 
       val ex = intercept[RuntimeException] {
         job.run(infoDate, conf)
@@ -175,7 +193,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "postProcessing" should {
     "return the original dataframe" in {
-      val (_, _, job, _, _) = getUseCase()
+      val (job, _, _, _) = getUseCase()
 
       val df = job.postProcessing(exampleDf, infoDate, conf)
       assert(df.count() == 3)
@@ -186,7 +204,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     "update the bookkeeper" in {
       val statsIn = MetaTableStats(100, None)
 
-      val (_, _, job, _, _) = getUseCase(stats = statsIn)
+      val (job, _, _, _) = getUseCase(stats = statsIn)
 
       val started = Instant.ofEpochSecond(12345678L)
 
@@ -196,7 +214,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throw an exception if metastore throws AnalysisException" in {
-      val (_, _, job, _, _) = getUseCase(statsException = new NoSuchDatabaseException("Dummy"))
+      val (job, _, _, _) = getUseCase(statsException = new NoSuchDatabaseException("Dummy"))
 
       val started = Instant.ofEpochSecond(12345678L)
 
@@ -210,7 +228,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     "allow no records in the output table" in {
       val statsIn = MetaTableStats(0, None)
 
-      val (_, _, job, _, _) = getUseCase(stats = statsIn)
+      val (job, _, _, _) = getUseCase(stats = statsIn)
 
       val started = Instant.ofEpochSecond(12345678L)
 
@@ -222,7 +240,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     "throw an exception if no records in the output table" in {
       val statsIn = MetaTableStats(0, None)
 
-      val (_, _, job, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "1"))
+      val (job, _, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "1"))
 
       val started = Instant.ofEpochSecond(12345678L)
 
@@ -236,7 +254,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     "throw an exception if the number of records is less then expected" in {
       val statsIn = MetaTableStats(9, None)
 
-      val (_, _, job, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "10"))
+      val (job, _, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "10"))
 
       val started = Instant.ofEpochSecond(12345678L)
 
@@ -248,7 +266,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throw an exception if metastore throws any other exception" in {
-      val (_, _, job, _, _) = getUseCase(statsException = new IllegalStateException("Dummy"))
+      val (job, _, _, _) = getUseCase(statsException = new IllegalStateException("Dummy"))
 
       val started = Instant.ofEpochSecond(12345678L)
 
@@ -262,19 +280,19 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "runPythonCmdLine" should {
     "run the proper command line" in {
-      val (_, _, job, runner, _) = getUseCase()
+      val (job, runner, pramenPyConfigOpt, _) = getUseCase()
 
-      job.runPythonCmdLine(infoDate, conf)
+      job.runPythonCmdLine(pramenPyConfigOpt.get, infoDate, conf)
 
       assert(runner.runCommands.length == 1)
       assert(runner.runCommands.head == "/dummy/path/dummy_cmd transformations run python_class")
     }
 
     "throws RuntimeException if the command throws an exception" in {
-      val (_, _, job, _, _) = getUseCase(runException = new IllegalStateException("Dummy"))
+      val (job, _, pramenPyConfigOpt, _) = getUseCase(runException = new IllegalStateException("Dummy"))
 
       val ex = intercept[RuntimeException] {
-        job.runPythonCmdLine(infoDate, conf)
+        job.runPythonCmdLine(pramenPyConfigOpt.get, infoDate, conf)
       }
 
       assert(ex.getMessage.contains("The process has exited with an exception"))
@@ -282,10 +300,10 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throws ProcessFailedException for non-zero exit code" in {
-      val (_, _, job, _, _) = getUseCase(exitCode = 1)
+      val (job, _, pramenPyConfigOpt, _) = getUseCase(exitCode = 1)
 
       val ex = intercept[ProcessFailedException] {
-        job.runPythonCmdLine(infoDate, conf)
+        job.runPythonCmdLine(pramenPyConfigOpt.get, infoDate, conf)
       }
 
       assert(ex.getMessage == "The process has exited with error code 1.")
@@ -294,7 +312,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   "runPythonOnDatabricks" should {
     "run the proper command line" in {
-      val (_, _, job, _, databricksClientOpt) = getUseCase(useDatabricks = true)
+      val (job, _, _, databricksClientOpt) = getUseCase(useDatabricks = true)
       val databricksClient = databricksClientOpt.get
 
       job.runPythonOnDatabricks(databricksClient, infoDate, conf)
@@ -304,7 +322,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
     }
 
     "throws RuntimeException if the databricks job fails throws an exception" in {
-      val (_, _, job, _, databricksClientOpt) = getUseCase(
+      val (job, _, _, databricksClientOpt) = getUseCase(
         useDatabricks = true,
         runException = new IllegalStateException("Dummy")
       )
@@ -353,7 +371,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
         |""".stripMargin
 
     "creates a temporary config" in {
-      val (_, _, job, _, _) = getUseCase()
+      val (job, _, _, _) = getUseCase()
 
       val tempFile = job.getMetastoreConfig(infoDate, conf)
 
@@ -397,7 +415,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           |  writer_options: {}
           |""".stripMargin
 
-      val (_, _, job, _, _) = getUseCase()
+      val (job, _, _, _) = getUseCase()
 
       val actual = job.getYamlConfig(infoDate)
 
@@ -441,7 +459,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           |  writer_options: {}
           |""".stripMargin
 
-      val (_, _, job, _, _) = getUseCase(
+      val (job, _, _, _) = getUseCase(
         sparkConfig = Map[String, String](
           "spark.driver.host" -> "127.0.0.1",
           "spark.executor.instances" -> "1",
@@ -495,7 +513,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           |    compression: snappy
           |""".stripMargin
 
-      val (_, _, job, _, _) = getUseCase(
+      val (job, _, _, _) = getUseCase(
         readOptions = Map[String, String](
           "mergeSchema" -> "true"
         ),
@@ -515,7 +533,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
           """
             |pramen.temporary.directory = "/tmp/pramen/"
             |""".stripMargin)
-        val (_, _, job, _, _) = getUseCase()
+        val (job, _, _, _) = getUseCase()
 
         val temporaryDirectory = job.getTemporaryPathForYamlConfig(conf)
 
@@ -527,6 +545,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
   def getUseCase(exitCode: Int = 0,
                  tableDf: DataFrame = null,
+                 useCommandLine: Boolean = true,
                  useDatabricks: Boolean = false,
                  runException: Throwable = null,
                  tableException: Throwable = null,
@@ -535,7 +554,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
                  sparkConfig: Map[String, String] = Map.empty[String, String],
                  extraOptions: Map[String, String] = Map.empty[String, String],
                  readOptions: Map[String, String] = Map.empty[String, String],
-                 writeOptions: Map[String, String] = Map.empty[String, String]): (SyncBookkeeperMock, MetastoreSpy, PythonTransformationJob, ProcessRunnerSpy, Option[DatabricksClientSpy]) = {
+                 writeOptions: Map[String, String] = Map.empty[String, String]): (PythonTransformationJob, ProcessRunnerSpy, Option[PramenPyCmdConfig], Option[DatabricksClientSpy]) = {
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy(
       tableDf = tableDf,
@@ -549,7 +568,12 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table2")
 
-    val pramenPyConfig = PramenPyConfig("/dummy/path", "dummy_cmd", "@location/@executable transformations run @pythonClass")
+    val pramenPyConfigOpt = if (useCommandLine) {
+      val cmdConfig = PramenPyCmdConfig("/dummy/path", "dummy_cmd", "@location/@executable transformations run @pythonClass")
+      Some(cmdConfig)
+    }  else {
+      None
+    }
 
     val processRunner = new ProcessRunnerSpy(exitCode, runException = runException)
 
@@ -567,11 +591,11 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
       Nil,
       outputTable,
       "python_class",
-      pramenPyConfig,
+      pramenPyConfigOpt,
       processRunner,
       databricksClientOpt
     )
 
-    (bk, metastore, job, processRunner, databricksClientOpt)
+    (job, processRunner, pramenPyConfigOpt, databricksClientOpt)
   }
 }
