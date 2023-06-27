@@ -227,12 +227,6 @@ class MetastoreReader(MetastoreReaderBase):
                     metastore_table.path,
                     metastore_table.reader_options,
                 )
-                .withColumn(
-                    info_date_settings.column,
-                    F.to_date(
-                        info_date_settings.column, info_date_settings.format
-                    ),
-                )
                 .select(info_date_settings.column)
                 .distinct()
             )
