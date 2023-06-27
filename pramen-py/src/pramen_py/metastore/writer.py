@@ -82,10 +82,13 @@ class MetastoreWriter(MetastoreWriterBase):
     def _write_delta_format_table(
         self, df: DataFrame, metastore_table: MetastoreTable
     ) -> Tuple[str, int]:
-        info_date_str = convert_date_to_str(self.info_date, fmt=metastore_table.info_date_settings.format)
+        info_date_str = convert_date_to_str(
+            self.info_date, fmt=metastore_table.info_date_settings.format
+        )
 
         df_with_info_date = df.withColumn(
-            metastore_table.info_date_settings.column, lit(info_date_str).cast(DateType())
+            metastore_table.info_date_settings.column,
+            lit(info_date_str).cast(DateType()),
         )
         df_repartitioned, count_df_items = self._apply_repartitioning(
             df_with_info_date, metastore_table.records_per_partition
