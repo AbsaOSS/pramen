@@ -2376,8 +2376,7 @@ Spark Master/YARN etc. Unfortunately, this is restricted on Databricks, although
 in the Databricks job and hacking some configuration (configuring `spark.master` for the Pramen-Py Spark application). But this would leave the job without access to Unity Catalog and some other
 Databricks features.
 
-Instead, Pramen can be configured to submit Pramen-Py jobs to Databricks using a REST API. Pramen will submit a one-time
-transient job run.
+Instead, Pramen can be configured to submit Pramen-Py jobs to Databricks using a REST API.
 
 ```hocon
 pramen.py {
@@ -2387,7 +2386,7 @@ pramen.py {
     host = "https://databricks-workspace-url.com"
     token = "[databricks-api-token]"
     
-    # this is a definition to creating and triggering a one-time run on Databricks
+    # this is a definition for creating and triggering a one-time run on Databricks
     # the @pythonClass, @infoDate and @metastoreConfig variables will get substituted before the configuration is rendered to JSON
     job {
       # here, you can configure any option supported by job submit endpoint (https://docs.databricks.com/api/workspace/jobs/submit) 
@@ -2409,7 +2408,7 @@ pramen.py {
               "@metastoreConfig"
             ]
           }
-          # also you can write the definition in JSON directly (instead of using HOCON)
+          # you can also write the definition in JSON directly (instead of using HOCON)
           "libraries": {
             "pypi": {
               "package": "pramen-py"

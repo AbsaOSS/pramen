@@ -34,6 +34,9 @@ class PramenPyJobTemplate(config: Config, pythonClass: String, metastoreConfigLo
   }
 
   private[databricks] def replaceVariablesInMap(map: Map[String, Any]): Map[String, Any] = {
+    // in typesafe Config, keys can be set to null (this function will be maily called on Maps created from
+    // typesafe Config objects)
+    // we use this function to filter the nulls out
     def isNull(x: Any): Boolean = x == null
 
     def replaceVariablesInText(text: String): String = {
