@@ -1298,7 +1298,7 @@ pramen {
 
   # Pramen-Py settings
   py {
-    # This is mandatory of you want to use Python transformations
+    # This is mandatory of you want to use Python transformations and run Pramen-Py on the command line
     location = "/opt/Pramen-Py/bin"
     
     # Optionally you can specify Pramen-Py executable name
@@ -2367,6 +2367,110 @@ spark-submit --jars custom-x.y.z.jar \
 ```
 
 ## Running on Databricks
+
+### Python Transformations
+As the default option, Pramen runs Pramen-Py transformations by spawning a Python subprocess, essentially 
+running `pramen-py IdentityTransformation --info-date 2023-01-01 --config /path/to/config.yaml`. Inside this subprocess,
+Pramen-Py retrieves it's own `SparkSession` by calling `SparkSession.getOrCreate()`. This submits a new application to
+Spark Master/YARN etc. Unfortunately, this is restricted on Databricks, although it can be bypassed by using a `spark-submit-task`
+in the Databricks job and hacking some configuration (configuring `spark.master` for the Pramen-Py Spark application). But this would leave the job without access to Unity Catalog and some other
+Databricks features.
+
+Instead, Pramen can be configured to submit Pramen-Py jobs to Databricks using a REST API. Pramen will submit a one-time
+transient job run.
+
+```hocon
+pramen.py {
+  databricks {
+    # configure REST API credentials
+    # if the authentication is set-up, Pramen will attempt to run the Pramen-Py transformations using a Databricks REST API
+    host = "https://databricks-workspace-url.com"
+    token = "[databricks-api-token]"
+    
+    # this is a definition to creating and triggering a one-time run on Databricks
+    # the @pythonClass, @infoDate and @metastoreConfig variables will get substituted before the configuration is rendered to JSON
+    job {
+      # here, you can configure any option supported by job submit endpoint (https://docs.databricks.com/api/workspace/jobs/submit) 
+      # after variable substitution, the definition will get converted to JSON and submitted to Databricks REST API
+      run_name = "Pramen-Py @pythonClass (@infoDate)"
+      tasks = [
+        {
+          new_cluster {
+            node_type_id = "m5d.large"
+            spark_version = "12.2.x-scala2.12"
+            num_workers = 1
+          }
+          # here we will submit a Spark Python task which will run our Python transformation
+          spark_python_task = {
+            python_file = "dbfs:/path/to/python_file.py"
+            parameters = [
+              "@pythonClass",
+              "@infoDate"
+              "@metastoreConfig"
+            ]
+          }
+          # also you can write the definition in JSON directly (instead of using HOCON)
+          "libraries": {
+            "pypi": {
+              "package": "pramen-py"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
+```
+
+The file for running Pramen-Py (stored in `dbfs:/path/to/python_file.py` per configuration above) could look like this.
+
+```python
+import sys
+import datetime as dt
+
+from pramen_py.metastore.reader import MetastoreReader
+from pramen_py.metastore.writer import MetastoreWriter
+from pramen_py.models import TransformationConfig
+from pramen_py.runner.runner_base import get_current_transformer_cfg
+from pramen_py.runner.runner_transformation import discover_transformations, overwrite_info_dates
+
+import yaml
+import cattr
+
+transformer_name = sys.argv[1]
+info_date = dt.datetime.strptime(sys.argv[2], "%Y-%m-%d").date()
+metastore_config_path = sys.argv[3].replace("dbfs:", "/dbfs")
+
+# read the metastore config
+with open(metastore_config_path) as f:
+    cfg = yaml.load(f.read(), Loader=yaml.BaseLoader)
+
+transformation_config = overwrite_info_dates(
+    cattr.structure(cfg, TransformationConfig),
+    info_date.strftime("%Y-%m-%d")
+)
+
+# retrieve transformation class dynamically
+available_transformations = list(discover_transformations())
+TransformerClass = next(filter(lambda transformation: transformation.__name__ == transformer_name, available_transformations))
+
+# run the pipeline
+metastore_reader = MetastoreReader(info_date=info_date, tables=transformation_config.metastore_tables, spark=spark)
+metastore_writer = MetastoreWriter(info_date=info_date, tables=transformation_config.metastore_tables, spark=spark)
+
+transformer_config = get_current_transformer_cfg(TransformerClass, transformation_config)
+transformer = TransformerClass(spark, transformation_config)
+
+result_df = await transformer.run(metastore_reader, transformer_config.info_date, transformer_config.options)
+
+metastore_writer.write(transformer_config.output_table, df=result_df)
+```
+
+Currently, this is a bit of a workaround (we are accessing the classes from Pramen-Py directly to compose a pipeline).
+In the future, we would like to create a custom runner for Pramen-Py on Databricks so that users don't have to stitch
+together their own runner (like the one above).
+
+
 
 
 ## Default pipeline run
