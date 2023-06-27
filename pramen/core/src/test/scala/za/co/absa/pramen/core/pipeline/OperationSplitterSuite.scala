@@ -18,8 +18,11 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.databricks.DatabricksClient
+import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.mocks.notify.NotificationTargetSpy
 
 class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
@@ -60,6 +63,16 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
     .withFallback(ConfigFactory.load())
     .resolve()
 
+  "createPythonTransformation()" should {
+    "create a Python transformation job from operation definition" in {
+      val (splitter, operation) = getUseCase()
+
+      val pythonJob = splitter.createPythonTransformation(operation, "HelloWorldTransformation", "output_table1")
+
+      assert(pythonJob.length == 1)
+    }
+  }
+
   "getNotificationTargets()" should {
     "get notification targets for a table config" in {
       val jobTarget = OperationSplitter.getNotificationTarget(appConfig, "custom1", tableConf)
@@ -77,6 +90,27 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
       assertThrows[IllegalArgumentException] {
         OperationSplitter.getNotificationTarget(appConfig, "does_not_exist", tableConf)
       }
+    }
+  }
+
+  "getPramenPyCmdlineConfig()" should {
+    "create a Pramen-Py command line config" in {
+      val conf = ConfigFactory
+        .parseString(""" pramen.py.location = "/path/to/pramen-py/venv" """)
+        .withFallback(ConfigFactory.load())
+
+      val pramenPyCmdConfig = OperationSplitter.getPramenPyCmdlineConfig(conf)
+
+      assert(pramenPyCmdConfig.isDefined)
+      assert(pramenPyCmdConfig.get.isInstanceOf[PramenPyCmdConfig])
+    }
+
+    "return None if Pramen-Py location is not defined" in {
+      val conf = ConfigFactory.empty()
+
+      val pramenPyCmdConfig = OperationSplitter.getPramenPyCmdlineConfig(conf)
+
+      assert(pramenPyCmdConfig.isEmpty)
     }
   }
 
@@ -101,5 +135,12 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
 
       assert(client.isEmpty)
     }
+  }
+
+  def getUseCase(conf: Config = appConfig): (OperationSplitter, OperationDef) = {
+    val splitter = new OperationSplitter(conf, new MetastoreSpy(), new SyncBookkeeperMock)
+    val operation = OperationDefFactory.getDummyOperationDef()
+
+    (splitter, operation)
   }
 }

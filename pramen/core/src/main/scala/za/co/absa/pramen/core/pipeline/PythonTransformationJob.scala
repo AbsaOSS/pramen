@@ -61,7 +61,7 @@ class PythonTransformationJob(operationDef: OperationDef,
                               notificationTargets: Seq[JobNotificationTarget],
                               outputTable: MetaTable,
                               pythonClass: String,
-                              pramenPyConfig: PramenPyConfig,
+                              pramenPyCmdConfigOpt: Option[PramenPyCmdConfig],
                               processRunner: ProcessRunner,
                               databricksClientOpt: Option[DatabricksClient])
                              (implicit spark: SparkSession)
@@ -85,11 +85,12 @@ class PythonTransformationJob(operationDef: OperationDef,
   }
 
   override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    if (databricksClientOpt.isDefined) {
+    if (pramenPyCmdConfigOpt.isDefined)
+      runPythonCmdLine(pramenPyCmdConfigOpt.get, infoDate, conf)
+    else if (databricksClientOpt.isDefined)
       runPythonOnDatabricks(databricksClientOpt.get, infoDate, conf)
-    } else {
-      runPythonCmdLine(infoDate, conf)
-    }
+    else
+      throw new RuntimeException("Neither command line options nor databricks client configured correctly for Pramen-Py.")
 
     try {
       RunResult(metastore.getTable(outputTable.name, Option(infoDate), Option(infoDate)))
@@ -138,13 +139,13 @@ class PythonTransformationJob(operationDef: OperationDef,
     SaveResult(stats)
   }
 
-  private[core] def runPythonCmdLine(infoDate: LocalDate, conf: Config): Unit = {
+  private[core] def runPythonCmdLine(pramenPyCmdConfig: PramenPyCmdConfig, infoDate: LocalDate, conf: Config): Unit = {
     val metastoreConfigLocation = getMetastoreConfig(infoDate, conf)
 
-    log.info(s"Using template: ${pramenPyConfig.cmdLineTemplate}")
-    val cmd = pramenPyConfig.cmdLineTemplate
-      .replace(LOCATION_VAR, pramenPyConfig.location)
-      .replace(EXECUTABLE_VAR, pramenPyConfig.executable)
+    log.info(s"Using template: ${pramenPyCmdConfig.cmdLineTemplate}")
+    val cmd = pramenPyCmdConfig.cmdLineTemplate
+      .replace(LOCATION_VAR, pramenPyCmdConfig.location)
+      .replace(EXECUTABLE_VAR, pramenPyCmdConfig.executable)
       .replace(PYTHON_CLASS_VAR, pythonClass)
       .replace(METASTORE_CONFIG_VAR, metastoreConfigLocation)
       .replace(INFO_DATE_VAR, infoDate.toString)
