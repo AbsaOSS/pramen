@@ -27,7 +27,9 @@ from pramen_py import MetastoreWriter
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
 
 
-@pytest.mark.parametrize("table_format", (TableFormat.parquet, TableFormat.delta))
+@pytest.mark.parametrize(
+    "table_format", (TableFormat.parquet, TableFormat.delta)
+)
 def test_write(spark, test_dataframe, tmp_path_builder, table_format):
     table_path = tmp_path_builder().as_posix()
     metastore_table_config = MetastoreTable(
