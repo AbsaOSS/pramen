@@ -82,7 +82,6 @@ def tmp_path_builder(tmp_path: pathlib.Path) -> Callable[[], pathlib.Path]:
 
 @pytest.fixture()
 def spark() -> SparkSession:
-    """Spark session built the same as in syncwathcer_py."""
     return get_or_create_spark_session(env)
 
 

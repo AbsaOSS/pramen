@@ -81,8 +81,7 @@ class MetastoreReader(MetastoreReaderBase):
             )
             df = (
                 self._get_dataframe_reader(
-                    metastore_table.format,
-                    metastore_table.reader_options
+                    metastore_table.format, metastore_table.reader_options
                 )
                 .load(pathlib.Path(path).as_posix())
                 .withColumn(
@@ -91,12 +90,9 @@ class MetastoreReader(MetastoreReaderBase):
                 )
             )
         else:
-            df = (
-                self._read_delta_table(metastore_table)
-                .filter(
-                    F.col(metastore_table.info_date_settings.column)
-                    == F.lit(latest_date)
-                )
+            df = self._read_delta_table(metastore_table).filter(
+                F.col(metastore_table.info_date_settings.column)
+                == F.lit(latest_date)
             )
 
         logger.info(
@@ -104,78 +100,6 @@ class MetastoreReader(MetastoreReaderBase):
             f" {metastore_table.path or metastore_table.table}"
         )
         return self._apply_uppercase_to_columns_names(df, uppercase_columns)
-
-    def get_latest_available_date(
-        self,
-        table_name: str,
-        until: Optional[datetime.date] = None,
-    ) -> datetime.date:
-        """Provide the latest info_date available for the table.
-
-        if until is not specified then info_date is used.
-        """
-
-        until = until or self.info_date
-        metastore_table = get_metastore_table(table_name, self.tables)
-        info_date_settings = metastore_table.info_date_settings
-
-        if metastore_table.format == TableFormat.parquet:
-            file_paths = self.fs_utils.list_files(
-                metastore_table.path,
-                file_pattern=f"{info_date_settings.column}=*",
-            )
-            self.validate_partitions_paths(file_paths, metastore_table)
-            info_dates = [
-                self._extract_date_from_path(
-                    path, info_date_settings.column, info_date_settings.format
-                )
-                for path in file_paths
-            ]
-        else:
-            distinct_info_dates_df = (
-                self._read_table(
-                    metastore_table.format,
-                    metastore_table.path,
-                    metastore_table.reader_options,
-                )
-                .withColumn(
-                    info_date_settings.column,
-                    F.to_date(
-                        info_date_settings.column, info_date_settings.format
-                    ),
-                )
-                .select(info_date_settings.column)
-                .distinct()
-            )
-            info_dates = [row[0] for row in distinct_info_dates_df.collect()]
-
-        if not info_dates:
-            raise ValueError(
-                f"The directory does not contain partitions by "
-                f"'{info_date_settings.column}': {metastore_table.path}"
-            )
-
-        filtered_dates_list = self._filter_info_dates_by_until(
-            info_dates, until  # type: ignore
-        )
-
-        if not filtered_dates_list:
-            str_date_list = list(
-                map(
-                    lambda date: convert_date_to_str(
-                        date, info_date_settings.format
-                    ),
-                    filtered_dates_list,
-                )
-            )
-            raise ValueError(
-                f"No partitions are available for the given '{metastore_table.name}'.\n"
-                f"The table is available for the following dates:\n"
-                f"{str_date_list}\n"
-                f"Only partitions earlier than {str(until)} might be included"
-            )
-
-        return max(filtered_dates_list)
 
     def get_table(
         self,
@@ -251,12 +175,13 @@ class MetastoreReader(MetastoreReaderBase):
                 metastore_table.path,
                 file_pattern=f"{metastore_table.info_date_settings.column}=*",
             )
-            info_dates = self._extract_info_dates_from_partitions(file_paths, metastore_table)
+            info_dates = self._extract_info_dates_from_partition_paths(
+                file_paths, metastore_table
+            )
         else:
             dataframe = self._read_delta_table(metastore_table)
             info_dates = self._extract_info_dates_from_dataframe(
-                dataframe,
-                metastore_table
+                dataframe, metastore_table
             )
 
         filtered_info_dates = self._filter_info_dates_by_until(
@@ -372,10 +297,12 @@ class MetastoreReader(MetastoreReaderBase):
     def _extract_date_from_path(
         path: str, target_partition_name: str, date_format: str
     ) -> Optional[datetime.date]:
-        def is_file_hidden(column_name_: str, date_: str) -> bool:
-            return column_name_.startswith(("_", ".")) or date_.startswith(("_", "."))
+        def is_partition_hidden(column_name: str, column_value: str) -> bool:
+            return column_name.startswith(
+                ("_", ".")
+            ) or column_value.startswith(("_", "."))
 
-        file_name = (path.replace("\\", "/").rsplit("/", 1)[-1])
+        file_name = path.replace("\\", "/").rsplit("/", 1)[-1]
         if not file_name:
             return None
 
@@ -383,8 +310,8 @@ class MetastoreReader(MetastoreReaderBase):
         if not len(name_parts) == 2:
             return None
 
-        partition_name, date = name_parts
-        if is_file_hidden(partition_name, date):
+        partition_name, partition_value = name_parts
+        if is_partition_hidden(partition_name, partition_value):
             return None
 
         if target_partition_name != partition_name:
@@ -394,14 +321,14 @@ class MetastoreReader(MetastoreReaderBase):
             )
 
         try:
-            return convert_str_to_date(date, fmt=date_format)
+            return convert_str_to_date(partition_value, fmt=date_format)
         except (KeyError, ValueError):
             raise ValueError(
                 f"Date format mismatch for path: {path}"
-                f"Expected '{date_format}' instead '{date}'"
+                f"Expected '{date_format}' instead '{partition_value}'"
             )
 
-    def _extract_info_dates_from_partitions(
+    def _extract_info_dates_from_partition_paths(
         self,
         file_paths: List[str],
         table: MetastoreTable,
@@ -410,73 +337,61 @@ class MetastoreReader(MetastoreReaderBase):
             self._extract_date_from_path(
                 path,
                 table.info_date_settings.column,
-                table.info_date_settings.format
+                table.info_date_settings.format,
             )
             for path in file_paths
         ]
 
-        info_dates = [
-            info_date for info_date in raw_info_dates
-            if info_date is not None
-        ]
+        filtered_info_dates: List[datetime.date] = list(
+            filter(lambda info_date: info_date is not None, raw_info_dates)
+        )
 
-        if not info_dates:
+        if not filtered_info_dates:
             raise ValueError(
                 f"The directory does not contain partitions by "
                 f"'{table.info_date_settings.column}': {table.path}"
             )
 
-        return info_dates
+        return filtered_info_dates
 
     @staticmethod
-    def _extract_info_dates_from_dataframe(df: DataFrame, table: MetastoreTable) -> List[datetime.date]:
+    def _extract_info_dates_from_dataframe(
+        df: DataFrame, table: MetastoreTable
+    ) -> List[datetime.date]:
         info_date_settings = table.info_date_settings
-        info_dates_df = (
-            df
-            .withColumn(
-                info_date_settings.column,
-                F.to_date(
-                    info_date_settings.column,
-                    info_date_settings.format
-                ),
-            )
-            .select(info_date_settings.column)
-            .distinct()
-        )
+        info_dates_df = df.select(info_date_settings.column).distinct()
         distinct_info_dates = [row[0] for row in info_dates_df.collect()]
 
         if not distinct_info_dates:
-            raise ValueError(f"Metastore table '{table.name}' at {table.path or table.table}"
-                             f"does not contain any info dates ({info_date_settings.column})")
+            raise ValueError(
+                f"Metastore table '{table.name}' at '{table.path or table.table}'"
+                f" does not contain any info dates (column: {info_date_settings.column})"
+            )
 
         return distinct_info_dates
 
-    def _get_dataframe_reader(self,
-                              table_format: TableFormat,
-                              reader_options: Dict[str, str]) -> DataFrameReader:
-        return (
-            self.spark
-            .read
-            .options(**reader_options)
-            .format(table_format.value)
+    def _get_dataframe_reader(
+        self, table_format: TableFormat, reader_options: Dict[str, str]
+    ) -> DataFrameReader:
+        return self.spark.read.options(**reader_options).format(
+            table_format.value
         )
 
-    def _read_parquet_table(self, metastore_table: MetastoreTable) -> DataFrame:
+    def _read_parquet_table(
+        self, metastore_table: MetastoreTable
+    ) -> DataFrame:
         try:
-            return (
-                self._get_dataframe_reader(
-                    TableFormat.parquet,
-                    metastore_table.reader_options
-                )
-                .load(metastore_table.path)
-            )
+            return self._get_dataframe_reader(
+                TableFormat.parquet, metastore_table.reader_options
+            ).load(metastore_table.path)
         except AnalysisException:
-            raise Exception(f"Unable to access directory: {metastore_table.path}")
+            raise Exception(
+                f"Unable to access directory: {metastore_table.path}"
+            )
 
     def _read_delta_table(self, metastore_table: MetastoreTable) -> DataFrame:
         reader = self._get_dataframe_reader(
-            TableFormat.delta,
-            metastore_table.reader_options
+            TableFormat.delta, metastore_table.reader_options
         )
 
         if metastore_table.path:
@@ -484,4 +399,6 @@ class MetastoreReader(MetastoreReaderBase):
         elif metastore_table.table:
             return reader.table(metastore_table.table)
         else:
-            raise ValueError(f"Metastore table '{metastore_table.name}' needs to contain either path or table option")
+            raise ValueError(
+                f"Metastore table '{metastore_table.name}' needs to contain either path or table option"
+            )

@@ -15,28 +15,10 @@
 from datetime import date as d
 from pathlib import PurePath
 
-import pytest
-
 from pyhocon import ConfigFactory  # type: ignore
 
 from pramen_py import MetastoreReader
 from pramen_py.models import InfoDateSettings, MetastoreTable, TableFormat
-
-
-def test_raises_exception_on_bad_path(spark, tmp_path):
-    metastore_table = MetastoreTable(
-        name="non_existing_table_name",
-        format=TableFormat.parquet,
-        path="non/existing/table/path",
-        info_date_settings=InfoDateSettings(column="info_date"),
-    )
-    metastore = MetastoreReader(
-        spark=spark,
-        tables=[metastore_table],
-    )
-
-    with pytest.raises(Exception, match="Unable to access directory: non/existing/table/path"):
-        metastore._read_parquet_table(metastore_table)
 
 
 def test_from_config(
