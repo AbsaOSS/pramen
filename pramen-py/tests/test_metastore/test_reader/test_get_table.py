@@ -86,7 +86,7 @@ def test_get_table(
 def test_with_reader_options(
     spark,
     test_dataframe,
-    tmp_path,
+    tmp_path_builder,
 ):
     def get_metastore_writer(
         table: MetastoreTable, info_date: d
@@ -101,7 +101,7 @@ def test_with_reader_options(
     metastore_table = MetastoreTable(
         name="test_table",
         format=TableFormat.parquet,
-        path=tmp_path.as_posix(),
+        path=tmp_path_builder().as_posix(),
         info_date_settings=InfoDateSettings(column="info_date"),
         reader_options=reader_options,
     )
@@ -129,12 +129,9 @@ def test_read_delta_table_from_catalog(spark, test_dataframe):
         table="test_table",
         info_date_settings=InfoDateSettings(column="info_date"),
     )
-    writer = MetastoreWriter(
-        spark=spark,
-        tables=[metastore_table],
-        info_date=d(2022, 3, 23),
+    test_dataframe.write.format("delta").mode("overwrite").saveAsTable(
+        "test_table"
     )
-    writer.write("test_table", test_dataframe)
 
     metastore_reader = MetastoreReader(spark=spark, tables=[metastore_table])
     dataframe = metastore_reader.get_table("test_table")
@@ -205,3 +202,36 @@ def test_columns_get_converted_to_uppercase(
         ignore_row_order=True,
         ignore_column_order=True,
     )
+
+
+def test_raises_exception_on_bad_path(spark, tmp_path):
+    metastore_table = MetastoreTable(
+        name="non_existing_table_name",
+        format=TableFormat.parquet,
+        path="non/existing/table/path",
+        info_date_settings=InfoDateSettings(column="info_date"),
+    )
+    reader = MetastoreReader(
+        spark=spark,
+        tables=[metastore_table],
+    )
+
+    with pytest.raises(
+        Exception, match="Unable to access directory: non/existing/table/path"
+    ):
+        reader.get_table("non_existing_table_name")
+
+
+def test_raises_exception_on_missing_table_and_path(spark):
+    metastore_table = MetastoreTable(
+        name="missing_path_and_table",
+        format=TableFormat.delta,
+        info_date_settings=InfoDateSettings(column="info_date"),
+    )
+    reader = MetastoreReader(spark=spark, tables=[metastore_table])
+
+    with pytest.raises(
+        ValueError,
+        match="Metastore table 'missing_path_and_table' needs to contain either path or table option",
+    ):
+        reader.get_table("missing_path_and_table")
