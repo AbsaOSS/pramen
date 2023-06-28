@@ -158,7 +158,7 @@ object OperationSplitter {
   val NOTIFICATION_TARGET_KEY = "notification.target"
   val NOTIFICATION_KEY = "notification"
 
-  private val logger = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   private[core] def getNotificationTarget(appConf: Config,
                                           targetName: String,
