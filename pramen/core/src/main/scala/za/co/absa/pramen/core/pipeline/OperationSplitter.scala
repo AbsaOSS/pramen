@@ -178,7 +178,7 @@ object OperationSplitter {
       val pramenPyConfig = PramenPyCmdConfig(pramenPyLocation, pramenPyExecutable, cmdLineTemplate)
       Some(pramenPyConfig)
     } else {
-      logger.info(s"Could not create command line config for Pramen-Py. Missing '$PRAMEN_PY_LOCATION_KEY' option.")
+      log.info(s"Could not create command line config for Pramen-Py. Missing '$PRAMEN_PY_LOCATION_KEY' option.")
       None
     }
   }
@@ -188,7 +188,7 @@ object OperationSplitter {
       val client = DatabricksClient.fromConfig(conf)
       Some(client)
     } else {
-      logger.info("Could not create databricks client for Pramen-Py. Missing mandatory options.")
+      log.info("Could not create databricks client for Pramen-Py. Missing mandatory options.")
       None
     }
   }
