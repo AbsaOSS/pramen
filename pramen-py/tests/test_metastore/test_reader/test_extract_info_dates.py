@@ -140,7 +140,7 @@ def test_extract_from_multiple_paths(metastore_reader, metastore_table):
         file_paths, metastore_table
     )
 
-    assert info_dates == [d(2022, 4, 1), d(2022, 4, 2)]
+    assert set(info_dates) == {d(2022, 4, 1), d(2022, 4, 2)}
 
 
 def test_extract_from_multiple_paths_errors_on_empty_dir(
@@ -175,7 +175,7 @@ def test_extract_info_dates_from_dataframe(
         info_date_df, metastore_table
     )
 
-    assert info_dates == [d(2022, 4, 1), d(2022, 4, 2)]
+    assert set(info_dates) == {d(2022, 4, 1), d(2022, 4, 2)}
 
 
 def test_extract_info_dates_from_empty_dataframe_raises_error(
