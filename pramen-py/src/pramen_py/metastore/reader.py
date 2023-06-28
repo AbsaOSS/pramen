@@ -185,7 +185,7 @@ class MetastoreReader(MetastoreReaderBase):
             )
 
         filtered_info_dates = self._filter_info_dates_by_until(
-            info_dates, until  # type: ignore
+            info_dates, until
         )
 
         if not filtered_info_dates:
@@ -342,9 +342,9 @@ class MetastoreReader(MetastoreReaderBase):
             for path in file_paths
         ]
 
-        filtered_info_dates: List[datetime.date] = list(
-            filter(lambda info_date: info_date is not None, raw_info_dates)
-        )
+        filtered_info_dates: List[datetime.date] = [
+            info_date for info_date in raw_info_dates if info_date is not None
+        ]
 
         if not filtered_info_dates:
             raise ValueError(

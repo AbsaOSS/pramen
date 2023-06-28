@@ -195,7 +195,7 @@ def test_extract_info_dates_from_empty_dataframe_raises_error(
     with pytest.raises(
         ValueError,
         match=r"Metastore table 'test_table' at '/random/path' "
-              r"does not contain any info dates \(column: pramen_info_date\)",
+        r"does not contain any info dates \(column: pramen_info_date\)",
     ):
         metastore_reader._extract_info_dates_from_dataframe(
             empty_info_date_df, metastore_table
