@@ -43,13 +43,19 @@ trait MetastorePersistence {
 object MetastorePersistence {
   def fromMetaTable(metaTable: MetaTable)(implicit spark: SparkSession): MetastorePersistence = {
     metaTable.format match {
-      case DataFormat.Parquet(path, recordsPerPartition) => new MetastorePersistenceParquet(
-        path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
-      )
-      case DataFormat.Delta(query, recordsPerPartition)  => new MetastorePersistenceDelta(
-        query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
-      )
-      case DataFormat.Null()                             => throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
+      case DataFormat.Parquet(path, recordsPerPartition) =>
+        new MetastorePersistenceParquet(
+          path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
+        )
+      case DataFormat.Delta(query, recordsPerPartition)  =>
+        new MetastorePersistenceDelta(
+          query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
+        )
+      case DataFormat.Raw(path)                          =>
+        new MetastorePersistenceRaw(path.path, metaTable.infoDateColumn, metaTable.infoDateFormat)
+
+      case DataFormat.Null() =>
+        throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
     }
   }
 }

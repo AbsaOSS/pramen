@@ -16,18 +16,20 @@
 
 package za.co.absa.pramen.core.tests.utils
 
+import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.pipeline.TransformExpression
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.LocalDate
 
-class SparkUtilsSuite extends AnyWordSpec with SparkTestBase {
+class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture  {
   import spark.implicits._
 
   private val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
@@ -209,4 +211,80 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase {
     }
   }
 
+  "hasDataInPartition" should {
+    "return false when partition folder does not exist" in {
+      withTempDirectory("spark_utils_test") { tempDir =>
+        val actual = hasDataInPartition(infoDate, "pramen_info_date", "yyyy-MM-dd", tempDir)
+
+        assert(!actual)
+      }
+    }
+
+    "return false if the partition folder exists, but doesn't have files" in {
+      withTempDirectory("spark_utils_test") { tempDir =>
+        val partitionPath = new Path(tempDir, s"pramen_info_date=$infoDate")
+
+        val fs = partitionPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+
+        fs.mkdirs(partitionPath)
+
+        val actual = hasDataInPartition(infoDate, "pramen_info_date", "yyyy-MM-dd", tempDir)
+
+        assert(!actual)
+      }
+    }
+
+    "return false if the partition folder exists, but contains only hidden files" in {
+      withTempDirectory("spark_utils_test") { tempDir =>
+        val partitionPath = new Path(tempDir, s"pramen_info_date=$infoDate")
+
+        val fs = partitionPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+
+        fs.mkdirs(partitionPath)
+        fs.create(new Path(partitionPath, "_SUCCESS")).close()
+
+        val actual = hasDataInPartition(infoDate, "pramen_info_date", "yyyy-MM-dd", tempDir)
+
+        assert(!actual)
+      }
+    }
+
+    "return true if the partition folder exists and contains a file" in {
+      withTempDirectory("spark_utils_test") { tempDir =>
+        val partitionPath = new Path(tempDir, s"pramen_info_date=$infoDate")
+
+        val fs = partitionPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+
+        fs.mkdirs(partitionPath)
+        fs.create(new Path(partitionPath, "1.dat")).close()
+
+        val actual = hasDataInPartition(infoDate, "pramen_info_date", "yyyy-MM-dd", tempDir)
+
+        assert(actual)
+      }
+    }
+
+    "return true if the partition folder exists and contains non-hidden subdirs" in {
+      withTempDirectory("spark_utils_test") { tempDir =>
+        val partitionPath = new Path(tempDir, s"pramen_info_date=$infoDate")
+
+        val fs = partitionPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+
+        fs.mkdirs(partitionPath)
+        fs.mkdirs(new Path(partitionPath, "subpath"))
+
+        val actual = hasDataInPartition(infoDate, "pramen_info_date", "yyyy-MM-dd", tempDir)
+
+        assert(actual)
+      }
+    }
+  }
+
+  "getPartitionPath" should {
+    "construct path with an info date date" in {
+      val actual = getPartitionPath(infoDate, "pramen_info_date", "yyyy-MM-dd", "s3://bucket/path")
+
+      assert(actual.toUri.toString == "s3://bucket/path/pramen_info_date=2021-12-18")
+    }
+  }
 }
