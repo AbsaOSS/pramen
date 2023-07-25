@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.utils.Emoji.SUCCESS
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
-import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, SparkUtils, StringUtils}
 
 import java.sql.Date
 import java.time.LocalDate
@@ -44,7 +44,10 @@ class MetastorePersistenceParquet(path: String,
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
 
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
-    if (infoDateFrom.isDefined && infoDateTo.isDefined && infoDateFrom.get == infoDateTo.get && hasData(infoDateFrom.get)) {
+    if (infoDateFrom.isDefined &&
+      infoDateTo.isDefined &&
+      infoDateFrom.get == infoDateTo.get &&
+      SparkUtils.hasDataInPartition(infoDateFrom.get, infoDateColumn, infoDateFormat, path)) {
       loadPartitionDirectly(infoDateFrom.get)
     } else {
       loadTableFromRootFolder(infoDateFrom, infoDateTo)
@@ -52,8 +55,8 @@ class MetastorePersistenceParquet(path: String,
   }
 
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
-    val outputDir = getPartitionPath(infoDate)
-    val outputDirStr = getPartitionPath(infoDate).toUri.toString
+    val outputDir = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
+    val outputDirStr = outputDir.toUri.toString
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
@@ -84,7 +87,7 @@ class MetastorePersistenceParquet(path: String,
   }
 
   override def getStats(infoDate: LocalDate): MetaTableStats = {
-    val outputDirStr = getPartitionPath(infoDate).toUri.toString
+    val outputDirStr = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path).toUri.toString
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
@@ -110,7 +113,7 @@ class MetastorePersistenceParquet(path: String,
 
   def loadPartitionDirectly(infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)
-    val partitionPath = getPartitionPath(infoDate)
+    val partitionPath = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
 
     log.info(s"Partition column exists, reading from $partitionPath.")
 
@@ -177,22 +180,5 @@ class MetastorePersistenceParquet(path: String,
 
         throw ex
     }
-  }
-
-  private def hasData(infoDate: LocalDate): Boolean = {
-    val path = getPartitionPath(infoDate)
-
-    val fs = path.getFileSystem(spark.sparkContext.hadoopConfiguration)
-
-    val hasPartition = fs.exists(path)
-    if (!hasPartition) {
-      log.warn(s"No partition: $path")
-    }
-    hasPartition
-  }
-
-  private def getPartitionPath(infoDate: LocalDate): Path = {
-    val partition = s"$infoDateColumn=${dateFormatter.format(infoDate)}"
-    new Path(path, partition)
   }
 }

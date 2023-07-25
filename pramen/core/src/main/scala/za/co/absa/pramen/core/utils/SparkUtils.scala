@@ -17,16 +17,18 @@
 package za.co.absa.pramen.core.utils
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.apache.spark.sql.DataFrame
+import org.apache.hadoop.fs.{Path, PathFilter}
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{ArrayType, DataType, StructType, TimestampType}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.notify.pipeline.FieldChange
 import za.co.absa.pramen.core.pipeline.TransformExpression
 
 import java.io.ByteArrayOutputStream
+import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
@@ -182,6 +184,45 @@ object SparkUtils {
       log.info(s"Applying filter: $actualFilter")
       df.filter(expr(actualFilter))
     })
+  }
+
+  def hasDataInPartition(infoDate: LocalDate,
+                         infoDateColumn: String,
+                         infoDateFormat: String,
+                         basePath: String)(implicit spark: SparkSession): Boolean = {
+    val path = getPartitionPath(infoDate, infoDateColumn, infoDateFormat, basePath)
+
+    val fs = path.getFileSystem(spark.sparkContext.hadoopConfiguration)
+
+    val hasPartition = fs.exists(path)
+    if (hasPartition) {
+      val pathFilter = new PathFilter {
+        override def accept(path: Path): Boolean = {
+          val name = path.getName
+          !name.startsWith("_") && !name.startsWith(".")
+        }
+      }
+      val filesInTheFolder = fs.globStatus(new Path(path, "*"), pathFilter).nonEmpty
+      if (filesInTheFolder) {
+        true
+      } else {
+        log.warn(s"No content in: $path")
+        false
+      }
+    } else {
+      log.warn(s"No partition: $path")
+      false
+    }
+  }
+
+  def getPartitionPath(infoDate: LocalDate,
+                       infoDateColumn: String,
+                       infoDateFormat: String,
+                       basePath: String): Path = {
+    val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
+
+    val partition = s"$infoDateColumn=${dateFormatter.format(infoDate)}"
+    new Path(basePath, partition)
   }
 
   def addProcessingTimestamp(df: DataFrame, timestampCol: String): DataFrame = {
