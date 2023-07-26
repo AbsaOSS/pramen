@@ -326,6 +326,14 @@ class FsUtils(conf: Configuration, pathBase: String) {
   def isFile(path: Path): Boolean = fs.getFileStatus(path).isFile
 
   /**
+    * Checks if a path points to a directory.
+    *
+    * @param path a path.
+    * @return true if the path is a directory.
+    */
+  def isDirectory(path: Path): Boolean = fs.getFileStatus(path).isDirectory
+
+  /**
     * Implements a file guard. A guard is a file on HDFS that contains its expiration time.
     * If the specified file is present and the expiration time is not reached a new
     * instance of the application won't be allowed to run.
@@ -655,8 +663,10 @@ class FsUtils(conf: Configuration, pathBase: String) {
     *
     * The glob pattern is supported. Maximum depth of recursivity is 1.
     */
-  def getHadoopFiles(path: Path): Array[String] = {
-    val stats: Array[FileStatus] = fs.globStatus(path, hiddenFileFilter)
+  def getHadoopFiles(path: Path, includeHiddenFiles: Boolean = false): Array[String] = {
+    val fileFilter = if (includeHiddenFiles) anyFileFilter else hiddenFileFilter
+
+    val stats: Array[FileStatus] = fs.globStatus(path, fileFilter)
 
     if (stats == null) {
       throw new IllegalArgumentException(s"Input path does not exist: $path")
@@ -664,7 +674,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
 
     val allFiles = stats.iterator.flatMap(stat => {
       if (stat.isDirectory) {
-        fs.listStatus(stat.getPath, hiddenFileFilter).filter(!_.isDirectory)
+        fs.listStatus(stat.getPath, fileFilter).filter(!_.isDirectory)
       }
       else {
         Array(stat)
@@ -679,6 +689,10 @@ class FsUtils(conf: Configuration, pathBase: String) {
       val name = p.getName
       !name.startsWith("_") && !name.startsWith(".")
     }
+  }
+
+  private val anyFileFilter = new PathFilter() {
+    def accept(p: Path): Boolean = true
   }
 
   protected def getTimedToken: String = {
