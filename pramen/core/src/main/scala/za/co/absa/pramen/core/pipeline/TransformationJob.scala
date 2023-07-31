@@ -20,8 +20,8 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
@@ -44,11 +44,11 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
-    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions)
+    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate), infoDate, effectiveExtraOptions)
   }
 
   override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions))
+    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, effectiveExtraOptions))
   }
 
   def postProcessing(df: DataFrame,

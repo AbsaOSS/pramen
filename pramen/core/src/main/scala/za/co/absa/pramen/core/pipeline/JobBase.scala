@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
-import za.co.absa.pramen.core.metastore.model.{MetaTable, MetastoreDependency}
+import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable, MetastoreDependency}
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.utils.Emoji._
 
@@ -44,6 +44,8 @@ abstract class JobBase(operationDef: OperationDef,
   override val operation: OperationDef = operationDef
 
   override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies
+
+  protected val effectiveExtraOptions: Map[String, String] = getMetastoreTableProperties(operationDef.dependencies) ++ operationDef.extraOptions
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
@@ -75,6 +77,30 @@ abstract class JobBase(operationDef: OperationDef,
       }
 
       preRunCheckJob(infoDate, conf, dependencyWarnings)
+    }
+  }
+
+  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String] = {
+    if (outputTableDef.hiveTable.isEmpty)
+      return Seq.empty
+
+    val hiveHelper = metastore.getHiveHelper(outputTableDef.name)
+
+    val attempt = Try {
+      metastore.repairOrCreateHiveTable(outputTableDef.name, infoDate, Option(schema), hiveHelper, recreate)
+    }
+
+    attempt match {
+      case Success(_)  => Seq.empty
+      case Failure(ex) =>
+        if (outputTableDef.hiveConfig.ignoreFailures) {
+          val cause = if (ex.getCause != null) s" ${ex.getCause.getMessage}" else ""
+          val msg = s"Failed to create or repair Hive table '${outputTableDef.hiveTable.get}': ${ex.getMessage}$cause"
+          log.error(s"$FAILURE $msg")
+          Seq(msg)
+        } else {
+          throw ex
+        }
     }
   }
 
@@ -172,27 +198,20 @@ abstract class JobBase(operationDef: OperationDef,
     (effectiveFrom, effectiveTo)
   }
 
-  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String] = {
-    if (outputTableDef.hiveTable.isEmpty)
-      return Seq.empty
+  private def getMetastoreTableProperties(deps: Seq[MetastoreDependency]): Map[String, String] = {
+    val dependentTables = deps.flatMap(_.tables)
+      .distinct
+      .map(metastore.getTableDef) // getTableDef returns null for mock implementations so we need to check for null later as well
+      .filter(tableDef => tableDef != null && tableDef.format.isInstanceOf[DataFormat.Raw])
 
-    val hiveHelper = metastore.getHiveHelper(outputTableDef.name)
-
-    val attempt = Try {
-      metastore.repairOrCreateHiveTable(outputTableDef.name, infoDate, Option(schema), hiveHelper, recreate)
-    }
-
-    attempt match {
-      case Success(_)  => Seq.empty
-      case Failure(ex) =>
-        if (outputTableDef.hiveConfig.ignoreFailures) {
-          val cause = if (ex.getCause != null) s" ${ex.getCause.getMessage}" else ""
-          val msg = s"Failed to create or repair Hive table '${outputTableDef.hiveTable.get}': ${ex.getMessage}$cause"
-          log.error(s"$FAILURE $msg")
-          Seq(msg)
-        } else {
-          throw ex
-        }
+    if (dependentTables.isEmpty) {
+      Map.empty[String, String]
+    } else {
+      dependentTables
+        .map(table => {
+        val path = table.format.asInstanceOf[DataFormat.Raw].path.path
+        s"${table.name}.path" -> path
+      }).toMap
     }
   }
 }

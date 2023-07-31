@@ -30,7 +30,16 @@ class FileSourcingSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
   private val infoDate = LocalDate.of(2021, 2, 18)
 
   "File-based sourcing" should {
-    "work end to end" in {
+    val expected =
+      """{"id":"1","name":"John"}
+        |{"id":"2","name":"Jack"}
+        |{"id":"3","name":"Jill"}
+        |{"id":"4","name":"Mary"}
+        |{"id":"5","name":"Jane"}
+        |{"id":"6","name":"Kate"}
+        |""".stripMargin
+
+    "work end to end with path-based transformer" in {
       withTempDirectory("integration_file_based") { tempDir =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
@@ -46,14 +55,27 @@ class FileSourcingSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
         val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
         val df = spark.read.parquet(table2Path.toString)
 
-        val expected =
-          """{"id":"1","name":"John"}
-            |{"id":"2","name":"Jack"}
-            |{"id":"3","name":"Jill"}
-            |{"id":"4","name":"Mary"}
-            |{"id":"5","name":"Jane"}
-            |{"id":"6","name":"Kate"}
-            |""".stripMargin
+        val actual = df.orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "work end to end with dataframe-based transformer" in {
+      withTempDirectory("integration_file_based") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        fsUtils.writeFile(new Path(tempDir, "landing_file1.csv"), "id,name\n1,John\n2,Jack\n3,Jill\n")
+        fsUtils.writeFile(new Path(tempDir, "landing_file2.csv"), "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+        val conf = getConfig(tempDir, useDataFrame = true)
+
+        val exitCode = AppRunner.runPipeline(conf)
+
+        assert(exitCode == 0)
+
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val df = spark.read.parquet(table2Path.toString)
 
         val actual = df.orderBy("id").toJSON.collect().mkString("\n")
 
@@ -62,12 +84,13 @@ class FileSourcingSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
     }
   }
 
-  def getConfig(basePath: String): Config = {
+  def getConfig(basePath: String, useDataFrame: Boolean = false): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/integration_file_based.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
 
     val conf = ConfigFactory.parseString(
       s"""base.path = "$basePathEscaped"
+         |use.dataframe = $useDataFrame
          |pramen.runtime.is.rerun = true
          |pramen.current.date = "$infoDate"
          |$configContents
