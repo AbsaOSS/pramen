@@ -19,8 +19,8 @@ package za.co.absa.pramen.core.runner
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
@@ -116,7 +116,7 @@ object AppRunner {
     Try {
       val version = BuildPropertyUtils.instance.getFullVersion
       val banner = ResourceUtils.getResourceString("/pramen_banner.txt")
-        .replaceAll("""project_version""", version)
+        .replace("""project_version""", version)
       log.info(s"\n$banner")
 
       spark.sparkContext.uiWebUrl.foreach(url => log.info(s"Spark URL: $url"))
