@@ -45,7 +45,7 @@ abstract class JobBase(operationDef: OperationDef,
 
   override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies
 
-  protected val effectiveExtraOptions: Map[String, String] = getMetastoreTableProperties(operationDef.dependencies) ++ operationDef.extraOptions
+  protected val effectiveExtraOptions: Map[String, String] = getMetastoreTableProperties ++ operationDef.extraOptions
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
@@ -198,8 +198,16 @@ abstract class JobBase(operationDef: OperationDef,
     (effectiveFrom, effectiveTo)
   }
 
-  private def getMetastoreTableProperties(deps: Seq[MetastoreDependency]): Map[String, String] = {
-    val dependentTables = deps.flatMap(_.tables)
+  private def getMetastoreTableProperties: Map[String, String] = {
+    // Sinks explicitly depend on input metastore tables, so need to include them
+    val allTables = operationDef.operationType match {
+      case s: OperationType.Sink =>
+        operationDef.dependencies.flatMap(_.tables) ++ s.sinkTables.map(table => table.metaTableName)
+      case _                     =>
+        operationDef.dependencies.flatMap(_.tables)
+    }
+
+    val dependentTables = allTables
       .distinct
       .map(metastore.getTableDef) // getTableDef returns null for mock implementations so we need to check for null later as well
       .filter(tableDef => tableDef != null && tableDef.format.isInstanceOf[DataFormat.Raw])
