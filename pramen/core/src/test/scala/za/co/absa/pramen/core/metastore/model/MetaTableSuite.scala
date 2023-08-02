@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.metastore.model.DataFormat.Parquet
+import za.co.absa.pramen.api.DataFormat.Parquet
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
 

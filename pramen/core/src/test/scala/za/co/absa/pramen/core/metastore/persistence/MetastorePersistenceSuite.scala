@@ -20,10 +20,9 @@ import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.api.{DataFormat, Query}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.metastore.model.DataFormat._
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.utils.{LocalFsUtils, SparkUtils}
@@ -511,7 +510,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
                               pathSuffix: String = "parquet"): MetastorePersistence = {
 
     val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
-      format = Parquet(s"$tempDir/$pathSuffix", recordsPerPartition),
+      format = DataFormat.Parquet(s"$tempDir/$pathSuffix", recordsPerPartition),
       infoDateColumn = infoDateColumn,
       infoDateFormat = infoDateFormat
     )
@@ -524,7 +523,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
                             pathSuffix: String = "delta",
                             writeOptions: Map[String, String] = Map.empty[String, String]): MetastorePersistence = {
     val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
-      format = Delta(Query.Path(s"$tempDir/$pathSuffix"), recordsPerPartition),
+      format = DataFormat.Delta(Query.Path(s"$tempDir/$pathSuffix"), recordsPerPartition),
       infoDateColumn = infoDateColumn,
       infoDateFormat = infoDateFormat,
       writeOptions = writeOptions

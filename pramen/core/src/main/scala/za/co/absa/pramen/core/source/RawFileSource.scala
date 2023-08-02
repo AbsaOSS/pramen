@@ -26,6 +26,56 @@ import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
+/**
+  * This source allows loading files, and copying them ot the metastore without looking into its contents.
+  *
+  * In order to store files in the metastore without looking into its contents, you need to use 'raw' format of
+  * the output table in the metastore. When you query such table, it returns the list of files available rather than
+  * data in these files.
+  *
+  * For the full example see this interation test: `FileSourcingSuite`.
+  *
+  * Example source definition:
+  * {{{
+  *  {
+  *    name = "file_source"
+  *    factory.class = "za.co.absa.pramen.core.source.RawFileSource"
+  *  }
+  * }}}
+  *
+  * Metastore definition:
+  * {{{
+  *   pramen.metastore {
+  *   tables = [
+  *     {
+  *       name = "table1"
+  *       description = "Table 1 (file based)"
+  *       format = "raw"
+  *       path = /bigdata/metastore/table1
+  *     }
+  *   ]
+  * }}}
+  *
+  * Here is an example of an ingestion operation for this source.
+  *
+  * {{{
+  *  {
+  *    name = "Sourcing from a folder"
+  *    type = "ingestion"
+  *    schedule.type = "daily"
+  *
+  *    source = "file_source"
+  *
+  *    tables = [
+  *      {
+  *        input.path = /bigdata/landing
+  *        output.metastore.table = table1
+  *      }
+  *    ]
+  *  }
+  * }}}
+  *
+  */
 class RawFileSource(val sourceConfig: Config,
                     val options: Map[String, String])(implicit spark: SparkSession) extends Source {
 

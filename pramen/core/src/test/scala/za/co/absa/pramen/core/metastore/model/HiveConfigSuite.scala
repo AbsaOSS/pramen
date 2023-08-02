@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
 
 class HiveConfigSuite extends AnyWordSpec {

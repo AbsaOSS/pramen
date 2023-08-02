@@ -17,33 +17,10 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.api.{DataFormat, Query}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
-/** Storage formats supported by the metastore. */
-sealed trait DataFormat {
-  def name: String
-}
-
-object DataFormat {
-  case class Parquet(path: String, recordsPerPartition: Option[Long]) extends DataFormat {
-    override def name: String = "parquet"
-  }
-
-  case class Delta(query: Query, recordsPerPartition: Option[Long]) extends DataFormat {
-    override def name: String = "delta"
-  }
-
-  // This format is used for metatables which are just files and can only be used for further sourcing
-  case class Raw(path: Query.Path) extends DataFormat {
-    override def name: String = "raw"
-  }
-
-  // This format is used for metatables which do not support persistence, e.g. for sink or tramsfer jobs
-  case class Null() extends DataFormat {
-    override def name: String = "null"
-  }
-
+object DataFormatParser {
   val FORMAT_PARQUET = "parquet"
   val FORMAT_DELTA = "delta"
   val FORMAT_RAW = "raw"
@@ -66,16 +43,16 @@ object DataFormat {
         val path = getPath(conf)
         val recordsPerPartition = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
           .orElse(defaultRecordsPerPartition)
-        Parquet(path, recordsPerPartition)
+        DataFormat.Parquet(path, recordsPerPartition)
       case FORMAT_DELTA   =>
         val query = getQuery(conf)
         val recordsPerPartition = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
           .orElse(defaultRecordsPerPartition)
-        Delta(query, recordsPerPartition)
+        DataFormat.Delta(query, recordsPerPartition)
       case FORMAT_RAW =>
         if (!conf.hasPath(PATH_KEY)) throw new IllegalArgumentException(s"Mandatory option for a metastore table having 'raw' format: $PATH_KEY")
         val path = Query.Path(conf.getString(PATH_KEY))
-        Raw(path)
+        DataFormat.Raw(path)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
     }
   }

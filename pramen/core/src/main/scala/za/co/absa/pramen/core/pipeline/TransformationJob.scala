@@ -44,11 +44,11 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
-    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate), infoDate, effectiveExtraOptions)
+    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions)
   }
 
   override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, effectiveExtraOptions))
+    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions))
   }
 
   def postProcessing(df: DataFrame,

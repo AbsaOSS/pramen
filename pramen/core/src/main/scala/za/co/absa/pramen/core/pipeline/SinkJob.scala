@@ -124,7 +124,7 @@ class SinkJob(operationDef: OperationDef,
         sinkTable.metaTableName,
         metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, infoDate),
         infoDate,
-        effectiveExtraOptions ++ sinkTable.options
+        sinkTable.options
       )
       val jobFinished = Instant.now
 

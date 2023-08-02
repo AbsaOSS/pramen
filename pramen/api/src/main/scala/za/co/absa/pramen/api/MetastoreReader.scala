@@ -78,4 +78,13 @@ trait MetastoreReader {
     * @return true if data is available for the specified range.
     */
   def isDataAvailable(tableName: String, from: Option[LocalDate], until: Option[LocalDate]): Boolean
+
+  /**
+    * Gets definition of a metastore table. Please, use with caution and do not write to the underlying path
+    * from transformers.
+    *
+    * @param tableName The name of the table to query.
+    * @return The table definition.
+    */
+  def getTableDef(tableName: String): MetaTableDef
 }
