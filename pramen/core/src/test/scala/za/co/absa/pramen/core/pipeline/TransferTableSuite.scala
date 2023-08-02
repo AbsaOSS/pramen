@@ -18,8 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.core.metastore.model.DataFormat
+import za.co.absa.pramen.api.{DataFormat, Query}
 
 import java.time.LocalDate
 

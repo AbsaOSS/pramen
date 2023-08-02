@@ -20,11 +20,11 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{MetastoreReader, Query}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetastoreReader, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable}
+import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
@@ -172,12 +172,32 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
         metastore.isDataAvailable(tableName, fromDate, untilDate)
       }
 
+      override def getTableDef(tableName: String): MetaTableDef = {
+        validateTable(tableName)
+
+        getMetaTableDef(metastore.getTableDef(tableName))
+      }
+
       private def validateTable(tableName: String): Unit = {
         if (!tables.contains(tableName)) {
           throw new TableNotConfigured(s"Attempt accessing non-dependent table: $tableName")
         }
       }
     }
+  }
+
+  private[core] def getMetaTableDef(table: MetaTable): MetaTableDef = {
+    MetaTableDef(
+      table.name,
+      table.description,
+      table.format,
+      table.infoDateColumn,
+      table.infoDateFormat,
+      table.hiveTable,
+      table.infoDateStart,
+      table.readOptions,
+      table.writeOptions
+    )
   }
 
   private[core] def prepareHiveSchema(schema: StructType, mt: MetaTable): StructType = {

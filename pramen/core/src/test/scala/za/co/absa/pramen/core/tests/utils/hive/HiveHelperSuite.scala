@@ -18,8 +18,9 @@ package za.co.absa.pramen.core.tests.utils.hive
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveApi, HiveConfig, HiveDefaultConfig}
+import za.co.absa.pramen.core.metastore.model.{HiveApi, HiveConfig, HiveDefaultConfig}
 import za.co.absa.pramen.core.utils.hive._
 
 class HiveHelperSuite extends AnyWordSpec with SparkTestBase {

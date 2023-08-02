@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
-import za.co.absa.pramen.core.metastore.model.{DataFormat, MetaTable, MetastoreDependency}
+import za.co.absa.pramen.core.metastore.model.{MetaTable, MetastoreDependency}
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.utils.Emoji._
 
@@ -44,8 +44,6 @@ abstract class JobBase(operationDef: OperationDef,
   override val operation: OperationDef = operationDef
 
   override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies
-
-  protected val effectiveExtraOptions: Map[String, String] = getMetastoreTableProperties ++ operationDef.extraOptions
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
@@ -196,31 +194,6 @@ abstract class JobBase(operationDef: OperationDef,
     log.info(s"Input date range for ${outputTable.name}: from $effectiveFrom to $effectiveTo")
 
     (effectiveFrom, effectiveTo)
-  }
-
-  private def getMetastoreTableProperties: Map[String, String] = {
-    // Sinks explicitly depend on input metastore tables, so need to include them
-    val allTables = operationDef.operationType match {
-      case s: OperationType.Sink =>
-        operationDef.dependencies.flatMap(_.tables) ++ s.sinkTables.map(table => table.metaTableName)
-      case _                     =>
-        operationDef.dependencies.flatMap(_.tables)
-    }
-
-    val dependentTables = allTables
-      .distinct
-      .map(metastore.getTableDef) // getTableDef returns null for mock implementations so we need to check for null later as well
-      .filter(tableDef => tableDef != null && tableDef.format.isInstanceOf[DataFormat.Raw])
-
-    if (dependentTables.isEmpty) {
-      Map.empty[String, String]
-    } else {
-      dependentTables
-        .map(table => {
-        val path = table.format.asInstanceOf[DataFormat.Raw].path.path
-        s"${table.name}.path" -> path
-      }).toMap
-    }
   }
 }
 

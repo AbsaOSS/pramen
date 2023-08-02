@@ -16,15 +16,15 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.core.metastore.model.DataFormat._
-import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveConfig, MetaTable}
+import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 
 import java.time.LocalDate
 
 object MetaTableFactory {
   def getDummyMetaTable(name: String = "dummy",
                         description: String = "description",
-                        format: DataFormat = Parquet("/tmp/dummy", None),
+                        format: DataFormat = DataFormat.Parquet("/tmp/dummy", None),
                         infoDateColumn: String = "INFO_DATE",
                         infoDateFormat: String = "yyyy-MM-dd",
                         hiveConfig: HiveConfig = HiveConfig.getNullConfig,

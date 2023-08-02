@@ -20,10 +20,10 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.fixtures.TempDirFixture
-import za.co.absa.pramen.core.metastore.model.DataFormat
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.journal.JournalMock
 import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock

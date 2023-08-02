@@ -18,11 +18,11 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.api.{DataFormat, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.InfoDateOverride
-import za.co.absa.pramen.core.metastore.model.{DataFormat, HiveConfig, MetaTable}
+import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.model.QueryBuilder
 import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}

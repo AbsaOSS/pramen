@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
-import za.co.absa.pramen.api.MetastoreReader
+import za.co.absa.pramen.api.{MetaTableDef, MetastoreReader}
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
@@ -115,6 +115,22 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         val fromDate = from.orElse(Option(infoDate))
         val untilDate = until.orElse(Option(infoDate))
         metastore.isDataAvailable(tableName, fromDate, untilDate)
+      }
+
+      override def getTableDef(tableName: String): MetaTableDef = {
+        validateTable(tableName)
+
+        val table = metastore.getTableDef(tableName)
+
+        MetaTableDef(table.name,
+          table.description,
+          table.format,
+          table.infoDateColumn,
+          table.infoDateFormat,
+          table.hiveTable,
+          table.infoDateStart,
+          table.readOptions,
+          table.writeOptions)
       }
 
       private def validateTable(tableName: String): Unit = {

@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.InfoDateOverride
@@ -95,7 +96,7 @@ object MetaTable {
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
 
     val format = Try {
-      DataFormat.fromConfig(conf, appConf)
+      DataFormatParser.fromConfig(conf, appConf)
     } match {
       case Success(f) => f
       case Failure(ex) => throw new IllegalArgumentException(s"Unable to read data format from config for the metastore table: $name", ex)

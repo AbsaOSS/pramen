@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.metastore.model.HiveDefaultConfig._
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
