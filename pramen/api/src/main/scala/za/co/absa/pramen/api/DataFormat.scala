@@ -31,7 +31,7 @@ object DataFormat {
   }
 
   // This format is used for metatables which are just files and can only be used for further sourcing
-  case class Raw(path: Query.Path) extends DataFormat {
+  case class Raw(path: String) extends DataFormat {
     override def name: String = "raw"
   }
 

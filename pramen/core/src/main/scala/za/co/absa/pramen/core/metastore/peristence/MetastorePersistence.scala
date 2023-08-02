@@ -53,7 +53,7 @@ object MetastorePersistence {
           query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Raw(path)                          =>
-        new MetastorePersistenceRaw(path.path, metaTable.infoDateColumn, metaTable.infoDateFormat)
+        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat)
 
       case DataFormat.Null() =>
         throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
