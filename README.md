@@ -2137,6 +2137,121 @@ More on this kind of sink can be found at the implementation of the sink itself:
 
 You can use any source/sink combination in transfer jobs.
 
+## Advanced usage
+
+We describe here a more complicated use cases.
+
+### File-based sourcing
+Let's consider a use case when your data lake has 'landing' area where data is loaded from external sources, in addition
+to the classic 'raw' area. The 'landing' area is owned by the data producer and source systems can write files there.
+Then, the data pipeline should pick only some of the files in the landing area and copy them to the raw area. Files in
+the raw area are owned and maintained by data engineers. Data producers do not have write access to it. This creates an
+ownership boundary between the data producers and data engineers with clear set of responsibilities.
+
+The main usage of Pramen is ingesting source structured data into a data lake. However, ingestion of file-based data can
+change it, for instance, when data types are not setup properly. Data engineers usually want to store raw data in exactly
+the same format as it was exported from the source so they can rerun the pipeline later to fix possible mistakes
+retrospectively.
+
+So this is where file sourcing capability is useful. The idea is that files can be sources into the metastore in 'raw'
+format. Pramen will not change input files in any way. When queried from a transformer or a sink a 'raw' metastore table
+returns not the data in the table itself, but the list of files for the requested date. It is up to the transformer or
+sink to read the data files and convert them to the desired format if necessary.
+
+A special built-in transformer `za.co.absa.pramen.core.transformers.ConversionTransformer` can be used to convert 'raw'
+data into a normal `parquet` or `delta` metastore table if the source format is supported by Spark. If the source format
+is not supported by Spark out of the box, you can use this transformer as an example for implementing a custom
+transformer that does the conversion.
+
+![](resources/file_based_sourcing.png)
+
+
+Here is an example pipeline definition:
+<details>
+  <summary>Click to expand</summary>
+
+```hocon
+pramen {
+  pipeline.name = "Example file sourcing pipeline"
+
+  bookkeeping.enabled = false
+}
+
+pramen.metastore {
+  tables = [
+    {
+      name = "table1_raw"
+      description = "Table 1 (file based)"
+      format = "raw"
+      path = /my_metastore/raw/table1
+    },
+    {
+      name = "table1_publish"
+      description = "Table 1 (delta)"
+      format = "delta"
+      path = /my_metastore/publish/table2
+    }
+  ]
+}
+
+# Define a file-based source. This is very simple.
+pramen.sources.1 = [
+  {
+    name = "file_source"
+    factory.class = "za.co.absa.pramen.core.source.RawFileSource"
+  }
+]
+
+pramen.operations = [
+  {
+    name = "Sourcing from landing to the raw folder"
+    type = "ingestion"
+    
+    schedule.type = "daily"
+
+    source = "file_source"
+
+    tables = [
+      {
+        input.path = ${base.path}
+        output.metastore.table = table1_raw
+      }
+    ]
+  },
+  {
+    name = "Converting from raw to publish"
+    type = "transformation"
+    class = "za.co.absa.pramen.core.transformers.ConversionTransformer"
+    
+    schedule.type = "daily"
+
+    # This is the output table stored in the Delta Lake format we are outputting to
+    output.table = "table1_publish"
+
+    # Explicit dependency on the raw table is required for transformers 
+    dependencies = [
+      {
+        tables = [ table1_raw ]
+        date.from = "@infoDate"
+        optional = true # Since no bookkeeping available the table will be seen as empty for the dependency manager
+      }
+    ]
+
+    option {
+      input.table = "table1_raw"
+      
+      # Specify the format of the input data (any Spark supported formats can be used here)
+      input.format = "csv"
+      
+      # Any spark-csv options can go here
+      header = true
+    }
+  }
+]
+```
+</details>
+
+
 ## Notifications
 If you need to react on a completion event of any job, you can do it using notification targets. A notification target 
 is a component that you can implement and register for any operation or table. The notification target will be called 
