@@ -80,9 +80,12 @@ In addition to basic error notification, typical operational warnings are genera
    Or you can build it from source for your Spark environment by running:
    ```sh
    git clone https://github.com/AbsaOSS/pramen
-   sbt -DSPARK_VERSION="2.4.8" ++2.11.12 assembly 
+   cd pramen
+   sbt -DSPARK_VERSION="3.3.2" ++2.12.18 assembly 
    ```
    (You need JDK 1.8 installed to run this)
+ 
+   You can specify your Spark path and run the full end to end example from (Linux or Mac only): [pramen/examples/combined_example.sh](pramen/examples/combined_example.sh) 
 
    For all possible build options look see [Building Pramen to suite your environment](#building-pramen-to-suite-your-environment)
 
