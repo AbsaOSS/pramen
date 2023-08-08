@@ -128,11 +128,11 @@ The latest version is `1.2.0`.
 
 The following Scala and Spark combinations are supported:
 
-| Scala version |    Spark version    |
-|:-------------:|:-------------------:|
-|     2.11      |        2.4.8        |
-|     2.12      | 3.0.x, 3.1.x, 3.2.x |
-|     2.13      |    3.2.x, 3.3.x     |
+| Scala version | Spark version |
+|:-------------:|:-------------:|
+|     2.11      |     2.4.8     |
+|     2.12      | 3.0 and above |
+|     2.13      | 3.2 and above |
 
 ## Building Pramen to suite your environment
 
@@ -144,13 +144,14 @@ Creating an uber jar for Pramen is very easy. Just clone the repository and run 
 ```sh
 sbt -DSPARK_VERSION="2.4.8" ++2.11.12 assembly 
 
-sbt -DSPARK_VERSION="2.4.8" ++2.12.17 assembly 
-sbt -DSPARK_VERSION="3.0.3" ++2.12.17 assembly 
-sbt -DSPARK_VERSION="3.1.3" ++2.12.17 assembly 
-sbt -DSPARK_VERSION="3.2.2" ++2.12.17 assembly 
+sbt -DSPARK_VERSION="3.1.4" ++2.12.18 assembly 
+sbt -DSPARK_VERSION="3.2.4" ++2.12.18 assembly 
+sbt -DSPARK_VERSION="3.3.2" ++2.12.18 assembly
+sbt -DSPARK_VERSION="3.4.1" ++2.12.18 assembly
 
-sbt -DSPARK_VERSION="3.2.2" ++2.13.10 assembly
-sbt -DSPARK_VERSION="3.3.1" ++2.13.10 assembly 
+sbt -DSPARK_VERSION="3.2.4" ++2.13.11 assembly
+sbt -DSPARK_VERSION="3.3.2" ++2.13.11 assembly 
+sbt -DSPARK_VERSION="3.4.1" ++2.13.11 assembly
 ```
 
 You can collect the uber jar of `pramen-runner` either at
