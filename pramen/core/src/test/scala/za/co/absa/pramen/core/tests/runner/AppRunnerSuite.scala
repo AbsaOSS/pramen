@@ -107,6 +107,15 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
     }
   }
 
+  "getExecutorNodes()" should {
+    "return a list of executor nodes" in {
+      val nodes = AppRunner.getExecutorNodes(spark)
+
+      assert(nodes.size == 1)
+      assert(nodes.head.nonEmpty)
+    }
+  }
+
   "handleFailure()" should {
     val state = getMockPipelineState
 

@@ -60,5 +60,7 @@ object Keys {
 
   val SPECIAL_CHARACTERS_IN_COLUMN_NAMES = "pramen.special.characters.in.column.names"
 
+  val LOG_EXECUTOR_NODES = "pramen.log.executor.nodes"
+
   val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "session.token", "access_key", "session_token")
 }

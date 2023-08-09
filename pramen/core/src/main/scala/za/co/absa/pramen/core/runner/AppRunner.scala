@@ -21,6 +21,7 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
+import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
 import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
@@ -52,6 +53,7 @@ object AppRunner {
     val exitCodeTry = for {
       spark      <- getSparkSession
       _          <- logBanner(spark)
+      _          <- logExecutorNodes(conf, state, spark)
       appContext <- createAppContext(conf, state, spark)
       taskRunner <- createTaskRunner(conf, state, appContext, spark.sparkContext.applicationId)
       pipeline   <- getPipelineDef(conf, state, appContext)
@@ -110,6 +112,28 @@ object AppRunner {
     handleFailure(Try {
       PipelineSparkSessionBuilder.buildSparkSession(conf)
     }, state, "Spark Session creation")
+  }
+
+  private[core] def logExecutorNodes(implicit conf: Config,
+                                     state: PipelineState,
+                                     spark: SparkSession): Try[Unit] = {
+    handleFailure(Try {
+      val logExecutorNodes = conf.getBoolean(LOG_EXECUTOR_NODES)
+
+      if (logExecutorNodes) {
+        val hosts = getExecutorNodes
+
+        hosts.foreach(host => log.info(s"Executor node: $host"))
+      }
+    }, state, "Spark List of executor nodes")
+  }
+
+  private[core] def getExecutorNodes(implicit spark: SparkSession): Seq[String] = {
+    val DEFAULT_DUMMY_JOB_ENTRIES = 1000000
+    val sc = spark.sparkContext
+
+    val data = sc.parallelize(1 to DEFAULT_DUMMY_JOB_ENTRIES).repartition(sc.defaultParallelism)
+    data.mapPartitions { _ => Iterable(java.net.InetAddress.getLocalHost.getHostName).iterator }.collect().distinct.sorted
   }
 
   private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {
