@@ -28,6 +28,7 @@ import za.co.absa.pramen.runner.config.Constants
 
 import java.io.File
 import java.nio.file.{FileSystems, Files, Paths}
+import scala.util.Try
 
 object RunnerCommons {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -54,6 +55,19 @@ object RunnerCommons {
       // Switch logging level to WARN
       Logger.getLogger("org").setLevel(Level.WARN)
       Logger.getLogger("akka").setLevel(Level.WARN)
+
+      Try {
+        // Using reflection to invoke for Spark 3.3+:
+        // Configurator.setLevel("org", "warn")
+        // Configurator.setLevel("akka", "warn")
+
+        val clazz = Class.forName("org.apache.logging.log4j.core.config.Configurator")
+
+        val method = clazz.getMethod("setLevel", classOf[String], classOf[String])
+
+        method.invoke(null, "org", "warn")
+        method.invoke(null, "akka", "warn")
+      }
     }
 
     conf
