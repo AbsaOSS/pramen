@@ -348,12 +348,35 @@ object ConfigUtils {
   }
 
   /**
-    * Logs the effective configuration while redacting sensitive keys
+    * Renders the effective configuration while redacting sensitive keys
+    * in Java Properties format.
+    *
+    * @param keysToRedact   A set of keys for which values shouldn't be logged.
+    * @param tokensToRedact A set of words in a key for which values shouldn't be logged.
+    */
+  def renderEffectiveConfigProps(conf: Config,
+                                 keysToRedact: Set[String] = Set(),
+                                 tokensToRedact: Set[String] = Set()): String = {
+    val redactedFlatConfig = getRedactedFlatConfig(
+      getFlatConfigOfPrimitiveValues(
+        getRedactedConfig(conf, keysToRedact)),
+      tokensToRedact)
+
+    redactedFlatConfig.map {
+      case (k, v) => s"$k = $v"
+    }.toArray
+      .sortBy(identity)
+      .mkString("\n")
+  }
+
+  /**
+    * Renders the effective configuration while redacting sensitive keys
     * in HOCON format.
     *
     * @param keysToRedact A set of keys for which values shouldn't be logged.
     */
-  def logEffectiveConfigHocon(conf: Config, keysToRedact: Set[String] = Set()): Unit = {
+  def renderEffectiveConfigHocon(conf: Config,
+                                 keysToRedact: Set[String] = Set()): String = {
     val redactedConfig = getRedactedConfig(conf, keysToRedact)
 
     val renderOptions = ConfigRenderOptions.defaults()
@@ -361,9 +384,7 @@ object ConfigUtils {
       .setOriginComments(false)
       .setJson(false)
 
-    val rendered = redactedConfig.root().render(renderOptions)
-
-    log.info(s"Effective configuration:\n$rendered")
+    redactedConfig.root().render(renderOptions)
   }
 
   /**
@@ -377,18 +398,10 @@ object ConfigUtils {
   def logEffectiveConfigProps(conf: Config,
                               keysToRedact: Set[String] = Set(),
                               tokensToRedact: Set[String] = Set()): Unit = {
-    val redactedFlatConfig = getRedactedFlatConfig(
-      getFlatConfigOfPrimitiveValues(
-        getRedactedConfig(conf, keysToRedact)),
-      tokensToRedact)
-
-    val rendered = redactedFlatConfig.map {
-      case (k, v) => s"$k = $v"
-    }.toArray
-      .sortBy(identity)
-      .mkString("\n")
+    val rendered = renderEffectiveConfigProps(conf, keysToRedact, tokensToRedact)
 
     log.info(s"Effective configuration:\n$rendered")
+
   }
 
   /**
