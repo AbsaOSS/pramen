@@ -587,6 +587,28 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
     }
   }
 
+  "renderEffectiveConfigProps" should {
+    "convert a config to a properties list" in {
+      val actual = ConfigUtils.renderEffectiveConfigProps(testConfig, Set("mytest.int.value"), Set("password"))
+
+      assert(actual.contains("mytest.date.value = 2020-08-10"))
+      assert(actual.contains("mytest.extra.options2.value3 = [10, 5, 7, 4]"))
+      assert(actual.contains("mytest.object.array[0].options[0].opt1 = a"))
+      assert(actual.contains("mytest.matrix[0] = [1, 2, 3]"))
+      assert(actual.contains("mytest.int.value = [redacted]"))
+      assert(actual.contains("mytest.password = [redacted]"))
+    }
+  }
+
+  "renderEffectiveConfigHocon" should {
+    "convert a config to a hocon string" in {
+      val actual = ConfigUtils.renderEffectiveConfigHocon(testConfig, Set("mytest.int.value"))
+
+      assert(actual.contains("pointer=2000000"))
+      assert(actual.contains("value=\"[redacted]\""))
+    }
+  }
+
   "renderExtraOptions" should {
     "redact keys that contain words to redact" in {
       val map = Map("key1" -> "value1", "MyPassword" -> "value2", "SECRET" -> "value3")
