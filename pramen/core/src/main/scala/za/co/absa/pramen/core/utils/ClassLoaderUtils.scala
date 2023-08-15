@@ -59,4 +59,27 @@ object ClassLoaderUtils {
       }.get
   }
 
+  @throws[ClassNotFoundException]
+  @throws[ClassCastException]
+  @throws[NoSuchMethodException]
+  def loadEntityConfigurableClass[T: ClassTag : universe.TypeTag](fullyQualifiedName: String, entityConfig: Config, appConfig: Config): T = {
+    // There are 2 types of constructors supported. If there is a one that takes a config - use it.
+    // Otherwise, try the default constructor.
+    val confCtor = Try[Constructor[_]](Class.forName(fullyQualifiedName).getConstructor(classOf[Config], classOf[Config]))
+
+    confCtor
+      .map(ctor => ctor.newInstance(entityConfig, appConfig).asInstanceOf[T])
+      .recoverWith {
+        case _: NoSuchMethodException =>
+          val defCtor = Try[Constructor[_]](Class.forName(fullyQualifiedName).getConstructor(classOf[Config]))
+          defCtor.map(ctor => ctor.newInstance(entityConfig).asInstanceOf[T])
+      }
+      .recoverWith {
+        case _: NoSuchMethodException =>
+          val defCtor = Try[Constructor[_]](Class.forName(fullyQualifiedName).getConstructor())
+          defCtor.map(ctor => ctor.newInstance().asInstanceOf[T])
+      }
+      .get
+  }
+
 }
