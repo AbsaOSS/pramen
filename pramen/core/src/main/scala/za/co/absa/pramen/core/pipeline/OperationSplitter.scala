@@ -98,7 +98,7 @@ class OperationSplitter(conf: Config,
   def createTransformation(operationDef: OperationDef,
                            clazz: String,
                            outputTable: String)(implicit spark: SparkSession): Seq[Job] = {
-    val transformer = ClassLoaderUtils.loadConfigurableClass[Transformer](clazz, conf)
+    val transformer = ClassLoaderUtils.loadEntityConfigurableClass[Transformer](clazz, operationDef.operationConf, conf)
 
     val outputMetaTable = metastore.getTableDef(outputTable)
 
