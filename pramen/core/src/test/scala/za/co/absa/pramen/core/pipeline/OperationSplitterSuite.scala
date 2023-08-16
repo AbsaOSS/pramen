@@ -24,10 +24,49 @@ import za.co.absa.pramen.core.databricks.DatabricksClient
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.mocks.notify.NotificationTargetSpy
+import za.co.absa.pramen.core.mocks.{SinkTableFactory, SourceTableFactory, TransferTableFactory}
 
 class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
   private val appConfig: Config = ConfigFactory.parseString(
-    s"""
+    s""" pramen.metastore.tables = [
+       |   {
+       |     name = "table1"
+       |     format = "delta"
+       |     path = "/dummy/path1"
+       |   },
+       |   {
+       |     name = "table2"
+       |     format = "parquet"
+       |     path = "/dummy/path2"
+       |   }
+       | ]
+       |
+       | pramen.sources = [
+       |   {
+       |     name = "spark_source"
+       |     factory.class = "za.co.absa.pramen.core.source.SparkSource"
+       |
+       |     format = "csv"
+       |
+       |     has.information.date.column = false
+       |
+       |     option {
+       |       header = true
+       |       delimiter = ","
+       |     }
+       |   }
+       | ]
+       |
+       | pramen.sinks.1 = [
+       |  {
+       |    name = "spark_sink"
+       |    factory.class = "za.co.absa.pramen.core.sink.SparkSink"
+       |
+       |    format = "parquet"
+       |    mode = "overwrite"
+       |  }
+       |]
+       |
        | pramen.notification.targets = [
        |    {
        |      name = "hyperdrive1"
@@ -62,6 +101,111 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
        |""".stripMargin)
     .withFallback(ConfigFactory.load())
     .resolve()
+
+  "createJobs" should {
+    "create ingestion jobs" in {
+      val ingestionConf = ConfigFactory.parseString(
+        s"""name = "Sourcing operation"
+           |source = "spark_source"
+           |""".stripMargin)
+      val (splitter, _) = getUseCase()
+
+      val sourceTable1 = SourceTableFactory.getDummySourceTable(metaTableName = "table1")
+      val sourceTable2 = SourceTableFactory.getDummySourceTable(metaTableName = "table2")
+
+      val ingestionDef = OperationDefFactory.getDummyOperationDef(name = "test",
+        operationConf = ingestionConf,
+        operationType = OperationType.Ingestion("spark_source", Seq(sourceTable1, sourceTable2))
+      )
+
+      val job = splitter.createJobs(ingestionDef)
+
+      assert(job.length == 2)
+      assert(job.head.isInstanceOf[IngestionJob])
+      assert(job(1).isInstanceOf[IngestionJob])
+    }
+
+    "create transformation jobs" in {
+      val transformerConf = ConfigFactory.parseString(
+        s"""name = "test transformer"
+           |class = "za.co.absa.pramen.core.mocks.transformer.DummyTransformer3"
+           |""".stripMargin)
+      val (splitter, _) = getUseCase()
+
+      val transformerDef = OperationDefFactory.getDummyOperationDef(name = "test",
+        operationConf = transformerConf,
+        operationType = OperationType.Transformation("za.co.absa.pramen.core.mocks.transformer.DummyTransformer3", "dummy_output_table")
+      )
+
+      val job = splitter.createJobs(transformerDef)
+
+      assert(job.length == 1)
+      assert(job.head.isInstanceOf[TransformationJob])
+    }
+
+    "create Python transformation jobs" in {
+      val transformerConf = ConfigFactory.parseString(
+        s"""name = "test Python transformer"
+           |python.class = "test_class"
+           |""".stripMargin)
+      val (splitter, _) = getUseCase()
+
+      val pythonTransformerDef = OperationDefFactory.getDummyOperationDef(name = "test",
+        operationConf = transformerConf,
+        operationType = OperationType.PythonTransformation("test_class", "dummy_output_table")
+      )
+
+      val job = splitter.createJobs(pythonTransformerDef)
+
+      assert(job.length == 1)
+      assert(job.head.isInstanceOf[PythonTransformationJob])
+    }
+
+    "create sink jobs" in {
+      val ingestionConf = ConfigFactory.parseString(
+        s"""name = "Sink operation"
+           |sink = "spark_sink"
+           |""".stripMargin)
+      val (splitter, _) = getUseCase()
+
+      val sinkTable1 = SinkTableFactory.getDummySinkTable(metaTableName = "table1")
+      val sinkTable2 = SinkTableFactory.getDummySinkTable(metaTableName = "table2")
+
+      val sinkDef = OperationDefFactory.getDummyOperationDef(name = "test",
+        operationConf = ingestionConf,
+        operationType = OperationType.Sink("spark_sink", Seq(sinkTable1, sinkTable2))
+      )
+
+      val job = splitter.createJobs(sinkDef)
+
+      assert(job.length == 2)
+      assert(job.head.isInstanceOf[SinkJob])
+      assert(job(1).isInstanceOf[SinkJob])
+    }
+
+    "create transfer jobs" in {
+      val transferConf = ConfigFactory.parseString(
+        s"""name = "Transfer operation"
+           |source = "spark_source"
+           |sink = "spark_sink"
+           |""".stripMargin)
+      val (splitter, _) = getUseCase()
+
+      val transferTable1 = TransferTableFactory.getDummyTransferTable()
+      val transferTable2 = TransferTableFactory.getDummyTransferTable()
+
+      val transferDef = OperationDefFactory.getDummyOperationDef(name = "test",
+        operationConf = transferConf,
+        operationType = OperationType.Transfer("spark_source", "spark_sink", Seq(transferTable1, transferTable2))
+      )
+
+      val job = splitter.createJobs(transferDef)
+
+      assert(job.length == 2)
+      assert(job.head.isInstanceOf[TransferJob])
+      assert(job(1).isInstanceOf[TransferJob])
+    }
+  }
 
   "createPythonTransformation()" should {
     "create a Python transformation job from operation definition" in {
