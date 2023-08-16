@@ -57,7 +57,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
       isTableAvailable
   }
 
-  override def getTableDef(tableName: String): MetaTable = null
+  override def getTableDef(tableName: String): MetaTable = MetaTableFactory.getDummyMetaTable(name = tableName)
 
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     if (tableException != null)
