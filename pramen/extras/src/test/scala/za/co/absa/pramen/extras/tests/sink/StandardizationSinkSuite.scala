@@ -244,7 +244,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       }
     }
 
-    "hive table queries should be executed" in {
+    "hive table queries should be executed with default path" in {
       val stdConfig = StandardizationConfig.fromConfig(conf)
       val hiveConfig = HiveQueryTemplates.fromConfig(conf)
       val qe = new QueryExecutorMock(tableExists = true)
@@ -268,6 +268,37 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
         assert(qe.queries.length == 3)
 
         assert(qe.queries.head == "DROP TABLE IF EXISTS my_table")
+        assert(qe.queries(1).contains("/publish'"))
+        assert(qe.queries(2) == "MSCK REPAIR TABLE my_table")
+      }
+    }
+
+    "hive table queries should be executed with custom path" in {
+      val stdConfig = StandardizationConfig.fromConfig(conf)
+      val hiveConfig = HiveQueryTemplates.fromConfig(conf)
+      val qe = new QueryExecutorMock(tableExists = true)
+      val hiveHelper = new HiveHelperSql(qe, hiveConfig)
+      val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
+
+      withTempDirectory("std_sink") { tempDir =>
+        val rawPath = new Path(tempDir, "raw")
+        val publishPath = new Path(tempDir, "publish")
+
+        val options = Map(
+          "raw.base.path" -> rawPath.toUri.toString,
+          "publish.base.path" -> publishPath.toUri.toString,
+          "info.version" -> "1",
+          "hive.table" -> "my_table",
+          "hive.path" -> "/my/hive/path"
+        )
+
+        val sinkResult = sink.send(exampleDf, "my_table", null, infoDate, options)
+
+        assert(sinkResult.recordsSent == 3)
+        assert(qe.queries.length == 3)
+
+        assert(qe.queries.head == "DROP TABLE IF EXISTS my_table")
+        assert(qe.queries(1).contains("LOCATION '/my/hive/path'"))
         assert(qe.queries(2) == "MSCK REPAIR TABLE my_table")
       }
     }
