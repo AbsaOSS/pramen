@@ -141,6 +141,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "delta")
       assert(metaTable.hiveTable.isEmpty)
+      assert(metaTable.hivePath.isEmpty)
       assert(metaTable.hiveConfig.hiveApi == HiveApi.Sql)
       assert(metaTable.hiveConfig.database.isEmpty)
       assert(metaTable.hiveConfig.jdbcConfig.isEmpty)
@@ -158,6 +159,7 @@ class MetaTableSuite extends AnyWordSpec {
           |format = parquet
           |path = /a/b/c
           |hive.table = my_hive_table
+          |hive.path = /d/e/f
           |information.date.column = INFORMATION_DATE
           |information.date.format = yyyy-MM-dd
           |read.option {
@@ -193,6 +195,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.format.name == "parquet")
       assert(metaTable.format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
       assert(metaTable.hiveTable.contains("my_hive_table"))
+      assert(metaTable.hivePath.contains("/d/e/f"))
       assert(metaTable.trackDays == 1)
       assert(metaTable.infoDateColumn == "INFORMATION_DATE")
       assert(metaTable.infoDateFormat == "yyyy-MM-dd")

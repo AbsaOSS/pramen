@@ -55,7 +55,7 @@ case class TransferTable(
   }
 
   def getMetaTable: MetaTable = {
-    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", HiveConfig.getNullConfig, None, None, infoDateStart, trackDays, readOptions, writeOptions)
+    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", HiveConfig.getNullConfig, None, None, None, infoDateStart, trackDays, readOptions, writeOptions)
   }
 }
 

@@ -194,6 +194,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
       table.infoDateColumn,
       table.infoDateFormat,
       table.hiveTable,
+      table.hivePath,
       table.infoDateStart,
       table.readOptions,
       table.writeOptions
