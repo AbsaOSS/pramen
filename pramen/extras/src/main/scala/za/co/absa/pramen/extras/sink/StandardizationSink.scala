@@ -128,6 +128,9 @@ import scala.util.control.NonFatal
   *        # Hive table to create/repair
   *        output.hive.table = "my_hive_table"
   *
+  *        # Hive path if it is different from publish path
+  *        output.hive.path = "/d/e/f"
+  *
   *        # Date range to read the source table for. By default the job information date is used.
   *        # But you can define an arbitrary expression based on the information date.
   *        # More: see the section of documentation regarding date expressions, an the list of functions allowed.
@@ -216,14 +219,17 @@ class StandardizationSink(sinkConfig: Config,
 
     val (warnings, hiveTables) = if (options.contains(HIVE_TABLE_KEY)) {
       val hiveTable = options(HIVE_TABLE_KEY)
+      val hivePath = options.get(HIVE_PATH_KEY)
       val fullTableName = HiveHelper.getFullTable(standardizationConfig.hiveDatabase, hiveTable)
 
       // Generating schema based on the latest ingested partition
       val fullSchema = addExtraFields(publishDf, infoDate, infoVersion).schema
 
+      val hiveEffectivePath = hivePath.getOrElse(publishBasePath.toUri.toString)
+
       log.info(s"Updating Hive table '$fullTableName'...")
       try {
-        hiveHelper.createOrUpdateHiveTable(publishBasePath.toUri.toString,
+        hiveHelper.createOrUpdateHiveTable(hiveEffectivePath,
           standardizationConfig.publishFormat,
           fullSchema,
           partitionBy,
@@ -404,6 +410,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
   val DATASET_NAME_KEY = "dataset.name"
   val DATASET_VERSION_KEY = "dataset.version"
   val HIVE_TABLE_KEY = "hive.table"
+  val HIVE_PATH_KEY = "hive.path"
   val HIVE_API_SINK_KEY = "hive.api"
 
   val ENCELADUS_INFO_DATE_COLUMN = "enceladus_info_date"
