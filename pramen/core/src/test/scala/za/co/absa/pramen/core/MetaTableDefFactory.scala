@@ -29,6 +29,7 @@ object MetaTableDefFactory {
                             infoDateColumn: String = "info_date",
                             infoDateFormat: String = "yyyy-MM-dd",
                             hiveTable: Option[String] = None,
+                            hivePath: Option[String] = None,
                             infoDateStart: LocalDate = LocalDate.of(2022, 1, 1),
                             readOptions: Map[String, String] = Map.empty[String, String],
                             writeOptions: Map[String, String] = Map.empty[String, String]
@@ -40,6 +41,7 @@ object MetaTableDefFactory {
       infoDateColumn,
       infoDateFormat,
       hiveTable,
+      hivePath,
       infoDateStart,
       readOptions,
       writeOptions)

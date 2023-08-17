@@ -2419,6 +2419,9 @@ pramen.metastore {
        
         # [Optional] Hive table to create/repair after writes to this metastore table
         hive.table = my_hive_table
+
+        # [Optional] Hive table location for create/repair if different from the metastore table location
+        hive.path = /d/e/f
         
         # [Optional] Override the table creation query for this table
         hive.conf.create.table.template = "..."

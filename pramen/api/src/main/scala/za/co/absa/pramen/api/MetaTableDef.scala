@@ -27,6 +27,7 @@ import java.time.LocalDate
   * @param infoDateColumn  The name of the column that contains the information date (partitioned by).
   * @param infoDateFormat  The format of the information date.
   * @param hiveTable       The name of the Hive table.
+  * @param hivePath        The path of the Hive table (if it differs from the path in the underlying format).
   * @param infoDateStart   The start date of the information date.
   * @param readOptions     The read options for the table.
   * @param writeOptions    The write options for the table.
@@ -38,6 +39,7 @@ case class MetaTableDef(
                          infoDateColumn: String,
                          infoDateFormat: String,
                          hiveTable: Option[String],
+                         hivePath: Option[String],
                          infoDateStart: LocalDate,
                          readOptions: Map[String, String],
                          writeOptions: Map[String, String]

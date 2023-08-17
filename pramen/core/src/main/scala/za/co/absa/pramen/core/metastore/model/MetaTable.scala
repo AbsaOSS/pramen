@@ -28,6 +28,23 @@ import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
 import java.time.LocalDate
 import scala.util.{Failure, Success, Try}
 
+/**
+  * This is metatable details available to read from the metastore.
+  *
+  * @param name               The name of the table.
+  * @param description        The description of the table.
+  * @param format             The format of the table.
+  * @param infoDateColumn     The name of the column that contains the information date (partitioned by).
+  * @param infoDateFormat     The format of the information date.
+  * @param hiveConfig         The effective Hive configuration to use for Hive operations.
+  * @param hiveTable          The name of the Hive table.
+  * @param hivePath           The path of the Hive table (if it differs from the path in the underlying format).
+  * @param infoDateExpression The expression to use to calculate the information date.
+  * @param infoDateStart      The start date of the information date.
+  * @param trackDays          The number of days to look back for retrospective changes if this table is used as a dependency.
+  * @param readOptions        The read options for the table.
+  * @param writeOptions       The write options for the table.
+  */
 case class MetaTable(
                       name: String,
                       description: String,
@@ -36,6 +53,7 @@ case class MetaTable(
                       infoDateFormat: String,
                       hiveConfig: HiveConfig,
                       hiveTable: Option[String],
+                      hivePath: Option[String],
                       infoDateExpression: Option[String],
                       infoDateStart: LocalDate,
                       trackDays: Int,
@@ -49,6 +67,7 @@ object MetaTable {
   val NAME_KEY = "name"
   val NAME_DESCRIPTION = "description"
   val HIVE_TABLE_KEY = "hive.table"
+  val HIVE_PATH_KEY = "hive.path"
   val TRACK_DAYS_KEY = "track.days"
   val READ_OPTION_KEY = "read.option"
   val WRITE_OPTION_KEY = "write.option"
@@ -103,6 +122,7 @@ object MetaTable {
     }
 
     val hiveTable = ConfigUtils.getOptionString(conf, HIVE_TABLE_KEY)
+    val hivePath = ConfigUtils.getOptionString(conf, HIVE_PATH_KEY)
 
     val hiveConfig = if (hiveTable.isEmpty) {
       HiveConfig.fromDefaults(defaultHiveConfig, format)
@@ -113,7 +133,19 @@ object MetaTable {
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
 
-    MetaTable(name, description, format, infoDateColumn, infoDateFormat, hiveConfig, hiveTable, infoDateExpressionOpt, startDate, trackDays, readOptions, writeOptions)
+    MetaTable(name,
+      description,
+      format,
+      infoDateColumn,
+      infoDateFormat,
+      hiveConfig,
+      hiveTable,
+      hivePath,
+      infoDateExpressionOpt,
+      startDate,
+      trackDays,
+      readOptions,
+      writeOptions)
   }
 
 }

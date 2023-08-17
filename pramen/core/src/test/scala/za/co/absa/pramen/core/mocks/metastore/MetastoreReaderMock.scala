@@ -49,7 +49,7 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
 
   override def getTableDef(tableName: String): MetaTableDef = {
     tables.find(_._1 == tableName) match {
-      case Some((name, _)) => MetaTableDef(name, "", DataFormat.Null(), "pramen_info_date", "yyyy-MM-dd", None, null, Map.empty[String, String], Map.empty[String, String])
+      case Some((name, _)) => MetaTableDef(name, "", DataFormat.Null(), "pramen_info_date", "yyyy-MM-dd", None, None, null, Map.empty[String, String], Map.empty[String, String])
       case None          => throw new IllegalArgumentException(s"Table $tableName not found")
     }
   }

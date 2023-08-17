@@ -128,6 +128,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
           table.infoDateColumn,
           table.infoDateFormat,
           table.hiveTable,
+          table.hivePath,
           table.infoDateStart,
           table.readOptions,
           table.writeOptions)
