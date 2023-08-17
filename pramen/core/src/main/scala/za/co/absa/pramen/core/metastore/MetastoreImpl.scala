@@ -121,17 +121,18 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
     }
 
     val fullTableName = HiveHelper.getFullTable(mt.hiveConfig.database, hiveTable)
+    val effectivePath = mt.hivePath.getOrElse(path)
 
     if (recreate) {
       log.info(s"Recreating Hive table '$fullTableName'")
-      hiveHelper.createOrUpdateHiveTable(path, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+      hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
         log.info(s"The table '$fullTableName' exists. Repairing it.")
         hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
-        hiveHelper.createOrUpdateHiveTable(path, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+        hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
       }
     }
   }

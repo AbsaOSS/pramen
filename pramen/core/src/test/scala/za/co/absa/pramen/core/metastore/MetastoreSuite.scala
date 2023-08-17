@@ -266,7 +266,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         assert(qe.queries.isEmpty)
       }
 
-      "re-create if not exist" in {
+      "re-create parquet table if not exist" in {
         val qe = new QueryExecutorMock(tableExists = false)
         val hh = new HiveHelperSql(qe, defaultTemplates)
 
@@ -275,6 +275,20 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         assert(qe.queries.length == 3)
         assert(qe.queries.exists(_.contains("DROP")))
         assert(qe.queries.exists(_.contains("CREATE")))
+        assert(qe.queries.exists(_.contains("/dummy/hive/path")))
+        assert(qe.queries.exists(_.contains("REPAIR")))
+      }
+
+      "re-create delta table if not exist" in {
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hh = new HiveHelperSql(qe, defaultTemplates)
+
+        m.repairOrCreateHiveTable("table_hive_delta", infoDate, Option(schema), hh, recreate = false)
+
+        assert(qe.queries.length == 3)
+        assert(qe.queries.exists(_.contains("DROP")))
+        assert(qe.queries.exists(_.contains("CREATE")))
+        assert(qe.queries.exists(_.contains("/table_hive_delta'")))
         assert(qe.queries.exists(_.contains("REPAIR")))
       }
 
@@ -415,6 +429,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
          |     format = "parquet"
          |     path = "$tempDirEscaped/table_hive_parquet"
          |     hive.table = "hive_table_parquet"
+         |     hive.path = "/dummy/hive/path"
          |   },
          |   {
          |     name = "table_hive_delta"
