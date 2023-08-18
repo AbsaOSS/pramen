@@ -27,7 +27,7 @@ case class DependencyFailure(
   def renderText: String = {
     val length = Math.min(failedTables.length, failedDateRanges.length)
 
-    val emptyTablesRendered = emptyTables.map(t => s"$t (Empty or wrong name)")
+    val emptyTablesRendered = emptyTables.map(t => s"$t (Empty table or wrong table name)")
 
     val failedTablesRendered = Range(0, length).map { i =>
       s"${failedTables(i)} (${failedDateRanges(i)})"

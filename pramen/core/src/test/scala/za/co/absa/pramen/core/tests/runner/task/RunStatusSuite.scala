@@ -199,7 +199,7 @@ class RunStatusSuite extends AnyWordSpec {
           Seq("2022-01-01")
         )))
 
-      assert(status.getReason().contains("Dependency check failures: table3 (Empty or wrong name), table1 (2022-01-01)"))
+      assert(status.getReason().contains("Dependency check failures: table3 (Empty table or wrong table name), table1 (2022-01-01)"))
     }
 
     "NoData" in {
