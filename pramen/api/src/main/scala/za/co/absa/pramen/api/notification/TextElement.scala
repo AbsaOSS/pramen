@@ -14,12 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify.message
+package za.co.absa.pramen.api.notification
 
-sealed trait Align
-
-object Align {
-  case object Left extends Align
-  case object Center extends Align
-  case object Right extends Align
-}
+case class TextElement(text: String, style: Style = Style.Normal)

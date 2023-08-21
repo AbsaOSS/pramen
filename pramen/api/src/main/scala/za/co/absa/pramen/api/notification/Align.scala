@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify.message
+package za.co.absa.pramen.api.notification
 
-case class TableHeader(textElement: TextElement, align: Align = Align.Left)
+sealed trait Align
+
+object Align {
+  case object Left extends Align
+  case object Center extends Align
+  case object Right extends Align
+}

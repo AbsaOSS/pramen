@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.notify.message
 
+import za.co.absa.pramen.api.notification.{TableHeader, TextElement}
+
 trait TableBuilder {
   def withHeaders(headers: Seq[TableHeader]): TableBuilder
 

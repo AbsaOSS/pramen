@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.notify.message
 
+import za.co.absa.pramen.api.notification.TextElement
+
 trait MessageBuilder {
   def withParagraph(text: Seq[TextElement]): MessageBuilder
   def withParagraph(text: String): MessageBuilder

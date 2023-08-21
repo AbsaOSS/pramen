@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.tests.notify.message
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.notification.{Align, Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.notify.message._
 

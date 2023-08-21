@@ -14,6 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify.message
+package za.co.absa.pramen.api.notification
 
-case class TextElement(text: String, style: Style = Style.Normal)
+sealed trait Style
+
+object Style {
+  case object Normal extends Style
+
+  case object Bold extends Style
+
+  case object Success extends Style
+
+  case object Warning extends Style
+
+  case object Exception extends Style
+
+  case object Error extends Style
+}
