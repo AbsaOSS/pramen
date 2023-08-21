@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.notify.message
 
+import za.co.absa.pramen.api.notification.{Style, TextElement}
+
 import scala.collection.mutable.ListBuffer
 
 class ParagraphBuilder {

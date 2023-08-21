@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.notify.message
 
+import za.co.absa.pramen.api.notification.{Style, TextElement}
 import za.co.absa.pramen.core.utils.ResourceUtils
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 

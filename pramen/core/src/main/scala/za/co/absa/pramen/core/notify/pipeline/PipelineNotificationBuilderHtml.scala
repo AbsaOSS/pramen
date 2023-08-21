@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.notification.{Align, Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
