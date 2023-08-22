@@ -63,7 +63,7 @@ object ClassLoaderUtils {
   @throws[ClassCastException]
   @throws[NoSuchMethodException]
   def loadEntityConfigurableClass[T: ClassTag : universe.TypeTag](fullyQualifiedName: String, entityConfig: Config, appConfig: Config): T = {
-    // There are 2 types of constructors supported. If there is a one that takes a config - use it.
+    // There are 3 types of constructors supported. If there is a one that takes a config - use it.
     // Otherwise, try the default constructor.
     val confCtor = Try[Constructor[_]](Class.forName(fullyQualifiedName).getConstructor(classOf[Config], classOf[Config]))
 

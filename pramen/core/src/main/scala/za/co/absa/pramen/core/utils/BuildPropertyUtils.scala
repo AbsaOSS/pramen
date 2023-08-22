@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.utils
 
-import za.co.absa.pramen.buildinfo.BuildPropertiesRetriever
+import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 
 import java.util.Properties
 

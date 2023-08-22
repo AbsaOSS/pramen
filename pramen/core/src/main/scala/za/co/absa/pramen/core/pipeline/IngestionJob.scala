@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{Reason, Source, SourceResult}
+import za.co.absa.pramen.api.{PramenNotificationBuilder, Reason, Source, SourceResult}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable

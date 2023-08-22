@@ -14,22 +14,8 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.buildinfo
+package za.co.absa.pramen.api.mocks
 
-trait BuildPropertiesRetriever {
-  def buildVersion: String
-
-  def buildTimestamp: String
-
-  def getFullVersion: String
-}
-
-object BuildPropertiesRetriever {
-  // This call assumes 'pramen-core' is in the class path, but not a compile time dependency, but either
-  // provided or runtime dependency.
-  def apply(): BuildPropertiesRetriever =
-    Class.forName("za.co.absa.pramen.core.utils.BuildPropertyUtils")
-      .getConstructor()
-      .newInstance()
-      .asInstanceOf[BuildPropertiesRetriever]
+trait DummySingletonFactory[+A <: DummySingletonTrait] {
+  def apply(dummyParam: String): A
 }

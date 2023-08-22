@@ -35,13 +35,4 @@ object NotificationEntry {
     * @param cells   Table cells. The number of elements in each row must match the number of headers.
     */
   case class Table(headers: Seq[TableHeader], cells: Seq[Seq[Paragraph]]) extends NotificationEntry
-
-  /**
-    * A custom notification data that can be interpreted by notification targets. This is not included in email
-    * notifications.
-    *
-    * @param params Parameters that are business logic related and it is up for a convention between notification
-    *               targets and pipeline operations (ingestions, transformations, sinks etc)
-    */
-  case class Custom(params: Map[String, Any]) extends NotificationEntry
 }
