@@ -97,12 +97,14 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
 
     try {
       val finishedInstant = Instant.now
+      val customEntries = PramenNotificationBuilderFactory.instance.entries
       val notification = PipelineNotification(failureException,
         pipelineName,
         environmentName,
         startedInstant,
         finishedInstant,
-        taskResults.toList)
+        taskResults.toList,
+        customEntries.toList)
       if (taskResults.nonEmpty || sendEmailIfNoNewData || failureException.nonEmpty) {
         val email = new PipelineNotificationEmail(notification)
         email.send()

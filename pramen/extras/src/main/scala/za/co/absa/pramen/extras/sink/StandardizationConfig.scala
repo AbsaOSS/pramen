@@ -17,7 +17,7 @@
 package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.buildinfo.BuildPropertiesRetriever
+import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.HiveFormat
