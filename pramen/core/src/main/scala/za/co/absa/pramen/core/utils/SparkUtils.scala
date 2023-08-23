@@ -30,6 +30,7 @@ import za.co.absa.pramen.core.pipeline.TransformExpression
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
+import scala.collection.mutable.ArrayBuffer
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
 
@@ -248,6 +249,32 @@ object SparkUtils {
       df.show(numRows, truncate = false)
     }
     new String(outCapture.toByteArray).replace("\r\n", "\n")
+  }
+
+  def collectTable(df: DataFrame, maxRecords: Int = 200): Array[Array[String]] = {
+    val collected = if (maxRecords > 0) {
+      df.take(maxRecords)
+    } else {
+      df.collect()
+    }
+
+    val headers = df.schema.fields.map(_.name)
+    val rows = collected.map(row => {
+      val arr = new ArrayBuffer[String]
+      var i = 0
+      val len = row.length
+
+      while (i < len) {
+        val v = row.get(i)
+        val vs = if (v == null) "null" else v.toString
+
+        arr.append(vs)
+        i += 1
+      }
+      arr.toArray[String]
+    })
+
+    headers +: rows
   }
 
   private def getActualProcessingTimeUdf: UserDefinedFunction = {

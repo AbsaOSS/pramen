@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
@@ -73,7 +74,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       compareText(actual, expected)
     }
 
-    "render a notification body with completed tasks and schema changes" in {
+    "render a notification body with completed tasks and schema changes and custom entries" in {
       val expected = ResourceUtils.getResourceString("/test/notify/test_pipeline_email_body_complex.txt")
 
       val builder = getBuilder
@@ -83,6 +84,16 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       builder.addRpsMetrics(1000, 2000)
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil))
+
+      builder.addCustomEntries(Seq(
+        NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil),
+        NotificationEntry.Table(
+          TableHeader(TextElement("Header 1"), Align.Right) :: TableHeader(TextElement("Header 2"), Align.Center) :: Nil, Seq(
+          TextElement("Cell 1, 1") :: TextElement("Cell 1, 2") :: Nil,
+          TextElement("Cell 2, 1") :: TextElement("Cell 2, 2") :: Nil,
+          TextElement("Cell 3, 1") :: TextElement("Cell 3, 2") :: Nil
+        )))
+      )
 
       val actual = builder.renderBody()
         .split("\n")

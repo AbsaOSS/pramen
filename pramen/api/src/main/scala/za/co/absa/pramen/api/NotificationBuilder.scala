@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.api
 
-import za.co.absa.pramen.api.notification.NotificationEntry
+import org.apache.spark.sql.DataFrame
+import za.co.absa.pramen.api.notification.{NotificationEntry, Style}
 
 /**
   * Pramen provides an instance of notification builder to custom sources, transformers and sinks so that
@@ -38,4 +39,21 @@ trait NotificationBuilder {
     * @param entries Entries to add.
     */
   def addEntries(entries: NotificationEntry*): Unit
+
+  /**
+    * Adds a data frame as a table in email notification, and [in the future] other use notifications.
+    *
+    * @param df               The DataFrame containing the table data,
+    * @param description      The test that goes before the table.
+    * @param descriptionStyle The style of the text of the description.
+    * @param maxRecords       The maximum number of records to add to the notification.
+    * @param align            Optionally specify text alignment of each column as a caracter of 'L', 'C', 'R'.
+    *                         For example Seq('C', 'C', 'R') means first 3 columns are centered and the last one is
+    *                         right aligned.
+    */
+  def addTable(df: DataFrame,
+               description: String,
+               descriptionStyle: Style = Style.Normal,
+               maxRecords: Int = 200,
+               align: Option[Seq[Char]] = None): Unit
 }

@@ -48,6 +48,8 @@ object PipelineNotificationDirector {
       .tasksCompleted
       .foreach(notificationBuilder.addCompletedTask)
 
+    notificationBuilder.addCustomEntries(notification.customEntries)
+
     notificationBuilder
   }
 

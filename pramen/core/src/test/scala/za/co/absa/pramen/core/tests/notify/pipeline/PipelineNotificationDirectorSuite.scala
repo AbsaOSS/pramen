@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.core.mocks.notify.PipelineNotificationBuilderSpy
 import za.co.absa.pramen.core.mocks.{PipelineNotificationFactory, SchemaDifferenceFactory, TaskResultFactory}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationDirector
@@ -47,7 +48,10 @@ class PipelineNotificationDirectorSuite extends AnyWordSpec {
       val taskCompleted2 = TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Failed(ex1))
       val taskCompleted3 = TaskResultFactory.getDummyTaskResult(schemaDifferences = schemaDifferences)
 
-      val notification = PipelineNotificationFactory.getDummyNotification(exception = Some(ex2), tasksCompleted = List(taskCompleted1, taskCompleted2, taskCompleted3))
+      val customEntries = List(NotificationEntry.Paragraph(TextElement("1") :: Nil), NotificationEntry.Paragraph(TextElement("1") :: Nil))
+
+      val notification = PipelineNotificationFactory.getDummyNotification(exception = Some(ex2), tasksCompleted =
+        List(taskCompleted1, taskCompleted2, taskCompleted3), customEntries = customEntries)
 
       val builderSpy = new PipelineNotificationBuilderSpy
 
@@ -63,6 +67,7 @@ class PipelineNotificationDirectorSuite extends AnyWordSpec {
       assert(builderSpy.minRps == 1000)
       assert(builderSpy.goodRps == 2000)
       assert(builderSpy.addCompletedTaskCalled == 3)
+      assert(builderSpy.addCustomEntriesCalled == 1)
     }
   }
 

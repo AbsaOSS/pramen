@@ -34,5 +34,13 @@ object NotificationEntry {
     * @param headers Table headers
     * @param cells   Table cells. The number of elements in each row must match the number of headers.
     */
-  case class Table(headers: Seq[TableHeader], cells: Seq[Seq[Paragraph]]) extends NotificationEntry
+  case class Table(headers: Seq[TableHeader], cells: Seq[Seq[TextElement]]) extends NotificationEntry
+
+  /**
+    * An unformatted text in a separate block.
+    *
+    * @param headers Table headers
+    * @param cells   Table cells. The number of elements in each row must match the number of headers.
+    */
+  case class UnformattedText(text: String) extends NotificationEntry
 }
