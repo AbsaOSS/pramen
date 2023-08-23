@@ -16,23 +16,36 @@
 
 package za.co.absa.pramen.core.state
 
-import za.co.absa.pramen.api.PramenNotificationBuilder
-import za.co.absa.pramen.api.notification.{NotificationBuilderFactory, NotificationEntry}
+import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.NotificationBuilder
+import za.co.absa.pramen.api.notification.NotificationEntry
 
 import scala.collection.mutable.ListBuffer
 
-class PramenNotificationBuilderFactory extends PramenNotificationBuilder {
+class NotificationBuilderImpl extends NotificationBuilder {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   private val notificationEntries = new ListBuffer[NotificationEntry]
 
   override def addEntries(entries: NotificationEntry*): Unit = synchronized {
-    notificationEntries ++= entries
+    entries.foreach(entry => if (isEntryValid(entry)) notificationEntries += entry)
   }
 
   def entries: Seq[NotificationEntry] = synchronized {
     notificationEntries.toSeq
   }
-}
 
-object PramenNotificationBuilderFactory extends NotificationBuilderFactory {
-  lazy val instance: PramenNotificationBuilderFactory = new PramenNotificationBuilderFactory
+  private def isEntryValid(entry: NotificationEntry): Boolean = entry match {
+    case NotificationEntry.Paragraph(_) => true
+    case NotificationEntry.Table(headers, cells) =>
+      if (headers.isEmpty) {
+        log.error("Table entry has no headers - skipping adding it to the notification")
+        false
+      } else if (cells.exists(_.size != headers.size)) {
+        log.error("Table entry has cells with different number of elements than the number of headers - skipping adding it to the notification")
+        false
+      } else {
+        true
+      }
+  }
 }

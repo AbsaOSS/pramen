@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.notification
+package za.co.absa.pramen.api.mocks
 
-import za.co.absa.pramen.api.PramenNotificationBuilder
+import za.co.absa.pramen.Pramen
+import za.co.absa.pramen.api.NotificationBuilder
+import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 
-/**
-  * This is the factory used to get the globally accessible notification builder.
-  *
-  * The instance is available in runtime only, and only when 'pramen-core' is in the classpath.
-  */
-trait NotificationBuilderFactory {
-  def instance: PramenNotificationBuilder
+class DummyPramen extends Pramen {
+  override def notificationBuilder: NotificationBuilder = null
+
+  override def buildProperties: BuildPropertiesRetriever = null
 }

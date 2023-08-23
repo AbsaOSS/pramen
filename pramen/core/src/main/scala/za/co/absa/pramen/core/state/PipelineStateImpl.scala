@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.state
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.Pramen
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
@@ -97,7 +98,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
 
     try {
       val finishedInstant = Instant.now
-      val customEntries = PramenNotificationBuilderFactory.instance.entries
+      val customEntries = Pramen.instance.notificationBuilder.asInstanceOf[NotificationBuilderImpl].entries
       val notification = PipelineNotification(failureException,
         pipelineName,
         environmentName,

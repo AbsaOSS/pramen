@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api
+package za.co.absa.pramen.api.app
 
-import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.state.PramenNotificationBuilderFactory
+import za.co.absa.pramen.Pramen
 
-class PramenNotificationBuilderSuite extends AnyWordSpec {
-  "the instance" should {
-    "have proper type" in {
-      PramenNotificationBuilder.instance.isInstanceOf[PramenNotificationBuilderFactory]
-    }
-  }
+/**
+  * This is the factory used to get the globally accessible Pramen client.
+  *
+  * The instance is available in runtime only, and only when 'pramen-core' is in the classpath.
+  */
+trait PramenFactory {
+  def instance: Pramen
 }
