@@ -17,7 +17,8 @@
 package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.notification.{Align, Style, TableHeader, TextElement}
+import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
@@ -38,6 +39,7 @@ object PipelineNotificationBuilderHtml {
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   private val timestampFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm Z")
 
@@ -57,6 +59,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   var isUndercover = false
 
   val completedTasks = new ListBuffer[TaskResult]
+  val customEntries = new ListBuffer[NotificationEntry]
 
   override def addFailureException(ex: Throwable): Unit = {
     appException = Option(ex)
@@ -119,6 +122,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       .sortBy(_.tableName)
 
     renderSchemaDifference(builder, allSchemaChanges.toSeq)
+
+    renderCustomEntries(builder, customEntries)
 
     completedTasks
       .foreach(t => {
@@ -583,4 +588,19 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     builder.withTable(tableBuilder)
   }
+
+  private def renderCustomEntries(builder: MessageBuilderHtml, customEntries: ListBuffer[NotificationEntry]): Unit = {
+    customEntries.foreach {
+      case NotificationEntry.Paragraph(text) => builder.withParagraph(text)
+      case NotificationEntry.Table(headers, cells) =>
+        val tableBuilder = new TableBuilderHtml
+        tableBuilder.withHeaders(headers)
+        cells.foreach(tableBuilder.withRow)
+        builder.withTable(tableBuilder)
+      case NotificationEntry.UnformattedText(text) => builder.withUnformattedText(text)
+      case c => log.error(s"Notification entry ${c.getClass} is not supported. Maybe this is related to Pramen runtime version mismatch.")
+    }
+  }
+
+  override def addCustomEntries(entries: Seq[NotificationEntry]): Unit = customEntries ++= entries
 }

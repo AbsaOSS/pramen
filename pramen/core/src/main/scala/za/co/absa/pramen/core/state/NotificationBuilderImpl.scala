@@ -16,9 +16,11 @@
 
 package za.co.absa.pramen.core.state
 
+import org.apache.spark.sql.DataFrame
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.NotificationBuilder
-import za.co.absa.pramen.api.notification.NotificationEntry
+import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, TableHeader, TextElement}
+import za.co.absa.pramen.core.utils.SparkUtils
 
 import scala.collection.mutable.ListBuffer
 
@@ -31,12 +33,39 @@ class NotificationBuilderImpl extends NotificationBuilder {
     entries.foreach(entry => if (isEntryValid(entry)) notificationEntries += entry)
   }
 
+  override def addTable(df: DataFrame,
+                        description: String,
+                        descriptionStyle: Style = Style.Normal,
+                        maxRecords: Int,
+                        align: Option[Seq[Char]]): Unit = {
+    val table = SparkUtils.collectTable(df, maxRecords)
+
+    if (table.nonEmpty) {
+      val colCount = table.head.length
+
+      val alignValid = align.isEmpty || align.forall(align => align.length == colCount)
+
+      if (alignValid) {
+        val headers = table.head.map(header => TableHeader(TextElement(header), Align.Center))
+        val cells = table.tail.map(row => row.map(cell => TextElement(cell)).toSeq)
+
+        val entryDescription = NotificationEntry.Paragraph(Seq(TextElement(description, descriptionStyle)))
+        val entryTable = NotificationEntry.Table(headers, cells)
+
+        addEntries(entryDescription, entryTable)
+      } else {
+        log.error(s"Align count (${align.get.length}) is not consistent with col count ($colCount) in table: $description")
+      }
+    }
+  }
+
   def entries: Seq[NotificationEntry] = synchronized {
     notificationEntries.toSeq
   }
 
   private def isEntryValid(entry: NotificationEntry): Boolean = entry match {
-    case NotificationEntry.Paragraph(_) => true
+    case NotificationEntry.Paragraph(_) =>
+      true
     case NotificationEntry.Table(headers, cells) =>
       if (headers.isEmpty) {
         log.error("Table entry has no headers - skipping adding it to the notification")
@@ -47,5 +76,7 @@ class NotificationBuilderImpl extends NotificationBuilder {
       } else {
         true
       }
+    case _ =>
+      true
   }
 }

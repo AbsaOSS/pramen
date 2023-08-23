@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.mocks.notify
 
+import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilder
 import za.co.absa.pramen.core.runner.task.TaskResult
 
@@ -33,6 +34,7 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   var goodRps = 0
 
   var addCompletedTaskCalled = 0
+  var addCustomEntriesCalled = 0
 
   override def addFailureException(ex: Throwable): Unit = failureException = Option(ex)
 
@@ -54,5 +56,7 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
     goodRps = good
   }
 
-  def addCompletedTask(completedTask: TaskResult): Unit = addCompletedTaskCalled += 1
+  override def addCompletedTask(completedTask: TaskResult): Unit = addCompletedTaskCalled += 1
+
+  override def addCustomEntries(entries: Seq[NotificationEntry]): Unit = addCustomEntriesCalled += 1
 }
