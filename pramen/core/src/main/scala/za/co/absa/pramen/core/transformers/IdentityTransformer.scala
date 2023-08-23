@@ -35,7 +35,7 @@ class IdentityTransformer extends Transformer {
 
     val df = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
 
-    if (df.count() > 0 || emptyAllowed) {
+    if (emptyAllowed || !df.isEmpty) {
       Reason.Ready
     } else {
       Reason.NotReady(s"No data for '$tableName' at $infoDate")
