@@ -16,14 +16,20 @@
 
 package za.co.absa.pramen.api
 
-import za.co.absa.pramen.api.common.FactoryLoader
-import za.co.absa.pramen.api.notification.{NotificationBuilderFactory, NotificationEntry}
+import za.co.absa.pramen.api.notification.NotificationEntry
 
 /**
   * Pramen provides an instance of notification builder to custom sources, transformers and sinks so that
   * they can add entries to email notifications and [in the future] other types of user notifications.
+  *
+  * Custom code can get the notification builder to send custom notifications any time using
+  * {{{
+  *   val notificationBuilder = Pramen.instance.notificationBuilder
+  *
+  *   notificationBuilder.addEntries(...)
+  * }}}
   */
-trait PramenNotificationBuilder {
+trait NotificationBuilder {
   /**
     * Adds entries for email notification, and [in the future] other use notifications.
     *
@@ -32,18 +38,4 @@ trait PramenNotificationBuilder {
     * @param entries Entries to add.
     */
   def addEntries(entries: NotificationEntry*): Unit
-}
-
-/**
-  * Custom code can get the notification builder to send custom notifications any time using
-  * {{{
-  *   val notificationBuilder = NotificationBuilder.instance
-  *
-  *   notificationBuilder.addEntries(...)
-  * }}}
-  */
-object PramenNotificationBuilder {
-  val PRAMEN_NOTIFICATION_BUILDER_FACTORY_CLASS = "za.co.absa.pramen.core.state.PramenNotificationBuilderFactory"
-
-  lazy val instance: NotificationBuilderFactory = FactoryLoader.loadSingletonFactoryOfType[NotificationBuilderFactory](PRAMEN_NOTIFICATION_BUILDER_FACTORY_CLASS)
 }
