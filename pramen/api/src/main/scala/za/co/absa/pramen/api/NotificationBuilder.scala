@@ -51,9 +51,9 @@ trait NotificationBuilder {
     *                         For example Seq('C', 'C', 'R') means first 3 columns are centered and the last one is
     *                         right aligned.
     */
-  def addTable(df: DataFrame,
-               description: String,
-               descriptionStyle: Style = Style.Normal,
-               maxRecords: Int = 200,
-               align: Option[Seq[Char]] = None): Unit
+  def addDataFrameTable(df: DataFrame,
+                        description: String,
+                        descriptionStyle: Style = Style.Normal,
+                        maxRecords: Int = 200,
+                        align: Option[Seq[Char]] = None): Unit
 }

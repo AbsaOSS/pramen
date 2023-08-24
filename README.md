@@ -2263,7 +2263,7 @@ In order to do this, use Pramen client:
 
 val notificationBuilder = Pramen.instance.notificationBuilder
 
-builder.addCustomEntries(Seq(
+builder.addEntries(Seq(
   NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil)
 ))
 ```
@@ -2278,7 +2278,7 @@ val pramenOpt = Try {
 
 // Add a notification message only if Pramen client is available
 pramenOpt.foreach { pramen =>
-  pramen.notificationBuilder.addCustomEntries(Seq(
+  pramen.notificationBuilder.addEntries(Seq(
     NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil)
   ))
 }

@@ -33,11 +33,11 @@ class NotificationBuilderImpl extends NotificationBuilder {
     entries.foreach(entry => if (isEntryValid(entry)) notificationEntries += entry)
   }
 
-  override def addTable(df: DataFrame,
-                        description: String,
-                        descriptionStyle: Style = Style.Normal,
-                        maxRecords: Int,
-                        align: Option[Seq[Char]]): Unit = {
+  override def addDataFrameTable(df: DataFrame,
+                                 description: String,
+                                 descriptionStyle: Style = Style.Normal,
+                                 maxRecords: Int,
+                                 align: Option[Seq[Char]]): Unit = {
     val table = SparkUtils.collectTable(df, maxRecords)
 
     if (table.nonEmpty) {
