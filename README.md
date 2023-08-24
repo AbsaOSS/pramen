@@ -2255,6 +2255,36 @@ pramen.operations = [
 ```
 </details>
 
+### Custom information in email notifications
+
+You can include additional information to email notification from custom components, like transformers, dources and sinks.
+In order to do this, use Pramen client:
+```scala
+
+val notificationBuilder = Pramen.instance.notificationBuilder
+
+builder.addCustomEntries(Seq(
+  NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil)
+))
+```
+
+For better testability of the code that does not depend on `pramen-core`, you can use `Try` to handle the absense of the
+Pramen client like this:
+```scala
+
+val pramenOpt = Try {
+  Pramen.instance
+}.toOption
+
+// Add a notification message only if Pramen client is available
+pramenOpt.foreach { pramen =>
+  pramen.notificationBuilder.addCustomEntries(Seq(
+    NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil)
+  ))
+}
+```
+
+You can add text, tables, and even chunks of a DataFrame to email notifications this way. 
 
 ## Notifications
 If you need to react on a completion event of any job, you can do it using notification targets. A notification target 
