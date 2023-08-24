@@ -17,6 +17,7 @@
 package za.co.absa.pramen
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.Pramen
 
 import scala.util.Try
 

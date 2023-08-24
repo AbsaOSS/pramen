@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.api.app
 
-import za.co.absa.pramen.Pramen
+import za.co.absa.pramen.api.Pramen
 
 /**
   * This is the factory used to get the globally accessible Pramen client.
