@@ -17,9 +17,7 @@
 package za.co.absa.pramen.core.transformers
 
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions._
 import za.co.absa.pramen.api.{MetastoreReader, Reason, Transformer}
-import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.LocalDate
 

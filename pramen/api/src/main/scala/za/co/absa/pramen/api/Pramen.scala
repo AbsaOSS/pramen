@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen
+package za.co.absa.pramen.api
 
-import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
 

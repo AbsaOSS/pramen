@@ -17,7 +17,7 @@
 package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.Pramen
+import za.co.absa.pramen.api.Pramen
 import za.co.absa.pramen.extras.utils.ConfigUtils
 
 import java.time.ZoneId

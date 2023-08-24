@@ -16,8 +16,7 @@
 
 package za.co.absa.pramen.api.mocks
 
-import za.co.absa.pramen.Pramen
-import za.co.absa.pramen.api.NotificationBuilder
+import za.co.absa.pramen.api.{NotificationBuilder, Pramen}
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 
 class DummyPramen extends Pramen {
