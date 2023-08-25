@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen
+package za.co.absa.pramen.api
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.Pramen
 
 import scala.util.Try
 

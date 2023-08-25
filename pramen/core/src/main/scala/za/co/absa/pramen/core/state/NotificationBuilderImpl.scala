@@ -38,15 +38,14 @@ class NotificationBuilderImpl extends NotificationBuilder {
                                  descriptionStyle: Style = Style.Normal,
                                  maxRecords: Int,
                                  align: Option[Seq[Char]]): Unit = {
-    val table = SparkUtils.collectTable(df, maxRecords)
-
-    if (table.nonEmpty) {
+    if (!df.isEmpty) {
+      val table = SparkUtils.collectTable(df, maxRecords)
       val colCount = table.head.length
 
       val alignValid = align.isEmpty || align.forall(align => align.length == colCount)
 
       if (alignValid) {
-        val headers = table.head.map(header => TableHeader(TextElement(header), Align.Center))
+        val headers = table.head.map(header => TableHeader(TextElement(header), Align.Center)).toSeq
         val cells = table.tail.map(row => row.map(cell => TextElement(cell)).toSeq)
 
         val entryDescription = NotificationEntry.Paragraph(Seq(TextElement(description, descriptionStyle)))
@@ -63,9 +62,7 @@ class NotificationBuilderImpl extends NotificationBuilder {
     notificationEntries.toSeq
   }
 
-  private def isEntryValid(entry: NotificationEntry): Boolean = entry match {
-    case NotificationEntry.Paragraph(_) =>
-      true
+  def isEntryValid(entry: NotificationEntry): Boolean = entry match {
     case NotificationEntry.Table(headers, cells) =>
       if (headers.isEmpty) {
         log.error("Table entry has no headers - skipping adding it to the notification")
