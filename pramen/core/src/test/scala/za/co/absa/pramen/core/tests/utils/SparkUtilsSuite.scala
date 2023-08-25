@@ -287,4 +287,39 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(actual.toUri.toString == "s3://bucket/path/pramen_info_date=2021-12-18")
     }
   }
+
+  "collectTable" should {
+    "return a dataframe as array of arrays with default number of records" in {
+      val table = SparkUtils.collectTable(exampleDf)
+
+      assert(table.length == 4) // headers + 3 rows
+      assert(table(0).length == 2) // 2 columns
+      assert(table(1).length == 2) // 2 columns
+      assert(table(2).length == 2) // 2 columns
+      assert(table(0)(0) == "a")
+      assert(table(0)(1) == "b")
+      assert(table(1)(0) == "A")
+      assert(table(1)(1) == "1")
+      assert(table(2)(0) == "B")
+      assert(table(2)(1) == "2")
+    }
+
+    "return a dataframe as array of arrays with number of records = 2" in {
+      val table = SparkUtils.collectTable(exampleDf, 2)
+
+      assert(table.length == 3) // headers + 3 rows
+      assert(table(0).length == 2) // 2 columns
+      assert(table(1).length == 2) // 2 columns
+      assert(table(0)(0) == "a")
+      assert(table(0)(1) == "b")
+      assert(table(1)(0) == "A")
+      assert(table(1)(1) == "1")
+    }
+
+    "return a dataframe as array of arrays with full table" in {
+      val table = SparkUtils.collectTable(exampleDf, 0)
+
+      assert(table.length == 4) // headers + 3 rows
+    }
+  }
 }

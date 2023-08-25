@@ -2260,6 +2260,7 @@ pramen.operations = [
 You can include additional information to email notification from custom components, like transformers, dources and sinks.
 In order to do this, use Pramen client:
 ```scala
+import za.co.absa.pramen.api.Pramen
 
 val notificationBuilder = Pramen.instance.notificationBuilder
 
@@ -2271,6 +2272,7 @@ builder.addEntries(Seq(
 For better testability of the code that does not depend on `pramen-core`, you can use `Try` to handle the absense of the
 Pramen client like this:
 ```scala
+import za.co.absa.pramen.api.Pramen
 
 val pramenOpt = Try {
   Pramen.instance
