@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{Reason, TaskNotification}
+import za.co.absa.pramen.api.{DataFormat, Reason, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.ReasonException
@@ -28,6 +28,7 @@ import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
+import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
@@ -240,7 +241,7 @@ abstract class TaskRunnerBase(conf: Config,
 
       val runResult = task.job.run(task.infoDate, conf)
 
-      val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable.name, task.infoDate)
+      val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
 
       val dfWithTimestamp = task.job.operation.processingTimestampColumn match {
         case Some(timestampCol) => addProcessingTimestamp(runResult.data, timestampCol)
@@ -264,7 +265,8 @@ abstract class TaskRunnerBase(conf: Config,
       )
 
       val schemaChangesAfterTransform = if (task.job.operation.schemaTransformations.nonEmpty) {
-        handleSchemaChange(dfTransformed, s"${task.job.outputTable.name}_transformed", task.infoDate)
+        val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")
+        handleSchemaChange(dfTransformed, transformedTable, task.infoDate)
       } else {
         Nil
       }
@@ -386,21 +388,26 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
-  private[core] def handleSchemaChange(df: DataFrame, table: String, infoDate: LocalDate): List[SchemaDifference] = {
-    val lastSchema = bookkeeper.getLatestSchema(table, infoDate.minusDays(1))
+  private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, infoDate: LocalDate): List[SchemaDifference] = {
+    if (table.format.isInstanceOf[DataFormat.Raw]) {
+      // Raw tables do need schema check
+      return List.empty[SchemaDifference]
+    }
+
+    val lastSchema = bookkeeper.getLatestSchema(table.name, infoDate.minusDays(1))
 
     lastSchema match {
       case Some((oldSchema, oldInfoDate)) =>
         val diff = compareSchemas(oldSchema, df.schema)
         if (diff.nonEmpty) {
           log.warn(s"$WARNING SCHEMA CHANGE for $table from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
-          bookkeeper.saveSchema(table, infoDate, df.schema)
-          SchemaDifference(table, oldInfoDate, infoDate, diff) :: Nil
+          bookkeeper.saveSchema(table.name, infoDate, df.schema)
+          SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil
         } else {
           Nil
         }
       case None =>
-        bookkeeper.saveSchema(table, infoDate, df.schema)
+        bookkeeper.saveSchema(table.name, infoDate, df.schema)
         Nil
     }
   }
