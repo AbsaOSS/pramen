@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.{Reason, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.{DataFormat, Reason, TaskNotification, TaskStatus}
 import za.co.absa.pramen.core
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -29,6 +29,7 @@ import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.journal.JournalMock
@@ -476,7 +477,9 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     "register a new schema" in {
       val (runner, bk, _, state, _) = getUseCase(runFunction = () => RunResult(exampleDf))
 
-      runner.handleSchemaChange(exampleDf, "table", infoDate)
+      val metaTable = MetaTableFactory.getDummyMetaTable("table")
+
+      runner.handleSchemaChange(exampleDf, metaTable, infoDate)
 
       val schemaOpt1 = bk.getLatestSchema("table", infoDate.minusDays(1))
       val schemaOpt2 = bk.getLatestSchema("table", infoDate)
@@ -490,7 +493,9 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       bk.saveSchema("table", infoDate.minusDays(10), exampleDf.schema)
 
-      runner.handleSchemaChange(exampleDf, "table", infoDate)
+      val metaTable = MetaTableFactory.getDummyMetaTable("table")
+
+      runner.handleSchemaChange(exampleDf, metaTable, infoDate)
 
       val schemaOpt1 = bk.getLatestSchema("table", infoDate)
       val schemaOpt2 = bk.getLatestSchema("table", infoDate.minusDays(11))
@@ -501,6 +506,22 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(schemaOpt1.get._2 == infoDate.minusDays(10))
     }
 
+    "do nothing if the table format is 'raw'" in {
+      val (runner, bk, _, state, _) = getUseCase(runFunction = () => RunResult(exampleDf))
+
+      val metaTable = MetaTableFactory.getDummyMetaTable("table", format = DataFormat.Raw("/dummy/path"))
+
+      runner.handleSchemaChange(exampleDf, metaTable, infoDate)
+
+      val schemaOpt1 = bk.getLatestSchema("table", infoDate.minusDays(1))
+      val schemaOpt2 = bk.getLatestSchema("table", infoDate)
+      val schemaOpt3 = bk.getLatestSchema("table", infoDate.plusDays(1))
+
+      assert(schemaOpt1.isEmpty)
+      assert(schemaOpt2.isEmpty)
+      assert(schemaOpt3.isEmpty)
+    }
+
     "register schema update" in {
       val (runner, bk, _, state, _) = getUseCase(runFunction = () => RunResult(exampleDf))
 
@@ -508,7 +529,9 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       val df2 = exampleDf.withColumn("c", lit(3))
 
-      runner.handleSchemaChange(df2, "table", infoDate)
+      val metaTable = MetaTableFactory.getDummyMetaTable("table")
+
+      runner.handleSchemaChange(df2, metaTable, infoDate)
 
       val schemaOpt1 = bk.getLatestSchema("table", infoDate.minusDays(1))
       val schemaOpt2 = bk.getLatestSchema("table", infoDate)
