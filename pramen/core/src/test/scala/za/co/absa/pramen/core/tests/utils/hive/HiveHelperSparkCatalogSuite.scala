@@ -77,6 +77,22 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         assert(spark.table("default.tbl3").count() == 3)
       }
     }
+
+    "drop table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val hiveHelper = new HiveHelperSparkCatalog(spark)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl4")
+        assert(hiveHelper.doesTableExist(Some("default"), "tbl4"))
+
+        hiveHelper.dropTable(Some("default"), "tbl4")
+
+        assert(!hiveHelper.doesTableExist(Some("default"), "tbl4"))
+      }
+    }
   }
 
   private def getParquetPath(tempBaseDir: String, partitionBy: Seq[String] = Nil): String = {

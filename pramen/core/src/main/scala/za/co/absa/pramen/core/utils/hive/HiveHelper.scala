@@ -36,6 +36,9 @@ abstract class HiveHelper {
 
   def doesTableExist(databaseName: Option[String],
                      tableName: String): Boolean
+
+  def dropTable(databaseName: Option[String],
+                tableName: String): Unit
 }
 
 object HiveHelper {

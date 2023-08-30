@@ -48,6 +48,15 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
+  override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = queryExecutor.doesTableExist(databaseName, tableName)
+
+  override def dropTable(databaseName: Option[String],
+                         tableName: String): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    dropHiveTable(fullTableName)
+  }
+
   private def dropHiveTable(fullTableName: String): Unit = {
     val sqlHiveDrop = applyTemplate(
       hiveConfig.dropTableTemplate,
@@ -56,8 +65,6 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
 
     queryExecutor.execute(sqlHiveDrop)
   }
-
-  override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = queryExecutor.doesTableExist(databaseName, tableName)
 
   private def createHiveTable(fullTableName: String,
                               path: String,

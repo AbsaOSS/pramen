@@ -128,6 +128,19 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
 
       assert(qe.queries.isEmpty)
     }
+
+    "drop table" in {
+      val expected = "DROP TABLE IF EXISTS tbl"
+
+      val qe = new QueryExecutorMock(tableExists = true)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+
+      hiveHelper.dropTable(None, "tbl")
+
+      val actual = qe.queries.mkString("\n")
+
+      compareText(actual, expected)
+    }
   }
 
   private def getParquetPath(tempBaseDir: String, partitionBy: Seq[String] = Nil): String = {

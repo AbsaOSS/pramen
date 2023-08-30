@@ -65,6 +65,13 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
 
   override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = spark.catalog.tableExists(HiveHelper.getFullTable(databaseName, tableName))
 
+  override def dropTable(databaseName: Option[String],
+                         tableName: String): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    dropCatalogTable(fullTableName)
+  }
+
   private def createCatalogTable(fullTableName: String,
                               path: String,
                               format: HiveFormat
