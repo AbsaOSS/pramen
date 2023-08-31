@@ -143,7 +143,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
           |} ]""".stripMargin
 
       val sinkTable = SinkTableFactory.getDummySinkTable(
-        transformations = Seq(TransformExpression("b1", "cast(b as string)", None)),
+        transformations = Seq(TransformExpression("b1", Some("cast(b as string)"), None)),
         filters = Seq("b > 1"),
         columns = Seq("a", "b1")
       )
@@ -161,7 +161,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     "throw an exception when preprocessing throws" in {
       val sinkTable = SinkTableFactory.getDummySinkTable(
-        transformations = Seq(TransformExpression("b1", "cast(b2 as string)", None)),
+        transformations = Seq(TransformExpression("b1", Some("cast(b2 as string)"), None)),
         filters = Seq("b > 1"),
         columns = Seq("a", "b1")
       )

@@ -137,7 +137,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "apply specified transformations" in {
-      val schemaTransformations = List(TransformExpression("c", "cast(b as string)", None))
+      val schemaTransformations = List(TransformExpression("c", Some("cast(b as string)"), None))
 
       val dfOut = applyTransformations(exampleDf, schemaTransformations)
 
@@ -148,7 +148,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "support comment metadata" in {
-      val schemaTransformations = List(TransformExpression("c", "cast(b as string)", Some("dummy")))
+      val schemaTransformations = List(TransformExpression("c", Some("cast(b as string)"), Some("dummy")))
 
       val dfOut = applyTransformations(exampleDf, schemaTransformations)
 
@@ -157,6 +157,40 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(dfOut.schema.fields(2).metadata.contains("comment"))
       assert(dfOut.schema.fields(2).metadata.getString("comment") == "dummy")
       assert(dfOut.count() == 3)
+    }
+    "support adding comments" in {
+      val schemaTransformations = List(TransformExpression("b", None, Some("dummy")))
+
+      val dfOut = applyTransformations(exampleDf, schemaTransformations)
+
+      assert(dfOut.schema.fields.length == 2)
+      assert(dfOut.schema.fields(1).name == "b")
+      assert(dfOut.schema.fields(1).metadata.contains("comment"))
+      assert(dfOut.schema.fields(1).metadata.getString("comment") == "dummy")
+    }
+    "support dropping of columns when the expression is empty" in {
+      val schemaTransformations = List(TransformExpression("b", None, None))
+
+      val dfOut = applyTransformations(exampleDf, schemaTransformations)
+
+      assert(dfOut.schema.fields.length == 1)
+      assert(dfOut.schema.fields.head.name == "a")
+    }
+    "support dropping of columns when the expression is an empty string" in {
+      val schemaTransformations = List(TransformExpression("b", Some(""), None))
+
+      val dfOut = applyTransformations(exampleDf, schemaTransformations)
+
+      assert(dfOut.schema.fields.length == 1)
+      assert(dfOut.schema.fields.head.name == "a")
+    }
+    "support dropping of columns when the expression is 'drop''" in {
+      val schemaTransformations = List(TransformExpression("b", Some(" DROP"), None))
+
+      val dfOut = applyTransformations(exampleDf, schemaTransformations)
+
+      assert(dfOut.schema.fields.length == 1)
+      assert(dfOut.schema.fields.head.name == "a")
     }
   }
 

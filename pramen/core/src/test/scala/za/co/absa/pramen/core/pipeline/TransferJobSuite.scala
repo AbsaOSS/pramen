@@ -157,9 +157,9 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val transferTable = TransferTableFactory.getDummyTransferTable(
         transformations = Seq(
-          TransformExpression("b1", "cast(v as string)", None),
-          TransformExpression("b", "v", None),
-          TransformExpression("a", "concat('a', b)", None)
+          TransformExpression("b1", Some("cast(v as string)"), None),
+          TransformExpression("b", Some("v"), None),
+          TransformExpression("a", Some("concat('a', b)"), None)
         ),
         filters = Seq("b > 1"),
         columns = Seq("a", "b1")
@@ -179,7 +179,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "throw an exception when preprocessing throws" in {
       val transferTable = TransferTableFactory.getDummyTransferTable(
         transformations = Seq(
-          TransformExpression("b1", "cast(x as string)", None)
+          TransformExpression("b1", Some("cast(x as string)"), None)
         )
       )
 

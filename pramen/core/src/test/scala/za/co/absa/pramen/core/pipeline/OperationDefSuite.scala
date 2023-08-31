@@ -122,7 +122,9 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |
            |transformations = [
            |    {col = "A", expr = "cast(A as decimal(15,5))"},
-           |    {col = "D", expr = "cast(A as decimal(14,4))", comment = "Test"},
+           |    {col = "D", expr = "cast(A as decimal(14,4))", comment = "Test1"},
+           |    {col = "C", expr = "drop", comment = "Test2"},
+           |    {col = "A", comment = "Test3"},
            |]
            |
            |filters = [ "A > 0", "B < 2" ]
@@ -143,13 +145,19 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.dependencies.head.triggerUpdates)
       assert(op.dependencies(1).tables.contains("table2"))
       assert(!op.dependencies(1).triggerUpdates)
-      assert(op.schemaTransformations.length == 2)
+      assert(op.schemaTransformations.length == 4)
       assert(op.schemaTransformations.head.column == "A")
-      assert(op.schemaTransformations.head.expression == "cast(A as decimal(15,5))")
+      assert(op.schemaTransformations.head.expression.contains("cast(A as decimal(15,5))"))
       assert(op.schemaTransformations.head.comment.isEmpty)
       assert(op.schemaTransformations(1).column == "D")
-      assert(op.schemaTransformations(1).expression == "cast(A as decimal(14,4))")
-      assert(op.schemaTransformations(1).comment.contains("Test"))
+      assert(op.schemaTransformations(1).expression.contains("cast(A as decimal(14,4))"))
+      assert(op.schemaTransformations(1).comment.contains("Test1"))
+      assert(op.schemaTransformations(2).column == "C")
+      assert(op.schemaTransformations(2).expression.contains("drop"))
+      assert(op.schemaTransformations(2).comment.contains("Test2"))
+      assert(op.schemaTransformations(3).column == "A")
+      assert(op.schemaTransformations(3).expression.isEmpty)
+      assert(op.schemaTransformations(3).comment.contains("Test3"))
       assert(op.filters.length == 2)
       assert(op.filters.head == "A > 0")
       assert(op.consumeThreads == 1)
