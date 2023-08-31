@@ -91,9 +91,9 @@ class SourceTableSuite extends AnyWordSpec {
       assert(tbl4.query.asInstanceOf[Query.Table].dbTable == "table14")
       assert(tbl4.transformations.length == 2)
       assert(tbl4.transformations.head.column == "a")
-      assert(tbl4.transformations.head.expression == "2+2")
+      assert(tbl4.transformations.head.expression.contains("2+2"))
       assert(tbl4.transformations(1).column == "b")
-      assert(tbl4.transformations(1).expression == "cast(a) as string")
+      assert(tbl4.transformations(1).expression.contains("cast(a) as string"))
       assert(tbl4.columns == Seq.empty[String])
       assert(tbl4.filters == Seq("A > 1"))
       assert(tbl4.rangeFromExpr.contains("@infoDate - 1"))
@@ -183,7 +183,7 @@ class SourceTableSuite extends AnyWordSpec {
         SourceTable.fromConfig(conf, "source.tables")
       }
 
-      assert(ex.getMessage.contains("'expr' not set for the transformation"))
+      assert(ex.getMessage.contains("Either 'expr' or 'comment' should be defined for for the transformation"))
     }
 
   }

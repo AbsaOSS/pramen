@@ -165,20 +165,26 @@ object SparkUtils {
     */
   def applyTransformations(df: DataFrame, transformations: Seq[TransformExpression]): DataFrame = {
     transformations.foldLeft(df)((accDf, tf) => {
-      if (tf.expression.isEmpty || tf.expression == "drop") {
-        log.info(s"Dropping: ${tf.column}")
-        accDf.drop(tf.column)
-      } else {
-        log.info(s"Applying: ${tf.column} <- ${tf.expression}")
-
-        tf.comment match {
-          case Some(comment) =>
-            val metadata = new MetadataBuilder()
-            metadata.putString("comment", comment)
-            accDf.withColumn(tf.column, expr(tf.expression).as("tf.column", metadata.build()))
-          case None          =>
-            accDf.withColumn(tf.column, expr(tf.expression))
-        }
+      (tf.expression, tf.comment) match {
+        case (Some(expression), Some(comment)) =>
+          log.info(s"Applying: ${tf.column} <- $expression ($comment)")
+          val metadata = new MetadataBuilder()
+          metadata.putString("comment", comment)
+          accDf.withColumn(tf.column, expr(expression).as(tf.column, metadata.build()))
+        case (Some(expression), None) if expression.isEmpty || expression.trim.equalsIgnoreCase("drop") =>
+          log.info(s"Dropping: ${tf.column}")
+          accDf.drop(tf.column)
+        case (Some(expression), None) =>
+          log.info(s"Applying: ${tf.column} <- $expression")
+          accDf.withColumn(tf.column, expr(expression))
+        case (None, Some(comment)) =>
+          log.info(s"Adding comment '$comment' to ${tf.column}")
+          val metadata = new MetadataBuilder()
+          metadata.putString("comment", comment)
+          accDf.withColumn(tf.column, col(tf.column).as(tf.column, metadata.build()))
+        case (None, None) =>
+          log.info(s"Dropping: ${tf.column}")
+          accDf.drop(tf.column)
       }
     })
   }

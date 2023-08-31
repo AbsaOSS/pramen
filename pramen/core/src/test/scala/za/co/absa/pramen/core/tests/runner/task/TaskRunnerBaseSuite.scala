@@ -569,7 +569,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     val state = new PipelineStateSpy
 
     val operationDef = OperationDefFactory.getDummyOperationDef(
-      schemaTransformations = List(TransformExpression("c", "cast(b as string)", None)),
+      schemaTransformations = List(TransformExpression("c", Some("cast(b as string)"), None)),
       filters = List("b > 1")
     )
 

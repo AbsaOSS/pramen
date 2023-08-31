@@ -23,22 +23,27 @@ import scala.collection.JavaConverters._
 
 case class TransformExpression(
                               column: String,
-                              expression: String,
+                              expression: Option[String],
                               comment: Option[String]
                               )
 
 object TransformExpression {
+  val COLUMN_KEY = "col"
+  val EXPRESSION_KEY = "expr"
+  val COMMENT_KEY = "comment"
+
   def fromConfigSingleEntry(conf: Config, parentPath: String): TransformExpression = {
-    if (!conf.hasPath("col")) {
-      throw new IllegalArgumentException(s"'col' not set for the transformation in $parentPath' in the configuration.")
+    if (!conf.hasPath(COLUMN_KEY)) {
+      throw new IllegalArgumentException(s"'$COLUMN_KEY' not set for the transformation in $parentPath' in the configuration.")
     }
-    if (!conf.hasPath("expr")) {
-      throw new IllegalArgumentException(s"'expr' not set for the transformation in $parentPath' in the configuration.")
+    val col = conf.getString(COLUMN_KEY)
+
+    if (!conf.hasPath(EXPRESSION_KEY) && !conf.hasPath(COMMENT_KEY)) {
+      throw new IllegalArgumentException(s"Either '$EXPRESSION_KEY' or '$COMMENT_KEY' should be defined for for the transformation of '$col' in $parentPath' in the configuration.")
     }
 
-    val col = conf.getString("col")
-    val expr = conf.getString("expr")
-    val comment = ConfigUtils.getOptionString(conf, "comment")
+    val expr = ConfigUtils.getOptionString(conf, EXPRESSION_KEY)
+    val comment = ConfigUtils.getOptionString(conf, COMMENT_KEY)
 
     TransformExpression(col, expr, comment)
   }

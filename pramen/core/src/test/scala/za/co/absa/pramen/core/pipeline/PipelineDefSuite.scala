@@ -71,7 +71,7 @@ class PipelineDefSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
         assert(op2.expectedDelayDays == 0)
         assert(op2.schemaTransformations.length == 1)
         assert(op2.schemaTransformations.head.column == "B")
-        assert(op2.schemaTransformations.head.expression == "cast(B as double)")
+        assert(op2.schemaTransformations.head.expression.contains("cast(B as double)"))
 
         val ingestion = op1.operationType.asInstanceOf[Ingestion]
 
@@ -114,7 +114,7 @@ class PipelineDefSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
         assert(op2.expectedDelayDays == 0)
         assert(op2.schemaTransformations.length == 1)
         assert(op2.schemaTransformations.head.column == "B")
-        assert(op2.schemaTransformations.head.expression == "cast(B as double)")
+        assert(op2.schemaTransformations.head.expression.contains("cast(B as double)"))
 
         val ingestion = op1.operationType.asInstanceOf[Ingestion]
 

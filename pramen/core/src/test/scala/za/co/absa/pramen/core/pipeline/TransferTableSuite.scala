@@ -128,9 +128,9 @@ class TransferTableSuite extends AnyWordSpec {
 
       assert(tbl4.transformations.length == 2)
       assert(tbl4.transformations.head.column == "a")
-      assert(tbl4.transformations.head.expression == "2+2")
+      assert(tbl4.transformations.head.expression.contains("2+2"))
       assert(tbl4.transformations(1).column == "b")
-      assert(tbl4.transformations(1).expression == "cast(a) as string")
+      assert(tbl4.transformations(1).expression.contains("cast(a) as string"))
       assert(tbl4.filters.length == 1)
       assert(tbl4.filters.head == "A > 1")
       assert(tbl4.columns.length == 2)
