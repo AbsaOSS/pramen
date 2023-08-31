@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.{Path, PathFilter}
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{ArrayType, DataType, StructType, TimestampType}
+import org.apache.spark.sql.types.{ArrayType, DataType, MetadataBuilder, StructType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.notify.pipeline.FieldChange
@@ -170,7 +170,15 @@ object SparkUtils {
         accDf.drop(tf.column)
       } else {
         log.info(s"Applying: ${tf.column} <- ${tf.expression}")
-        accDf.withColumn(tf.column, expr(tf.expression))
+
+        tf.comment match {
+          case Some(comment) =>
+            val metadata = new MetadataBuilder()
+            metadata.putString("comment", comment)
+            accDf.withColumn(tf.column, expr(tf.expression).as("tf.column", metadata.build()))
+          case None          =>
+            accDf.withColumn(tf.column, expr(tf.expression))
+        }
       }
     })
   }

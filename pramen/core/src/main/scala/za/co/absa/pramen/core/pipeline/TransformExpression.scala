@@ -17,12 +17,14 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.collection.JavaConverters._
 
 case class TransformExpression(
                               column: String,
-                              expression: String
+                              expression: String,
+                              comment: Option[String]
                               )
 
 object TransformExpression {
@@ -36,9 +38,11 @@ object TransformExpression {
 
     val col = conf.getString("col")
     val expr = conf.getString("expr")
+    val comment = ConfigUtils.getOptionString(conf, "comment")
 
-    TransformExpression(col, expr)
+    TransformExpression(col, expr, comment)
   }
+
   def fromConfig(conf: Config, arrayPath: String, parentPath: String): Seq[TransformExpression] = {
     if (conf.hasPath(arrayPath)) {
       val transformationConfigs = conf.getConfigList(arrayPath).asScala

@@ -338,7 +338,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       Nil,
       source,
       SourceTable("table1", Query.Table(sourceTable), tableConf, rangeFromExpr, rangeToExpr, Seq(
-        TransformExpression("NAME_U", "upper(NAME)")
+        TransformExpression("NAME_U", "upper(NAME)", None)
       ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), configOverride),
       outputTable,
       specialCharacters)

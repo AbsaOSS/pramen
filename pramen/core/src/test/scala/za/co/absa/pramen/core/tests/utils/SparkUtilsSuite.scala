@@ -137,12 +137,25 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "apply specified transformations" in {
-      val schemaTransformations = List(TransformExpression("c", "cast(b as string)"))
+      val schemaTransformations = List(TransformExpression("c", "cast(b as string)", None))
 
       val dfOut = applyTransformations(exampleDf, schemaTransformations)
 
       assert(dfOut.schema.fields.length == 3)
       assert(dfOut.schema.fields(2).name == "c")
+      assert(dfOut.count() == 3)
+      assert(!dfOut.schema.fields(2).metadata.contains("comment"))
+    }
+
+    "support comment metadata" in {
+      val schemaTransformations = List(TransformExpression("c", "cast(b as string)", Some("dummy")))
+
+      val dfOut = applyTransformations(exampleDf, schemaTransformations)
+
+      assert(dfOut.schema.fields.length == 3)
+      assert(dfOut.schema.fields(2).name == "c")
+      assert(dfOut.schema.fields(2).metadata.contains("comment"))
+      assert(dfOut.schema.fields(2).metadata.getString("comment") == "dummy")
       assert(dfOut.count() == 3)
     }
   }
