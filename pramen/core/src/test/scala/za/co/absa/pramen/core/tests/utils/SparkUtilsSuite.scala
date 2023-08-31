@@ -22,35 +22,102 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.notify.pipeline.FieldChange._
 import za.co.absa.pramen.core.pipeline.TransformExpression
+import za.co.absa.pramen.core.samples.SampleCaseClass2
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.LocalDate
 
-class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture  {
+class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture  {
   import spark.implicits._
 
   private val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
   private val infoDate = LocalDate.of(2021, 12, 18)
 
+  "getStructType" should {
+    "convert a case class to a StructType" in {
+      val expected =
+      """{
+        |  "type" : "struct",
+        |  "fields" : [ {
+        |    "name" : "strValue",
+        |    "type" : "string",
+        |    "nullable" : true,
+        |    "metadata" : { }
+        |  }, {
+        |    "name" : "intValue",
+        |    "type" : "integer",
+        |    "nullable" : false,
+        |    "metadata" : { }
+        |  }, {
+        |    "name" : "longValue",
+        |    "type" : "long",
+        |    "nullable" : false,
+        |    "metadata" : { }
+        |  } ]
+        |}""".stripMargin
+      val actual = SparkUtils.getStructType[SampleCaseClass2].prettyJson
+
+      compareText(actual, expected)
+    }
+  }
+
+  "dataFrameToJson" should {
+    "convert a dataframe to a json string" in {
+      val expected =
+        """[ {
+          |  "a" : "A",
+          |  "b" : 1
+          |}, {
+          |  "a" : "B",
+          |  "b" : 2
+          |}, {
+          |  "a" : "C",
+          |  "b" : 3
+          |} ]""".stripMargin
+
+      val actual = SparkUtils.dataFrameToJson(exampleDf)
+
+      assert(actual == expected)
+    }
+  }
+
+  "convertDataFrameToPrettyJSON" should {
+    "convert a dataframe to a pretty json string" in {
+      val expected =
+        """[ {
+          |  "a" : "A",
+          |  "b" : 1
+          |} ]""".stripMargin
+
+      val actual = SparkUtils.convertDataFrameToPrettyJSON(exampleDf, 1)
+
+      assert(actual == expected)
+    }
+  }
+
   "sanitizeDfColumns()" should {
     "rename spaces of input dataframe columns" in {
       val expected =
       """[ {
         |  "a_a" : "A",
-        |  "_b_" : 1
+        |  "_b_" : 1,
+        |  "c" : 4
         |}, {
         |  "a_a" : "B",
-        |  "_b_" : 2
+        |  "_b_" : 2,
+        |  "c" : 5
         |}, {
         |  "a_a" : "C",
-        |  "_b_" : 3
+        |  "_b_" : 3,
+        |  "c" : 6
         |} ]"""
 
-      val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a a", " b ")
+      val df = List(("A", 1, 4), ("B", 2, 5), ("C", 3, 6)).toDF("a a", " b ", "c")
 
       val actualDf = sanitizeDfColumns(df, " ")
 
@@ -127,6 +194,64 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "schemaFromJson" should {
+    "return None on a wrong schema" in {
+      val schemaJson = """wrong_json"""
+
+      val schema = SparkUtils.schemaFromJson(schemaJson)
+
+      assert(schema.isEmpty)
+    }
+
+    "convert a json schema to StructType" in {
+      val schemaJson = """{"type":"struct","fields":[{"name":"a","type":"string","nullable":true,"metadata":{}}]}"""
+
+      val schema = SparkUtils.schemaFromJson(schemaJson)
+
+      assert(schema.isDefined)
+      assert(schema.get.fields.head.name == "a")
+    }
+  }
+
+  "compareSchemas" should {
+    "detect new columns" in {
+      val schema1 = exampleDf.schema
+      val schema2 = exampleDf.withColumn("c", lit(1)).schema
+
+      val diff = compareSchemas(schema1, schema2)
+
+      assert(diff.length == 1)
+      assert(diff.head.isInstanceOf[NewField])
+      assert(diff.head.asInstanceOf[NewField].columnName == "c")
+      assert(diff.head.asInstanceOf[NewField].dataType == "integer")
+    }
+
+    "detect deleted columns" in {
+      val schema1 = exampleDf.withColumn("c", lit(1)).schema
+      val schema2 = exampleDf.schema
+
+      val diff = compareSchemas(schema1, schema2)
+
+      assert(diff.length == 1)
+      assert(diff.head.isInstanceOf[DeletedField])
+      assert(diff.head.asInstanceOf[DeletedField].columnName == "c")
+      assert(diff.head.asInstanceOf[DeletedField].dataType == "integer")
+    }
+
+    "detect changed data types" in {
+      val schema1 = exampleDf.schema
+      val schema2 = exampleDf.withColumn("b", lit(1.1)).schema
+
+      val diff = compareSchemas(schema1, schema2)
+
+      assert(diff.length == 1)
+      assert(diff.head.isInstanceOf[ChangedType])
+      assert(diff.head.asInstanceOf[ChangedType].columnName == "b")
+      assert(diff.head.asInstanceOf[ChangedType].oldType == "integer")
+      assert(diff.head.asInstanceOf[ChangedType].newType == "double")
+    }
+  }
+
   "applyTransformations" should {
     "do nothing for empty transformations" in {
 
@@ -184,8 +309,16 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(dfOut.schema.fields.length == 1)
       assert(dfOut.schema.fields.head.name == "a")
     }
-    "support dropping of columns when the expression is 'drop''" in {
+    "support dropping of columns when the expression is 'drop'" in {
       val schemaTransformations = List(TransformExpression("b", Some(" DROP"), None))
+
+      val dfOut = applyTransformations(exampleDf, schemaTransformations)
+
+      assert(dfOut.schema.fields.length == 1)
+      assert(dfOut.schema.fields.head.name == "a")
+    }
+    "support dropping of columns when the expression is 'drop' and there is a comment" in {
+      val schemaTransformations = List(TransformExpression("b", Some(" DROP"), Some("Dropping...")))
 
       val dfOut = applyTransformations(exampleDf, schemaTransformations)
 
@@ -255,6 +388,24 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val tsField = actualDf.schema.fields.find(f => f.name == "ts")
 
       assert(tsField.get.dataType.isInstanceOf[StringType])
+    }
+  }
+
+  "showString" should {
+    "produce a text version of a dataframe" in {
+      val expected =
+        """+---+---+
+          ||a  |b  |
+          |+---+---+
+          ||A  |1  |
+          ||B  |2  |
+          ||C  |3  |
+          |+---+---+
+          |""".stripMargin
+
+      val actual = showString(exampleDf)
+
+      compareText(actual, expected)
     }
   }
 
