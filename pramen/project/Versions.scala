@@ -50,6 +50,12 @@ object Versions {
 
   def sparkVersion(scalaVersion: String): String = sys.props.getOrElse("SPARK_VERSION", sparkFallbackVersion(scalaVersion))
 
+  def sparkVersionShort(scalaVersion: String): String = {
+    val fullVersion = sparkVersion(scalaVersion)
+
+    fullVersion.split('.').take(2).mkString(".")
+  }
+
   def getSparkVersionRelatedDeps(sparkVersion: String): Seq[ModuleID] = {
     if (sparkVersion.startsWith("2.")) {
       // Seq("com.fasterxml.jackson.core" % "jackson-databind" % "2.6.7.3")
