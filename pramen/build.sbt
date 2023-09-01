@@ -186,7 +186,7 @@ lazy val assemblySettingsCommon = Seq(
       }
     case _ => MergeStrategy.deduplicate
   },
-  assembly / assemblyJarName := s"${name.value}_${scalaBinaryVersion.value}_${sparkVersion(scalaVersion.value)}-${version.value}.jar",
+  assembly / assemblyJarName := s"${name.value}_${scalaBinaryVersion.value}_${sparkVersionShort(scalaVersion.value)}-${version.value}.jar",
   assembly / assemblyOption:= (assembly / assemblyOption).value.copy(includeScala = false),
   assembly / logLevel := Level.Info,
   assembly / test := {}
