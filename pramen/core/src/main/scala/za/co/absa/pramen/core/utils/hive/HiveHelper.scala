@@ -63,6 +63,16 @@ object HiveHelper {
     }
   }
 
+  def fromQueryExecutor(api: HiveApi,
+                        templates: HiveQueryTemplates,
+                        queryExecutor: QueryExecutor)
+                       (implicit spark: SparkSession): HiveHelper = {
+    api match {
+      case HiveApi.Sql => new HiveHelperSql(queryExecutor, templates)
+      case _ => new HiveHelperSparkCatalog(spark)
+    }
+  }
+
   def getFullTable(databaseName: Option[String],
                    tableName: String): String = {
 

@@ -21,6 +21,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.metastore.model.{HiveApi, HiveConfig, HiveDefaultConfig}
+import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.hive._
 
 class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
@@ -62,6 +63,21 @@ class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
       val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig).asInstanceOf[HiveHelperSql]
 
       assert(hiveHelper.queryExecutor.isInstanceOf[QueryExecutorJdbc])
+    }
+  }
+
+  "fromQueryExecutor" should {
+    "return a helper without query executor when Spark Catalog API is used" in {
+      val hiveHelper = HiveHelper.fromQueryExecutor(HiveApi.SparkCatalog, null, null)
+
+      assert(hiveHelper.isInstanceOf[HiveHelperSparkCatalog])
+    }
+
+    "return a helper with the specified query executor when SQL API is used" in {
+      val hiveHelper = HiveHelper.fromQueryExecutor(HiveApi.Sql, HiveQueryTemplates.getDefaultQueryTemplates, new QueryExecutorMock(true))
+
+      assert(hiveHelper.isInstanceOf[HiveHelperSql])
+      assert(hiveHelper.asInstanceOf[HiveHelperSql].queryExecutor.isInstanceOf[QueryExecutorMock])
     }
   }
 }
