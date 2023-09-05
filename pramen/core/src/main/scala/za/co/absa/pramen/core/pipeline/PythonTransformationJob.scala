@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, Reason}
+import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.databricks.{DatabricksClient, PramenPyJobTemplate}
@@ -267,7 +268,7 @@ class PythonTransformationJob(operationDef: OperationDef,
   }
 
   private[core] def getTemporaryPathForYamlConfig(conf: Config) = {
-    val temporaryDirectoryBase = conf.getString(Keys.TEMPORARY_DIRECTORY).stripSuffix("/")
+    val temporaryDirectoryBase = conf.getString(TEMPORARY_DIRECTORY_KEY).stripSuffix("/")
     val randomNumber = Random.nextInt(1000000)
 
     val pathForConfig = s"$temporaryDirectoryBase/pramen_py_configs/$randomNumber/config.yaml"

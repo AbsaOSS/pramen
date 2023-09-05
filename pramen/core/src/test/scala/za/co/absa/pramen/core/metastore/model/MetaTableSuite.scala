@@ -51,13 +51,17 @@ class MetaTableSuite extends AnyWordSpec {
           |    name = table3
           |    format = delta
           |    path = /a/b/c
+          |  },
+          |  {
+          |    name = table4
+          |    format = transient
           |  }
           |]
           |""".stripMargin)
 
       val metaTables = MetaTable.fromConfig(conf, "pramen.metastore.tables")
 
-      assert(metaTables.size == 3)
+      assert(metaTables.size == 4)
       assert(metaTables.head.name == "table1")
       assert(metaTables.head.format.name == "parquet")
       assert(metaTables.head.infoDateColumn == "INFO_DATE")
@@ -73,6 +77,8 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTables(2).format.name == "delta")
       assert(metaTables(2).infoDateColumn == "INFORMATION_DATE")
       assert(metaTables(2).infoDateFormat == "yyyy-MM-dd")
+      assert(metaTables(3).name == "table4")
+      assert(metaTables(3).format.name == "transient")
     }
 
     "create an empty metastore if the config key is missing" in {

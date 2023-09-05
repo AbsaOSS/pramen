@@ -19,7 +19,6 @@ package za.co.absa.pramen.core.config
 object Keys {
   val INFORMATION_DATE_COLUMN = "pramen.information.date.column"
   val INFORMATION_DATE_FORMAT_APP = "pramen.information.date.format"
-  val TEMPORARY_DIRECTORY = "pramen.temporary.directory"
 
   val PARALLEL_TASKS = "pramen.parallel.tasks"
 

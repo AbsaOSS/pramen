@@ -35,7 +35,12 @@ object DataFormat {
     override def name: String = "raw"
   }
 
-  // This format is used for metatables which do not support persistence, e.g. for sink or tramsfer jobs
+  // This format is used for tables that exist only for the duration of the process, and is not persisted
+  case class Transient(cachePolicy: CachePolicy) extends DataFormat {
+    override def name: String = "transient"
+  }
+
+  // This format is used for metatables which do not support persistence, e.g. for sink or transfer jobs
   case class Null() extends DataFormat {
     override def name: String = "null"
   }

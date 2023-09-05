@@ -17,18 +17,20 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{DataFormat, Query}
+import za.co.absa.pramen.api.{CachePolicy, DataFormat, Query}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 object DataFormatParser {
   val FORMAT_PARQUET = "parquet"
   val FORMAT_DELTA = "delta"
   val FORMAT_RAW = "raw"
+  val FORMAT_TRANSIENT = "transient"
 
   val FORMAT_KEY = "format"
   val PATH_KEY = "path"
   val TABLE_KEY = "table"
   val RECORDS_PER_PARTITION_KEY = "records.per.partition"
+  val CACHE_POLICY_KEY = "cache.policy"
   val DEFAULT_FORMAT = "parquet"
 
   val DEFAULT_RECORDS_PER_PARTITION_KEY = "pramen.default.records.per.partition"
@@ -53,15 +55,32 @@ object DataFormatParser {
         if (!conf.hasPath(PATH_KEY)) throw new IllegalArgumentException(s"Mandatory option for a metastore table having 'raw' format: $PATH_KEY")
         val path = Query.Path(conf.getString(PATH_KEY)).path
         DataFormat.Raw(path)
+      case FORMAT_TRANSIENT =>
+        val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
+        DataFormat.Transient(cachePolicy)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
     }
   }
 
-  private def getPath(conf: Config): String = {
+  private[core] def getCachePolicy(conf: Config): Option[CachePolicy] = {
+    if (conf.hasPath(CACHE_POLICY_KEY)) {
+      conf.getString(CACHE_POLICY_KEY).trim.toLowerCase match {
+        case CachePolicy.Cache.name => Some(CachePolicy.Cache)
+        case CachePolicy.NoCache.name => Some(CachePolicy.NoCache)
+        case CachePolicy.Persist.name => Some(CachePolicy.Persist)
+        case policyStr => throw new IllegalArgumentException(s"Incorrect cache policy: $policyStr. " +
+          s"Should be one of: ${CachePolicy.Cache.name}, ${CachePolicy.NoCache.name}, ${CachePolicy.Persist.name}")
+      }
+    } else {
+      None
+    }
+  }
+
+  private[core] def getPath(conf: Config): String = {
     ConfigUtils.getOptionString(conf, PATH_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $PATH_KEY"))
   }
 
-  private def getQuery(conf: Config): Query = {
+  private[core] def getQuery(conf: Config): Query = {
     conf match {
       case conf if conf.hasPath(PATH_KEY)  => Query.Path(conf.getString(PATH_KEY))
       case conf if conf.hasPath(TABLE_KEY) => Query.Table(conf.getString(TABLE_KEY))
