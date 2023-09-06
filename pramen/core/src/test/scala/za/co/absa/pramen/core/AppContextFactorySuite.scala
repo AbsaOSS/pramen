@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.BookkeeperNull
