@@ -211,7 +211,8 @@ abstract class TaskRunnerBase(conf: Config,
               case Reason.Skip(msg) =>
                 log.info(s"SKIP validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
                 if (bookkeeper.getLatestDataChunk(outputTable, task.infoDate, task.infoDate).isEmpty) {
-                  bookkeeper.setRecordCount(outputTable, task.infoDate, task.infoDate, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond)
+                  val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
+                  bookkeeper.setRecordCount(outputTable, task.infoDate, task.infoDate, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
                 }
                 Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, Nil, status.dependencyWarnings, Nil))
             }

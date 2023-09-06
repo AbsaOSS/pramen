@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperNull}
+import za.co.absa.pramen.core.bookkeeper.{BookkeeperBase, BookkeeperNull}
 
 import java.time.LocalDate
 
@@ -30,7 +30,7 @@ class BookkeeperNullSuite extends AnyWordSpec {
     "return nothing" in {
       val bk = getBookkeeper
 
-      val dateOpt = bk.getLatestProcessedDate("table", Some(infoDate2))
+      val dateOpt = bk.getLatestProcessedDateFromStorage("table", Some(infoDate2))
 
       assert(dateOpt.isEmpty)
     }
@@ -40,7 +40,7 @@ class BookkeeperNullSuite extends AnyWordSpec {
     "return nothing" in {
       val bk = getBookkeeper
 
-      val chunkOpt = bk.getLatestDataChunk("table", infoDate2, infoDate3)
+      val chunkOpt = bk.getLatestDataChunkFromStorage("table", infoDate2, infoDate3)
 
       assert(chunkOpt.isEmpty)
     }
@@ -50,7 +50,7 @@ class BookkeeperNullSuite extends AnyWordSpec {
     "return nothing" in {
       val bk = getBookkeeper
 
-      val chunks = bk.getDataChunks("table", infoDate1, infoDate2)
+      val chunks = bk.getDataChunksFromStorage("table", infoDate1, infoDate2)
 
       assert(chunks.isEmpty)
     }
@@ -59,9 +59,9 @@ class BookkeeperNullSuite extends AnyWordSpec {
   "setRecordCount()" should {
     "do nothing" in {
       val bk = getBookkeeper
-      bk.setRecordCount("table1", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)
+      bk.setRecordCount("table1", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false)
 
-      val chunks = bk.getDataChunks("table", infoDate1, infoDate2)
+      val chunks = bk.getDataChunksFromStorage("table", infoDate1, infoDate2)
 
       assert(chunks.isEmpty)
     }
@@ -88,11 +88,11 @@ class BookkeeperNullSuite extends AnyWordSpec {
     }
   }
 
-  def getBookkeeper: Bookkeeper = {
+  def getBookkeeper: BookkeeperBase = {
     val bk = new BookkeeperNull
-    bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)
-    bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318830, 1597318835)
-    bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318830, 1597318835)
     bk
   }
 }

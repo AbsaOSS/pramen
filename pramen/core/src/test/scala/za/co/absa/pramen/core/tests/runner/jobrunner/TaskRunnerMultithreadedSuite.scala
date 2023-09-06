@@ -187,7 +187,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     val state = new PipelineStateSpy
 
-    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0)
+    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0, isTableTransient = false)
 
     val stats = MetaTableStats(2, Some(100))
 

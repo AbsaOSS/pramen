@@ -136,7 +136,7 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
 
     val state = new PipelineStateSpy
 
-    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0)
+    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0, isTableTransient = false)
 
     val sourceTable = SourceTableFactory.getDummySourceTable()
 

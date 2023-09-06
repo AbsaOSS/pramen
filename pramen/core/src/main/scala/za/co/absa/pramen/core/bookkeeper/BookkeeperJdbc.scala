@@ -30,7 +30,7 @@ import za.co.absa.pramen.core.utils.SlickUtils
 import java.time.LocalDate
 import scala.util.control.NonFatal
 
-class BookkeeperJdbc(db: Database) extends Bookkeeper {
+class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
 
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
@@ -38,16 +38,8 @@ class BookkeeperJdbc(db: Database) extends Bookkeeper {
 
   override val bookkeepingEnabled: Boolean = true
 
-  override def getLatestProcessedDate(table: String, until: Option[LocalDate]): Option[LocalDate] = {
-    val query = until match {
-      case Some(endDate) =>
-        val endDateStr = DataChunk.dateFormatter.format(endDate)
-        BookkeepingRecords.records
-          .filter(r => r.pramenTableName === table && r.infoDate <= endDateStr)
-      case None          =>
-        BookkeepingRecords.records
-          .filter(r => r.pramenTableName === table)
-    }
+  override def getLatestProcessedDateFromStorage(table: String, until: Option[LocalDate]): Option[LocalDate] = {
+    val query = getFilter(table, None, until)
 
     val chunks = try {
       SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
@@ -59,22 +51,35 @@ class BookkeeperJdbc(db: Database) extends Bookkeeper {
     if (chunks.isEmpty) {
       None
     } else {
-      val chunk = chunks.maxBy(_.infoDateEnd)
-      Option(LocalDate.parse(chunk.infoDateEnd, DataChunk.dateFormatter))
+      Option(
+        LocalDate.parse(chunks.maxBy(_.infoDate).infoDate, DataChunk.dateFormatter)
+      )
     }
   }
 
-  override def getLatestDataChunk(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, dateBegin, dateEnd).lastOption
+  override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
+    val query = getFilter(table, Option(dateBegin), Option(dateEnd))
+
+    val chunks = try {
+      SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
+        .map(toChunk)
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
+    }
+
+    if (chunks.isEmpty) {
+      None
+    } else {
+      Option(chunks.maxBy(_.infoDateEnd))
+    }
   }
 
-  override def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
+  override def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
     val query = getFilter(table, Option(dateBegin), Option(dateEnd))
 
     try {
       SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
         .map(toChunk)
-        .sortBy(_.jobFinished)
         .groupBy(v => (v.tableName, v.infoDate))
         .map { case (_, listChunks) =>
           listChunks.maxBy(c => c.jobFinished)
@@ -85,7 +90,7 @@ class BookkeeperJdbc(db: Database) extends Bookkeeper {
     }
   }
 
-  def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
+  def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
     val query = getFilter(table, dateBeginOpt, dateEndOpt)
       .length
 
@@ -98,14 +103,14 @@ class BookkeeperJdbc(db: Database) extends Bookkeeper {
     count
   }
 
-  private[pramen] override def setRecordCount(table: String,
-                                               infoDate: LocalDate,
-                                               infoDateBegin: LocalDate,
-                                               infoDateEnd: LocalDate,
-                                               inputRecordCount: Long,
-                                               outputRecordCount: Long,
-                                               jobStarted: Long,
-                                               jobFinished: Long): Unit = {
+  private[pramen] override def saveRecordCountToStorage(table: String,
+                                                        infoDate: LocalDate,
+                                                        infoDateBegin: LocalDate,
+                                                        infoDateEnd: LocalDate,
+                                                        inputRecordCount: Long,
+                                                        outputRecordCount: Long,
+                                                        jobStarted: Long,
+                                                        jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
     val dateBeginStr = DataChunk.dateFormatter.format(infoDateBegin)
     val dateEndStr = DataChunk.dateFormatter.format(infoDateEnd)
@@ -184,7 +189,7 @@ class BookkeeperJdbc(db: Database) extends Bookkeeper {
     }
   }
 
-  /** This method is for migration purposes*/
+  /** This method is for migration purposes */
   private[pramen] def saveSchemaRaw(table: String, infoDate: String, schema: String): Unit = {
     try {
       db.run(

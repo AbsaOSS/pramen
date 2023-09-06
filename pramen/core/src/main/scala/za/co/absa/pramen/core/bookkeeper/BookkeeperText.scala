@@ -58,12 +58,12 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
 
   override val bookkeepingEnabled: Boolean = true
 
-  override def getLatestProcessedDate(tableName: String, until: Option[LocalDate]): Option[LocalDate] = {
+  override def getLatestProcessedDateFromStorage(tableName: String, until: Option[LocalDate]): Option[LocalDate] = {
     val filter = until match {
       case Some(endDate) =>
         val endDateStr = getDateStr(endDate)
         col("tableName") === tableName && col("infoDate") <= endDateStr
-      case None          =>
+      case None =>
         col("tableName") === tableName
     }
 
@@ -77,28 +77,28 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
     }
   }
 
-  override def getLatestDataChunk(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, dateBegin, dateEnd).lastOption
+  override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
+    getDataChunksFromStorage(table, dateBegin, dateEnd).lastOption
   }
 
-  override def getDataChunks(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[DataChunk] = {
+  override def getDataChunksFromStorage(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[DataChunk] = {
     val infoDateFilter = getFilter(tableName, Option(infoDateBegin), Option(infoDateEnd))
 
     getData(infoDateFilter)
   }
 
-  def getDataChunksCount(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
+  def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
     getDf(getFilter(table, dateBegin, dateEnd)).count()
   }
 
-  private[pramen] override def setRecordCount(table: String,
-                                               infoDate: LocalDate,
-                                               infoDateBegin: LocalDate,
-                                               infoDateEnd: LocalDate,
-                                               inputRecordCount: Long,
-                                               outputRecordCount: Long,
-                                               jobStarted: Long,
-                                               jobFinished: Long): Unit = {
+  private[pramen] override def saveRecordCountToStorage(table: String,
+                                                        infoDate: LocalDate,
+                                                        infoDateBegin: LocalDate,
+                                                        infoDateEnd: LocalDate,
+                                                        inputRecordCount: Long,
+                                                        outputRecordCount: Long,
+                                                        jobStarted: Long,
+                                                        jobFinished: Long): Unit = {
     val lock: TokenLockHadoop = getLock
 
     try {

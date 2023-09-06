@@ -99,7 +99,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       "track already ran" in {
         val (bk, _, job) = getUseCase()
 
-        bk.setRecordCount("table1", infoDate, infoDate, infoDate, 3, 3, 123, 456)
+        bk.setRecordCount("table1", infoDate, infoDate, infoDate, 3, 3, 123, 456, isTableTransient = false)
 
         val result = job.preRunCheckJob(infoDate, conf, Nil)
 
@@ -110,7 +110,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
         "some records, default minimum records" in {
           val (bk, _, job) = getUseCase()
 
-          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456, isTableTransient = false)
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
@@ -120,7 +120,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
         "some records, custom minimum records" in {
           val (bk, _, job) = getUseCase(minRecords = Some(3))
 
-          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456, isTableTransient = false)
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
@@ -176,7 +176,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
         "needs update, some records, custom minimum records" in {
           val (bk, _, job) = getUseCase(minRecords = Some(4))
 
-          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456)
+          bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456, isTableTransient = false)
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
@@ -191,7 +191,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
         val noDataInfoDate = infoDate.plusDays(1)
 
-        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 3, 3, 123, 456)
+        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 3, 3, 123, 456, isTableTransient = false)
 
         val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
 
@@ -203,7 +203,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
         val noDataInfoDate = infoDate.plusDays(1)
 
-        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 30, 30, 123, 456)
+        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 30, 30, 123, 456, isTableTransient = false)
 
         val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
 

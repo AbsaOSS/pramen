@@ -23,9 +23,7 @@ import za.co.absa.pramen.core.model.DataChunk
 import java.time.LocalDate
 
 
-abstract class BookkeeperHadoop extends Bookkeeper {
-  protected def getDateStr(date: LocalDate): String = DataChunk.dateFormatter.format(date)
-
+abstract class BookkeeperHadoop extends BookkeeperBase(true) {
   protected def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate]): Column = {
     (infoDateBegin, infoDateEnd) match {
       case (Some(begin), Some(end)) =>

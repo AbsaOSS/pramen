@@ -90,7 +90,8 @@ class SyncBookkeeperMock extends Bookkeeper {
                                                inputRecordCount: Long,
                                                outputRecordCount: Long,
                                                jobStarted: Long,
-                                               jobFinished: Long): Unit = {
+                                               jobFinished: Long,
+                                               isTableTransient: Boolean): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
     val dateBeginStr = DataChunk.dateFormatter.format(infoDateBegin)
     val dateEndStr = DataChunk.dateFormatter.format(infoDateEnd)
