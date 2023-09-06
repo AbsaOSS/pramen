@@ -82,7 +82,11 @@ class PythonTransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
+    if (outputTable.format.isInstanceOf[DataFormat.Transient]) {
+      Reason.NotReady(s"Python transformations cannot output to transient tables. Please, change teh format of ${outputTable.name}")
+    } else {
       Reason.Ready
+    }
   }
 
   override def run(infoDate: LocalDate, conf: Config): RunResult = {
@@ -135,7 +139,8 @@ class PythonTransformationJob(operationDef: OperationDef,
       stats.recordCount,
       stats.recordCount,
       jobStarted.getEpochSecond,
-      jobFinished.getEpochSecond)
+      jobFinished.getEpochSecond,
+      isTableTransient = false)
 
     SaveResult(stats)
   }

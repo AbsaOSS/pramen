@@ -68,13 +68,13 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
 
   override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
     val mt = getTableDef(tableName)
-
+    val isTransient = mt.format.isInstanceOf[DataFormat.Transient]
     val start = Instant.now.getEpochSecond
     val stats = MetastorePersistence.fromMetaTable(mt).saveTable(infoDate, df, inputRecordCount)
     val finish = Instant.now.getEpochSecond
 
     if (!skipBookKeepingUpdates) {
-      bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(stats.recordCount), stats.recordCount, start, finish)
+      bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(stats.recordCount), stats.recordCount, start, finish, isTransient)
     }
 
     stats

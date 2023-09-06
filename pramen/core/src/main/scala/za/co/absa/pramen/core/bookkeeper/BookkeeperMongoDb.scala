@@ -40,7 +40,7 @@ object BookkeeperMongoDb {
   val MODEL_VERSION = 2
 }
 
-class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper {
+class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends BookkeeperBase(true) {
 
   import BookkeeperMongoDb._
   import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
@@ -57,14 +57,14 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
 
   override val bookkeepingEnabled: Boolean = true
 
-  override def getLatestProcessedDate(table: String, until: Option[LocalDate]): Option[LocalDate] = {
+  override def getLatestProcessedDateFromStorage(table: String, until: Option[LocalDate]): Option[LocalDate] = {
     val filter = until match {
       case Some(endDate) =>
         val endDateStr = DataChunk.dateFormatter.format(endDate)
         Filters.and(
           Filters.eq("tableName", table),
           Filters.lte("infoDate", endDateStr))
-      case None          =>
+      case None =>
         Filters.eq("tableName", table)
     }
 
@@ -78,29 +78,29 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
     }
   }
 
-  override def getLatestDataChunk(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, dateBegin, dateEnd).lastOption
+  override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
+    getDataChunksFromStorage(table, dateBegin, dateEnd).lastOption
   }
 
-  override def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
+  override def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
     val chunks = collection.find(getFilter(table, Option(dateBegin), Option(dateEnd))).execute()
       .sortBy(_.jobFinished)
     log.info(s"For $table $dateBegin - $dateEnd : ${chunks.mkString("[ ", ", ", " ]")}")
     chunks
   }
 
-  def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
+  def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
     collection.countDocuments(getFilter(table, dateBeginOpt, dateEndOpt)).execute()
   }
 
-  private[pramen] override def setRecordCount(table: String,
-                                               infoDate: LocalDate,
-                                               infoDateBegin: LocalDate,
-                                               infoDateEnd: LocalDate,
-                                               inputRecordCount: Long,
-                                               outputRecordCount: Long,
-                                               jobStarted: Long,
-                                               jobFinished: Long): Unit = {
+  private[pramen] override def saveRecordCountToStorage(table: String,
+                                                        infoDate: LocalDate,
+                                                        infoDateBegin: LocalDate,
+                                                        infoDateEnd: LocalDate,
+                                                        inputRecordCount: Long,
+                                                        outputRecordCount: Long,
+                                                        jobStarted: Long,
+                                                        jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
     val dateBeginStr = DataChunk.dateFormatter.format(infoDateBegin)
     val dateEndStr = DataChunk.dateFormatter.format(infoDateEnd)

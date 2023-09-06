@@ -43,7 +43,7 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
       }
 
       "return a date when there is an entry" in {
-        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)
+        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false)
 
         val dateOpt = bk.getLatestProcessedDate("table")
 
@@ -52,9 +52,9 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
       }
 
       "return the latest date when there are several dates" in {
-        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)
-        bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318830, 1597318835)
-        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318830, 1597318835)
+        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318830, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318830, 1597318835, isTableTransient = false)
 
         val dateOpt = bk.getLatestProcessedDate("table")
 
@@ -69,9 +69,9 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
       }
 
       "return the latest date from the specified periods" in {
-        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318831, 1597318835)
-        bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318832, 1597318836)
-        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318833, 1597318837)
+        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318831, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318832, 1597318836, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318833, 1597318837, isTableTransient = false)
 
         val chunkOpt = bk.getLatestDataChunk("table", infoDate2, infoDate3)
         val infoDate3Str = infoDate3.format(DataChunk.dateFormatter)
@@ -94,9 +94,9 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
       }
 
       "return entries if there are entries" in {
-        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318833, 1597318837)
-        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318831, 1597318835)
-        bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318832, 1597318836)
+        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318833, 1597318837, isTableTransient = false)
+        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318831, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318832, 1597318836, isTableTransient = false)
 
         val chunks = bk.getDataChunks("table", infoDate1, infoDate2).sortBy(_.infoDate)
 
@@ -113,8 +113,8 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
 
     "setRecordCount()" should {
       "overwrite the previous entry" in {
-        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 100, 10, 1597318833, 1597318837)
-        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 200, 20, 1597318838, 1597318839)
+        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false)
 
         val chunks = bk.getDataChunks("table", infoDate1, infoDate1)
 

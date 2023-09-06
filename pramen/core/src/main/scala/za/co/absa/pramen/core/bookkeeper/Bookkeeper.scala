@@ -43,13 +43,14 @@ trait Bookkeeper {
   def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 
   private[pramen] def setRecordCount(table: String,
-                                      infoDate: LocalDate,
-                                      infoDateBegin: LocalDate,
-                                      infoDateEnd: LocalDate,
-                                      inputRecordCount: Long,
-                                      outputRecordCount: Long,
-                                      jobStarted: Long,
-                                      jobFinished: Long): Unit
+                                     infoDate: LocalDate,
+                                     infoDateBegin: LocalDate,
+                                     infoDateEnd: LocalDate,
+                                     inputRecordCount: Long,
+                                     outputRecordCount: Long,
+                                     jobStarted: Long,
+                                     jobFinished: Long,
+                                     isTableTransient: Boolean): Unit
 
   def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
 
@@ -83,7 +84,7 @@ object Bookkeeper {
           case Some(connection) =>
             log.info(s"Using MongoDB for lock management.")
             new TokenLockFactoryMongoDb(connection)
-          case None             =>
+          case None =>
             log.info(s"Using HadoopFS for lock management.")
             new TokenLockFactoryHadoop(spark.sparkContext.hadoopConfiguration, bookkeepingConfig.bookkeepingLocation.get + "/locks")
         }
@@ -103,9 +104,9 @@ object Bookkeeper {
         case Some(connection) =>
           log.info(s"Using MongoDB for bookkeeping.")
           new BookkeeperMongoDb(connection)
-        case None             =>
+        case None =>
           bookkeepingConfig.bookkeepingHadoopFormat match {
-            case HadoopFormat.Text  =>
+            case HadoopFormat.Text =>
               log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping.")
               new BookkeeperText(bookkeepingConfig.bookkeepingLocation.get)
           }
@@ -123,7 +124,7 @@ object Bookkeeper {
         case Some(connection) =>
           log.info(s"Using MongoDB to keep journal of executed jobs.")
           new JournalMongoDb(connection)
-        case None             =>
+        case None =>
           log.info(s"Using HadoopFS to keep journal of executed jobs.")
           new JournalHadoop(bookkeepingConfig.bookkeepingLocation.get + "/journal")
       }
