@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.metastore.model.DataFormatParser.{PATH_KEY, TABLE_
 class DataFormatSuite extends AnyWordSpec {
   "fromConfig()" should {
     "use 'parquet' as the default format" in {
-      val conf = ConfigFactory.parseString("""path = /a/b/c""")
+      val conf = ConfigFactory.parseString("path = /a/b/c")
 
       val format = DataFormatParser.fromConfig(conf, conf)
 
@@ -37,8 +37,7 @@ class DataFormatSuite extends AnyWordSpec {
 
     "use 'parquet' when specified explicitly" in {
       val conf = ConfigFactory.parseString(
-      """
-          |format = parquet
+        """format = parquet
           |path = /a/b/c
           |records.per.partition = 100
           |""".stripMargin)
@@ -53,8 +52,7 @@ class DataFormatSuite extends AnyWordSpec {
 
     "use 'delta' when specified explicitly" in {
       val conf = ConfigFactory.parseString(
-        """
-          |format = delta
+        """format = delta
           |path = /a/b/c
           |records.per.partition = 200
           |""".stripMargin)
@@ -70,8 +68,7 @@ class DataFormatSuite extends AnyWordSpec {
 
     "use 'raw' when specified explicitly" in {
       val conf = ConfigFactory.parseString(
-        """
-          |format = raw
+        """format = raw
           |path = /a/b/c
           |""".stripMargin)
 
@@ -83,22 +80,18 @@ class DataFormatSuite extends AnyWordSpec {
     }
 
     "use 'transient' when specified explicitly" in {
-      val conf = ConfigFactory.parseString(
-        """
-          |format = transient
-          |""".stripMargin)
+      val conf = ConfigFactory.parseString("format = transient")
 
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "transient")
       assert(format.isInstanceOf[Transient])
-      assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.NoCache)
+      assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.Persist)
     }
 
     "support cache policies for 'transient' format" in {
       val conf = ConfigFactory.parseString(
-        """
-          |format = transient
+        """format = transient
           |cache.policy = cache
           |""".stripMargin)
 
@@ -111,8 +104,7 @@ class DataFormatSuite extends AnyWordSpec {
 
     "use default records per partition" in {
       val conf = ConfigFactory.parseString(
-        """
-          |format = delta
+        """format = delta
           |path = /a/b/c
           |""".stripMargin)
 
@@ -128,10 +120,7 @@ class DataFormatSuite extends AnyWordSpec {
     }
 
     "throw an exception on unknown format" in {
-      val conf = ConfigFactory.parseString(
-        """
-          |format = isberg
-          |""".stripMargin)
+      val conf = ConfigFactory.parseString("format = isberg")
 
       val ex = intercept[IllegalArgumentException] {
         DataFormatParser.fromConfig(conf, conf)
@@ -141,10 +130,7 @@ class DataFormatSuite extends AnyWordSpec {
     }
 
     "throw an exception on mandatory options missing" in {
-      val conf = ConfigFactory.parseString(
-        """
-          |format = parquet
-          |""".stripMargin)
+      val conf = ConfigFactory.parseString("format = parquet")
 
       val ex = intercept[IllegalArgumentException] {
         DataFormatParser.fromConfig(conf, conf)
@@ -154,10 +140,7 @@ class DataFormatSuite extends AnyWordSpec {
     }
 
     "throw an exception when path is not specified for 'raw'" in {
-      val conf = ConfigFactory.parseString(
-        """
-          |format = raw
-          |""".stripMargin)
+      val conf = ConfigFactory.parseString("format = raw")
 
       val ex = intercept[IllegalArgumentException] {
         DataFormatParser.fromConfig(conf, conf)

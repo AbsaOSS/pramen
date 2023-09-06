@@ -56,7 +56,7 @@ object DataFormatParser {
         val path = Query.Path(conf.getString(PATH_KEY)).path
         DataFormat.Raw(path)
       case FORMAT_TRANSIENT =>
-        val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
+        val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.Persist)
         DataFormat.Transient(cachePolicy)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
     }
