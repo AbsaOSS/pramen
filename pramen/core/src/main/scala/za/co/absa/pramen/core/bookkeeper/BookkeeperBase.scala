@@ -22,8 +22,6 @@ import java.time.LocalDate
 import scala.collection.mutable
 
 abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper {
-  protected def getDateStr(date: LocalDate): String = DataChunk.dateFormatter.format(date)
-
   private val transientDataChunks = new mutable.HashMap[String, Array[DataChunk]]()
 
   def getLatestProcessedDateFromStorage(table: String, until: Option[LocalDate] = None): Option[LocalDate]
@@ -72,7 +70,6 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
 
     if (isTransient || !isBookkeepingEnabled) {
       getLatestTransientDate(table, None, until)
-      getLatestTransientChunk(table, None, until).map(chunk => LocalDate.parse(chunk.infoDate))
     } else {
       getLatestProcessedDateFromStorage(table, until)
     }
@@ -143,4 +140,6 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
 
     allChunks.filter(chunk => chunk.infoDate >= minDate && chunk.infoDate <= maxDate)
   }
+
+  protected def getDateStr(date: LocalDate): String = DataChunk.dateFormatter.format(date)
 }

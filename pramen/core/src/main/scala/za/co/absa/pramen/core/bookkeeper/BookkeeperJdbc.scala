@@ -39,7 +39,15 @@ class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
   override val bookkeepingEnabled: Boolean = true
 
   override def getLatestProcessedDateFromStorage(table: String, until: Option[LocalDate]): Option[LocalDate] = {
-    val query = getFilter(table, None, until)
+    val query = until match {
+      case Some(endDate) =>
+        val endDateStr = DataChunk.dateFormatter.format(endDate)
+        BookkeepingRecords.records
+          .filter(r => r.pramenTableName === table && r.infoDate <= endDateStr)
+      case None          =>
+        BookkeepingRecords.records
+          .filter(r => r.pramenTableName === table)
+    }
 
     val chunks = try {
       SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
@@ -51,27 +59,13 @@ class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
     if (chunks.isEmpty) {
       None
     } else {
-      Option(
-        LocalDate.parse(chunks.maxBy(_.infoDate).infoDate, DataChunk.dateFormatter)
-      )
+      val chunk = chunks.maxBy(_.infoDateEnd)
+      Option(LocalDate.parse(chunk.infoDateEnd, DataChunk.dateFormatter))
     }
   }
 
   override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    val query = getFilter(table, Option(dateBegin), Option(dateEnd))
-
-    val chunks = try {
-      SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
-        .map(toChunk)
-    } catch {
-      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
-    }
-
-    if (chunks.isEmpty) {
-      None
-    } else {
-      Option(chunks.maxBy(_.infoDateEnd))
-    }
+    getDataChunksFromStorage(table, dateBegin, dateEnd).lastOption
   }
 
   override def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
@@ -80,6 +74,7 @@ class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
     try {
       SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
         .map(toChunk)
+        .sortBy(_.jobFinished)
         .groupBy(v => (v.tableName, v.infoDate))
         .map { case (_, listChunks) =>
           listChunks.maxBy(c => c.jobFinished)
@@ -189,7 +184,7 @@ class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
     }
   }
 
-  /** This method is for migration purposes */
+  /** This method is for migration purposes*/
   private[pramen] def saveSchemaRaw(table: String, infoDate: String, schema: String): Unit = {
     try {
       db.run(
