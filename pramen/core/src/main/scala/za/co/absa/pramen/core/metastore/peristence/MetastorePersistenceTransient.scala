@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
@@ -31,7 +32,6 @@ class MetastorePersistenceTransient(tempPath: String,
                                     tableName: String,
                                     cachePolicy: CachePolicy
                                    )(implicit spark: SparkSession) extends MetastorePersistence {
-
   import MetastorePersistenceTransient._
 
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
@@ -85,13 +85,17 @@ class MetastorePersistenceTransient(tempPath: String,
 }
 
 object MetastorePersistenceTransient {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   case class MetastorePartition(tableName: String, infoDateStr: String)
 
   private val rawDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val cachedDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val persistedLocations = new mutable.HashMap[MetastorePartition, String]()
+  private var spark: SparkSession = _
 
   private[core] def addRawDataFrame(tableName: String, infoDate: LocalDate, df: DataFrame): (DataFrame, Option[Long]) = synchronized {
+    spark = df.sparkSession
     val partition = getMetastorePartition(tableName, infoDate)
 
     rawDataframes += partition -> df
@@ -105,6 +109,7 @@ object MetastorePersistenceTransient {
     val cachedDf = df.cache()
 
     this.synchronized {
+      spark = df.sparkSession
       cachedDataframes += partition -> cachedDf
     }
 
@@ -113,7 +118,10 @@ object MetastorePersistenceTransient {
 
   private[core] def addPersistedDataFrame(tableName: String, infoDate: LocalDate, df: DataFrame, tempDir: String): (DataFrame,  Option[Long]) = {
     val partition = getMetastorePartition(tableName, infoDate)
-    val spark = df.sparkSession
+    this.synchronized {
+      spark = df.sparkSession
+    }
+
     val partitionFolder = s"temp_partition_date=$infoDate"
     val outputPath = new Path(tempDir, partitionFolder).toString
 
@@ -129,35 +137,41 @@ object MetastorePersistenceTransient {
       persistedLocations += partition -> outputPath
     }
 
-    (df.sparkSession.read.parquet(outputPath), Option(sizeBytes))
+    (spark.read.parquet(outputPath), Option(sizeBytes))
   }
 
   private[core] def getDataForTheDate(tableName: String, infoDate: LocalDate)(implicit spark: SparkSession): DataFrame = synchronized {
     val partition = getMetastorePartition(tableName, infoDate)
 
     if (MetastorePersistenceTransient.rawDataframes.contains(partition)) {
+      log.info(s"Using non-cached dataframe for '$tableName' for '$infoDate'...")
       MetastorePersistenceTransient.rawDataframes(partition)
     } else if (MetastorePersistenceTransient.cachedDataframes.contains(partition)) {
+      log.info(s"Using cached dataframe for '$tableName' for '$infoDate'...")
       MetastorePersistenceTransient.cachedDataframes(partition)
     } else if (MetastorePersistenceTransient.persistedLocations.contains(partition)) {
       val path = MetastorePersistenceTransient.persistedLocations(partition)
+      log.info(s"Reading persisted transient table from $path...")
       spark.read.parquet(path)
     } else {
       throw new IllegalStateException(s"No data for transient table '$tableName' for '$infoDate'")
     }
   }
 
-  private[core] def cleanup()(implicit spark: SparkSession): Unit = synchronized {
+  private[core] def cleanup(): Unit = synchronized {
     rawDataframes.clear()
     cachedDataframes.foreach { case (_, df) => df.unpersist() }
     cachedDataframes.clear()
 
-    persistedLocations.foreach { case (_, path) =>
-      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+    if (spark != null) {
+      persistedLocations.foreach { case (_, path) =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
-      fsUtils.deleteDirectoryRecursively(new Path(path))
+        log.info(s"Deleting $path...")
+        fsUtils.deleteDirectoryRecursively(new Path(path))
+      }
+      persistedLocations.clear()
     }
-    persistedLocations.clear()
   }
 
   private def getMetastorePartition(tableName: String, infoDate: LocalDate): MetastorePartition = {

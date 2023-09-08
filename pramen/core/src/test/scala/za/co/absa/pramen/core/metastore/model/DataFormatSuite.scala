@@ -86,7 +86,7 @@ class DataFormatSuite extends AnyWordSpec {
 
       assert(format.name == "transient")
       assert(format.isInstanceOf[Transient])
-      assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.Persist)
+      assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.NoCache)
     }
 
     "support cache policies for 'transient' format" in {

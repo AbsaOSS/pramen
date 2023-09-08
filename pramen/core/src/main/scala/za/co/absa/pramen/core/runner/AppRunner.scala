@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
 import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
@@ -217,6 +218,7 @@ object AppRunner {
   private[core] def shutdown(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {
     handleFailure(Try {
       taskRunner.shutdown()
+      MetastorePersistenceTransient.cleanup()
     }, state, "shutting down task runner execution context")
   }
 }
