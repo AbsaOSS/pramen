@@ -48,6 +48,10 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
     super.afterAll()
   }
 
+  "cleanup should do nothing if spark session is not available" in {
+    MetastorePersistenceTransient.cleanup()
+  }
+
   "loadTable" should {
     "return data for a date when it is available" in {
       val persistor = new MetastorePersistenceTransient(null, "table1", CachePolicy.NoCache)

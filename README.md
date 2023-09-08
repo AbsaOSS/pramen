@@ -2145,6 +2145,31 @@ You can use any source/sink combination in transfer jobs.
 
 We describe here a more complicated use cases.
 
+### Transient tables in the metastore
+Transformers are useful as reusable components and for persisting intermediate reusable results. However, when splitting
+up the pipeline into small reusable components, it is not always desirable to persist intermediate results. This is
+solved by transient tables. You can define a table as transient in the metastore and it won't be persisted to a storage.
+You can use transient tables in transformers and sinks, but only for the same pipeline and the same information date.
+
+You can define a transient table in the metastore like this:
+```hocon
+pramen.metastore {
+  tables = [
+    {
+      name = "table1"
+      format = "transient"
+      cache.policy = "no_cache"
+    }
+  ]
+}
+```
+
+The cache policy can be:
+- `no_cache` - the table is not cached
+- `cache` - the table is cached using Spark cache
+- `persist` - the table is persisted in the temporary directory for the duration of the pipeline run.
+
+
 ### File-based sourcing
 Let's consider a use case when your data lake has 'landing' area where data is loaded from external sources, in addition
 to the classic 'raw' area. The 'landing' area is owned by the data producer and source systems can write files there.

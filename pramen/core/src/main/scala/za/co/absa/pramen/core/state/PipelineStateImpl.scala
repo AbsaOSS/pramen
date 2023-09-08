@@ -20,13 +20,15 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Pramen
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
-import za.co.absa.pramen.core.runner.task.RunStatus.{NotRan, Skipped}
+import za.co.absa.pramen.core.runner.task.RunStatus.NotRan
 import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 import scala.util.control.NonFatal
 
 class PipelineStateImpl(implicit conf: Config) extends PipelineState {
@@ -87,6 +89,12 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
           failureException = Some(new IllegalStateException("The application exited unexpectedly."))
         }
         sendNotificationEmail()
+        Try{
+          // Clean up transient metastore tables if any
+          MetastorePersistenceTransient.cleanup()
+        }.recover {
+          case NonFatal(ex) => log.error("Unable to clean up transient metastore tables.", ex)
+        }
       }
     }
   }
