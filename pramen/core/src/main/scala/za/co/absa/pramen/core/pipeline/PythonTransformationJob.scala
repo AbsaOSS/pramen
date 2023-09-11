@@ -22,7 +22,6 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.databricks.{DatabricksClient, PramenPyJobTemplate}
 import za.co.absa.pramen.core.exceptions.ProcessFailedException
 import za.co.absa.pramen.core.metastore.Metastore
@@ -273,7 +272,12 @@ class PythonTransformationJob(operationDef: OperationDef,
   }
 
   private[core] def getTemporaryPathForYamlConfig(conf: Config) = {
-    val temporaryDirectoryBase = conf.getString(TEMPORARY_DIRECTORY_KEY).stripSuffix("/")
+    val temporaryDirectoryBase = if (conf.hasPath(TEMPORARY_DIRECTORY_KEY) && conf.getString(TEMPORARY_DIRECTORY_KEY).nonEmpty) {
+      conf.getString(TEMPORARY_DIRECTORY_KEY).stripSuffix("/")
+    } else {
+      throw new IllegalArgumentException(s"Python transformation require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
+    }
+
     val randomNumber = Random.nextInt(1000000)
 
     val pathForConfig = s"$temporaryDirectoryBase/pramen_py_configs/$randomNumber/config.yaml"

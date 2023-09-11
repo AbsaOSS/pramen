@@ -38,7 +38,7 @@ class GeneralConfigSuite extends AnyWordSpec {
 
       assert(generalConfig.timezoneId == ZoneId.of("Africa/Johannesburg"))
       assert(generalConfig.environmentName == "DummyEnv")
-      assert(generalConfig.temporaryDirectory == "/dummy/dir")
+      assert(generalConfig.temporaryDirectory.contains("/dummy/dir"))
     }
   }
 }

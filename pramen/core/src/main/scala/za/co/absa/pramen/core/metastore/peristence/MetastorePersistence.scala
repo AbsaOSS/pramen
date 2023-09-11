@@ -16,8 +16,10 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
+import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
@@ -42,7 +44,7 @@ trait MetastorePersistence {
 }
 
 object MetastorePersistence {
-  def fromMetaTable(metaTable: MetaTable)(implicit spark: SparkSession): MetastorePersistence = {
+  def fromMetaTable(metaTable: MetaTable, conf: Config)(implicit spark: SparkSession): MetastorePersistence = {
     metaTable.format match {
       case DataFormat.Parquet(path, recordsPerPartition) =>
         new MetastorePersistenceParquet(
@@ -54,7 +56,13 @@ object MetastorePersistence {
         )
       case DataFormat.Raw(path)                          =>
         new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat)
-
+      case DataFormat.Transient(cachePolicy)             =>
+        if (conf.hasPath(TEMPORARY_DIRECTORY_KEY) && conf.getString(TEMPORARY_DIRECTORY_KEY).nonEmpty) {
+          val tempPath = conf.getString(TEMPORARY_DIRECTORY_KEY)
+          new MetastorePersistenceTransient(tempPath, metaTable.name, cachePolicy)
+        } else {
+          throw new IllegalArgumentException(s"Transient metastore tables require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
+        }
       case DataFormat.Null() =>
         throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
     }
