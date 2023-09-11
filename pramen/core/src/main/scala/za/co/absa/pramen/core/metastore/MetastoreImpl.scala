@@ -31,7 +31,8 @@ import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 
 import java.time.{Instant, LocalDate}
 
-class MetastoreImpl(tableDefs: Seq[MetaTable],
+class MetastoreImpl(appConfig: Config,
+                    tableDefs: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -56,7 +57,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
 
-    MetastorePersistence.fromMetaTable(mt).loadTable(infoDateFrom, infoDateTo)
+    MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(infoDateFrom, infoDateTo)
   }
 
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
@@ -70,7 +71,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
     val mt = getTableDef(tableName)
     val isTransient = mt.format.isInstanceOf[DataFormat.Transient]
     val start = Instant.now.getEpochSecond
-    val stats = MetastorePersistence.fromMetaTable(mt).saveTable(infoDate, df, inputRecordCount)
+    val stats = MetastorePersistence.fromMetaTable(mt, appConfig).saveTable(infoDate, df, inputRecordCount)
     val finish = Instant.now.getEpochSecond
 
     if (!skipBookKeepingUpdates) {
@@ -140,7 +141,7 @@ class MetastoreImpl(tableDefs: Seq[MetaTable],
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {
     val mt = getTableDef(tableName)
 
-    MetastorePersistence.fromMetaTable(mt).getStats(infoDate)
+    MetastorePersistence.fromMetaTable(mt, appConfig).getStats(infoDate)
   }
 
   override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate): MetastoreReader = {
@@ -222,7 +223,7 @@ object MetastoreImpl {
 
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
-    new MetastoreImpl(tableDefs, bookkeeper, isUndercover)
+    new MetastoreImpl(conf, tableDefs, bookkeeper, isUndercover)
   }
 }
 

@@ -16,14 +16,15 @@
 
 package za.co.absa.pramen.core.metastore.persistence
 
+import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.{DataFormat, Query}
+import za.co.absa.pramen.api.{CachePolicy, DataFormat, Query}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet}
+import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet, MetastorePersistenceTransient}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.utils.{LocalFsUtils, SparkUtils}
 
@@ -503,6 +504,22 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
         }
       }
     }
+
+    "transient tables support" in {
+      val conf = ConfigFactory.parseString(
+        """pramen.temporary.directory=/dummy"""
+      )
+
+      val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
+        format = DataFormat.Transient(CachePolicy.Cache),
+        infoDateColumn = infoDateColumn,
+        infoDateFormat = infoDateFormat
+      )
+
+      val persistence = MetastorePersistence.fromMetaTable(mt, conf)
+
+      assert(persistence.isInstanceOf[MetastorePersistenceTransient])
+    }
   }
 
   def getParquetMtPersistence(tempDir: String,
@@ -515,7 +532,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       infoDateFormat = infoDateFormat
     )
 
-    MetastorePersistence.fromMetaTable(mt)
+    MetastorePersistence.fromMetaTable(mt, null)
   }
 
   def getDeltaMtPersistence(tempDir: String,
@@ -529,7 +546,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       writeOptions = writeOptions
     )
 
-    MetastorePersistence.fromMetaTable(mt)
+    MetastorePersistence.fromMetaTable(mt, null)
   }
 
   private def getDf: DataFrame = {

@@ -19,12 +19,13 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.exceptions.ProcessFailedException
-import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
@@ -35,16 +36,17 @@ import za.co.absa.pramen.core.mocks.process.ProcessRunnerSpy
 import java.nio.file.{Files, Paths}
 import java.time.{Instant, LocalDate}
 
-class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
+class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase with TempDirFixture with TextComparisonFixture {
 
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
+  private var tempDir: String = _
+  private val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
-  private def exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
-
-  private val conf: Config = ConfigFactory.parseString(
+  private def getConf(tempDir: String): Config = ConfigFactory.parseString(
     s"""
+       |pramen.temporary.directory="$tempDir"
        |
        |pramen.py {
        |  databricks {
@@ -99,6 +101,20 @@ class PythonTransformationJobSuite extends AnyWordSpec with SparkTestBase with T
        |""".stripMargin)
     .withFallback(ConfigFactory.load())
     .resolve()
+
+  lazy val conf: Config = getConf(tempDir)
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    tempDir = createTempDir("python_transformer")
+  }
+
+
+  override def afterAll(): Unit = {
+    deleteDir(tempDir)
+    super.afterAll()
+  }
+
 
   "preRunCheckJob" should {
     "always return Ready" in {

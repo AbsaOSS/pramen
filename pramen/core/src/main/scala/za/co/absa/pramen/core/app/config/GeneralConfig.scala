@@ -24,7 +24,7 @@ import java.time.ZoneId
 case class GeneralConfig(
                           timezoneId: ZoneId,
                           environmentName: String,
-                          temporaryDirectory: String
+                          temporaryDirectory: Option[String]
                         )
 object GeneralConfig {
   val TIMEZONE_ID_KEY = "pramen.timezone"
@@ -36,7 +36,7 @@ object GeneralConfig {
       .map(tz => ZoneId.of(tz))
       .getOrElse(ZoneId.systemDefault())
     val environmentName = conf.getString(ENVIRONMENT_NAME_KEY)
-    val temporaryDirectory = conf.getString(TEMPORARY_DIRECTORY_KEY)
+    val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
 
     GeneralConfig(timezoneId, environmentName, temporaryDirectory)
   }
