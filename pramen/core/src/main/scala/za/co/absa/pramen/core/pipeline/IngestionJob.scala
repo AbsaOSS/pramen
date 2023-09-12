@@ -71,6 +71,9 @@ class IngestionJob(operationDef: OperationDef,
       case Reason.Skip(msg) =>
         log.warn(s"Validation of '${outputTable.name}' for $from..$to requested to skip the task. Reason: $msg.")
         return JobPreRunResult(JobPreRunStatus.Skip(msg), None, dependencyWarnings, Nil)
+      case Reason.SkipOnce(msg) =>
+        log.warn(s"Validation of '${outputTable.name}' for $from..$to requested to skip the task. Reason: $msg.")
+        return JobPreRunResult(JobPreRunStatus.Skip(msg), None, dependencyWarnings, Nil)
     }
 
     val recordCount = source.getRecordCount(sourceTable.query, from, to)

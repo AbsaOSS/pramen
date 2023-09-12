@@ -59,12 +59,12 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
       assert(outcome == Reason.Ready)
     }
 
-    "return not ready when empty is not allowed" in {
+    "return SkipOnce when empty is not allowed" in {
       val (transformer, metastore) = getUseCase
 
       val outcome = transformer.validate(metastore, infoDateWithEmptyDf, Map("table" -> "table1", "empty.allowed" -> "false"))
 
-      assert(outcome.isInstanceOf[Reason.NotReady])
+      assert(outcome.isInstanceOf[Reason.SkipOnce])
     }
 
     "fail when the mandatory option is absent" in {

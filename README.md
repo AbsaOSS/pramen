@@ -2173,6 +2173,7 @@ The cache policy can be:
 - `cache` - the table is cached using Spark cache
 - `persist` - the table is persisted in the temporary directory for the duration of the pipeline run.
 
+This feature is experimental. Please, let know if there are any issues when using transient metastore table format.
 
 ### File-based sourcing
 Let's consider a use case when your data lake has 'landing' area where data is loaded from external sources, in addition

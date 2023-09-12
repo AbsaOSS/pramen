@@ -17,7 +17,9 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -92,6 +94,7 @@ object MetastorePersistenceTransient {
   private val rawDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val cachedDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val persistedLocations = new mutable.HashMap[MetastorePartition, String]()
+  private val schemas = new mutable.HashMap[String, StructType]()
   private var spark: SparkSession = _
 
   private[core] def addRawDataFrame(tableName: String, infoDate: LocalDate, df: DataFrame): (DataFrame, Option[Long]) = synchronized {
@@ -99,6 +102,7 @@ object MetastorePersistenceTransient {
     val partition = getMetastorePartition(tableName, infoDate)
 
     rawDataframes += partition -> df
+    schemas += partition.tableName -> df.schema
 
     (df, None)
   }
@@ -111,6 +115,7 @@ object MetastorePersistenceTransient {
     this.synchronized {
       spark = df.sparkSession
       cachedDataframes += partition -> cachedDf
+      schemas += partition.tableName -> df.schema
     }
 
     (cachedDf, None)
@@ -135,6 +140,7 @@ object MetastorePersistenceTransient {
 
     this.synchronized {
       persistedLocations += partition -> outputPath
+      schemas += partition.tableName -> df.schema
     }
 
     (spark.read.parquet(outputPath), Option(sizeBytes))
@@ -154,7 +160,13 @@ object MetastorePersistenceTransient {
       log.info(s"Reading persisted transient table from $path...")
       spark.read.parquet(path)
     } else {
-      throw new IllegalStateException(s"No data for transient table '$tableName' for '$infoDate'")
+      if (schemas.contains(tableName.toLowerCase)) {
+        val schema = schemas(tableName.toLowerCase)
+        val emptyRDD = spark.sparkContext.emptyRDD[Row]
+        spark.createDataFrame(emptyRDD, schema)
+      } else {
+        throw new IllegalStateException(s"No data for transient table '$tableName' for '$infoDate'")
+      }
     }
   }
 
@@ -162,6 +174,7 @@ object MetastorePersistenceTransient {
     rawDataframes.clear()
     cachedDataframes.foreach { case (_, df) => df.unpersist() }
     cachedDataframes.clear()
+    schemas.clear()
 
     if (spark != null) {
       persistedLocations.foreach { case (_, path) =>

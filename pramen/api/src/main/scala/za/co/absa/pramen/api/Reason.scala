@@ -26,9 +26,12 @@ object Reason {
   /** The transformation is ready to run, but has some warnings to be displayed in notifications. */
   case class Warning(warnings: Seq[String]) extends Reason
 
-  /** Data required to run the job is absent or not up to date. */
+  /** Data required to run the job is absent or not up to date. This will result in dependent jobs not run. */
   case class NotReady(message: String) extends Reason
 
-  /** It is too late to calculate data for the specified information date. */
+  /** Skip the task for the current information date, but allow dependent jobs to run. */
   case class Skip(message: String) extends Reason
+
+  /** Skip the task only for this run, but allow dependent jobs to run. */
+  case class SkipOnce(message: String) extends Reason
 }

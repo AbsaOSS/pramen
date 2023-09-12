@@ -50,13 +50,13 @@ class ConversionTransformerSuite extends AnyWordSpec with SparkTestBase with Tem
       }
     }
 
-    "return NotReady when there is no data" in {
+    "return SkipOnce when there is no data" in {
       withTempDirectory("comparison_transformer") { tempDir =>
         val (transformer, metastoreReader) = getUseCase(tempDir)
 
         val result = transformer.validate(metastoreReader, infoDateWithEmptyDf, conversionOptions)
 
-        assert(result.isInstanceOf[Reason.NotReady])
+        assert(result.isInstanceOf[Reason.SkipOnce])
       }
     }
 
