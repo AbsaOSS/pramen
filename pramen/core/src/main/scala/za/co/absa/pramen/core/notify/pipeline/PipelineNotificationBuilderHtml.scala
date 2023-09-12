@@ -332,7 +332,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       if (haveHiveColumn) {
         val hiveTable = task.runStatus match {
           case s: Succeeded => s.hiveTablesUpdated.mkString(", ")
-          case _            => "-"
+          case _            => ""
         }
 
         row.append(TextElement(hiveTable))

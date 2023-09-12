@@ -37,7 +37,7 @@ class IdentityTransformer extends Transformer {
     if (emptyAllowed || !df.isEmpty) {
       Reason.Ready
     } else {
-      Reason.NotReady(s"No data for '$tableName' at $infoDate")
+      Reason.SkipOnce(s"No data for '$tableName' at $infoDate")
     }
   }
 

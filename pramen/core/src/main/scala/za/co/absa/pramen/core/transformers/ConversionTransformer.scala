@@ -123,8 +123,8 @@ class ConversionTransformer extends Transformer {
       throw new IllegalArgumentException(s"Table $inputTable should be in 'raw' format so the for each file the metastore returns a file path.")
     }
 
-    if (filesDf.count() == 0) {
-      Reason.NotReady(s"Table $inputTable has no data for $infoDate")
+    if (filesDf.isEmpty) {
+      Reason.SkipOnce(s"Table $inputTable has no data for $infoDate")
     } else {
       Reason.Ready
     }

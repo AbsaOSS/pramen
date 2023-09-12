@@ -61,18 +61,32 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       val df = persistor.loadTable(Some(infoDate), Some(infoDate))
 
       assert(df.count() == 3)
+
+      MetastorePersistenceTransient.cleanup()
     }
 
-    "throw an exception is the data is not available" in {
+    "return an empty dataframe if data is not available but schema is available" in {
       val persistor = new MetastorePersistenceTransient(null, "table2", CachePolicy.Cache)
 
       persistor.saveTable(infoDate, exampleDf, Some(10))
+
+      val df = persistor.loadTable(Some(infoDate.plusDays(1)), Some(infoDate.plusDays(1)))
+
+      assert(df.isEmpty)
+
+      MetastorePersistenceTransient.cleanup()
+    }
+
+    "throw an exception if the data and schema are not available" in {
+      val persistor = new MetastorePersistenceTransient(null, "table2", CachePolicy.Cache)
 
       val ex = intercept[IllegalStateException] {
         persistor.loadTable(Some(infoDate.plusDays(1)), Some(infoDate.plusDays(1)))
       }
 
       assert(ex.getMessage.contains("No data for transient table 'table2' for '2022-02-19'"))
+
+      MetastorePersistenceTransient.cleanup()
     }
 
     "throw an exception on range queries" in {
@@ -85,6 +99,8 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       }
 
       assert(ex.getMessage.contains("Metastore 'transient' format does not support ranged queries"))
+
+      MetastorePersistenceTransient.cleanup()
     }
 
     "throw an exception if info date is not provided" in {
@@ -95,6 +111,8 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       }
 
       assert(ex.getMessage.contains("Metastore 'transient' format requires info date for querying its contents"))
+
+      MetastorePersistenceTransient.cleanup()
     }
   }
 
@@ -225,9 +243,18 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       MetastorePersistenceTransient.cleanup()
     }
 
-    "throw an exception if data not found" in {
+    "return an empty dataframe if data not found but schema found" in {
       MetastorePersistenceTransient.addCachedDataframe("table_cache", infoDate, exampleDf)
 
+      val df = MetastorePersistenceTransient.getDataForTheDate("table_cache", infoDate.plusDays(1))
+
+      assert(df.isEmpty)
+      assert(df.schema.sameElements(exampleDf.schema))
+
+      MetastorePersistenceTransient.cleanup()
+    }
+
+    "throw an exception if data nor schema not found" in {
       assertThrows[IllegalStateException] {
         MetastorePersistenceTransient.getDataForTheDate("table_cache", infoDate.plusDays(1))
       }

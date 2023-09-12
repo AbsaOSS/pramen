@@ -218,6 +218,9 @@ abstract class TaskRunnerBase(conf: Config,
                   bookkeeper.setRecordCount(outputTable, task.infoDate, task.infoDate, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
                 }
                 Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))
+              case Reason.SkipOnce(msg) =>
+                log.info(s"SKIP today validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
+                Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))
             }
           case Failure(ex) =>
             Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))

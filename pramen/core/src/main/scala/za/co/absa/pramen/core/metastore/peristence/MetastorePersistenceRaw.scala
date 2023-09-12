@@ -38,7 +38,7 @@ class MetastorePersistenceRaw(path: String,
     import spark.implicits._
 
     (infoDateFrom, infoDateTo) match {
-      case (Some(from), Some(to)) if from == to =>
+      case (Some(from), Some(to)) if from.isEqual(to) =>
         getListOfFiles(from).toDF("path")
       case (Some(from), Some(to)) =>
         getListOfFilesRange(from, to).toDF("path")
@@ -128,7 +128,9 @@ class MetastorePersistenceRaw(path: String,
 
       while (d.isBefore(infoDateTo) || d.isEqual(infoDateTo)) {
         val subPath = SparkUtils.getPartitionPath(d, infoDateColumn, infoDateFormat, path)
-        files ++= fsUtils.getHadoopFiles(subPath)
+        if (fsUtils.exists(subPath)) {
+          files ++= fsUtils.getHadoopFiles(subPath)
+        }
         d = d.plusDays(1)
       }
       files.toSeq
@@ -139,6 +141,13 @@ class MetastorePersistenceRaw(path: String,
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
     val subPath = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
-    fsUtils.getHadoopFiles(subPath).toSeq
+
+    if (fsUtils.exists(new Path(path)) && !fsUtils.exists(subPath)) {
+      // The absence of the partition folder means no data is there, which is okay quite often.
+      // But fsUtils.getHadoopFiles() throws an exception that fails the job and dependent jobs in this case
+      Seq.empty[String]
+    } else {
+      fsUtils.getHadoopFiles(subPath).toSeq
+    }
   }
 }
