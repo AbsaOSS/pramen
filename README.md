@@ -1397,6 +1397,10 @@ pramen.operations = [
         date.to = "@infoDate" // optional
       }
     ]
+   
+    option {
+      input.table = "table1"
+    }
   },
   {
     name = "A Kafka sink"

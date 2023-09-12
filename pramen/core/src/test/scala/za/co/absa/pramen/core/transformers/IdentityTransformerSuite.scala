@@ -38,6 +38,14 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
     "pass when the mandatory option is present" in {
       val (transformer, metastore) = getUseCase
 
+      val outcome = transformer.validate(metastore, infoDateWithData, Map("input.table" -> "table1"))
+
+      assert(outcome == Reason.Ready)
+    }
+
+    "pass when the legacy mandatory option is present" in {
+      val (transformer, metastore) = getUseCase
+
       val outcome = transformer.validate(metastore, infoDateWithData, Map("table" -> "table1"))
 
       assert(outcome == Reason.Ready)
@@ -66,7 +74,7 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
         transformer.validate(metastore, infoDateWithData, Map.empty)
       }
 
-      assert(ex.getMessage.contains("Option 'table' is not defined"))
+      assert(ex.getMessage.contains("Option 'input.table' is not defined"))
     }
   }
 
