@@ -146,7 +146,26 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         assert(chunk1.infoDate == "2020-08-11")
         assert(chunk2.infoDate == "2020-08-12")
       }
+    }
 
+    "getDataChunksCount()" should {
+      "return 0 if there are no entries" in {
+        val bk = getBookkeeper()
+
+        assert(bk.getDataChunksCount("table", Option(infoDate1), Option(infoDate1)) == 0)
+      }
+
+      "return the number of entries if there are entries" in {
+        val bk = getBookkeeper()
+
+        bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318833, 1597318837, isTableTransient = false)
+        bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318831, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318832, 1597318836, isTableTransient = false)
+
+        val chunksCount = bk.getDataChunksCount("table", Option(infoDate1), Option(infoDate2))
+
+        assert(chunksCount == 2)
+      }
     }
 
     "setRecordCount()" should {
