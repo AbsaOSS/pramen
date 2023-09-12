@@ -24,7 +24,7 @@ import java.time.LocalDate
 
 
 abstract class BookkeeperHadoop extends BookkeeperBase(true) {
-  protected def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate]): Column = {
+  private[core] def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate]): Column = {
     (infoDateBegin, infoDateEnd) match {
       case (Some(begin), Some(end)) =>
         val beginStr = getDateStr(begin)
