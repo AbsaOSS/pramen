@@ -38,6 +38,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         RunStatus.Succeeded(Some(1000), 2000, Some(3000), runReason, Nil, Nil, Nil, Nil),
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
         "app_123",
+        isTransient = false,
         Nil,
         Nil,
         Nil)
@@ -70,6 +71,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         RunStatus.Failed(new IllegalStateException("Dummy Exception")),
         None,
         "app_123",
+        isTransient = false,
         Nil,
         Nil,
         Nil)

@@ -20,6 +20,7 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
@@ -83,9 +84,10 @@ class OrchestratorImpl extends Orchestrator {
 
       val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
 
+      val isTransient = job.outputTable.format.isInstanceOf[DataFormat.Transient]
       val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
 
-      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, applicationId, Nil, Nil, Nil)
+      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, applicationId,isTransient, Nil, Nil, Nil)
 
       state.addTaskCompletion(taskResult :: Nil)
     })
