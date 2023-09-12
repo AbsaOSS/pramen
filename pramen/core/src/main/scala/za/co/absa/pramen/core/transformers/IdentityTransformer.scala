@@ -18,18 +18,19 @@ package za.co.absa.pramen.core.transformers
 
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.{MetastoreReader, Reason, Transformer}
+import za.co.absa.pramen.core.transformers.IdentityTransformer._
 
 import java.time.LocalDate
 
 class IdentityTransformer extends Transformer {
   override def validate(metastore: MetastoreReader, infoDate: LocalDate, options: Map[String, String]): Reason = {
-    if (!options.contains("table")) {
-      throw new IllegalArgumentException(s"Option 'table' is not defined")
+    if (!options.contains(INPUT_TABLE_KEY) && !options.contains(INPUT_TABLE_LEGACY_KEY)) {
+      throw new IllegalArgumentException(s"Option '$INPUT_TABLE_KEY' is not defined")
     }
 
-    val emptyAllowed = options.getOrElse("empty.allowed", "true").toBoolean
+    val emptyAllowed = options.getOrElse(EMPTY_ALLOWED_KEY, "true").toBoolean
 
-    val tableName = options("table")
+    val tableName = options.getOrElse(INPUT_TABLE_KEY, options(INPUT_TABLE_LEGACY_KEY))
 
     val df = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
 
@@ -43,8 +44,14 @@ class IdentityTransformer extends Transformer {
   override def run(metastore: MetastoreReader,
                    infoDate: LocalDate,
                    options: Map[String, String]): DataFrame = {
-    val tableName = options("table")
+    val tableName = options.getOrElse(INPUT_TABLE_KEY, options(INPUT_TABLE_LEGACY_KEY))
 
     metastore.getTable(tableName, Option(infoDate), Option(infoDate))
   }
+}
+
+object IdentityTransformer {
+  val INPUT_TABLE_KEY = "input.table"
+  val INPUT_TABLE_LEGACY_KEY = "table"
+  val EMPTY_ALLOWED_KEY = "empty.allowed"
 }

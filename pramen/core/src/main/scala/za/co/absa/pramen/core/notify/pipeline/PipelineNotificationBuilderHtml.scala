@@ -397,7 +397,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     val taskName = s"Files sourced - ${task.job.outputTable.name} - ${task.runInfo.map(_.infoDate.toString).getOrElse(" ")}"
 
-    tableHeaders.append(TableHeader(TextElement(taskName), Align.Center))
+    tableHeaders.append(TableHeader(TextElement(taskName), Align.Left))
     tableBuilder.withHeaders(tableHeaders.toSeq)
 
     runStatus.filesRead.sorted.foreach(fileName => {
