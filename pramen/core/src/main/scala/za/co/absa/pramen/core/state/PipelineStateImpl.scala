@@ -105,6 +105,11 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
     failureException.foreach(ex => log.error(s"The job has FAILED.", ex))
 
     try {
+      val realTaskResults = if (taskResults.exists(!_.isTransient)) {
+        taskResults
+      } else {
+        taskResults.filterNot(_.isTransient)
+      }
       val finishedInstant = Instant.now
       val customEntries = Pramen.instance.notificationBuilder.asInstanceOf[NotificationBuilderImpl].entries
       val notification = PipelineNotification(failureException,
@@ -112,9 +117,9 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
         environmentName,
         startedInstant,
         finishedInstant,
-        taskResults.toList,
+        realTaskResults.toList,
         customEntries.toList)
-      if (taskResults.nonEmpty || sendEmailIfNoNewData || failureException.nonEmpty) {
+      if (realTaskResults.nonEmpty || sendEmailIfNoNewData || failureException.nonEmpty) {
         val email = new PipelineNotificationEmail(notification)
         email.send()
       } else {
