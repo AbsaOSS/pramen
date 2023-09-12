@@ -23,6 +23,8 @@ import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperText}
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.FsUtils
 
+import java.time.LocalDate
+
 class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase with BeforeAndAfter with TempDirFixture {
 
   import za.co.absa.pramen.core.bookkeeper.BookkeeperText._
@@ -39,7 +41,7 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     deleteDir(tmpDir)
   }
 
-  def getBookkeeper: Bookkeeper = {
+  def getBookkeeper: BookkeeperText = {
     new BookkeeperText(tmpDir)
   }
 
@@ -56,4 +58,37 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     testBookKeeper(() => getBookkeeper)
   }
 
+  "getFilter" should {
+    "get a ranged filter" in {
+      val bk = getBookkeeper
+
+      val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2))).toString()
+
+      assert(actual == "(((tableName = table1) AND (infoDate >= 2021-01-01)) AND (infoDate <= 2021-01-02))")
+    }
+
+    "get a from filter" in {
+      val bk = getBookkeeper
+
+      val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), None).toString()
+
+      assert(actual == "((tableName = table1) AND (infoDate >= 2021-01-01))")
+    }
+
+    "get a to filter" in {
+      val bk = getBookkeeper
+
+      val actual = bk.getFilter("table1", None, Some(LocalDate.of(2021, 1, 2))).toString()
+
+      assert(actual == "((tableName = table1) AND (infoDate <= 2021-01-02))")
+    }
+
+    "get a table filter" in {
+      val bk = getBookkeeper
+
+      val actual = bk.getFilter("table1", None, None).toString()
+
+      assert(actual == "(tableName = table1)")
+    }
+  }
 }
