@@ -1359,6 +1359,12 @@ pramen.operations = [
     # It makes sense to set it to false for jobs that take a lot of cluster resources.
     allow.parallel = true
     
+    # If this is true, the operation will run regardless if dependent jobs had failed.
+    # This gives more responsibilities for validation to ensure that the job can run.
+    # Useful for transformations that should still run if they do not strongly need latest
+    # data from previous jobs.
+    always.attempt = false
+    
     # You can determine number of tasks running in parallel with 'pramen.parallel.tasks' setting. 
     # By setting 'consume.threads' to greater value than 1, the task will appear to require more than 1 thread to run. 
     # Thus, the task will take up multiple "slots" in 'pramen.parallel.tasks' setting.

@@ -106,7 +106,7 @@ class OrchestratorImpl extends Orchestrator {
 
     var atLeastOneStarted = false
     pendingJobs.foreach { job =>
-      if (dependencyResolver.canRun(job.outputTable.name)) {
+      if (dependencyResolver.canRun(job.outputTable.name, job.operation.alwaysAttempt)) {
         runningJobs += job
         atLeastOneStarted = true
         log.info(s"Job '${job.name}' outputting to '${job.outputTable.name}' is selected for execution.")

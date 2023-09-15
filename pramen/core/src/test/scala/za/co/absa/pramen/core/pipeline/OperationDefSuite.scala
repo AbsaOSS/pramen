@@ -91,6 +91,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.size == 1)
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.head.metaTableName == "table1_sync")
       assert(op.allowParallel)
+      assert(!op.alwaysAttempt)
       assert(op.notificationTargets.size == 2)
       assert(op.notificationTargets.head == "hyperdrive1")
       assert(op.notificationTargets(1) == "custom2")
@@ -106,6 +107,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |schedule.type = "daily"
            |class = "myclass"
            |output.table = "dummy_table"
+           |always.attempt = "true"
            |
            |dependencies = [
            |  {
@@ -138,6 +140,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.outputInfoDateExpression == "@date")
       assert(op.operationType.asInstanceOf[Transformation].clazz == "myclass")
       assert(op.allowParallel)
+      assert(op.alwaysAttempt)
       assert(op.dependencies.length == 2)
       assert(op.dependencies.head.tables.contains("table1"))
       assert(op.dependencies.head.dateFromExpr.contains("@infoDate - 1"))

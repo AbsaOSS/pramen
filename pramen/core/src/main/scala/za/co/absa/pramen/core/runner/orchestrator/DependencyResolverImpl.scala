@@ -49,10 +49,17 @@ class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolve
     availableTables.remove(table)
   }
 
-  override def canRun(outputTable: String): Boolean = {
+  override def canRun(outputTable: String, alwaysAttempt: Boolean): Boolean = {
     val relevantTables = getRelevantTables(outputTable)
 
-    relevantTables.forall(t => availableTables.contains(t))
+    if (alwaysAttempt) {
+      // Always attempt flag means always try running the job, even if dependent jobs failed
+      // But we still need to enforce order, so allow running the job only if all dependent tables
+      // were processed, either successfully or with a failure.
+      relevantTables.forall(t => availableTables.contains(t) || unavailableTables.contains(t))
+    } else {
+      relevantTables.forall(t => availableTables.contains(t))
+    }
   }
 
   override def getMissingDependencies(outputTable: String):Seq[String] = {
