@@ -76,7 +76,7 @@ class DependencyResolverSuite extends AnyWordSpec {
 
       resolver.setAvailableTable("table1")
 
-      assert(resolver.canRun("table3" ))
+      assert(resolver.canRun("table3", alwaysAttempt = false))
     }
   }
 
@@ -87,7 +87,7 @@ class DependencyResolverSuite extends AnyWordSpec {
       resolver.setAvailableTable("table1")
       resolver.setFailedTable("table1")
 
-      assert(!resolver.canRun("table3"))
+      assert(!resolver.canRun("table3", alwaysAttempt = false))
     }
   }
 
@@ -95,26 +95,54 @@ class DependencyResolverSuite extends AnyWordSpec {
     "return true for tables that do not have dependencies" in {
       val resolver = getTestCase
 
-      assert(resolver.canRun("table1"))
+      assert(resolver.canRun("table1", alwaysAttempt = false))
     }
 
     "return true for tables that have all dependencies satisfied" in {
       val resolver = getTestCase
 
       resolver.setAvailableTable("table1")
-      assert(resolver.canRun("table3"))
+      assert(resolver.canRun("table3", alwaysAttempt = false))
+    }
+
+    "return false for tables that have failed dependencies" in {
+      val resolver = getTestCase
+
+      resolver.setFailedTable("table1")
+      assert(!resolver.canRun("table3", alwaysAttempt = false))
+    }
+
+    "return true for tables that have failed all dependencies with always attempt = true" in {
+      val resolver = getTestCase
+
+      resolver.setFailedTable("table1")
+      assert(resolver.canRun("table3", alwaysAttempt = true))
+    }
+
+    "return false for tables that have neither successful nor failed all dependencies with always attempt = true" in {
+      val resolver = getTestCase
+
+      assert(!resolver.canRun("table3", alwaysAttempt = true))
     }
 
     "return true for tables that have table dependencies not part of this pipeline" in {
       val resolver = getTestCase
 
-      assert(resolver.canRun("table4"))
+      assert(resolver.canRun("table4", alwaysAttempt = false))
+    }
+
+    "return true for tables that have some successful dependencies, and some failed with always attempt = true" in {
+      val resolver = getTestCase
+
+      resolver.setFailedTable("table1")
+      resolver.setAvailableTable("table10")
+      assert(resolver.canRun("table3", alwaysAttempt = true))
     }
 
     "return false for tables that have not all dependencies satisfied" in {
       val resolver = getTestCase
 
-      assert(!resolver.canRun("table3"))
+      assert(!resolver.canRun("table3", alwaysAttempt = false))
     }
   }
 

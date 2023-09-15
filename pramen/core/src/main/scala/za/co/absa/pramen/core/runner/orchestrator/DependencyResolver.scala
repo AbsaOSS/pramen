@@ -52,7 +52,7 @@ trait DependencyResolver {
     *
     * @return True if the job can run, false otherwise
     */
-  def canRun(outputTable: String): Boolean
+  def canRun(outputTable: String, alwaysAttempt: Boolean): Boolean
 
   /**
     * Returns the list of dependencies that are not satisfied in order to run a job identified by its output table
