@@ -45,7 +45,7 @@ class TaskRunnerMultithreaded(conf: Config,
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)
-  implicit private val executionContext: ExecutionContextExecutorService = fromExecutorService(executor)
+  implicit private[core] val executionContext: ExecutionContextExecutorService = fromExecutorService(executor)
 
   private val maxResources = runtimeConfig.parallelTasks
   private val availableResources: Semaphore = new Semaphore(maxResources, true)
@@ -55,7 +55,7 @@ class TaskRunnerMultithreaded(conf: Config,
     * We have a finite number of resources. Before executing, the *action* asks for the required resources and only when
     * there is enough of them available, the action will be executed.
     */
-  private[task] def whenEnoughResourcesAreAvailable[T](requestedCount: Int)(action: => T): T = {
+  private[core] def whenEnoughResourcesAreAvailable[T](requestedCount: Int)(action: => T): T = {
     val resourceCount = getTruncatedResourceCount(requestedCount)
 
     availableResources.acquire(resourceCount)
@@ -65,7 +65,7 @@ class TaskRunnerMultithreaded(conf: Config,
     result.get
   }
 
-  private[task] def getTruncatedResourceCount(requestedCount: Int): Int = {
+  private[core] def getTruncatedResourceCount(requestedCount: Int): Int = {
     if (requestedCount > maxResources) {
       log.warn(s"Asked for $requestedCount resources but maximum allowed is $maxResources. Truncating to $maxResources")
       maxResources
@@ -83,10 +83,14 @@ class TaskRunnerMultithreaded(conf: Config,
   }
 
   override def runSequential(tasks: Seq[Task]): Future[Seq[RunStatus]] = {
-    Future {
-      val requiredResources = tasks.map(_.job.operation.consumeThreads).max
-      whenEnoughResourcesAreAvailable(requiredResources) {
-        runDependentTasks(tasks)
+    if (tasks.isEmpty) {
+      Future.successful(Seq.empty[RunStatus])
+    } else {
+      Future {
+        val requiredResources = tasks.map(_.job.operation.consumeThreads).max
+        whenEnoughResourcesAreAvailable(requiredResources) {
+          runDependentTasks(tasks)
+        }
       }
     }
   }
@@ -94,5 +98,4 @@ class TaskRunnerMultithreaded(conf: Config,
   override def shutdown(): Unit = {
     executionContext.shutdown()
   }
-
 }
