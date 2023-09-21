@@ -20,11 +20,12 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api._
-import za.co.absa.pramen.core.source.RawFileSource.{FILE_PREFIX, PATH_FIELD}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
+import scala.util.matching.Regex
 
 /**
   * This source allows loading files, and copying them ot the metastore without looking into its contents.
@@ -79,41 +80,61 @@ import scala.collection.mutable.ListBuffer
 class RawFileSource(val sourceConfig: Config,
                     val options: Map[String, String])(implicit spark: SparkSession) extends Source {
 
+  import RawFileSource._
   import spark.implicits._
 
   override val config: Config = sourceConfig
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    getPaths(query).length
+    getPaths(query, infoDateBegin, infoDateEnd).length
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
-    val files = getPaths(query)
+    val files = getPaths(query, infoDateBegin, infoDateEnd)
     val df = files.toDF(PATH_FIELD)
 
     SourceResult(df, files)
   }
 
-  private[source] def getPaths(query: Query): Seq[String] = {
+  private[source] def getPaths(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[String] = {
     query match {
-      case Query.Path(path)      => getListOfFiles(path)
+      case Query.Path(pathPattern) => getPatternBasedFilesForRange(pathPattern, infoDateBegin, infoDateEnd)
       case Query.Custom(options) => getMultiList(options)
-      case _                     => throw new IllegalArgumentException("RawFileSource only supports 'path' or 'file.1,...' as an input, 'sql' and 'table' are not supported.")
+      case _ => throw new IllegalArgumentException("RawFileSource only supports 'path' or 'file.1,...' as an input, 'sql' and 'table' are not supported.")
     }
   }
 
-  private[source] def getListOfFiles(path: String): Seq[String] = {
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-    val hadoopPath = new Path(path)
-
-    if (fsUtils.exists(hadoopPath) && fsUtils.isDirectory(hadoopPath)) {
-      fsUtils.getHadoopFiles(new Path(path), includeHiddenFiles = true).sorted
+  private[source] def getPatternBasedFilesForRange(pathPattern: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[String] = {
+    if (!pathPattern.contains("{{") || infoDateBegin.isEqual(infoDateEnd)) {
+      getListOfFilesForPathPattern(pathPattern, infoDateBegin)
     } else {
-      Seq(path)
+      if (infoDateBegin.isAfter(infoDateEnd)) {
+        throw new IllegalArgumentException(s"Begin date is more recent than the end date: $infoDateBegin > $infoDateEnd.")
+      }
+      val files = new ListBuffer[String]
+      var date = infoDateBegin
+      while (date.isBefore(infoDateEnd) || date.isEqual(infoDateEnd)) {
+        files ++= getListOfFilesForPathPattern(pathPattern, infoDateBegin)
+        date = date.plusDays(1)
+      }
+      files.toSeq
     }
   }
+}
 
-  private[source] def getMultiList(options: Map[String, String]): Seq[String] = {
+object RawFileSource extends ExternalChannelFactory[RawFileSource] {
+  val PATH_FIELD = "path"
+  val FILE_PREFIX = "file"
+
+  val datePatternRegExp: Regex = ".*\\{\\{(\\S+)\\}\\}.*".r
+
+  override def apply(conf: Config, parentPath: String, spark: SparkSession): RawFileSource = {
+    val options = ConfigUtils.getExtraOptions(conf, "option")
+
+    new RawFileSource(conf, options)(spark)
+  }
+
+  private[core] def getMultiList(options: Map[String, String]): Seq[String] = {
     var i = 1
     val files = new ListBuffer[String]
 
@@ -126,15 +147,50 @@ class RawFileSource(val sourceConfig: Config,
     }
     files.toSeq
   }
-}
 
-object RawFileSource extends ExternalChannelFactory[RawFileSource] {
-  val PATH_FIELD = "path"
-  val FILE_PREFIX = "file"
+  private[core] def getListOfFilesForPathPattern(pathPattern: String,
+                                                 infoDate: LocalDate)
+                                                (implicit spark: SparkSession): Seq[String] = {
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, pathPattern)
 
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): RawFileSource = {
-    val options = ConfigUtils.getExtraOptions(conf, "option")
+    val globPattern = if (pathPattern.contains("{{"))
+      getGlobPattern(pathPattern, infoDate)
+    else {
+      pathPattern
+    }
 
-    new RawFileSource(conf, options)(spark)
+    val hadoopPath = new Path(globPattern)
+    if (fsUtils.exists(hadoopPath) && fsUtils.isDirectory(hadoopPath)) {
+      fsUtils.getHadoopFiles(new Path(pathPattern), includeHiddenFiles = true).sorted
+    } else {
+      getListOfFiles(globPattern)
+    }
+  }
+
+
+  private[core] def getListOfFiles(pathPattern: String)(implicit spark: SparkSession): Seq[String] = {
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, pathPattern)
+    val hadoopPath = new Path(pathPattern)
+
+    val parentPath = new Path(pathPattern).getParent
+
+    if (!parentPath.isRoot && !fsUtils.exists(parentPath)) {
+      throw new IllegalArgumentException(s"Input path does not exist: $parentPath")
+    }
+
+    try {
+      fsUtils.getHadoopFiles(hadoopPath, includeHiddenFiles = true).sorted
+    } catch {
+      case ex: IllegalArgumentException if ex.getMessage.contains("Input path does not exist") => Seq.empty[String]
+    }
+  }
+
+  private[core] def getGlobPattern(filePattern: String, infoDate: LocalDate): String = {
+    filePattern match {
+      case filePattern@datePatternRegExp(dateFormat) =>
+        filePattern.replace(s"{{$dateFormat}}", infoDate.format(DateTimeFormatter.ofPattern(dateFormat)))
+      case filePattern =>
+        throw new IllegalArgumentException(s"File pattern '$filePattern' does not contain date format in curly braces, e.g. 'FILE_{{yyyyMMdd}}.dat'.")
+    }
   }
 }
