@@ -2198,6 +2198,21 @@ format. Pramen will not change input files in any way. When queried from a trans
 returns not the data in the table itself, but the list of files for the requested date. It is up to the transformer or
 sink to read the data files and convert them to the desired format if necessary.
 
+You can use date pattern when file names contain information dates. You need to specify date pattern in double
+curly braces `{{...}}`, for example:
+```hocon
+tables = [
+  {
+    # This will load files like:
+    # - s3://mybucket/folder/file_2023-09-22_A.DAT
+    # - s3://mybucket/folder/file_2023-09-22_B.DAT
+    # when the info date is 2023-09-22.
+    input.path = "s3://mybucket/folder/file_{{yyyy-MM-dd}}*"
+    output.metastore.table = table1_raw
+  }
+]
+```
+
 A special built-in transformer `za.co.absa.pramen.core.transformers.ConversionTransformer` can be used to convert 'raw'
 data into a normal `parquet` or `delta` metastore table if the source format is supported by Spark. If the source format
 is not supported by Spark out of the box, you can use this transformer as an example for implementing a custom

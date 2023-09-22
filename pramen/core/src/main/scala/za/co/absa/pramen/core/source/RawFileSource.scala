@@ -19,9 +19,11 @@ package za.co.absa.pramen.core.source
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
+import java.io.FileNotFoundException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
@@ -92,10 +94,12 @@ class RawFileSource(val sourceConfig: Config,
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
     val files = getPaths(query, infoDateBegin, infoDateEnd)
     val df = files.toDF(PATH_FIELD)
+    val fileNames = files.map(fullPath => new Path(fullPath).getName)
 
-    SourceResult(df, files)
+    SourceResult(df, fileNames)
   }
 
+  @throws[FileNotFoundException]
   private[source] def getPaths(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[String] = {
     query match {
       case Query.Path(pathPattern) => getPatternBasedFilesForRange(pathPattern, infoDateBegin, infoDateEnd)
@@ -104,6 +108,7 @@ class RawFileSource(val sourceConfig: Config,
     }
   }
 
+  @throws[FileNotFoundException]
   private[source] def getPatternBasedFilesForRange(pathPattern: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[String] = {
     if (!pathPattern.contains("{{") || infoDateBegin.isEqual(infoDateEnd)) {
       getListOfFilesForPathPattern(pathPattern, infoDateBegin)
@@ -114,7 +119,7 @@ class RawFileSource(val sourceConfig: Config,
       val files = new ListBuffer[String]
       var date = infoDateBegin
       while (date.isBefore(infoDateEnd) || date.isEqual(infoDateEnd)) {
-        files ++= getListOfFilesForPathPattern(pathPattern, infoDateBegin)
+        files ++= getListOfFilesForPathPattern(pathPattern, date)
         date = date.plusDays(1)
       }
       files.toSeq
@@ -123,6 +128,8 @@ class RawFileSource(val sourceConfig: Config,
 }
 
 object RawFileSource extends ExternalChannelFactory[RawFileSource] {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val PATH_FIELD = "path"
   val FILE_PREFIX = "file"
 
@@ -148,15 +155,18 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
     files.toSeq
   }
 
+  @throws[FileNotFoundException]
   private[core] def getListOfFilesForPathPattern(pathPattern: String,
                                                  infoDate: LocalDate)
                                                 (implicit spark: SparkSession): Seq[String] = {
     val globPattern = getGlobPattern(pathPattern, infoDate)
+    log.info(s"Using the following pattern for '${infoDate}': $globPattern")
 
     getListOfFiles(globPattern)
   }
 
 
+  @throws[FileNotFoundException]
   private[core] def getListOfFiles(pathPattern: String)(implicit spark: SparkSession): Seq[String] = {
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, pathPattern)
     val hadoopPath = new Path(pathPattern)
@@ -164,7 +174,7 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
     val parentPath = new Path(pathPattern).getParent
 
     if (!parentPath.isRoot && !fsUtils.exists(parentPath)) {
-      throw new IllegalArgumentException(s"Input path does not exist: $parentPath")
+      throw new FileNotFoundException(s"Input path does not exist: $parentPath")
     }
 
     try {

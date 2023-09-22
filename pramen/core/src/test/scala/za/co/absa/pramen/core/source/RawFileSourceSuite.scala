@@ -26,13 +26,17 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.{FsUtils, LocalFsUtils}
 
-import java.io.File
+import java.io.{File, FileNotFoundException}
+import java.time.LocalDate
 
 class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFixture with SparkTestBase {
+  private val infoDate = LocalDate.of(2022, 2, 18)
 
   val tempDir: String = createTempDir("raw_file_source")
   val metastorePath = new Path(tempDir, "mt")
   val filesPath = new Path(tempDir, "files")
+  val filesPatternPath = new Path(tempDir, "pattern_files")
+  val filesPattern = new Path(filesPatternPath, "FILE_TEST_{{yyyy-MM-dd}}*.dat")
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -41,10 +45,15 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
     fsUtils.createDirectoryRecursive(metastorePath)
     fsUtils.createDirectoryRecursive(filesPath)
+    fsUtils.createDirectoryRecursive(filesPatternPath)
 
     fsUtils.writeFile(new Path(filesPath, "1.dat"), "123")
     fsUtils.writeFile(new Path(filesPath, "2.dat"), "4567")
     fsUtils.writeFile(new Path(filesPath, "_3.dat"), "89")
+    fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-18_A.dat"), "123")
+    fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-18_A.txt"), "999")
+    fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-18_B.dat"), "456")
+    fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-19_C.dat"), "789")
   }
 
   override def afterAll(): Unit = {
@@ -111,6 +120,22 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
       assert(count == 3)
     }
 
+    "return the number of files in the directory for a path pattern" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val count = source.getRecordCount(Query.Path(filesPattern.toString), infoDate, infoDate)
+
+      assert(count == 2)
+    }
+
+    "return the number of files in the directory for a path pattern and range query" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val count = source.getRecordCount(Query.Path(filesPattern.toString), infoDate, infoDate.plusDays(1))
+
+      assert(count == 3)
+    }
+
     "return the number of files in the directory for a list of files" in {
       val source = new RawFileSource(null, null)(spark)
 
@@ -119,6 +144,16 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
       val count = source.getRecordCount(Query.Custom(options), null, null)
 
       assert(count == 2)
+    }
+
+    "thrown an exception when parent path does not exist" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val innerPath = new Path(filesPattern, "inner")
+
+      assertThrows[FileNotFoundException] {
+        source.getRecordCount(Query.Path(innerPath.toString), infoDate, infoDate)
+      }
     }
   }
 
@@ -131,13 +166,53 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
       val filesInDf = result.data.collect().map(_.toString())
       val filesRead = result.filesRead
 
+      assert(filesInDf.length == 3)
       assert(filesInDf.exists(_.contains("1.dat")))
       assert(filesInDf.exists(_.contains("2.dat")))
       assert(filesInDf.exists(_.contains("_3.dat")))
 
-      assert(filesRead.exists(_.contains("1.dat")))
-      assert(filesRead.exists(_.contains("2.dat")))
-      assert(filesRead.exists(_.contains("_3.dat")))
+      assert(filesRead.length == 3)
+      assert(filesRead.contains("1.dat"))
+      assert(filesRead.contains("2.dat"))
+      assert(filesRead.contains("_3.dat"))
+    }
+
+    "return the list of files for a pattern" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val result = source.getData(Query.Path(filesPattern.toString), infoDate, infoDate, null)
+
+      val filesInDf = result.data.collect().map(_.toString())
+      val filesRead = result.filesRead
+
+      assert(filesInDf.length == 2)
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_A.dat")))
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_B.dat")))
+
+      assert(filesRead.length == 2)
+      assert(filesRead.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(filesRead.contains("FILE_TEST_2022-02-18_B.dat"))
+    }
+
+    "return the list of files for a pattern with range query" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val result = source.getData(Query.Path(filesPattern.toString), infoDate, infoDate.plusDays(1), null)
+
+      val filesInDf = result.data.collect().map(_.toString())
+      val filesRead = result.filesRead
+
+      filesInDf.foreach(println)
+
+      assert(filesInDf.length == 3)
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_A.dat")))
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_B.dat")))
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-19_C.dat")))
+
+      assert(filesRead.length == 3)
+      assert(filesRead.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(filesRead.contains("FILE_TEST_2022-02-18_B.dat"))
+      assert(filesRead.contains("FILE_TEST_2022-02-19_C.dat"))
     }
 
     "return the list of files for a list of files" in {
