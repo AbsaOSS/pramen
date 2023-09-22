@@ -151,20 +151,9 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
   private[core] def getListOfFilesForPathPattern(pathPattern: String,
                                                  infoDate: LocalDate)
                                                 (implicit spark: SparkSession): Seq[String] = {
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, pathPattern)
+    val globPattern = getGlobPattern(pathPattern, infoDate)
 
-    val globPattern = if (pathPattern.contains("{{"))
-      getGlobPattern(pathPattern, infoDate)
-    else {
-      pathPattern
-    }
-
-    val hadoopPath = new Path(globPattern)
-    if (fsUtils.exists(hadoopPath) && fsUtils.isDirectory(hadoopPath)) {
-      fsUtils.getHadoopFiles(new Path(pathPattern), includeHiddenFiles = true).sorted
-    } else {
-      getListOfFiles(globPattern)
-    }
+    getListOfFiles(globPattern)
   }
 
 
@@ -190,7 +179,7 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
       case filePattern@datePatternRegExp(dateFormat) =>
         filePattern.replace(s"{{$dateFormat}}", infoDate.format(DateTimeFormatter.ofPattern(dateFormat)))
       case filePattern =>
-        throw new IllegalArgumentException(s"File pattern '$filePattern' does not contain date format in curly braces, e.g. 'FILE_{{yyyyMMdd}}.dat'.")
+        filePattern
     }
   }
 }
