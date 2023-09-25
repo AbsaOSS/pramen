@@ -33,6 +33,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
   private val infoDate = LocalDate.of(2022, 2, 18)
 
   val tempDir: String = createTempDir("raw_file_source")
+  val emptyDirPath = new Path(tempDir, "empty")
   val metastorePath = new Path(tempDir, "mt")
   val filesPath = new Path(tempDir, "files")
   val filesPatternPath = new Path(tempDir, "pattern_files")
@@ -43,6 +44,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
+    fsUtils.createDirectoryRecursive(emptyDirPath)
     fsUtils.createDirectoryRecursive(metastorePath)
     fsUtils.createDirectoryRecursive(filesPath)
     fsUtils.createDirectoryRecursive(filesPatternPath)
@@ -230,6 +232,94 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
       assert(filesRead.exists(_.contains("f1.dat")))
       assert(filesRead.exists(_.contains("f2.dat")))
+    }
+  }
+
+  "getPaths" should {
+    "work for a directory" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val files = source.getPaths(Query.Path(filesPath.toString), infoDate, infoDate)
+        .map(path => new Path(path).getName)
+
+      assert(files.length == 3)
+
+      assert(files.contains("1.dat"))
+      assert(files.contains("2.dat"))
+      assert(files.contains("_3.dat"))
+    }
+
+    "work for a list of files" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val options = Map("file.1" -> "1.dat", "file.2" -> "_3.dat")
+      val files = source.getPaths(Query.Custom(options), infoDate, infoDate)
+        .map(path => new Path(path).getName)
+
+      assert(files.length == 2)
+
+      assert(files.contains("1.dat"))
+      assert(files.contains("_3.dat"))
+    }
+
+    "throw an exception when the query is SQL or a table" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      assertThrows[IllegalArgumentException] {
+        source.getPaths(Query.Table("abc"), infoDate, infoDate)
+      }
+    }
+  }
+
+  "getPatternBasedFilesForRange" should {
+    "return the list of files for a date range" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      val files = source.getPatternBasedFilesForRange(filesPatternPath.toString, infoDate, infoDate.plusDays(1))
+        .map(path => new Path(path).getName)
+
+      assert(files.length == 4)
+
+      assert(files.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(files.contains("FILE_TEST_2022-02-18_B.dat"))
+      assert(files.contains("FILE_TEST_2022-02-19_C.dat"))
+    }
+
+    "throw an exception if the date range is incorrect" in {
+      val source = new RawFileSource(null, null)(spark)
+
+      assertThrows[IllegalArgumentException] {
+        source.getPatternBasedFilesForRange(filesPattern.toString, infoDate.plusDays(1), infoDate)
+      }
+    }
+  }
+
+  "getListOfFiles" should {
+    val specificPattern = new Path(filesPatternPath, "FILE_TEST_2022-02-18*.dat")
+    val nonExistingPath = new Path(filesPatternPath, "inner")
+    val nonPattern = new Path(nonExistingPath, "FILE_TEST_2022-02-18*.dat")
+
+    "return the list of files for the pattern" in {
+      val files = RawFileSource.getListOfFiles(specificPattern.toString)
+        .map(path => new Path(path).getName)
+
+      assert(files.length == 2)
+
+      assert(files.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(files.contains("FILE_TEST_2022-02-18_B.dat"))
+    }
+
+    "return an empty list on empty directory" in {
+      val emptyPattern = new Path(emptyDirPath, "empty")
+      val files = RawFileSource.getListOfFiles(emptyPattern.toString)
+
+      assert(files.isEmpty)
+    }
+
+    "throw an exception if parent path does not exist" in {
+      assertThrows[FileNotFoundException] {
+        RawFileSource.getListOfFiles(nonPattern.toString)
+      }
     }
   }
 }
