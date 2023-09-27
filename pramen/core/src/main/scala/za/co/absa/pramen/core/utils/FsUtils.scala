@@ -21,7 +21,7 @@ import org.apache.hadoop.fs._
 import org.slf4j.{Logger, LoggerFactory}
 
 import java.io.IOException
-import java.nio.file.{Files, Paths}
+import java.nio.file.{FileSystems, Files, PathMatcher, Paths}
 import java.time._
 import java.time.format.DateTimeFormatter
 import scala.annotation.tailrec
@@ -684,6 +684,48 @@ class FsUtils(conf: Configuration, pathBase: String) {
     allFiles.map(_.getPath.toString).toArray[String]
   }
 
+  /**
+    * Retrieves files from a directory according to the rules of Hadoop Client.
+    *
+    * This simulates path patterns used when using 'spark.read()'
+    *
+    * The glob pattern is supported. Maximum depth of recursivity is 1.
+    */
+  def getHadoopFilesCaseInsensitive(path: Path, includeHiddenFiles: Boolean = false): Array[String] = {
+    def containsWildcard(input: String): Boolean = {
+      val wildcardPattern = "[*?{}!]".r
+        wildcardPattern.findFirstIn(input).isDefined
+    }
+
+    val basePath = path.getParent
+    val pattern = path.getName
+    val patternHasWildCards = containsWildcard(pattern)
+
+    if (!patternHasWildCards || (fs.exists(path) && isDirectory(path))) {
+      getHadoopFiles(path, includeHiddenFiles)
+    } else {
+      val allFilesPattern = new Path(basePath, "*")
+      val fileFilter = if (includeHiddenFiles) caseInsensitiveAllFileFilter(pattern) else caseInsensitiveHiddenFileFilter(pattern)
+
+      val stats: Array[FileStatus] = fs.globStatus(allFilesPattern, fileFilter)
+
+      if (stats == null) {
+        throw new IllegalArgumentException(s"Input path does not exist: $path")
+      }
+
+      val allFiles = stats.iterator.flatMap(stat => {
+        if (stat.isDirectory) {
+          fs.listStatus(stat.getPath, fileFilter).filter(!_.isDirectory)
+        }
+        else {
+          Array(stat)
+        }
+      })
+
+      allFiles.map(_.getPath.toString).toArray[String]
+    }
+  }
+
   private val hiddenFileFilter = new PathFilter() {
     def accept(p: Path): Boolean = {
       val name = p.getName
@@ -693,6 +735,30 @@ class FsUtils(conf: Configuration, pathBase: String) {
 
   private val anyFileFilter = new PathFilter() {
     def accept(p: Path): Boolean = true
+  }
+
+  private def caseInsensitiveAllFileFilter(caseInsensitivePattern: String): PathFilter = new PathFilter() {
+    val pathMatcher: PathMatcher = FileSystems.getDefault.getPathMatcher("glob:" + caseInsensitivePattern.toLowerCase)
+
+    def accept(p: Path): Boolean = {
+      val pathName = p.getName.toLowerCase
+
+      pathMatcher.matches(Paths.get(pathName))
+    }
+  }
+
+  private def caseInsensitiveHiddenFileFilter(caseInsensitivePattern: String): PathFilter = new PathFilter() {
+    val pathMatcher: PathMatcher = FileSystems.getDefault.getPathMatcher("glob:" + caseInsensitivePattern.toLowerCase)
+
+    def accept(p: Path): Boolean = {
+      val pathName = p.getName.toLowerCase
+
+      if (pathName.startsWith("_") || pathName.startsWith(".")) {
+        false
+      } else {
+        pathMatcher.matches(Paths.get(pathName))
+      }
+    }
   }
 
   protected def getTimedToken: String = {

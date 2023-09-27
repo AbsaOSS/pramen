@@ -872,7 +872,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   }
 
   "getHadoopFiles" should {
-    "thrown an exception if the fiel does not exist" in {
+    "thrown an exception if the file does not exist" in {
       withTempDirectory("get_hadoop_files") { tempDir =>
         val file = new File(tempDir, "innerDir1").getAbsolutePath
         val ex = intercept[IllegalArgumentException] {
@@ -933,6 +933,124 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         assert(filesByPath.isEmpty)
         assert(filesWithMask.length == 1)
         assert(filesWithMask.head.endsWith("data1.bin"))
+      }
+    }
+
+    "support a dir" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+
+        val innerPath = new Path(tempDir, "inner")
+
+        fsUtils.createDirectoryRecursive(innerPath)
+
+        createBinFile(innerPath.toString, "data1.bin", 100)
+
+        val files = fsUtils.getHadoopFiles(innerPath)
+
+        assert(files.length == 1)
+        assert(files.head.endsWith("data1.bin"))
+      }
+    }
+
+    "support a file" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+
+        val innerPath = new Path(tempDir, "inner")
+        val innerFile = new Path(innerPath, "data1.bin")
+
+        fsUtils.createDirectoryRecursive(innerPath)
+
+        createBinFile(innerPath.toString, "data1.bin", 100)
+
+        val files = fsUtils.getHadoopFiles(innerFile)
+
+        assert(files.length == 1)
+        assert(files.head.endsWith("data1.bin"))
+      }
+    }
+  }
+
+  "getHadoopFilesCaseInsensitive" should {
+    "thrown an exception if the file does not exist" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+        val file = new File(tempDir, "innerDir1").getAbsolutePath
+        val ex = intercept[IllegalArgumentException] {
+          fsUtils.getHadoopFilesCaseInsensitive(new Path(file))
+        }
+        assert(ex.getMessage.contains("Input path does not exist"))
+      }
+    }
+
+    "support case insensitive patterns" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+
+        val innerPath = new Path(tempDir, "inner")
+        val filePattern = new Path(innerPath, "?data?.{bin,csv}")
+
+        fsUtils.createDirectoryRecursive(innerPath)
+
+        createBinFile(innerPath.toString, "Adata1.BIN", 100)
+        createBinFile(innerPath.toString, ".data2.bin", 100)
+        createBinFile(innerPath.toString, "_data3.BiN", 100)
+
+        val files = fsUtils.getHadoopFilesCaseInsensitive(filePattern, includeHiddenFiles = true)
+
+        assert(files.length == 3)
+        assert(files.exists(_.endsWith("Adata1.BIN")))
+        assert(files.exists(_.endsWith(".data2.bin")))
+        assert(files.exists(_.endsWith("_data3.BiN")))
+      }
+    }
+
+    "support case insensitive patterns with hidden filter" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+
+        val innerPath = new Path(tempDir, "inner")
+        val filePattern = new Path(innerPath, "?data?.{bin,csv}")
+
+        fsUtils.createDirectoryRecursive(innerPath)
+
+        createBinFile(innerPath.toString, "Adata1.BiN", 100)
+        createBinFile(innerPath.toString, ".data2.bin", 100)
+        createBinFile(innerPath.toString, "_data3.BIN", 100)
+
+        val files = fsUtils.getHadoopFilesCaseInsensitive(filePattern)
+
+        assert(files.length == 1)
+        assert(files.head.endsWith("Adata1.BiN"))
+      }
+    }
+
+    "support a dir" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+
+        val innerPath = new Path(tempDir, "inner")
+
+        fsUtils.createDirectoryRecursive(innerPath)
+
+        createBinFile(innerPath.toString, "data1.bin", 100)
+
+        val files = fsUtils.getHadoopFilesCaseInsensitive(innerPath)
+
+        assert(files.length == 1)
+        assert(files.head.endsWith("data1.bin"))
+      }
+    }
+
+    "support a file" in {
+      withTempDirectory("get_hadoop_files") { tempDir =>
+
+        val innerPath = new Path(tempDir, "inner")
+        val innerFile = new Path(innerPath, "data1.bin")
+
+        fsUtils.createDirectoryRecursive(innerPath)
+
+        createBinFile(innerPath.toString, "data1.bin", 100)
+
+        val files = fsUtils.getHadoopFilesCaseInsensitive(innerFile)
+
+        assert(files.length == 1)
+        assert(files.head.endsWith("data1.bin"))
       }
     }
   }
