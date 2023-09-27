@@ -22,6 +22,8 @@ import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, Tabl
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
+import za.co.absa.pramen.core.pipeline.TaskRunReason
+import za.co.absa.pramen.core.runner.task.RunStatus
 import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.Instant
@@ -83,7 +85,12 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       builder.addUndercover(true)
 
       builder.addRpsMetrics(1000, 2000)
-      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil))
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(
+        runStatus = RunStatus.Succeeded(
+          Some(100), 200, Some(1000), TaskRunReason.New, Seq("file1.txt", "file1.ctl"),
+          Seq("file1.csv", "file2.csv"), Seq("`db`.`table1`"), Seq("Test warning")),
+        schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil)
+      )
 
       builder.addCustomEntries(Seq(
         NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil),
