@@ -24,6 +24,7 @@ import za.co.absa.pramen.api.{Query, Source}
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.source.RawFileSource.FILE_PATTERN_CASE_SENSITIVE_KEY
 import za.co.absa.pramen.core.utils.{FsUtils, LocalFsUtils}
 
 import java.io.{File, FileNotFoundException}
@@ -32,6 +33,7 @@ import java.time.LocalDate
 class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFixture with SparkTestBase {
   private val infoDate = LocalDate.of(2022, 2, 18)
 
+  val emptyConfig: Config = ConfigFactory.empty()
   val tempDir: String = createTempDir("raw_file_source")
   val emptyDirPath = new Path(tempDir, "empty")
   val metastorePath = new Path(tempDir, "mt")
@@ -55,7 +57,8 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-18_A.dat"), "123")
     fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-18_A.txt"), "999")
     fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-18_B.dat"), "456")
-    fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-19_C.dat"), "789")
+    fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-18_C.DAT"), "456")
+    fsUtils.writeFile(new Path(filesPatternPath, "FILE_TEST_2022-02-19_D.dat"), "789")
   }
 
   override def afterAll(): Unit = {
@@ -115,7 +118,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
   "getRecordCount" should {
     "return the number of files in the directory for a path" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val count = source.getRecordCount(Query.Path(filesPath.toString), null, null)
 
@@ -123,7 +126,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "return the number of files in the directory for a path pattern" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val count = source.getRecordCount(Query.Path(filesPattern.toString), infoDate, infoDate)
 
@@ -131,7 +134,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "return the number of files in the directory for a path pattern and range query" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val count = source.getRecordCount(Query.Path(filesPattern.toString), infoDate, infoDate.plusDays(1))
 
@@ -139,7 +142,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "return the number of files in the directory for a list of files" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val options = Map("file.1" -> "f1.dat", "file.2" -> "f2.dat")
 
@@ -149,7 +152,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "thrown an exception when parent path does not exist" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val innerPath = new Path(filesPattern, "inner")
 
@@ -161,7 +164,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
   "getData" should {
     "return the list of files for a directory" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val result = source.getData(Query.Path(filesPath.toString), null, null, null)
 
@@ -180,7 +183,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "return the list of files for a pattern" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val result = source.getData(Query.Path(filesPattern.toString), infoDate, infoDate, null)
 
@@ -196,29 +199,49 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
       assert(filesRead.contains("FILE_TEST_2022-02-18_B.dat"))
     }
 
+    "return the list of files for a case insensitive pattern" in {
+      val conf = ConfigFactory.parseString(
+        s"$FILE_PATTERN_CASE_SENSITIVE_KEY = false"
+      )
+      val source = new RawFileSource(conf, null)(spark)
+
+      val result = source.getData(Query.Path(filesPattern.toString), infoDate, infoDate, null)
+
+      val filesInDf = result.data.collect().map(_.toString())
+      val filesRead = result.filesRead
+
+      assert(filesInDf.length == 3)
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_A.dat")))
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_B.dat")))
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_C.DAT")))
+
+      assert(filesRead.length == 3)
+      assert(filesRead.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(filesRead.contains("FILE_TEST_2022-02-18_B.dat"))
+      assert(filesRead.contains("FILE_TEST_2022-02-18_C.DAT"))
+    }
+
     "return the list of files for a pattern with range query" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val result = source.getData(Query.Path(filesPattern.toString), infoDate, infoDate.plusDays(1), null)
 
       val filesInDf = result.data.collect().map(_.toString())
       val filesRead = result.filesRead
 
-      filesInDf.foreach(println)
-
       assert(filesInDf.length == 3)
       assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_A.dat")))
       assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-18_B.dat")))
-      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-19_C.dat")))
+      assert(filesInDf.exists(_.contains("FILE_TEST_2022-02-19_D.dat")))
 
       assert(filesRead.length == 3)
       assert(filesRead.contains("FILE_TEST_2022-02-18_A.dat"))
       assert(filesRead.contains("FILE_TEST_2022-02-18_B.dat"))
-      assert(filesRead.contains("FILE_TEST_2022-02-19_C.dat"))
+      assert(filesRead.contains("FILE_TEST_2022-02-19_D.dat"))
     }
 
     "return the list of files for a list of files" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val options = Map("file.1" -> "f1.dat", "file.2" -> "f2.dat")
 
@@ -237,7 +260,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
   "getPaths" should {
     "work for a directory" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val files = source.getPaths(Query.Path(filesPath.toString), infoDate, infoDate)
         .map(path => new Path(path).getName)
@@ -250,7 +273,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "work for a list of files" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val options = Map("file.1" -> "1.dat", "file.2" -> "_3.dat")
       val files = source.getPaths(Query.Custom(options), infoDate, infoDate)
@@ -263,7 +286,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "throw an exception when the query is SQL or a table" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       assertThrows[IllegalArgumentException] {
         source.getPaths(Query.Table("abc"), infoDate, infoDate)
@@ -273,20 +296,20 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
   "getPatternBasedFilesForRange" should {
     "return the list of files for a date range" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       val files = source.getPatternBasedFilesForRange(filesPatternPath.toString, infoDate, infoDate.plusDays(1))
         .map(path => new Path(path).getName)
 
-      assert(files.length == 4)
+      assert(files.length == 5)
 
       assert(files.contains("FILE_TEST_2022-02-18_A.dat"))
       assert(files.contains("FILE_TEST_2022-02-18_B.dat"))
-      assert(files.contains("FILE_TEST_2022-02-19_C.dat"))
+      assert(files.contains("FILE_TEST_2022-02-19_D.dat"))
     }
 
     "throw an exception if the date range is incorrect" in {
-      val source = new RawFileSource(null, null)(spark)
+      val source = new RawFileSource(emptyConfig, null)(spark)
 
       assertThrows[IllegalArgumentException] {
         source.getPatternBasedFilesForRange(filesPattern.toString, infoDate.plusDays(1), infoDate)
@@ -300,7 +323,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     val nonPattern = new Path(nonExistingPath, "FILE_TEST_2022-02-18*.dat")
 
     "return the list of files for the pattern" in {
-      val files = RawFileSource.getListOfFiles(specificPattern.toString)
+      val files = RawFileSource.getListOfFiles(specificPattern.toString, caseSensitive = true)
         .map(path => new Path(path).getName)
 
       assert(files.length == 2)
@@ -309,16 +332,28 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
       assert(files.contains("FILE_TEST_2022-02-18_B.dat"))
     }
 
+    "return the list of files for the case insensitive pattern" in {
+      val caseInsensitivePattern = new Path(filesPatternPath, "FILE_test_2022-02-18*.Dat")
+      val files = RawFileSource.getListOfFiles(caseInsensitivePattern.toString, caseSensitive = false)
+        .map(path => new Path(path).getName)
+
+      assert(files.length == 3)
+
+      assert(files.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(files.contains("FILE_TEST_2022-02-18_B.dat"))
+      assert(files.contains("FILE_TEST_2022-02-18_C.DAT"))
+    }
+
     "return an empty list on empty directory" in {
       val emptyPattern = new Path(emptyDirPath, "empty")
-      val files = RawFileSource.getListOfFiles(emptyPattern.toString)
+      val files = RawFileSource.getListOfFiles(emptyPattern.toString, caseSensitive = true)
 
       assert(files.isEmpty)
     }
 
     "throw an exception if parent path does not exist" in {
       assertThrows[FileNotFoundException] {
-        RawFileSource.getListOfFiles(nonPattern.toString)
+        RawFileSource.getListOfFiles(nonPattern.toString, caseSensitive = true)
       }
     }
   }

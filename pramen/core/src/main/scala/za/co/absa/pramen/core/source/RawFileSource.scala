@@ -71,7 +71,7 @@ import scala.util.matching.Regex
   *
   *    tables = [
   *      {
-  *        input.path = /bigdata/landing
+  *        input.path = /bigdata/landing/FILE_{{yyyy-MM-dd}}*
   *        output.metastore.table = table1
   *      }
   *    ]
@@ -84,6 +84,8 @@ class RawFileSource(val sourceConfig: Config,
 
   import RawFileSource._
   import spark.implicits._
+
+  private[core] val caseSensitivePattern = ConfigUtils.getOptionBoolean(sourceConfig, FILE_PATTERN_CASE_SENSITIVE_KEY).getOrElse(true)
 
   override val config: Config = sourceConfig
 
@@ -111,7 +113,7 @@ class RawFileSource(val sourceConfig: Config,
   @throws[FileNotFoundException]
   private[source] def getPatternBasedFilesForRange(pathPattern: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[String] = {
     if (!pathPattern.contains("{{") || infoDateBegin.isEqual(infoDateEnd)) {
-      getListOfFilesForPathPattern(pathPattern, infoDateBegin)
+      getListOfFilesForPathPattern(pathPattern, infoDateBegin, caseSensitivePattern)
     } else {
       if (infoDateBegin.isAfter(infoDateEnd)) {
         throw new IllegalArgumentException(s"Begin date is more recent than the end date: $infoDateBegin > $infoDateEnd.")
@@ -119,7 +121,7 @@ class RawFileSource(val sourceConfig: Config,
       val files = new ListBuffer[String]
       var date = infoDateBegin
       while (date.isBefore(infoDateEnd) || date.isEqual(infoDateEnd)) {
-        files ++= getListOfFilesForPathPattern(pathPattern, date)
+        files ++= getListOfFilesForPathPattern(pathPattern, date, caseSensitivePattern)
         date = date.plusDays(1)
       }
       files.toSeq
@@ -132,6 +134,7 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
 
   val PATH_FIELD = "path"
   val FILE_PREFIX = "file"
+  val FILE_PATTERN_CASE_SENSITIVE_KEY = "file.pattern.case.sensitive"
 
   val datePatternRegExp: Regex = ".*\\{\\{(\\S+)\\}\\}.*".r
 
@@ -157,17 +160,18 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
 
   @throws[FileNotFoundException]
   private[core] def getListOfFilesForPathPattern(pathPattern: String,
-                                                 infoDate: LocalDate)
+                                                 infoDate: LocalDate,
+                                                 caseSensitive: Boolean)
                                                 (implicit spark: SparkSession): Seq[String] = {
     val globPattern = getGlobPattern(pathPattern, infoDate)
-    log.info(s"Using the following pattern for '${infoDate}': $globPattern")
+    log.info(s"Using the following pattern for '$infoDate': $globPattern")
 
-    getListOfFiles(globPattern)
+    getListOfFiles(globPattern, caseSensitive)
   }
 
 
   @throws[FileNotFoundException]
-  private[core] def getListOfFiles(pathPattern: String)(implicit spark: SparkSession): Seq[String] = {
+  private[core] def getListOfFiles(pathPattern: String, caseSensitive: Boolean)(implicit spark: SparkSession): Seq[String] = {
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, pathPattern)
     val hadoopPath = new Path(pathPattern)
 
@@ -178,7 +182,13 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
     }
 
     try {
-      fsUtils.getHadoopFiles(hadoopPath, includeHiddenFiles = true).sorted
+      if (caseSensitive) {
+        log.info(s"Using case-sensitive Hadoop file search.")
+        fsUtils.getHadoopFiles(hadoopPath, includeHiddenFiles = true).sorted
+      } else {
+        log.info(s"Using case-insensitive Hadoop file search.")
+        fsUtils.getHadoopFilesCaseInsensitive(hadoopPath, includeHiddenFiles = true).sorted
+      }
     } catch {
       case ex: IllegalArgumentException if ex.getMessage.contains("Input path does not exist") => Seq.empty[String]
     }
