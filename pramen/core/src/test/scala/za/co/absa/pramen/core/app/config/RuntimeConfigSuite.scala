@@ -42,7 +42,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
            |  load.date.from = 2020-12-31
            |  load.date.to = 2021-01-10
            |  parallel.tasks = 4
-           |  stop.spark.session = false
+           |  stop.spark.session = true
            |}
            |""".stripMargin
 
@@ -63,7 +63,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.runDate.toString == "2020-12-31")
       assert(runtimeConfig.runDateTo.get.toString == "2021-01-10")
       assert(runtimeConfig.parallelTasks == 4)
-      assert(!runtimeConfig.stopSparkSession)
+      assert(runtimeConfig.stopSparkSession)
     }
 
     "have default values" in {
@@ -83,7 +83,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.runDate.toString == LocalDate.now().toString)
       assert(runtimeConfig.runDateTo.isEmpty)
       assert(runtimeConfig.parallelTasks == 1)
-      assert(runtimeConfig.stopSparkSession)
+      assert(!runtimeConfig.stopSparkSession)
     }
   }
 

@@ -39,7 +39,6 @@ class AppContextImpl(val appConfig: AppConfig,
     }
 
     if (appConfig.runtimeConfig.stopSparkSession && !sparkSessionStopped) {
-      throw new IllegalArgumentException("Stopping Spark Session")
       spark.stop()
       sparkSessionStopped = true
     }
