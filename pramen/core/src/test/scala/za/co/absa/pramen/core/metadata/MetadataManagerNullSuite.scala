@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metadata
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.MetadataManager
 
 import java.time.LocalDate
 
