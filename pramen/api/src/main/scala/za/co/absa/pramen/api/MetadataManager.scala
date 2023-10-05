@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.metadata
+package za.co.absa.pramen.api
 
 import java.time.LocalDate
 

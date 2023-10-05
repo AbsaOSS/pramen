@@ -18,10 +18,11 @@ package za.co.absa.pramen.core.app
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
+import za.co.absa.pramen.api.MetadataManager
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
-import za.co.absa.pramen.core.metadata.{MetadataManager, MetadataManagerNull}
+import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreImpl}
 
 class AppContextImpl(val appConfig: AppConfig,
