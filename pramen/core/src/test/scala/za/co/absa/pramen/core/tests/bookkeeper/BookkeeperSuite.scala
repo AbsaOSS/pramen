@@ -25,6 +25,7 @@ import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperJdbc, Bookkeeper
 import za.co.absa.pramen.core.fixtures.{MongoDbFixture, RelationalDbFixture, TempDirFixture}
 import za.co.absa.pramen.core.journal.{JournalHadoop, JournalJdbc, JournalMongoDb}
 import za.co.absa.pramen.core.lock.{TokenLockFactoryHadoop, TokenLockFactoryJdbc, TokenLockFactoryMongoDb}
+import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
@@ -69,11 +70,12 @@ class BookkeeperSuite extends AnyWordSpec
         Some(jdbcConfig)
       )
 
-      val (bk, tf, journal, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+      val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
 
       assert(bk.isInstanceOf[BookkeeperJdbc])
       assert(tf.isInstanceOf[TokenLockFactoryJdbc])
       assert(journal.isInstanceOf[JournalJdbc])
+      assert(metadataManager.isInstanceOf[MetadataManagerJdbc])
       closable.close()
     }
 
@@ -87,11 +89,12 @@ class BookkeeperSuite extends AnyWordSpec
         None
       )
 
-      val (bk, tf, journal, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+      val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
 
       assert(bk.isInstanceOf[BookkeeperMongoDb])
       assert(tf.isInstanceOf[TokenLockFactoryMongoDb])
       assert(journal.isInstanceOf[JournalMongoDb])
+      assert(metadataManager.isInstanceOf[MetadataManagerNull])
       closable.close()
     }
 
@@ -106,11 +109,12 @@ class BookkeeperSuite extends AnyWordSpec
           None
         )
 
-        val (bk, tf, journal, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
 
         assert(bk.isInstanceOf[BookkeeperText])
         assert(tf.isInstanceOf[TokenLockFactoryHadoop])
         assert(journal.isInstanceOf[JournalHadoop])
+        assert(metadataManager.isInstanceOf[MetadataManagerNull])
         closable.close()
       }
     }

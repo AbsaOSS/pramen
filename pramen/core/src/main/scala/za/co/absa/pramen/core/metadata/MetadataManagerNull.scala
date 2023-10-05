@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.metadata
 
 import java.time.LocalDate
 
-class MetadataManagerNull extends MetadataManagerBase(true) {
+class MetadataManagerNull(isPersistenceEnabled: Boolean) extends MetadataManagerBase(isPersistenceEnabled) {
   private val errorMessage = "The current bookkeeping persistent layer does not support metadata management."
 
   def getMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Option[String] = {

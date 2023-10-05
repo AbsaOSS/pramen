@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
 import za.co.absa.pramen.core.journal._
 import za.co.absa.pramen.core.lock._
+import za.co.absa.pramen.core.metadata.{MetadataManager, MetadataManagerJdbc, MetadataManagerNull}
 import za.co.absa.pramen.core.model.DataChunk
 import za.co.absa.pramen.core.mongo.MongoDbConnection
 import za.co.absa.pramen.core.rdb.PramenDb
@@ -61,7 +62,7 @@ object Bookkeeper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   def fromConfig(bookkeepingConfig: BookkeeperConfig, runtimeConfig: RuntimeConfig)
-                (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, AutoCloseable) = {
+                (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, MetadataManager, AutoCloseable) = {
     val mongoDbConnection = bookkeepingConfig.bookkeepingConnectionString.map { url =>
       MongoDbConnection.getConnection(url, bookkeepingConfig.bookkeepingDbName.get)
     }
@@ -130,6 +131,17 @@ object Bookkeeper {
       }
     }
 
+    val metadataManager = if (!bookkeepingConfig.bookkeepingEnabled) {
+      log.info(s"The custom metadata persistence is DISABLED.")
+      new MetadataManagerNull(isPersistenceEnabled = false)
+    } else if (hasBookkeepingJdbc) {
+      log.info(s"Using RDB to keep custom metadata.")
+      new MetadataManagerJdbc(dbOpt.get.slickDb)
+    } else {
+      log.info(s"The custom metadata management is not supported.")
+      new MetadataManagerNull(isPersistenceEnabled = true)
+    }
+
     val closable = new AutoCloseable {
       override def close(): Unit = {
         mongoDbConnection.foreach(_.close())
@@ -137,6 +149,6 @@ object Bookkeeper {
       }
     }
 
-    (bookkeeper, tokenFactory, journal, closable)
+    (bookkeeper, tokenFactory, journal, metadataManager, closable)
   }
 }
