@@ -22,16 +22,22 @@ import za.co.absa.pramen.core.mocks.metadata.MetadataManagerSpy
 import java.time.LocalDate
 
 class MetadataManagerBaseSuite extends AnyWordSpec {
+  private val infoDate = LocalDate.of(2021, 2, 18)
+
   "getMetadata" should {
     "return metadata from the persistent layer" in {
       val metadata = new MetadataManagerSpy(true)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
+      metadata.setMetadata("table1", infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").contains("value1"))
-      assert(metadata.getMetadataFromStorageCalls1.length == 1)
+      assert(metadata.getMetadata("table1", infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("table1", infoDate, "key2").isEmpty)
+      assert(metadata.getMetadata("table1", infoDate.plusDays(1), "key1").isEmpty)
+      assert(metadata.getMetadata("table2", infoDate, "key1").isEmpty)
+
+      assert(metadata.getMetadataFromStorageCalls1.length == 4)
       assert(metadata.getMetadataFromStorageCalls1.head._1 == "table1")
-      assert(metadata.getMetadataFromStorageCalls1.head._2 == LocalDate.parse("2021-01-01"))
+      assert(metadata.getMetadataFromStorageCalls1.head._2 == infoDate)
       assert(metadata.getMetadataFromStorageCalls1.head._3 == "key1")
       assert(metadata.getMetadataFromStorageCalls1.head._4.contains("value1"))
     }
@@ -39,19 +45,19 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
     "return metadata from the local in memory map" in {
       val metadata = new MetadataManagerSpy(false)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").contains("value1"))
+      assert(metadata.getMetadata("table1",infoDate, "key1").contains("value1"))
       assert(metadata.getMetadataFromStorageCalls1.isEmpty)
     }
 
     "return none from the persistent layer when no such key found" in {
       val metadata = new MetadataManagerSpy(true)
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.getMetadataFromStorageCalls1.length == 1)
       assert(metadata.getMetadataFromStorageCalls1.head._1 == "table1")
-      assert(metadata.getMetadataFromStorageCalls1.head._2 == LocalDate.parse("2021-01-01"))
+      assert(metadata.getMetadataFromStorageCalls1.head._2 ==infoDate)
       assert(metadata.getMetadataFromStorageCalls1.head._3 == "key1")
       assert(metadata.getMetadataFromStorageCalls1.head._4.isEmpty)
     }
@@ -59,17 +65,17 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
     "return none from the local in memory map" in {
       val metadata = new MetadataManagerSpy(false)
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.getMetadataFromStorageCalls1.isEmpty)
     }
 
     "return metadata map from the persistent layer" in {
       val metadata = new MetadataManagerSpy(true)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key2", "value2")
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
+      metadata.setMetadata("table1",infoDate, "key2", "value2")
 
-      val result = metadata.getMetadata("table1", LocalDate.parse("2021-01-01"))
+      val result = metadata.getMetadata("table1",infoDate)
 
       assert(result.contains("key1"))
       assert(result.contains("key2"))
@@ -79,16 +85,16 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       assert(metadata.getMetadataFromStorageCalls2.length == 1)
       assert(metadata.getMetadataFromStorageCalls2.head._1 == "table1")
-      assert(metadata.getMetadataFromStorageCalls2.head._2 == LocalDate.parse("2021-01-01"))
+      assert(metadata.getMetadataFromStorageCalls2.head._2 ==infoDate)
     }
 
     "return metadata map from the local in memory map" in {
       val metadata = new MetadataManagerSpy(false)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key2", "value2")
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
+      metadata.setMetadata("table1",infoDate, "key2", "value2")
 
-      val result = metadata.getMetadata("table1", LocalDate.parse("2021-01-01"))
+      val result = metadata.getMetadata("table1",infoDate)
 
       assert(result.contains("key1"))
       assert(result.contains("key2"))
@@ -102,19 +108,19 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
     "return empty map from the persistent layer when no such key found" in {
       val metadata = new MetadataManagerSpy(true)
 
-      val result = metadata.getMetadata("table1", LocalDate.parse("2021-01-01"))
+      val result = metadata.getMetadata("table1",infoDate)
 
       assert(result.isEmpty)
       assert(metadata.getMetadataFromStorageCalls2.length == 1)
       assert(metadata.getMetadataFromStorageCalls2.head._1 == "table1")
-      assert(metadata.getMetadataFromStorageCalls2.head._2 == LocalDate.parse("2021-01-01"))
+      assert(metadata.getMetadataFromStorageCalls2.head._2 ==infoDate)
       assert(metadata.getMetadataFromStorageCalls2.head._3.isEmpty)
     }
 
     "return empty map from the local in memory map" in {
       val metadata = new MetadataManagerSpy(false)
 
-      val result = metadata.getMetadata("table1", LocalDate.parse("2021-01-01"))
+      val result = metadata.getMetadata("table1",infoDate)
 
       assert(result.isEmpty)
       assert(metadata.getMetadataFromStorageCalls1.isEmpty)
@@ -125,17 +131,17 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
     "set metadata in the persistent layer" in {
       val metadata = new MetadataManagerSpy(true)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").contains("value1"))
+      assert(metadata.getMetadata("table1",infoDate, "key1").contains("value1"))
     }
 
     "set metadata in the local in memory map" in {
       val metadata = new MetadataManagerSpy(false)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").contains("value1"))
+      assert(metadata.getMetadata("table1",infoDate, "key1").contains("value1"))
     }
   }
 
@@ -143,49 +149,49 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
     "delete metadata previously added to the persistent layer" in {
       val metadata = new MetadataManagerSpy(true)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
-      metadata.deleteMetadata("table1", LocalDate.parse("2021-01-01"), "key1")
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
+      metadata.deleteMetadata("table1",infoDate, "key1")
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.deleteMetadataFromStorageCalls1.length == 1)
       assert(metadata.deleteMetadataFromStorageCalls1.head._1 == "table1")
-      assert(metadata.deleteMetadataFromStorageCalls1.head._2 == LocalDate.parse("2021-01-01"))
+      assert(metadata.deleteMetadataFromStorageCalls1.head._2 ==infoDate)
       assert(metadata.deleteMetadataFromStorageCalls1.head._3 == "key1")
     }
 
     "delete metadata previously added to the local in memory map" in {
       val metadata = new MetadataManagerSpy(false)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
-      metadata.deleteMetadata("table1", LocalDate.parse("2021-01-01"), "key1")
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
+      metadata.deleteMetadata("table1",infoDate, "key1")
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.deleteMetadataFromStorageCalls1.isEmpty)
     }
 
     "delete all metadata previously added to the persistent layer" in {
       val metadata = new MetadataManagerSpy(true)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key2", "value2")
-      metadata.deleteMetadata("table1", LocalDate.parse("2021-01-01"))
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
+      metadata.setMetadata("table1",infoDate, "key2", "value2")
+      metadata.deleteMetadata("table1",infoDate)
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").isEmpty)
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key2").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key2").isEmpty)
       assert(metadata.deleteMetadataFromStorageCalls2.length == 1)
       assert(metadata.deleteMetadataFromStorageCalls2.head._1 == "table1")
-      assert(metadata.deleteMetadataFromStorageCalls2.head._2 == LocalDate.parse("2021-01-01"))
+      assert(metadata.deleteMetadataFromStorageCalls2.head._2 ==infoDate)
     }
 
     "delete all metadata previously added to the local in memory map" in {
       val metadata = new MetadataManagerSpy(false)
 
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key1", "value1")
-      metadata.setMetadata("table1", LocalDate.parse("2021-01-01"), "key2", "value2")
-      metadata.deleteMetadata("table1", LocalDate.parse("2021-01-01"))
+      metadata.setMetadata("table1",infoDate, "key1", "value1")
+      metadata.setMetadata("table1",infoDate, "key2", "value2")
+      metadata.deleteMetadata("table1",infoDate)
 
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key1").isEmpty)
-      assert(metadata.getMetadata("table1", LocalDate.parse("2021-01-01"), "key2").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
+      assert(metadata.getMetadata("table1",infoDate, "key2").isEmpty)
       assert(metadata.deleteMetadataFromStorageCalls1.isEmpty)
     }
   }

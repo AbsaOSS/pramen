@@ -1,0 +1,114 @@
+/*
+ * Copyright 2022 ABSA Group Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package za.co.absa.pramen.core.metadata
+
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+
+import java.time.LocalDate
+
+class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
+  val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
+  val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  private val infoDate = LocalDate.of(2021, 2, 18)
+
+  before {
+    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase()
+  }
+
+  override def afterAll(): Unit = {
+    pramenDb.close()
+    super.afterAll()
+  }
+
+  "getMetadataFromStorage" should {
+    "fetch metadata by key" in {
+      val metadata = getMetadataManager
+
+      metadata.setMetadataToStorage("table1", infoDate, "key1", "value1")
+
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key2").isEmpty)
+      assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1), "key1").isEmpty)
+    }
+
+    "fetch all metadata for a table and info date" in {
+      val metadata = getMetadataManager
+
+      metadata.setMetadataToStorage("table1", infoDate, "key1", "value1")
+      metadata.setMetadataToStorage("table1", infoDate, "key2", "value2")
+
+      val result = metadata.getMetadataFromStorage("table1", infoDate)
+
+      assert(result.size == 2)
+      assert(result("key1") == "value1")
+      assert(result("key2") == "value2")
+
+      assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1)).isEmpty)
+    }
+  }
+
+  "setMetadataToStorage" should {
+    "overwrite previous value" in {
+      val metadata = getMetadataManager
+
+      metadata.setMetadataToStorage("table1", infoDate, "key1", "value1")
+      metadata.setMetadataToStorage("table1", infoDate, "key1", "value2")
+
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key1").contains("value2"))
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key2").isEmpty)
+      assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1), "key1").isEmpty)
+    }
+  }
+
+  "deleteMetadataFromStorage" should {
+    "delete metadata by key" in {
+      val metadata = getMetadataManager
+
+      metadata.setMetadataToStorage("table1", infoDate, "key1", "value1")
+      metadata.setMetadataToStorage("table1", infoDate, "key2", "value2")
+
+      metadata.deleteMetadataFromStorage("table1", infoDate, "key1")
+
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key1").isEmpty)
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key2").contains("value2"))
+      assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1), "key1").isEmpty)
+    }
+
+    "delete all metadata for a table and info date" in {
+      val metadata = getMetadataManager
+
+      metadata.setMetadataToStorage("table1", infoDate, "key1", "value1")
+      metadata.setMetadataToStorage("table1", infoDate, "key2", "value2")
+
+      metadata.deleteMetadataFromStorage("table1", infoDate)
+
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key1").isEmpty)
+      assert(metadata.getMetadataFromStorage("table1", infoDate, "key2").isEmpty)
+      assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1), "key1").isEmpty)
+    }
+
+  }
+
+  def getMetadataManager: MetadataManagerJdbc = {
+    new MetadataManagerJdbc(pramenDb.slickDb)
+  }
+}

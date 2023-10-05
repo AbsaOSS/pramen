@@ -47,7 +47,7 @@ class MetadataManagerSpy(isPersistent: Boolean) extends MetadataManagerBase(isPe
     result
   }
 
-  override def setMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
+  override def setMetadataToStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
     setMetadataFromStorageCalls += ((tableName, infoDate, key, value))
 
     metadataLocalStore.getOrElseUpdate(MetadataTableKey(tableName, infoDate), mutable.HashMap.empty).put(key, value)

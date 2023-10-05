@@ -29,7 +29,7 @@ class MetadataManagerNull extends MetadataManagerBase(true) {
     throw new UnsupportedOperationException(errorMessage)
   }
 
-  def setMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
+  def setMetadataToStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
     throw new UnsupportedOperationException(errorMessage)
   }
 
