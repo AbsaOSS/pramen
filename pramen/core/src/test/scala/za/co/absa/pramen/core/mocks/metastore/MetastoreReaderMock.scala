@@ -17,11 +17,14 @@
 package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetastoreReader}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetadataManager, MetastoreReader}
+import za.co.absa.pramen.core.metadata.MetadataManagerNull
 
 import java.time.LocalDate
 
 class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate) extends MetastoreReader {
+  private val metadataManager = new MetadataManagerNull(false)
+
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     tables.find(_._1 == tableName) match {
       case Some((_, df)) => df
@@ -53,4 +56,6 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
       case None          => throw new IllegalArgumentException(s"Table $tableName not found")
     }
   }
+
+  override def getMetadataManager: MetadataManager = metadataManager
 }

@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetastoreReader, Query}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetadataManager, MetastoreReader, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -34,6 +34,7 @@ import java.time.{Instant, LocalDate}
 class MetastoreImpl(appConfig: Config,
                     tableDefs: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
+                    metadataManager: MetadataManager,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -112,13 +113,13 @@ class MetastoreImpl(appConfig: Config,
         }
       case f: DataFormat.Parquet =>
         f.path
-      case _: DataFormat.Null => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
+      case _ => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
     }
 
     val format: HiveFormat = mt.format match {
       case _: DataFormat.Delta   => HiveFormat.Delta
       case _: DataFormat.Parquet => HiveFormat.Parquet
-      case _: DataFormat.Null    => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
+      case _                     => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
     }
 
     val fullTableName = HiveHelper.getFullTable(mt.hiveConfig.database, hiveTable)
@@ -180,6 +181,8 @@ class MetastoreImpl(appConfig: Config,
         getMetaTableDef(metastore.getTableDef(tableName))
       }
 
+      override def getMetadataManager: MetadataManager = metadataManager
+
       private def validateTable(tableName: String): Unit = {
         if (!tables.contains(tableName)) {
           throw new TableNotConfigured(s"Attempt accessing non-dependent table: $tableName")
@@ -218,12 +221,12 @@ object MetastoreImpl {
   val METASTORE_KEY = "pramen.metastore.tables"
   val DEFAULT_RECORDS_PER_PARTITION = 500000
 
-  def fromConfig(conf: Config, bookkeeper: Bookkeeper)(implicit spark: SparkSession): MetastoreImpl = {
+  def fromConfig(conf: Config, bookkeeper: Bookkeeper, metadataManager: MetadataManager)(implicit spark: SparkSession): MetastoreImpl = {
     val tableDefs = MetaTable.fromConfig(conf, METASTORE_KEY)
 
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
-    new MetastoreImpl(conf, tableDefs, bookkeeper, isUndercover)
+    new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, isUndercover)
   }
 }
 

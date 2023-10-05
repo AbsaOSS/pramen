@@ -18,7 +18,8 @@ package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
-import za.co.absa.pramen.api.{MetaTableDef, MetastoreReader}
+import za.co.absa.pramen.api.{MetaTableDef, MetadataManager, MetastoreReader}
+import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
@@ -42,6 +43,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   val saveTableInvocations = new ListBuffer[(String, LocalDate, DataFrame)]
   var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean)]
   val queryExecutorMock = new QueryExecutorMock(true)
+  val metadataManager = new MetadataManagerNull(false)
 
   override def getRegisteredTables: Seq[String] = registeredTables
 
@@ -133,6 +135,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
           table.readOptions,
           table.writeOptions)
       }
+
+      override def getMetadataManager: MetadataManager = metadataManager
 
       private def validateTable(tableName: String): Unit = {
         if (!tables.contains(tableName)) {

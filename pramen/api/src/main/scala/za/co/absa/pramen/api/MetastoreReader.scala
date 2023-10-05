@@ -87,4 +87,9 @@ trait MetastoreReader {
     * @return The table definition.
     */
   def getTableDef(tableName: String): MetaTableDef
+
+  /**
+    * Returns an object that allows accessing metadata of metastore tables.
+    */
+  def getMetadataManager: MetadataManager
 }
