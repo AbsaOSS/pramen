@@ -26,7 +26,7 @@ abstract class MetadataManagerBase(isBookkeepingEnabled: Boolean) extends Metada
 
   def getMetadataFromStorage(tableName: String, infoDate: LocalDate): Map[String, String]
 
-  def setMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit
+  def setMetadataToStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit
 
   def deleteMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Unit
 
@@ -50,7 +50,7 @@ abstract class MetadataManagerBase(isBookkeepingEnabled: Boolean) extends Metada
 
   final override def setMetadata(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
     if (isPersistent) {
-      setMetadataFromStorage(tableName, infoDate, key, value)
+      setMetadataToStorage(tableName, infoDate, key, value)
     } else {
       this.synchronized {
         metadataLocalStore.getOrElseUpdate(MetadataTableKey(tableName, infoDate), mutable.HashMap.empty).put(key, value)

@@ -16,28 +16,79 @@
 
 package za.co.absa.pramen.core.metadata
 
-import slick.jdbc.JdbcBackend.Database
+import slick.jdbc.H2Profile.api._
+import za.co.absa.pramen.core.bookkeeper.model.{MetadataRecord, MetadataRecords}
 
 import java.time.LocalDate
+import scala.util.control.NonFatal
+import za.co.absa.pramen.core.utils.SlickUtils
 
 class MetadataManagerJdbc(db: Database) extends MetadataManagerBase(true) {
+  import za.co.absa.pramen.core.utils.FutureImplicits._
+
   def getMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Option[String] = {
-    ???
+    val query = MetadataRecords.records
+      .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString && r.key === key)
+
+    try {
+      SlickUtils.executeQuery[MetadataRecords, MetadataRecord](db, query)
+        .headOption
+        .map(_.value)
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the metadata table.", ex)
+    }
   }
 
   def getMetadataFromStorage(tableName: String, infoDate: LocalDate): Map[String, String] = {
-    ???
+    val query = MetadataRecords.records
+      .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString)
+
+    try {
+      SlickUtils.executeQuery[MetadataRecords, MetadataRecord](db, query)
+        .map(r => r.key -> r.value)
+        .toMap
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the metadata table.", ex)
+    }
   }
 
-  def setMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
-    ???
+  def setMetadataToStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
+    val record = MetadataRecord(tableName, infoDate.toString, key, value)
+
+    try {
+      db.run(
+        MetadataRecords.records
+          .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString && r.key === key)
+          .delete
+          .andThen(
+            MetadataRecords.records += record
+          )
+          .transactionally
+      ).execute()
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to write to the metadata table.", ex)
+    }
   }
 
   def deleteMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Unit = {
-    ???
+    val query = MetadataRecords.records
+      .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString && r.key === key)
+
+    try {
+      db.run(query.delete).execute()
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to delete from the metadata table.", ex)
+    }
   }
 
   def deleteMetadataFromStorage(tableName: String, infoDate: LocalDate): Unit = {
-    ???
+    val query = MetadataRecords.records
+      .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString)
+
+    try {
+      db.run(query.delete).execute()
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to delete from the metadata table.", ex)
+    }
   }
 }

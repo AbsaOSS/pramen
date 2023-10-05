@@ -34,7 +34,7 @@ class MetadataManagerNullSuite extends AnyWordSpec {
   "setMetadataFromStorage" should {
     "throw an exception" in {
       val metadata = new MetadataManagerNull()
-      assertThrows[UnsupportedOperationException](metadata.setMetadataFromStorage(null, null, null, null))
+      assertThrows[UnsupportedOperationException](metadata.setMetadataToStorage(null, null, null, null))
     }
   }
 
