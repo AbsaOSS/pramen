@@ -55,7 +55,7 @@ object AppContextImpl {
 
     val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper)
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper, metadataManager)
 
     val appContext = new AppContextImpl(
       appConfig,
@@ -76,7 +76,9 @@ object AppContextImpl {
               journal: Journal)(implicit spark: SparkSession): AppContextImpl = {
     val appConfig = AppConfig.fromConfig(conf)
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper)
+    val metadataManager = new MetadataManagerNull(isPersistenceEnabled = false)
+
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper, metadataManager)
 
     val appContext = new AppContextImpl(
       appConfig,

@@ -23,6 +23,7 @@ import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.SparkUtils
@@ -363,6 +364,22 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
       }
     }
 
+    "return a reader that returns a metadata manager" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        m.saveTable("table1", infoDate, getDf)
+
+        val reader = m.getMetastoreReader("table1" :: Nil, infoDate)
+        val metadataManager = reader.getMetadataManager
+
+        metadataManager.setMetadata("table1", infoDate, "key1", "value1")
+        val value = metadataManager.getMetadata("table1", infoDate, "key1")
+
+        assert(value.contains("value1"))
+      }
+    }
+
     "getLatestAvailableDate()" should {
       "return the latest date for a table" in {
         withTempDirectory("metastore_test") { tempDir =>
@@ -452,6 +469,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     )
 
     val bk = new SyncBookkeeperMock
-    (MetastoreImpl.fromConfig(conf, bk), bk)
+    val mm = new MetadataManagerNull(isPersistenceEnabled = false)
+    (MetastoreImpl.fromConfig(conf, bk, mm), bk)
   }
 }
