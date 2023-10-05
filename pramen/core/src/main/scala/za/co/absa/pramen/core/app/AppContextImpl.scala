@@ -21,12 +21,14 @@ import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
+import za.co.absa.pramen.core.metadata.{MetadataManager, MetadataManagerNull}
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreImpl}
 
 class AppContextImpl(val appConfig: AppConfig,
                      val bookkeeper: Bookkeeper,
                      val tokenLockFactory: TokenLockFactory,
                      val journal: Journal,
+                     val metadataManager: MetadataManager,
                      val metastore: Metastore
                     )(implicit spark: SparkSession) extends AppContext {
   protected var closable: AutoCloseable = _
@@ -50,7 +52,7 @@ object AppContextImpl {
 
     val appConfig = AppConfig.fromConfig(conf)
 
-    val (bookkeeper, tokenLockFactory, journal, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
+    val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
 
     val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper)
 
@@ -59,6 +61,7 @@ object AppContextImpl {
       bookkeeper,
       tokenLockFactory,
       journal,
+      metadataManager,
       metastore
     )
 
@@ -79,6 +82,7 @@ object AppContextImpl {
       bookkeeper,
       new TokenLockFactoryAllow,
       journal,
+      new MetadataManagerNull(isPersistenceEnabled = false),
       metastore
     )
 

@@ -18,35 +18,64 @@ package za.co.absa.pramen.core.metadata
 
 import org.scalatest.wordspec.AnyWordSpec
 
+import java.time.LocalDate
+
 class MetadataManagerNullSuite extends AnyWordSpec {
+  private val infoDate = LocalDate.of(2021, 2, 18)
+
   "getMetadataFromStorage" should {
     "throw an exception when querying for a key" in {
-      val metadata = new MetadataManagerNull()
-      assertThrows[UnsupportedOperationException](metadata.getMetadataFromStorage(null, null, null))
+      val metadata: MetadataManager = new MetadataManagerNull(true)
+      assertThrows[UnsupportedOperationException](metadata.getMetadata("table1", infoDate, "key1"))
+    }
+
+    "not throw when persistence is disabled" in {
+      val metadata: MetadataManager = new MetadataManagerNull(false)
+      metadata.getMetadata("table1", infoDate, "key1")
     }
 
     "throw an exception when querying for a map" in {
-      val metadata = new MetadataManagerNull()
-      assertThrows[UnsupportedOperationException](metadata.getMetadataFromStorage(null, null))
+      val metadata: MetadataManager = new MetadataManagerNull(true)
+      assertThrows[UnsupportedOperationException](metadata.getMetadata("table1", infoDate))
+    }
+
+    "not throw an exception when querying for a map and persistence is disabled" in {
+      val metadata: MetadataManager = new MetadataManagerNull(false)
+      metadata.getMetadata("table1", infoDate)
     }
   }
 
   "setMetadataFromStorage" should {
-    "throw an exception" in {
-      val metadata = new MetadataManagerNull()
-      assertThrows[UnsupportedOperationException](metadata.setMetadataToStorage(null, null, null, null))
+    "throw an exception when persistence is enabled" in {
+      val metadata: MetadataManager = new MetadataManagerNull(true)
+      assertThrows[UnsupportedOperationException](metadata.setMetadata("table1", infoDate, "key1", "value1"))
+    }
+
+    "not throw an exception when persistence is disabled" in {
+      val metadata: MetadataManager = new MetadataManagerNull(false)
+      metadata.setMetadata("table1", infoDate, "key1", "value1")
     }
   }
 
   "deleteMetadataFromStorage" should {
     "throw an exception when deleting a key" in {
-      val metadata = new MetadataManagerNull()
-      assertThrows[UnsupportedOperationException](metadata.deleteMetadataFromStorage(null, null, null))
+      val metadata: MetadataManager = new MetadataManagerNull(true)
+      assertThrows[UnsupportedOperationException](metadata.deleteMetadata("table1", infoDate, "key1"))
+    }
+
+    "not throw an exception when deleting a key and persistence is disabled" in {
+      val metadata: MetadataManager = new MetadataManagerNull(false)
+      metadata.deleteMetadata("table1", infoDate, "key1")
     }
 
     "throw an exception when deleting all metadata for a table and day" in {
-      val metadata = new MetadataManagerNull()
-      assertThrows[UnsupportedOperationException](metadata.deleteMetadataFromStorage(null, null))
+      val metadata: MetadataManager = new MetadataManagerNull(true)
+      assertThrows[UnsupportedOperationException](metadata.deleteMetadata("table1", infoDate))
+    }
+
+    "not throw an exception when deleting all metadata for a table and day and persistence is disabled" in {
+      val metadata: MetadataManager = new MetadataManagerNull(false)
+      metadata.deleteMetadata("table1", infoDate)
     }
   }
 }

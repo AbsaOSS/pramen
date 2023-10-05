@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.metadata
 import java.time.LocalDate
 import scala.collection.mutable
 
-abstract class MetadataManagerBase(isBookkeepingEnabled: Boolean) extends MetadataManager {
+abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends MetadataManager {
   private val metadataLocalStore = new mutable.HashMap[MetadataTableKey, mutable.HashMap[String, String]]()
 
   def getMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Option[String]
@@ -78,5 +78,5 @@ abstract class MetadataManagerBase(isBookkeepingEnabled: Boolean) extends Metada
     }
   }
 
-  final override def isPersistent: Boolean = isBookkeepingEnabled
+  final override def isPersistent: Boolean = isPersistenceEnabled
 }
