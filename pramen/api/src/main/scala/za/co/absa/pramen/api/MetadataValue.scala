@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.bookkeeper.model
+package za.co.absa.pramen.api
 
-case class MetadataRecord(pramenTableName: String,
-                          infoDate: String, /* Use String to workaround serialization issues */
-                          key: String,
-                          value: String,
-                          lastUpdated: Long /* Use epoch seconds */
-                         )
+import java.time.Instant
+
+/**
+  * An entry of metastore metadata that can be set for a partition partition (table + info date).
+  */
+case class MetadataValue(value: String, lastUpdated: Instant)
