@@ -64,6 +64,26 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
 
       assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1)).isEmpty)
     }
+
+    "throw an exception on connection errors when querying a key" in {
+      val metadata = new MetadataManagerJdbc(null)
+
+      val ex = intercept[RuntimeException] {
+        metadata.getMetadataFromStorage("table1", infoDate, "key1")
+      }
+
+      assert(ex.getMessage.contains("Unable to read from the metadata table."))
+    }
+
+    "throw an exception on connection errors when querying a table" in {
+      val metadata = new MetadataManagerJdbc(null)
+
+      val ex = intercept[RuntimeException] {
+        metadata.getMetadataFromStorage("table1", infoDate)
+      }
+
+      assert(ex.getMessage.contains("Unable to read from the metadata table."))
+    }
   }
 
   "setMetadataToStorage" should {
@@ -77,6 +97,16 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
       assert(metadata.getMetadataFromStorage("table1", infoDate, "key2").isEmpty)
       assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1), "key1").isEmpty)
     }
+
+    "throw an exception on connection errors" in {
+      val metadata = new MetadataManagerJdbc(null)
+
+      val ex = intercept[RuntimeException] {
+        metadata.setMetadataToStorage("table1", infoDate, "key1", "value1")
+      }
+
+      assert(ex.getMessage.contains("Unable to write to the metadata table."))
+    }
   }
 
   "deleteMetadataFromStorage" should {
@@ -87,10 +117,15 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
       metadata.setMetadataToStorage("table1", infoDate, "key2", "value2")
 
       metadata.deleteMetadataFromStorage("table1", infoDate, "key1")
-
       assert(metadata.getMetadataFromStorage("table1", infoDate, "key1").isEmpty)
       assert(metadata.getMetadataFromStorage("table1", infoDate, "key2").contains("value2"))
       assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1), "key1").isEmpty)
+    }
+
+    "not throw an exception when deleting a key that does not exist" in {
+      val metadata = getMetadataManager
+
+      metadata.deleteMetadataFromStorage("table1", infoDate, "key1")
     }
 
     "delete all metadata for a table and info date" in {
@@ -106,6 +141,25 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
       assert(metadata.getMetadataFromStorage("table1", infoDate.plusDays(1), "key1").isEmpty)
     }
 
+    "throw an exception on connection errors when deleting a key" in {
+      val metadata = new MetadataManagerJdbc(null)
+
+      val ex = intercept[RuntimeException] {
+        metadata.deleteMetadataFromStorage("table1", infoDate, "key1")
+      }
+
+      assert(ex.getMessage.contains("Unable to delete from the metadata table."))
+    }
+
+    "throw an exception on connection errors when deleting metadata from a partision" in {
+      val metadata = new MetadataManagerJdbc(null)
+
+      val ex = intercept[RuntimeException] {
+        metadata.deleteMetadataFromStorage("table1", infoDate)
+      }
+
+      assert(ex.getMessage.contains("Unable to delete from the metadata table."))
+    }
   }
 
   def getMetadataManager: MetadataManagerJdbc = {
