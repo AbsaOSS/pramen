@@ -2339,6 +2339,40 @@ pramenOpt.foreach { pramen =>
 
 You can add text, tables, and even chunks of a DataFrame to email notifications this way. 
 
+### Storing and retrieving key/value metadata for tables in the metastore
+
+> This feature is supported currently only when PostgreSQL database is used for bookkeeping.
+
+Pramen allows storing and retrieving key/value metadata for tables in the metastore. You can do this from a transformer
+or a sink like this:
+```scala
+val metadataManager = metastore.metadataManager
+
+// Setting key1 = value1 for table1 for the specified information date
+metadataManager.setMetadata("table1", infoDate, "key1", "value1")
+
+// Getting key1 for table1 for the specified information date if available
+val metadataValueOpt = metadataManager.getMetadata("table1", infoDate, "key1")
+
+// Getting run info for a previously ran job outputting to the specified table and info date
+val runInfo = metastore.getTableRunInfo("table2", infoDate)
+```
+
+You can also get and set metadata when the metastore reader is not available, for example in custom sources. For example:
+```scala
+import za.co.absa.pramen.api.Pramen
+
+val pramenOpt = Try {
+  Pramen.instance
+}.toOption
+
+// Access metadata only if Pramen client is available
+pramenOpt.foreach { pramen =>
+  pramen.metadataManager.setMetadata("table1", infoDate, "key1", "value1")
+}
+```
+
+
 ## Notifications
 If you need to react on a completion event of any job, you can do it using notification targets. A notification target 
 is a component that you can implement and register for any operation or table. The notification target will be called 
