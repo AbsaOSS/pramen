@@ -89,6 +89,17 @@ trait MetastoreReader {
   def getTableDef(tableName: String): MetaTableDef
 
   /**
+    * Returns the run info of a metastore table based on bookkeeping information.
+    *
+    * It is available only if bookkeeping is used.
+    *
+    * @param tableName The name of the table in the metastore.
+    * @param infoDate  The information date of the data.
+    * @return The run info of the table if available.
+    */
+  def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo]
+
+  /**
     * Returns an object that allows accessing metadata of metastore tables.
     */
   def getMetadataManager: MetadataManager

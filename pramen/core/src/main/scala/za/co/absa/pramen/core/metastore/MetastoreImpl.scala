@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetadataManager, MetastoreReader, Query}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -179,6 +179,13 @@ class MetastoreImpl(appConfig: Config,
         validateTable(tableName)
 
         getMetaTableDef(metastore.getTableDef(tableName))
+      }
+
+      override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = {
+        bookkeeper.getLatestDataChunk(tableName, infoDate, infoDate)
+          .map(chunk =>
+            MetaTableRunInfo(tableName, LocalDate.parse(chunk.infoDate), chunk.inputRecordCount, chunk.outputRecordCount, chunk.jobStarted, chunk.jobFinished)
+          )
       }
 
       override def getMetadataManager: MetadataManager = metadataManager

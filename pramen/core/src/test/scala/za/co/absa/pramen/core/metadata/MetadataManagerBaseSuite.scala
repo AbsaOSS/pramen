@@ -30,9 +30,9 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1", infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1", infoDate, "key1").contains("value1"))
-      assert(metadata.getMetadata("table1", infoDate, "key2").isEmpty)
-      assert(metadata.getMetadata("table1", infoDate.plusDays(1), "key1").isEmpty)
+      assert(metadata.getMetadata("TABLE1", infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("TABLE1", infoDate, "key2").isEmpty)
+      assert(metadata.getMetadata("TABLE1", infoDate.plusDays(1), "key1").isEmpty)
       assert(metadata.getMetadata("table2", infoDate, "key1").isEmpty)
 
       assert(metadata.getMetadataFromStorageCalls1.length == 4)
@@ -47,7 +47,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1",infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("TABLE1",infoDate, "key1").contains("value1"))
       assert(metadata.getMetadataFromStorageCalls1.isEmpty)
     }
 
@@ -75,7 +75,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
       metadata.setMetadata("table1",infoDate, "key1", "value1")
       metadata.setMetadata("table1",infoDate, "key2", "value2")
 
-      val result = metadata.getMetadata("table1",infoDate)
+      val result = metadata.getMetadata("TABLE1",infoDate)
 
       assert(result.contains("key1"))
       assert(result.contains("key2"))
@@ -94,7 +94,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
       metadata.setMetadata("table1",infoDate, "key1", "value1")
       metadata.setMetadata("table1",infoDate, "key2", "value2")
 
-      val result = metadata.getMetadata("table1",infoDate)
+      val result = metadata.getMetadata("TABLE1",infoDate)
 
       assert(result.contains("key1"))
       assert(result.contains("key2"))
@@ -133,7 +133,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1",infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("TABLE1",infoDate, "key1").contains("value1"))
     }
 
     "set metadata in the local in memory map" in {
@@ -150,7 +150,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
       val metadata = new MetadataManagerSpy(true)
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
-      metadata.deleteMetadata("table1",infoDate, "key1")
+      metadata.deleteMetadata("TABLE1",infoDate, "key1")
 
       assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.deleteMetadataFromStorageCalls1.length == 1)
@@ -163,7 +163,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
       val metadata = new MetadataManagerSpy(false)
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
-      metadata.deleteMetadata("table1",infoDate, "key1")
+      metadata.deleteMetadata("TABLE1",infoDate, "key1")
 
       assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.deleteMetadataFromStorageCalls1.isEmpty)
@@ -174,7 +174,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
       metadata.setMetadata("table1",infoDate, "key2", "value2")
-      metadata.deleteMetadata("table1",infoDate)
+      metadata.deleteMetadata("TABLE1",infoDate)
 
       assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.getMetadata("table1",infoDate, "key2").isEmpty)
@@ -188,7 +188,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
       metadata.setMetadata("table1",infoDate, "key2", "value2")
-      metadata.deleteMetadata("table1",infoDate)
+      metadata.deleteMetadata("TABLE1",infoDate)
 
       assert(metadata.getMetadata("table1",infoDate, "key1").isEmpty)
       assert(metadata.getMetadata("table1",infoDate, "key2").isEmpty)

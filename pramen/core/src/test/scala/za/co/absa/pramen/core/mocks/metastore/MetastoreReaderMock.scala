@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetadataManager, MetastoreReader}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 
 import java.time.LocalDate
@@ -56,6 +56,8 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
       case None          => throw new IllegalArgumentException(s"Table $tableName not found")
     }
   }
+
+  override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
 
   override def getMetadataManager: MetadataManager = metadataManager
 }
