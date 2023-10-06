@@ -28,9 +28,9 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
     "return metadata from the persistent layer" in {
       val metadata = new MetadataManagerSpy(true)
 
-      metadata.setMetadata("table1", infoDate, "key1", "value1")
+      metadata.setMetadata("table1", infoDate, "key1", "Value1")
 
-      assert(metadata.getMetadata("TABLE1", infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("TABLE1", infoDate, "key1").exists(_.value == "Value1"))
       assert(metadata.getMetadata("TABLE1", infoDate, "key2").isEmpty)
       assert(metadata.getMetadata("TABLE1", infoDate.plusDays(1), "key1").isEmpty)
       assert(metadata.getMetadata("table2", infoDate, "key1").isEmpty)
@@ -39,7 +39,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
       assert(metadata.getMetadataFromStorageCalls1.head._1 == "table1")
       assert(metadata.getMetadataFromStorageCalls1.head._2 == infoDate)
       assert(metadata.getMetadataFromStorageCalls1.head._3 == "key1")
-      assert(metadata.getMetadataFromStorageCalls1.head._4.contains("value1"))
+      assert(metadata.getMetadataFromStorageCalls1.head._4.exists(_.value == "Value1"))
     }
 
     "return metadata from the local in memory map" in {
@@ -47,7 +47,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("TABLE1",infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("TABLE1",infoDate, "key1").exists(_.value == "value1"))
       assert(metadata.getMetadataFromStorageCalls1.isEmpty)
     }
 
@@ -79,8 +79,8 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       assert(result.contains("key1"))
       assert(result.contains("key2"))
-      assert(result("key1") == "value1")
-      assert(result("key2") == "value2")
+      assert(result("key1").value == "value1")
+      assert(result("key2").value == "value2")
       assert(result.size == 2)
 
       assert(metadata.getMetadataFromStorageCalls2.length == 1)
@@ -98,8 +98,8 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       assert(result.contains("key1"))
       assert(result.contains("key2"))
-      assert(result("key1") == "value1")
-      assert(result("key2") == "value2")
+      assert(result("key1").value == "value1")
+      assert(result("key2").value == "value2")
       assert(result.size == 2)
 
       assert(metadata.getMetadataFromStorageCalls1.isEmpty)
@@ -133,7 +133,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("TABLE1",infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("TABLE1",infoDate, "key1").exists(_.value == "value1"))
     }
 
     "set metadata in the local in memory map" in {
@@ -141,7 +141,7 @@ class MetadataManagerBaseSuite extends AnyWordSpec {
 
       metadata.setMetadata("table1",infoDate, "key1", "value1")
 
-      assert(metadata.getMetadata("table1",infoDate, "key1").contains("value1"))
+      assert(metadata.getMetadata("table1",infoDate, "key1").exists(_.value == "value1"))
     }
   }
 

@@ -16,25 +16,26 @@
 
 package za.co.absa.pramen.core.metadata
 
-import za.co.absa.pramen.api.MetadataManager
+import za.co.absa.pramen.api.{MetadataManager, MetadataValue}
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 import scala.collection.mutable
+import scala.util.Try
 
 abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends MetadataManager {
-  private val metadataLocalStore = new mutable.HashMap[MetadataTableKey, mutable.HashMap[String, String]]()
+  private val metadataLocalStore = new mutable.HashMap[MetadataTableKey, mutable.HashMap[String, MetadataValue]]()
 
-  def getMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Option[String]
+  def getMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Option[MetadataValue]
 
-  def getMetadataFromStorage(tableName: String, infoDate: LocalDate): Map[String, String]
+  def getMetadataFromStorage(tableName: String, infoDate: LocalDate): Map[String, MetadataValue]
 
-  def setMetadataToStorage(tableName: String, infoDate: LocalDate, key: String, value: String): Unit
+  def setMetadataToStorage(tableName: String, infoDate: LocalDate, key: String, value: MetadataValue): Unit
 
   def deleteMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Unit
 
   def deleteMetadataFromStorage(tableName: String, infoDate: LocalDate): Unit
 
-  final override def getMetadata(tableName: String, infoDate: LocalDate, key: String): Option[String] = {
+  final override def getMetadata(tableName: String, infoDate: LocalDate, key: String): Option[MetadataValue] = {
     val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
       getMetadataFromStorage(tableLowerCase, infoDate, key)
@@ -43,7 +44,7 @@ abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends Metada
     }
   }
 
-  final override def getMetadata(tableName: String, infoDate: LocalDate): Map[String, String] = {
+  final override def getMetadata(tableName: String, infoDate: LocalDate): Map[String, MetadataValue] = {
     val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
       getMetadataFromStorage(tableLowerCase, infoDate)
@@ -53,12 +54,14 @@ abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends Metada
   }
 
   final override def setMetadata(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
+    val metadataValue = MetadataValue(value, Instant.now())
     val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
-      setMetadataToStorage(tableLowerCase, infoDate, key, value)
+      setMetadataToStorage(tableLowerCase, infoDate, key, metadataValue)
     } else {
       this.synchronized {
-        metadataLocalStore.getOrElseUpdate(MetadataTableKey(tableLowerCase, infoDate), mutable.HashMap.empty).put(key, value)
+        metadataLocalStore.getOrElseUpdate(MetadataTableKey(tableLowerCase, infoDate), mutable.HashMap.empty)
+          .put(key, metadataValue)
       }
     }
   }

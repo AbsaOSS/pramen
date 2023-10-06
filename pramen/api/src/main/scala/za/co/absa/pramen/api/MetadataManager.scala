@@ -27,7 +27,7 @@ trait MetadataManager {
     * @param key       The key metadata key.
     * @return The metadata value if found.
     */
-  def getMetadata(tableName: String, infoDate: LocalDate, key: String): Option[String]
+  def getMetadata(tableName: String, infoDate: LocalDate, key: String): Option[MetadataValue]
 
   /**
     * Get all metadata for a given table and date.
@@ -36,7 +36,7 @@ trait MetadataManager {
     * @param infoDate  The information date of the data.
     * @return A map of metadata key-value pairs for the specified table and date.
     */
-  def getMetadata(tableName: String, infoDate: LocalDate): Map[String, String]
+  def getMetadata(tableName: String, infoDate: LocalDate): Map[String, MetadataValue]
 
   /**
     * Set metadata value for a given table, date and key.

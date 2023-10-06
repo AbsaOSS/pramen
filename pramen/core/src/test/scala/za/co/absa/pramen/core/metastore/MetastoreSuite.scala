@@ -394,7 +394,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         metadataManager.setMetadata("table1", infoDate, "key1", "value1")
         val value = metadataManager.getMetadata("table1", infoDate, "key1")
 
-        assert(value.contains("value1"))
+        assert(value.exists(_.value == "value1"))
       }
     }
 

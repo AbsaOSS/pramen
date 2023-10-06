@@ -23,7 +23,8 @@ class MetadataRecords(tag: Tag) extends Table[MetadataRecord](tag, "metadata") {
   def infoDate = column[String]("info_date", O.Length(20))
   def key = column[String]("key", O.Length(255))
   def value = column[String]("value")
-  def * = (pramenTableName, infoDate, key, value) <> (MetadataRecord.tupled, MetadataRecord.unapply)
+  def lastUpdated = column[Long]("last_updated")
+  def * = (pramenTableName, infoDate, key, value, lastUpdated) <> (MetadataRecord.tupled, MetadataRecord.unapply)
   def idx1 = index("meta_idx_1", (pramenTableName, infoDate, key), unique = true)
   def idx2 = index("meta_idx_2", (pramenTableName, infoDate), unique = false)
 }
