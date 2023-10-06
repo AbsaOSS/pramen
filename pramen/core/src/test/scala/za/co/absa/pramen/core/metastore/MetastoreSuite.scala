@@ -364,6 +364,24 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
       }
     }
 
+    "return a reader that returns the run info for the specified table" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        m.saveTable("table1", infoDate, getDf)
+
+        val reader = m.getMetastoreReader("table1" :: Nil, infoDate)
+        val runInfo1 = reader.getTableRunInfo("table1", infoDate)
+        val runInfo2 = reader.getTableRunInfo("table1", infoDate.plusDays(1))
+
+        assert(runInfo1.isDefined)
+        assert(runInfo2.isEmpty)
+
+        assert(runInfo1.get.tableName == "table1")
+        assert(runInfo1.get.infoDate == infoDate)
+      }
+    }
+
     "return a reader that returns a metadata manager" in {
       withTempDirectory("metastore_test") { tempDir =>
         val (m, _) = getTestCase(tempDir)

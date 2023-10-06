@@ -35,47 +35,52 @@ abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends Metada
   def deleteMetadataFromStorage(tableName: String, infoDate: LocalDate): Unit
 
   final override def getMetadata(tableName: String, infoDate: LocalDate, key: String): Option[String] = {
+    val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
-      getMetadataFromStorage(tableName, infoDate, key)
+      getMetadataFromStorage(tableLowerCase, infoDate, key)
     } else {
-      metadataLocalStore.getOrElse(MetadataTableKey(tableName, infoDate), mutable.HashMap.empty).get(key)
+      metadataLocalStore.getOrElse(MetadataTableKey(tableLowerCase, infoDate), mutable.HashMap.empty).get(key)
     }
   }
 
   final override def getMetadata(tableName: String, infoDate: LocalDate): Map[String, String] = {
+    val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
-      getMetadataFromStorage(tableName, infoDate)
+      getMetadataFromStorage(tableLowerCase, infoDate)
     } else {
-      metadataLocalStore.getOrElse(MetadataTableKey(tableName, infoDate), mutable.HashMap.empty).toMap
+      metadataLocalStore.getOrElse(MetadataTableKey(tableLowerCase, infoDate), mutable.HashMap.empty).toMap
     }
   }
 
   final override def setMetadata(tableName: String, infoDate: LocalDate, key: String, value: String): Unit = {
+    val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
-      setMetadataToStorage(tableName, infoDate, key, value)
+      setMetadataToStorage(tableLowerCase, infoDate, key, value)
     } else {
       this.synchronized {
-        metadataLocalStore.getOrElseUpdate(MetadataTableKey(tableName, infoDate), mutable.HashMap.empty).put(key, value)
+        metadataLocalStore.getOrElseUpdate(MetadataTableKey(tableLowerCase, infoDate), mutable.HashMap.empty).put(key, value)
       }
     }
   }
 
   final override def deleteMetadata(tableName: String, infoDate: LocalDate, key: String): Unit = {
+    val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
-      deleteMetadataFromStorage(tableName, infoDate, key)
+      deleteMetadataFromStorage(tableLowerCase, infoDate, key)
     } else {
       this.synchronized {
-        metadataLocalStore.getOrElse(MetadataTableKey(tableName, infoDate), mutable.HashMap.empty).remove(key)
+        metadataLocalStore.getOrElse(MetadataTableKey(tableLowerCase, infoDate), mutable.HashMap.empty).remove(key)
       }
     }
   }
 
   final override def deleteMetadata(tableName: String, infoDate: LocalDate): Unit = {
+    val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
-      deleteMetadataFromStorage(tableName, infoDate)
+      deleteMetadataFromStorage(tableLowerCase, infoDate)
     } else {
       this.synchronized {
-        metadataLocalStore.remove(MetadataTableKey(tableName, infoDate))
+        metadataLocalStore.remove(MetadataTableKey(tableLowerCase, infoDate))
       }
     }
   }
