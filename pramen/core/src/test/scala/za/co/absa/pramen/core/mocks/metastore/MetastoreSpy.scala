@@ -138,7 +138,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
       override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
 
-      override def getMetadataManager: MetadataManager = metadataManager
+      override def metadataManager: MetadataManager = metadataManager
 
       private def validateTable(tableName: String): Unit = {
         if (!tables.contains(tableName)) {

@@ -29,11 +29,18 @@ import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
   * For tests that do not use 'pramen-core' you can create a dummy implementation in 'za.co.absa.pramen.core.state'.
   */
 trait Pramen {
+  /** Gets an object that contains Pramen runtime version information. */
+  def buildProperties: BuildPropertiesRetriever
+
   /** Gets the notification builder that you can use to add custom information to email notifications. */
   def notificationBuilder: NotificationBuilder
 
-  /** Gets an object that contains Pramen runtime version information. */
-  def buildProperties: BuildPropertiesRetriever
+  /**
+    * Returns metadata manager that can be used to get set metastore tables metadata.
+    * This is method is used from custom sources. In transformers and sinks you can use
+    * {{{metastore.metadataManager}}}
+    */
+  def metadataManager: MetadataManager
 }
 
 object Pramen {

@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import java.time.LocalDate
 
 class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate) extends MetastoreReader {
-  private val metadataManager = new MetadataManagerNull(false)
+  private val metadata = new MetadataManagerNull(false)
 
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     tables.find(_._1 == tableName) match {
@@ -59,5 +59,5 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
 
   override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
 
-  override def getMetadataManager: MetadataManager = metadataManager
+  override def metadataManager: MetadataManager = metadata
 }

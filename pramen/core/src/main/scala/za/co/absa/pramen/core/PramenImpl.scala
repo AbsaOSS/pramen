@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core
 
-import za.co.absa.pramen.api.{NotificationBuilder, Pramen}
+import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, Pramen}
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 import za.co.absa.pramen.core.state.NotificationBuilderImpl
@@ -25,9 +25,17 @@ import za.co.absa.pramen.core.utils.BuildPropertyUtils
 class PramenImpl extends Pramen {
   private val notificationBuilderImpl = new NotificationBuilderImpl
 
-  override def notificationBuilder: NotificationBuilder = notificationBuilderImpl
+  private var _metadataManager: Option[MetadataManager] = None
 
   override def buildProperties: BuildPropertiesRetriever = BuildPropertyUtils.instance
+
+  override def notificationBuilder: NotificationBuilder = notificationBuilderImpl
+
+  override def metadataManager: MetadataManager = _metadataManager.getOrElse(
+    throw new IllegalStateException("Metadata manager is not available at the context.")
+  )
+
+  private[core] def setMetadataManager(m: MetadataManager): Unit = _metadataManager = Option(m)
 }
 
 object PramenImpl extends PramenFactory {
