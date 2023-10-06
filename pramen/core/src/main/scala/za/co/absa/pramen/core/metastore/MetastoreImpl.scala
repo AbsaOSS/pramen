@@ -34,7 +34,7 @@ import java.time.{Instant, LocalDate}
 class MetastoreImpl(appConfig: Config,
                     tableDefs: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
-                    metadataManager: MetadataManager,
+                    metadata: MetadataManager,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -188,7 +188,7 @@ class MetastoreImpl(appConfig: Config,
           )
       }
 
-      override def getMetadataManager: MetadataManager = metadataManager
+      override def metadataManager: MetadataManager = metadata
 
       private def validateTable(tableName: String): Unit = {
         if (!tables.contains(tableName)) {

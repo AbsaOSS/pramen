@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.app
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.MetadataManager
+import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
@@ -56,6 +57,8 @@ object AppContextImpl {
     val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
 
     val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper, metadataManager)
+
+    PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
 
     val appContext = new AppContextImpl(
       appConfig,

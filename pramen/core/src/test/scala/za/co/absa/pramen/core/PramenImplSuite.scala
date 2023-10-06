@@ -19,6 +19,7 @@ package za.co.absa.pramen.core
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
+import za.co.absa.pramen.core.metadata.MetadataManagerNull
 
 class PramenImplSuite extends AnyWordSpec {
   "instance()" should {
@@ -28,16 +29,6 @@ class PramenImplSuite extends AnyWordSpec {
 
       assert(instance1.isInstanceOf[PramenImpl])
       assert(instance1 == instance2)
-    }
-  }
-
-  "notificationBuilder()" should {
-    "return the notification builder instance" in {
-      val builder1 = PramenImpl.instance.notificationBuilder
-      val builder2 = PramenImpl.instance.notificationBuilder
-
-      assert(builder1.isInstanceOf[NotificationBuilder])
-      assert(builder1 == builder2)
     }
   }
 
@@ -51,4 +42,37 @@ class PramenImplSuite extends AnyWordSpec {
     }
   }
 
+  "notificationBuilder()" should {
+    "return the notification builder instance" in {
+      val builder1 = PramenImpl.instance.notificationBuilder
+      val builder2 = PramenImpl.instance.notificationBuilder
+
+      assert(builder1.isInstanceOf[NotificationBuilder])
+      assert(builder1 == builder2)
+    }
+  }
+
+  "metadataManager()" should {
+    "return the metadata manager if it is available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      pramen.setMetadataManager(new MetadataManagerNull(false))
+
+      val manager = PramenImpl.instance.metadataManager
+
+      assert(manager.isInstanceOf[MetadataManagerNull])
+
+      pramen.setMetadataManager(null)
+    }
+
+    "throw an exception if metadata manager is not available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      pramen.setMetadataManager(null)
+
+      assertThrows[IllegalStateException] {
+        PramenImpl.instance.metadataManager
+      }
+    }
+  }
 }

@@ -389,7 +389,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         m.saveTable("table1", infoDate, getDf)
 
         val reader = m.getMetastoreReader("table1" :: Nil, infoDate)
-        val metadataManager = reader.getMetadataManager
+        val metadataManager = reader.metadataManager
 
         metadataManager.setMetadata("table1", infoDate, "key1", "value1")
         val value = metadataManager.getMetadata("table1", infoDate, "key1")

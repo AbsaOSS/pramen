@@ -102,5 +102,5 @@ trait MetastoreReader {
   /**
     * Returns an object that allows accessing metadata of metastore tables.
     */
-  def getMetadataManager: MetadataManager
+  def metadataManager: MetadataManager
 }
