@@ -26,6 +26,8 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 object PipelineSparkSessionBuilder {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  val SPARK_APP_NAME_KEY = "pramen.spark.app.name"
+
   /**
     * Builds a SparkSession for the pipeline from configuration.
     * The name of the Spark Application will be according to 'pramen.ingestion.name'
@@ -95,12 +97,15 @@ object PipelineSparkSessionBuilder {
     spark
   }
 
-  private def getSparkAppName(conf: Config): String = {
-    val ingestionSuffix = if (conf.hasPath(PIPELINE_NAME_KEY)) {
-      s" - ${conf.getString(PIPELINE_NAME_KEY)}"
+  private[core] def getSparkAppName(conf: Config): String = {
+    if (conf.hasPath(SPARK_APP_NAME_KEY)) {
+      conf.getString(SPARK_APP_NAME_KEY)
     } else {
-      ""
+      if (conf.hasPath(PIPELINE_NAME_KEY)) {
+        s"Pramen - ${conf.getString(PIPELINE_NAME_KEY)}"
+      } else {
+        "Pramen"
+      }
     }
-    s"Pramen$ingestionSuffix"
   }
 }

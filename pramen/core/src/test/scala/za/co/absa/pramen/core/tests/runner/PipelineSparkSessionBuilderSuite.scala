@@ -75,4 +75,44 @@ class PipelineSparkSessionBuilderSuite extends AnyWordSpec {
       assert(key2Set)
     }
   }
+
+  "getSparkAppName" should {
+    "use the name configured when available" in {
+      val conf = ConfigFactory.parseString("""pramen.spark.app.name = "My App"""")
+
+      val appName = PipelineSparkSessionBuilder.getSparkAppName(conf)
+
+      assert(appName == "My App")
+    }
+
+    "allow substitutions in spark app name" in {
+      val conf = ConfigFactory.parseString(
+        """pramen {
+          |  pipeline.name = "Data sourcing"
+          |  spark.app.name = "My App - "${pramen.pipeline.name}
+          |}
+          |""".stripMargin
+      ).resolve()
+
+      val appName = PipelineSparkSessionBuilder.getSparkAppName(conf)
+
+      assert(appName == "My App - Data sourcing")
+    }
+
+    "use pipeline name when configured" in {
+      val conf = ConfigFactory.parseString("""pramen.pipeline.name = "Data sourcing"""")
+
+      val appName = PipelineSparkSessionBuilder.getSparkAppName(conf)
+
+      assert(appName == "Pramen - Data sourcing")
+    }
+
+    "use the default name when not configured" in {
+      val conf = ConfigFactory.empty()
+
+      val appName = PipelineSparkSessionBuilder.getSparkAppName(conf)
+
+      assert(appName == "Pramen")
+    }
+  }
 }
