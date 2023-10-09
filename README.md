@@ -1296,6 +1296,11 @@ pramen {
   environment.name = "MyEnv/UAT"
   pipeline.name = "My Data Pipeline"
 
+  # Optionally, you can set the Spark Application name. Otherwise the default name will be used.
+  # This does not work when using Yarn in cluster deploy mode. In this case you need to set Spark application name
+  # via the spark-xubmit command line.
+  spark.app.name = "Pramen - "${pramen.pipeline.name}
+
   # The number of tasks to run in parallel. A task is a source, transformer, or sink running for a specified information date.
   # This feature is experimental, use more than 1 with caution. 
   parallel.tasks = 1
