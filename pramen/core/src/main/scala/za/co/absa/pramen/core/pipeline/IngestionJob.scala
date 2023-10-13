@@ -152,6 +152,15 @@ class IngestionJob(operationDef: OperationDef,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
     val stats = metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
+
+    source.postProcess(
+      sourceTable.query,
+      outputTable.name,
+      metastore.getMetastoreReader(Seq(outputTable.name), infoDate),
+      infoDate,
+      operationDef.extraOptions
+    )
+
     source.close()
 
     SaveResult(stats)

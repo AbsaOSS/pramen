@@ -48,4 +48,20 @@ trait Source extends ExternalChannel {
     * Returns the data based on the particular input period and query.
     */
   def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult
+
+  /**
+    * This method is called after the ingestion is finished. You can query the output table form the output information
+    * data and the data should be there.
+    *
+    * @param query           The query used to read the data from the source.
+    * @param outputTableName The table name used as the output table of the ingestion.
+    * @param metastore       The read only version of metastore. You can only query tables using it.
+    * @param infoDate        The information date of the output of the ingestion.
+    * @param options         Extra options specified in the operation definition for the ingestion.
+    */
+  def postProcess(query: Query,
+                  outputTableName: String,
+                  metastore: MetastoreReader,
+                  infoDate: LocalDate,
+                  options: Map[String, String]): Unit = {}
 }
