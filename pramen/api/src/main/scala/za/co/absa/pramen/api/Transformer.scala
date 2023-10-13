@@ -58,4 +58,18 @@ trait Transformer {
   def run(metastore: MetastoreReader,
           infoDate: LocalDate,
           options: Map[String, String]): DataFrame
+
+  /**
+    * This method is called after the transformation is finished. You can query the output table form the output information
+    * data and the data should be there.
+    *
+    * @param outputTableName The table name used as the output table of the transformer
+    * @param metastore       The read only version of metastore. You can only query tables using it.
+    * @param infoDate        The information date of the output of the transformation.
+    * @param options         Extra options specified in the configuration for the transformation.
+    */
+  def postProcess(outputTableName: String,
+                  metastore: MetastoreReader,
+                  infoDate: LocalDate,
+                  options: Map[String, String]): Unit = {}
 }
