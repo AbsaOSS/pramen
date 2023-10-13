@@ -184,7 +184,7 @@ class MetastoreImpl(appConfig: Config,
       override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = {
         bookkeeper.getLatestDataChunk(tableName, infoDate, infoDate)
           .map(chunk =>
-            MetaTableRunInfo(tableName, LocalDate.parse(chunk.infoDate), chunk.inputRecordCount, chunk.outputRecordCount, chunk.jobStarted, chunk.jobFinished)
+            MetaTableRunInfo(tableName, LocalDate.parse(chunk.infoDate), chunk.inputRecordCount, chunk.outputRecordCount, Instant.ofEpochSecond(chunk.jobStarted), Instant.ofEpochSecond(chunk.jobFinished))
           )
       }
 
