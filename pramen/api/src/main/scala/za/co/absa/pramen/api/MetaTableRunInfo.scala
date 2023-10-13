@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.api
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 case class MetaTableRunInfo(tableName: String,
                             infoDate: LocalDate,
                             inputRecordCount: Long,
                             outputRecordCount: Long,
-                            jobStarted: Long,
-                            jobFinished: Long)
+                            jobStarted: Instant,
+                            jobFinished: Instant)
