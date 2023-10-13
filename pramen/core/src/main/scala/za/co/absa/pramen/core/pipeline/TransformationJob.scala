@@ -62,6 +62,14 @@ class TransformationJob(operationDef: OperationDef,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
-    SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
+    val saveResults = SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
+
+    transformer.postProcess(
+      outputTable.name,
+      metastore.getMetastoreReader(inputTables :+ outputTable.name,  infoDate),
+      infoDate, operationDef.extraOptions
+    )
+
+    saveResults
   }
 }
