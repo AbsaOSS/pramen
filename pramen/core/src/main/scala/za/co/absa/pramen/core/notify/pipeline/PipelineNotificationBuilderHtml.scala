@@ -525,7 +525,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     if (status.reason == TaskRunReason.Update) {
       TextElement("Update", Style.Warning)
     } else if (status.reason == TaskRunReason.Rerun) {
-      TextElement("Rerun", style)
+      if (status.warnings.nonEmpty)
+        TextElement("Warning", style)
+      else
+        TextElement("Rerun", style)
     } else if (status.reason == TaskRunReason.Late) {
       TextElement("Late", Style.Warning)
     } else {
