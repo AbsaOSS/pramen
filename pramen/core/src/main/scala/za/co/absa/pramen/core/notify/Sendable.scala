@@ -18,11 +18,12 @@ package za.co.absa.pramen.core.notify
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji._
 
 import java.util.Properties
-import javax.mail.internet.{InternetAddress, MimeMessage}
+import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
 import javax.mail.{Message, Session, Transport}
 import scala.util.control.NonFatal
 
@@ -59,6 +60,8 @@ trait Sendable {
 
   def getBody: String
 
+  def getFiles: Seq[NotificationEntry.AttachedFile] = Seq()
+
   final def send(): Unit = {
     if (getConfig.hasPath(MAIL_SEND_TO_KEY) && getConfig.getString(MAIL_SEND_TO_KEY).trim.nonEmpty) {
       doSend()
@@ -81,12 +84,33 @@ trait Sendable {
     message.setSubject(getSubject)
     message.setText(getBody, getEncoding, getFormat)
 
+    val multipart = new MimeMultipart()
+
+    // Attach the message body
+    val messageBodyPart = new MimeBodyPart()
+    messageBodyPart.setText(getBody, getEncoding, getFormat)
+    multipart.addBodyPart(messageBodyPart)
+
+    // Attach the files if any
+    attachFiles(getFiles, multipart)
+
+    message.setContent(multipart)
+
     // Send it
     try {
       Transport.send(message)
       log.info(s"$VOLTAGE An email has been sent successfully.")
     } catch {
       case NonFatal(ex) => log.error(s"$FAILURE Failed to send an email.", ex)
+    }
+  }
+
+  private def attachFiles(files: Seq[NotificationEntry.AttachedFile], multipart: MimeMultipart): Unit = {
+    files.foreach { file =>
+      val attachmentBodyPart = new MimeBodyPart()
+      attachmentBodyPart.setContent(file.contents, "application/octet-stream")
+      attachmentBodyPart.setFileName(file.fileName)
+      multipart.addBodyPart(attachmentBodyPart)
     }
   }
 

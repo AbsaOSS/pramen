@@ -603,6 +603,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         cells.foreach(tableBuilder.withRow)
         builder.withTable(tableBuilder)
       case NotificationEntry.UnformattedText(text) => builder.withUnformattedText(text)
+      case _: NotificationEntry.AttachedFile => // Skipping... This is going to be added elsewhere.
       case c => log.error(s"Notification entry ${c.getClass} is not supported. Maybe this is related to Pramen runtime version mismatch.")
     }
   }
