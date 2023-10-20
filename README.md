@@ -1,5 +1,6 @@
 # About Pramen
-[![Build](https://github.com/AbsaOSS/pramen/workflows/Build/badge.svg)](https://github.com/AbsaOSS/pramen/actions)
+[![ScalaCI](https://github.com/AbsaOSS/pramen/workflows/ScalaCI/badge.svg)](https://github.com/AbsaOSS/pramen/actions)
+[![PythonCI](https://github.com/AbsaOSS/pramen/workflows/python_ci/badge.svg)](https://github.com/AbsaOSS/pramen/actions)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen.svg?type=shield)](https://app.fossa.com/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen)
 
 Pramen is a framework for defining data pipelines based on Spark and a configuration driven tool to run and
