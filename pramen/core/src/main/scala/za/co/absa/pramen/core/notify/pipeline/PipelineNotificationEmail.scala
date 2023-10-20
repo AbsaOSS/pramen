@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.notify.Sendable
 
@@ -57,5 +58,12 @@ class PipelineNotificationEmail(notification: PipelineNotification)
 
   override def getBody: String = {
     notificationBuilder.renderBody()
+  }
+
+  override def getFiles: Seq[NotificationEntry.AttachedFile] = {
+    notificationBuilder.customEntries.flatMap {
+      case NotificationEntry.AttachedFile(name, content) => Some(NotificationEntry.AttachedFile(name, content))
+      case _ => None
+    }.toSeq
   }
 }
