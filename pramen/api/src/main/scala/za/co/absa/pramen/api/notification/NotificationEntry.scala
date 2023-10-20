@@ -39,8 +39,36 @@ object NotificationEntry {
   /**
     * An unformatted text in a separate block.
     *
-    * @param headers Table headers
-    * @param cells   Table cells. The number of elements in each row must match the number of headers.
+    * @param text The text to inlude
     */
   case class UnformattedText(text: String) extends NotificationEntry
+
+  /**
+    * An unordered (bulleted) list (corresponds to `<ul>`).
+    *
+    * @param items The list items.
+    */
+  case class UnorderedList(items: Seq[Paragraph]) extends NotificationEntry
+
+  /**
+    * Am ordered list (corresponds to `<ol>`).
+    *
+    * @param items The list items.
+    */
+  case class OrderedList(items: Seq[Paragraph]) extends NotificationEntry
+
+  /**
+    * A file to attach.
+    *
+    * @param fileName The name of the file as seed in the email message.
+    * @param contents The contents of the file.
+    */
+  case class AttachedFile(fileName: String, contents: Array[Byte]) extends NotificationEntry
+
+  /**
+    * A raw HTML block - you can include anything.
+    *
+    * @param contents The contents of the HTML block.
+    */
+  case class Html(contents: String) extends NotificationEntry
 }
