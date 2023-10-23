@@ -23,8 +23,8 @@ trait MessageBuilder {
   def withParagraph(text: Seq[TextElement]): MessageBuilder
   def withParagraph(text: String): MessageBuilder
   def withParagraph(builder: ParagraphBuilder): MessageBuilder
-  def withUnorderedList(items: Seq[Paragraph])(builder: ParagraphBuilder): MessageBuilder
-  def withOrderedList(items: Seq[Paragraph])(builder: ParagraphBuilder): MessageBuilder
+  def withUnorderedList(items: Seq[Paragraph]): MessageBuilder
+  def withOrderedList(items: Seq[Paragraph]): MessageBuilder
   def withTable(headers: Seq[TableHeader], cells: Seq[Seq[TextElement]]): MessageBuilderHtml
   def withTable(tableBuilder: TableBuilder): MessageBuilder
   def withException(description: String, ex: Throwable): MessageBuilder

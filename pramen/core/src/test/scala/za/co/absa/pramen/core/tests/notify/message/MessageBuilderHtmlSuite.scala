@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.tests.notify.message
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification.{Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.notify.message._
@@ -31,7 +32,7 @@ class MessageBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
       val tb = new TableBuilderHtml
 
       val actual = builder
-        .withParagraph(TextElement("Hi, ") :: TextElement("user", Style.Bold) :: TextElement(". This is a test") :: Nil)
+        .withParagraph("Hi, user. This is a test.")
         .withParagraph(TextElement("This is an") :: TextElement("error", Style.Error) :: Nil)
         .withParagraph(TextElement("This is a") :: TextElement("warning", Style.Warning) :: Nil)
         .withParagraph(ParagraphBuilder()
@@ -39,6 +40,7 @@ class MessageBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
           .withText("success", Style.Success)
         )
         .withUnformattedText("This is some unformatted text\nLine 2\n")
+        .withHtmlText("<p><b>This is a test HTML block</b></p>")
         .withException("This is an exception:",
           new CustomException("Dummy Exception")
         )
@@ -49,6 +51,17 @@ class MessageBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
           .withHeaders(Seq(TableHeader(TextElement("a")), TableHeader(TextElement("b")), TableHeader(TextElement("c"))))
           .withRow(Seq(TextElement("1"), TextElement("2"), TextElement("3")))
         )
+        .withTable(Seq(TableHeader(TextElement("d")), TableHeader(TextElement("e")), TableHeader(TextElement("f"))),
+          Seq(Seq(TextElement("4"), TextElement("5"), TextElement("6")))
+        )
+        .withUnorderedList(Seq(
+          Paragraph(ParagraphBuilder().withText("Item 1").paragraph),
+          Paragraph(ParagraphBuilder().withText("Item 2").paragraph)
+        ))
+        .withOrderedList(Seq(
+          Paragraph(ParagraphBuilder().withText("Ordered 1").paragraph),
+          Paragraph(ParagraphBuilder().withText("Ordered 2").paragraph)
+        ))
         .withRawParagraph("Regards,<br>MyApp<br>MyVersion")
         .renderBody
 

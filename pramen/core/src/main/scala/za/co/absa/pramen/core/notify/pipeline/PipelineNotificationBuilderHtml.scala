@@ -598,8 +598,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     customEntries.foreach {
       case NotificationEntry.Paragraph(text)       => builder.withParagraph(text)
       case NotificationEntry.Table(headers, cells) => builder.withTable(headers, cells)
-      case NotificationEntry.UnorderedList(items)  => builder.withUnorderedList(items)(ParagraphBuilder())
-      case NotificationEntry.OrderedList(items)    => builder.withOrderedList(items)(ParagraphBuilder())
+      case NotificationEntry.UnorderedList(items)  => builder.withUnorderedList(items)
+      case NotificationEntry.OrderedList(items)    => builder.withOrderedList(items)
       case NotificationEntry.UnformattedText(text) => builder.withUnformattedText(text)
       case NotificationEntry.Html(contents)        => builder.withHtmlText(contents)
       case _: NotificationEntry.AttachedFile       => // Skipping... This is going to be added elsewhere.

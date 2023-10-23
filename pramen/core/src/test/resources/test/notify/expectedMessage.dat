@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 .datagrid table {
     border-collapse: collapse;
     text-align: left;
@@ -97,7 +98,7 @@
 }
 
 </style>
-<body><p>Hi, <b>user</b>. This is a test</p>
+<body><p>Hi, user. This is a test.</p>
 
 <p>This is an<span class="tderr">error</span></p>
 
@@ -108,6 +109,8 @@
 <pre>This is some unformatted text
 Line 2
 </pre>
+
+<p><b>This is a test HTML block</b></p>
 
 <p><span class="tdred">This is an exception:</span></p>
 
@@ -132,6 +135,24 @@ Line 2
 <td>2</td>
 <td>3</td></tr></tbody>
 </table></div>
+<div class="datagrid" style="width:fit-content"><table style="width:100%">
+<thead><tr><th>d</th>
+<th>e</th>
+<th>f</th></tr></thead>
+<tbody><tr><td>4</td>
+<td>5</td>
+<td>6</td></tr></tbody>
+</table></div>
+<ul><li><p>Item 1</p>
+</li>
+<li><p>Item 2</p>
+</li></ul>
+
+<ol><li><p>Ordered 1</p>
+</li>
+<li><p>Ordered 2</p>
+</li></ol>
+
 <p>Regards,<br>MyApp<br>MyVersion</p>
 
 </body>

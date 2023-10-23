@@ -41,12 +41,12 @@ class MessageBuilderHtml extends MessageBuilder {
     withParagraph(builder.paragraph)
   }
 
-  override def withUnorderedList(items: Seq[Paragraph])(builder: ParagraphBuilder): MessageBuilderHtml = {
+  override def withUnorderedList(items: Seq[Paragraph]): MessageBuilderHtml = {
     body += s"<ul>${items.map(renderListItem).mkString(EOL)}</ul>$EOL"
     this
   }
 
-  override def withOrderedList(items: Seq[Paragraph])(builder: ParagraphBuilder): MessageBuilder = {
+  override def withOrderedList(items: Seq[Paragraph]): MessageBuilder = {
     body += s"<ol>${items.map(renderListItem).mkString(EOL)}</ol>$EOL"
     this
   }

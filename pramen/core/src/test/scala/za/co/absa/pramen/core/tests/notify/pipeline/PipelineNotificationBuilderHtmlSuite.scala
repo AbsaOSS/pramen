@@ -18,9 +18,11 @@ package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory}
+import za.co.absa.pramen.core.notify.message.ParagraphBuilder
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
 import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.RunStatus
@@ -96,11 +98,21 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
         NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil),
         NotificationEntry.Table(
           TableHeader(TextElement("Header 1"), Align.Right) :: TableHeader(TextElement("Header 2"), Align.Center) :: Nil, Seq(
-          TextElement("Cell 1, 1") :: TextElement("Cell 1, 2") :: Nil,
-          TextElement("Cell 2, 1") :: TextElement("Cell 2, 2") :: Nil,
-          TextElement("Cell 3, 1") :: TextElement("Cell 3, 2") :: Nil
-        )))
-      )
+            TextElement("Cell 1, 1") :: TextElement("Cell 1, 2") :: Nil,
+            TextElement("Cell 2, 1") :: TextElement("Cell 2, 2") :: Nil,
+            TextElement("Cell 3, 1") :: TextElement("Cell 3, 2") :: Nil
+          )),
+        NotificationEntry.UnorderedList(Seq(
+          Paragraph(ParagraphBuilder().withText("Item 1").paragraph),
+          Paragraph(ParagraphBuilder().withText("Item 2").paragraph)
+        )),
+        NotificationEntry.OrderedList(Seq(
+          Paragraph(ParagraphBuilder().withText("Ordered 1").paragraph),
+          Paragraph(ParagraphBuilder().withText("Ordered 2").paragraph)
+        )),
+        NotificationEntry.AttachedFile("file1.txt", "This is a test file".getBytes),
+        NotificationEntry.Html("<p><b>This is a test HTML block</b></p>")
+      ))
 
       val actual = builder.renderBody()
         .split("\n")
