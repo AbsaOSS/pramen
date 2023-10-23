@@ -596,15 +596,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private def renderCustomEntries(builder: MessageBuilderHtml, customEntries: ListBuffer[NotificationEntry]): Unit = {
     customEntries.foreach {
-      case NotificationEntry.Paragraph(text) => builder.withParagraph(text)
-      case NotificationEntry.Table(headers, cells) =>
-        val tableBuilder = new TableBuilderHtml
-        tableBuilder.withHeaders(headers)
-        cells.foreach(tableBuilder.withRow)
-        builder.withTable(tableBuilder)
+      case NotificationEntry.Paragraph(text)       => builder.withParagraph(text)
+      case NotificationEntry.Table(headers, cells) => builder.withTable(headers, cells)
+      case NotificationEntry.UnorderedList(items)  => builder.withUnorderedList(items)(ParagraphBuilder())
+      case NotificationEntry.OrderedList(items)    => builder.withOrderedList(items)(ParagraphBuilder())
       case NotificationEntry.UnformattedText(text) => builder.withUnformattedText(text)
-      case _: NotificationEntry.AttachedFile => // Skipping... This is going to be added elsewhere.
-      case c => log.error(s"Notification entry ${c.getClass} is not supported. Maybe this is related to Pramen runtime version mismatch.")
+      case NotificationEntry.Html(contents)        => builder.withHtmlText(contents)
+      case _: NotificationEntry.AttachedFile       => // Skipping... This is going to be added elsewhere.
+      case c                                       => log.error(s"Notification entry ${c.getClass} is not supported. Maybe this is related to Pramen runtime version mismatch.")
     }
   }
 
