@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.core.notify.message
 
-import za.co.absa.pramen.api.notification.{Style, TextElement}
+import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
+import za.co.absa.pramen.api.notification.{Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.utils.ResourceUtils
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 
@@ -28,12 +29,7 @@ class MessageBuilderHtml extends MessageBuilder {
   private val body = new ListBuffer[String]
 
   override def withParagraph(text: Seq[TextElement]): MessageBuilderHtml = {
-    val sb = new StringBuilder
-
-    sb.append("<p>")
-    text.foreach(te => sb.append(renderTextElement(te)))
-    sb.append(s"</p>$EOL")
-    body += sb.toString()
+    body += renderParagraph(text)
     this
   }
 
@@ -43,6 +39,23 @@ class MessageBuilderHtml extends MessageBuilder {
 
   override def withParagraph(builder: ParagraphBuilder): MessageBuilderHtml = {
     withParagraph(builder.paragraph)
+  }
+
+  override def withUnorderedList(items: Seq[Paragraph])(builder: ParagraphBuilder): MessageBuilderHtml = {
+    body += s"<ul>${items.map(renderListItem).mkString(EOL)}</ul>$EOL"
+    this
+  }
+
+  override def withOrderedList(items: Seq[Paragraph])(builder: ParagraphBuilder): MessageBuilder = {
+    body += s"<ol>${items.map(renderListItem).mkString(EOL)}</ol>$EOL"
+    this
+  }
+
+  override def withTable(headers: Seq[TableHeader], cells: Seq[Seq[TextElement]]): MessageBuilderHtml = {
+    val tableBuilder = new TableBuilderHtml
+    tableBuilder.withHeaders(headers)
+    cells.foreach(tableBuilder.withRow)
+    withTable(tableBuilder)
   }
 
   override def withTable(tableBuilder: TableBuilder): MessageBuilderHtml = {
@@ -60,6 +73,11 @@ class MessageBuilderHtml extends MessageBuilder {
 
   override def withUnformattedText(text: String): MessageBuilderHtml = {
     body += s"<pre>$text</pre>$EOL"
+    this
+  }
+
+  override def withHtmlText(html: String): MessageBuilderHtml = {
+    body += s"$html$EOL"
     this
   }
 
@@ -82,5 +100,15 @@ class MessageBuilderHtml extends MessageBuilder {
       case Style.Error     => ("""<span class="tderr">""", "</span>")
     }
     s"$styleOp${te.text}$styleCl"
+  }
+
+  private def renderParagraph(text: Seq[TextElement]): String = {
+    val paragraphText = text.map(renderTextElement).mkString
+
+    s"<p>$paragraphText</p>$EOL"
+  }
+
+  private def renderListItem(p: Paragraph): String = {
+    s"<li>${renderParagraph(p.text)}</li>"
   }
 }
