@@ -178,6 +178,36 @@ object ConfigUtils {
   }
 
   def getExtraOptions(conf: Config, prefix: String): Map[String, String] = {
+    // This is the same as getFlatConfig(), but handles ConfigList
+    // in the special way that is easier to convert ack to a configuration.
+    // Otherwise, the ConfigList is rendered as a non-parsable JSON that cannot be
+    // converted back to Config in all cases.
+    // Search for "work with list of objects" unit test that illustrates the problem and
+    // demonstrates how the conversion could work.
+    def getFlatConfigSpecial(conf: Config): Map[String, AnyRef] = {
+      val renderOptions = ConfigRenderOptions.defaults()
+        .setComments(false)
+        .setOriginComments(false)
+        .setJson(true)
+        .setFormatted(false)
+      conf.entrySet().asScala.map({ entry =>
+        val k = entry.getKey
+        val v: ConfigValue = entry.getValue
+        v match {
+          case list: ConfigList =>
+            val lst = list.unwrapped()
+
+            if (!lst.isEmpty && lst.get(0).isInstanceOf[java.util.Map[String, AnyRef]]) {
+              k -> v.render(renderOptions)
+            } else  {
+              k -> v.unwrapped()
+            }
+          case _ =>
+            k -> v.unwrapped()
+        }
+      }).toMap
+    }
+
     val optionsConfig = if (prefix.isEmpty) {
       conf
     } else {
@@ -188,7 +218,7 @@ object ConfigUtils {
       }
     }
 
-    ConfigUtils.getFlatConfig(optionsConfig)
+    getFlatConfigSpecial(optionsConfig)
       .map { case (k, v) => (k, v.toString) }
   }
 

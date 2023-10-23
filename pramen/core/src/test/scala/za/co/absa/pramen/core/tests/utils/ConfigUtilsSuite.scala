@@ -555,6 +555,37 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
       assert(map("value3") == "[10, 5, 7, 4]")
     }
 
+    "work with list of objects" in {
+      val conf = ConfigFactory.parseString(
+        """obj {
+          |  test = [
+          |    {
+          |      data = "abc.dat"
+          |      control = "abc.ctrl"
+          |    },
+          |    {
+          |      data = "cde.txt"
+          |      control = "cde.ctrl"
+          |    }
+          |  ]
+          |}
+          |""".stripMargin)
+
+      val map = ConfigUtils.getExtraOptions(conf, "obj")
+
+      assert(map("test") == """[{"control":"abc.ctrl","data":"abc.dat"},{"control":"cde.ctrl","data":"cde.txt"}]""")
+
+      val convertedBackConfig = ConfigFactory.parseString(s"""test = ${map("test")}""")
+
+      val configList = convertedBackConfig.getConfigList("test")
+
+      assert(configList.size() == 2)
+      assert(configList.get(0).getString("data") == "abc.dat")
+      assert(configList.get(0).getString("control") == "abc.ctrl")
+      assert(configList.get(1).getString("data") == "cde.txt")
+      assert(configList.get(1).getString("control") == "cde.ctrl")
+    }
+
     "throw WrongType exception if the path is not a config" in {
       val ex = intercept[WrongType] {
         ConfigUtils.getExtraOptions(testConfig, "mytest.extra.options.value1")
