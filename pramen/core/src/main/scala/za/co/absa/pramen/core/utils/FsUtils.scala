@@ -412,7 +412,9 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * @return true if the rename succeeded.
     */
   def copyFile(srcFile: Path, dstFile: Path, overwrite: Boolean = true): Unit = {
-    FileUtil.copy(fs, srcFile, fs, dstFile, false, overwrite, conf)
+    val fs1 = srcFile.getFileSystem(conf)
+    val fs2 = dstFile.getFileSystem(conf)
+    FileUtil.copy(fs1, srcFile, fs2, dstFile, false, overwrite, conf)
   }
 
   def copyToLocal(srcFile: Path, targetFile: Path, overwrite: Boolean = false): Unit = {
