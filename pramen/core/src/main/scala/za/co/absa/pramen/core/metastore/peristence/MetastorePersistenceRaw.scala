@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileUtil, Path}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -56,13 +56,13 @@ class MetastorePersistenceRaw(path: String,
 
     val outputDir = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
 
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+    val fsUtilsTrg = new FsUtils(spark.sparkContext.hadoopConfiguration, outputDir.toString)
 
-    if (fsUtils.exists(outputDir)) {
-      fsUtils.deleteDirectoryRecursively(outputDir)
+    if (fsUtilsTrg.exists(outputDir)) {
+      fsUtilsTrg.deleteDirectoryRecursively(outputDir)
     }
 
-    fsUtils.createDirectoryRecursive(outputDir)
+    fsUtilsTrg.createDirectoryRecursive(outputDir)
 
     var totalSize = 0L
 
@@ -72,11 +72,12 @@ class MetastorePersistenceRaw(path: String,
       files.foreach(file => {
         val srcPath = new Path(file)
         val trgPath = new Path(outputDir, srcPath.getName)
+        val fsSrc = srcPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
 
         log.info(s"Copying file from $srcPath to $trgPath")
 
-        totalSize += fsUtils.fs.getContentSummary(srcPath).getLength
-        fsUtils.copyFile(srcPath, trgPath)
+        totalSize += fsSrc.getContentSummary(srcPath).getLength
+        fsUtilsTrg.copyFile(srcPath, trgPath)
       })
     }
 
