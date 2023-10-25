@@ -369,6 +369,57 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "transformSchemaForCatalog" should {
+    "transform string fields to varchar if metadata is defined" in {
+      val expected =
+        """id INT,
+          |name VARCHAR(5) COMMENT 'Employee name',
+          |subordinates STRUCT<id: INT, name: VARCHAR(7) COMMENT 'Subordinate name'>,
+          |addresses ARRAY<VARCHAR(15)> COMMENT 'Address',
+          |phone_numbers ARRAY<STRUCT<type: STRING, number: VARCHAR(10) COMMENT 'Phone number'>>,
+          |matrix ARRAY<ARRAY<VARCHAR(1)>> COMMENT 'Some code'"""
+          .stripMargin.replace("\r", "").replace("\n", "")
+
+      val metadata1 = new MetadataBuilder().putLong("maxLength", 5).putString("comment", "Employee name").build()
+      val metadata2 = new MetadataBuilder().putLong("maxLength", 7).putString("comment", "Subordinate name").build()
+      val metadata3 = new MetadataBuilder().putLong("maxLength", 15).putString("comment", "Address").build()
+      val metadata4 = new MetadataBuilder().putLong("maxLength", 10).putString("comment", "Phone number").build()
+      val metadata5 = new MetadataBuilder().putLong("maxLength", 1).putString("comment", "Some code").build()
+
+      val schema = StructType(
+        StructField("id", IntegerType, nullable = false) ::
+          StructField("name", StringType, nullable = true, metadata = metadata1) ::
+          StructField("subordinates", StructType(
+            StructField("id", IntegerType, nullable = true) ::
+              StructField("name", StringType, nullable = false, metadata = metadata2) :: Nil)
+          ) ::
+          StructField("addresses", ArrayType(StringType, containsNull = true), nullable = true, metadata = metadata3) ::
+          StructField("phone_numbers", ArrayType(StructType(
+            StructField("type", StringType, nullable = true) ::
+              StructField("number", StringType, nullable = true, metadata = metadata4) :: Nil)
+          )) ::
+          StructField("matrix", ArrayType(ArrayType(StringType)), metadata = metadata5) ::
+          Nil)
+
+      val transformedSchema = SparkUtils.transformSchemaForCatalog(schema)
+      val actual = transformedSchema.toDDL
+
+      assert(transformedSchema.fields.head.nullable)
+      assert(transformedSchema.fields(1).dataType.isInstanceOf[VarcharType])
+      assert(transformedSchema.fields(1).dataType.asInstanceOf[VarcharType].length == 5)
+      assert(transformedSchema.fields(2).dataType.asInstanceOf[StructType].fields(1).dataType .isInstanceOf[VarcharType])
+      assert(transformedSchema.fields(3).dataType.asInstanceOf[ArrayType].elementType.isInstanceOf[VarcharType])
+      assert(transformedSchema.fields(4).dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields.head.dataType.isInstanceOf[StringType])
+      assert(transformedSchema.fields(4).dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[StructType].fields(1).dataType.isInstanceOf[VarcharType])
+      assert(transformedSchema.fields(5).dataType.asInstanceOf[ArrayType].elementType.asInstanceOf[ArrayType].elementType.isInstanceOf[VarcharType])
+
+      // Comments and non-nul handling has added to Spark since 3.0, so testing this fully starting from 3.0
+      if (spark.version.split('.').head.toInt >= 3.0) {
+        assert(actual.replace("`", "") == expected)
+      }
+    }
+  }
+
   "addProcessingTimestamp" should {
     "add a timestamp field if it does not exist" in {
       val actualDf = addProcessingTimestamp(exampleDf, "ts")
