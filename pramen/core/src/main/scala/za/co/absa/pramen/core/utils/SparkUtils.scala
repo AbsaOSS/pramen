@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.{Path, PathFilter}
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{ArrayType, DataType, MetadataBuilder, StructType, TimestampType}
+import org.apache.spark.sql.types.{ArrayType, DataType, MetadataBuilder, StringType, StructField, StructType, TimestampType, VarcharType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.notify.pipeline.FieldChange
@@ -30,12 +30,15 @@ import za.co.absa.pramen.core.pipeline.TransformExpression
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
+import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
 
 object SparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
+
+  val MAX_LENGTH_METADATA_KEY = "maxLength"
 
   /** Get Spark StructType from a case class. */
   def getStructType[T: TypeTag]: StructType = ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
@@ -199,6 +202,44 @@ object SparkUtils {
       log.info(s"Applying filter: $actualFilter")
       df.filter(expr(actualFilter))
     })
+  }
+
+  def transformSchemaForCatalog(schema: StructType): StructType = {
+    def transformField(field: StructField): StructField = {
+      field.dataType match {
+        case struct: StructType =>  StructField(field.name, transformStruct(struct), nullable = true, field.metadata)
+        case arr: ArrayType     =>  StructField(field.name, transformArray(arr, field), nullable = true, field.metadata)
+        case dataType: DataType =>  StructField(field.name, transformPrimitive(dataType, field), nullable = true, field.metadata)
+      }
+    }
+
+    def transformPrimitive(dataType: DataType, field: StructField): DataType = {
+      dataType match {
+        case _: StringType =>
+          if (field.metadata.contains(MAX_LENGTH_METADATA_KEY)) {
+            val length = field.metadata.getLong(MAX_LENGTH_METADATA_KEY).toInt
+            VarcharType(length)
+          } else {
+            StringType
+          }
+        case _ =>
+          dataType
+      }
+    }
+
+    def transformArray(arr: ArrayType, field: StructField): ArrayType = {
+      arr.elementType match {
+        case struct: StructType => ArrayType(transformStruct(struct), arr.containsNull)
+        case arr: ArrayType     => ArrayType(transformArray(arr, field))
+        case dataType: DataType => ArrayType(transformPrimitive(dataType, field), arr.containsNull)
+      }
+    }
+
+    def transformStruct(struct: StructType): StructType = {
+      StructType(struct.fields.map(transformField))
+    }
+
+    transformStruct(schema)
   }
 
   def hasDataInPartition(infoDate: LocalDate,

@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.utils.hive
 
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.utils.SparkUtils
 
 class HiveHelperSql(val queryExecutor: QueryExecutor,
                     hiveConfig: HiveQueryTemplates) extends HiveHelper {
@@ -100,12 +101,11 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
   private def getTableDDL(schema: StructType, partitionBy: Seq[String]): String = {
     val partitionColsLower = partitionBy.map(_.toLowerCase())
 
-    val nonPartitionFields = schema
+    val nonPartitionFields = SparkUtils.transformSchemaForCatalog(schema)
       .filter(field => !partitionColsLower.contains(field.name.toLowerCase()))
       .filter(field => field.name.trim.nonEmpty)
 
     StructType(nonPartitionFields).toDDL
-      .replace(" NOT NULL", "")
   }
 
   private def getPartitionDDL(schema: StructType, partitionBy: Seq[String]): String = {
@@ -113,9 +113,10 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
       ""
     } else {
       val partitionColsLower = partitionBy.map(_.toLowerCase())
-      val cols = StructType(schema.filter(field => partitionColsLower.contains(field.name.toLowerCase())))
-      // Hive required not having nullability flags for partition columns
-      val ddl = cols.toDDL.replace(" NOT NULL", "")
+      val cols = SparkUtils.transformSchemaForCatalog(
+        StructType(schema.filter(field => partitionColsLower.contains(field.name.toLowerCase())))
+      )
+      val ddl = cols.toDDL
       s"PARTITIONED BY ($ddl)"
     }
   }
