@@ -18,7 +18,7 @@ import sbt.*
 
 object Versions {
   val defaultSparkVersionForScala211 = "2.4.8"
-  val defaultSparkVersionForScala212 = "3.3.2"
+  val defaultSparkVersionForScala212 = "3.3.3"
   val defaultSparkVersionForScala213 = "3.4.1"
 
   val typesafeConfigVersion = "1.4.0"
@@ -69,17 +69,18 @@ object Versions {
 
   def getDeltaDependency(sparkVersion: String): ModuleID = {
     // According to this: https://docs.delta.io/latest/releases.html
-    val deltaVersion = sparkVersion match {
-      case version if version.startsWith("2.")   => "0.6.1"
-      case version if version.startsWith("3.0.") => "0.8.0"
-      case version if version.startsWith("3.1.") => "1.0.1"
-      case version if version.startsWith("3.2.") => "2.0.1"
-      case version if version.startsWith("3.3.") => "2.2.0"
-      case version if version.startsWith("3.4.") => "2.4.0"
+    val (deltaArtifact, deltaVersion) = sparkVersion match {
+      case version if version.startsWith("2.")   => ("delta-core", "0.6.1")
+      case version if version.startsWith("3.0.") => ("delta-core", "0.8.0")
+      case version if version.startsWith("3.1.") => ("delta-core", "1.0.1")
+      case version if version.startsWith("3.2.") => ("delta-core", "2.0.2")
+      case version if version.startsWith("3.3.") => ("delta-core", "2.2.0")
+      case version if version.startsWith("3.4.") => ("delta-core", "2.4.0")
+      case version if version.startsWith("3.5.") => ("delta-spark", "3.0.0")  // 'delta-core' was renamed to 'delta-spark' since 3.0.0.
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
-    println(s"Using Delta version $deltaVersion")
-    "io.delta" %% "delta-core" % deltaVersion
+    println(s"Using Delta version $deltaArtifact:$deltaVersion")
+    "io.delta" %% deltaArtifact % deltaVersion
   }
 
   def getAbrisDependency(scalaVersion: String): ModuleID = {
