@@ -204,6 +204,13 @@ object SparkUtils {
     })
   }
 
+  /**
+    * Transforms the schema to the format compatible with Hive-like catalogs.
+    * - Removes non-nullable flag since it is not compatible with catalogs
+    * - Switches from string to varchar(n) when the maximum field length is known
+    * @param schema The input schema.
+    * @return The transformed schema.
+    */
   def transformSchemaForCatalog(schema: StructType): StructType = {
     def transformField(field: StructField): StructField = {
       field.dataType match {
@@ -240,6 +247,47 @@ object SparkUtils {
     }
 
     transformStruct(schema)
+  }
+
+  /**
+    * Removes metadata of nested fields to make DDL compatible with some Hive-like catalogs.
+    * In addition, removes the nullability flag for all fields.
+    *
+    * This method is usually applied to make schemas comparable when reading a table from a data catalog.
+    *
+    * @param schema The input schema.
+    * @return The transformed schema.
+    */
+  def removeNestedMetadata(schema: StructType): StructType = {
+    def transformRootField(field: StructField): StructField = {
+      field.dataType match {
+        case struct: StructType => StructField(field.name, transformStruct(struct), nullable = true, field.metadata)
+        case arr: ArrayType => StructField(field.name, transformArray(arr), nullable = true, field.metadata)
+        case _: DataType => StructField(field.name, field.dataType, nullable = true, field.metadata)
+      }
+    }
+
+    def transformNestedField(field: StructField): StructField = {
+      field.dataType match {
+        case struct: StructType => StructField(field.name, transformStruct(struct), nullable = true)
+        case arr: ArrayType => StructField(field.name, transformArray(arr), nullable = true)
+        case dataType: DataType => StructField(field.name, dataType, nullable = true)
+      }
+    }
+
+    def transformStruct(struct: StructType): StructType = {
+      StructType(struct.fields.map(transformNestedField))
+    }
+
+    def transformArray(array: ArrayType): ArrayType = {
+      array.elementType match {
+        case struct: StructType => ArrayType(transformStruct(struct), containsNull = true)
+        case arr: ArrayType => ArrayType(transformArray(arr), containsNull = true)
+        case dataType: DataType => ArrayType(dataType, containsNull = true)
+      }
+    }
+
+    StructType(schema.fields.map(transformRootField))
   }
 
   def hasDataInPartition(infoDate: LocalDate,

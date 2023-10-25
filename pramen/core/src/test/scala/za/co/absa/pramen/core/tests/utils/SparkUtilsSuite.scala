@@ -420,6 +420,57 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "removeNestedMetadata" should {
+    "remove metadata, but only from nested fields" in {
+      val metadata1 = new MetadataBuilder().putLong("maxLength", 5).putString("comment", "Employee name").build()
+      val metadata2 = new MetadataBuilder().putLong("maxLength", 7).putString("comment", "Subordinate name").build()
+      val metadata3 = new MetadataBuilder().putLong("maxLength", 15).putString("comment", "Address").build()
+      val metadata4 = new MetadataBuilder().putLong("maxLength", 10).putString("comment", "Phone number").build()
+      val metadata5 = new MetadataBuilder().putLong("maxLength", 1).putString("comment", "Some code").build()
+
+      val schema1 = StructType(
+        StructField("id", IntegerType, nullable = false) ::
+          StructField("name", StringType, nullable = true, metadata = metadata1) ::
+          StructField("subordinates", StructType(
+            StructField("id", IntegerType, nullable = true) ::
+              StructField("name", StringType, nullable = false, metadata = metadata2) :: Nil)
+          ) ::
+          StructField("addresses", ArrayType(StringType, containsNull = true), nullable = true, metadata = metadata3) ::
+          StructField("phone_numbers", ArrayType(StructType(
+            StructField("type", StringType, nullable = true) ::
+              StructField("number", StringType, nullable = true, metadata = metadata4) :: Nil)
+          )) ::
+          StructField("matrix", ArrayType(ArrayType(StringType)), metadata = metadata5) ::
+          Nil)
+
+      val schema2 = StructType(
+        StructField("id", IntegerType, nullable = true) ::
+          StructField("name", StringType, nullable = false, metadata = metadata1) ::
+          StructField("subordinates", StructType(
+            StructField("id", IntegerType, nullable = true) ::
+              StructField("name", StringType, nullable = false) :: Nil)
+          ) ::
+          StructField("addresses", ArrayType(StringType, containsNull = false), nullable = true, metadata = metadata3) ::
+          StructField("phone_numbers", ArrayType(StructType(
+            StructField("type", StringType, nullable = true) ::
+              StructField("number", StringType, nullable = true) :: Nil)
+          )) ::
+          StructField("matrix", ArrayType(ArrayType(StringType)), metadata = metadata5) ::
+          Nil)
+
+      val transformedSchema1 = removeNestedMetadata(schema1)
+      val transformedSchema2 = removeNestedMetadata(schema2)
+
+      assert(transformedSchema1.toDDL == transformedSchema2.toDDL)
+
+      assert(transformedSchema1.fields(1).metadata.contains("maxLength"))
+      assert(!transformedSchema1.fields(2).dataType.asInstanceOf[StructType].fields(1).metadata.contains("maxLength"))
+      assert(transformedSchema1.fields.head.nullable)
+      assert(transformedSchema2.fields(3).nullable)
+      assert(transformedSchema2.fields(3).dataType.asInstanceOf[ArrayType].containsNull)
+    }
+  }
+
   "addProcessingTimestamp" should {
     "add a timestamp field if it does not exist" in {
       val actualDf = addProcessingTimestamp(exampleDf, "ts")
