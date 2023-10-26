@@ -78,7 +78,7 @@ In addition to basic error notification, typical operational warnings are genera
 
 1. Get Pramen pipeline runner:
 
-2. You can download Pramen from GitHub by following link: [Pramen for Scala 2.11, Spark 2.4.8](https://github.com/AbsaOSS/pramen/releases/download/v1.1.0/pramen-runner_2.11_2.4.8-1.1.0.jar)
+2. You can download Pramen from GitHub releases: [Pramen Releases](https://github.com/AbsaOSS/pramen/releases)
 
    Or you can build it from source for your Spark environment by running:
    ```sh
@@ -128,9 +128,10 @@ creating an uber jar containing all the dependencies.
 ## Linking
 
 In order to implement custom sources, transformers and sinks you need to link Pramen API, and sometimes, the core.
-Pramen libraries are available at [Maven Central](https://mvnrepository.com/search?q=pramen)
+Pramen libraries are available at [Maven Central (API)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api)
+and [Maven Central (framework)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core)
 
-The latest version is `1.2.0`.
+The latest version is `1.6.3`.
 
 The following Scala and Spark combinations are supported:
 
