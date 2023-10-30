@@ -60,7 +60,9 @@ object AppRunner {
       pipeline   <- getPipelineDef(conf, state, appContext)
       jobsOrig   <- splitJobs(conf, pipeline, state, appContext, spark)
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
+      _          <- runInitHook(state, appContext)
       _          <- runPipeline(conf, jobs, state, appContext, taskRunner, spark)
+      _          <- runFinalHook(state, appContext)
       _          <- shutdown(taskRunner, state)
     } yield {
       val exitCode = state.getExitCode
@@ -155,10 +157,10 @@ object AppRunner {
   }
 
   private[core] def splitJobs(implicit conf: Config,
-                                   pipelineDef: PipelineDef,
-                                   state: PipelineState,
-                                   appContext: AppContext,
-                                   spark: SparkSession): Try[Seq[Job]] = {
+                              pipelineDef: PipelineDef,
+                              state: PipelineState,
+                              appContext: AppContext,
+                              spark: SparkSession): Try[Seq[Job]] = {
     handleFailure(Try {
       val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper)
 
@@ -167,8 +169,8 @@ object AppRunner {
   }
 
   private[core] def filterJobs(state: PipelineState,
-                                    jobs: Seq[Job],
-                                    runtimeConfig: RuntimeConfig): Try[Seq[Job]] = {
+                               jobs: Seq[Job],
+                               runtimeConfig: RuntimeConfig): Try[Seq[Job]] = {
     handleFailure(Try {
       if (runtimeConfig.runTables.isEmpty) {
         jobs
@@ -213,6 +215,20 @@ object AppRunner {
 
       state.setSuccess()
     }, state, "running of the pipeline")
+  }
+
+  private[core] def runInitHook(state: PipelineState,
+                                appContext: AppContext): Try[Unit] = {
+    handleFailure(Try {
+      appContext.appConfig.hookConfig.initHook.foreach(_.run())
+    }, state, "running the init hook")
+  }
+
+  private[core] def runFinalHook(state: PipelineState,
+                                 appContext: AppContext): Try[Unit] = {
+    handleFailure(Try {
+      appContext.appConfig.hookConfig.initHook.foreach(_.run())
+    }, state, "running the final hook")
   }
 
   private[core] def shutdown(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {
