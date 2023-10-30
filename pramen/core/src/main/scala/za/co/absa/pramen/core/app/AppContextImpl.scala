@@ -59,6 +59,7 @@ object AppContextImpl {
     val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper, metadataManager)
 
     PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
+    PramenImpl.instance.asInstanceOf[PramenImpl].setWorkflowConfig(conf)
 
     val appContext = new AppContextImpl(
       appConfig,
