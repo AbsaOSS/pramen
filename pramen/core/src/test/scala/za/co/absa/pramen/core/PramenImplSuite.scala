@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core
 
+import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
@@ -49,6 +50,31 @@ class PramenImplSuite extends AnyWordSpec {
 
       assert(builder1.isInstanceOf[NotificationBuilder])
       assert(builder1 == builder2)
+    }
+  }
+
+  "metadataManager()" should {
+    "return the config if it is available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+      val config = ConfigFactory.empty()
+
+      pramen.setWorkflowConfig(config)
+
+      val workflowConfig = PramenImpl.instance.workflowConfig
+
+      assert(workflowConfig == config)
+
+      pramen.setWorkflowConfig(null)
+    }
+
+    "throw an exception if the config is not available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      pramen.setWorkflowConfig(null)
+
+      assertThrows[IllegalStateException] {
+        PramenImpl.instance.workflowConfig
+      }
     }
   }
 

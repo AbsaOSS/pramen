@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.api
 
+import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
 
@@ -31,6 +32,9 @@ import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
 trait Pramen {
   /** Gets an object that contains Pramen runtime version information. */
   def buildProperties: BuildPropertiesRetriever
+
+  /** This gives access to the current workflow configuration. */
+  def workflowConfig: Config
 
   /** Gets the notification builder that you can use to add custom information to email notifications. */
   def notificationBuilder: NotificationBuilder
