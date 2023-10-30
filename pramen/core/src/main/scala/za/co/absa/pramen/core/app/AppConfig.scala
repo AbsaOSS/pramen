@@ -17,13 +17,14 @@
 package za.co.absa.pramen.core.app
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.core.app.config.{BookkeeperConfig, GeneralConfig, InfoDateConfig, RuntimeConfig}
+import za.co.absa.pramen.core.app.config.{BookkeeperConfig, GeneralConfig, HookConfig, InfoDateConfig, RuntimeConfig}
 
 case class AppConfig(
                       generalConfig: GeneralConfig,
                       bookkeepingConfig: BookkeeperConfig,
                       runtimeConfig: RuntimeConfig,
-                      infoDateDefaults: InfoDateConfig
+                      infoDateDefaults: InfoDateConfig,
+                      hookConfig: HookConfig
                     )
 
 object AppConfig {
@@ -32,7 +33,8 @@ object AppConfig {
     val bookkeepingConfig = BookkeeperConfig.fromConfig(conf)
     val runtimeConfig = RuntimeConfig.fromConfig(conf)
     val infoDateDefaults = InfoDateConfig.fromConfig(conf)
+    val hookConfig = HookConfig.fromConfig(conf)
 
-    AppConfig(generalConfig, bookkeepingConfig, runtimeConfig, infoDateDefaults)
+    AppConfig(generalConfig, bookkeepingConfig, runtimeConfig, infoDateDefaults, hookConfig)
   }
 }
