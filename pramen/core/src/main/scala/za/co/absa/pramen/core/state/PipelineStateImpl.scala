@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.state
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Pramen
+import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
@@ -38,6 +39,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   private val pipelineName = conf.getString(PIPELINE_NAME_KEY)
   private val environmentName = conf.getString(ENVIRONMENT_NAME)
   private val sendEmailIfNoNewData: Boolean = conf.getBoolean(EMAIL_IF_NO_CHANGES)
+  private val hookConfig = HookConfig.fromConfig(conf)
 
   // State
   private val startedInstant = Instant.now
@@ -50,6 +52,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   override def setSuccess(): Unit = synchronized {
     protectAgainstDoubleFinish()
     exitedNormally = true
+    runCustomShutdownHook()
     sendNotificationEmail()
   }
 
@@ -60,6 +63,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
     }
     exitCode = 1
     exitedNormally = false
+    runCustomShutdownHook()
     sendNotificationEmail()
   }
 
@@ -88,6 +92,8 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
         if (failureException.isEmpty) {
           failureException = Some(new IllegalStateException("The application exited unexpectedly."))
         }
+
+        runCustomShutdownHook()
         sendNotificationEmail()
         Try{
           // Clean up transient metastore tables if any
@@ -100,6 +106,14 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   }
 
   Runtime.getRuntime.addShutdownHook(shutdownHook)
+
+  private def runCustomShutdownHook(): Unit = {
+    try {
+      hookConfig.shutdownHook.foreach(_.run())
+    } catch {
+      case NonFatal(ex) => log.error(s"Unable to run a shutdown hook.", ex)
+    }
+  }
 
   private def sendNotificationEmail(): Unit = {
     failureException.foreach(ex => log.error(s"The job has FAILED.", ex))

@@ -60,9 +60,8 @@ object AppRunner {
       pipeline   <- getPipelineDef(conf, state, appContext)
       jobsOrig   <- splitJobs(conf, pipeline, state, appContext, spark)
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
-      _          <- runInitHook(state, appContext)
+      _          <- runStartupHook(state, appContext)
       _          <- runPipeline(conf, jobs, state, appContext, taskRunner, spark)
-      _          <- runFinalHook(state, appContext)
       _          <- shutdown(taskRunner, state)
     } yield {
       val exitCode = state.getExitCode
@@ -217,18 +216,11 @@ object AppRunner {
     }, state, "running of the pipeline")
   }
 
-  private[core] def runInitHook(state: PipelineState,
-                                appContext: AppContext): Try[Unit] = {
+  private[core] def runStartupHook(state: PipelineState,
+                                   appContext: AppContext): Try[Unit] = {
     handleFailure(Try {
-      appContext.appConfig.hookConfig.initHook.foreach(_.run())
+      appContext.appConfig.hookConfig.startupHook.foreach(_.run())
     }, state, "running the init hook")
-  }
-
-  private[core] def runFinalHook(state: PipelineState,
-                                 appContext: AppContext): Try[Unit] = {
-    handleFailure(Try {
-      appContext.appConfig.hookConfig.initHook.foreach(_.run())
-    }, state, "running the final hook")
   }
 
   private[core] def shutdown(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {

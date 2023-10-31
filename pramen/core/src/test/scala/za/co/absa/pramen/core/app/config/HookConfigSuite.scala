@@ -27,8 +27,8 @@ class HookConfigSuite extends AnyWordSpec {
     "deserialize the config properly" in {
       val configStr =
         s"""pramen.hook {
-           |  init.class = "za.co.absa.pramen.core.PramenHookSpy"
-           |  final.class = "za.co.absa.pramen.core.PramenHookSpy"
+           |  startup.class = "za.co.absa.pramen.core.PramenHookSpy"
+           |  shutdown.class = "za.co.absa.pramen.core.PramenHookSpy"
            |}
            |""".stripMargin
 
@@ -36,10 +36,10 @@ class HookConfigSuite extends AnyWordSpec {
 
       val hookConfig = HookConfig.fromConfig(conf)
 
-      assert(hookConfig.initHook.isDefined)
-      assert(hookConfig.finalHook.isDefined)
+      assert(hookConfig.startupHook.isDefined)
+      assert(hookConfig.shutdownHook.isDefined)
 
-      val hook = hookConfig.initHook.get.asInstanceOf[PramenHookSpy]
+      val hook = hookConfig.startupHook.get.asInstanceOf[PramenHookSpy]
 
       assert(hook.runCallCount == 0)
       assert(hook.conf == conf)
@@ -50,13 +50,13 @@ class HookConfigSuite extends AnyWordSpec {
 
       val hookConfig = HookConfig.fromConfig(conf)
 
-      assert(hookConfig.initHook.isEmpty)
-      assert(hookConfig.finalHook.isEmpty)
+      assert(hookConfig.startupHook.isEmpty)
+      assert(hookConfig.shutdownHook.isEmpty)
     }
   }
 
   "throw RuntimeException when the init hook can't be created" in {
-    val conf = getUseCase("pramen.hook.init.class = \"za.co.absa.pramen.core.NonExistentHook\"")
+    val conf = getUseCase("pramen.hook.startup.class = \"za.co.absa.pramen.core.NonExistentHook\"")
 
     val ex = intercept[ClassNotFoundException] {
       HookConfig.fromConfig(conf)
@@ -66,7 +66,7 @@ class HookConfigSuite extends AnyWordSpec {
   }
 
   "throw RuntimeException when the final hook can't be created" in {
-    val conf = getUseCase("pramen.hook.final.class = \"za.co.absa.pramen.core.NonExistentHook\"")
+    val conf = getUseCase("pramen.hook.shutdown.class = \"za.co.absa.pramen.core.NonExistentHook\"")
 
     val ex = intercept[ClassNotFoundException] {
       HookConfig.fromConfig(conf)
