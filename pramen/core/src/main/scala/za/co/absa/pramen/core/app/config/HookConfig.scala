@@ -20,27 +20,27 @@ import com.typesafe.config.Config
 import za.co.absa.pramen.core.utils.ClassLoaderUtils
 
 case class HookConfig(
-                       initHook: Option[Runnable],
-                       finalHook: Option[Runnable]
+                       startupHook: Option[Runnable],
+                       shutdownHook: Option[Runnable]
                      )
 
 object HookConfig {
-  val INIT_HOOK_CLASS_KEY = "pramen.hook.init.class"
-  val FINAL_HOOK_CLASS_KEY = "pramen.hook.final.class"
+  val STARTUP_HOOK_CLASS_KEY = "pramen.hook.startup.class"
+  val SHUTDOWN_HOOK_CLASS_KEY = "pramen.hook.shutdown.class"
 
   def fromConfig(conf: Config): HookConfig = {
-    val initHook = if (conf.hasPath(INIT_HOOK_CLASS_KEY) && conf.getString(INIT_HOOK_CLASS_KEY).nonEmpty) {
-      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](conf.getString(INIT_HOOK_CLASS_KEY), conf))
+    val startupHook = if (conf.hasPath(STARTUP_HOOK_CLASS_KEY) && conf.getString(STARTUP_HOOK_CLASS_KEY).nonEmpty) {
+      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](conf.getString(STARTUP_HOOK_CLASS_KEY), conf))
     } else {
       None
     }
 
-    val finalHook = if (conf.hasPath(FINAL_HOOK_CLASS_KEY) && conf.getString(FINAL_HOOK_CLASS_KEY).nonEmpty) {
-      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](conf.getString(FINAL_HOOK_CLASS_KEY), conf))
+    val shutdownHook = if (conf.hasPath(SHUTDOWN_HOOK_CLASS_KEY) && conf.getString(SHUTDOWN_HOOK_CLASS_KEY).nonEmpty) {
+      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](conf.getString(SHUTDOWN_HOOK_CLASS_KEY), conf))
     } else {
       None
     }
 
-    HookConfig(initHook, finalHook)
+    HookConfig(startupHook, shutdownHook)
   }
 }
