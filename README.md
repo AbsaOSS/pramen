@@ -2164,6 +2164,39 @@ You can use any source/sink combination in transfer jobs.
 
 We describe here a more complicated use cases.
 
+### Startup and shutdown hooks
+
+Startup and shutdown hooks allow running custom code before and after the pipeline runs.
+
+- The startup hook runs before the pipeline starts, but after the Spark session is available. You can use it
+  to initialize custom resources needed for the pipeline.
+- The shutdown hook runs before sending the notification email, but after all jobs have finished (suceeded or failed).
+  So you can add more notification items in the shutdown hook.
+
+Here is how you can configure the hooks in the config file:
+
+```hocon
+pramen.hook.startup.class = "com.example.myhook.MyStartupHook"
+pramen.hook.shutdown.class = "com.example.myhook.MyShutdownHook"
+```
+
+The hook class should extend `Runnable` and can optionally take the config as the parameter. Pramen will pass the workflow configuration as the constructor parameter if it is available.
+
+```scala
+import com.typesafe.config.Config
+
+class MyStartupHook(conf: Config) extends Runnable {
+  override def run(): Unit = {
+    ???
+  }
+}
+```
+
+You can get the current Spark session inside the method in the usual way. The Spark session is guaranteed to be created at this point.
+```scala
+val spark = SparkSession.builder().getOrCreate()
+```
+
 ### Transient tables in the metastore
 Transformers are useful as reusable components and for persisting intermediate reusable results. However, when splitting
 up the pipeline into small reusable components, it is not always desirable to persist intermediate results. This is
