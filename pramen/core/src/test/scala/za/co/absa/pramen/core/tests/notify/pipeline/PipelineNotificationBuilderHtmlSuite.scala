@@ -114,10 +114,9 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
         NotificationEntry.Html("<p><b>This is a test HTML block</b></p>")
       ))
 
+      builder.addSignature(TextElement("Test signature"))
+
       val actual = builder.renderBody()
-        .split("\n")
-        .dropRight(5) // dropping lines that contain build version and timestamp
-        .mkString("\n")
 
       compareText(actual, expected)
     }

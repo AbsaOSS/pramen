@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.notify.pipeline
 
-import za.co.absa.pramen.api.notification.NotificationEntry
+import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.Instant
@@ -28,5 +28,6 @@ case class PipelineNotification(
                                  started: Instant,
                                  finished: Instant,
                                  tasksCompleted: List[TaskResult],
-                                 customEntries: List[NotificationEntry]
+                                 customEntries: List[NotificationEntry],
+                                 customSignature: List[TextElement]
                                )

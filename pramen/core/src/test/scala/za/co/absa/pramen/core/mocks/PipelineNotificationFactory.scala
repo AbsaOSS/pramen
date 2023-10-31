@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.api.notification.NotificationEntry
+import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.core.notify.pipeline
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotification
 import za.co.absa.pramen.core.runner.task.TaskResult
@@ -30,7 +30,8 @@ object PipelineNotificationFactory {
                            started: Instant = Instant.ofEpochSecond(1234567L),
                            finished: Instant = Instant.ofEpochSecond(1234568L),
                            tasksCompleted: List[TaskResult] = List(TaskResultFactory.getDummyTaskResult()),
-                           customEntries: List[NotificationEntry] = List.empty[NotificationEntry]
+                           customEntries: List[NotificationEntry] = List.empty[NotificationEntry],
+                           customSignature: List[TextElement] = List.empty[TextElement]
                           ): PipelineNotification = {
     pipeline.PipelineNotification(
       exception,
@@ -39,7 +40,8 @@ object PipelineNotificationFactory {
       started,
       finished,
       tasksCompleted,
-      customEntries
+      customEntries,
+      customSignature
     )
   }
 

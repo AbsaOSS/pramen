@@ -17,7 +17,7 @@
 package za.co.absa.pramen.api
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.notification.{NotificationEntry, Style}
+import za.co.absa.pramen.api.notification.{NotificationEntry, Style, TextElement}
 
 /**
   * Pramen provides an instance of notification builder to custom sources, transformers and sinks so that
@@ -56,4 +56,7 @@ trait NotificationBuilder {
                         descriptionStyle: Style = Style.Normal,
                         maxRecords: Int = 200,
                         align: Option[Seq[Char]] = None): Unit
+
+  /** Sets a custom notification signature at runtime. Can be used from the custom startup/shutdown hook. */
+  def setSignature(text: TextElement*): Unit
 }

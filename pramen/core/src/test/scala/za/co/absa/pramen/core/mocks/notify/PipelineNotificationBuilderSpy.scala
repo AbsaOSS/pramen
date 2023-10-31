@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks.notify
 
-import za.co.absa.pramen.api.notification.NotificationEntry
+import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilder
 import za.co.absa.pramen.core.runner.task.TaskResult
 
@@ -32,6 +32,7 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   var isUndercover: Option[Boolean] = None
   var minRps = 0
   var goodRps = 0
+  var customSignature = Seq.empty[TextElement]
 
   var addCompletedTaskCalled = 0
   var addCustomEntriesCalled = 0
@@ -59,4 +60,6 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   override def addCompletedTask(completedTask: TaskResult): Unit = addCompletedTaskCalled += 1
 
   override def addCustomEntries(entries: Seq[NotificationEntry]): Unit = addCustomEntriesCalled += 1
+
+  override def addSignature(signature: TextElement*): Unit = customSignature = signature
 }

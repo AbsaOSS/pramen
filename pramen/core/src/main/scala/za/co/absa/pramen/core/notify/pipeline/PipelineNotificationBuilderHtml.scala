@@ -57,6 +57,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   var appFinished: Instant = Instant.now()
   var isDryRun = false
   var isUndercover = false
+  var customSignature = Seq.empty[TextElement]
 
   val completedTasks = new ListBuffer[TaskResult]
   val customEntries = new ListBuffer[NotificationEntry]
@@ -91,9 +92,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     this.goodRps = goodRps
   }
 
-  def addCompletedTask(completedTask: TaskResult): Unit = {
+  override def addCompletedTask(completedTask: TaskResult): Unit = {
     completedTasks += completedTask
   }
+
+  override def addCustomEntries(entries: Seq[NotificationEntry]): Unit = customEntries ++= entries
+
+  override def addSignature(signature: TextElement*): Unit = customSignature = signature
 
   def renderSubject(): String = {
     val timeCreatedStr = ZonedDateTime.now(zoneId).format(timestampFmt)
@@ -140,12 +145,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       renderNotificationTargetErrors(builder, notificationTargetErrors)
     }
 
-    builder.withRawParagraph(
-      s"""Regards,<br>
-         |Pramen<br>
-         |version ${BuildPropertyUtils.instance.getFullVersion}
-         |""".stripMargin
-    )
+    renderSignature(builder)
 
     builder.renderBody
   }
@@ -607,5 +607,16 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  override def addCustomEntries(entries: Seq[NotificationEntry]): Unit = customEntries ++= entries
+  def renderSignature(builder: MessageBuilder): MessageBuilder = {
+    if (customSignature.isEmpty) {
+      builder.withRawParagraph(
+        s"""Regards,<br>
+           |Pramen<br>
+           |version ${BuildPropertyUtils.instance.getFullVersion}
+           |""".stripMargin
+      )
+    } else {
+      builder.withParagraph(customSignature)
+    }
+  }
 }

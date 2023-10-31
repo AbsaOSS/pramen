@@ -29,6 +29,8 @@ class NotificationBuilderImpl extends NotificationBuilder {
 
   private val notificationEntries = new ListBuffer[NotificationEntry]
 
+  private var notificationSignature: Seq[TextElement] = Seq.empty
+
   override def addEntries(entries: NotificationEntry*): Unit = synchronized {
     entries.foreach(entry => if (isEntryValid(entry)) notificationEntries += entry)
   }
@@ -58,8 +60,16 @@ class NotificationBuilderImpl extends NotificationBuilder {
     }
   }
 
+  def setSignature(text: TextElement*): Unit = {
+    notificationSignature = text
+  }
+
   def entries: Seq[NotificationEntry] = synchronized {
     notificationEntries.toSeq
+  }
+
+  def signature: Seq[TextElement] = synchronized {
+    notificationSignature
   }
 
   def isEntryValid(entry: NotificationEntry): Boolean = entry match {
