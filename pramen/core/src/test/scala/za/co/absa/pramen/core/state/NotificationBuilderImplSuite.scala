@@ -148,4 +148,29 @@ class NotificationBuilderImplSuite extends AnyWordSpec with SparkTestBase {
       assert(!isValid)
     }
   }
+
+  "setSignature()" should {
+    "have the default empty signature if not set" in {
+      val builder = new NotificationBuilderImpl
+
+      assert(builder.signature.isEmpty)
+    }
+
+    "set the signature retrievable by the caller" in {
+      val builder = new NotificationBuilderImpl
+
+      builder.setSignature(TextElement("Some text"), TextElement("Some more text"))
+
+      assert(builder.signature.size == 2)
+    }
+
+    "keep the latest signature when set twice" in {
+      val builder = new NotificationBuilderImpl
+
+      builder.setSignature(TextElement("Some text"), TextElement("Some more text"))
+      builder.setSignature(TextElement("Some text"))
+
+      assert(builder.signature.size == 1)
+    }
+  }
 }

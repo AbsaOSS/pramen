@@ -187,5 +187,7 @@
 
 <p><b>This is a test HTML block</b></p>
 
-<p>Regards,<br>
-Pramen<br>
+<p>Test signature</p>
+
+</body>
+</html>

@@ -219,6 +219,7 @@ object AppRunner {
   private[core] def runStartupHook(state: PipelineState,
                                    appContext: AppContext): Try[Unit] = {
     handleFailure(Try {
+      log.info(s"Running the startup hook: ${appContext.appConfig.hookConfig.startupHook.isDefined} ")
       appContext.appConfig.hookConfig.startupHook.foreach(_.run())
     }, state, "running the init hook")
   }

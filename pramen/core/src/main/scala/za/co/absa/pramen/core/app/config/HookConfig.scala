@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.ClassLoaderUtils
 
 case class HookConfig(
@@ -28,16 +29,24 @@ object HookConfig {
   val STARTUP_HOOK_CLASS_KEY = "pramen.hook.startup.class"
   val SHUTDOWN_HOOK_CLASS_KEY = "pramen.hook.shutdown.class"
 
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   def fromConfig(conf: Config): HookConfig = {
     val startupHook = if (conf.hasPath(STARTUP_HOOK_CLASS_KEY) && conf.getString(STARTUP_HOOK_CLASS_KEY).nonEmpty) {
-      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](conf.getString(STARTUP_HOOK_CLASS_KEY), conf))
+      val hookClass = conf.getString(STARTUP_HOOK_CLASS_KEY)
+      log.info(s"Loading the startup hook class '$hookClass'")
+      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](hookClass, conf))
     } else {
+      log.info(s"Startup hook is not defined.")
       None
     }
 
     val shutdownHook = if (conf.hasPath(SHUTDOWN_HOOK_CLASS_KEY) && conf.getString(SHUTDOWN_HOOK_CLASS_KEY).nonEmpty) {
-      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](conf.getString(SHUTDOWN_HOOK_CLASS_KEY), conf))
+      val hookClass = conf.getString(SHUTDOWN_HOOK_CLASS_KEY)
+      log.info(s"Loading the shutdown hook class '$hookClass'")
+      Option(ClassLoaderUtils.loadConfigurableClass[Runnable](hookClass, conf))
     } else {
+      log.info(s"Shutdown hook is not defined.")
       None
     }
 

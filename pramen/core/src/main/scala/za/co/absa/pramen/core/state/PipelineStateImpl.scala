@@ -125,14 +125,18 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
         taskResults.filterNot(_.isTransient)
       }
       val finishedInstant = Instant.now
-      val customEntries = Pramen.instance.notificationBuilder.asInstanceOf[NotificationBuilderImpl].entries
+      val notificationBuilder = Pramen.instance.notificationBuilder.asInstanceOf[NotificationBuilderImpl]
+      val customEntries = notificationBuilder.entries
+      val customSignature = notificationBuilder.signature
+
       val notification = PipelineNotification(failureException,
         pipelineName,
         environmentName,
         startedInstant,
         finishedInstant,
         realTaskResults.toList,
-        customEntries.toList)
+        customEntries.toList,
+        customSignature.toList)
       if (realTaskResults.nonEmpty || sendEmailIfNoNewData || failureException.nonEmpty) {
         val email = new PipelineNotificationEmail(notification)
         email.send()
