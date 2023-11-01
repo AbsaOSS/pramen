@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.mocks
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
 import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job, TaskRunReason}
-import za.co.absa.pramen.core.runner.task.{RunInfo, RunStatus, TaskResult}
+import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunInfo, RunStatus, TaskResult}
 
 import java.time.{Instant, LocalDate}
 
@@ -30,7 +30,8 @@ object TaskResultFactory {
                          applicationId: String = "app_123",
                          isTransient: Boolean = false,
                          schemaDifferences: Seq[SchemaDifference] = Nil,
-                         dependencyWarnings: Seq[DependencyWarning] = Nil): TaskResult = {
+                         dependencyWarnings: Seq[DependencyWarning] = Nil,
+                         notificationTargetErrors: Seq[NotificationFailure] = Nil): TaskResult = {
     TaskResult(job,
       runStatus,
       runInfo,
@@ -38,7 +39,7 @@ object TaskResultFactory {
       isTransient,
       schemaDifferences,
       dependencyWarnings,
-      Nil)
+      notificationTargetErrors)
   }
 
 }

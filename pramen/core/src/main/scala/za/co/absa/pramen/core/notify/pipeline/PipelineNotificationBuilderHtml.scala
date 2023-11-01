@@ -150,7 +150,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.renderBody
   }
 
-  private def renderHeader(builder: MessageBuilder): MessageBuilder = {
+  private[core] def renderHeader(builder: MessageBuilder): MessageBuilder = {
     val introParagraph = ParagraphBuilder()
 
     if (isDryRun)
@@ -210,21 +210,21 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder
   }
 
-  private def getSuccessFlags: (Boolean, Boolean) = {
+  private[core] def getSuccessFlags: (Boolean, Boolean) = {
     val hasNotificationFailures = completedTasks.exists(t => t.notificationTargetErrors.nonEmpty)
     val someTasksSucceeded = completedTasks.exists(_.runStatus.isInstanceOf[Succeeded]) && appException.isEmpty
     val someTasksFailed = completedTasks.exists(t => t.runStatus.isFailure) || hasNotificationFailures || appException.nonEmpty
     (someTasksSucceeded, someTasksFailed)
   }
 
-  private def getZoneId: ZoneId = {
+  private[core] def getZoneId: ZoneId = {
     ConfigUtils.getOptionString(conf, TIMEZONE) match {
       case Some(tz) => ZoneId.of(tz)
       case None     => ZoneId.systemDefault()
     }
   }
 
-  private def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
+  private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
     val paragraphBuilder = ParagraphBuilder()
       .withText("Job ", Style.Exception)
       .withText(taskResult.job.name, Style.Error)
@@ -245,7 +245,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     renderException(builder, ex)
   }
 
-  private def renderException(builder: MessageBuilder, ex: Throwable): MessageBuilder = {
+  private[core] def renderException(builder: MessageBuilder, ex: Throwable): MessageBuilder = {
     val text = ex match {
       case CmdFailedException(msg, logLines) =>
         if (logLines.isEmpty) {
@@ -287,7 +287,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder
   }
 
-  private def renderTaskTable(builder: MessageBuilder, tasks: Seq[TaskResult]): MessageBuilder = {
+  private[core] def renderTaskTable(builder: MessageBuilder, tasks: Seq[TaskResult]): MessageBuilder = {
     val outputRecordsKnown = tasks.exists(t => t.runStatus match {
       case _: Succeeded => true
       case _            => false
@@ -363,7 +363,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withTable(tableBuilder)
   }
 
-  def renderNotificationTargetErrors(builder: MessageBuilderHtml, notificationTargetErrors: ListBuffer[NotificationFailure]): MessageBuilder = {
+  private[core] def renderNotificationTargetErrors(builder: MessageBuilderHtml, notificationTargetErrors: ListBuffer[NotificationFailure]): MessageBuilder = {
     val tableBuilder = new TableBuilderHtml
 
     val tableHeaders = new ListBuffer[TableHeader]
@@ -392,7 +392,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withTable(tableBuilder)
   }
 
-  private def renderFilesRead(builder: MessageBuilder, task: TaskResult, runStatus: RunStatus.Succeeded): MessageBuilder = {
+  private[core] def renderFilesRead(builder: MessageBuilder, task: TaskResult, runStatus: RunStatus.Succeeded): MessageBuilder = {
     val tableBuilder = new TableBuilderHtml
 
     val tableHeaders = new ListBuffer[TableHeader]
@@ -414,7 +414,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withTable(tableBuilder)
   }
 
-  private def getThroughputRps(task: TaskResult): TextElement = {
+  private[core] def getThroughputRps(task: TaskResult): TextElement = {
     val recordCount = task.runStatus match {
       case s: Succeeded => s.recordCount
       case _            => 0
@@ -437,7 +437,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def getRecordCountText(task: TaskResult): String = {
+  private[core] def getRecordCountText(task: TaskResult): String = {
     def renderDifference(numRecords: Long, numRecordsOld: Option[Long]): String = {
       numRecordsOld match {
         case Some(old) if old > 0 =>
@@ -460,14 +460,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def getElapsedTime(task: TaskResult): String = {
+  private[core] def getElapsedTime(task: TaskResult): String = {
     task.runInfo match {
       case Some(runInfo) => TimeUtils.prettyPrintElapsedTimeShort((runInfo.finished.getEpochSecond - runInfo.started.getEpochSecond) * 1000L)
       case _             => ""
     }
   }
 
-  private def getOutputSize(task: TaskResult): String = {
+  private[core] def getOutputSize(task: TaskResult): String = {
     task.runStatus match {
       case s: Succeeded =>
         s.sizeBytes match {
@@ -478,7 +478,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def getFailureReason(task: TaskResult): String = {
+  private[core] def getFailureReason(task: TaskResult): String = {
     task.runStatus.getReason() match {
       case Some(reason) => reason
       case None         =>
@@ -491,14 +491,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def getFinishTime(task: TaskResult): String = {
+  private[core] def getFinishTime(task: TaskResult): String = {
     task.runInfo match {
       case Some(runInfo) => ZonedDateTime.ofInstant(runInfo.finished, zoneId).format(timestampFmt)
       case None          => ""
     }
   }
 
-  private def getStatus(task: TaskResult): TextElement = {
+  private[core] def getStatus(task: TaskResult): TextElement = {
     val successStyle = if (task.dependencyWarnings.nonEmpty) Style.Warning else Style.Success
 
     task.runStatus match {
@@ -514,7 +514,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def getSuccessTextElement(status: RunStatus.Succeeded, hasDependencyWarnings: Boolean): TextElement = {
+  private[core] def getSuccessTextElement(status: RunStatus.Succeeded, hasDependencyWarnings: Boolean): TextElement = {
     val successStyle = if (hasDependencyWarnings) Style.Warning else Style.Success
 
     val style = if (status.warnings.nonEmpty)
@@ -539,7 +539,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private def renderSchemaDifference(builder: MessageBuilder, schemaDifferences: Seq[SchemaDifference]): MessageBuilder = {
+  private[core] def renderSchemaDifference(builder: MessageBuilder, schemaDifferences: Seq[SchemaDifference]): MessageBuilder = {
     if (schemaDifferences.isEmpty) {
       return builder
     }
