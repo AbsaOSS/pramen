@@ -19,16 +19,18 @@ package za.co.absa.pramen.core.tests.notify.pipeline
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
-import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, TableHeader, TextElement}
+import za.co.absa.pramen.api.notification._
+import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
-import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory}
-import za.co.absa.pramen.core.notify.message.ParagraphBuilder
+import za.co.absa.pramen.core.metastore.model.MetastoreDependency
+import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory, TestPrototypes}
+import za.co.absa.pramen.core.notify.message.{MessageBuilderHtml, ParagraphBuilder}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
-import za.co.absa.pramen.core.pipeline.TaskRunReason
-import za.co.absa.pramen.core.runner.task.RunStatus
+import za.co.absa.pramen.core.pipeline.DependencyFailure
+import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus}
 import za.co.absa.pramen.core.utils.ResourceUtils
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
   "constructor" should {
@@ -62,6 +64,25 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       assert(builder.renderSubject().startsWith("(DRY RUN) Notification for MyNewApp at"))
     }
+
+    "render failure" in {
+      val builder = getBuilder
+
+      builder.addAppName("MyNewApp")
+      builder.addFailureException(new RuntimeException("Test exception"))
+
+      assert(builder.renderSubject().startsWith("Notification of FAILURE for MyNewApp"))
+    }
+
+    "render partial failure" in {
+      val builder = getBuilder
+
+      builder.addAppName("MyNewApp")
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult( runStatus = TestPrototypes.runStatusWarning))
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult( runStatus = TestPrototypes.runStatusFailure))
+
+      assert(builder.renderSubject().startsWith("Notification of partial success for MyNewApp at"))
+    }
   }
 
   "renderBody()" should {
@@ -88,9 +109,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       builder.addRpsMetrics(1000, 2000)
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(
-        runStatus = RunStatus.Succeeded(
-          Some(100), 200, Some(1000), TaskRunReason.New, Seq("file1.txt", "file1.ctl"),
-          Seq("file1.csv", "file2.csv"), Seq("`db`.`table1`"), Seq("Test warning")),
+        runStatus = TestPrototypes.runStatusWarning,
         schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil)
       )
 
@@ -129,15 +148,169 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       builder.addFailureException(new IllegalArgumentException("MyTest exception", nestedCause2))
 
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(
+        runStatus = TestPrototypes.runStatusWarning,
+        schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil,
+        notificationTargetErrors = Seq(NotificationFailure("table1", "my_tagret", LocalDate.parse("2020-02-18"), new RuntimeException("Target 1 exception"))))
+      )
+
       val actual = builder.renderBody()
 
       // Can't test the full body since stack trace depends on the runner of the unit test
       assert(actual.contains("<pre>java.lang.IllegalArgumentException: MyTest exception"))
       assert(actual.contains("Cause 1"))
       assert(actual.contains("Cause 2"))
+      assert(actual.contains("Failed to send notifications to the following targets"))
     }
   }
 
+  "renderJobException" should {
+    "render a job exception" in {
+      val notificationBuilder = getBuilder
+      val messageBuilder = new MessageBuilderHtml
+
+      val taskResult = TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusFailure)
+
+      val actual = notificationBuilder.renderJobException(messageBuilder, taskResult, new RuntimeException("Job Exception"))
+        .renderBody
+
+      assert(actual.contains("""<span class="tderr">DummyJob</span><span class="tdred"> outputting to </span><span class="tderr">table_out</span><span class="tdred"> at </span><span class="tderr">2022-02-18</span><span class="tdred"> has failed with an exception:"""))
+      assert(actual.contains("""</span><span class="tderr">Job Exception</span>"""))
+      assert(actual.contains("""<pre>java.lang.RuntimeException: Job Exception"""))
+    }
+  }
+
+  "renderException" should {
+    "render runtime exceptions" in {
+      val notificationBuilder = getBuilder
+      val messageBuilder = new MessageBuilderHtml
+
+      val ex = new RuntimeException("Text exception")
+
+      val actual = notificationBuilder.renderException(messageBuilder, ex)
+        .renderBody
+
+      assert(actual.contains("""<pre>java.lang.RuntimeException: Text exception"""))
+      assert(actual.contains("""za.co.absa.pramen.core.tests.notify.pipeline.PipelineNotificationBuilderHtmlSuite"""))
+    }
+
+    "render command line exceptions with logs" in {
+      val notificationBuilder = getBuilder
+      val messageBuilder = new MessageBuilderHtml
+
+      val ex = CmdFailedException("Command line failed", Array("Log line 1", "Log line 2"))
+
+      val actual = notificationBuilder.renderException(messageBuilder, ex)
+        .renderBody
+
+      assert(actual.contains(
+        """<pre>Command line failed
+          |Last log lines:
+          |Log line 1
+          |Log line 2
+          |</pre>""".stripMargin.replaceAll("\\r\\n", "\\n")
+      ))
+    }
+
+    "render command line exceptions without logs" in {
+      val notificationBuilder = getBuilder
+      val messageBuilder = new MessageBuilderHtml
+
+      val ex = CmdFailedException("Command line failed", Array.empty)
+
+      val actual = notificationBuilder.renderException(messageBuilder, ex)
+        .renderBody
+
+      assert(actual.contains("""<pre>Command line failed</pre>"""))
+    }
+
+    "render process execution exceptions" in {
+      val notificationBuilder = getBuilder
+      val messageBuilder = new MessageBuilderHtml
+
+      val ex = ProcessFailedException("Command line failed", Array("stdout line 1", "stdout line 2"), Array("stderr line 1"))
+
+      val actual = notificationBuilder.renderException(messageBuilder, ex)
+        .renderBody
+
+      assert(actual.contains(
+      """<pre>Command line failed
+        |Last <b>stdout</b> lines:
+        |stdout line 1
+        |stdout line 2
+        |
+        |Last <b>stderr</b> lines:
+        |stderr line 1
+        |</pre>""".stripMargin.replaceAll("\\r\\n", "\\n")
+      ))
+    }
+  }
+
+  "getStatus" should {
+    "work for succeeded" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusSuccess))
+
+      assert(actual == TextElement("Success", Style.Success))
+    }
+
+    "work for insufficient data" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.InsufficientData(100, 200, None)))
+
+      assert(actual == TextElement("Insufficient data", Style.Exception))
+    }
+
+    "work for no data" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.NoData(true)))
+
+      assert(actual == TextElement("No Data", Style.Exception))
+    }
+
+    "work for skipped" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Skipped("dummy")))
+
+      assert(actual ==TextElement("Skipped", Style.Success))
+    }
+
+    "work for not ran" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.NotRan))
+
+      assert(actual == TextElement("Skipped", Style.Warning))
+    }
+
+    "work for validation failure" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.ValidationFailed(new RuntimeException("dummy"))))
+
+      assert(actual == TextElement("Validation failed", Style.Warning))
+    }
+
+    "work for failed dependencies" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.FailedDependencies(isFailure = true, Seq.empty)))
+
+      assert(actual == TextElement("Skipped", Style.Warning))
+    }
+
+    "work for failed jobs" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Failed(new RuntimeException("dummy"))))
+
+      assert(actual ==TextElement("Failed", Style.Exception))
+    }
+  }
 
   def getBuilder: PipelineNotificationBuilderHtml = {
     implicit val conf: Config = ConfigFactory.parseString(
