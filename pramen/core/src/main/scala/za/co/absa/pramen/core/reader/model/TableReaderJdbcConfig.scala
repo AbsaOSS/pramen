@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.reader.model
 
 import com.typesafe.config.Config
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class TableReaderJdbcConfig(
@@ -29,10 +30,13 @@ case class TableReaderJdbcConfig(
                                   limitRecords: Option[Int] = None,
                                   saveTimestampsAsDates: Boolean = false,
                                   correctDecimalsInSchema: Boolean = false,
-                                  correctDecimalsFixPrecision: Boolean = false
+                                  correctDecimalsFixPrecision: Boolean = false,
+                                  enableSchemaMetadata: Boolean = false
                                 )
 
 object TableReaderJdbcConfig {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val HAS_INFO_DATE = "has.information.date.column"
   val INFORMATION_DATE_COLUMN = "information.date.column"
   val INFORMATION_DATE_TYPE = "information.date.type"
@@ -43,6 +47,7 @@ object TableReaderJdbcConfig {
   val JDBC_TIMESTAMPS_AS_DATES = "save.timestamps.as.dates"
   val CORRECT_DECIMALS_IN_SCHEMA = "correct.decimals.in.schema"
   val CORRECT_DECIMALS_FIX_PRECISION = "correct.decimals.fix.precision"
+  val ENABLE_SCHEMA_METADATA_KEY = "enable.schema.metadata"
 
   def load(conf: Config, parent: String = ""): TableReaderJdbcConfig = {
     ConfigUtils.validatePathsExistence(conf, parent, HAS_INFO_DATE :: Nil)
@@ -55,6 +60,12 @@ object TableReaderJdbcConfig {
         INFORMATION_DATE_COLUMN :: INFORMATION_DATE_TYPE :: INFORMATION_DATE_APP_FORMAT :: INFORMATION_DATE_SQL_FORMAT :: Nil)
     }
 
+    val saveTimestampsAsDates = ConfigUtils.getOptionBoolean(conf, JDBC_TIMESTAMPS_AS_DATES).getOrElse(false)
+
+    if (saveTimestampsAsDates) {
+      log.warn(s"An obsolete flag '$JDBC_TIMESTAMPS_AS_DATES' is used. Please, use inline column transformations instead ('transformations = { ... }').")
+    }
+
     TableReaderJdbcConfig(
       jdbcConfig = JdbcConfig.load(conf, parent),
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
@@ -63,9 +74,10 @@ object TableReaderJdbcConfig {
       infoDateFormatApp = ConfigUtils.getOptionString(conf, INFORMATION_DATE_APP_FORMAT).getOrElse("yyyy-MM-dd"),
       infoDateFormatSql = ConfigUtils.getOptionString(conf, INFORMATION_DATE_SQL_FORMAT).getOrElse("YYYY-MM-DD"),
       limitRecords = ConfigUtils.getOptionInt(conf, JDBC_SYNC_LIMIT_RECORDS),
-      saveTimestampsAsDates = ConfigUtils.getOptionBoolean(conf, JDBC_TIMESTAMPS_AS_DATES).getOrElse(false),
+      saveTimestampsAsDates,
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),
-      correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false)
+      correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
+      enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false)
     )
   }
 }

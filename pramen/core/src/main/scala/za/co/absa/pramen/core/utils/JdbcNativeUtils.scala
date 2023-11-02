@@ -48,7 +48,7 @@ object JdbcNativeUtils {
   final val JDBC_WORDS_TO_REDACT = Set("password", "secret", "pwd", "token")
 
   /** Returns a JDBC URL and connection by a config. */
-  def getConnection(jdbcConfig: JdbcConfig, retries: Option[Int] = None): (String, Connection) = {
+  def getConnection(jdbcConfig: JdbcConfig): (String, Connection) = {
     val urlSelector = JdbcUrlSelector(jdbcConfig)
 
     def getConnectionWithRetries(jdbcConfig: JdbcConfig, retriesLeft: Int): (String, Connection) = {
@@ -66,7 +66,7 @@ object JdbcNativeUtils {
       }
     }
 
-    retries match {
+    jdbcConfig.retries match {
       case Some(n) => getConnectionWithRetries(jdbcConfig, n)
       case None    => getConnectionWithRetries(jdbcConfig, urlSelector.getNumberOfUrls - 1)
     }

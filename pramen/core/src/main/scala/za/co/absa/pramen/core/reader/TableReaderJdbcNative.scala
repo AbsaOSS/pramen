@@ -21,12 +21,13 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.{JdbcNativeUtils, TimeUtils}
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.ENABLE_SCHEMA_METADATA_KEY
+import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
-class TableReaderJdbcNative(jdbcConfig: JdbcConfig)
+class TableReaderJdbcNative(jdbcConfig: JdbcConfig, enableSchemaMetadata: Boolean)
                            (implicit spark: SparkSession) extends TableReader {
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -74,7 +75,20 @@ class TableReaderJdbcNative(jdbcConfig: JdbcConfig)
   private def getDataFrame(sql: String): DataFrame = {
     log.info(s"JDBC Query: $sql")
 
-    JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+
+    if (enableSchemaMetadata) {
+      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, sql) { jdbcMetadata =>
+        val newSchema = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
+        df = spark.createDataFrame(df.rdd, newSchema)
+      }
+    }
+
+    if (log.isDebugEnabled) {
+      log.debug(df.schema.treeString)
+    }
+
+    df
   }
 
 
@@ -90,7 +104,8 @@ object TableReaderJdbcNative {
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
     val jdbcConfig = JdbcConfig.load(conf, parent)
+    val enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false)
 
-    new TableReaderJdbcNative(jdbcConfig)
+    new TableReaderJdbcNative(jdbcConfig, enableSchemaMetadata)
   }
 }
