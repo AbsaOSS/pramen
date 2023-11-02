@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
-import za.co.absa.pramen.core.utils.{ConfigUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcSparkUtils, TimeUtils}
 
 import java.time.{Instant, LocalDate}
 import scala.annotation.tailrec
@@ -74,7 +74,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     val start = Instant.now
-    val count = getWithRetry[Long](sql, jdbcRetries)(df =>
+    val count = getWithRetry[Long](sql, isDataQuery = false, jdbcRetries)(df =>
       // Take first column of the first row, use BigDecimal as the most generic numbers parser,
       // and then convert to Long. This is a safe way if the output is like "0E-11".
       BigDecimal(df.collect()(0)(0).toString).toLong
@@ -93,7 +93,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       sqlGen.getDataQuery(tableName, Nil, jdbcReaderConfig.limitRecords)
     }
 
-    val df = getWithRetry[DataFrame](sql, jdbcRetries)(df => {
+    val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries)(df => {
       // Make sure connection to the server is made without fetching the data
       log.debug(df.schema.treeString)
       df
@@ -110,9 +110,9 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   @tailrec
-  private def getWithRetry[T](sql: String, retriesLeft: Int)(f: DataFrame => T): T = {
+  private def getWithRetry[T](sql: String, isDataQuery: Boolean, retriesLeft: Int)(f: DataFrame => T): T = {
     Try {
-      val df = getDataFrame(sql)
+      val df = getDataFrame(sql, isDataQuery)
       f(df)
     } match {
       case Success(result) => result
@@ -122,7 +122,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
           val nextUrl = jdbcUrlSelector.getNextUrl
           log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying...", ex)
           log.info(s"Trying URL: $nextUrl")
-          getWithRetry(sql, retriesLeft - 1)(f)
+          getWithRetry(sql, isDataQuery, retriesLeft - 1)(f)
         } else {
           log.error(s"JDBC connection error for $currentUrl. No connection attempts left.", ex)
           throw ex
@@ -130,7 +130,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  private def getDataFrame(sql: String): DataFrame = {
+  private[core] def getDataFrame(sql: String, isDataQuery: Boolean): DataFrame = {
     log.info(s"JDBC Query: $sql")
     val qry = sqlGen.getDtable(sql)
 
@@ -138,20 +138,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       log.debug(s"Sending to JDBC: $qry")
     }
 
-    val databaseOptions = getOptions("database", jdbcReaderConfig.jdbcConfig.database)
-    val userOptions = getOptions("user", jdbcReaderConfig.jdbcConfig.user)
-    val passwordOptions = getOptions("password", jdbcReaderConfig.jdbcConfig.password)
-
-    val connectionOptions = Map[String, String](
-      "url" -> jdbcUrlSelector.getUrl,
-      "driver" -> jdbcReaderConfig.jdbcConfig.driver,
-      "dbtable" -> qry
-    ) ++
-      userOptions ++
-      passwordOptions ++
-      databaseOptions ++
-      jdbcReaderConfig.jdbcConfig.extraOptions ++
-      extraOptions
+    val connectionOptions = JdbcSparkUtils.getJdbcOptions(jdbcUrlSelector.getUrl, jdbcReaderConfig.jdbcConfig, qry, extraOptions)
 
     if (log.isDebugEnabled) {
       log.debug("Connection options:")
@@ -165,7 +152,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       .load()
 
     if (jdbcReaderConfig.correctDecimalsInSchema || jdbcReaderConfig.correctDecimalsFixPrecision) {
-      getCorrectedDecimalsSchema(df).foreach(schema =>
+      JdbcSparkUtils.getCorrectedDecimalsSchema(df, jdbcReaderConfig.correctDecimalsFixPrecision).foreach(schema =>
         df = spark
           .read
           .format("jdbc")
@@ -175,33 +162,24 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       )
     }
 
-    if (log.isDebugEnabled) {
-      log.debug(df.schema.treeString)
+    if (jdbcReaderConfig.saveTimestampsAsDates) {
+      df = JdbcSparkUtils.convertTimestampToDates(df)
     }
 
-    if (jdbcReaderConfig.saveTimestampsAsDates) {
-      df = convertTimestampToDates(df)
+    if (isDataQuery && jdbcReaderConfig.enableSchemaMetadata) {
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, qry) { jdbcMetadata =>
+        val newSchema = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
+        df = spark.createDataFrame(df.rdd, newSchema)
+      }
+    }
+
+    if (isDataQuery && log.isDebugEnabled) {
+      log.debug(df.schema.treeString)
     }
 
     jdbcReaderConfig.limitRecords match {
       case Some(limit) => df.limit(limit)
       case None => df
-    }
-  }
-
-  private def getOptions(optionName: String, optionValue: Option[Any]): Map[String, String] = {
-    optionValue match {
-      case Some(value) =>
-        val keyLowercase = optionName
-        val redactedValue = if (KEYS_TO_REDACT.exists(k => keyLowercase.contains(k))) {
-          "[redacted]"
-        } else {
-          value.toString
-        }
-        log.info(s"JDBC reader $optionName = $redactedValue")
-        Map[String, String](optionName -> value.toString)
-      case None =>
-        Map[String, String]()
     }
   }
 
@@ -215,59 +193,6 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
           jdbcReaderConfig.infoDateFormatApp)
       case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
         s"It should be one of: date, string, number")
-    }
-  }
-
-  private def convertTimestampToDates(df: DataFrame): DataFrame = {
-    val dateColumns = new ListBuffer[String]
-
-    val newFields = df.schema.fields.map(fld => {
-      fld.dataType match {
-        case TimestampType =>
-          dateColumns += fld.name
-          col(fld.name).cast(DateType).as(fld.name)
-        case _ =>
-          col(fld.name)
-      }
-    })
-
-    if (dateColumns.nonEmpty) {
-      log.info(s"The following fields have been converted to Date: ${dateColumns.mkString(", ")}")
-      df.select(newFields: _*)
-    } else {
-      log.debug("No timestamp fields found in the dataset.")
-      df
-    }
-  }
-
-  private def getCorrectedDecimalsSchema(df: DataFrame): Option[String] = {
-    val newSchema = new ListBuffer[String]
-
-    df.schema.fields.foreach(field => {
-      field.dataType match {
-        case t: DecimalType if t.scale == 0 && t.precision <= 9 =>
-          log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to int")
-          newSchema += s"${field.name} integer"
-        case t: DecimalType if t.scale == 0 && t.precision <= 18 =>
-          log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to long")
-          newSchema += s"${field.name} long"
-        case t: DecimalType if t.scale >= 18 =>
-          log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to decimal(38, 18)")
-          newSchema += s"${field.name} decimal(38, 18)"
-        case t: DecimalType if jdbcReaderConfig.correctDecimalsFixPrecision && t.scale > 0 =>
-          val fixedPrecision = if (t.precision + t.scale > 38) 38 else t.precision + t.scale
-          log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to decimal($fixedPrecision, ${t.scale})")
-          newSchema += s"${field.name} decimal($fixedPrecision, ${t.scale})"
-        case _ =>
-          field
-      }
-    })
-    if (newSchema.nonEmpty) {
-      val customSchema = newSchema.mkString(", ")
-      log.info(s"Custom schema: $customSchema")
-      Some(customSchema)
-    } else {
-      None
     }
   }
 
