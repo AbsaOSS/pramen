@@ -114,6 +114,11 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |    "nullable" : true,
           |    "metadata" : { }
           |  }, {
+          |    "name" : "DESCRIPTION",
+          |    "type" : "string",
+          |    "nullable" : true,
+          |    "metadata" : { }
+          |  }, {
           |    "name" : "EMAIL",
           |    "type" : "string",
           |    "nullable" : true,

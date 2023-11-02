@@ -55,6 +55,26 @@ trait RelationalDbFixture extends BeforeAndAfterAll {
     while(rs.next()) {
       tables += rs.getString(1)
     }
+    rs.close()
+    st.close()
+    conn.close()
     tables.toSeq
+  }
+
+  def withQuery(sql: String)(action: ResultSet => Unit): Unit = {
+    val conn = getConnection
+    val st: Statement = conn.createStatement()
+
+    try {
+      val rs: ResultSet = st.executeQuery(sql)
+      try {
+        action(rs)
+      } finally {
+        rs.close()
+      }
+    } finally {
+      st.close()
+      conn.close()
+    }
   }
 }
