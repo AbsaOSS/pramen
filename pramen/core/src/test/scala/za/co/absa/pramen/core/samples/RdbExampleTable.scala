@@ -55,6 +55,7 @@ object RdbExampleTable {
          |CREATE TABLE $tableName (
          |  id INT NOT NULL,
          |  name VARCHAR(50) NOT NULL,
+         |  description VARCHAR NOT NULL,
          |  email VARCHAR(50) NOT NULL,
          |  founded DATE NOT NULL,
          |  last_updated TIMESTAMP NOT NULL,
@@ -63,9 +64,9 @@ object RdbExampleTable {
          |""".stripMargin
 
     val inserts: Seq[String] = Seq(
-      s"INSERT INTO $tableName VALUES (1,'Company1', 'company1@example.com', DATE '2000-10-11', TIMESTAMP '2020-11-04 10:11:00+02:00', '2022-02-18')",
-      s"INSERT INTO $tableName VALUES (2,'Company2', 'company2@example.com', DATE '2005-03-29', TIMESTAMP '2020-11-04 10:22:33+02:00', '2022-02-18')",
-      s"INSERT INTO $tableName VALUES (3,'Company3', 'company3@example.com', DATE '2016-12-30', TIMESTAMP '2020-11-04 10:33:59+02:00', '2022-02-18')"
+      s"INSERT INTO $tableName VALUES (1,'Company1', 'description1', 'company1@example.com', DATE '2000-10-11', TIMESTAMP '2020-11-04 10:11:00+02:00', '2022-02-18')",
+      s"INSERT INTO $tableName VALUES (2,'Company2', 'description2', 'company2@example.com', DATE '2005-03-29', TIMESTAMP '2020-11-04 10:22:33+02:00', '2022-02-18')",
+      s"INSERT INTO $tableName VALUES (3,'Company3', 'description3', 'company3@example.com', DATE '2016-12-30', TIMESTAMP '2020-11-04 10:33:59+02:00', '2022-02-18')"
     )
   }
 

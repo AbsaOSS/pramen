@@ -253,9 +253,10 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       assert(df.count() == 3)
       assert(df.schema.fields.head.name == "ID")
       assert(df.schema.fields(1).name == "NAME")
-      assert(df.schema.fields(2).name == "EMAIL")
-      assert(df.schema.fields(3).name == "FOUNDED")
-      assert(df.schema.fields(4).name == "LAST_UPDATED")
+      assert(df.schema.fields(2).name == "DESCRIPTION")
+      assert(df.schema.fields(3).name == "EMAIL")
+      assert(df.schema.fields(4).name == "FOUNDED")
+      assert(df.schema.fields(5).name == "LAST_UPDATED")
     }
 
     "throw an exception on read failure" in {
