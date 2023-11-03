@@ -27,12 +27,11 @@ import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtil
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
-class TableReaderJdbcNative(jdbcConfig: JdbcConfig)
+class TableReaderJdbcNative(jdbcConfig: JdbcConfig,
+                            jdbcUrlSelector: JdbcUrlSelector)
                            (implicit spark: SparkSession) extends TableReader {
 
   private val log = LoggerFactory.getLogger(this.getClass)
-
-  private val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
   private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 
@@ -97,7 +96,8 @@ object TableReaderJdbcNative {
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
     val jdbcConfig = JdbcConfig.load(conf, parent)
+    val urlSelector = JdbcUrlSelector(jdbcConfig)
 
-    new TableReaderJdbcNative(jdbcConfig)
+    new TableReaderJdbcNative(jdbcConfig, urlSelector)
   }
 }

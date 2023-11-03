@@ -483,6 +483,12 @@ is determined by the pipeline configuration.
       # https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html
     }
 
+    # If enabled, additional metadata will be added to the Spark schema
+    # Currently, it includes 'maxLength' for VARCHAR(n) fields.
+    # This is turned off by default because it requires connecting to the database one more time, which slows
+    # the ingestion a little.
+    enable.schema.metadata = false
+
     # Convert decimals with no scale to integers and longs, fix 'NUMBER' SQL to Spark mapping. 
     correct.decimals.in.schema = true
     

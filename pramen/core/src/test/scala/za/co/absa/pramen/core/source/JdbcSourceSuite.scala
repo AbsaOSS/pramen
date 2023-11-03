@@ -32,13 +32,11 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-
     RdbExampleTable.Company.initTable(getConnection)
   }
 
   override protected def afterAll(): Unit = {
     RdbExampleTable.Company.dropTable(getConnection)
-
     super.afterAll()
   }
 
