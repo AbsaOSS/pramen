@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.bookkeeper.model
 import slick.jdbc.H2Profile.api._
 
 class SchemaRecords(tag: Tag) extends Table[SchemaRecord](tag, "schemas") {
-  def pramenTableName = column[String]("watcher_table_name", O.Length(100))
+  def pramenTableName = column[String]("watcher_table_name", O.Length(128))
   def infoDate = column[String]("info_date", O.Length(20))
   def schemaJson = column[String]("schema_json")
   def * = (pramenTableName, infoDate, schemaJson) <> (SchemaRecord.tupled, SchemaRecord.unapply)

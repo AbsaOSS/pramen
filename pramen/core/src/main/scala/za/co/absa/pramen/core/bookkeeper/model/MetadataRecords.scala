@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.bookkeeper.model
 import slick.jdbc.H2Profile.api._
 
 class MetadataRecords(tag: Tag) extends Table[MetadataRecord](tag, "metadata") {
-  def pramenTableName = column[String]("table_name", O.Length(100))
+  def pramenTableName = column[String]("table_name", O.Length(128))
   def infoDate = column[String]("info_date", O.Length(20))
   def key = column[String]("key", O.Length(255))
   def value = column[String]("value")
