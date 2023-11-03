@@ -39,6 +39,11 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
     RdbExampleTable.Company.initTable(getConnection)
   }
 
+  override protected def afterAll(): Unit = {
+    RdbExampleTable.Company.dropTable(getConnection)
+    super.afterAll()
+  }
+
   "addMetadataFromJdbc" should {
     "add varchar metadata to Spark fields" in {
       val connectionOptions = JdbcSparkUtils.getJdbcOptions(url, jdbcConfig, RdbExampleTable.Company.tableName, Map.empty)
