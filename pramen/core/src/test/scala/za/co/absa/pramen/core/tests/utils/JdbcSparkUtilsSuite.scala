@@ -28,14 +28,13 @@ import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.JdbcSparkUtils
 import za.co.absa.pramen.core.utils.impl.JdbcFieldMetadata
 
-class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase with RelationalDbFixture  with TextComparisonFixture {
+class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase with RelationalDbFixture with TextComparisonFixture {
   import spark.implicits._
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-
     RdbExampleTable.Company.initTable(getConnection)
   }
 

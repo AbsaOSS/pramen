@@ -35,6 +35,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
+                      jdbcUrlSelector: JdbcUrlSelector,
                       conf: Config
                      )(implicit spark: SparkSession) extends TableReader {
 
@@ -43,8 +44,6 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
-
-  private val jdbcUrlSelector = JdbcUrlSelector(jdbcReaderConfig.jdbcConfig)
 
   private val jdbcRetries = jdbcReaderConfig.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
 
@@ -102,7 +101,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     df
   }
 
-  private def getTableName(query: Query): String = {
+  private[core] def getTableName(query: Query): String = {
     query match {
       case Query.Table(tableName) => tableName
       case other => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' instead.")
@@ -110,7 +109,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   @tailrec
-  private def getWithRetry[T](sql: String, isDataQuery: Boolean, retriesLeft: Int)(f: DataFrame => T): T = {
+  final private[core] def getWithRetry[T](sql: String, isDataQuery: Boolean, retriesLeft: Int)(f: DataFrame => T): T = {
     Try {
       val df = getDataFrame(sql, isDataQuery)
       f(df)
@@ -167,6 +166,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     if (isDataQuery && jdbcReaderConfig.enableSchemaMetadata) {
+      log.info(s"Reading JDBC metadata from the query: $sql")
       JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { jdbcMetadata =>
         val newSchema = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
         df = spark.createDataFrame(df.rdd, newSchema)
@@ -220,6 +220,8 @@ object TableReaderJdbc {
   def apply(conf: Config, parent: String = "")(implicit spark: SparkSession): TableReaderJdbc = {
     val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, parent)
 
-    new TableReaderJdbc(jdbcTableReaderConfig, conf)
+    val urlSelector = JdbcUrlSelector(jdbcTableReaderConfig.jdbcConfig)
+
+    new TableReaderJdbc(jdbcTableReaderConfig, urlSelector, conf)
   }
 }

@@ -21,7 +21,7 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.reader.{TableReaderJdbc, TableReaderJdbcNative}
+import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
 
 import java.time.LocalDate
 
@@ -47,13 +47,15 @@ class JdbcSource(sourceConfig: Config,
   }
 
   private[core] def getReader(query: Query): TableReader = {
+    val urlSelector = JdbcUrlSelector(jdbcReaderConfig.jdbcConfig)
+
     query match {
       case Query.Table(dbTable) =>
         log.info(s"Using TableReaderJdbc to read the table: $dbTable")
-        new TableReaderJdbc(jdbcReaderConfig, sourceConfig)
+        new TableReaderJdbc(jdbcReaderConfig, urlSelector, sourceConfig)
       case Query.Sql(sql)       =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
-        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig)
+        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig, urlSelector)
       case q          =>
         throw new IllegalArgumentException(s"Unexpected '${q.name}' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }
