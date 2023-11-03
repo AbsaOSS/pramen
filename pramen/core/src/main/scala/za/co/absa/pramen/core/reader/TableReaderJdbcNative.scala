@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtil
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
-class TableReaderJdbcNative(jdbcConfig: JdbcConfig, enableSchemaMetadata: Boolean)
+class TableReaderJdbcNative(jdbcConfig: JdbcConfig)
                            (implicit spark: SparkSession) extends TableReader {
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -75,14 +75,7 @@ class TableReaderJdbcNative(jdbcConfig: JdbcConfig, enableSchemaMetadata: Boolea
   private def getDataFrame(sql: String): DataFrame = {
     log.info(s"JDBC Query: $sql")
 
-    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
-
-    if (enableSchemaMetadata) {
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, sql) { jdbcMetadata =>
-        val newSchema = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
-        df = spark.createDataFrame(df.rdd, newSchema)
-      }
-    }
+    val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
@@ -104,8 +97,7 @@ object TableReaderJdbcNative {
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
     val jdbcConfig = JdbcConfig.load(conf, parent)
-    val enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false)
 
-    new TableReaderJdbcNative(jdbcConfig, enableSchemaMetadata)
+    new TableReaderJdbcNative(jdbcConfig)
   }
 }

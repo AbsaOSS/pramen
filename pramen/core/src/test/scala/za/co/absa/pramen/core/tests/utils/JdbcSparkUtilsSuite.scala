@@ -16,16 +16,21 @@
 
 package za.co.absa.pramen.core.tests.utils
 
+import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions.to_timestamp
+import org.apache.spark.sql.types.{DecimalType, MetadataBuilder, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.JdbcSparkUtils
 import za.co.absa.pramen.core.utils.impl.JdbcFieldMetadata
 
-class JdbcSparkUtilsSuite extends AnyWordSpec with SparkTestBase with RelationalDbFixture with BeforeAndAfterAll {
+class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase with RelationalDbFixture  with TextComparisonFixture {
+  import spark.implicits._
+
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
 
   override def beforeAll(): Unit = {
@@ -35,23 +40,139 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with SparkTestBase with Relational
   }
 
   "addMetadataFromJdbc" should {
+    "add varchar metadata to Spark fields" in {
+      val connectionOptions = JdbcSparkUtils.getJdbcOptions(url, jdbcConfig, RdbExampleTable.Company.tableName, Map.empty)
 
+      val df = spark
+        .read
+        .format("jdbc")
+        .options(connectionOptions)
+        .load()
+
+      val schema = StructType(df.schema.fields.map { field =>
+        val metadata = new MetadataBuilder
+        metadata.withMetadata(field.metadata)
+        metadata.putLong("test_metadata", 0L)
+        field.copy(metadata = metadata.build())
+      })
+
+      withQuery(s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { rs =>
+        val newSchema = JdbcSparkUtils.addMetadataFromJdbc(schema, rs.getMetaData)
+
+        assert(newSchema.fields(1).name == "NAME")
+        assert(newSchema.fields(1).metadata.getLong("maxLength") == 50L)
+        assert(newSchema.fields(1).metadata.getLong("test_metadata") == 0L)
+        assert(newSchema.fields(2).name == "DESCRIPTION")
+        assert(!newSchema.fields(2).metadata.contains("maxLength"))
+        assert(newSchema.fields(3).name == "EMAIL")
+        assert(newSchema.fields(3).metadata.getLong("maxLength") == 50)
+        assert(newSchema.fields(4).name == "FOUNDED")
+        assert(!newSchema.fields(4).metadata.contains("maxLength"))
+      }
+    }
   }
 
   "withJdbcMetadata" should {
-
+    "provide the metadata object for the query" in {
+      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { metadata =>
+        assert(metadata.getColumnName(2) == "NAME")
+      }
+    }
   }
 
   "withResultSet" should {
-
+    "provide the resultset object for the query" in {
+      JdbcSparkUtils.withResultSet(getConnection, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { rs =>
+        assert(rs.getMetaData.getColumnName(2) == "NAME")
+      }
+    }
   }
 
   "convertTimestampToDates" should {
+    "convert timestamp columns as dates" in {
+      val expected =
+        """{"long":1649319691,"str":"2022-01-18","date":"2022-01-18","ts":"2022-04-07"}
+          |{"long":1649318691,"str":"2022-02-28","date":"2022-02-28","ts":"2022-04-07"}
+          |""".stripMargin
+      val df: DataFrame = Seq(
+        (1649319691L, "2022-01-18"),
+        (1649318691L, "2022-02-28")
+      ).toDF("long", "str")
+        .withColumn("date", $"str".cast("date"))
+        .withColumn("ts", to_timestamp($"long"))
 
+      val convertedDf = JdbcSparkUtils.convertTimestampToDates(df)
+
+      val actual = convertedDf.toJSON.collect().mkString("\n")
+
+      compareText(actual, expected)
+    }
+
+    "do nothing if the data frame does not contain date columns" in {
+      val df: DataFrame = Seq(
+        (1649319691L, "2022-01-18"),
+        (1649318691L, "2022-02-28")
+      ).toDF("long", "str")
+
+      val convertedDf = JdbcSparkUtils.convertTimestampToDates(df)
+
+      assert(df.eq(convertedDf))
+    }
   }
 
   "getCorrectedDecimalsSchema" should {
+    "correct decimal to int" in {
+      val df: DataFrame = Seq("12345").toDF("value")
+        .withColumn("value", $"value".cast("decimal(9, 0)"))
 
+      val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
+
+      assert(customFields.contains("value integer"))
+    }
+
+    "correct decimal to long" in {
+      val df: DataFrame = Seq("1234567890").toDF("value")
+        .withColumn("value", $"value".cast("decimal(18, 0)"))
+
+      val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
+
+      assert(customFields.contains("value long"))
+    }
+
+    "correct too big scale" in {
+      val schema = StructType(Array(StructField("value", DecimalType(38, 20))))
+
+      val dfOrig: DataFrame = Seq("1234567890").toDF("value")
+        .withColumn("value", $"value".cast("decimal(28, 2)"))
+
+      val df = spark.createDataFrame(dfOrig.rdd, schema)
+
+      val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
+
+      assert(customFields.contains("value decimal(38, 18)"))
+    }
+
+    "correct invalid precision" in {
+      val schema = StructType(Array(StructField("value", DecimalType(28, 20))))
+
+      val dfOrig: DataFrame = Seq("1234567890").toDF("value")
+        .withColumn("value", $"value".cast("decimal(28, 12)"))
+
+      val df = spark.createDataFrame(dfOrig.rdd, schema)
+
+      val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
+
+      assert(customFields.contains("value decimal(38, 18)"))
+    }
+
+    "do nothing if the field is okay" in {
+      val df: DataFrame = Seq("12345").toDF("value")
+        .withColumn("value", $"value".cast("int"))
+
+      val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
+
+      assert(customFields.isEmpty)
+    }
   }
 
   "getFieldMetadata" should {
