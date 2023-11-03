@@ -19,14 +19,14 @@ package za.co.absa.pramen.core.tests.utils
 import org.apache.spark.sql.types.IntegerType
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, SparkUtils}
 
 import java.sql.{DriverManager, ResultSet, SQLSyntaxErrorException}
 
-class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase {
+class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase with TextComparisonFixture {
   private val tableName = RdbExampleTable.Company.tableName
   private val jdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
 
@@ -112,7 +112,9 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |    "name" : "NAME",
           |    "type" : "string",
           |    "nullable" : true,
-          |    "metadata" : { }
+          |    "metadata" : {
+          |      "maxLength" : 50
+          |    }
           |  }, {
           |    "name" : "DESCRIPTION",
           |    "type" : "string",
@@ -122,7 +124,9 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |    "name" : "EMAIL",
           |    "type" : "string",
           |    "nullable" : true,
-          |    "metadata" : { }
+          |    "metadata" : {
+          |      "maxLength" : 50
+          |    }
           |  }, {
           |    "name" : "FOUNDED",
           |    "type" : "date",
@@ -137,13 +141,15 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |    "name" : "INFO_DATE",
           |    "type" : "string",
           |    "nullable" : true,
-          |    "metadata" : { }
+          |    "metadata" : {
+          |      "maxLength" : 10
+          |    }
           |  } ]
-          |}"""
+          |}""".stripMargin
 
       val actual = df.schema.prettyJson
 
-      assert(stripLineEndings(actual) == stripLineEndings(expected))
+      compareText(actual, expected)
     }
 
     "return proper data from a JDBC query" in {
@@ -168,7 +174,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT id, name, email, founded FROM $tableName")
       val actual = SparkUtils.convertDataFrameToPrettyJSON(df)
 
-      assert(stripLineEndings(actual) == stripLineEndings(expected))
+      compareText(actual, expected)
     }
 
     "throw an exception on error" in {

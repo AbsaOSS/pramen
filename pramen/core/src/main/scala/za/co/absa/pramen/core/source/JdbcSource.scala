@@ -46,14 +46,14 @@ class JdbcSource(sourceConfig: Config,
     SourceResult(df)
   }
 
-  private def getReader(query: Query): TableReader = {
+  private[core] def getReader(query: Query): TableReader = {
     query match {
       case Query.Table(dbTable) =>
         log.info(s"Using TableReaderJdbc to read the table: $dbTable")
         new TableReaderJdbc(jdbcReaderConfig, sourceConfig)
       case Query.Sql(sql)       =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
-        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig, jdbcReaderConfig.enableSchemaMetadata)
+        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig)
       case q          =>
         throw new IllegalArgumentException(s"Unexpected '${q.name}' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }

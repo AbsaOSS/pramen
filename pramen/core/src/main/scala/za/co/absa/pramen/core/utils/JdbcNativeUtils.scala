@@ -88,8 +88,10 @@ object JdbcNativeUtils {
                             (implicit spark: SparkSession): DataFrame = {
 
     // Executing the query
-    val driverIterator = new ResultSetToRowIterator(getResultSet(jdbcConfig, url, query))
-    val schema = driverIterator.getSchema
+    val rs = getResultSet(jdbcConfig, url, query)
+    val driverIterator = new ResultSetToRowIterator(rs)
+    val schema = JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
+
     driverIterator.close()
 
     val rdd = spark.sparkContext.parallelize(Seq(query)).flatMap(q => {

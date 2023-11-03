@@ -167,7 +167,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     if (isDataQuery && jdbcReaderConfig.enableSchemaMetadata) {
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, qry) { jdbcMetadata =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { jdbcMetadata =>
         val newSchema = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
         df = spark.createDataFrame(df.rdd, newSchema)
       }

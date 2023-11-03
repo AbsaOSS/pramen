@@ -33,16 +33,26 @@ object JdbcSparkUtils {
 
   val MAXIMUM_VARCHAR_LENGTH = 8192
 
+  /**
+    * Adds metadata to Spark fields based on JDBC metadata.
+    *
+    * Currently, the only metadata it adds is 'maxLength' for VARCHAR fields.
+    *
+    * All existing metadata fields stay the same.
+    *
+    * @param schema        A schema.
+    * @param jdbcMetadata  The metadata obtained for the same query using native JDBC connection.
+    * @return The schema with new metadata items added.
+    */
   def addMetadataFromJdbc(schema: StructType, jdbcMetadata: ResultSetMetaData): StructType = {
-    val fieldToMetadataMap: Map[String, JdbcFieldMetadata] =
-      {
-        for (index <- Range.inclusive(1, jdbcMetadata.getColumnCount))
-          yield {
-            val fieldMetadata = getFieldMetadata(jdbcMetadata, index)
-            val name = fieldMetadata.name.toLowerCase
-            name -> fieldMetadata
-          }
-      }.toMap
+    val fieldToMetadataMap: Map[String, JdbcFieldMetadata] = {
+      for (index <- Range.inclusive(1, jdbcMetadata.getColumnCount))
+        yield {
+          val fieldMetadata = getFieldMetadata(jdbcMetadata, index)
+          val name = fieldMetadata.name.toLowerCase
+          name -> fieldMetadata
+        }
+    }.toMap
 
     StructType(
       schema.fields.map {
@@ -67,6 +77,14 @@ object JdbcSparkUtils {
     )
   }
 
+  /**
+    * Connects to a database and executes a raw SQL query using Java JDBC, and allows running a custom action on the
+    * metadata of the query.
+    *
+    * @param jdbcConfig  a JDBC configuration.
+    * @param nativeQuery a SQL query in the dialect native to the database.
+    * @param action      the action to execute.
+    */
   def withJdbcMetadata(jdbcConfig: JdbcConfig,
                        nativeQuery: String)
                       (action: ResultSetMetaData => Unit): Unit = {
@@ -83,9 +101,17 @@ object JdbcSparkUtils {
     }
   }
 
+  /**
+    * Executes a query against a JDBC connection and allows running an action on the result set.
+    * Handles the closure of created objects.
+    *
+    * @param connection  a JDBC connection.
+    * @param query       a SQL query in the dialect native to the database.
+    * @param action      the action to execute on the result set.
+    */
   def withResultSet(connection: Connection,
-                           query: String)
-                           (action: ResultSet => Unit): Unit = {
+                    query: String)
+                   (action: ResultSet => Unit): Unit = {
     val statement = try {
       connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
     } catch {
@@ -109,6 +135,9 @@ object JdbcSparkUtils {
     }
   }
 
+  /**
+    * Converts all timestamp fields to dates in a data frame.
+    */
   def convertTimestampToDates(df: DataFrame): DataFrame = {
     val dateColumns = new ListBuffer[String]
 
@@ -131,6 +160,21 @@ object JdbcSparkUtils {
     }
   }
 
+  /**
+    * Fixes issues found with decimal numbers due to various compatibility issues between relational database
+    * systems and Spark type model.
+    *
+    * Fix precision flag handles the case when the database sends precision as the number integral of digits
+    * instead of total digits. For example,
+    * {{{
+    *   # Precision cannot be smaller that scale, but due to different interpretations of various dbs this can happen.
+    *   precision=5, scale=8 converts to precition=5+8=13, scale = 8
+    * }}}
+    *
+    * @param df an input dataframe.
+    * @param fixPrecision  if true, the source database interprets precision as integral part and scale as fractional part.
+    * @return An optional custom schema string that can be applied when reading the JDBC source.
+    */
   def getCorrectedDecimalsSchema(df: DataFrame, fixPrecision: Boolean): Option[String] = {
     val newSchema = new ListBuffer[String]
 
@@ -163,6 +207,13 @@ object JdbcSparkUtils {
     }
   }
 
+  /**
+    * Converts JDBC metadata of a specific field to the case class representation.
+    *
+    * @param jdbcMetadata a query metadata object that you can get from a result set (rs.getMetaData()).
+    * @param fieldIndex   a field index (warning! the index starts from 1, not from 0).
+    * @return an object defining the field.
+    */
   def getFieldMetadata(jdbcMetadata: ResultSetMetaData, fieldIndex: Int): JdbcFieldMetadata = {
     val name = jdbcMetadata.getColumnName(fieldIndex).trim
     val label = jdbcMetadata.getColumnLabel(fieldIndex).trim
@@ -178,6 +229,15 @@ object JdbcSparkUtils {
     JdbcFieldMetadata(effectiveName, label, sqlType, sqlTypeName, displaySize, precision, scale, nullable)
   }
 
+  /**
+    * Converts JDBC connection parameters to Spark options that you can pass to Spark reader.
+    *
+    * @param url               a JDBC URL.
+    * @param jdbcConfig        a JDBC configuration.
+    * @param nativeQuery       a SQL query in the dialect native to the database.
+    * @param extraSparkOptions extra Spark options to add to the result (e.g. 'fetchsize', 'batchsize' etc).
+    * @return
+    */
   def getJdbcOptions(url: String,
                      jdbcConfig: JdbcConfig,
                      nativeQuery: String,

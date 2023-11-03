@@ -20,14 +20,14 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.LocalDate
 
-class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase {
+class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase with TextComparisonFixture {
   private val tableName = RdbExampleTable.Company.tableName
 
   private val conf = ConfigFactory.parseString(
@@ -135,19 +135,23 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
         |    "name" : "NAME",
         |    "type" : "string",
         |    "nullable" : true,
-        |    "metadata" : { }
+        |    "metadata" : {
+        |      "maxLength" : 50
+        |    }
         |  }, {
         |    "name" : "EMAIL",
         |    "type" : "string",
         |    "nullable" : true,
-        |    "metadata" : { }
+        |    "metadata" : {
+        |      "maxLength" : 50
+        |    }
         |  }, {
         |    "name" : "FOUNDED",
         |    "type" : "date",
         |    "nullable" : true,
         |    "metadata" : { }
         |  } ]
-        |}"""
+        |}""".stripMargin
 
       val expectedData =
       """[ {
@@ -155,7 +159,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
         |  "NAME" : "Company2",
         |  "EMAIL" : "company2@example.com",
         |  "FOUNDED" : "2005-03-29"
-        |} ]"""
+        |} ]""".stripMargin
 
       val reader = getReader
 
@@ -168,9 +172,8 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       val actualSchema = df.schema.prettyJson
       val actualData = SparkUtils.convertDataFrameToPrettyJSON(df)
 
-      assert(stripLineEndings(actualSchema) == stripLineEndings(expectedSchema))
-      assert(stripLineEndings(actualData) == stripLineEndings(expectedData))
-
+      compareText(actualSchema, expectedSchema)
+      compareText(actualData, expectedData)
     }
 
     "return the actual data for a date range" in {
