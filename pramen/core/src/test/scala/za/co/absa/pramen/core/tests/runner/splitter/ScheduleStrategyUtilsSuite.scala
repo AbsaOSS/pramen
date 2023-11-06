@@ -70,37 +70,25 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
 
     "getLate" should {
       "return the date range when job hasn't ran yet" in {
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestProcessedDate("table")).thenReturn(None)
-
         val expected = List(date.minusDays(3), date.minusDays(2), date.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
-        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", None)
 
         assert(actual == expected)
       }
 
       "return the date range when there is some late data" in {
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestProcessedDate("table")).thenReturn(Some(date.minusDays(2)))
-
         val expected = List(date.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
 
-        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", Some(date.minusDays(2)))
 
         assert(actual == expected)
       }
 
       "return empty list when data is up to date" in {
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestProcessedDate("table")).thenReturn(Some(date.minusDays(1)))
-
-        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", bk)
+        val actual = getLate("table", date, Schedule.EveryDay(), "@runDate", "@runDate - 3", Some(date.minusDays(1)))
 
         assert(actual.isEmpty)
       }

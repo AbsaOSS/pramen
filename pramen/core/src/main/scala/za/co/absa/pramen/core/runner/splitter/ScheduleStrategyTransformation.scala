@@ -41,21 +41,33 @@ class ScheduleStrategyTransformation extends ScheduleStrategy {
     val dates = params match {
       case ScheduleParams.Normal(runDate, trackDays, delayDays, newOnly, lateOnly)                      =>
         log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly")
-        val retrospective = getInfoDateRange(runDate.minusDays(trackDays + delayDays), runDate.minusDays(delayDays + 1), infoDateExpression, schedule)
+        val retrospective = getInfoDateRange(runDate.minusDays(trackDays + delayDays), runDate.minusDays(delayDays), infoDateExpression, schedule)
           .filter(date => anyDependencyUpdatedRetrospectively(outputTable, date, dependencies, bookkeeper))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Update))
 
+        val lastProcessedDate = bookkeeper.getLatestProcessedDate(outputTable)
+
         val lateDays = if (!newOnly) {
-          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, bookkeeper)
+          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, lastProcessedDate)
         } else {
           Nil
         }
 
-        val newDays = if (!lateOnly) {
+        val newDaysOrig = if (!lateOnly) {
           getNew(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression).toList
         } else {
           Nil
         }
+
+        val newDays = lastProcessedDate match {
+          case Some(date) => newDaysOrig.filter(task => task.infoDate.isAfter(date))
+          case _          => newDaysOrig
+        }
+
+        log.info(s"Retrospective: ${retrospective.map(_.infoDate).mkString(", ")}")
+        log.info(s"Late days: ${lateDays.map(_.infoDate).mkString(", ")}")
+        log.info(s"New days: ${newDaysOrig.map(_.infoDate).mkString(", ")}")
+        log.info(s"New days (filtered): ${newDays.map(_.infoDate).mkString(", ")}")
 
         (retrospective ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
       case ScheduleParams.Rerun(runDate)                                                     =>
