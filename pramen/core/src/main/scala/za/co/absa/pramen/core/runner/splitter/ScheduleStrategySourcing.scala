@@ -42,23 +42,35 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
       case ScheduleParams.Normal(runDate, trackDays, delayDays, newOnly, lateOnly)                      =>
         log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly")
         val trackedDays = if (!lateOnly && !newOnly) {
-          getInfoDateRange(runDate.minusDays(delayDays + trackDays), runDate.minusDays(delayDays + 1), infoDateExpression, schedule)
+          getInfoDateRange(runDate.minusDays(delayDays + trackDays - 1), runDate.minusDays(delayDays + 1), infoDateExpression, schedule)
             .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
         } else {
           Nil
         }
 
+        val lastProcessedDate = bookkeeper.getLatestProcessedDate(outputTable)
+
         val lateDays = if (!newOnly) {
-          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, bookkeeper)
+          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, lastProcessedDate)
         } else {
           Nil
         }
 
-        val newDays = if (!lateOnly) {
+        val newDaysOrig = if (!lateOnly) {
           getNew(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression).toList
         } else {
           Nil
         }
+
+        val newDays = lastProcessedDate match {
+          case Some(date) if trackDays <= 0 => newDaysOrig.filter(task => task.infoDate.isAfter(date))
+          case _                            => newDaysOrig
+        }
+
+        log.info(s"Tracked days: ${trackedDays.map(_.infoDate).mkString(", ")}")
+        log.info(s"Late days: ${lateDays.map(_.infoDate).mkString(", ")}")
+        log.info(s"New days: ${newDaysOrig.map(_.infoDate).mkString(", ")}")
+        log.info(s"New days (filtered): ${newDays.map(_.infoDate).mkString(", ")}")
 
         (trackedDays ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
       case ScheduleParams.Rerun(runDate)                                                     =>

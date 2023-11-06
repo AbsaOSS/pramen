@@ -93,11 +93,11 @@ object ScheduleStrategyUtils {
                             schedule: Schedule,
                             infoDateExpression: String,
                             initialDateExpr: String,
-                            bookkeeper: Bookkeeper
+                            lastProcessedDate: Option[LocalDate]
                            ): List[TaskPreDef] = {
     val lastInfoDate = evaluateRunDate(runDate.minusDays(1), infoDateExpression)
 
-    bookkeeper.getLatestProcessedDate(outputTable) match {
+    lastProcessedDate match {
       case Some(lastUpdatedInfoDate) =>
         val nextExpected = lastUpdatedInfoDate.plusDays(1)
 

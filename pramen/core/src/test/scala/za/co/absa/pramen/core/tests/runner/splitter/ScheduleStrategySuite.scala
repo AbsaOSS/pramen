@@ -55,7 +55,6 @@ class ScheduleStrategySuite extends AnyWordSpec {
         val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = false, lateOnly = false)
 
         val expected = Seq(
-          pipeline.TaskPreDef(runDate.minusDays(4), TaskRunReason.Late),
           pipeline.TaskPreDef(runDate.minusDays(3), TaskRunReason.Late),
           pipeline.TaskPreDef(runDate.minusDays(2), TaskRunReason.Late),
           pipeline.TaskPreDef(runDate.minusDays(1), TaskRunReason.Late),
@@ -65,6 +64,18 @@ class ScheduleStrategySuite extends AnyWordSpec {
         val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
         assert(result == expected)
+      }
+
+      "normal execution with zero track days" in {
+        val bk = mock(classOf[Bookkeeper])
+
+        when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(1)))
+
+        val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+
+        val result = strategy.getDaysToRun(outputTable, dependencies, bk, "@runDate - 1", schedule, params, initialSourcingDateExpr, minimumDate)
+
+        assert(result.isEmpty)
       }
 
       "late only" in {
@@ -201,7 +212,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate.minusDays(9)))
 
         "default behavior" in {
-          val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(nextSunday, 15, 0, newOnly = false, lateOnly = false)
 
           val expected = Seq(
             pipeline.TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.Late),
@@ -388,6 +399,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         when(bk.getLatestDataChunk(outputTable, "2022-02-15", "2022-02-15")).thenReturn(Some(dc15))
         when(bk.getLatestDataChunk(outputTable, "2022-02-16", "2022-02-16")).thenReturn(None)
         when(bk.getLatestDataChunk(outputTable, "2022-02-17", "2022-02-17")).thenReturn(None)
+        when(bk.getLatestDataChunk(outputTable, "2022-02-18", "2022-02-18")).thenReturn(None)
 
         // Dependencies (input tables) bookkeeping mocks
         val dc12 = getDummyDataChunk("table1", "2022-02-12", jobFinished = 15000)
@@ -440,6 +452,37 @@ class ScheduleStrategySuite extends AnyWordSpec {
           val expected = Seq(pipeline.TaskPreDef(toDate("2022-02-14"), TaskRunReason.Update),
             pipeline.TaskPreDef(toDate("2022-02-17"), TaskRunReason.Late),
             pipeline.TaskPreDef(toDate("2022-02-18"), TaskRunReason.New))
+
+          val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
+
+          assert(result == expected)
+        }
+
+        "when no retrospective updated at the last day" in {
+          val dc14 = getDummyDataChunk(outputTable, "2022-02-18", jobFinished = 5000)
+
+          when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate))
+          when(bk.getLatestDataChunk(outputTable, "2022-02-18", "2022-02-18")).thenReturn(Some(dc14))
+          when(bk.getLatestDataChunk("table1", "2022-02-11", "2022-02-18")).thenReturn(None)
+
+          val params = ScheduleParams.Normal(runDate, 1, 0, newOnly = false, lateOnly = false)
+
+          val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
+
+          assert(result.isEmpty)
+        }
+
+        "retrospective updates at last day" in {
+          val dep = getDummyDataChunk("table1", "2022-02-18", jobFinished = 6000)
+          val dc14 = getDummyDataChunk(outputTable, "2022-02-18", jobFinished = 5000)
+
+          when(bk.getLatestProcessedDate(outputTable)).thenReturn(Some(runDate))
+          when(bk.getLatestDataChunk(outputTable, "2022-02-18", "2022-02-18")).thenReturn(Some(dc14))
+          when(bk.getLatestDataChunk("table1", "2022-02-11", "2022-02-18")).thenReturn(Some(dep))
+
+          val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+
+          val expected = Seq(pipeline.TaskPreDef(toDate("2022-02-18"), TaskRunReason.Update))
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -547,6 +590,8 @@ class ScheduleStrategySuite extends AnyWordSpec {
         when(bk.getLatestDataChunk(outputTable, "2022-02-12", "2022-02-12")).thenReturn(Some(dc12o))
         when(bk.getLatestDataChunk(outputTable, "2022-02-16", "2022-02-16")).thenReturn(None)
         when(bk.getLatestDataChunk(outputTable, "2022-02-17", "2022-02-17")).thenReturn(None)
+        when(bk.getLatestDataChunk(outputTable, "2022-02-18", "2022-02-18")).thenReturn(None)
+        when(bk.getLatestDataChunk(outputTable, "2022-02-19", "2022-02-19")).thenReturn(None)
 
         // Dependencies (input tables) bookkeeping mocks
         val dc5 = getDummyDataChunk("table1", "2022-02-05", jobFinished = 15000)
@@ -556,7 +601,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         when(bk.getLatestDataChunk("table1", "2022-02-05", "2022-02-12")).thenReturn(Some(dc12))
 
         "normal execution" in {
-          val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(nextSunday, 15, 0, newOnly = false, lateOnly = false)
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -595,7 +640,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
           when(bk.getLatestDataChunk("table1", "2022-01-29", "2022-02-05")).thenReturn(Some(dc5))
           when(bk.getLatestDataChunk("table1", "2022-02-05", "2022-02-12")).thenReturn(Some(dc12))
 
-          val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(nextSunday, 15, 0, newOnly = false, lateOnly = false)
 
           val expected = Seq(
             pipeline.TaskPreDef(toDate("2022-02-05"), TaskRunReason.Update),
