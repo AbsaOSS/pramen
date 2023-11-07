@@ -38,6 +38,7 @@ case class TransferTable(
                           rangeToExpr: Option[String],
                           infoDateStart: LocalDate,
                           trackDays: Int,
+                          trackDaysExplicitlySet: Boolean,
                           transformations: Seq[TransformExpression],
                           filters: Seq[String],
                           columns: Seq[String],
@@ -55,7 +56,7 @@ case class TransferTable(
   }
 
   def getMetaTable: MetaTable = {
-    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", HiveConfig.getNullConfig, None, None, None, infoDateStart, trackDays, readOptions, writeOptions)
+    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", HiveConfig.getNullConfig, None, None, None, infoDateStart, trackDays, trackDaysExplicitlySet, readOptions, writeOptions)
   }
 }
 
@@ -78,6 +79,7 @@ object TransferTable {
     val dateFromExpr = ConfigUtils.getOptionString(conf, DATE_FROM_KEY)
     val dateToExpr = ConfigUtils.getOptionString(conf, DATE_TO_KEY)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
+    val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
     val columns = ConfigUtils.getOptListStrings(conf, COLUMNS_KEY)
     val transformations = TransformExpression.fromConfig(conf, TRANSFORMATIONS_KEY, parentPath)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
@@ -104,7 +106,7 @@ object TransferTable {
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val jobMetaTable = getOutputTableName(jobMetaTableOpt, query, sinkName)
 
-    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
+    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, trackDaysExplicitlySet, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
   }
 
   def fromConfig(conf: Config, appConfig: Config, arrayPath: String, sinkName: String): Seq[TransferTable] = {
@@ -128,17 +130,17 @@ object TransferTable {
   private[core] def getInputTableName(query: Query): Option[String] = {
     query match {
       case t: Query.Table => Option(t.dbTable)
-      case _              => None
+      case _ => None
     }
   }
 
   private[core] def getOutputTableName(jobMetaTableOpt: Option[String], query: Query, sinkName: String): String = {
     jobMetaTableOpt match {
       case Some(name) => name
-      case None       =>
+      case None =>
         getInputTableName(query) match {
           case Some(name) => s"$name->$sinkName"
-          case None       => throw new IllegalArgumentException(s"Cannot determine metastore table name for '$query -> $sinkName'." +
+          case None => throw new IllegalArgumentException(s"Cannot determine metastore table name for '$query -> $sinkName'." +
             s"Please specify it explicitly via '$JOB_METASTORE_OUTPUT_TABLE_KEY'.")
         }
     }

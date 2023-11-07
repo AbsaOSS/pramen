@@ -94,6 +94,26 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
     super.afterAll()
   }
 
+  "trackDays" should {
+    "return 0 for a snapshot table" in {
+      val (_, _, job) = getUseCase()
+
+      assert(job.trackDays == 0)
+    }
+
+    "return non-zero for a snapshot table with explicit track days" in {
+      val (_, _, job) = getUseCase(trackDaysExplicitlySet = true)
+
+      assert(job.trackDays == 1)
+    }
+
+    "return non-zero for an event table" in {
+      val (_, _, job) = getUseCase(sourceName = "jdbc_info_date")
+
+      assert(job.trackDays == 1)
+    }
+  }
+
   "preRunCheckJob" should {
     "single day inputs" should {
       "track already ran" in {
@@ -318,7 +338,8 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
                  sourceTable: String = RdbExampleTable.Company.tableName,
                  rangeFromExpr: Option[String] = None,
                  rangeToExpr: Option[String] = None,
-                 minRecords: Option[Int] = None): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
+                 minRecords: Option[Int] = None,
+                 trackDaysExplicitlySet: Boolean = false): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy
     val operationDef = OperationDefFactory.getDummyOperationDef()
@@ -327,7 +348,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
     val source = getSourceByName(sourceName, conf, configOverride)
 
-    val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1")
+    val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1", trackDays = 1, trackDaysExplicitlySet = trackDaysExplicitlySet)
 
     val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
 

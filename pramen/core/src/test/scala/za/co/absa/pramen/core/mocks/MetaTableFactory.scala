@@ -33,6 +33,7 @@ object MetaTableFactory {
                         infoDateExpression: Option[String] = None,
                         infoDateStart: LocalDate = LocalDate.of(2020, 1, 31),
                         trackDays: Int = 0,
+                        trackDaysExplicitlySet: Boolean = false,
                         readOptions: Map[String, String] = Map.empty[String, String],
                         writeOptions: Map[String, String] = Map.empty[String, String]
                        ): MetaTable = {
@@ -47,6 +48,7 @@ object MetaTableFactory {
       infoDateExpression,
       infoDateStart,
       trackDays,
+      trackDaysExplicitlySet,
       readOptions,
       writeOptions)
   }

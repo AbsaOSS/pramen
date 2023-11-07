@@ -39,7 +39,8 @@ class JobSpy(jobName: String = "DummyJob",
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing,
              allowParallel: Boolean = true,
              saveStats: MetaTableStats = MetaTableStats(0, None),
-             jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty
+             jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty,
+             jobTrackDays: Int = 0
             ) extends Job {
   var getDatesToRunCount = 0
   var preRunCheckCount = 0
@@ -61,6 +62,8 @@ class JobSpy(jobName: String = "DummyJob",
   override def allowRunningTasksInParallel: Boolean = allowParallel
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
+
+  override def trackDays: Int = jobTrackDays
 
   def preRunCheck(infoDate: LocalDate,
                   conf: Config): JobPreRunResult = {

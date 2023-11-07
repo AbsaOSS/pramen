@@ -35,6 +35,14 @@ trait Source extends ExternalChannel {
   def isDataAlwaysAvailable: Boolean = false
 
   /**
+    * If true, the source + query is configured for ingesting events - tables have information date column, and data is filtered
+    * by that date when ingested.
+    *
+    * If false, the source + query is configured for snapshots - tables are loaded fully each day according to the schedule.
+    */
+  def hasInfoDateColumn(query: Query): Boolean = true
+
+  /**
     * Validates if the source is okay and the ingestion can proceed.
     */
   def validate(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Reason = Reason.Ready

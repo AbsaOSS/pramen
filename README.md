@@ -1758,10 +1758,6 @@ Here is an example configuration for a JDBC source:
   # Optionally you can specify an expression for the information date.
   info.date.expr = "@runDate"
   
-  # Data is 1 day late (T+1). When run at 2022-01-15, say, the expectation is that
-  # the input table has data up until 2022-01-14 (inclusive).
-  expected.delay.days = 1
-  
   tables = [
     {
       input.db.table = "table1"
@@ -2097,8 +2093,6 @@ pramen.operations = [
 
     source = "my_postgre_rds"
     sink = "my_data_lake"
-
-    expected.delay.days = 1
 
     tables = [
       {
@@ -2764,7 +2758,7 @@ together their own runner (like the one above).
 When started without additional command line arguments Pramen will run a normal daily pipeline checks and will execute
 jobs scheduled for the day.
 
-Here is how it works. Suppose you run a pipeline at `2020-07-19` and `expected.delay.days = 1`. This means that
+Here is how it works. Suppose you run a pipeline at `2020-07-19` and `info.date.expr = "@runDate - 1"`. This means that
 the pipeline should process data for the `information date = 2020-07-18`, as usual for T+1 jobs. During a normal
 execution Pramen will do the following:
 

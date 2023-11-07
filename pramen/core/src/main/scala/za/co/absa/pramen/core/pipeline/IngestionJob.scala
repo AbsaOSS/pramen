@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{NotificationBuilder, Reason, Source, SourceResult}
+import za.co.absa.pramen.api.{NotificationBuilder, Query, Reason, Source, SourceResult}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -43,6 +43,13 @@ class IngestionJob(operationDef: OperationDef,
   import JobBase._
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
+
+  override def trackDays: Int = {
+    if (source.hasInfoDateColumn(sourceTable.query) || outputTable.trackDaysExplicitlySet)
+      outputTable.trackDays
+    else
+      0
+  }
 
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     source.connect()

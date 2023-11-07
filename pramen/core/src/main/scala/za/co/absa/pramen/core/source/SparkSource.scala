@@ -38,6 +38,8 @@ class SparkSource(val format: String,
 
   override val config: Config = sourceConfig
 
+  override def hasInfoDateColumn(query: Query): Boolean = hasInfoDateCol
+
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val reader = getReader(query)
 
