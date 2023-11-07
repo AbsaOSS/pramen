@@ -47,6 +47,8 @@ abstract class JobBase(operationDef: OperationDef,
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
+  override def trackDays: Int = outputTable.trackDays
+
   def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult
 
   final override def preRunCheck(infoDate: LocalDate,

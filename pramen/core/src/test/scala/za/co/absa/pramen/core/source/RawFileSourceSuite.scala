@@ -116,6 +116,34 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
   }
 
+  "hasInfoDateColumn" should {
+    "return true if the date pattern is present" in {
+      val source = new RawFileSource(emptyConfig, null)(spark)
+
+      assert(source.hasInfoDateColumn(Query.Path(filesPattern.toString)))
+    }
+
+    "return false if the file pattern is absent" in {
+      val source = new RawFileSource(emptyConfig, null)(spark)
+
+      assert(!source.hasInfoDateColumn(Query.Path("s3://bucket/prefix/*")))
+    }
+
+    "return false on custom path query" in {
+      val source = new RawFileSource(emptyConfig, null)(spark)
+
+      assert(!source.hasInfoDateColumn(Query.Custom(Map("file.1" -> "f1.dat"))))
+    }
+
+    "throw an exception on unsupported query type" in {
+      val source = new RawFileSource(emptyConfig, null)(spark)
+
+      assertThrows[IllegalArgumentException] {
+        source.hasInfoDateColumn(Query.Table("abc"))
+      }
+    }
+  }
+
   "getRecordCount" should {
     "return the number of files in the directory for a path" in {
       val source = new RawFileSource(emptyConfig, null)(spark)

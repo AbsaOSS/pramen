@@ -32,6 +32,8 @@ class JdbcSource(sourceConfig: Config,
 
   override val config: Config = sourceConfig
 
+  override def hasInfoDateColumn(query: Query): Boolean = jdbcReaderConfig.hasInfoDate
+
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val reader = getReader(query)
 

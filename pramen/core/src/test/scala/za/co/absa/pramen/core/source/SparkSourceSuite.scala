@@ -226,6 +226,20 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
     }
   }
 
+  "hasInfoDateColumn" should {
+    "return true if the source is configured with info date column" in {
+      val src = SourceManager.getSourceByName("spark1", conf, None)
+
+      assert(src.hasInfoDateColumn(null))
+    }
+
+    "return false if the source is configured without info date column" in {
+      val src = SourceManager.getSourceByName("spark2", conf, None)
+
+      assert(!src.hasInfoDateColumn(null))
+    }
+  }
+
   "getRecordCount()" should {
     val src = SourceManager.getSourceByName("spark2", conf, None)
 

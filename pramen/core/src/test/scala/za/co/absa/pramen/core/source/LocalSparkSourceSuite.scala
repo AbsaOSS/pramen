@@ -236,6 +236,14 @@ class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
     }
   }
 
+  "hasInfoDateColumn" should {
+    "always return false" in {
+      val src = SourceManager.getSourceByName("spark2", conf, None)
+
+      assert(!src.hasInfoDateColumn(null))
+    }
+  }
+
   "getReader()" should {
     "work according to the access pattern" in {
       val src = SourceManager.getSourceByName("spark2", conf, None)

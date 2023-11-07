@@ -59,10 +59,10 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
        |      correct.decimals.fix.precision = true
        |      enable.schema.metadata = true
        |
-       |      has.information.date.column = false
+       |      has.information.date.column = true
        |      information.date.column = "INFO_DATE"
        |      information.date.type = "date"
-       |      information.date.app.format = "yyyy-MM-DD"
+       |      information.date.app.format = "yyyy-MM-dd"
        |      information.date.sql.format = "YYYY-mm-DD"
        |    },
        |    {
@@ -198,6 +198,24 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       assert(ex.getMessage.contains("Duplicate source names: mysource1, MYsource1"))
     }
 
+  }
+
+  "hasInfoDateColumn" should {
+    "return true if JDBC is configured with info date column" in {
+      val srcConfig = conf.getConfigList("pramen.sources")
+      val src1Config = srcConfig.get(0)
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+
+      assert(src.hasInfoDateColumn(null))
+    }
+
+    "return false if JDBC is configured without info date column" in {
+      val srcConfig = conf.getConfigList("pramen.sources")
+      val src1Config = srcConfig.get(1)
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.1", "source").asInstanceOf[JdbcSource]
+
+      assert(!src.hasInfoDateColumn(null))
+    }
   }
 
   "getReader" should {

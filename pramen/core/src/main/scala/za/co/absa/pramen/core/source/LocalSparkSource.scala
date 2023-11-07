@@ -38,6 +38,8 @@ class LocalSparkSource(sparkSource: SparkSource,
   private var fsUtils: FsUtils = _
   private val traverser: FsTraverser = new FsTraverserLocal()
 
+  override def hasInfoDateColumn(query: Query): Boolean = false
+
   @throws[Exception]
   override def connect(): Unit = {
     isConnected = true

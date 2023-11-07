@@ -89,6 +89,14 @@ class RawFileSource(val sourceConfig: Config,
 
   override val config: Config = sourceConfig
 
+  override def hasInfoDateColumn(query: Query): Boolean = {
+    query match {
+      case Query.Path(pathPattern) => pathPattern.contains("{{")
+      case _: Query.Custom => false
+      case _ => throw new IllegalArgumentException("RawFileSource only supports 'path' or 'file.1,...' as an input, 'sql' and 'table' are not supported.")
+    }
+  }
+
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     getPaths(query, infoDateBegin, infoDateEnd).length
   }
