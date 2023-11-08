@@ -241,88 +241,90 @@ abstract class TaskRunnerBase(conf: Config,
     val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
     val lock = lockFactory.getLock(getTokenName(task))
 
-    val attempt = Try {
-      if (runtimeConfig.useLocks && !lock.tryAcquire())
-        throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+    val attempt = try {
+      Try {
+        if (runtimeConfig.useLocks && !lock.tryAcquire())
+          throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
 
-      val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
+        val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
 
-      val runResult = task.job.run(task.infoDate, conf)
+        val runResult = task.job.run(task.infoDate, conf)
 
-      val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
+        val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
 
-      val dfWithTimestamp = task.job.operation.processingTimestampColumn match {
-        case Some(timestampCol) => addProcessingTimestamp(runResult.data, timestampCol)
-        case None => runResult.data
+        val dfWithTimestamp = task.job.operation.processingTimestampColumn match {
+          case Some(timestampCol) => addProcessingTimestamp(runResult.data, timestampCol)
+          case None => runResult.data
+        }
+
+        val dfWithInfoDate = if (dfWithTimestamp.schema.exists(f => f.name.equals(task.job.outputTable.infoDateColumn)) || task.job.outputTable.infoDateColumn.isEmpty) {
+          dfWithTimestamp
+        } else {
+          dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
+        }
+
+        val postProcessed = task.job.postProcessing(dfWithInfoDate, task.infoDate, conf)
+
+        val dfTransformed = applyFilters(
+          applyTransformations(postProcessed, task.job.operation.schemaTransformations),
+          task.job.operation.filters,
+          task.infoDate,
+          task.infoDate,
+          task.infoDate
+        )
+
+        val schemaChangesAfterTransform = if (task.job.operation.schemaTransformations.nonEmpty) {
+          val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")
+          handleSchemaChange(dfTransformed, transformedTable, task.infoDate)
+        } else {
+          Nil
+        }
+
+        val saveResult = if (runtimeConfig.isDryRun) {
+          log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
+          SaveResult(MetaTableStats(dfTransformed.count(), None))
+        } else {
+          task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
+        }
+
+        val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
+          val recreate = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || task.reason == TaskRunReason.Rerun
+          task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, recreate)
+        } else {
+          Seq.empty
+        }
+
+        val outputMetastoreHiveTable = task.job.outputTable.hiveTable.map(table => HiveHelper.getFullTable(task.job.outputTable.hiveConfig.database, table))
+        val hiveTableUpdates = (saveResult.hiveTablesUpdates ++ outputMetastoreHiveTable).distinct
+
+        val stats = saveResult.stats
+
+        val finished = Instant.now()
+
+        val completionReason = if (validationResult.status == NeedsUpdate || (validationResult.status == AlreadyRan && task.reason != TaskRunReason.Rerun))
+          TaskRunReason.Update else task.reason
+
+        val warnings = validationResult.warnings ++ runResult.warnings ++ saveResult.warnings ++ hiveWarnings
+
+        TaskResult(task.job,
+          RunStatus.Succeeded(recordCountOldOpt,
+            stats.recordCount,
+            stats.dataSizeBytes,
+            completionReason,
+            runResult.filesRead,
+            saveResult.filesSent,
+            hiveTableUpdates,
+            warnings),
+          Some(RunInfo(task.infoDate, started, finished)),
+          applicationId,
+          isTransient,
+          schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
+          validationResult.dependencyWarnings,
+          Seq.empty)
       }
-
-      val dfWithInfoDate = if (dfWithTimestamp.schema.exists(f => f.name.equals(task.job.outputTable.infoDateColumn)) || task.job.outputTable.infoDateColumn.isEmpty) {
-        dfWithTimestamp
-      } else {
-        dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
-      }
-
-      val postProcessed = task.job.postProcessing(dfWithInfoDate, task.infoDate, conf)
-
-      val dfTransformed = applyFilters(
-        applyTransformations(postProcessed, task.job.operation.schemaTransformations),
-        task.job.operation.filters,
-        task.infoDate,
-        task.infoDate,
-        task.infoDate
-      )
-
-      val schemaChangesAfterTransform = if (task.job.operation.schemaTransformations.nonEmpty) {
-        val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")
-        handleSchemaChange(dfTransformed, transformedTable, task.infoDate)
-      } else {
-        Nil
-      }
-
-      val saveResult = if (runtimeConfig.isDryRun) {
-        log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
-        SaveResult(MetaTableStats(dfTransformed.count(), None))
-      } else {
-        task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
-      }
-
-      val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
-        val recreate = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || task.reason == TaskRunReason.Rerun
-        task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, recreate)
-      } else {
-        Seq.empty
-      }
-
-      val outputMetastoreHiveTable = task.job.outputTable.hiveTable.map(table => HiveHelper.getFullTable(task.job.outputTable.hiveConfig.database, table))
-      val hiveTableUpdates = (saveResult.hiveTablesUpdates ++ outputMetastoreHiveTable).distinct
-
-      val stats = saveResult.stats
-
-      val finished = Instant.now()
-
-      val completionReason = if (validationResult.status == NeedsUpdate || (validationResult.status == AlreadyRan && task.reason != TaskRunReason.Rerun))
-        TaskRunReason.Update else task.reason
-
-      val warnings = validationResult.warnings ++ runResult.warnings ++ saveResult.warnings ++ hiveWarnings
-
-      TaskResult(task.job,
-        RunStatus.Succeeded(recordCountOldOpt,
-          stats.recordCount,
-          stats.dataSizeBytes,
-          completionReason,
-          runResult.filesRead,
-          saveResult.filesSent,
-          hiveTableUpdates,
-          warnings),
-        Some(RunInfo(task.infoDate, started, finished)),
-        applicationId,
-        isTransient,
-        schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
-        validationResult.dependencyWarnings,
-        Seq.empty)
-    }
-
-    if (runtimeConfig.useLocks) {
+    } catch {
+      case ex: Throwable => Failure(ex)
+    } finally {
       lock.release()
     }
 

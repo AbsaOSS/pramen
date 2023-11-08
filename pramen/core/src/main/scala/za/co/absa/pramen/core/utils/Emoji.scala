@@ -21,6 +21,8 @@ object Emoji {
   val WARNING = "\u26A0\uFE0F"
   val FAILURE = "\u274C"
   val EXCLAMATION = s"\u2757"
+  val WRENCH = "\uD83D\uDD27"
+  val PARALLEL = "\u29B7"
 
   val ROCKET = "\uD83D\uDE80"
   val EMAIL1 = "\uD83D\uDCE7"

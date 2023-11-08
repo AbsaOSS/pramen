@@ -67,8 +67,6 @@ class PythonTransformationJob(operationDef: OperationDef,
                              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper,notificationTargets, outputTable) {
 
-  private val log = LoggerFactory.getLogger(this.getClass)
-
   private val minimumRecords: Int = operationDef.extraOptions.getOrElse(MINIMUM_RECORDS_OPTION, "0").toInt
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing

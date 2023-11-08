@@ -25,6 +25,7 @@ import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.core.runner.splitter.ScheduleParams
 import za.co.absa.pramen.core.runner.task.{RunStatus, TaskResult, TaskRunner}
+import za.co.absa.pramen.core.utils.Emoji
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors.newFixedThreadPool
@@ -76,18 +77,23 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private def workerLoop(workerNum: Int, incomingJobs: ReadChannel[Job]): Unit = {
-    incomingJobs.foreach(job => {
+    incomingJobs.foreach { job =>
       val isTransient = job.outputTable.format.isInstanceOf[DataFormat.Transient]
-      Try {
+      try {
         log.info(s"Worker $workerNum starting job '${job.name}' that outputs to '${job.outputTable.name}'...")
         val isSucceeded = runJob(job)
 
         completedJobsChannel.send((job, Nil, isSucceeded))
-      }.recover({
+      } catch {
         case NonFatal(ex) =>
           completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
-      })
-    })
+        case ex: Throwable =>
+          log.error(s"${Emoji.FAILURE} A FATAL error has been encountered.", ex)
+          val fatalEx = new RuntimeException(s"FATAL exception encountered, stopping the pipeline.", ex)
+          completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(fatalEx), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
+          completedJobsChannel.close()
+      }
+    }
     completedJobsChannel.close()
   }
 
