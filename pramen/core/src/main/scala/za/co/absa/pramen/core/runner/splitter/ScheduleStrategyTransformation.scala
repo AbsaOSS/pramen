@@ -67,7 +67,7 @@ class ScheduleStrategyTransformation extends ScheduleStrategy {
         log.info(s"Retrospective: ${retrospective.map(_.infoDate).mkString(", ")}")
         log.info(s"Late days: ${lateDays.map(_.infoDate).mkString(", ")}")
         log.info(s"New days: ${newDaysOrig.map(_.infoDate).mkString(", ")}")
-        log.info(s"New days (filtered): ${newDays.map(_.infoDate).mkString(", ")}")
+        log.info(s"New days not ran already: ${newDays.map(_.infoDate).mkString(", ")}")
 
         (retrospective ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
       case ScheduleParams.Rerun(runDate)                                                     =>
