@@ -43,8 +43,6 @@ class SinkJob(operationDef: OperationDef,
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
 
-  private val log = LoggerFactory.getLogger(this.getClass)
-
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing

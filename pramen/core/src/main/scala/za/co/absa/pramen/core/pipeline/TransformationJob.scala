@@ -64,11 +64,15 @@ class TransformationJob(operationDef: OperationDef,
                     inputRecordCount: Option[Long]): SaveResult = {
     val saveResults = SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
 
-    transformer.postProcess(
-      outputTable.name,
-      metastore.getMetastoreReader(inputTables :+ outputTable.name,  infoDate),
-      infoDate, operationDef.extraOptions
-    )
+    try {
+      transformer.postProcess(
+        outputTable.name,
+        metastore.getMetastoreReader(inputTables :+ outputTable.name, infoDate),
+        infoDate, operationDef.extraOptions
+      )
+    } catch {
+      case _: AbstractMethodError => log.warn(s"Transformers were built using old version of Pramen that does not support post processing. Ignoring...")
+    }
 
     saveResults
   }

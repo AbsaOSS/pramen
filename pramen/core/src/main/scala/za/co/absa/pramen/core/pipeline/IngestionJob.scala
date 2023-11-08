@@ -42,8 +42,6 @@ class IngestionJob(operationDef: OperationDef,
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
 
-  private val log = LoggerFactory.getLogger(this.getClass)
-
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 
   override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
@@ -153,13 +151,17 @@ class IngestionJob(operationDef: OperationDef,
                     inputRecordCount: Option[Long]): SaveResult = {
     val stats = metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
 
-    source.postProcess(
-      sourceTable.query,
-      outputTable.name,
-      metastore.getMetastoreReader(Seq(outputTable.name), infoDate),
-      infoDate,
-      operationDef.extraOptions
-    )
+    try {
+      source.postProcess(
+        sourceTable.query,
+        outputTable.name,
+        metastore.getMetastoreReader(Seq(outputTable.name), infoDate),
+        infoDate,
+        operationDef.extraOptions
+      )
+    } catch {
+      case _: AbstractMethodError => log.warn(s"Sources were built using old version of Pramen that does not support post processing. Ignoring...")
+    }
 
     source.close()
 

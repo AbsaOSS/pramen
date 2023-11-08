@@ -24,12 +24,12 @@ import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.pipeline.Task
 import za.co.absa.pramen.core.state.PipelineState
+import za.co.absa.pramen.core.utils.Emoji
 
 import java.util.concurrent.Executors.newFixedThreadPool
 import java.util.concurrent.{ExecutorService, Semaphore}
 import scala.concurrent.ExecutionContext.fromExecutorService
 import scala.concurrent.{ExecutionContextExecutorService, Future}
-import scala.util.Try
 
 /**
   * The responsibility of this class is to handle the execution method.
@@ -59,15 +59,18 @@ class TaskRunnerMultithreaded(conf: Config,
     val resourceCount = getTruncatedResourceCount(requestedCount)
 
     availableResources.acquire(resourceCount)
-    val result = Try { action }
-    availableResources.release(resourceCount)
+    val result = try {
+      action
+    } finally  {
+      availableResources.release(resourceCount)
+    }
 
-    result.get
+    result
   }
 
   private[core] def getTruncatedResourceCount(requestedCount: Int): Int = {
     if (requestedCount > maxResources) {
-      log.warn(s"Asked for $requestedCount resources but maximum allowed is $maxResources. Truncating to $maxResources")
+      log.warn(s"${Emoji.WARNING} Asked for $requestedCount resources but maximum allowed is $maxResources. Truncating to $maxResources")
       maxResources
     } else {
       requestedCount
@@ -76,7 +79,9 @@ class TaskRunnerMultithreaded(conf: Config,
 
   override def runParallel(tasks: Seq[Task]): Seq[Future[RunStatus]] = {
     tasks.map(task => Future {
+      log.warn(s"${Emoji.PARALLEL}The task has requested ${task.job.operation.consumeThreads} threads...")
       whenEnoughResourcesAreAvailable(task.job.operation.consumeThreads) {
+        log.warn(s"${Emoji.PARALLEL}Running task for the table: '${task.job.outputTable.name}' for '${task.infoDate}'...")
         runTask(task)
       }
     })

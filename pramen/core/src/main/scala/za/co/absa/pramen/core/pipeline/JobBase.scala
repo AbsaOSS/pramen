@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.types.StructType
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
@@ -35,7 +35,7 @@ abstract class JobBase(operationDef: OperationDef,
                        jobNotificationTargets: Seq[JobNotificationTarget],
                        outputTableDef: MetaTable
                       ) extends Job {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   override val name: String = operationDef.name
 
