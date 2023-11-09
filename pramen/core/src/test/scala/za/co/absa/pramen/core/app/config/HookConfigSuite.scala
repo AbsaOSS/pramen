@@ -39,7 +39,7 @@ class HookConfigSuite extends AnyWordSpec {
       assert(hookConfig.startupHook.isDefined)
       assert(hookConfig.shutdownHook.isDefined)
 
-      val hook = hookConfig.startupHook.get.asInstanceOf[PramenHookSpy]
+      val hook = hookConfig.startupHook.get.get.asInstanceOf[PramenHookSpy]
 
       assert(hook.runCallCount == 0)
       assert(hook.conf == conf)
@@ -59,7 +59,7 @@ class HookConfigSuite extends AnyWordSpec {
     val conf = getUseCase("pramen.hook.startup.class = \"za.co.absa.pramen.core.NonExistentHook\"")
 
     val ex = intercept[ClassNotFoundException] {
-      HookConfig.fromConfig(conf)
+      HookConfig.fromConfig(conf).startupHook.get.get
     }
 
     assert(ex.getMessage.contains("za.co.absa.pramen.core.NonExistentHook"))
@@ -69,7 +69,7 @@ class HookConfigSuite extends AnyWordSpec {
     val conf = getUseCase("pramen.hook.shutdown.class = \"za.co.absa.pramen.core.NonExistentHook\"")
 
     val ex = intercept[ClassNotFoundException] {
-      HookConfig.fromConfig(conf)
+      HookConfig.fromConfig(conf).shutdownHook.get.get
     }
 
     assert(ex.getMessage.contains("za.co.absa.pramen.core.NonExistentHook"))

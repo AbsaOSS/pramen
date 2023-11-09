@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.pipeline.Task
@@ -30,6 +31,7 @@ import java.util.concurrent.Executors.newFixedThreadPool
 import java.util.concurrent.{ExecutorService, Semaphore}
 import scala.concurrent.ExecutionContext.fromExecutorService
 import scala.concurrent.{ExecutionContextExecutorService, Future}
+import scala.util.control.NonFatal
 
 /**
   * The responsibility of this class is to handle the execution method.
@@ -80,9 +82,18 @@ class TaskRunnerMultithreaded(conf: Config,
   override def runParallel(tasks: Seq[Task]): Seq[Future[RunStatus]] = {
     tasks.map(task => Future {
       log.warn(s"${Emoji.PARALLEL}The task has requested ${task.job.operation.consumeThreads} threads...")
-      whenEnoughResourcesAreAvailable(task.job.operation.consumeThreads) {
-        log.warn(s"${Emoji.PARALLEL}Running task for the table: '${task.job.outputTable.name}' for '${task.infoDate}'...")
-        runTask(task)
+
+      // We cannot use 'Try' here, need to use 'try' to catch fatal errors.
+      // Fatal errors, if occurred will be wrapped into a custom exception which will propagate to the bottom og the
+      // run stack, and trigger the pipeline shutdown.
+      try {
+        whenEnoughResourcesAreAvailable(task.job.operation.consumeThreads) {
+          log.warn(s"${Emoji.PARALLEL}Running task for the table: '${task.job.outputTable.name}' for '${task.infoDate}'...")
+          runTask(task)
+        }
+      } catch {
+        case NonFatal(ex) => throw ex
+        case ex: Throwable => throw new FatalErrorWrapper("Fatal error has occurred.", ex)
       }
     })
   }
@@ -92,9 +103,16 @@ class TaskRunnerMultithreaded(conf: Config,
       Future.successful(Seq.empty[RunStatus])
     } else {
       Future {
-        val requiredResources = tasks.map(_.job.operation.consumeThreads).max
-        whenEnoughResourcesAreAvailable(requiredResources) {
-          runDependentTasks(tasks)
+        // We cannot use 'Try' here, need to use 'try' to catch fatal errors.
+        // See the comment in runParallel(). Same reasoning.
+        try {
+          val requiredResources = tasks.map(_.job.operation.consumeThreads).max
+          whenEnoughResourcesAreAvailable(requiredResources) {
+            runDependentTasks(tasks)
+          }
+        } catch {
+          case NonFatal(ex) => throw ex
+          case ex: Throwable => throw new FatalErrorWrapper("Fatal error has occurred.", ex)
         }
       }
     }

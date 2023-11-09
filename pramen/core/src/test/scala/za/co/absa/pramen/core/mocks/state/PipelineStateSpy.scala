@@ -22,11 +22,16 @@ import za.co.absa.pramen.core.state.PipelineState
 import scala.collection.mutable.ListBuffer
 
 class PipelineStateSpy extends PipelineState {
+  var setShutdownHookCanRunCount = 0
   var setSuccessCount = 0
   var getExitCodeCalled = 0
   var jobFailureCalled = 0
   val failures = new ListBuffer[(String, Throwable)]
   val completedStatuses = new ListBuffer[TaskResult]
+
+  override def setShutdownHookCanRun(): Unit = synchronized {
+    setShutdownHookCanRunCount += 1
+  }
 
   override def setSuccess(): Unit = synchronized {
     setSuccessCount += 1

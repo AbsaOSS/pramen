@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.core.runner.splitter.ScheduleParams
@@ -85,6 +86,11 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
 
         completedJobsChannel.send((job, Nil, isSucceeded))
       } catch {
+        case ex: FatalErrorWrapper if ex.cause != null =>
+          log.error(s"${Emoji.FAILURE} A FATAL error has been encountered.", ex.cause)
+          val fatalEx = new RuntimeException(s"FATAL exception encountered, stopping the pipeline.", ex.cause)
+          completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(fatalEx), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
+          completedJobsChannel.close()
         case NonFatal(ex) =>
           completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
         case ex: Throwable =>
