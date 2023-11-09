@@ -45,7 +45,15 @@ class IngestionJob(operationDef: OperationDef,
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 
   override def trackDays: Int = {
-    if (source.hasInfoDateColumn(sourceTable.query) || outputTable.trackDaysExplicitlySet)
+    val hasInfoDate = try {
+      source.hasInfoDateColumn(sourceTable.query)
+    } catch {
+      case _: AbstractMethodError =>
+        log.warn(s"Sources were built using old version of Pramen that does not support track days handling for snapshot tables. Ignoring...")
+        true
+    }
+
+    if (hasInfoDate || outputTable.trackDaysExplicitlySet)
       outputTable.trackDays
     else
       0
