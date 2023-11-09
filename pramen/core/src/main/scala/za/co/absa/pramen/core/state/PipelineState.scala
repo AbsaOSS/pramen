@@ -19,6 +19,8 @@ package za.co.absa.pramen.core.state
 import za.co.absa.pramen.core.runner.task.TaskResult
 
 trait PipelineState {
+  def setShutdownHookCanRun(): Unit
+
   def setSuccess(): Unit
 
   def setFailure(stage: String, exception: Throwable): Unit

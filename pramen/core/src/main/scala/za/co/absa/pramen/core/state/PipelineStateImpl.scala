@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 class PipelineStateImpl(implicit conf: Config) extends PipelineState {
@@ -48,6 +48,11 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   private var failureException: Option[Throwable] = None
   private var exitedNormally = false
   private var isFinished = false
+  private var customShutdownHookCanRun = false
+
+  def setShutdownHookCanRun(): Unit = synchronized {
+    customShutdownHookCanRun = true
+  }
 
   override def setSuccess(): Unit = synchronized {
     protectAgainstDoubleFinish()
@@ -108,10 +113,18 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   Runtime.getRuntime.addShutdownHook(shutdownHook)
 
   private def runCustomShutdownHook(): Unit = {
-    try {
-      hookConfig.shutdownHook.foreach(_.run())
-    } catch {
-      case NonFatal(ex) => log.error(s"Unable to run a shutdown hook.", ex)
+    if (customShutdownHookCanRun) {
+      try {
+        hookConfig.shutdownHook.foreach {
+          case Success(runnable) => runnable.run()
+          case Failure(ex) => throw ex
+        }
+      } catch {
+        case ex: Throwable =>
+          log.error(s"Unable to run a shutdown hook.", ex)
+          if (failureException.isEmpty)
+            failureException = Option(ex)
+      }
     }
   }
 
