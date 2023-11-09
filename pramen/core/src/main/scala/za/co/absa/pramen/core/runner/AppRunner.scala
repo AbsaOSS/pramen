@@ -61,6 +61,7 @@ object AppRunner {
       jobsOrig   <- splitJobs(conf, pipeline, state, appContext, spark)
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
       _          <- runStartupHook(state, appContext)
+      _          <- validateShutdownHook(state, appContext)
       _          <- runPipeline(conf, jobs, state, appContext, taskRunner, spark)
       _          <- shutdown(taskRunner, state)
     } yield {
@@ -80,7 +81,7 @@ object AppRunner {
   }
 
   private[core] def handleFailure[T](t: Try[T], state: PipelineState, stage: String): Try[T] = {
-    t.recoverWith { case NonFatal(ex) =>
+    t.recoverWith { case ex: Throwable =>
       state.setFailure(stage, ex)
       Failure(new RuntimeException(s"An error occurred during $stage.", ex))
     }
@@ -196,11 +197,11 @@ object AppRunner {
   }
 
   private[core] def runPipeline(implicit conf: Config,
-                                     jobs: Seq[Job],
-                                     state: PipelineState,
-                                     appContext: AppContext,
-                                     taskRunner: TaskRunner,
-                                     spark: SparkSession): Try[Unit] = {
+                                jobs: Seq[Job],
+                                state: PipelineState,
+                                appContext: AppContext,
+                                taskRunner: TaskRunner,
+                                spark: SparkSession): Try[Unit] = {
     handleFailure(Try {
       implicit val jobRunner: ConcurrentJobRunner = new ConcurrentJobRunnerImpl(
         appContext.appConfig.runtimeConfig,
@@ -218,10 +219,43 @@ object AppRunner {
 
   private[core] def runStartupHook(state: PipelineState,
                                    appContext: AppContext): Try[Unit] = {
-    handleFailure(Try {
-      log.info(s"Running the startup hook: ${appContext.appConfig.hookConfig.startupHook.isDefined} ")
-      appContext.appConfig.hookConfig.startupHook.foreach(_.run())
-    }, state, "running the init hook")
+
+    val tryHandler: Try[Unit] =
+      appContext.appConfig.hookConfig.startupHook match {
+        case Some(hookTry) => hookTry match {
+          case Success(runnable) => Try {
+            log.info(s"Running the startup hook...")
+            runnable.run()
+          }
+          case Failure(ex) =>
+            log.warn(s"An error has occurred while instantiating the startup hook. The exception will be re-thrown.")
+            Failure(ex)
+        }
+        case None =>
+          Success[Unit](())
+      }
+
+    handleFailure(tryHandler, state, "running the startup hook")
+  }
+
+  private[core] def validateShutdownHook(state: PipelineState,
+                                         appContext: AppContext): Try[Unit] = {
+    val tryHandler: Try[Unit] =
+      appContext.appConfig.hookConfig.shutdownHook match {
+        case Some(hookTry) =>
+          log.info(s"Validating the shutdown hook...")
+          hookTry match {
+            case Success(_)  =>
+              state.setShutdownHookCanRun()
+              Success[Unit](())
+            case Failure(ex) =>
+              log.warn(s"An error has occurred while instantiating the shutdown hook. The exception will be re-thrown.")
+              Failure(ex)
+          }
+        case None => Success[Unit](())
+      }
+
+    handleFailure(tryHandler, state, "validating the shutdown hook")
   }
 
   private[core] def shutdown(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {
