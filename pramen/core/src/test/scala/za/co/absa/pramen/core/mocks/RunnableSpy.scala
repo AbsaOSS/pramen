@@ -14,20 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.state
+package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.core.runner.task.TaskResult
+class RunnableSpy(exOpt: Option[Throwable] = None) extends Runnable {
+  var runCount = 0
 
-trait PipelineState {
-  def getState(): PipelineStateSnapshot
-
-  def setShutdownHookCanRun(): Unit
-
-  def setSuccess(): Unit
-
-  def setFailure(stage: String, exception: Throwable): Unit
-
-  def addTaskCompletion(statuses: Seq[TaskResult]): Unit
-
-  def getExitCode: Int
+  override def run(): Unit = this.synchronized{
+    runCount += 1
+    exOpt.foreach(ex => throw ex)
+  }
 }

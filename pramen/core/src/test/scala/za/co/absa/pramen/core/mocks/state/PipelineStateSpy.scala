@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks.state
 
 import za.co.absa.pramen.core.runner.task.TaskResult
-import za.co.absa.pramen.core.state.PipelineState
+import za.co.absa.pramen.core.state.{PipelineState, PipelineStateSnapshot}
 
 import scala.collection.mutable.ListBuffer
 
@@ -28,6 +28,17 @@ class PipelineStateSpy extends PipelineState {
   var jobFailureCalled = 0
   val failures = new ListBuffer[(String, Throwable)]
   val completedStatuses = new ListBuffer[TaskResult]
+
+  override def getState(): PipelineStateSnapshot = {
+    PipelineStateSnapshot(
+      isFinished = false,
+      exitedNormally = false,
+      0,
+      setShutdownHookCanRunCount > 0,
+      None,
+      completedStatuses.toList
+    )
+  }
 
   override def setShutdownHookCanRun(): Unit = synchronized {
     setShutdownHookCanRunCount += 1

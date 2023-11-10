@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.state
 
 import com.typesafe.config.Config
-import org.slf4j.LoggerFactory
+import org.slf4j.{Logger, LoggerFactory}
 import za.co.absa.pramen.api.Pramen
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
@@ -33,7 +33,7 @@ import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 
 class PipelineStateImpl(implicit conf: Config) extends PipelineState {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   // Config
   private val pipelineName = conf.getString(PIPELINE_NAME_KEY)
@@ -50,7 +50,18 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   private var isFinished = false
   private var customShutdownHookCanRun = false
 
-  def setShutdownHookCanRun(): Unit = synchronized {
+  override def getState(): PipelineStateSnapshot = synchronized {
+    PipelineStateSnapshot(
+      isFinished,
+      exitedNormally,
+      exitCode,
+      customShutdownHookCanRun,
+      failureException,
+      taskResults.toList
+    )
+  }
+
+  override def setShutdownHookCanRun(): Unit = synchronized {
     customShutdownHookCanRun = true
   }
 
@@ -83,7 +94,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
     exitCode
   }
 
-  private def protectAgainstDoubleFinish(): Unit = {
+  private[state] def protectAgainstDoubleFinish(): Unit = {
     if (isFinished) {
       throw new IllegalStateException(s"Attempt to run post finish tasks multiple times")
     }
@@ -100,7 +111,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
 
         runCustomShutdownHook()
         sendNotificationEmail()
-        Try{
+        Try {
           // Clean up transient metastore tables if any
           MetastorePersistenceTransient.cleanup()
         }.recover {
@@ -112,23 +123,27 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
 
   Runtime.getRuntime.addShutdownHook(shutdownHook)
 
-  private def runCustomShutdownHook(): Unit = {
+  private[state] def runCustomShutdownHook(): Unit = {
     if (customShutdownHookCanRun) {
       try {
         hookConfig.shutdownHook.foreach {
-          case Success(runnable) => runnable.run()
-          case Failure(ex) => throw ex
+          case Success(runnable) =>
+            runnable.run()
+          case Failure(ex) =>
+            // The error should already be thrown at the validation stage. This is just a precaution.
+            throw ex
         }
       } catch {
         case ex: Throwable =>
-          log.error(s"Unable to run a shutdown hook.", ex)
-          if (failureException.isEmpty)
-            failureException = Option(ex)
+          log.error(s"Unable to run the shutdown hook.", ex)
+          if (failureException.isEmpty) {
+            setFailure("running the shutdown hook", ex)
+          }
       }
     }
   }
 
-  private def sendNotificationEmail(): Unit = {
+  protected def sendNotificationEmail(): Unit = {
     failureException.foreach(ex => log.error(s"The job has FAILED.", ex))
 
     try {

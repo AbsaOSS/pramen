@@ -18,7 +18,9 @@ package za.co.absa.pramen.core.tests.runner
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.mocks.RunnableSpy
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.runner.AppRunner
@@ -68,12 +70,75 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
     "filter out jobs that are not specified" in {
       val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(runTables = Seq("table2", "table4"))
 
-
       val filteredJobs = AppRunner.filterJobs(state, jobs, runtimeConfig).get
 
       assert(filteredJobs.size == 2)
       assert(filteredJobs.map(_.outputTable.name).contains("table2"))
       assert(filteredJobs.map(_.outputTable.name).contains("table4"))
+    }
+  }
+
+  "runStartupHook()" should {
+    val conf: Config = getTestConfig()
+    val state = AppRunner.createPipelineState(conf).get
+
+    "do nothing if the startup hook is not defined" in {
+      val attempt = AppRunner.runStartupHook(state, HookConfig(None, None))
+      assert(attempt.isSuccess)
+    }
+
+    "run the hook if is set" in {
+      val runnable = new RunnableSpy()
+
+      val attempt = AppRunner.runStartupHook(state, HookConfig(Some(Success(runnable)), None))
+
+      assert(attempt.isSuccess)
+      assert(runnable.runCount == 1)
+    }
+
+    "return failure if initialization of the hook has failed" in {
+      val ex = new RuntimeException("test")
+
+      val attempt = AppRunner.runStartupHook(state, HookConfig(Some(Failure(ex)), None))
+
+      assert(attempt.isFailure)
+    }
+
+    "return failure if the runnable failed" in {
+      val ex = new RuntimeException("test")
+      val runnable = new RunnableSpy(Some(ex))
+
+      val attempt = AppRunner.runStartupHook(state, HookConfig(Some(Success(runnable)), None))
+
+      assert(attempt.isFailure)
+      assert(runnable.runCount == 1)
+    }
+  }
+
+  "validateShutdownHook()" should {
+    val conf: Config = getTestConfig()
+    val state = AppRunner.createPipelineState(conf).get
+
+    "do nothing if the shutdown hook is not defined" in {
+      val attempt = AppRunner.validateShutdownHook(state, HookConfig(None, None))
+      assert(attempt.isSuccess)
+    }
+
+    "return success the hook if is set" in {
+      val runnable = new RunnableSpy()
+
+      val attempt = AppRunner.validateShutdownHook(state, HookConfig(None, Some(Success(runnable))))
+
+      assert(attempt.isSuccess)
+      assert(runnable.runCount == 0)
+    }
+
+    "return failure if initialization of the hook has failed" in {
+      val ex = new RuntimeException("test")
+
+      val attempt = AppRunner.validateShutdownHook(state, HookConfig(None, Some(Failure(ex))))
+
+      assert(attempt.isFailure)
     }
   }
 
