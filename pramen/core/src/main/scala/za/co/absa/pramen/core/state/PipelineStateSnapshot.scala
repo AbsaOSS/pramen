@@ -18,16 +18,11 @@ package za.co.absa.pramen.core.state
 
 import za.co.absa.pramen.core.runner.task.TaskResult
 
-trait PipelineState {
-  def getState(): PipelineStateSnapshot
-
-  def setShutdownHookCanRun(): Unit
-
-  def setSuccess(): Unit
-
-  def setFailure(stage: String, exception: Throwable): Unit
-
-  def addTaskCompletion(statuses: Seq[TaskResult]): Unit
-
-  def getExitCode: Int
-}
+case class PipelineStateSnapshot(
+                                  isFinished: Boolean,
+                                  exitedNormally: Boolean,
+                                  exitCode: Int,
+                                  customShutdownHookCanRun: Boolean,
+                                  failureException: Option[Throwable] = None,
+                                  taskResults: Seq[TaskResult]
+                                )

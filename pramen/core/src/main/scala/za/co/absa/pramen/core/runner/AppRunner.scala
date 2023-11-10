@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.runner
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
@@ -60,8 +60,8 @@ object AppRunner {
       pipeline   <- getPipelineDef(conf, state, appContext)
       jobsOrig   <- splitJobs(conf, pipeline, state, appContext, spark)
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
-      _          <- runStartupHook(state, appContext)
-      _          <- validateShutdownHook(state, appContext)
+      _          <- runStartupHook(state, appContext.appConfig.hookConfig)
+      _          <- validateShutdownHook(state, appContext.appConfig.hookConfig)
       _          <- runPipeline(conf, jobs, state, appContext, taskRunner, spark)
       _          <- shutdown(taskRunner, state)
     } yield {
@@ -218,10 +218,10 @@ object AppRunner {
   }
 
   private[core] def runStartupHook(state: PipelineState,
-                                   appContext: AppContext): Try[Unit] = {
+                                   hookConfig: HookConfig): Try[Unit] = {
 
     val tryHandler: Try[Unit] =
-      appContext.appConfig.hookConfig.startupHook match {
+      hookConfig.startupHook match {
         case Some(hookTry) => hookTry match {
           case Success(runnable) => Try {
             log.info(s"Running the startup hook...")
@@ -239,9 +239,9 @@ object AppRunner {
   }
 
   private[core] def validateShutdownHook(state: PipelineState,
-                                         appContext: AppContext): Try[Unit] = {
+                                         hookConfig: HookConfig): Try[Unit] = {
     val tryHandler: Try[Unit] =
-      appContext.appConfig.hookConfig.shutdownHook match {
+      hookConfig.shutdownHook match {
         case Some(hookTry) =>
           log.info(s"Validating the shutdown hook...")
           hookTry match {

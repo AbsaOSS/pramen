@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.state
+package za.co.absa.pramen.core.mocks.state
 
-import za.co.absa.pramen.core.runner.task.TaskResult
+import com.typesafe.config.Config
 
-trait PipelineState {
-  def getState(): PipelineStateSnapshot
+class ShutdownHookFailureMock(conf: Config) extends Runnable {
+  override def run(): Unit = this.synchronized {
+    ShutdownHookFailureMock.ranTimes += 1
 
-  def setShutdownHookCanRun(): Unit
+    throw new LinkageError("Test fatal error")
+  }
+}
 
-  def setSuccess(): Unit
-
-  def setFailure(stage: String, exception: Throwable): Unit
-
-  def addTaskCompletion(statuses: Seq[TaskResult]): Unit
-
-  def getExitCode: Int
+object ShutdownHookFailureMock {
+  var ranTimes: Int = 0
 }
