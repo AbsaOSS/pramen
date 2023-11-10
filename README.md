@@ -131,7 +131,7 @@ In order to implement custom sources, transformers and sinks you need to link Pr
 Pramen libraries are available at [Maven Central (API)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api)
 and [Maven Central (framework)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core)
 
-The latest version is `1.6.3`.
+The latest version is `1.6.5`.
 
 The following Scala and Spark combinations are supported:
 
