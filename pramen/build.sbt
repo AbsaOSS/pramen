@@ -43,7 +43,8 @@ lazy val commonJacocoReportSettings: JacocoReportSettings = JacocoReportSettings
 
 lazy val commonJacocoExcludes: Seq[String] = Seq(
   "za.co.absa.pramen.api.*",
-  "za.co.absa.pramen.buildinfo.*"
+  "za.co.absa.pramen.buildinfo.*",
+  "za.co.absa.pramen.core.exceptions.*"
 )
 
 val shadeBase = "za.co.absa.pramen.shaded"
