@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
 
-class SparkSource(val format: String,
+class SparkSource(val format: Option[String],
                   val schema: Option[String],
                   val hasInfoDateCol: Boolean,
                   val infoDateColumn: String,
@@ -91,9 +91,7 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
   val INFO_COLUMN_FORMAT = "information.date.app.format"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): SparkSource = {
-    ConfigUtils.validatePathsExistence(conf, parentPath, Seq(FORMAT))
-
-    val format = conf.getString(FORMAT)
+    val format = ConfigUtils.getOptionString(conf, FORMAT)
     val schema = ConfigUtils.getOptionString(conf, SCHEMA)
 
     val hasInfoDate = conf.hasPath(HAS_INFO_DATE) && conf.getBoolean(HAS_INFO_DATE)
