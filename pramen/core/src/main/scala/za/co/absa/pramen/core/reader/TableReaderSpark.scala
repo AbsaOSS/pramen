@@ -25,7 +25,7 @@ import za.co.absa.pramen.api.{Query, TableReader}
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class TableReaderSpark(format: String,
+class TableReaderSpark(formatOpt: Option[String],
                        schemaOpt: Option[String],
                        hasInfoDateColumn: Boolean,
                        infoDateColumn: String,
@@ -80,7 +80,7 @@ class TableReaderSpark(format: String,
 
       val dfIn = if (hasData(path, infoDate)) {
         log.info(s"Partition column exists, reading from $partitionPath.")
-        getBasePathReader.load(partitionPath.toUri.toString)
+        getBasePathReader(query).load(partitionPath.toUri.toString)
       } else {
         getFilteredDataFrame(query, infoDate, infoDate)
       }
@@ -129,14 +129,12 @@ class TableReaderSpark(format: String,
       case Query.Path(path) =>
         schemaOpt match {
           case Some(schema) =>
-            spark.read
-              .format(format)
+            getFormattedReader(query)
               .schema(schema)
               .options(options)
               .load(path)
           case None         =>
-            spark.read
-              .format(format)
+            getFormattedReader(query)
               .options(options)
               .load(path)
         }
@@ -146,17 +144,22 @@ class TableReaderSpark(format: String,
     }
   }
 
-  private def getBasePathReader: DataFrameReader = {
+  private def getBasePathReader(query: Query): DataFrameReader = {
     schemaOpt match {
       case Some(schema) =>
-        spark.read
-          .format(format)
+        getFormattedReader(query)
           .schema(schema)
           .options(options)
       case None         =>
-        spark.read
-          .format(format)
+        getFormattedReader(query)
           .options(options)
+    }
+  }
+
+  private def getFormattedReader(q: Query): DataFrameReader = {
+    formatOpt match {
+      case Some(format) => spark.read.format(format)
+      case None => throw new IllegalArgumentException(s"Spark source input.${q.name} == '${q.query}' requires 'format' to be specified at the source.")
     }
   }
 
@@ -164,5 +167,4 @@ class TableReaderSpark(format: String,
     val partition = s"$infoDateColumn=${dateFormatter.format(infoDate)}"
     new Path(path, partition)
   }
-
 }

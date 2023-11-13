@@ -158,7 +158,7 @@ class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
       assert(ex.getMessage.contains("A name is not configured for 2 source(s)"))
     }
 
-    "throw an exception when a format is not configured" in {
+    "should work when format is not configured" in {
       val conf = ConfigFactory.parseString(
         s"""
            | pramen {
@@ -178,11 +178,12 @@ class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
         .withFallback(ConfigFactory.load())
         .resolve()
 
-      val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
-      }
+      val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[LocalSparkSource]
 
-      assert(ex.getMessage.contains("Mandatory configuration options are missing: pramen.sources[0].format"))
+      assert(src.isInstanceOf[LocalSparkSource])
+      assert(src.asInstanceOf[LocalSparkSource].hadoopTempPath == sourceTemp.toString)
+      assert(src.asInstanceOf[LocalSparkSource].fileNamePattern == "*.csv")
+      assert(!src.asInstanceOf[LocalSparkSource].isRecursive)
     }
 
     "throw an exception when a factory class is not configured" in {

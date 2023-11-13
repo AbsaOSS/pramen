@@ -223,6 +223,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
   }
 
   private def getUseCase(tempDir: String,
+                         formatOpt: Option[String] = Some("csv"),
                          createData: Boolean = true,
                          hasInfoDate: Boolean = true,
                          noSchema: Boolean = false,
@@ -242,7 +243,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
 
     val query = Query.Path(pathBase.toString)
 
-    (new TableReaderSpark("csv", schemaOpt, hasInfoDate, "info_date", options = effectiveOptions), query)
+    (new TableReaderSpark(formatOpt, schemaOpt, hasInfoDate, "info_date", options = effectiveOptions), query)
   }
 
 }

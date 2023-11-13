@@ -99,7 +99,7 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source")
 
       assert(src.isInstanceOf[SparkSource])
-      assert(src.asInstanceOf[SparkSource].format == "csv")
+      assert(src.asInstanceOf[SparkSource].format.contains("csv"))
       assert(src.asInstanceOf[SparkSource].schema.isEmpty)
     }
 
@@ -107,7 +107,7 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
       val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "spark2", "source")
 
       assert(src.isInstanceOf[SparkSource])
-      assert(src.asInstanceOf[SparkSource].format == "csv")
+      assert(src.asInstanceOf[SparkSource].format.contains("csv"))
       assert(src.asInstanceOf[SparkSource].schema.contains("id int"))
     }
 
@@ -115,7 +115,7 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
       val src = SourceManager.getSourceByName("spark1", conf, None)
 
       assert(src.isInstanceOf[SparkSource])
-      assert(src.asInstanceOf[SparkSource].format == "csv")
+      assert(src.asInstanceOf[SparkSource].format.contains("csv"))
     }
 
     "throw an exception if a source is not found" in {
@@ -151,7 +151,7 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
       assert(ex.getMessage.contains("A name is not configured for 2 source(s)"))
     }
 
-    "throw an exception when a format is not configured" in {
+    "work when format is not configured" in {
       val conf = ConfigFactory.parseString(
         s"""
            | pramen {
@@ -168,11 +168,9 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
         .withFallback(ConfigFactory.load())
         .resolve()
 
-      val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[JdbcSource]
-      }
+      val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "test", "source").asInstanceOf[SparkSource]
 
-      assert(ex.getMessage.contains("Mandatory configuration options are missing: pramen.sources[0].format"))
+      assert(src.format.isEmpty)
     }
 
     "throw an exception when a factory class is not configured" in {
