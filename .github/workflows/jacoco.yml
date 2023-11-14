@@ -33,8 +33,8 @@ jobs:
           - scala: 2.12.18
             scala_short: 2.12
             spark: 3.4.1
-            overall: 75.0
-            changed: 75.0
+            overall: 80.0
+            changed: 80.0
     name: Test Coverage on Scala ${{matrix.scala}}
     steps:
       - name: Checkout code
