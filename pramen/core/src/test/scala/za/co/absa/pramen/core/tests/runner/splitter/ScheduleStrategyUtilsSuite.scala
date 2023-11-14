@@ -333,4 +333,70 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       }
     }
   }
+
+  "getNextExpectedInfoDate" should {
+    "correctly work with daily dates" in {
+      val schedule = Schedule.EveryDay()
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val nextExpected = getNextExpectedInfoDate(LocalDate.parse("2023-11-05"), infoDateExpression, schedule)
+
+      assert(nextExpected == LocalDate.parse("2023-11-06"))
+    }
+
+    "correctly work with weekly dates" in {
+      val schedule = Schedule.Weekly(Seq(DayOfWeek.MONDAY))
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val nextExpected = getNextExpectedInfoDate(LocalDate.parse("2023-11-05"), infoDateExpression, schedule)
+
+      assert(nextExpected == LocalDate.parse("2023-11-12"))
+    }
+
+    "correctly work with weekly dates and more complicated info date formula" in {
+      val schedule = Schedule.Weekly(Seq(DayOfWeek.MONDAY))
+      val infoDateExpression = "lastSaturday(@runDate)"
+
+      val nextExpected = getNextExpectedInfoDate(LocalDate.parse("2023-11-04"), infoDateExpression, schedule)
+
+      assert(nextExpected == LocalDate.parse("2023-11-11"))
+    }
+
+    "correctly work with monthly dates" in {
+      val schedule = Schedule.Monthly(Seq(1))
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val nextExpected = getNextExpectedInfoDate(LocalDate.parse("2023-11-01"), infoDateExpression, schedule)
+
+      assert(nextExpected == LocalDate.parse("2023-11-30"))
+    }
+
+    "correctly work with schedules that never enabled" in {
+      val schedule = Schedule.Monthly(Seq.empty)
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val nextExpected = getNextExpectedInfoDate(LocalDate.parse("2023-11-01"), infoDateExpression, schedule)
+
+      assert(nextExpected == LocalDate.parse("2023-11-02"))
+    }
+
+    "correctly work with dates that increase with info date" in {
+      val schedule = Schedule.EveryDay()
+      val infoDateExpression = "plusDays(@runDate,1)"
+
+      val nextExpected = getNextExpectedInfoDate(LocalDate.parse("2023-11-05"), infoDateExpression, schedule)
+
+      assert(nextExpected == LocalDate.parse("2023-11-07"))
+    }
+
+    "correctly work with an out of schedule example" in {
+      val schedule = Schedule.Weekly(Seq(DayOfWeek.SUNDAY))
+      val infoDateExpression = "lastSaturday(@runDate)"
+
+      // 2022-07-03. 2022-07-10 - Sundays
+      val nextExpected = getNextExpectedInfoDate(LocalDate.parse("2022-07-05"), infoDateExpression, schedule)
+
+      assert(nextExpected == LocalDate.parse("2022-07-09"))
+    }
+  }
 }

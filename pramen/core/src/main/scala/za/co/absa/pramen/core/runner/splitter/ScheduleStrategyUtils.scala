@@ -96,19 +96,24 @@ object ScheduleStrategyUtils {
                             lastProcessedDate: Option[LocalDate]
                            ): List[TaskPreDef] = {
     val lastInfoDate = evaluateRunDate(runDate.minusDays(1), infoDateExpression)
+    log.info(s"Closest late info date: $lastInfoDate")
 
     lastProcessedDate match {
       case Some(lastUpdatedInfoDate) =>
-        val nextExpected = lastUpdatedInfoDate.plusDays(1)
+        val nextExpected = getNextExpectedInfoDate(lastUpdatedInfoDate, infoDateExpression, schedule)
+        log.info(s"Next expected date: $nextExpected")
 
         if (nextExpected.toEpochDay <= lastInfoDate.toEpochDay) {
           val range = getInfoDateRange(nextExpected, runDate.minusDays(1), infoDateExpression, schedule)
+
+          log.info(s"Getting possible late run dates in range '$nextExpected'..'${runDate.minusDays(1)}': ${range.mkString(", ")}")
 
           if (range.nonEmpty) {
             log.info(s"Adding catch up jobs for info dates: ${range.mkString(", ")}")
           }
           range.map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
         } else {
+          log.info(s"No late dates to process")
           Nil
         }
       case None                      =>
@@ -259,19 +264,22 @@ object ScheduleStrategyUtils {
   /**
     * Evaluates the info date expression from the run date.
     *
-    * @param runDate    A run date
-    * @param expression The expression for converting the run date to info date
+    * @param runDate       A run date.
+    * @param expression    The expression for converting the run date to info date.
+    * @param logExpression Whether to log the expression.
     * @return The info date
     */
-  private[core] def evaluateRunDate(runDate: LocalDate, expression: String): LocalDate = {
+  private[core] def evaluateRunDate(runDate: LocalDate, expression: String, logExpression: Boolean = true): LocalDate = {
     val evaluator = new DateExprEvaluator
 
     evaluator.setValue(RUN_DATE_VAR1, runDate)
     evaluator.setValue(RUN_DATE_VAR2, runDate)
 
     val result = evaluator.evalDate(expression)
-    val q = "\""
-    log.info(s"Given @runDate = '$runDate', $q$expression$q => infoDate = '$result'")
+    if (logExpression) {
+      val q = "\""
+      log.info(s"Given @runDate = '$runDate', $q$expression$q => infoDate = '$result'")
+    }
     result
   }
 
@@ -304,6 +312,37 @@ object ScheduleStrategyUtils {
       case (None, None)           =>
         ""
     }
+  }
+
+
+  private[core] def getNextExpectedInfoDate(infoDate: LocalDate, infoDateExpression: String, schedule: Schedule): LocalDate = {
+    val MAX_ITERATIONS = 100
+    var currentInfoDate = infoDate
+    var currentRunDate = infoDate
+    var iterations = 0
+    val fallbackInfoDate = infoDate.plusDays(1)
+
+    while (currentInfoDate.toEpochDay <= infoDate.toEpochDay) {
+      iterations += 1
+      currentRunDate = currentRunDate.plusDays(1)
+      if (schedule.isEnabled(currentRunDate)) {
+        val newInfoDate = evaluateRunDate(currentRunDate, infoDateExpression, logExpression = false)
+
+        // If info dates are in the future of run dates for some reason
+        if (newInfoDate.isBefore(currentInfoDate)){
+          return fallbackInfoDate
+        }
+
+        currentInfoDate = newInfoDate
+      }
+
+      // If info dates do not change with run dates
+      if (iterations > MAX_ITERATIONS) {
+        return fallbackInfoDate
+      }
+    }
+
+    currentInfoDate
   }
 
 }
