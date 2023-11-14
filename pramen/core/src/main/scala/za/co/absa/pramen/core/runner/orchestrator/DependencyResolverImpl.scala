@@ -16,12 +16,13 @@
 
 package za.co.absa.pramen.core.runner.orchestrator
 
+import za.co.absa.pramen.core.app.config.GeneralConfig.ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE
 import za.co.absa.pramen.core.pipeline.JobDependency
 import za.co.absa.pramen.core.utils.AlgorithmUtils
 
 import scala.collection.mutable
 
-class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolver {
+class DependencyResolverImpl(deps: Seq[JobDependency], allowMultipleJobsPerTable: Boolean) extends DependencyResolver {
   private val inputTables = deps.flatMap(_.inputTables).toSet
   private val outputTables = deps.map(_.outputTable).toSet
   private val dependentTables = outputTables.intersect(inputTables)
@@ -30,7 +31,12 @@ class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolve
   private val unavailableTables = new mutable.HashSet[String]()
 
   override def validate(): Unit = {
-    val issues1 = ensureHaveOnlyOneTransformation(deps.map(_.outputTable))
+    val issues1 = if (allowMultipleJobsPerTable) {
+      Seq.empty
+    } else {
+      ensureHaveOnlyOneTransformation(deps.map(_.outputTable))
+    }
+
     val issues2 = ensureNoCycles()
 
     val issuesAll = issues1 ++ issues2
@@ -119,7 +125,8 @@ class DependencyResolverImpl(deps: Seq[JobDependency]) extends DependencyResolve
 
   private def ensureHaveOnlyOneTransformation(allTables: Seq[String]): Seq[String] = {
     val wrongTables = allTables.filter(table => deps.count(_.outputTable == table) > 1)
-    wrongTables.map(t => s"Table is produced my more than 1 job: $t")
+    wrongTables.map(t => s"Table is produced my more than 1 job: $t. " +
+      s"Please, either make jobs output to different metastore tables, or set '$ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE = true'")
   }
 
   private def ensureNoCycles(): Seq[String] = {

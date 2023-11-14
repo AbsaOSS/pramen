@@ -34,9 +34,20 @@ class DependencyResolverSuite extends AnyWordSpec {
         JobDependency(Nil, "table1"),
         JobDependency(Seq("table2", "table10"), "table2"),
         JobDependency(Seq("table11"), "table4")
-      ))
+      ), allowMultipleJobsPerTable = false)
 
       testCase.validate()
+    }
+
+    "do nothing if there are 2 jobs outputting the same table and it is allowed" in {
+      val faultyCase = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table1"),
+        JobDependency(Nil, "table2"),
+        JobDependency(Seq("table1", "table10"), "table2"),
+        JobDependency(Seq("table11"), "table4")
+      ), allowMultipleJobsPerTable = true)
+
+      faultyCase.validate()
     }
 
     "throw an exception if there are 2 jobs outputting the same table" in {
@@ -45,7 +56,7 @@ class DependencyResolverSuite extends AnyWordSpec {
         JobDependency(Nil, "table2"),
         JobDependency(Seq("table1", "table10"), "table2"),
         JobDependency(Seq("table11"), "table4")
-      ))
+      ), allowMultipleJobsPerTable = false)
 
       val ex  = intercept[IllegalArgumentException] {
         faultyCase.validate()
@@ -60,7 +71,7 @@ class DependencyResolverSuite extends AnyWordSpec {
         JobDependency(Nil, "table2"),
         JobDependency(Seq("table1", "table4"), "table3"),
         JobDependency(Seq("table3"), "table4")
-      ))
+      ), allowMultipleJobsPerTable = false)
 
       val ex  = intercept[IllegalArgumentException] {
         faultyCase.validate()
@@ -176,7 +187,7 @@ class DependencyResolverSuite extends AnyWordSpec {
       val resolver = new DependencyResolverImpl(Seq(
         JobDependency(Nil, "table10"),
         JobDependency(Seq("table3", "table10"), "table3")
-      ))
+      ), allowMultipleJobsPerTable = false)
 
       assert(resolver.getMissingDependencies("table3") == Seq("table10"))
     }
@@ -204,7 +215,7 @@ class DependencyResolverSuite extends AnyWordSpec {
     "if an output table depends on itself, not include this dependency in the visualized graph" in {
       val testCase = new DependencyResolverImpl(Seq(
         JobDependency(Seq("table1", "table2"), "table1")
-      ))
+      ), allowMultipleJobsPerTable = false)
 
       val graph = testCase.getDag("table1" :: Nil)
 
@@ -218,6 +229,6 @@ class DependencyResolverSuite extends AnyWordSpec {
       JobDependency(Nil, "table2"),
       JobDependency(Seq("table1", "table10"), "table3"),
       JobDependency(Seq("table11"), "table4")
-    ))
+    ), allowMultipleJobsPerTable = false)
   }
 }

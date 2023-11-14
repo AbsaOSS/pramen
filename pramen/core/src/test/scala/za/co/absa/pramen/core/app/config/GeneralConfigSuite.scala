@@ -29,6 +29,7 @@ class GeneralConfigSuite extends AnyWordSpec {
            |  environment.name = "DummyEnv"
            |  temporary.directory = "/dummy/dir"
            |  timezone = "Africa/Johannesburg"
+           |  enable.multiple.jobs.per.output.table = true
            |}
            |""".stripMargin
 
@@ -39,6 +40,7 @@ class GeneralConfigSuite extends AnyWordSpec {
       assert(generalConfig.timezoneId == ZoneId.of("Africa/Johannesburg"))
       assert(generalConfig.environmentName == "DummyEnv")
       assert(generalConfig.temporaryDirectory.contains("/dummy/dir"))
+      assert(generalConfig.enableMultipleJobsPerTable)
     }
   }
 }
