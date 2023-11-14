@@ -40,7 +40,8 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
                            ): Seq[TaskPreDef] = {
     val dates = params match {
       case ScheduleParams.Normal(runDate, trackDays, delayDays, newOnly, lateOnly)                      =>
-        log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly")
+        val infoDate = evaluateRunDate(runDate, infoDateExpression)
+        log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly, infoDate=$infoDate")
         val trackedDays = if (!lateOnly && !newOnly) {
           getInfoDateRange(runDate.minusDays(delayDays + trackDays - 1), runDate.minusDays(delayDays + 1), infoDateExpression, schedule)
             .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
@@ -48,7 +49,8 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
           Nil
         }
 
-        val lastProcessedDate = bookkeeper.getLatestProcessedDate(outputTable)
+        val lastProcessedDate = bookkeeper.getLatestProcessedDate(outputTable, Option(infoDate))
+        lastProcessedDate.foreach(d => log.info(s"Last processed info date: $d"))
 
         val lateDays = if (!newOnly) {
           getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, lastProcessedDate)
