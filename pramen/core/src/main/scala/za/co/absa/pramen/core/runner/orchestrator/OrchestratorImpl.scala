@@ -24,10 +24,12 @@ import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
+import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
 import za.co.absa.pramen.core.runner.task.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 
+import java.time.LocalDate
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
@@ -52,8 +54,9 @@ class OrchestratorImpl extends Orchestrator {
 
     pendingJobs = jobs.toList
 
+    val allowMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
     val dependencies = getDependencies(jobs)
-    val dependencyResolver = new DependencyResolverImpl(dependencies)
+    val dependencyResolver = new DependencyResolverImpl(dependencies, allowMultipleJobsPerTable)
 
     log.info(s"Starting execution of the pipeline: \n${dependencyResolver.getDag(allOutputTables)}")
 
@@ -67,7 +70,14 @@ class OrchestratorImpl extends Orchestrator {
       completedJobsChannel.foreach{ case(finishedJob, taskResults, isSucceeded) =>
         runningJobs.remove(finishedJob)
 
-        updateDependencyResolver(dependencyResolver, finishedJob, isSucceeded)
+        val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
+        if (hasAnotherUnfinishedJob) {
+          log.info(s"There is another job outputting to ${finishedJob.outputTable.name}. Waiting for it to finish before marking the table as finished.")
+        }
+
+        if (!hasAnotherUnfinishedJob || !isSucceeded) {
+          updateDependencyResolver(dependencyResolver, finishedJob, isSucceeded)
+        }
 
         state.addTaskCompletion(taskResults)
 
@@ -99,6 +109,11 @@ class OrchestratorImpl extends Orchestrator {
     missingTables.exists(table =>
       job.operation.dependencies.exists(d => !d.isPassive && !d.isOptional && d.tables.contains(table))
     )
+  }
+
+  private def hasAnotherJobWithSameOutputTable(outputTableName: String): Boolean = {
+    runningJobs.exists(_.outputTable.name.equalsIgnoreCase(outputTableName)) ||
+      pendingJobs.exists(_.outputTable.name.equalsIgnoreCase(outputTableName))
   }
 
   def sendPendingJobs(runJobsChannel: Channel[Job], dependencyResolver: DependencyResolver): Boolean = {
@@ -144,6 +159,48 @@ class OrchestratorImpl extends Orchestrator {
     } else {
       log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' is FAILED.")
       dependencyResolver.setFailedTable(outputTable.name)
+    }
+  }
+
+  private[core] def validateJobs(jobs: Seq[Job],
+                                 runDate: LocalDate,
+                                 allowMultipleJobsPerTable: Boolean): Unit = {
+    if (allowMultipleJobsPerTable) {
+      val duplicateJobs = jobs
+        .groupBy(_.outputTable.name)
+        .filter(_._2.length > 1)
+        .values
+        .toList
+
+      val issues = duplicateJobs.flatMap(duplicateJobs => validateOverlapInfoDates(duplicateJobs, runDate))
+
+      if (issues.nonEmpty) {
+        throw new IllegalArgumentException(s"Job validation issues found: ${issues.mkString("; ")}")
+      }
+    }
+  }
+
+  private[core] def validateOverlapInfoDates(jobs: Seq[Job], runDate: LocalDate): Seq[String] = {
+    val infoDates = jobs.flatMap { job =>
+      if (job.operation.schedule.isEnabled(runDate)) {
+        val infoDateExpression = job.operation.outputInfoDateExpression
+        val infoDate = evaluateRunDate(runDate, infoDateExpression).toString
+        Option(infoDate)
+      } else {
+        None
+      }
+    }
+
+    val duplicateInfoDates = infoDates
+      .groupBy(identity)
+      .filter(_._2.length > 1)
+      .keys
+      .toList
+
+    if (duplicateInfoDates.isEmpty) {
+      Seq.empty[String]
+    } else {
+      Seq(s"More than one job outputting to ${jobs.head.outputTable.name} output to the same info date (partition): ${duplicateInfoDates.mkString(", ")}")
     }
   }
 }

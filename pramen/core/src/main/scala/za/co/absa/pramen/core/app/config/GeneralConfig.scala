@@ -24,12 +24,14 @@ import java.time.ZoneId
 case class GeneralConfig(
                           timezoneId: ZoneId,
                           environmentName: String,
-                          temporaryDirectory: Option[String]
+                          temporaryDirectory: Option[String],
+                          enableMultipleJobsPerTable: Boolean
                         )
 object GeneralConfig {
   val TIMEZONE_ID_KEY = "pramen.timezone"
   val ENVIRONMENT_NAME_KEY = "pramen.environment.name"
   val TEMPORARY_DIRECTORY_KEY = "pramen.temporary.directory"
+  val ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE = "pramen.enable.multiple.jobs.per.output.table"
 
   def fromConfig(conf: Config): GeneralConfig = {
     val timezoneId = ConfigUtils.getOptionString(conf, TIMEZONE_ID_KEY)
@@ -37,7 +39,8 @@ object GeneralConfig {
       .getOrElse(ZoneId.systemDefault())
     val environmentName = conf.getString(ENVIRONMENT_NAME_KEY)
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
+    val allowMultipleJobsPerTable = conf.getBoolean(ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE)
 
-    GeneralConfig(timezoneId, environmentName, temporaryDirectory)
+    GeneralConfig(timezoneId, environmentName, temporaryDirectory, allowMultipleJobsPerTable)
   }
 }
