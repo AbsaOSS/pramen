@@ -18,17 +18,21 @@ package za.co.absa.pramen.core.tests.reader
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.AnalysisException
-import org.apache.spark.sql.types.{IntegerType, StringType}
+import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.types.{DateType, IntegerType, StringType}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.mocks.reader.TableReaderSparkFactory
 import za.co.absa.pramen.core.reader.TableReaderSpark
 import za.co.absa.pramen.core.utils.FsUtils
 
 import java.time.LocalDate
 
 class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
+  import spark.implicits._
+
   private val fs = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 
   private val infoDate1 = LocalDate.of(2022, 8, 5)
@@ -175,7 +179,6 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
           assert(df.schema.fields(1).dataType == StringType)
         }
       }
-
     }
 
     "the table doesn't have an info date" should {
@@ -209,6 +212,54 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
         }
       }
 
+      "return data for a catalog table" in {
+        val reader = TableReaderSparkFactory.getDummyReader()
+
+        val exampleDf = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+        exampleDf.createOrReplaceTempView("my_table1")
+
+        val query = Query.Table("my_table1")
+
+        val df = reader.getData(query, infoDate1, infoDate1, Nil)
+
+        assert(df.count() == 3)
+
+        spark.catalog.dropTempView("my_table1")
+      }
+
+      "return data for a catalog SQL" in {
+        val reader = TableReaderSparkFactory.getDummyReader()
+
+        val exampleDf = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+        exampleDf.createOrReplaceTempView("my_table2")
+
+        val query = Query.Sql("SELECT * FROM my_table2 WHERE b > 1")
+
+        val df = reader.getData(query, infoDate1, infoDate1, Nil)
+
+        assert(df.count() == 2)
+
+        spark.catalog.dropTempView("my_table2")
+      }
+
+      "return data for a catalog SQL and info date" in {
+        val reader = TableReaderSparkFactory.getDummyReader(hasInfoDateColumn = true, infoDateColumn = "info_date")
+
+        val exampleDf = List(("A", 1, "2022-08-04"), ("B", 2, "2022-08-04"), ("C", 3, "2022-08-05"))
+          .toDF("a", "b", "info_date_str")
+          .withColumn("info_date", col("info_date_str").cast(DateType))
+
+        exampleDf.createOrReplaceTempView("my_table3")
+
+        val query = Query.Sql("SELECT * FROM my_table3 WHERE b > 1")
+
+        val df = reader.getData(query, infoDate1, infoDate1, Nil)
+
+        assert(df.count() == 1)
+
+        spark.catalog.dropTempView("my_table3")
+      }
+
       "throw an exception if data directory does not exist" in {
         withTempDirectory("spark_source") { tempDir =>
           val (reader, query) = getUseCase(tempDir, hasInfoDate = false, createData = false)
@@ -219,6 +270,39 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
           assert(ex.getMessage().contains("Path does not exist"))
         }
       }
+    }
+  }
+
+  "getBaseDataFrame()" should {
+    "throw an exception if the query type is not supported" in {
+      val reader = TableReaderSparkFactory.getDummyReader()
+      val query = Query.Custom(Map.empty)
+
+      val ex = intercept[IllegalArgumentException] {
+        reader.getBaseDataFrame(query)
+      }
+
+      assert(ex.getMessage.contains("'custom' is not supported by the Spark reader"))
+    }
+  }
+
+  "getFormattedReader()" should {
+    "work when the format is specified" in {
+      val reader = TableReaderSparkFactory.getDummyReader(formatOpt = Some("parquet"))
+
+      val dataframeReader = reader.getFormattedReader(Query.Path("/dummy/path"))
+
+      assert(dataframeReader != null)
+    }
+
+    "throw an exception if the format is not specified" in {
+      val reader = TableReaderSparkFactory.getDummyReader()
+
+      val ex = intercept[IllegalArgumentException] {
+        reader.getFormattedReader(Query.Path("/dummy/path"))
+      }
+
+      assert(ex.getMessage.contains("Spark source input.path == '/dummy/path' requires 'format' to be specified at the source"))
     }
   }
 

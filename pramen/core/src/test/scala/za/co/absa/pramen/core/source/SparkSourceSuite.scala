@@ -18,12 +18,14 @@ package za.co.absa.pramen.core.source
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.DataFrame
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{Query, Source}
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.reader.TableReaderSpark
 import za.co.absa.pramen.core.utils.LocalFsUtils
 
 import java.io.File
@@ -251,16 +253,78 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
   "getData()" should {
     val src = SourceManager.getSourceByName("spark2", conf, None)
 
-    "return proper dataframe" in {
+    "return proper dataframe for a path" in {
       val result = src.getData(Query.Path(filesPath.toString), LocalDate.now(), LocalDate.now(), Nil)
 
       assert(result.data.count() == 10)
     }
 
-    "return proper list of files" in {
+    "return proper dataframe for a catalog table" in {
+      val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+
+      exampleDf.createOrReplaceTempView("my_table1")
+
+      val result = src.getData(Query.Table("my_table1"), LocalDate.now(), LocalDate.now(), Nil)
+
+      assert(result.data.count() == 3)
+
+      spark.catalog.dropTempView("my_table1")
+    }
+
+    "return proper dataframe for an SQL statement" in {
+      val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+
+      exampleDf.createOrReplaceTempView("my_table2")
+
+      val result = src.getData(Query.Sql("SELECT * FROM my_table2 WHERE b > 1"), LocalDate.now(), LocalDate.now(), Nil)
+
+      assert(result.data.count() == 2)
+
+      spark.catalog.dropTempView("my_table2")
+    }
+
+    "return proper list of files for a path" in {
       val result = src.getData(Query.Path(filesPath.toString), LocalDate.now(), LocalDate.now(), Nil)
 
       assert(result.filesRead.length == 2)
+    }
+
+    "throw an exception on incorrect query type" in {
+      val ex = intercept[IllegalArgumentException] {
+        src.getData(Query.Custom(Map.empty), LocalDate.now(), LocalDate.now(), Nil)
+      }
+
+      assert(ex.getMessage.contains("is not supported by the Spark source. Use 'path', 'table' or 'sql' instead."))
+    }
+  }
+
+  "getReader()" should {
+    val src = SourceManager.getSourceByName("spark2", conf, None).asInstanceOf[SparkSource]
+
+    "get a reader for path" in {
+      val reader = src.getReader(Query.Path(filesPath.toString))
+
+      assert(reader.isInstanceOf[TableReaderSpark])
+    }
+
+    "get a reader for the SQL query" in {
+      val reader = src.getReader(Query.Sql("select * from table"))
+
+      assert(reader.isInstanceOf[TableReaderSpark])
+    }
+
+    "get a reader for a catalog table SQL query" in {
+      val reader = src.getReader(Query.Sql("select * from table"))
+
+      assert(reader.isInstanceOf[TableReaderSpark])
+    }
+
+    "throw an exception on an unsupported query type" in {
+      val ex = intercept[IllegalArgumentException] {
+        src.getReader(Query.Custom(Map.empty))
+      }
+
+      assert(ex.getMessage.contains("is not supported by the Spark source. Use 'path', 'table' or 'sql' instead."))
     }
   }
 }

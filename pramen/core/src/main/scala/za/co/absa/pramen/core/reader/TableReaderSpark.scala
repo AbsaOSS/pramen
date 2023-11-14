@@ -64,7 +64,7 @@ class TableReaderSpark(formatOpt: Option[String],
     }
   }
 
-  private def getDailyDataFrame(query: Query, infoDate: LocalDate): DataFrame = {
+  private[core] def getDailyDataFrame(query: Query, infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)
 
     val readPartitionDirectly = query match {
@@ -98,7 +98,7 @@ class TableReaderSpark(formatOpt: Option[String],
     }
   }
 
-  private def getFilteredDataFrame(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+  private[core] def getFilteredDataFrame(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
     val infoDateBeginStr = dateFormatter.format(infoDateBegin)
     val infoDateEndStr = dateFormatter.format(infoDateEnd)
 
@@ -111,7 +111,7 @@ class TableReaderSpark(formatOpt: Option[String],
     }
   }
 
-  private def hasData(basePath: String, infoDate: LocalDate): Boolean = {
+  private[core] def hasData(basePath: String, infoDate: LocalDate): Boolean = {
     val path = getPartitionPath(basePath, infoDate)
     val fs = path.getFileSystem(spark.sparkContext.hadoopConfiguration)
 
@@ -122,7 +122,7 @@ class TableReaderSpark(formatOpt: Option[String],
     hasPartition
   }
 
-  private def getBaseDataFrame(query: Query): DataFrame = {
+  private[core] def getBaseDataFrame(query: Query): DataFrame = {
     query match {
       case Query.Sql(sql)   =>
         spark.sql(sql)
@@ -144,7 +144,7 @@ class TableReaderSpark(formatOpt: Option[String],
     }
   }
 
-  private def getBasePathReader(query: Query): DataFrameReader = {
+  private[core] def getBasePathReader(query: Query): DataFrameReader = {
     schemaOpt match {
       case Some(schema) =>
         getFormattedReader(query)
@@ -156,14 +156,14 @@ class TableReaderSpark(formatOpt: Option[String],
     }
   }
 
-  private def getFormattedReader(q: Query): DataFrameReader = {
+  private[core] def getFormattedReader(q: Query): DataFrameReader = {
     formatOpt match {
       case Some(format) => spark.read.format(format)
       case None => throw new IllegalArgumentException(s"Spark source input.${q.name} == '${q.query}' requires 'format' to be specified at the source.")
     }
   }
 
-  private def getPartitionPath(path: String, infoDate: LocalDate): Path = {
+  private[core] def getPartitionPath(path: String, infoDate: LocalDate): Path = {
     val partition = s"$infoDateColumn=${dateFormatter.format(infoDate)}"
     new Path(path, partition)
   }
