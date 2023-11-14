@@ -410,11 +410,12 @@ pramen.sources = [
 
 Built-in sources:
 
-| Factory Class                                    | Description                                                              |
-|--------------------------------------------------|--------------------------------------------------------------------------|
-| `za.co.absa.pramen.core.source.JdbcSource`       | JDBC Source                                                              |
-| `za.co.absa.pramen.core.source.SparkSource`      | Any format supported by Spark on Hadoop source.                          |
-| `za.co.absa.pramen.core.source.LocalSparkSource` | Any format supported by Spark on a local file system on the driver node. |
+| Factory Class                                    | Description                                                                                                               |
+|--------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| `za.co.absa.pramen.core.source.JdbcSource`       | JDBC Source                                                                                                               |
+| `za.co.absa.pramen.core.source.SparkSource`      | Any format supported by Spark on Hadoop source.                                                                           |
+| `za.co.absa.pramen.core.source.LocalSparkSource` | Any format supported by Spark on a local file system on the driver node.                                                  |
+| `za.co.absa.pramen.core.source.RawFileSource  `  | Copies files defined by a pattern to the metastore table in 'raw' format, without looking at the contents of input files. |
 
 Here is how each of these sources can be configured:
 
@@ -579,6 +580,47 @@ pramen.operations = [
       }
     ]
   }
+]
+```
+
+#### Spark source (catalog example)
+You can use `SparkSiurce` to ingest data available in Spark Catalog (Hive/Glue/etc).
+
+You can ingest tables and run queries to get the data you want. `input.table` will be read using `spark.table()`, 
+`input.sql` will be read using `spark.sql()`. Here is an example:
+
+```hocon
+pramen.sources = [
+  {
+    name = "my_catalog_source"
+    factory.class = "za.co.absa.pramen.core.source.SparkSource"
+
+    minimum.records = 1
+
+    has.information.date.column = true
+    information.date.column = "info_date"
+  }
+]
+
+pramen.operations = [
+  {
+    name = "Sourcing of data from the Catalog"
+    type = "ingestion"
+    schedule.type = "daily"
+
+    source = "my_catalog_source"
+    tables = [
+      {
+        input.table = "catalog_db.catalog_table1"
+        output.metastore.table = my_table1
+      },
+      {
+        # You can also run queries against the Spark catalog. 
+        input.sql = "SELECT * FROM catalog_db.catalog_table2 WHERE record_type = 'A'"
+        output.metastore.table = my_table2
+      }
+    ]
+  }  
 ]
 ```
 
