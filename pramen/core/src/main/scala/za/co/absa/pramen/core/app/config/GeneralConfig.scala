@@ -39,8 +39,8 @@ object GeneralConfig {
       .getOrElse(ZoneId.systemDefault())
     val environmentName = conf.getString(ENVIRONMENT_NAME_KEY)
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
-    val allowMultipleJobsPerTable = conf.getBoolean(ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE)
+    val enableMultipleJobsPerTable = conf.getBoolean(ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE)
 
-    GeneralConfig(timezoneId, environmentName, temporaryDirectory, allowMultipleJobsPerTable)
+    GeneralConfig(timezoneId, environmentName, temporaryDirectory, enableMultipleJobsPerTable)
   }
 }

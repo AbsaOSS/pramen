@@ -41,14 +41,14 @@ class OrchestratorImpl extends Orchestrator {
 
   override def validateJobs(jobs: Seq[Job])(implicit appContext: AppContext,
                                             spark: SparkSession): Unit = {
-    val allowMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
+    val enableMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
     val dependencies = getDependencies(jobs)
-    val dependencyResolver = new DependencyResolverImpl(dependencies, allowMultipleJobsPerTable)
+    val dependencyResolver = new DependencyResolverImpl(dependencies, enableMultipleJobsPerTable)
 
     log.info(s"Validating dependencies...")
 
     dependencyResolver.validate()
-    validateJobs(jobs, appContext.appConfig.runtimeConfig.runDate, allowMultipleJobsPerTable)
+    validateJobs(jobs, appContext.appConfig.runtimeConfig.runDate, enableMultipleJobsPerTable)
   }
 
   override def runJobs(jobs: Seq[Job])(implicit conf: Config,
@@ -66,9 +66,9 @@ class OrchestratorImpl extends Orchestrator {
 
     pendingJobs = jobs.toList
 
-    val allowMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
+    val enableMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
     val dependencies = getDependencies(jobs)
-    val dependencyResolver = new DependencyResolverImpl(dependencies, allowMultipleJobsPerTable)
+    val dependencyResolver = new DependencyResolverImpl(dependencies, enableMultipleJobsPerTable)
 
     log.info(s"Starting execution of the pipeline: \n${dependencyResolver.getDag(allOutputTables)}")
 
