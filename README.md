@@ -2456,6 +2456,78 @@ pramenOpt.foreach { pramen =>
 }
 ```
 
+### Multiple jobs writing to the same metastore table
+
+Pramen allows multiple jobs, including ingestion, transformation jobs to write to the same table in the metastore
+as long as they write to different partitions. A partition is defined by the information date. So in order to write
+to the same table jobs should have non-overlapping schedule and information date expressions.
+
+You can control this feature by setting this option:
+```hocon
+enable.multiple.jobs.per.output.table = true
+```
+
+Here is an example of such a pipeline:
+
+<details>
+  <summary>Click to expand</summary>
+
+```hocon
+pramen.metastore {
+  tables = [
+    {
+      name = "table1"
+      description = "Table 1"
+      format = "parquet"
+      path = "/data/table1"
+    }
+  ]
+}
+
+pramen.sources = [
+  {
+    name = "spark_source"
+    factory.class = "za.co.absa.pramen.core.source.SparkSource"
+
+    has.information.date.column = false
+  }
+]
+
+pramen.operations = [
+  {
+    name = "Loading data on Sundays and Mondays"
+    type = "ingestion"
+    schedule.type = "weekly"
+    schedule.days.of.week = [ 1, 7 ] # On Sundays and Mondays
+
+    source = "spark_source"
+
+    info.date.expr = "@runDate"
+
+    tables = [
+      {
+        input.table = "my_table1"
+        output.metastore.table = table1
+      }
+    ]
+  },
+  {
+    name = "Get data from a transformer on Fridays and Saturdays"
+    type = "transformation"
+
+    class = "com.example.GeneratingTransformer"
+    schedule.type = "weekly"
+    schedule.days.of.week = [ 5, 6 ] # On Fridays and Saturdays
+
+    info.date.expr = "@runDate"
+
+    output.table = "table1"
+
+    dependencies = [ ]
+  }
+]
+```
+</details>
 
 ## Notifications
 If you need to react on a completion event of any job, you can do it using notification targets. A notification target 

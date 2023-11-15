@@ -24,6 +24,9 @@ import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.state.PipelineState
 
 trait Orchestrator {
+  def validateJobs(jobs: Seq[Job])(implicit appContext: AppContext,
+                                   spark: SparkSession): Unit
+
   def runJobs(jobs: Seq[Job])(implicit conf: Config,
                               state: PipelineState,
                               appContext: AppContext,
