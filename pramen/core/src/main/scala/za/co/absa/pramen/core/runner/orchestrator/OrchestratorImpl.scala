@@ -39,11 +39,23 @@ class OrchestratorImpl extends Orchestrator {
   private var pendingJobs = List.empty[Job]
   private val runningJobs: mutable.Set[Job] = mutable.HashSet.empty[Job]
 
-  def runJobs(jobs: Seq[Job])(implicit conf: Config,
-                              state: PipelineState,
-                              appContext: AppContext,
-                              jobRunner: ConcurrentJobRunner,
-                              spark: SparkSession): Unit = {
+  override def validateJobs(jobs: Seq[Job])(implicit appContext: AppContext,
+                                            spark: SparkSession): Unit = {
+    val allowMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
+    val dependencies = getDependencies(jobs)
+    val dependencyResolver = new DependencyResolverImpl(dependencies, allowMultipleJobsPerTable)
+
+    log.info(s"Validating dependencies...")
+
+    dependencyResolver.validate()
+    validateJobs(jobs, appContext.appConfig.runtimeConfig.runDate, allowMultipleJobsPerTable)
+  }
+
+  override def runJobs(jobs: Seq[Job])(implicit conf: Config,
+                                       state: PipelineState,
+                                       appContext: AppContext,
+                                       jobRunner: ConcurrentJobRunner,
+                                       spark: SparkSession): Unit = {
     val applicationId = spark.sparkContext.applicationId
     val allOutputTables = jobs.map(_.outputTable.name)
 
@@ -67,7 +79,7 @@ class OrchestratorImpl extends Orchestrator {
     val atLeastOneStarted = sendPendingJobs(runJobChannel, dependencyResolver)
 
     if (atLeastOneStarted) {
-      completedJobsChannel.foreach{ case(finishedJob, taskResults, isSucceeded) =>
+      completedJobsChannel.foreach { case (finishedJob, taskResults, isSucceeded) =>
         runningJobs.remove(finishedJob)
 
         val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
@@ -97,7 +109,7 @@ class OrchestratorImpl extends Orchestrator {
       val isTransient = job.outputTable.format.isInstanceOf[DataFormat.Transient]
       val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
 
-      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, applicationId,isTransient, Nil, Nil, Nil)
+      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, applicationId, isTransient, Nil, Nil, Nil)
 
       state.addTaskCompletion(taskResult :: Nil)
     })

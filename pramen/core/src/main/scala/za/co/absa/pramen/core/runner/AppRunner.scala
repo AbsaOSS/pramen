@@ -62,6 +62,7 @@ object AppRunner {
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
       _          <- runStartupHook(state, appContext.appConfig.hookConfig)
       _          <- validateShutdownHook(state, appContext.appConfig.hookConfig)
+      _          <- validatePipeline(jobs, state, appContext, spark)
       _          <- runPipeline(conf, jobs, state, appContext, taskRunner, spark)
       _          <- shutdown(taskRunner, state)
     } yield {
@@ -196,6 +197,17 @@ object AppRunner {
     }, state, "selecting jobs for execution")
   }
 
+  private[core] def validatePipeline(implicit jobs: Seq[Job],
+                                     state: PipelineState,
+                                     appContext: AppContext,
+                                     spark: SparkSession): Try[Unit] = {
+    handleFailure(Try {
+      val orchestrator = new OrchestratorImpl()
+
+      orchestrator.validateJobs(jobs)
+    }, state, "validating the pipeline")
+  }
+
   private[core] def runPipeline(implicit conf: Config,
                                 jobs: Seq[Job],
                                 state: PipelineState,
@@ -214,7 +226,7 @@ object AppRunner {
       orchestrator.runJobs(jobs)
 
       state.setSuccess()
-    }, state, "running of the pipeline")
+    }, state, "running the pipeline")
   }
 
   private[core] def runStartupHook(state: PipelineState,
