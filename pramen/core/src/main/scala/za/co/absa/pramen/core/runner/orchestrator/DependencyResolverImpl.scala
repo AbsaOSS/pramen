@@ -22,7 +22,7 @@ import za.co.absa.pramen.core.utils.AlgorithmUtils
 
 import scala.collection.mutable
 
-class DependencyResolverImpl(deps: Seq[JobDependency], allowMultipleJobsPerTable: Boolean) extends DependencyResolver {
+class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTable: Boolean) extends DependencyResolver {
   private val inputTables = deps.flatMap(_.inputTables).toSet
   private val outputTables = deps.map(_.outputTable).toSet
   private val dependentTables = outputTables.intersect(inputTables)
@@ -31,7 +31,7 @@ class DependencyResolverImpl(deps: Seq[JobDependency], allowMultipleJobsPerTable
   private val unavailableTables = new mutable.HashSet[String]()
 
   override def validate(): Unit = {
-    val issues1 = if (allowMultipleJobsPerTable) {
+    val issues1 = if (enableMultipleJobsPerTable) {
       Seq.empty
     } else {
       ensureHaveOnlyOneTransformation(deps.map(_.outputTable))
