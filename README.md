@@ -161,8 +161,8 @@ sbt -DSPARK_VERSION="3.3.2" ++2.13.11 assembly
 sbt -DSPARK_VERSION="3.4.1" ++2.13.11 assembly
 ```
 
-You can collect the uber jar of `pramen-runner` either at
-- `runner/target/scala-2.x/` for the pipeline runner.
+You can collect the uber jar of Pramen either at
+- `core/target/scala-2.x/` for the pipeline runner.
 - `extras/target/scala-2.x/` for extra pipeline elements.
 
 depending on the Scala version you used.

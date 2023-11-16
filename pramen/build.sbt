@@ -53,6 +53,13 @@ def itFilter(name: String): Boolean = name endsWith "LongSuite"
 def unitFilter(name: String): Boolean = (name endsWith "Suite") && !itFilter(name)
 def shade(pkg: String): (String, String) = s"$pkg.**" -> s"$shadeBase.$pkg.@1"
 
+/* This is so that Pramen uber jar has the name compatible to versions where 'pramen-runner' module existed */
+def runnerAssemblyName(moduleName: String): String = {
+  if (moduleName == "pramen-core")
+    "pramen-runner"
+  else moduleName
+}
+
 lazy val IntegrationTest = config("integration") extend Test
 
 lazy val pramen = (project in file("."))
@@ -65,7 +72,7 @@ lazy val pramen = (project in file("."))
     publish := {},
     publishLocal := {}
   )
-  .aggregate(api, core, runner, extras)
+  .aggregate(api, core, extras)
 
 lazy val api = (project in file("api"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
@@ -83,7 +90,6 @@ lazy val api = (project in file("api"))
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val core = (project in file("core"))
-  .disablePlugins(sbtassembly.AssemblyPlugin)
   .configs( IntegrationTest )
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
@@ -104,6 +110,7 @@ lazy val core = (project in file("core"))
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
     jacocoExcludes := commonJacocoExcludes,
+    assemblySettingsRunner
   )
   .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
@@ -126,27 +133,6 @@ lazy val extras = (project in file("extras"))
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
     jacocoExcludes := commonJacocoExcludes,
     assemblySettingsExtras
-  )
-  .dependsOn(core)
-  .enablePlugins(AutomateHeaderPlugin)
-
-lazy val runner = (project in file("runner"))
-  .settings(
-    name := "pramen-runner",
-    printSparkVersion := {
-      val log = streams.value.log
-      log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
-      sparkVersion(scalaVersion.value)
-    },
-    (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= RunnerDependencied(scalaVersion.value)  ++
-      getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
-      getScalaDependency(scalaVersion.value),
-    Test / fork := true,
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:runner Jacoco Report"),
-    jacocoExcludes := commonJacocoExcludes,
-    assemblySettingsRunner
   )
   .dependsOn(core)
   .enablePlugins(AutomateHeaderPlugin)
@@ -187,8 +173,8 @@ lazy val assemblySettingsCommon = Seq(
       }
     case _ => MergeStrategy.deduplicate
   },
-  assembly / assemblyJarName := s"${name.value}_${scalaBinaryVersion.value}_${sparkVersionShort(scalaVersion.value)}-${version.value}.jar",
   assembly / assemblyOption:= (assembly / assemblyOption).value.copy(includeScala = false),
+  assembly / assemblyJarName := s"${runnerAssemblyName(name.value)}_${scalaBinaryVersion.value}_${sparkVersionShort(scalaVersion.value)}-${version.value}.jar",
   assembly / logLevel := Level.Info,
   assembly / test := {}
 )

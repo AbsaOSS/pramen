@@ -50,10 +50,4 @@ object Dependencies {
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   ) :+ getAbrisDependency(scalaVersion)
 
-  def RunnerDependencied(scalaVersion: String): Seq[ModuleID] = Seq(
-    "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
-    "com.github.scopt"     %% "scopt"                      % scoptVersion,
-    "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
-  )
-
 }
