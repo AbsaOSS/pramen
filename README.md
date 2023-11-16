@@ -141,35 +141,38 @@ The following Scala and Spark combinations are supported:
 |     2.12      | 3.0 and above |
 |     2.13      | 3.2 and above |
 
-## Building Pramen to suite your environment
+## Getting Pramen runner for your environment
 
-Pramen is released as a set of thin JAR libraries. When running on a specific environment you might want to tune the pipeline
-runner and extra pipeline elements to Scala and Spark version. You can do that by building Pramen from source and creating
-an uber JAR file that contains all dependencies required to run the pipeline on a Spark cluster (an uber jar aka fat jar).
+Pramen is released as a set of thin JAR libraries. When running on a specific environment you might want to include all
+dependencies in an uber jar that you can build for your Scala version. You can do that by either 
+- Downloading pre-compiled version of Pramen runners at the [Releases](https://github.com/AbsaOSS/pramen/releases) section of the project.
+- Or by building Pramen from source and creating an uber JAR file that contains all dependencies required to run the pipeline on a Spark cluster (see below).
+
+### Building a Pramen runner JAR from sources
 
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
-sbt -DSPARK_VERSION="2.4.8" ++2.11.12 assembly 
-
-sbt -DSPARK_VERSION="3.1.4" ++2.12.18 assembly 
-sbt -DSPARK_VERSION="3.2.4" ++2.12.18 assembly 
-sbt -DSPARK_VERSION="3.3.2" ++2.12.18 assembly
-sbt -DSPARK_VERSION="3.4.1" ++2.12.18 assembly
-
-sbt -DSPARK_VERSION="3.2.4" ++2.13.11 assembly
-sbt -DSPARK_VERSION="3.3.2" ++2.13.11 assembly 
-sbt -DSPARK_VERSION="3.4.1" ++2.13.11 assembly
+sbt ++2.11.12 assembly 
+sbt ++2.12.18 assembly
+sbt ++2.13.12 assembly
 ```
 
 You can collect the uber jar of Pramen either at
 - `core/target/scala-2.x/` for the pipeline runner.
 - `extras/target/scala-2.x/` for extra pipeline elements.
 
-depending on the Scala version you used.
+Since `1.7.0` Pramen runner bundle does not include Delta Lake format classes since they are most often available in 
+Spark distributions. This makes the runner independent of Spark version. But if you want to include Delta Lake files
+in your bundle, use one of example commands specifying your Spark version:
+```sh
+sbt -DSPARK_VERSION="2.4.8" -Dassembly.features="includeDelta" ++2.11.12 assembly 
+sbt -DSPARK_VERSION="3.3.3" -Dassembly.features="includeDelta" ++2.12.18 assembly
+sbt -DSPARK_VERSION="3.4.1" -Dassembly.features="includeDelta" ++2.13.12 assembly
+```
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
 ```sh
-$ spark-shell --jars pramen-runner_2.12_3.2-1.5.2-SNAPSHOT.jar
+$ spark-shell --jars pramen-runner_2.12-1.7.1-SNAPSHOT.jar
 ```
 
 # Creating a data pipeline

@@ -61,6 +61,15 @@ def runnerAssemblyName(moduleName: String): String = {
   else moduleName
 }
 
+def runnerSparkVersionSuffix(moduleName: String, scalaVersion: String, includeDelta: Boolean): String = {
+  if (moduleName == "pramen-core" && includeDelta) {
+    val minorSparkVersion = sparkVersionShort(scalaVersion)
+    s"_$minorSparkVersion"
+  } else ""
+}
+
+val assemblyFeatures = settingKey[Seq[String]]("Define assembly scope")
+
 lazy val IntegrationTest = config("integration") extend Test
 
 lazy val pramen = (project in file("."))
@@ -101,7 +110,8 @@ lazy val core = (project in file("core"))
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
-    libraryDependencies ++= CoreDependencies(scalaVersion.value)  ++
+    assemblyFeatures := sys.props.getOrElse("assembly.features", "").split(',').toSeq,
+    libraryDependencies ++= CoreDependencies(scalaVersion.value, assemblyFeatures.value.contains("includeDelta"))  ++
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
     (Test / testOptions) := Seq(Tests.Filter(unitFilter)),
@@ -125,6 +135,7 @@ lazy val extras = (project in file("extras"))
       sparkVersion(scalaVersion.value)
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
+    assemblyFeatures := sys.props.getOrElse("assembly.features", "").split(',').toSeq,
     libraryDependencies ++= ExtrasJobsDependencies(scalaVersion.value) ++
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
@@ -176,7 +187,7 @@ lazy val assemblySettingsCommon = Seq(
     case _ => MergeStrategy.deduplicate
   },
   assembly / assemblyOption:= (assembly / assemblyOption).value.copy(includeScala = false),
-  assembly / assemblyJarName := s"${runnerAssemblyName(name.value)}_${scalaBinaryVersion.value}_${sparkVersionShort(scalaVersion.value)}-${version.value}.jar",
+  assembly / assemblyJarName := s"${runnerAssemblyName(name.value)}_${scalaBinaryVersion.value}${runnerSparkVersionSuffix(name.value, scalaVersion.value, assemblyFeatures.value.contains("includeDelta"))}-${version.value}.jar",
   assembly / logLevel := Level.Info,
   assembly / test := {}
 )

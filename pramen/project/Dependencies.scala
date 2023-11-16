@@ -27,7 +27,7 @@ object Dependencies {
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
   )
 
-  def CoreDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
+  def CoreDependencies(scalaVersion: String, isDeltaCompile: Boolean): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "org.mongodb.scala"    %% "mongo-scala-driver"         % mongoDbScalaDriverVersion,
     "com.typesafe.slick"   %% "slick"                      % slickVersion,
@@ -42,7 +42,7 @@ object Dependencies {
     "org.mockito"          %  "mockito-core"               % mockitoVersion             % Test,
     "de.flapdoodle.embed"  %  "de.flapdoodle.embed.mongo"  % embeddedMongoDbVersion     % Test,
     "org.hsqldb"           %  "hsqldb"                     % hsqlDbVersion              % Test classifier "jdk8"
-  ) :+ getDeltaDependency(sparkVersion(scalaVersion))
+  ) :+ getDeltaDependency(sparkVersion(scalaVersion), isDeltaCompile)
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
