@@ -120,7 +120,6 @@ object RunnerCommons {
       log.info(s"Fetching '$file'...")
       val fs = new Path(file).getFileSystem(hadoopConfig)
 
-
       fs.copyToLocalFile(new Path(file), currentPath)
     })
   }

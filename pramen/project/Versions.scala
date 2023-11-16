@@ -67,7 +67,7 @@ object Versions {
     }
   }
 
-  def getDeltaDependency(sparkVersion: String, isCompile: Boolean): ModuleID = {
+  def getDeltaDependency(sparkVersion: String, isCompile: Boolean, isTest: Boolean): ModuleID = {
     // According to this: https://docs.delta.io/latest/releases.html
     val (deltaArtifact, deltaVersion) = sparkVersion match {
       case version if version.startsWith("2.")   => ("delta-core", "0.6.1")
@@ -79,12 +79,16 @@ object Versions {
       case version if version.startsWith("3.5.") => ("delta-spark", "3.0.0")  // 'delta-core' was renamed to 'delta-spark' since 3.0.0.
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
-    if (isCompile) {
-      println(s"Using Delta version $deltaArtifact:$deltaVersion (compile)")
-      "io.delta" %% deltaArtifact % deltaVersion % Compile
+    if (isTest) {
+      "io.delta" %% deltaArtifact % deltaVersion % Test
     } else {
-      println(s"Using Delta version $deltaArtifact:$deltaVersion (provided)")
-      "io.delta" %% deltaArtifact % deltaVersion % Provided
+      if (isCompile) {
+        println(s"Using Delta version $deltaArtifact:$deltaVersion (compile)")
+        "io.delta" %% deltaArtifact % deltaVersion % Compile
+      } else {
+        println(s"Using Delta version $deltaArtifact:$deltaVersion (provided)")
+        "io.delta" %% deltaArtifact % deltaVersion % Provided
+      }
     }
   }
 
