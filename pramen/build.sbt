@@ -155,6 +155,7 @@ lazy val assemblySettingsCommon = Seq(
     case x if x.endsWith("module-info.class")      => MergeStrategy.discard
     case PathList("include", xs @ _*)              => MergeStrategy.discard
     case PathList("com", "ibm", "icu", xs @ _*)    => MergeStrategy.discard
+    case PathList("common", "message", xs @ _*)    => MergeStrategy.discard
     case PathList("javax", "json", xs @ _*)        => MergeStrategy.discard
     case PathList(ps @ _*) if isFiltered(ps.last)  => MergeStrategy.discard
     case PathList("META-INF", xs @ _*) =>
@@ -197,6 +198,7 @@ lazy val assemblySettingsExtras = assemblySettingsCommon ++ Seq(assembly / assem
   ShadeRule.zap("com.zaxxer.**").inAll,
   ShadeRule.zap("delta.**").inAll,
   ShadeRule.zap("edu.**").inAll,
+  ShadeRule.zap("geny.**").inAll,
   ShadeRule.zap("io.delta.**").inAll,
   ShadeRule.zap("io.netty.**").inAll,
   ShadeRule.zap("javax.**").inAll,
@@ -229,16 +231,20 @@ lazy val assemblySettingsExtras = assemblySettingsCommon ++ Seq(assembly / assem
   ShadeRule.zap("org.tukaani.**").inAll,
   ShadeRule.zap("org.xerial.**").inAll,
   ShadeRule.zap("org.xerial.snappy.**").inAll,
+  ShadeRule.zap("requests.**").inAll,
   ShadeRule.zap("scala.**").inAll,
+  ShadeRule.zap("scopt.**").inAll,
   ShadeRule.zap("slick.**").inAll,
   ShadeRule.zap("za.co.absa.commons.**").inAll,
   ShadeRule.zap("za.co.absa.pramen.api.**").inAll,
   ShadeRule.zap("za.co.absa.pramen.core.**").inAll
 ))
 
-lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
+lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules := Seq(
   ShadeRule.rename(shade("com.mongodb")).inAll,
+  ShadeRule.rename(shade("geny")).inAll,
   ShadeRule.rename(shade("org.mongodb")).inAll,
+  ShadeRule.rename(shade("requests")).inAll,
   ShadeRule.rename(shade("scopt")).inAll,
   ShadeRule.rename(shade("slick")).inAll,
   ShadeRule.zap("com.github.luben.**").inAll,
@@ -251,7 +257,9 @@ lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assem
   ShadeRule.zap("org.slf4j.**").inAll,
   ShadeRule.zap("org.slf4j.**").inAll,
   ShadeRule.zap("org.xerial.snappy.**").inAll
-))
+),
+  assembly / mainClass := Some("za.co.absa.pramen.runner.PipelineRunner")
+)
 
 addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bump.Bugfix; release with-defaults")
 addCommandAlias("itTest", "integration:test")
