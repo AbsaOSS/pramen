@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.base
+package za.co.absa.pramen.core.mocks
 
 import java.security.Permission
 

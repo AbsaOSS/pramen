@@ -16,12 +16,16 @@
 
 package za.co.absa.pramen.core
 
+import com.typesafe.config.ConfigFactory
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.base.{ExitException, NoExitSecurityManager}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.mocks.{ExitException, NoExitSecurityManager}
+import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.runner.PipelineRunner
+
+import java.nio.file.Paths
 
 class PipelineRunnerSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFixture with SparkTestBase {
   override def beforeAll(): Unit = System.setSecurityManager(new NoExitSecurityManager())
@@ -50,5 +54,28 @@ class PipelineRunnerSuite extends AnyWordSpec with BeforeAndAfterAll with TempDi
           assert(e.status != 0)
       }
     }
+
+    "exit with zero exit code on a pipeline with minimal configuration" in {
+      val conf = ConfigFactory.parseString(
+        """pramen {
+          |  pipeline.name = "Test pipeline"
+          |  bookkeeping.enabled = false
+          |  stop.spark.session = false
+          |}
+          |""".stripMargin)
+      withTempDirectory("pramen_main") { tempDir =>
+        val workflowPath = Paths.get(tempDir, "workflow.conf").toString
+
+        ConfigUtils.writeConfigToFile(conf, workflowPath)
+
+        try {
+          PipelineRunner.main(Array("--workflow", workflowPath))
+        } catch {
+          case e: ExitException =>
+            assert(e.status == 0)
+        }
+      }
+    }
   }
 }
+
