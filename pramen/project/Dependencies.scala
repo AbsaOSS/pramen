@@ -42,12 +42,15 @@ object Dependencies {
     "org.mockito"          %  "mockito-core"               % mockitoVersion             % Test,
     "de.flapdoodle.embed"  %  "de.flapdoodle.embed.mongo"  % embeddedMongoDbVersion     % Test,
     "org.hsqldb"           %  "hsqldb"                     % hsqlDbVersion              % Test classifier "jdk8"
-  ) :+ getDeltaDependency(sparkVersion(scalaVersion), isDeltaCompile)
+  ) :+ getDeltaDependency(sparkVersion(scalaVersion), isDeltaCompile, isTest = false)
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "net.sourceforge.jtds" %  "jtds"                       % msSqlDriverVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
-  ) :+ getAbrisDependency(scalaVersion)
+  ) ++ Seq(
+    getAbrisDependency(scalaVersion),
+    getDeltaDependency(sparkVersion(scalaVersion), isCompile = false, isTest = true)
+  )
 
 }
