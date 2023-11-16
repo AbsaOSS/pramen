@@ -20,6 +20,7 @@ import com.typesafe.config._
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.StringUtils.{escapeString, trimLeft}
 
+import java.io.{File, PrintWriter}
 import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{DayOfWeek, LocalDate}
@@ -584,5 +585,17 @@ object ConfigUtils {
     val root = conf.root().unwrapped().asScala
 
     processStruct("", "", root, isRoot = true)
+  }
+
+  /**
+    * Writes the contents of a configuration to a file in HOCON format.
+    *
+    * @param conf     A configuration.
+    * @param fileName The output file name.
+    */
+  def writeConfigToFile(conf: Config, fileName: String): Unit = {
+    val pw = new PrintWriter(new File(fileName))
+    pw.write(conf.root().render())
+    pw.close()
   }
 }

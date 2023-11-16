@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.base
+package za.co.absa.pramen.core.mocks
 
 case class ExitException(status: Int) extends SecurityException("System.exit() is not allowed")
