@@ -43,7 +43,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   val saveTableInvocations = new ListBuffer[(String, LocalDate, DataFrame)]
   var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean)]
   val queryExecutorMock = new QueryExecutorMock(true)
-  val metadataManager = new MetadataManagerNull(false)
+  val metadataManagerMock = new MetadataManagerNull(false)
 
   override def getRegisteredTables: Seq[String] = registeredTables
 
@@ -138,7 +138,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
       override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
 
-      override def metadataManager: MetadataManager = metadataManager
+      override def metadataManager: MetadataManager = metadataManagerMock
 
       private def validateTable(tableName: String): Unit = {
         if (!tables.contains(tableName)) {

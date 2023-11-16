@@ -25,24 +25,9 @@ object Keys {
   val WARN_THROUGHPUT_RPS = "pramen.warn.throughput.rps"
   val GOOD_THROUGHPUT_RPS = "pramen.good.throughput.rps"
 
-  val JOB_FACTORIES = "pramen.jobs"
-
   val MAIL_FROM = "mail.send.from"
   val MAIL_TO = "mail.send.to"
   val MAIL_FAILURES_TO = "mail.send.failures.to"
-
-  // Snapshot job
-  val SNAP_DATE_FIELD = "jdbc.snap.weekly.snapshot.date.column"
-
-  val HAS_INFO_DATE_COLUMN = "jdbc.snap.weekly.has.information.date.column"
-  val JDBC_SNAP_INFO_DATE_COLUMN = "jdbc.snap.weekly.information.date.column"
-
-  val JDBC_SNAP_INFO_DATE_DELAY = "jdbc.snap.weekly.info.date.delay.days"
-  val JDBC_SNAP_FIELD_DELAY = "jdbc.snap.weekly.snapshot.date.delay.days"
-
-  val JDBC_SNAP_TABLE_WEEKLY_PREFIX="jdbc.snap.weekly.table"
-
-  val SNAP_WEEKLY_DAYS_OF_WEEK = "jdbc.snap.weekly.days.of.week"
 
   val HADOOP_REDACT_TOKENS = "hadoop.redacted.tokens"
   val HADOOP_OPTION_PREFIX = "hadoop.option"
@@ -61,5 +46,15 @@ object Keys {
 
   val LOG_EXECUTOR_NODES = "pramen.log.executor.nodes"
 
-  val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "session.token", "access_key", "session_token")
+  final val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "session.token", "access_key", "session_token", "auth.user.info")
+
+  final val CONFIG_KEYS_TO_REDACT = Set(
+    "java.class.path",
+    "java.security.auth.login.config",
+    "spark.driver.extraJavaOptions",
+    "spark.yarn.dist.files",
+    "spline.mongodb.url",
+    "sun.boot.class.path",
+    "sun.java.command"
+  )
 }
