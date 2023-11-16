@@ -2731,7 +2731,7 @@ in the class path.
 Use `spark-submit` to run `pramen` jobs.
 
 ```sh
-spark-submit --class za.co.absa.pramen.core.runner.PipelineRunner \
+spark-submit --class za.co.absa.pramen.runner.PipelineRunner \
   pramen-runner_2.11-x.y.z.jar --workflow my_workflow.conf
 ```
 
