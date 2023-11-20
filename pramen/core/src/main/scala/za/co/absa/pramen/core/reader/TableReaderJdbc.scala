@@ -29,6 +29,7 @@ import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcSparkUtils, TimeUtils}
 
+import java.sql.Date
 import java.time.{Instant, LocalDate}
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
@@ -38,9 +39,6 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
                       jdbcUrlSelector: JdbcUrlSelector,
                       conf: Config
                      )(implicit spark: SparkSession) extends TableReader {
-
-  // ToDo Pass proper parent path in 0.9.0
-
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
@@ -61,55 +59,40 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     gen
   }
 
-  private[core] def getJdbcConfig: TableReaderJdbcConfig = jdbcReaderConfig
-
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    val tableName = getTableName(query)
-
-    val sql = if (jdbcReaderConfig.hasInfoDate) {
-      sqlGen.getCountQuery(tableName, infoDateBegin, infoDateEnd)
-    } else {
-      sqlGen.getCountQuery(tableName)
+    val start = Instant.now
+    val count = query match {
+      case Query.Table(tableName) =>
+        getCountForTable(tableName, infoDateBegin, infoDateEnd)
+      case Query.Sql(sql) =>
+        getCountForSql(sql, infoDateBegin, infoDateEnd)
+      case other =>
+        throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
 
-    val start = Instant.now
-    val count = getWithRetry[Long](sql, isDataQuery = false, jdbcRetries)(df =>
-      // Take first column of the first row, use BigDecimal as the most generic numbers parser,
-      // and then convert to Long. This is a safe way if the output is like "0E-11".
-      BigDecimal(df.collect()(0)(0).toString).toLong
-    )
     val finish = Instant.now
+
     log.info(s"Record count: $count. Query elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
     count
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
-    val tableName = getTableName(query)
-
-    val sql = if (jdbcReaderConfig.hasInfoDate) {
-      sqlGen.getDataQuery(tableName, infoDateBegin, infoDateEnd, Nil, jdbcReaderConfig.limitRecords)
-    } else {
-      sqlGen.getDataQuery(tableName, Nil, jdbcReaderConfig.limitRecords)
-    }
-
-    val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries)(df => {
-      // Make sure connection to the server is made without fetching the data
-      log.debug(df.schema.treeString)
-      df
-    })
-
-    df
-  }
-
-  private[core] def getTableName(query: Query): String = {
     query match {
-      case Query.Table(tableName) => tableName
-      case other => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' instead.")
+      case Query.Table(tableName) =>
+        getDataForTable(tableName, infoDateBegin, infoDateEnd)
+      case Query.Sql(sql) =>
+        getDataForSql(sql, infoDateBegin, infoDateEnd)
+      case other =>
+        throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
   }
+
+  private[core] def getJdbcConfig: TableReaderJdbcConfig = jdbcReaderConfig
 
   @tailrec
-  final private[core] def getWithRetry[T](sql: String, isDataQuery: Boolean, retriesLeft: Int)(f: DataFrame => T): T = {
+  final private[core] def getWithRetry[T](sql: String,
+                                          isDataQuery: Boolean,
+                                          retriesLeft: Int)(f: DataFrame => T): T = {
     Try {
       val df = getDataFrame(sql, isDataQuery)
       f(df)
@@ -126,6 +109,49 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
           log.error(s"JDBC connection error for $currentUrl. No connection attempts left.", ex)
           throw ex
         }
+    }
+  }
+
+  private[core] def getCountForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val sql = if (jdbcReaderConfig.hasInfoDate) {
+      sqlGen.getCountQuery(tableName, infoDateBegin, infoDateEnd)
+    } else {
+      sqlGen.getCountQuery(tableName)
+    }
+
+    getWithRetry[Long](sql, isDataQuery = false, jdbcRetries)(df =>
+      // Take first column of the first row, use BigDecimal as the most generic numbers parser,
+      // and then convert to Long. This is a safe way if the output is like "0E-11".
+      BigDecimal(df.collect()(0)(0).toString).toLong
+    )
+  }
+
+  private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    getWithRetry[Long](sql, isDataQuery = false, jdbcRetries) { df =>
+      val filteredDf = getFilteredDf(df, infoDateBegin, infoDateEnd)
+      filteredDf.count()
+    }
+  }
+
+  private[core] def getDataForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+    val sql = if (jdbcReaderConfig.hasInfoDate) {
+      sqlGen.getDataQuery(tableName, infoDateBegin, infoDateEnd, Nil, jdbcReaderConfig.limitRecords)
+    } else {
+      sqlGen.getDataQuery(tableName, Nil, jdbcReaderConfig.limitRecords)
+    }
+
+    val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries)(df => {
+      // Make sure connection to the server is made without fetching the data
+      log.debug(df.schema.treeString)
+      df
+    })
+
+    df
+  }
+
+  private[core] def getDataForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+    getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries) { df =>
+      getFilteredDf(df, infoDateBegin, infoDateEnd)
     }
   }
 
@@ -180,6 +206,15 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     jdbcReaderConfig.limitRecords match {
       case Some(limit) => df.limit(limit)
       case None => df
+    }
+  }
+
+  private[core] def getFilteredDf(df: DataFrame, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+    if (jdbcReaderConfig.hasInfoDate) {
+      df.filter(col(jdbcReaderConfig.infoDateColumn).cast(DateType)
+        .between(Date.valueOf(infoDateBegin), Date.valueOf(infoDateEnd)))
+    } else {
+      df
     }
   }
 

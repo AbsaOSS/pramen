@@ -55,12 +55,19 @@ class JdbcSource(sourceConfig: Config,
       case Query.Table(dbTable) =>
         log.info(s"Using TableReaderJdbc to read the table: $dbTable")
         new TableReaderJdbc(jdbcReaderConfig, urlSelector, sourceConfig)
-      case Query.Sql(sql)       =>
+      case Query.Sql(sql) if canUseSparkBuiltInJdbcConnector(sql) =>
+        log.info(s"Using TableReaderJdbc to read the query: $sql")
+        new TableReaderJdbc(jdbcReaderConfig, urlSelector, sourceConfig)
+      case Query.Sql(sql)  =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
         new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig, urlSelector)
-      case q          =>
+      case q =>
         throw new IllegalArgumentException(s"Unexpected '${q.name}' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }
+  }
+
+  private def canUseSparkBuiltInJdbcConnector(sql: String): Boolean = {
+    sql.toLowerCase.startsWith("select") && !jdbcReaderConfig.useJdbcNative
   }
 }
 
@@ -68,6 +75,6 @@ object JdbcSource extends ExternalChannelFactory[JdbcSource] {
   override def apply(conf: Config, parentPath: String, spark: SparkSession): JdbcSource = {
     val tableReaderJdbc = TableReaderJdbcConfig.load(conf)
 
-    new JdbcSource( conf, parentPath, tableReaderJdbc)(spark)
+    new JdbcSource(conf, parentPath, tableReaderJdbc)(spark)
   }
 }
