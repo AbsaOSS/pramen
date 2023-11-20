@@ -64,6 +64,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
        |      information.date.type = "date"
        |      information.date.app.format = "yyyy-MM-dd"
        |      information.date.sql.format = "YYYY-mm-DD"
+       |      use.jdbc.native = true
        |    },
        |    {
        |      name = "jdbc2"
