@@ -23,6 +23,7 @@ import za.co.absa.pramen.api.{Query, Source}
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.USE_JDBC_NATIVE
 import za.co.absa.pramen.core.reader.{TableReaderJdbc, TableReaderJdbcNative}
 import za.co.absa.pramen.core.samples.RdbExampleTable
 
@@ -245,6 +246,30 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
 
       assert(reader.isInstanceOf[TableReaderJdbcNative])
       assert(df.schema.fields(1).metadata.getLong("maxLength") == 50L)
+    }
+
+    "return JDBC table reader when a SELECT query is specified and jdbc native is not enabled" in {
+      val srcConfig = conf.getConfigList("pramen.sources")
+      val src1Config = srcConfig.get(0).withoutPath(USE_JDBC_NATIVE)
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val query = Query.Sql("SELECT * FROM company")
+
+      val reader = src.getReader(query)
+      val df = reader.getData(query, infoDateBegin = LocalDate.now(), infoDateEnd = LocalDate.now(), Nil)
+
+      assert(reader.isInstanceOf[TableReaderJdbc])
+      assert(df.schema.fields(1).metadata.getLong("maxLength") == 50L)
+    }
+
+    "return JDBC Native table reader when a non-SELECT query is specified and jdbc native is not enabled" in {
+      val srcConfig = conf.getConfigList("pramen.sources")
+      val src1Config = srcConfig.get(0)
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val query = Query.Sql("EXECUTE SELECT * FROM company")
+
+      val reader = src.getReader(query)
+
+      assert(reader.isInstanceOf[TableReaderJdbcNative])
     }
 
     "throw an exception on unknown query type" in {
