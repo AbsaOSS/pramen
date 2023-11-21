@@ -60,7 +60,7 @@ class JdbcSource(sourceConfig: Config,
         new TableReaderJdbc(jdbcReaderConfig, urlSelector, sourceConfig)
       case Query.Sql(sql)  =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
-        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig, urlSelector)
+        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig, urlSelector, jdbcReaderConfig.infoDateFormatApp)
       case q =>
         throw new IllegalArgumentException(s"Unexpected '${q.name}' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }

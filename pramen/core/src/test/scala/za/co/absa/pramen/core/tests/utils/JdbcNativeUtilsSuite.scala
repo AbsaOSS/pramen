@@ -55,7 +55,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       assert(df.schema.fields.nonEmpty)
       assert(df.schema.fields.head.name == "ID")
       assert(df.schema.fields.head.dataType == IntegerType)
-      assert(df.count() == 3)
+      assert(df.count() == 4)
     }
   }
 
@@ -87,7 +87,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
 
       val count = JdbcNativeUtils.getResultSetCount(resultSet)
 
-      assert(count == 3)
+      assert(count == 4)
     }
 
     "throw an exception on error" in {
@@ -169,6 +169,11 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |  "NAME" : "Company3",
           |  "EMAIL" : "company3@example.com",
           |  "FOUNDED" : "2016-12-30"
+          |}, {
+          |  "ID" : 4,
+          |  "NAME" : "Company4",
+          |  "EMAIL" : "company4@example.com",
+          |  "FOUNDED" : "2016-12-31"
           |} ]""".stripMargin
 
       val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT id, name, email, founded FROM $tableName")

@@ -462,6 +462,11 @@ is determined by the pipeline configuration.
     # the throughut of the sourcing.
     option.fetchsize = 50000
     option.batchsize = 50000
+  
+    # If set to true, Pramen will use its built-in JDBC connector instead of Spark built in one.
+    # Pramen JDBC connector is slower, and does not support all data types of various RDMS, but supports
+    # SQL queries that do not start with "SELECT".
+    use.jdbc.native = false
     
     # Consider the pipeline as failed if at least one table has no data at the scheduled time.
     # Useful for auto-retrying ingestion pipelines.
@@ -1834,6 +1839,7 @@ Here is an example configuration for a JDBC source:
         minimum.records = 1000 
         fail.if.no.data = true
         has.information.date.column = true
+        use.jdbc.native = true
         information.date.column = "info_date"
       }
     }

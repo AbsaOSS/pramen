@@ -43,7 +43,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |
        |  information.date.column = "FOUNDED"
        |  information.date.type = "date"
-       |  information.date.app.format = "yyyy-MM-DD"
+       |  information.date.app.format = "yyyy-MM-dd"
        |  information.date.sql.format = "YYYY-mm-DD"
        |
        |}""".stripMargin)
@@ -117,7 +117,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
         LocalDate.parse("2000-01-01"),
         LocalDate.parse("2017-12-31"))
 
-      assert(count == 3)
+      assert(count == 4)
     }
   }
 
@@ -193,6 +193,11 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
         |  "NAME" : "Company3",
         |  "EMAIL" : "company3@example.com",
         |  "FOUNDED" : "2016-12-30"
+        |}, {
+        |  "ID" : 4,
+        |  "NAME" : "Company4",
+        |  "EMAIL" : "company4@example.com",
+        |  "FOUNDED" : "2016-12-31"
         |} ]"""
 
       val reader = getReader
