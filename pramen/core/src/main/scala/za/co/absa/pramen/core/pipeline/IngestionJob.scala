@@ -18,8 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{NotificationBuilder, Query, Reason, Source, SourceResult}
+import za.co.absa.pramen.api.{Reason, Source, SourceResult}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -186,7 +185,10 @@ class IngestionJob(operationDef: OperationDef,
   private def getSourcingResult(infoDate: LocalDate): SourceResult = {
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
-    val sourceResult = source.getData(sourceTable.query, from, to, sourceTable.columns)
+    val sourceResult = if (sourceTable.transformations.isEmpty && sourceTable.filters.isEmpty)
+      source.getData(sourceTable.query, from, to, sourceTable.columns) // push down the projection
+    else
+      source.getData(sourceTable.query, from, to, Seq.empty[String]) // column selection and order will be applied later
 
     val sanitizedDf = sanitizeDfColumns(sourceResult.data, specialCharacters)
 

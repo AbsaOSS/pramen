@@ -30,7 +30,7 @@ import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.pipeline.JobBase._
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.source.SourceManager.getSourceByName
-import za.co.absa.pramen.core.utils.{ConfigUtils, SparkUtils}
+import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.sql.SQLSyntaxErrorException
 import java.time.{Instant, LocalDate}
@@ -119,7 +119,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       "track already ran" in {
         val (bk, _, job) = getUseCase()
 
-        bk.setRecordCount("table1", infoDate, infoDate, infoDate, 3, 3, 123, 456, isTableTransient = false)
+        bk.setRecordCount("table1", infoDate, infoDate, infoDate, 4, 4, 123, 456, isTableTransient = false)
 
         val result = job.preRunCheckJob(infoDate, conf, Nil)
 
@@ -186,21 +186,21 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
       "track insufficient data" when {
         "new job, some records, custom minimum records" in {
-          val (_, _, job) = getUseCase(minRecords = Some(4))
+          val (_, _, job) = getUseCase(minRecords = Some(5))
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-          assert(result.status == JobPreRunStatus.InsufficientData(3, 4, None))
+          assert(result.status == JobPreRunStatus.InsufficientData(4, 5, None))
         }
 
         "needs update, some records, custom minimum records" in {
-          val (bk, _, job) = getUseCase(minRecords = Some(4))
+          val (bk, _, job) = getUseCase(minRecords = Some(5))
 
           bk.setRecordCount("table1", infoDate, infoDate, infoDate, 100, 100, 123, 456, isTableTransient = false)
 
           val result = job.preRunCheckJob(infoDate, conf, Nil)
 
-          assert(result.status == JobPreRunStatus.InsufficientData(3, 4, Some(100)))
+          assert(result.status == JobPreRunStatus.InsufficientData(4, 5, Some(100)))
         }
       }
     }
@@ -211,7 +211,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
         val noDataInfoDate = infoDate.plusDays(1)
 
-        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 3, 3, 123, 456, isTableTransient = false)
+        bk.setRecordCount("table1", noDataInfoDate, noDataInfoDate, noDataInfoDate, 4, 4, 123, 456, isTableTransient = false)
 
         val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
 
@@ -243,7 +243,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       "track no data" in {
         val (bk, _, job) = getUseCase(sourceName = "jdbc_info_date", rangeFromExpr = Some("@infoDate-1"), rangeToExpr = Some("@infoDate"))
 
-        val noDataInfoDate = infoDate.plusDays(2)
+        val noDataInfoDate = infoDate.plusDays(3)
 
         val result = job.preRunCheckJob(noDataInfoDate, conf, Nil)
 
@@ -270,7 +270,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
       val df = runResult.data
 
-      assert(df.count() == 3)
+      assert(df.count() == 4)
       assert(df.schema.fields.head.name == "ID")
       assert(df.schema.fields(1).name == "NAME")
       assert(df.schema.fields(2).name == "DESCRIPTION")
@@ -303,6 +303,11 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
           |  "NAME" : "Company3",
           |  "NAME_U" : "COMPANY3",
           |  "EMAIL" : "company3@example.com"
+          |}, {
+          |  "ID" : 4,
+          |  "NAME" : "Company4",
+          |  "NAME_U" : "COMPANY4",
+          |  "EMAIL" : "company4@example.com"
           |} ]""".stripMargin
       val (_, _, job) = getUseCase()
 

@@ -17,22 +17,18 @@
 package za.co.absa.pramen.core.reader
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{DateType, DecimalType, TimestampType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcSparkUtils, TimeUtils}
 
-import java.sql.Date
+import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 import scala.annotation.tailrec
-import scala.collection.mutable.ListBuffer
 import scala.util.{Failure, Success, Try}
 
 class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
@@ -44,6 +40,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   private val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
 
   private val jdbcRetries = jdbcReaderConfig.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
+
+  private val infoDateFormatter = DateTimeFormatter.ofPattern(jdbcReaderConfig.infoDateFormatApp)
 
   logConfiguration()
 
@@ -79,9 +77,9 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     query match {
       case Query.Table(tableName) =>
-        getDataForTable(tableName, infoDateBegin, infoDateEnd)
+        getDataForTable(tableName, infoDateBegin, infoDateEnd, columns)
       case Query.Sql(sql) =>
-        getDataForSql(sql, infoDateBegin, infoDateEnd)
+        getDataForSql(sql, infoDateBegin, infoDateEnd, columns)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
@@ -127,17 +125,15 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    getWithRetry[Long](sql, isDataQuery = false, jdbcRetries) { df =>
-      val filteredDf = getFilteredDf(df, infoDateBegin, infoDateEnd)
-      filteredDf.count()
-    }
+    val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd, infoDateFormatter)
+    getWithRetry[Long](filteredSql, isDataQuery = false, jdbcRetries)(df => df.count())
   }
 
-  private[core] def getDataForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+  private[core] def getDataForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     val sql = if (jdbcReaderConfig.hasInfoDate) {
-      sqlGen.getDataQuery(tableName, infoDateBegin, infoDateEnd, Nil, jdbcReaderConfig.limitRecords)
+      sqlGen.getDataQuery(tableName, infoDateBegin, infoDateEnd, columns, jdbcReaderConfig.limitRecords)
     } else {
-      sqlGen.getDataQuery(tableName, Nil, jdbcReaderConfig.limitRecords)
+      sqlGen.getDataQuery(tableName, columns, jdbcReaderConfig.limitRecords)
     }
 
     val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries)(df => {
@@ -149,10 +145,9 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     df
   }
 
-  private[core] def getDataForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
-    getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries) { df =>
-      getFilteredDf(df, infoDateBegin, infoDateEnd)
-    }
+  private[core] def getDataForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
+    val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd, infoDateFormatter)
+    getWithRetry[DataFrame](filteredSql, isDataQuery = true, jdbcRetries)(df => filterDfColumns(df, columns))
   }
 
   private[core] def getDataFrame(sql: String, isDataQuery: Boolean): DataFrame = {
@@ -209,16 +204,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  private[core] def getFilteredDf(df: DataFrame, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
-    if (jdbcReaderConfig.hasInfoDate) {
-      df.filter(col(jdbcReaderConfig.infoDateColumn).cast(DateType)
-        .between(Date.valueOf(infoDateBegin), Date.valueOf(infoDateEnd)))
-    } else {
-      df
-    }
-  }
-
-  private def getSqlConfig: SqlConfig = {
+  private[core] def getSqlConfig: SqlConfig = {
     val dateFieldType = SqlColumnType.fromString(jdbcReaderConfig.infoDateType)
     dateFieldType match {
       case Some(infoDateType) =>
@@ -231,7 +217,15 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  private def logConfiguration(): Unit = {
+  private[core] def filterDfColumns(df: DataFrame, columns: Seq[String]): DataFrame = {
+    if (columns.nonEmpty) {
+      df.select(columns.head, columns.tail: _*)
+    } else {
+      df
+    }
+  }
+
+  private[core] def logConfiguration(): Unit = {
     jdbcUrlSelector.logConnectionSettings()
 
     log.info(s"JDBC Reader Configuration:")
