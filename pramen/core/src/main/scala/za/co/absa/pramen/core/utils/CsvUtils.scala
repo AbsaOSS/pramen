@@ -34,10 +34,13 @@ object CsvUtils {
 
   /** Get a CSV record string from an instance of a case class. */
   def getRecord[T](obj: T, separator: Char = ','): String = {
-    obj.getClass.getDeclaredFields.map(field => {
-      field.setAccessible(true)
-      field.get(obj).toString.replace(separator, ' ')
-    }).mkString("", s"$separator", "\n")
+    obj.getClass.getDeclaredFields
+      .filterNot(_.getName.contains('$'))
+      .map(field => {
+        println(field.getName)
+        field.setAccessible(true)
+        field.get(obj).toString.replace(separator, ' ')
+      }).mkString("", s"$separator", "\n")
   }
 
 }
