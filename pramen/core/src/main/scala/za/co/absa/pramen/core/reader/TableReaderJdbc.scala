@@ -246,7 +246,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 }
 
 object TableReaderJdbc {
-  def apply(conf: Config, parent: String = "")(implicit spark: SparkSession): TableReaderJdbc = {
+  def apply(conf: Config, parent: String)(implicit spark: SparkSession): TableReaderJdbc = {
     val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, parent)
 
     val urlSelector = JdbcUrlSelector(jdbcTableReaderConfig.jdbcConfig)

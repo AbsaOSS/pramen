@@ -59,14 +59,14 @@ class TableReaderJdbcNative(jdbcConfig: JdbcConfig,
     getDataFrame(getFilteredSql(getSqlExpression(query), infoDateBegin, infoDateEnd, infoDateFormatter))
   }
 
-  private def getSqlExpression(query: Query): String = {
+  private[core] def getSqlExpression(query: Query): String = {
     query match {
       case Query.Sql(sql) => sql
       case other          => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' instead.")
     }
   }
 
-  private def getDataFrame(sql: String): DataFrame = {
+  private[core] def getDataFrame(sql: String): DataFrame = {
     log.info(s"JDBC Query: $sql")
 
     val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
