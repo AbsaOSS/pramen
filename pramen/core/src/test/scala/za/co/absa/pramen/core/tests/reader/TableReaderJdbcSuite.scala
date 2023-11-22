@@ -236,6 +236,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
           .withValue("information.date.app.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
+          .withValue("correct.decimals.in.schema", ConfigValueFactory.fromAnyRef(true))
 
         val reader = TableReaderJdbc(testConfig, "reader")
 
@@ -276,6 +277,21 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
         val df = reader.getData(Query.Sql("SELECT id, info_date FROM company WHERE info_date BETWEEN '@dateFrom' AND '@dateTo'"), infoDate, infoDate, Seq.empty[String])
 
         assert(df.count == 3)
+      }
+    }
+
+    "getSqlConfig" should {
+      "throw an exception on an incorrect info date column type" in {
+        val testConfig = conf.getConfig("reader")
+          .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
+          .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
+          .withValue("information.date.type", ConfigValueFactory.fromAnyRef("not_exist"))
+
+        val reader = TableReaderJdbc(testConfig, "reader")
+
+        assertThrows[IllegalArgumentException] {
+          reader.getSqlConfig
+        }
       }
     }
   }

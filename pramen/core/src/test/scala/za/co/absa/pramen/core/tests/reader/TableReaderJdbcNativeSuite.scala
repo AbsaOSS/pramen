@@ -213,4 +213,14 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       assert(stripLineEndings(actualData) == stripLineEndings(expectedData))
     }
   }
+
+  "getSqlExpression" should {
+    "throw an exception if the query is not an SQL" in {
+      val reader = getReader
+
+      assertThrows[IllegalArgumentException] {
+        reader.getSqlExpression(Query.Table("table1"))
+      }
+    }
+  }
 }
