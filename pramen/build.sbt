@@ -62,7 +62,7 @@ def runnerAssemblyName(moduleName: String): String = {
 }
 
 def runnerSparkVersionSuffix(moduleName: String, scalaVersion: String, includeDelta: Boolean): String = {
-  if (moduleName == "pramen-core" && includeDelta) {
+  if (includeDelta) {
     val minorSparkVersion = sparkVersionShort(scalaVersion)
     s"_$minorSparkVersion"
   } else ""
