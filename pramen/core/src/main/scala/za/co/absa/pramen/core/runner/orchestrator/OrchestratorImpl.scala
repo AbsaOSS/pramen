@@ -166,10 +166,10 @@ class OrchestratorImpl extends Orchestrator {
     val outputTable = job.outputTable
 
     if (isSucceeded) {
-      log.info(s"$SUCCESS Job '${job.name}' outputting to '${outputTable.name}' is SUCCEEDED.")
+      log.info(s"$SUCCESS Job '${job.name}' outputting to '${outputTable.name}' has SUCCEEDED.")
       dependencyResolver.setAvailableTable(outputTable.name)
     } else {
-      log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' is FAILED.")
+      log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED.")
       dependencyResolver.setFailedTable(outputTable.name)
     }
   }

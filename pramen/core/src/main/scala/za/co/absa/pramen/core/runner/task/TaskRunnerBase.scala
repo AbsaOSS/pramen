@@ -144,7 +144,7 @@ abstract class TaskRunnerBase(conf: Config,
       case Success(validationResult) =>
         val resultToReturn = validationResult.status match {
           case Ready =>
-            log.info(s"Validation of the task: $outputTable for date: ${task.infoDate} is SUCCEEDED.")
+            log.info(s"Validation of the task: $outputTable for date: ${task.infoDate} has SUCCEEDED.")
             Right(validationResult)
           case NeedsUpdate =>
             log.info(s"The table needs update: $outputTable for date: ${task.infoDate}.")
