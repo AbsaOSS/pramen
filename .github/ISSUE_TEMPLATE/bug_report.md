@@ -12,7 +12,7 @@ A clear and concise description of what the bug is.
 
 ## Code and/or configuration snippet that caused the issue
 
-```
+```hocon
 pramen {
 }
 ```
