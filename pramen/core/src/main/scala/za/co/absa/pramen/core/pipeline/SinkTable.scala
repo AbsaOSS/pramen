@@ -76,7 +76,7 @@ object SinkTable {
 
     val sinkTables = tableConfigs
       .zipWithIndex
-      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]") }
+      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[${idx + 1}]") }
 
     val duplicates = AlgorithmicUtils.findDuplicates(sinkTables.map(_.metaTableName).toSeq)
     if (duplicates.nonEmpty) {

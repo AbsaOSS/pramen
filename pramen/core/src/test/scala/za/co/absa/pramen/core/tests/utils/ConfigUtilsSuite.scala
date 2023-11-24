@@ -299,9 +299,9 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
 
       assert(flat("mytest.password") == "xyz")
       assert(flat("mytest.days.ok").asInstanceOf[util.ArrayList[Int]].asScala.toList == List(1, 2, 3))
-      assert(flat("mytest.object.array[0].numbers").asInstanceOf[util.ArrayList[Int]].asScala.toList == List(1, 2, 3))
-      assert(flat("mytest.object.array[0].options[1].opt2") == 200)
-      assert(flat("mytest.object.array[1].name") == "b")
+      assert(flat("mytest.object.array[1].numbers").asInstanceOf[util.ArrayList[Int]].asScala.toList == List(1, 2, 3))
+      assert(flat("mytest.object.array[1].options[2].opt2") == 200)
+      assert(flat("mytest.object.array[2].name") == "b")
     }
   }
 
@@ -624,8 +624,8 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
 
       assert(actual.contains("mytest.date.value = 2020-08-10"))
       assert(actual.contains("mytest.extra.options2.value3 = [10, 5, 7, 4]"))
-      assert(actual.contains("mytest.object.array[0].options[0].opt1 = a"))
-      assert(actual.contains("mytest.matrix[0] = [1, 2, 3]"))
+      assert(actual.contains("mytest.object.array[1].options[1].opt1 = a"))
+      assert(actual.contains("mytest.matrix[1] = [1, 2, 3]"))
       assert(actual.contains("mytest.int.value = [redacted]"))
       assert(actual.contains("mytest.password = [redacted]"))
     }

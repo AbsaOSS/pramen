@@ -63,7 +63,7 @@ object ExternalChannelFactoryReflect {
           case Some(oc) => oc.withFallback(cfg)
           case None     => cfg
         }
-        fromConfig(effectiveConf, s"$arrayPath[$idx]", channelType)
+        fromConfig(effectiveConf, s"$arrayPath[${idx + 1}]", channelType)
       case None             =>
         throw new IllegalArgumentException(s"Unknown name of a data $channelType: $name.")
     }

@@ -354,7 +354,7 @@ object ConfigUtils {
     def flattenConfigList(configKey: String, configList: ConfigList): Map[String, AnyRef] = {
       configList.asScala.zipWithIndex
         .flatMap {
-          case (configValue, index) => flattenConfigValue(s"$configKey[$index]", configValue)
+          case (configValue, index) => flattenConfigValue(s"$configKey[${index + 1}]", configValue)
         }
         .toMap
     }

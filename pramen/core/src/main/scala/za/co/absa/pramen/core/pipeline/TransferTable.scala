@@ -118,7 +118,7 @@ object TransferTable {
 
     val transferTables = tableConfigs
       .zipWithIndex
-      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]", sinkName, defaultStartDate, defaultTrackDays) }
+      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[${idx + 1}]", sinkName, defaultStartDate, defaultTrackDays) }
 
     val duplicates = AlgorithmicUtils.findDuplicates(transferTables.map(_.jobMetaTableName).toSeq)
     if (duplicates.nonEmpty) {

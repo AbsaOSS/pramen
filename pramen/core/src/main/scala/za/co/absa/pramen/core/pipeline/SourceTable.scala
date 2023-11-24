@@ -75,7 +75,7 @@ object SourceTable {
 
     val sourceTables = tableConfigs
       .zipWithIndex
-      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]") }
+      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[${idx + 1}]") }
 
     val duplicates = AlgorithmicUtils.findDuplicates(sourceTables.map(_.metaTableName).toSeq)
     if (duplicates.nonEmpty) {

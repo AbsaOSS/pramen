@@ -98,7 +98,7 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
 
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source")
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.1", "source")
 
       assert(src.isInstanceOf[SparkSource])
       assert(src.asInstanceOf[SparkSource].format.contains("csv"))

@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.LocalFsUtils
 
-import java.io.{File, IOException}
+import java.io.File
 import java.nio.file.Paths
 import java.time.LocalDate
 
@@ -99,7 +99,7 @@ class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
 
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source")
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.1", "source")
 
       assert(src.isInstanceOf[LocalSparkSource])
       assert(src.asInstanceOf[LocalSparkSource].hadoopTempPath == sourceTemp.toString)

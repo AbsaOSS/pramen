@@ -156,7 +156,7 @@ class SinkTableSuite extends AnyWordSpec {
         SinkTable.fromConfig(conf, "sink.tables")
       }
 
-      assert(ex.getMessage.contains("Either 'expr' or 'comment' should be defined for for the transformation of '2.2' in sink.tables[0].transformations[0]"))
+      assert(ex.getMessage.contains("Either 'expr' or 'comment' should be defined for for the transformation of '2.2' in sink.tables[1].transformations[1]"))
     }
 
   }

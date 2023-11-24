@@ -157,7 +157,7 @@ object OperationDef {
       val dependencyConfigs = conf.getConfigList(DEPENDENCIES_KEY)
       dependencyConfigs.asScala
         .zipWithIndex
-        .map { case (c, i) => MetastoreDependency.fromConfig(c, s"$parent[$i]") }
+        .map { case (c, i) => MetastoreDependency.fromConfig(c, s"$parent[${i + 1}]") }
         .toSeq
     } else {
       Seq.empty[MetastoreDependency]

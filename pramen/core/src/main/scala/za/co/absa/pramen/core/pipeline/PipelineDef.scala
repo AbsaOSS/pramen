@@ -38,7 +38,7 @@ object PipelineDef {
     val environment = conf.getString(ENVIRONMENT_NAME)
     val operations = ConfigUtils.getOptionConfigList(conf, OPERATIONS_KEY)
       .zipWithIndex
-      .flatMap{ case (c, i) => OperationDef.fromConfig(c, conf, infoDateConfig, s"$OPERATIONS_KEY[$i]", defaultDelayDays) }
+      .flatMap{ case (c, i) => OperationDef.fromConfig(c, conf, infoDateConfig, s"$OPERATIONS_KEY[${i + 1}]", defaultDelayDays) }
       .toSeq
     PipelineDef(name, environment, operations)
   }

@@ -54,7 +54,7 @@ object TransformExpression {
 
       val transformations = transformationConfigs
         .zipWithIndex
-        .map { case (transformationConfig, idx) => fromConfigSingleEntry(transformationConfig, s"$parentPath.$arrayPath[$idx]") }
+        .map { case (transformationConfig, idx) => fromConfigSingleEntry(transformationConfig, s"$parentPath.$arrayPath[${idx + 1}]") }
 
       transformations.toSeq
     } else {
