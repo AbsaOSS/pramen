@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, Reason, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.exceptions.ReasonException
+import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.lock.TokenLockFactory
@@ -323,7 +323,7 @@ abstract class TaskRunnerBase(conf: Config,
           Seq.empty)
       }
     } catch {
-      case ex: Throwable => Failure(ex)
+      case ex: Throwable => Failure(new FatalErrorWrapper("Fatal error has occurred.", ex))
     } finally {
       lock.release()
     }

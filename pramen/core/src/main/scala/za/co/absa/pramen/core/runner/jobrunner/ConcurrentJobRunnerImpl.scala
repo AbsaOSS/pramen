@@ -33,7 +33,6 @@ import java.util.concurrent.Executors.newFixedThreadPool
 import scala.concurrent.ExecutionContext.fromExecutorService
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContextExecutorService, Future}
-import scala.util.Try
 import scala.util.control.NonFatal
 
 class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
@@ -72,8 +71,11 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
     if (!loopStarted) {
       throw new IllegalStateException("Worker loop hasn't started yet")
     }
+    log.info("Waiting for worker threads to finish...")
     Await.result(workersFuture, Duration.Inf)
+    log.info("Workers have finished. Shutting down the execution context...")
     executionContext.shutdown()
+    log.info("The execution context is now finished.")
     loopStarted = false
   }
 
@@ -86,21 +88,22 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
 
         completedJobsChannel.send((job, Nil, isSucceeded))
       } catch {
-        case ex: FatalErrorWrapper if ex.cause != null =>
-          log.error(s"${Emoji.FAILURE} A FATAL error has been encountered.", ex.cause)
-          val fatalEx = new RuntimeException(s"FATAL exception encountered, stopping the pipeline.", ex.cause)
-          completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(fatalEx), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
-          completedJobsChannel.close()
-        case NonFatal(ex) =>
-          completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
-        case ex: Throwable =>
-          log.error(s"${Emoji.FAILURE} A FATAL error has been encountered.", ex)
-          val fatalEx = new RuntimeException(s"FATAL exception encountered, stopping the pipeline.", ex)
-          completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(fatalEx), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
-          completedJobsChannel.close()
+        case ex: FatalErrorWrapper if ex.cause != null => onFatalException(ex.cause, job, isTransient)
+        case NonFatal(ex)                              => sendFailure(ex, job, isTransient)
+        case ex: Throwable                             => onFatalException(ex, job, isTransient)
       }
     }
     completedJobsChannel.close()
+  }
+
+  private[core] def onFatalException(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
+    log.error(s"${Emoji.FAILURE} A FATAL error has been encountered.", ex)
+    val fatalEx = new FatalErrorWrapper(s"FATAL exception encountered, stopping the pipeline.", ex)
+    sendFailure(fatalEx, job, isTransient)
+  }
+
+  private[core] def sendFailure(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
+    completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
   }
 
   private[core] def runJob(job: Job): Boolean = {
@@ -121,7 +124,15 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
 
     val fut = taskRunner.runJobTasks(job, taskDefs)
 
+    log.info("Waiting for all job tasks to finish...")
     val statuses = Await.result(fut, Duration.Inf)
+    log.info("All job tasks have finished.")
+
+    // Rethrow fatal errors so the pipeline can be stopped asap.
+    statuses.foreach {
+      case RunStatus.Failed(ex) if ex.isInstanceOf[FatalErrorWrapper] => throw ex
+      case _ => // skip
+    }
 
     statuses.forall(s => !s.isFailure)
   }
