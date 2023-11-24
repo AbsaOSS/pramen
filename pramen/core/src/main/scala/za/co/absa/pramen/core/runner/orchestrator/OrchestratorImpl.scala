@@ -22,6 +22,7 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.AppContext
+import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
@@ -77,10 +78,13 @@ class OrchestratorImpl extends Orchestrator {
     jobRunner.startWorkerLoop(runJobChannel)
 
     val atLeastOneStarted = sendPendingJobs(runJobChannel, dependencyResolver)
+    var hasFatalErrors = false
 
     if (atLeastOneStarted) {
       completedJobsChannel.foreach { case (finishedJob, taskResults, isSucceeded) =>
         runningJobs.remove(finishedJob)
+
+        hasFatalErrors = hasFatalErrors || taskResults.exists(status => isFatalFailure(status.runStatus))
 
         val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
         if (hasAnotherUnfinishedJob) {
@@ -93,9 +97,18 @@ class OrchestratorImpl extends Orchestrator {
 
         state.addTaskCompletion(taskResults)
 
-        val jobStarted = sendPendingJobs(runJobChannel, dependencyResolver)
-        if (!jobStarted && runningJobs.isEmpty) {
-          runJobChannel.close()
+        if (hasFatalErrors) {
+          // In case of a fatal error we either need to interrupt running threads, or wait for them to return.
+          // In the current implementation we wait for threads to finish, but not start new jobs in running threads.
+          // This can be also reconsidered, if there are issues with the current solutions observed.
+          if (runningJobs.isEmpty) {
+            runJobChannel.close()
+          }
+        } else {
+          val jobStarted = sendPendingJobs(runJobChannel, dependencyResolver)
+          if (!jobStarted && runningJobs.isEmpty) {
+            runJobChannel.close()
+          }
         }
       }
     }
@@ -115,6 +128,13 @@ class OrchestratorImpl extends Orchestrator {
     })
 
     jobRunner.shutdown()
+  }
+
+  private def isFatalFailure(runStatus: RunStatus): Boolean = {
+    runStatus match {
+      case RunStatus.Failed(ex) if ex.isInstanceOf[FatalErrorWrapper] => true
+      case _ => false
+    }
   }
 
   private def hasNonPassiveNonOptionalDeps(job: Job, missingTables: Seq[String]): Boolean = {

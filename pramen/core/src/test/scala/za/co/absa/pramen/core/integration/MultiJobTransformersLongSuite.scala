@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.LocalDate
 
-class MultiJobTransformersSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
+class MultiJobTransformersLongSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   import spark.implicits._
 
   private val infoDateSaturday = LocalDate.parse("2023-11-04")
@@ -60,10 +60,10 @@ class MultiJobTransformersSuite extends AnyWordSpec with SparkTestBase with Temp
     }
 
     "work for a day with a different job (source)" in {
-      withTempDirectory("integration_multi_table_transformers") { tempDir =>
-        val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+      val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+      df.createOrReplaceTempView("my_table1")
 
-        df.createOrReplaceTempView("my_table1")
+      withTempDirectory("integration_multi_table_transformers") { tempDir =>
 
         val conf = getConfig(tempDir, infoDateMonday, enableMultiJobPerOutputTable = true)
 
@@ -85,6 +85,8 @@ class MultiJobTransformersSuite extends AnyWordSpec with SparkTestBase with Temp
         assert(actual2.length == 3)
         assert(actual2.exists(_.contains(""""a":"A"""")))
       }
+
+      spark.catalog.dropTempView("my_table1")
     }
 
     "fail if multi jobs per output table is not enabled" in {
