@@ -47,14 +47,20 @@ object ScheduleStrategyUtils {
   private[core] def getRerun(outputTable: String,
                              runDate: LocalDate,
                              schedule: Schedule,
-                             infoDateExpression: String
+                             infoDateExpression: String,
+                             bookkeeper: Bookkeeper
                             ): List[TaskPreDef] = {
     if (schedule.isEnabled(runDate)) {
       val infoDate = evaluateRunDate(runDate, infoDateExpression)
 
-      log.info(s"Rerunning '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
-
-      List(pipeline.TaskPreDef(infoDate, TaskRunReason.Rerun))
+      bookkeeper.getLatestDataChunk(outputTable, infoDate, infoDate) match {
+        case Some(_) =>
+          log.info(s"Rerunning '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
+          List(pipeline.TaskPreDef(infoDate, TaskRunReason.Rerun))
+        case None =>
+          log.info(s"Running '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
+          List(pipeline.TaskPreDef(infoDate, TaskRunReason.New))
+      }
     } else {
       log.info(s"The job for '$outputTable' is out of schedule $schedule for $runDate. Skipping...")
       Nil

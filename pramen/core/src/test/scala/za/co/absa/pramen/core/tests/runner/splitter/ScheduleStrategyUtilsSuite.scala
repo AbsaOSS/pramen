@@ -21,9 +21,9 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.core.metastore.model.MetastoreDependency
-import za.co.absa.pramen.core.pipeline
-import za.co.absa.pramen.core.pipeline.{TaskPreDef, TaskRunReason}
 import za.co.absa.pramen.core.model.DataChunk
+import za.co.absa.pramen.core.pipeline
+import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.splitter.RunMode
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 import za.co.absa.pramen.core.schedule.Schedule
@@ -35,22 +35,30 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
     val date = LocalDate.of(2022, 2, 18)
 
     "getRerun" should {
+      val bk = mock(classOf[Bookkeeper])
+      when(bk.getLatestDataChunk("table", date.minusDays(1), date.minusDays(1))).thenReturn(Some(null))
+      when(bk.getLatestDataChunk("table", date, date)).thenReturn(None)
+
       "return information date of the rerun" in {
         val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
 
-        assert(getRerun("table", date, Schedule.EveryDay(), "@runDate - 1") == expected :: Nil)
+        assert(getRerun("table", date, Schedule.EveryDay(), "@runDate - 1", bk) == expected :: Nil)
+      }
+
+      "return information date of the rerun with New status if the job hasn't ran yet" in {
+        val expected = pipeline.TaskPreDef(date, TaskRunReason.New)
+
+        assert(getRerun("table", date, Schedule.EveryDay(), "@runDate", bk) == expected :: Nil)
       }
 
       "return information date of a non-daily run rerun" in {
         val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
 
-        assert(getRerun("table", date, Schedule.Monthly(18 :: Nil), "@runDate - 1") == expected :: Nil)
+        assert(getRerun("table", date, Schedule.Monthly(18 :: Nil), "@runDate - 1", bk) == expected :: Nil)
       }
 
       "return nothing is out of schedule rerun" in {
-        val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)
-
-        assert(getRerun("table", date, Schedule.Monthly(1 :: Nil), "@runDate - 1").isEmpty)
+        assert(getRerun("table", date, Schedule.Monthly(1 :: Nil), "@runDate - 1", bk).isEmpty)
       }
     }
 
