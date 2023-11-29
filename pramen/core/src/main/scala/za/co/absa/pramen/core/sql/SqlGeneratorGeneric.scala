@@ -49,7 +49,7 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
     s"SELECT ${columnExpr(columns)} FROM $tableName WHERE $where${getLimit(limit)}"
   }
 
-  private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
+  override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
@@ -69,7 +69,7 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
     }
   }
 
-  private def getDateLiteral(date: LocalDate): String = {
+  override def getDateLiteral(date: LocalDate): String = {
     val dateStr = dateFormatterApp.format(date)
 
     sqlConfig.infoDateType match {

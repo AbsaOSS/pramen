@@ -53,7 +53,7 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig, extraConfig: Config) extends SqlG
     s"SELECT ${columnExpr(columns)} FROM $tableName WHERE $where${getLimit(limit, hasWhere = true)}"
   }
 
-  private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
+  override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
@@ -66,7 +66,7 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig, extraConfig: Config) extends SqlG
     }
   }
 
-  private def getDateLiteral(date: LocalDate): String = {
+  override def getDateLiteral(date: LocalDate): String = {
     sqlConfig.infoDateType match {
       case SqlColumnType.DATE => {
         val dateStr = dateFormatterOracle.format(date)

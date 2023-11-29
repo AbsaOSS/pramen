@@ -118,7 +118,7 @@ class SqlGeneratorSas(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGene
     statement.executeQuery(sql)
   }
 
-  private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
+  override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
@@ -131,7 +131,7 @@ class SqlGeneratorSas(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGene
     }
   }
 
-  private def getDateLiteral(date: LocalDate): String = {
+  override def getDateLiteral(date: LocalDate): String = {
     sqlConfig.infoDateType match {
       case SqlColumnType.DATE   =>
         val dateStr = dateFormatterOracle.format(date)

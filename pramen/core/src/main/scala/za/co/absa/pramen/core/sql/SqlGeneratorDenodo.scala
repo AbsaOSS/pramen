@@ -51,7 +51,7 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig, extraConfig: Config) extends SqlG
     s"SELECT ${columnExpr(columns)} FROM $tableName WHERE $where${getLimit(limit)}"
   }
 
-  private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
+  override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
@@ -64,7 +64,7 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig, extraConfig: Config) extends SqlG
     }
   }
 
-  private def getDateLiteral(date: LocalDate): String = {
+  def getDateLiteral(date: LocalDate): String = {
     val dateStr = dateFormatterApp.format(date)
 
     sqlConfig.infoDateType match {

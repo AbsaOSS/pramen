@@ -33,6 +33,10 @@ trait SqlGenerator {
 
   def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String
 
+  def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String
+
+  def getDateLiteral(date: LocalDate): String
+
   def requiresConnection: Boolean = false
 
   def setConnection(connection: Connection): Unit = {}

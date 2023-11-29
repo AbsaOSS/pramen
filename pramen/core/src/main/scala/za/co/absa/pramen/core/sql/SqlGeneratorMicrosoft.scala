@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.sql
 
+import com.typesafe.config.Config
+
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
-import com.typesafe.config.Config
 
 class SqlGeneratorMicrosoft(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGeneratorBase(sqlConfig) {
 
@@ -51,7 +51,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig, extraConfig: Config) extends S
     s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM $tableName WITH (NOLOCK) WHERE $where"
   }
 
-  private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
+  override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
@@ -71,7 +71,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig, extraConfig: Config) extends S
     }
   }
 
-  private def getDateLiteral(date: LocalDate): String = {
+  override def getDateLiteral(date: LocalDate): String = {
     val dateStr = dateFormatterApp.format(date)
 
     sqlConfig.infoDateType match {
