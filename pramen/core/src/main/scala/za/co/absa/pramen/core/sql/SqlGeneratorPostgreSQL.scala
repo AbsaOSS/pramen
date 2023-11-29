@@ -51,7 +51,7 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig, extraConfig: Config) extends 
     s"SELECT ${columnExpr(columns)} FROM $tableName WHERE $where${getLimit(limit)}"
   }
 
-  private def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
+  override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
@@ -71,7 +71,7 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig, extraConfig: Config) extends 
     }
   }
 
-  private def getDateLiteral(date: LocalDate): String = {
+  override def getDateLiteral(date: LocalDate): String = {
     val dateStr = dateFormatterApp.format(date)
 
     sqlConfig.infoDateType match {
