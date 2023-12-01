@@ -37,6 +37,18 @@ ThisBuild / developers := List(
     email = "Artem.Zhukov@absa.africa",
     url   = url("https://github.com/zhukovgreen")
   ),
+  Developer(
+    id = "jirifilip",
+    name = "Jiří Filip",
+    email = "Jiri.Filip@absa.africa",
+    url = url("https://github.com/jirifilip")
+  ),
+  Developer(
+    id = "ValeriiKhalimendik",
+    name = "Valerii Khalimendik",
+    email = "Valerii.Khalimendik@absa.africa",
+    url = url("https://github.com/ValeriiKhalimendik")
+  ),
 )
 
 ThisBuild / homepage := Some(url("https://github.com/AbsaOSS/pramen"))
