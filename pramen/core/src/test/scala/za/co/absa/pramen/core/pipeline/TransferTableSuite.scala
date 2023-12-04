@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{DataFormat, Query}
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 
 import java.time.LocalDate
 
@@ -73,7 +74,8 @@ class TransferTableSuite extends AnyWordSpec {
           |""".stripMargin)
         .withFallback(ConfigFactory.load())
 
-      val tables = TransferTable.fromConfig(conf, conf, "transfer.tables", "mysink")
+      val infoDateConfig = InfoDateConfig.fromConfig(conf)
+      val tables = TransferTable.fromConfig(conf, infoDateConfig, "transfer.tables", "mysink")
 
       assert(tables.size == 4)
 
@@ -164,8 +166,10 @@ class TransferTableSuite extends AnyWordSpec {
           |""".stripMargin)
         .withFallback(ConfigFactory.load())
 
+      val infoDateConfig = InfoDateConfig.fromConfig(conf)
+
       val ex = intercept[IllegalArgumentException] {
-        TransferTable.fromConfig(conf, conf, "transfer.tables", "mysink")
+        TransferTable.fromConfig(conf, infoDateConfig, "transfer.tables", "mysink")
       }
 
       assert(ex.getMessage.contains("Duplicate table definitions for the transfer job: db1.table1->mysink"))
@@ -182,8 +186,9 @@ class TransferTableSuite extends AnyWordSpec {
           |""".stripMargin)
         .withFallback(ConfigFactory.load())
 
+      val infoDateConfig = InfoDateConfig.fromConfig(conf)
       val ex = intercept[IllegalArgumentException] {
-        TransferTable.fromConfig(conf, conf, "transfer.tables", "mysink")
+        TransferTable.fromConfig(conf, infoDateConfig, "transfer.tables", "mysink")
       }
 
       assert(ex.getMessage.contains("Cannot determine metastore table name for 'Sql(SELECT * FROM users) -> mysink"))
@@ -223,7 +228,8 @@ class TransferTableSuite extends AnyWordSpec {
 
     "getSourceTable()" should {
       "correctly create a source table" in {
-        val tables = TransferTable.fromConfig(conf, conf, "transfer.tables", "mysink")
+        val infoDateConfig = InfoDateConfig.fromConfig(conf)
+        val tables = TransferTable.fromConfig(conf, infoDateConfig, "transfer.tables", "mysink")
 
         val sourceTable = tables.head.getSourceTable
 
@@ -242,7 +248,8 @@ class TransferTableSuite extends AnyWordSpec {
 
     "getSinkTable()" should {
       "correctly create a sink table" in {
-        val tables = TransferTable.fromConfig(conf, conf, "transfer.tables", "mysink")
+        val infoDateConfig = InfoDateConfig.fromConfig(conf)
+        val tables = TransferTable.fromConfig(conf, infoDateConfig, "transfer.tables", "mysink")
 
         val sinkTable = tables.head.getSinkTable
 
@@ -260,7 +267,8 @@ class TransferTableSuite extends AnyWordSpec {
 
     "getMetaTable()" should {
       "correctly create a metastore table" in {
-        val tables = TransferTable.fromConfig(conf, conf, "transfer.tables", "mysink")
+        val infoDateConfig = InfoDateConfig.fromConfig(conf)
+        val tables = TransferTable.fromConfig(conf, infoDateConfig, "transfer.tables", "mysink")
 
         val metaTable = tables.head.getMetaTable
 

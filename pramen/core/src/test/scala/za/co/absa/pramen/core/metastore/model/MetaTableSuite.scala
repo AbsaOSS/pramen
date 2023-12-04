@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.metastore.model
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat.Parquet
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
 
@@ -59,7 +60,9 @@ class MetaTableSuite extends AnyWordSpec {
           |]
           |""".stripMargin)
 
-      val metaTables = MetaTable.fromConfig(conf, "pramen.metastore.tables")
+      val infoDateConfig = InfoDateConfig.fromConfig(conf.withFallback(ConfigFactory.load()))
+
+      val metaTables = MetaTable.fromConfig(conf, infoDateConfig, "pramen.metastore.tables")
 
       assert(metaTables.size == 4)
       assert(metaTables.head.name == "table1")
@@ -90,7 +93,9 @@ class MetaTableSuite extends AnyWordSpec {
           |pramen.hive.api = sql
           |""".stripMargin)
 
-      val metaTables = MetaTable.fromConfig(conf, "pramen.metastore.tables")
+      val infoDateConfig = InfoDateConfig.fromConfig(conf.withFallback(ConfigFactory.load()))
+
+      val metaTables = MetaTable.fromConfig(conf, infoDateConfig, "pramen.metastore.tables")
 
       assert(metaTables.isEmpty)
     }
@@ -121,9 +126,10 @@ class MetaTableSuite extends AnyWordSpec {
           |  }
           |]
           |""".stripMargin)
+      val infoDateConfig = InfoDateConfig.fromConfig(conf.withFallback(ConfigFactory.load()))
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfig(conf, "pramen.metastore.tables")
+        MetaTable.fromConfig(conf, infoDateConfig, "pramen.metastore.tables")
       }
 
       assert(ex.getMessage.contains("Duplicate table definitions in the metastore: TABLE1"))

@@ -20,7 +20,8 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader, Query}
+import za.co.absa.pramen.api._
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -228,8 +229,11 @@ object MetastoreImpl {
   val METASTORE_KEY = "pramen.metastore.tables"
   val DEFAULT_RECORDS_PER_PARTITION = 500000
 
-  def fromConfig(conf: Config, bookkeeper: Bookkeeper, metadataManager: MetadataManager)(implicit spark: SparkSession): MetastoreImpl = {
-    val tableDefs = MetaTable.fromConfig(conf, METASTORE_KEY)
+  def fromConfig(conf: Config,
+                 infoDateConfig: InfoDateConfig,
+                 bookkeeper: Bookkeeper,
+                 metadataManager: MetadataManager)(implicit spark: SparkSession): MetastoreImpl = {
+    val tableDefs = MetaTable.fromConfig(conf, infoDateConfig, METASTORE_KEY)
 
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 

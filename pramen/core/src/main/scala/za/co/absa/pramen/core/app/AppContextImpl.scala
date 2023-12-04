@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.MetadataManager
 import za.co.absa.pramen.core.PramenImpl
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
@@ -56,7 +57,7 @@ object AppContextImpl {
 
     val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper, metadataManager)
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, appConfig.infoDateDefaults, bookkeeper, metadataManager)
 
     PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
     PramenImpl.instance.asInstanceOf[PramenImpl].setWorkflowConfig(conf)
@@ -76,13 +77,14 @@ object AppContextImpl {
   }
 
   def getMock(conf: Config,
+              infoDateConfig: InfoDateConfig,
               bookkeeper: Bookkeeper,
               journal: Journal)(implicit spark: SparkSession): AppContextImpl = {
     val appConfig = AppConfig.fromConfig(conf)
 
     val metadataManager = new MetadataManagerNull(isPersistenceEnabled = false)
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, bookkeeper, metadataManager)
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, infoDateConfig, bookkeeper, metadataManager)
 
     val appContext = new AppContextImpl(
       appConfig,

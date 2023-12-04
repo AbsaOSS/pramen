@@ -18,6 +18,9 @@ package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.app.config.InfoDateConfig.{INFORMATION_DATE_START_DAYS_KEY, INFORMATION_DATE_START_KEY}
+
+import java.time.LocalDate
 
 class InfoDateConfigSuite extends AnyWordSpec {
   "InfoDateConfig" should {
@@ -126,6 +129,52 @@ class InfoDateConfigSuite extends AnyWordSpec {
       }
 
       assert(ex.getMessage.contains("Cannot parse '123' in one of 'yyyy-MM-dd', 'yyyyMMdd'"))
+    }
+
+    "support the default start date" in {
+      val config = ConfigFactory.load()
+
+      val infoDateConfig = InfoDateConfig.fromConfig(config)
+
+      assert(infoDateConfig.startDate == LocalDate.parse("2010-01-01"))
+    }
+
+    "support the start date" in {
+      val configStr = s"""$INFORMATION_DATE_START_KEY = "2023-12-14""""
+
+      val config = ConfigFactory.parseString(configStr)
+        .withFallback(ConfigFactory.load())
+
+      val infoDateConfig = InfoDateConfig.fromConfig(config)
+
+      assert(infoDateConfig.startDate == LocalDate.parse("2023-12-14"))
+    }
+
+    "support the start day" in {
+      val configStr = s"$INFORMATION_DATE_START_DAYS_KEY = 30"
+
+      val config = ConfigFactory.parseString(configStr)
+        .withFallback(ConfigFactory.load())
+
+      val infoDateConfig = InfoDateConfig.fromConfig(config)
+
+      assert(infoDateConfig.startDate == LocalDate.now().minusDays(30))
+    }
+
+    "throw an exception if incompatible options are specified" in {
+      val configStr =
+        s"""$INFORMATION_DATE_START_KEY = "2023-12-14"
+           |$INFORMATION_DATE_START_DAYS_KEY = 30
+           |""".stripMargin
+
+      val config = ConfigFactory.parseString(configStr)
+        .withFallback(ConfigFactory.load())
+
+      val ex = intercept[IllegalArgumentException] {
+        InfoDateConfig.fromConfig(config)
+      }
+
+      assert(ex.getMessage.contains(s"Incompatible options used. Please, use only one of: $INFORMATION_DATE_START_KEY, $INFORMATION_DATE_START_DAYS_KEY"))
     }
   }
 

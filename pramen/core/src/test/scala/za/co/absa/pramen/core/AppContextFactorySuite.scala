@@ -65,8 +65,9 @@ class AppContextFactorySuite extends AnyWordSpec with SparkTestBase {
     "be able to create mock app context" in {
       val bookkeeper = new BookkeeperNull()
       val journal = new JournalNull()
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
 
-      val context = AppContextFactory.createMockAppContext(conf, bookkeeper, journal)
+      val context = AppContextFactory.createMockAppContext(conf, infoDateConfig, bookkeeper, journal)
 
       assert(context == AppContextFactory.get)
 

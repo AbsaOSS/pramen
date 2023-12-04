@@ -18,10 +18,10 @@ package za.co.absa.pramen.core.mocks
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.core.AppContextFactory
 import za.co.absa.pramen.core.journal.JournalNull
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.utils.ResourceUtils
+import za.co.absa.pramen.core.{AppContextFactory, InfoDateConfigFactory}
 
 object AppContextMock {
   def initAppContext(confInOpt: Option[Config] = None)(implicit spark: SparkSession): Unit = {
@@ -44,8 +44,9 @@ object AppContextMock {
 
     val bookkeeper = new SyncBookkeeperMock
     val journal = new JournalNull
+    val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
 
-    AppContextFactory.createMockAppContext(conf, bookkeeper, journal)
+    AppContextFactory.createMockAppContext(conf, infoDateConfig, bookkeeper, journal)
   }
 
 }

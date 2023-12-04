@@ -81,7 +81,7 @@ object OperationDef {
       return None
     }
 
-    val operationType = OperationType.fromConfig(conf, appConfig, parent)
+    val operationType = OperationType.fromConfig(conf, appConfig, infoDateConfig, parent)
     val schedule = Schedule.fromConfig(conf)
     val expectedDelayDays = ConfigUtils.getOptionInt(conf, EXPECTED_DELAY_DAYS_KEY).getOrElse(defaultDelayDays)
     val consumeThreads = getThreadsToConsume(name, conf, appConfig)
