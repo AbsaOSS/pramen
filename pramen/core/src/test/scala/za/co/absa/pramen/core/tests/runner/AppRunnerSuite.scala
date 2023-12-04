@@ -142,6 +142,12 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
     }
   }
 
+  "validatePipeline" should {
+    "return success when the pipeline is okay" in {
+
+    }
+  }
+
   "createAppContext()" should {
     "be able to initialize proper application context" in {
       implicit val conf: Config = getTestConfig()

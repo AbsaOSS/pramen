@@ -17,20 +17,25 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.utils.ConfigUtils
 
-import java.time.ZoneId
+import java.time.{LocalDate, ZoneId}
 
 case class GeneralConfig(
                           timezoneId: ZoneId,
                           environmentName: String,
                           temporaryDirectory: Option[String],
+                          writeOldestInfoDate: Option[LocalDate],
                           enableMultipleJobsPerTable: Boolean
                         )
+
 object GeneralConfig {
   val TIMEZONE_ID_KEY = "pramen.timezone"
   val ENVIRONMENT_NAME_KEY = "pramen.environment.name"
   val TEMPORARY_DIRECTORY_KEY = "pramen.temporary.directory"
+  val WRITE_OLDEST_RUN_DATE_KEY = "pramen.write.oldest.information.date"
+  val WRITE_OLDEST_DAYS_FROM_TODAY_KEY = "pramen.write.oldest.information.days.from.today"
   val ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE = "pramen.enable.multiple.jobs.per.output.table"
 
   def fromConfig(conf: Config): GeneralConfig = {
@@ -41,6 +46,21 @@ object GeneralConfig {
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
     val enableMultipleJobsPerTable = conf.getBoolean(ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE)
 
-    GeneralConfig(timezoneId, environmentName, temporaryDirectory, enableMultipleJobsPerTable)
+    val oldestInfoDateOpt = ConfigUtils.getDateOpt(conf, WRITE_OLDEST_RUN_DATE_KEY, DEFAULT_DATE_FORMAT)
+    val oldestInfoDaysOpt = ConfigUtils.getOptionInt(conf, WRITE_OLDEST_DAYS_FROM_TODAY_KEY)
+
+    val writeOldestInfoDateOpt = (oldestInfoDateOpt, oldestInfoDaysOpt) match {
+      case (Some(_), Some(_)) =>
+        throw new IllegalArgumentException(s"Incompatible options used. Please, use only one of: " +
+          s"$WRITE_OLDEST_RUN_DATE_KEY, $WRITE_OLDEST_DAYS_FROM_TODAY_KEY")
+      case (Some(oldestDate), None) =>
+        Option(oldestDate)
+      case (None, Some(days)) =>
+        Option(LocalDate.now().minusDays(days))
+      case (None, None) =>
+        None
+    }
+
+    GeneralConfig(timezoneId, environmentName, temporaryDirectory, writeOldestInfoDateOpt, enableMultipleJobsPerTable)
   }
 }

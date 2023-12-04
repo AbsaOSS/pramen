@@ -34,7 +34,7 @@ import za.co.absa.pramen.core.pipeline.{IngestionJob, Job, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
 import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.utils.LocalFsUtils
-import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
+import za.co.absa.pramen.core.{AppConfigFactory, OperationDefFactory, RuntimeConfigFactory}
 
 import java.io.File
 import java.time.LocalDate
@@ -128,6 +128,7 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
 
   def getIngestionUseCase(runDateIn: LocalDate = runDate, sourceName: String = "source_mock1"): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(runDate = runDateIn)
+    val appConfig = AppConfigFactory.getDummyAppConfig(runtimeConfig = runtimeConfig)
 
     val metastore = new MetastoreSpy()
     val bookkeeper = new SyncBookkeeperMock
@@ -156,7 +157,7 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
 
     val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
 
-    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner, "app_123")
+    val jobRunner = new ConcurrentJobRunnerImpl(appConfig, bookkeeper, taskRunner, "app_123")
 
     (jobRunner, bookkeeper, state, job)
   }
