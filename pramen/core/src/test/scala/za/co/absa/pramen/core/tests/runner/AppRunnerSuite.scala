@@ -17,17 +17,21 @@
 package za.co.absa.pramen.core.tests.runner
 
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core._
+import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.mocks.RunnableSpy
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
+import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.ResourceUtils
-import za.co.absa.pramen.core.{AppContextFactory, RuntimeConfigFactory}
 
+import java.time.LocalDate
 import scala.util.{Failure, Success}
 
 class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
@@ -144,7 +148,63 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
 
   "validatePipeline" should {
     "return success when the pipeline is okay" in {
+      implicit val appContext: AppContext = mock(classOf[AppContext])
+      implicit val state: PipelineState = getMockPipelineState
+      implicit val jobs: Seq[Job] = Seq(new JobSpy)
 
+      when(appContext.appConfig).thenReturn(AppConfigFactory.getDummyAppConfig())
+
+      val attempt = AppRunner.validatePipeline
+
+      assert(attempt.isSuccess)
+    }
+
+    "throw when the pipeline is empty" in {
+      implicit val appContext: AppContext = mock(classOf[AppContext])
+      implicit val state: PipelineState = getMockPipelineState
+      implicit val jobs: Seq[Job] = Seq.empty
+
+      when(appContext.appConfig).thenReturn(AppConfigFactory.getDummyAppConfig())
+
+      val attempt = AppRunner.validatePipeline
+
+      assert(attempt.isFailure)
+      assert(attempt.failed.get.getCause.getMessage == "No jobs defined in the pipeline. Please, define one or more operations.")
+    }
+
+    "throw when the run date is before the start information date" in {
+      implicit val appContext: AppContext = mock(classOf[AppContext])
+      implicit val state: PipelineState = getMockPipelineState
+      implicit val jobs: Seq[Job] = Seq(new JobSpy)
+
+      val minDate = LocalDate.parse("2023-11-12")
+      val generalConfig = GeneralConfigFactory.getDummyGeneralConfig(writeOldestInfoDate = Some(minDate))
+      val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(runDate = LocalDate.parse("2023-11-11"))
+
+      when(appContext.appConfig).thenReturn(AppConfigFactory.getDummyAppConfig(generalConfig = generalConfig, runtimeConfig = runtimeConfig))
+
+      val attempt = AppRunner.validatePipeline
+
+      assert(attempt.isFailure)
+      assert(attempt.failed.get.getCause.getMessage == "The requested run date '2023-11-11' is older than the minimum allowed write date '2023-11-12'.")
+    }
+
+    "throw when the run date is before the minimum allowed write date date" in {
+      implicit val appContext: AppContext = mock(classOf[AppContext])
+      implicit val state: PipelineState = getMockPipelineState
+      implicit val jobs: Seq[Job] = Seq(new JobSpy)
+
+
+      val startDate = LocalDate.parse("2023-11-12")
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig(startDate = startDate)
+      val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(runDate = LocalDate.parse("2023-11-11"))
+
+      when(appContext.appConfig).thenReturn(AppConfigFactory.getDummyAppConfig(infoDateDefaults = infoDateConfig, runtimeConfig = runtimeConfig))
+
+      val attempt = AppRunner.validatePipeline
+
+      assert(attempt.isFailure)
+      assert(attempt.failed.get.getCause.getMessage == "The requested run date '2023-11-11' is older than the information start date '2023-11-12'.")
     }
   }
 
