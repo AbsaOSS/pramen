@@ -32,7 +32,7 @@ import za.co.absa.pramen.core.pipeline.{Job, RunResult}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
 import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, Succeeded}
 import za.co.absa.pramen.core.runner.task.TaskRunnerMultithreaded
-import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
+import za.co.absa.pramen.core.{AppConfigFactory, OperationDefFactory, RuntimeConfigFactory}
 
 import java.time.{Instant, LocalDate, Duration => Dur}
 
@@ -180,6 +180,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     val conf = ConfigFactory.empty()
 
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn, parallelTasks = parallelTasks)
+    val appConfig = AppConfigFactory.getDummyAppConfig(runtimeConfig = runtimeConfig)
 
     val bookkeeper = new SyncBookkeeperMock
     val journal = new JournalMock
@@ -196,7 +197,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
 
-    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner, "app_123")
+    val jobRunner = new ConcurrentJobRunnerImpl(appConfig, bookkeeper, taskRunner, "app_123")
 
     (jobRunner, bookkeeper, state, job)
   }

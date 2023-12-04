@@ -22,7 +22,7 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.AppContext
-import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
+import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
@@ -40,6 +40,7 @@ class OrchestratorImpl extends Orchestrator {
   private var pendingJobs = List.empty[Job]
   private val runningJobs: mutable.Set[Job] = mutable.HashSet.empty[Job]
 
+  @throws[ValidationException]
   override def validateJobs(jobs: Seq[Job])(implicit appContext: AppContext,
                                             spark: SparkSession): Unit = {
     val enableMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
@@ -194,6 +195,7 @@ class OrchestratorImpl extends Orchestrator {
     }
   }
 
+  @throws[ValidationException]
   private[core] def validateJobs(jobs: Seq[Job],
                                  runDate: LocalDate,
                                  allowMultipleJobsPerTable: Boolean): Unit = {
@@ -207,7 +209,7 @@ class OrchestratorImpl extends Orchestrator {
       val issues = duplicateJobs.flatMap(duplicateJobs => validateOverlapInfoDates(duplicateJobs, runDate))
 
       if (issues.nonEmpty) {
-        throw new IllegalArgumentException(s"Job validation issues found: ${issues.mkString("; ")}")
+        throw new ValidationException(s"Job validation issues found: ${issues.mkString("; ")}")
       }
     }
   }

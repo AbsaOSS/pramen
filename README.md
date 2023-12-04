@@ -1366,6 +1366,16 @@ pramen {
   # This feature is experimental, use more than 1 with caution. 
   parallel.tasks = 1
 
+
+  # You can specify either the oldest date that cannot be overwritten
+  # of the maximum number of days before today the data can still be writtenm
+  # (this option overrides all other options)
+  #
+  #write.oldest {
+  #  info.date = "2020-01-01"
+  #  info.days.from.today = 30
+  #}
+
   # Pramen-Py settings
   py {
     # This is mandatory of you want to use Python transformations and run Pramen-Py on the command line

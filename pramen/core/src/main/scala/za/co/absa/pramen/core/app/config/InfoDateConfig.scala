@@ -33,7 +33,7 @@ case class InfoDateConfig(
                            expressionMonthly: String,
                            initialSourcingDateExprDaily: String,
                            initialSourcingDateExprWeekly: String,
-                           initialSourcingDateExprMonthly: String                         )
+                           initialSourcingDateExprMonthly: String)
 
 object InfoDateConfig {
   val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"

@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.runner.jobrunner
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
-import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.app.AppConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
 import za.co.absa.pramen.core.pipeline.Job
@@ -35,7 +35,7 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContextExecutorService, Future}
 import scala.util.control.NonFatal
 
-class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
+class ConcurrentJobRunnerImpl(appConfig: AppConfig,
                               bookkeeper: Bookkeeper,
                               taskRunner: TaskRunner,
                               applicationId: String) extends ConcurrentJobRunner {
@@ -45,7 +45,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   private val completedJobsChannel = Channel.make[JobRunResults](1)
   private var workersFuture: Future[Unit] = _
 
-  private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)
+  private val executor: ExecutorService = newFixedThreadPool(appConfig.runtimeConfig.parallelTasks)
   implicit private  val executionContext: ExecutionContextExecutorService = fromExecutorService(executor)
 
   override def getCompletedJobsChannel: ReadChannel[JobRunResults] = {
@@ -58,7 +58,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
     }
     loopStarted = true
 
-    val workers = Range(0, runtimeConfig.parallelTasks).map(workerNum => {
+    val workers = Range(0, appConfig.runtimeConfig.parallelTasks).map(workerNum => {
       Future {
         workerLoop(workerNum, incomingJobs)
       }
@@ -107,7 +107,12 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runJob(job: Job): Boolean = {
-    val scheduleParams = ScheduleParams.fromRuntimeConfig(runtimeConfig, job.trackDays, job.operation.expectedDelayDays)
+    val scheduleParams = ScheduleParams.fromRuntimeConfig(appConfig.runtimeConfig, job.trackDays, job.operation.expectedDelayDays)
+
+    val minimumDate = appConfig.generalConfig.writeOldestInfoDate match {
+      case Some(date) => date
+      case None => job.outputTable.infoDateStart
+    }
 
     val taskDefs = job.scheduleStrategy.getDaysToRun(
       job.outputTable.name,
@@ -117,7 +122,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
       job.operation.schedule,
       scheduleParams,
       job.operation.initialSourcingDateExpression,
-      job.outputTable.infoDateStart
+      minimumDate
     )
 
     log.info(s"Dates selected to run for '${job.outputTable.name}': ${taskDefs.map(_.infoDate).mkString(", ")}")
