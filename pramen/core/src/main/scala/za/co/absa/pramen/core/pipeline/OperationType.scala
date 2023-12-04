@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 /** This is a base class for all Pramen jobs (new API). */
@@ -38,23 +39,23 @@ object OperationType {
   val PYTHON_CLASS_KEY = "python.class"
   val OUTPUT_TABLE_KEY = "output.table"
 
-  def fromConfig(conf: Config, appConfig: Config, parent: String): OperationType = {
+  def fromConfig(conf: Config, appConfig: Config, infoDateConfig: InfoDateConfig, parent: String): OperationType = {
     if (conf.hasPath(TYPE_KEY)) {
-      getOperationTypeFromName(conf.getString(TYPE_KEY), conf, appConfig, parent)
+      getOperationTypeFromName(conf.getString(TYPE_KEY), conf, infoDateConfig, parent)
     } else {
-      getDefaultOperationType(conf, appConfig, parent)
+      getDefaultOperationType(conf, appConfig, infoDateConfig, parent)
     }
   }
 
-  private [core] def getDefaultOperationType(conf: Config, appConfig: Config, parent: String): OperationType = {
+  private [core] def getDefaultOperationType(conf: Config, appConfig: Config, infoDateConfig: InfoDateConfig, parent: String): OperationType = {
     if (appConfig.hasPath(DEFAULT_TYPE_KEY)) {
-      getOperationTypeFromName(appConfig.getString(DEFAULT_TYPE_KEY), conf, appConfig, parent)
+      getOperationTypeFromName(appConfig.getString(DEFAULT_TYPE_KEY), conf, infoDateConfig, parent)
     } else {
       throw new IllegalArgumentException(s"Missing either $parent.$TYPE_KEY or $DEFAULT_TYPE_KEY")
     }
   }
 
-  private[core] def getOperationTypeFromName(name: String, conf: Config, appConfig: Config, parent: String): OperationType = {
+  private[core] def getOperationTypeFromName(name: String, conf: Config, infoDateConfig: InfoDateConfig, parent: String): OperationType = {
     name match {
       case "ingestion" | "sourcing" | "extract" =>
         ConfigUtils.validatePathsExistence(conf, parent, Seq(SOURCE_KEY, TABLES_KEY))
@@ -85,7 +86,7 @@ object OperationType {
         val source = conf.getString(SOURCE_KEY)
         val sink = conf.getString(SINK_KEY)
 
-        val tables = TransferTable.fromConfig(conf, appConfig, TABLES_KEY, sink)
+        val tables = TransferTable.fromConfig(conf, infoDateConfig, TABLES_KEY, sink)
 
         Transfer(source, sink, tables)
       case _ => throw new IllegalArgumentException(s"Unknown operation type: ${conf.getString(TYPE_KEY)} at $parent")

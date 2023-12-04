@@ -206,16 +206,11 @@ object AppRunner {
 
       orchestrator.validateJobs(jobs)
 
-      if (jobs.isEmpty) {
+      if (jobs.isEmpty && !appContext.appConfig.runtimeConfig.allowEmptyPipeline) {
         throw new ValidationException(s"No jobs defined in the pipeline. Please, define one or more operations.")
       }
 
       val runDate = appContext.appConfig.runtimeConfig.runDate
-      appContext.appConfig.generalConfig.writeOldestInfoDate.foreach { minDate =>
-        if (runDate.isBefore(minDate)) {
-          throw new ValidationException(s"The requested run date '$runDate' is older than the minimum allowed write date '$minDate'.")
-        }
-      }
 
       if (runDate.isBefore(appContext.appConfig.infoDateDefaults.startDate)) {
         throw new ValidationException(s"The requested run date '$runDate' is older than the information start date '${appContext.appConfig.infoDateDefaults.startDate}'.")
@@ -231,7 +226,7 @@ object AppRunner {
                                 spark: SparkSession): Try[Unit] = {
     handleFailure(Try {
       implicit val jobRunner: ConcurrentJobRunner = new ConcurrentJobRunnerImpl(
-        appContext.appConfig,
+        appContext.appConfig.runtimeConfig,
         appContext.bookkeeper,
         taskRunner,
         spark.sparkContext.applicationId)

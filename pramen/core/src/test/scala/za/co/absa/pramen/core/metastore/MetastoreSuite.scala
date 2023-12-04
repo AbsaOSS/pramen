@@ -21,6 +21,7 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
@@ -484,10 +485,11 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
     val conf = ConfigFactory.parseString(
       confString
-    )
+    ).withFallback(ConfigFactory.load())
 
+    val infoDateConfig = InfoDateConfig.fromConfig(conf)
     val bk = new SyncBookkeeperMock
     val mm = new MetadataManagerNull(isPersistenceEnabled = false)
-    (MetastoreImpl.fromConfig(conf, bk, mm), bk)
+    (MetastoreImpl.fromConfig(conf, infoDateConfig, bk, mm), bk)
   }
 }

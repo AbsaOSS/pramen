@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query.Table
+import za.co.absa.pramen.core.InfoDateConfigFactory
 import za.co.absa.pramen.core.pipeline.OperationType.{Ingestion, Transformation}
 
 class OperationTypeSuite extends AnyWordSpec {
@@ -37,7 +38,8 @@ class OperationTypeSuite extends AnyWordSpec {
            |""".stripMargin
       )
 
-      val opType = OperationType.fromConfig(conf, conf, "path").asInstanceOf[Ingestion]
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
+      val opType = OperationType.fromConfig(conf, conf, infoDateConfig, "path").asInstanceOf[Ingestion]
 
       assert(opType.sourceName == "jdbc1")
       assert(opType.sourceTables.size == 1)
@@ -53,7 +55,8 @@ class OperationTypeSuite extends AnyWordSpec {
            |""".stripMargin
       )
 
-      val opType = OperationType.fromConfig(conf, conf, "path").asInstanceOf[Transformation]
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
+      val opType = OperationType.fromConfig(conf, conf, infoDateConfig, "path").asInstanceOf[Transformation]
 
       assert(opType.clazz == "myclass")
     }
@@ -72,7 +75,8 @@ class OperationTypeSuite extends AnyWordSpec {
            |""".stripMargin
       )
 
-      val opType = OperationType.fromConfig(conf, conf, "path").asInstanceOf[OperationType.Sink]
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
+      val opType = OperationType.fromConfig(conf, conf, infoDateConfig, "path").asInstanceOf[OperationType.Sink]
 
       assert(opType.sinkName == "kafka1")
       assert(opType.sinkTables.size == 1)
@@ -92,7 +96,8 @@ class OperationTypeSuite extends AnyWordSpec {
            |""".stripMargin
       )
 
-      val opType = OperationType.fromConfig(conf, appConfig, "path").asInstanceOf[Transformation]
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
+      val opType = OperationType.fromConfig(conf, appConfig, infoDateConfig, "path").asInstanceOf[Transformation]
 
       assert(opType.clazz == "myclass")
     }
@@ -104,8 +109,10 @@ class OperationTypeSuite extends AnyWordSpec {
            |""".stripMargin
       )
 
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
+
       val ex = intercept[IllegalArgumentException] {
-        OperationType.fromConfig(conf, conf, "path").asInstanceOf[Transformation]
+        OperationType.fromConfig(conf, conf, infoDateConfig, "path").asInstanceOf[Transformation]
       }
 
       assert(ex.getMessage.contains("Missing either path.type or pramen.default.operation.type"))

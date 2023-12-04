@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.app
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.InfoDateConfigFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.BookkeeperNull
 import za.co.absa.pramen.core.journal.JournalNull
@@ -57,10 +58,11 @@ class AppContextSuite extends AnyWordSpec with SparkTestBase{
     }
 
     "be able to create mock app context" in {
+      val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
       val bookkeeper = new BookkeeperNull()
       val journal = new JournalNull()
 
-      val context = AppContextImpl.getMock(conf, bookkeeper, journal)
+      val context = AppContextImpl.getMock(conf, infoDateConfig, bookkeeper, journal)
 
       assert(context.bookkeeper == bookkeeper)
       assert(context.journal == journal)

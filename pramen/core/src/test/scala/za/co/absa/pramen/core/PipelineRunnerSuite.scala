@@ -61,6 +61,7 @@ class PipelineRunnerSuite extends AnyWordSpec with BeforeAndAfterAll with TempDi
           |  pipeline.name = "Test pipeline"
           |  bookkeeping.enabled = false
           |  stop.spark.session = false
+          |  allow.empty.pipeline = true
           |}
           |""".stripMargin)
       withTempDirectory("pramen_main") { tempDir =>

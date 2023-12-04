@@ -18,9 +18,8 @@ package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.app.config.GeneralConfig.{WRITE_OLDEST_DAYS_FROM_TODAY_KEY, WRITE_OLDEST_RUN_DATE_KEY}
 
-import java.time.{LocalDate, ZoneId}
+import java.time.ZoneId
 
 class GeneralConfigSuite extends AnyWordSpec {
   "GeneralConfig" should {
@@ -42,45 +41,6 @@ class GeneralConfigSuite extends AnyWordSpec {
       assert(generalConfig.environmentName == "DummyEnv")
       assert(generalConfig.temporaryDirectory.contains("/dummy/dir"))
       assert(generalConfig.enableMultipleJobsPerTable)
-      assert(generalConfig.writeOldestInfoDate.isEmpty)
-    }
-
-    "support the oldest date" in {
-      val configStr = s"""$WRITE_OLDEST_RUN_DATE_KEY = "2023-12-14""""
-
-      val config = ConfigFactory.parseString(configStr)
-        .withFallback(ConfigFactory.load())
-
-      val generalConfig = GeneralConfig.fromConfig(config)
-
-      assert(generalConfig.writeOldestInfoDate.contains(LocalDate.parse("2023-12-14")))
-    }
-
-    "support the oldest day" in {
-      val configStr = s"$WRITE_OLDEST_DAYS_FROM_TODAY_KEY = 30"
-
-      val config = ConfigFactory.parseString(configStr)
-        .withFallback(ConfigFactory.load())
-
-      val generalConfig = GeneralConfig.fromConfig(config)
-
-      assert(generalConfig.writeOldestInfoDate.contains(LocalDate.now().minusDays(30)))
-    }
-
-    "throw an exception if incompatible options are specified" in {
-      val configStr =
-        s"""$WRITE_OLDEST_RUN_DATE_KEY = "2023-12-14"
-           |$WRITE_OLDEST_DAYS_FROM_TODAY_KEY = 30
-           |""".stripMargin
-
-      val config = ConfigFactory.parseString(configStr)
-        .withFallback(ConfigFactory.load())
-
-      val ex = intercept[IllegalArgumentException] {
-        GeneralConfig.fromConfig(config)
-      }
-
-      assert(ex.getMessage.contains(s"Incompatible options used. Please, use only one of: $WRITE_OLDEST_RUN_DATE_KEY, $WRITE_OLDEST_DAYS_FROM_TODAY_KEY"))
     }
   }
 }

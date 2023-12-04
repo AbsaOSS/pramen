@@ -20,9 +20,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.InfoDateConfig
-import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.InfoDateOverride
-import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
 
 import java.time.LocalDate
@@ -76,11 +74,11 @@ object MetaTable {
   val TABLE_HIVE_CONFIG_PREFIX = "hive"
   val DEFAULT_HIVE_CONFIG_PREFIX = "pramen.hive"
 
-  def fromConfig(conf: Config, key: String): Seq[MetaTable] = {
-    val defaultInfoDateColumnName = conf.getString(InfoDateConfig.INFORMATION_DATE_COLUMN_KEY)
-    val defaultInfoDateFormat = conf.getString(InfoDateConfig.INFORMATION_DATE_FORMAT_KEY)
-    val defaultStartDate = convertStrToDate(conf.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DEFAULT_DATE_FORMAT, defaultInfoDateFormat)
-    val defaultTrackDays = conf.getInt(InfoDateConfig.TRACK_DAYS)
+  def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String): Seq[MetaTable] = {
+    val defaultInfoDateColumnName = infoDateConfig.columnName
+    val defaultInfoDateFormat = infoDateConfig.dateFormat
+    val defaultStartDate = infoDateConfig.startDate
+    val defaultTrackDays = infoDateConfig.defaultTrackDays
     val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
 
     val tableConfigs = ConfigUtils.getOptionConfigList(conf, key)

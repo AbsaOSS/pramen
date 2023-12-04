@@ -36,6 +36,7 @@ object RuntimeConfigFactory {
                             isInverseOrder: Boolean = false,
                             parallelTasks: Int = 1,
                             stopSparkSession: Boolean = false,
+                            allowEmptyPipeline: Boolean = false,
                             historicalRunMode: RunMode = RunMode.CheckUpdates): RuntimeConfig = {
     RuntimeConfig(isDryRun,
       isRerun,
@@ -50,6 +51,7 @@ object RuntimeConfigFactory {
       isInverseOrder,
       parallelTasks,
       stopSparkSession,
+      allowEmptyPipeline,
       historicalRunMode)
   }
 

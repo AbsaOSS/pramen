@@ -20,11 +20,9 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
-import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.InfoDateOverride
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.model.QueryBuilder
-import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
 
 import java.time.LocalDate
@@ -109,10 +107,9 @@ object TransferTable {
     TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, trackDaysExplicitlySet, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
   }
 
-  def fromConfig(conf: Config, appConfig: Config, arrayPath: String, sinkName: String): Seq[TransferTable] = {
-    val defaultInfoDateFormat = appConfig.getString(InfoDateConfig.INFORMATION_DATE_FORMAT_KEY)
-    val defaultStartDate = convertStrToDate(appConfig.getString(InfoDateConfig.INFORMATION_DATE_START_KEY), DEFAULT_DATE_FORMAT, defaultInfoDateFormat)
-    val defaultTrackDays = appConfig.getInt(InfoDateConfig.TRACK_DAYS)
+  def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, arrayPath: String, sinkName: String): Seq[TransferTable] = {
+    val defaultStartDate = infoDateConfig.startDate
+    val defaultTrackDays = infoDateConfig.defaultTrackDays
 
     val tableConfigs = conf.getConfigList(arrayPath).asScala
 

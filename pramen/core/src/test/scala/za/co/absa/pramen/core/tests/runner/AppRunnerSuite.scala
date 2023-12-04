@@ -172,23 +172,6 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
       assert(attempt.failed.get.getCause.getMessage == "No jobs defined in the pipeline. Please, define one or more operations.")
     }
 
-    "throw when the run date is before the start information date" in {
-      implicit val appContext: AppContext = mock(classOf[AppContext])
-      implicit val state: PipelineState = getMockPipelineState
-      implicit val jobs: Seq[Job] = Seq(new JobSpy)
-
-      val minDate = LocalDate.parse("2023-11-12")
-      val generalConfig = GeneralConfigFactory.getDummyGeneralConfig(writeOldestInfoDate = Some(minDate))
-      val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(runDate = LocalDate.parse("2023-11-11"))
-
-      when(appContext.appConfig).thenReturn(AppConfigFactory.getDummyAppConfig(generalConfig = generalConfig, runtimeConfig = runtimeConfig))
-
-      val attempt = AppRunner.validatePipeline
-
-      assert(attempt.isFailure)
-      assert(attempt.failed.get.getCause.getMessage == "The requested run date '2023-11-11' is older than the minimum allowed write date '2023-11-12'.")
-    }
-
     "throw when the run date is before the minimum allowed write date date" in {
       implicit val appContext: AppContext = mock(classOf[AppContext])
       implicit val state: PipelineState = getMockPipelineState

@@ -41,6 +41,7 @@ case class RuntimeConfig(
                           isInverseOrder: Boolean,
                           parallelTasks: Int,
                           stopSparkSession: Boolean,
+                          allowEmptyPipeline: Boolean,
                           historicalRunMode: RunMode
                         )
 
@@ -64,6 +65,7 @@ object RuntimeConfig {
   val LOAD_DATE_TO = "pramen.load.date.to"
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
   val VERBOSE = "pramen.verbose"
+  val ALLOW_EMPTY_PIPELINE = "pramen.allow.empty.pipeline"
 
   def fromConfig(conf: Config): RuntimeConfig = {
     val infoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
@@ -125,6 +127,8 @@ object RuntimeConfig {
       true
     }
 
+    val allowEmptyPipeline = ConfigUtils.getOptionBoolean(conf, ALLOW_EMPTY_PIPELINE).getOrElse(false)
+
     RuntimeConfig(
       isDryRun = isDryRun,
       isRerun = isRerun,
@@ -139,6 +143,7 @@ object RuntimeConfig {
       isInverseOrder = ConfigUtils.getOptionBoolean(conf, IS_INVERSE_ORDER).getOrElse(false),
       parallelTasks = parallelTasks,
       stopSparkSession = conf.getBoolean(STOP_SPARK_SESSION),
+      allowEmptyPipeline,
       runMode
     )
   }

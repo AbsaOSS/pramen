@@ -1366,15 +1366,11 @@ pramen {
   # This feature is experimental, use more than 1 with caution. 
   parallel.tasks = 1
 
+  # You can set this option so that Pramen never writes to partitions older than the specified date
+  #information.date.start = "2010-01-01"
 
-  # You can specify either the oldest date that cannot be overwritten
-  # of the maximum number of days before today the data can still be writtenm
-  # (this option overrides all other options)
-  #
-  #write.oldest {
-  #  info.date = "2020-01-01"
-  #  info.days.from.today = 30
-  #}
+  # Or you can specify the same option in the number of days from the current calendar date.
+  #information.date.max.days.behind = 30
 
   # Pramen-Py settings
   py {

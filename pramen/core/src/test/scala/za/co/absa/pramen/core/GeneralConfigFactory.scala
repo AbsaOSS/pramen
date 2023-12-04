@@ -18,19 +18,17 @@ package za.co.absa.pramen.core
 
 import za.co.absa.pramen.core.app.config.GeneralConfig
 
-import java.time.{LocalDate, ZoneId}
+import java.time.ZoneId
 
 object GeneralConfigFactory {
   def getDummyGeneralConfig(timezoneId: ZoneId = ZoneId.of("Africa/Johannesburg"),
                             environmentName: String = "TEST",
                             temporaryDirectory: Option[String] = None,
-                            writeOldestInfoDate: Option[LocalDate] = None,
                             enableMultipleJobsPerTable: Boolean = false): GeneralConfig = {
     GeneralConfig(
       timezoneId,
       environmentName,
       temporaryDirectory,
-      writeOldestInfoDate,
       enableMultipleJobsPerTable
     )
   }

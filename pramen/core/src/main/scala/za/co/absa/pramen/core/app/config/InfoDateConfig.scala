@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 
 import java.time.LocalDate
@@ -40,7 +41,9 @@ object InfoDateConfig {
 
   val INFORMATION_DATE_COLUMN_KEY = "pramen.information.date.column"
   val INFORMATION_DATE_FORMAT_KEY = "pramen.information.date.format"
+
   val INFORMATION_DATE_START_KEY = "pramen.information.date.start"
+  val INFORMATION_DATE_START_DAYS_KEY = "pramen.information.date.max.days.behind"
 
   val INFORMATION_DATE_EXPRESSION_DAILY_KEY = "pramen.default.daily.output.info.date.expr"
   val INFORMATION_DATE_EXPRESSION_WEEKLY_KEY = "pramen.default.weekly.output.info.date.expr"
@@ -53,13 +56,13 @@ object InfoDateConfig {
   val TRACK_DAYS = "pramen.track.days"
   val EXPECTED_DELAY_DAYS = "pramen.expected.delay.days"
 
-  val defaultDateFormatter = DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT)
+  val defaultDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT)
+  val defaultStartDate: LocalDate = LocalDate.parse("2010-01-01")
 
   def fromConfig(conf: Config): InfoDateConfig = {
     val dateFormat = conf.getString(INFORMATION_DATE_FORMAT_KEY)
 
     val columnName = conf.getString(INFORMATION_DATE_COLUMN_KEY)
-    val startDate = convertStrToDate(conf.getString(INFORMATION_DATE_START_KEY), DEFAULT_DATE_FORMAT, dateFormat)
     val expressionDaily = conf.getString(INFORMATION_DATE_EXPRESSION_DAILY_KEY)
     val expressionWeekly = conf.getString(INFORMATION_DATE_EXPRESSION_WEEKLY_KEY)
     val expressionMonthly = conf.getString(INFORMATION_DATE_EXPRESSION_MONTHLY_KEY)
@@ -70,6 +73,21 @@ object InfoDateConfig {
 
     val defaultTrackDays = conf.getInt(TRACK_DAYS)
     val defaultDelayDays = conf.getInt(EXPECTED_DELAY_DAYS)
+
+    val startDateOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_START_KEY)
+    val startMaxDaysOpt = ConfigUtils.getOptionInt(conf, INFORMATION_DATE_START_DAYS_KEY)
+
+    val startDate = (startDateOpt, startMaxDaysOpt) match {
+      case (Some(_), Some(_)) =>
+        throw new IllegalArgumentException(s"Incompatible options used. Please, use only one of: " +
+          s"$INFORMATION_DATE_START_KEY, $INFORMATION_DATE_START_DAYS_KEY")
+      case (Some(startDateStr), None) =>
+        convertStrToDate(startDateStr, DEFAULT_DATE_FORMAT, dateFormat)
+      case (None, Some(days)) =>
+        LocalDate.now().minusDays(days)
+      case (None, None) =>
+        defaultStartDate
+    }
 
     InfoDateConfig(columnName,
       dateFormat,

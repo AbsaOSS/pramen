@@ -18,6 +18,7 @@ package za.co.absa.pramen.core
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
+import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
@@ -39,10 +40,11 @@ object AppContextFactory {
   }
 
   private [pramen] def createMockAppContext(conf: Config,
+                                            infoDateConfig: InfoDateConfig,
                                             bookkeeper: Bookkeeper,
                                             journal: Journal
                                               )(implicit spark: SparkSession): AppContext = this.synchronized {
-    appContext = AppContextImpl.getMock(conf, bookkeeper, journal)
+    appContext = AppContextImpl.getMock(conf, infoDateConfig, bookkeeper, journal)
     appContext
   }
 
