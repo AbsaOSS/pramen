@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
+import za.co.absa.pramen.core.exceptions.ValidationException
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
 import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
@@ -31,7 +32,6 @@ import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl}
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ResourceUtils}
 
-import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 object AppRunner {
@@ -205,6 +205,21 @@ object AppRunner {
       val orchestrator = new OrchestratorImpl()
 
       orchestrator.validateJobs(jobs)
+
+      if (jobs.isEmpty) {
+        throw new ValidationException(s"No jobs defined in the pipeline. Please, define one or more operations.")
+      }
+
+      val runDate = appContext.appConfig.runtimeConfig.runDate
+      appContext.appConfig.generalConfig.writeOldestInfoDate.foreach { minDate =>
+        if (runDate.isBefore(minDate)) {
+          throw new ValidationException(s"The requested run date '$runDate' is older than the minimum allowed write date '$minDate'.")
+        }
+      }
+
+      if (runDate.isBefore(appContext.appConfig.infoDateDefaults.startDate)) {
+        throw new ValidationException(s"The requested run date '$runDate' is older than the information start date '${appContext.appConfig.infoDateDefaults.startDate}'.")
+      }
     }, state, "validating the pipeline")
   }
 
@@ -216,7 +231,7 @@ object AppRunner {
                                 spark: SparkSession): Try[Unit] = {
     handleFailure(Try {
       implicit val jobRunner: ConcurrentJobRunner = new ConcurrentJobRunnerImpl(
-        appContext.appConfig.runtimeConfig,
+        appContext.appConfig,
         appContext.bookkeeper,
         taskRunner,
         spark.sparkContext.applicationId)
