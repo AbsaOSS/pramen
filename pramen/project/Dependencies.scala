@@ -34,7 +34,7 @@ object Dependencies {
     "com.typesafe.slick"   %% "slick-hikaricp"             % slickVersion,
     "org.postgresql"       %  "postgresql"                 % postgreSqlDriverVersion,
     "com.github.scopt"     %% "scopt"                      % scoptVersion,
-    "com.github.yruslan"   %% "channel_scala"              % channelsVersion,
+    "com.github.yruslan"   %% "channel_scala"              % channelVersion,
     "org.apache.kafka"     %  "kafka-clients"              % kafkaClientVersion,
     "com.sun.mail"         %  "javax.mail"                 % javaXMailVersion,
     "com.lihaoyi"          %% "requests"                   % requestsVersion,
