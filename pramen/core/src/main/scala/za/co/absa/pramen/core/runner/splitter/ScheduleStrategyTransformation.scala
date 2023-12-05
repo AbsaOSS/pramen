@@ -80,6 +80,6 @@ class ScheduleStrategyTransformation extends ScheduleStrategy {
         getHistorical(outputTable, dateFrom, dateTo, schedule, mode, infoDateExpression, minimumDate, inverseDateOrder, bookkeeper)
     }
 
-    filterOutPastMinimumDates(outputTable, dates, minimumDate)
+    filterOutPastMinimumDates(dates, minimumDate)
   }
 }

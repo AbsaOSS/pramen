@@ -148,7 +148,8 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
-          assert(result.isEmpty)
+          assert(result.length == 1)
+          assert(result.head.reason.isInstanceOf[TaskRunReason.Skip])
         }
       }
 
@@ -536,7 +537,8 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
           val result = strategy.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
-          assert(result.isEmpty)
+          assert(result.length == 1)
+          assert(result.head.reason.isInstanceOf[TaskRunReason.Skip])
         }
       }
 

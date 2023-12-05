@@ -104,7 +104,7 @@ class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "decode skipped" in {
-      assert(NotificationTargetManager.runStatusToTaskStatus(RunStatus.Skipped("msg")).contains(TaskStatus.Skipped("msg")))
+      assert(NotificationTargetManager.runStatusToTaskStatus(RunStatus.Skipped("msg", isWarning = true)).contains(TaskStatus.Skipped("msg")))
     }
 
     "decode not ran" in {

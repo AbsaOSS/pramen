@@ -99,7 +99,7 @@ object RunStatus {
     override def getReason(): Option[String] = None
   }
 
-  case class Skipped(msg: String) extends RunStatus {
+  case class Skipped(msg: String, isWarning: Boolean = false) extends RunStatus {
     val isFailure: Boolean = false
 
     override def toString: String = "Skipped"
