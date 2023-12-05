@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, TableHeader, TextElement}
+import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
@@ -505,7 +505,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case s: Succeeded           => getSuccessTextElement(s, task.dependencyWarnings.nonEmpty)
       case _: InsufficientData    => TextElement("Insufficient data", Style.Exception)
       case NoData(isFailure)      => TextElement("No Data", if (isFailure) Style.Exception else Style.Warning)
-      case _: Skipped             => TextElement("Skipped", successStyle)
+      case s: Skipped             => if (s.isWarning) TextElement("Skipped", Style.Warning) else TextElement("Skipped", successStyle)
       case NotRan                 => TextElement("Skipped", Style.Warning)
       case _: ValidationFailed    => TextElement("Validation failed", Style.Warning)
       case _: MissingDependencies => TextElement("Skipped", Style.Warning)

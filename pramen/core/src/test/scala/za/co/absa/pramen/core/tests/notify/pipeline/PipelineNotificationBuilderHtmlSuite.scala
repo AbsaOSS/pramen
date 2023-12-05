@@ -22,11 +22,9 @@ import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
-import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory, TestPrototypes}
 import za.co.absa.pramen.core.notify.message.{MessageBuilderHtml, ParagraphBuilder}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
-import za.co.absa.pramen.core.pipeline.DependencyFailure
 import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus}
 import za.co.absa.pramen.core.utils.ResourceUtils
 
@@ -276,7 +274,15 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Skipped("dummy")))
 
-      assert(actual ==TextElement("Skipped", Style.Success))
+      assert(actual == TextElement("Skipped", Style.Success))
+    }
+
+    "work for skipped with warnings" in {
+      val builder = getBuilder
+
+      val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Skipped("dummy", isWarning = true)))
+
+      assert(actual == TextElement("Skipped", Style.Warning))
     }
 
     "work for not ran" in {

@@ -280,16 +280,23 @@ Here is an example of a metastore configuration with a single table (Parquet for
 ```hocon
 pramen.metastore {
   tables = [
-  {  
-    name = "table_name"
-    format = "parquet"
-    path = "hdfs://cluster/path/to/parquet/folder"
-    records.per.partition = 1000000
-    information.date.column = "INFORMATION_DATE"
-    information.date.format = "yyyy-MM-dd"
-    information.date.start = "2022-01-01"
-  }
-]
+    {
+      name = "table_name"
+      format = "parquet"
+      path = "hdfs://cluster/path/to/parquet/folder"
+      records.per.partition = 1000000
+      information.date.column = "INFORMATION_DATE"
+      information.date.format = "yyyy-MM-dd"
+
+      # You can set the start date beyond which Pramen won't allow writes:
+      information.date.start = "2022-01-01"
+
+      # Alternatively, you can set the time window in days that from the current system
+      # date that the table could be written to. This is helpful is the table is archived.
+      #information.date.max.days.behind = 180
+    }
+  ]
+}
 ```
 
 Metastore table options:

@@ -34,13 +34,28 @@ object InfoDateOverride {
   val INFORMATION_DATE_FORMAT_KEY = "information.date.format"
   val INFORMATION_DATE_EXPRESSION_KEY = "information.date.expression"
   val INFORMATION_DATE_START_KEY = "information.date.start"
+  val INFORMATION_DATE_MAX_DAYS_BEHIND_KEY = "information.date.max.days.behind"
 
   def fromConfig(conf: Config): InfoDateOverride = {
     val columnNameOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN_KEY)
     val dateFormatOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_FORMAT_KEY)
     val expressionOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_EXPRESSION_KEY)
-    val startDateOpt = ConfigUtils.getDateOpt(conf, INFORMATION_DATE_START_KEY, DEFAULT_DATE_FORMAT)
 
-    InfoDateOverride(columnNameOpt, dateFormatOpt, expressionOpt, startDateOpt)
+    val startDateOpt = ConfigUtils.getDateOpt(conf, INFORMATION_DATE_START_KEY, DEFAULT_DATE_FORMAT)
+    val startMaxDaysOpt = ConfigUtils.getOptionInt(conf, INFORMATION_DATE_MAX_DAYS_BEHIND_KEY)
+
+    val startDate = (startDateOpt, startMaxDaysOpt) match {
+      case (Some(_), Some(_)) =>
+        throw new IllegalArgumentException(s"Incompatible options used. Please, use only one of: " +
+          s"$INFORMATION_DATE_START_KEY, $INFORMATION_DATE_MAX_DAYS_BEHIND_KEY.")
+      case (Some(startDate), None) =>
+        Some(startDate)
+      case (None, Some(days)) =>
+        Some(LocalDate.now().minusDays(days))
+      case (None, None) =>
+        None
+    }
+
+    InfoDateOverride(columnNameOpt, dateFormatOpt, expressionOpt, startDate)
   }
 }

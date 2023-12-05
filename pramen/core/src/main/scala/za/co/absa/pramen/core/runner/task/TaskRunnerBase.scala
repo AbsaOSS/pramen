@@ -91,7 +91,7 @@ abstract class TaskRunnerBase(conf: Config,
     sortedTasks.map(task =>
       failedInfoDate match {
         case Some(failedDate) =>
-          skipTask(task, s"Due to failure for $failedDate")
+          skipTask(task, s"Due to failure for $failedDate", isWarning = true)
         case None             =>
           val status = runTask(task)
           if (status.isFailure)
@@ -105,18 +105,23 @@ abstract class TaskRunnerBase(conf: Config,
   protected def runTask(task: Task): RunStatus = {
     val started = Instant.now()
 
-    val result: TaskResult = validate(task, started) match {
-      case Left(failedResult)      => failedResult
-      case Right(validationResult) => run(task, started, validationResult)
+    task.reason match {
+      case TaskRunReason.Skip(reason) =>
+        // This skips tasks that were skipped based on strong date constraints (e.g. attempt to run before the minimum date)
+        skipTask(task, reason, isWarning = true)
+      case _ =>
+        val result: TaskResult = validate(task, started) match {
+          case Left(failedResult) => failedResult
+          case Right(validationResult) => run(task, started, validationResult)
+        }
+        onTaskCompletion(task, result)
     }
-
-    onTaskCompletion(task, result)
   }
 
   /** Skips a task. Performs all task logging and notification sending activities. */
-  protected def skipTask(task: Task, reason: String): RunStatus = {
+  protected def skipTask(task: Task, reason: String, isWarning: Boolean): RunStatus = {
     val now = Instant.now()
-    val runStatus = RunStatus.Skipped(reason)
+    val runStatus = RunStatus.Skipped(reason, isWarning)
     val runInfo = RunInfo(task.infoDate, now, now)
     val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
     val taskResult = TaskResult(task.job, runStatus, Some(runInfo), applicationId, isTransient, Nil, Nil, Nil)
@@ -450,7 +455,7 @@ abstract class TaskRunnerBase(conf: Config,
         log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
       case _: RunStatus.InsufficientData =>
         log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")
-      case RunStatus.Skipped(msg) =>
+      case RunStatus.Skipped(msg, _) =>
         log.warn(s"$WARNING Task '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
       case RunStatus.NotRan =>
         log.info(s"Task '${result.job.name}'$infoDateMsg is SKIPPED.")
