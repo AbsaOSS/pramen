@@ -99,6 +99,48 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.correctDecimalsInSchema)
     }
 
+    "ensure jdbc minimal snapshot configuration works" in {
+      val testConfig = ConfigFactory.parseString(
+        s"""reader {
+           |  jdbc {
+           |    driver = "$driver"
+           |    connection.string = "$url"
+           |    user = "$user"
+           |    password = "$password"
+           |  }
+           |
+           |  has.information.date.column = false
+           |}""".stripMargin)
+      val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+
+      val jdbc = reader.getJdbcConfig
+
+      assert(!jdbc.hasInfoDate)
+    }
+
+    "ensure jdbc minimal event configuration works" in {
+      val testConfig = ConfigFactory.parseString(
+        s"""reader {
+           |  jdbc {
+           |    driver = "$driver"
+           |    connection.string = "$url"
+           |    user = "$user"
+           |    password = "$password"
+           |  }
+           |
+           |  has.information.date.column = true
+           |  information.date.column = "sync_date"
+           |  information.date.type = "date"
+           |}""".stripMargin)
+      val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+
+      val jdbc = reader.getJdbcConfig
+
+      assert(jdbc.hasInfoDate)
+      assert(jdbc.infoDateColumn == "sync_date")
+      assert(jdbc.infoDateType == "date")
+    }
+
     "getWithRetry" should {
       "return the successful dataframe on the second try" in {
         val readerConfig = conf.getConfig("reader")
