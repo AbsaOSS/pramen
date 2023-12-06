@@ -55,23 +55,36 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig, extraConfig: Config) extends SqlG
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val infoDateColumn = sqlConfig.infoDateColumn
+    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
+
+    val infoDateColumnAdjusted =
+      if (dateTypes.contains(sqlConfig.infoDateType)) {
+        s"TO_DATE(${sqlConfig.infoDateColumn}, 'YYYY-MM-DD')"
+      } else {
+        sqlConfig.infoDateColumn
+      }
 
     if (dateBeginLit == dateEndLit) {
-      s"$infoDateColumn = $dateBeginLit"
+      s"$infoDateColumnAdjusted = $dateBeginLit"
     } else {
-      s"$infoDateColumn >= $dateBeginLit AND $infoDateColumn <= $dateEndLit"
+      s"$infoDateColumnAdjusted >= $dateBeginLit AND $infoDateColumnAdjusted <= $dateEndLit"
     }
   }
 
   def getDateLiteral(date: LocalDate): String = {
-    val dateStr = dateFormatterApp.format(date)
-
     sqlConfig.infoDateType match {
-      case SqlColumnType.DATE => s"date'$dateStr'"
-      case SqlColumnType.DATETIME => throw new NotImplementedError("DATETIME support for Denodo is not supported yet.")
-      case SqlColumnType.STRING => s"'$dateStr'"
-      case SqlColumnType.NUMBER => s"$dateStr"
+      case SqlColumnType.DATE =>
+        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
+        s"date'$dateStr'"
+      case SqlColumnType.DATETIME =>
+        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
+        s"date'$dateStr'"
+      case SqlColumnType.STRING =>
+        val dateStr = dateFormatterApp.format(date)
+        s"'$dateStr'"
+      case SqlColumnType.NUMBER =>
+        val dateStr = dateFormatterApp.format(date)
+        s"$dateStr"
     }
   }
 

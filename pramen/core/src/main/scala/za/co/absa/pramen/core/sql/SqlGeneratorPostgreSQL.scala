@@ -22,7 +22,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGeneratorBase(sqlConfig) {
-
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
   override def getDtable(sql: String): String = {
@@ -72,13 +71,19 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig, extraConfig: Config) extends 
   }
 
   override def getDateLiteral(date: LocalDate): String = {
-    val dateStr = dateFormatterApp.format(date)
-
     sqlConfig.infoDateType match {
-      case SqlColumnType.DATE => s"TO_DATE('$dateStr', '${sqlConfig.dateFormatSql}')"
-      case SqlColumnType.DATETIME => s"TO_DATE('$dateStr', '${sqlConfig.dateFormatSql}')"
-      case SqlColumnType.STRING => s"'$dateStr'"
-      case SqlColumnType.NUMBER => s"$dateStr"
+      case SqlColumnType.DATE =>
+        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
+        s"date'$dateStr'"
+      case SqlColumnType.DATETIME =>
+        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
+        s"date'$dateStr'"
+      case SqlColumnType.STRING =>
+        val dateStr = dateFormatterApp.format(date)
+        s"'$dateStr'"
+      case SqlColumnType.NUMBER =>
+        val dateStr = dateFormatterApp.format(date)
+        s"$dateStr"
     }
   }
 
