@@ -59,7 +59,7 @@ object TableReaderJdbcConfig {
     if (hasInformationDate) {
       ConfigUtils.validatePathsExistence(conf,
         parent,
-        INFORMATION_DATE_COLUMN :: INFORMATION_DATE_TYPE :: INFORMATION_DATE_APP_FORMAT :: INFORMATION_DATE_SQL_FORMAT :: Nil)
+        INFORMATION_DATE_COLUMN :: INFORMATION_DATE_TYPE :: Nil)
     }
 
     val saveTimestampsAsDates = ConfigUtils.getOptionBoolean(conf, JDBC_TIMESTAMPS_AS_DATES).getOrElse(false)
