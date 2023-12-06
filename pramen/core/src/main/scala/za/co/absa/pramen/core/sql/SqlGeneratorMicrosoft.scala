@@ -72,13 +72,19 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig, extraConfig: Config) extends S
   }
 
   override def getDateLiteral(date: LocalDate): String = {
-    val dateStr = dateFormatterApp.format(date)
-
     sqlConfig.infoDateType match {
-      case SqlColumnType.DATE => s"CONVERT(DATE, '$dateStr')"
-      case SqlColumnType.DATETIME => s"CONVERT(DATE, '$dateStr')"
-      case SqlColumnType.STRING => s"'$dateStr'"
-      case SqlColumnType.NUMBER => s"$dateStr"
+      case SqlColumnType.DATE =>
+        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
+        s"CONVERT(DATE, '$dateStr')"
+      case SqlColumnType.DATETIME =>
+        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
+        s"CONVERT(DATE, '$dateStr')"
+      case SqlColumnType.STRING =>
+        val dateStr = dateFormatterApp.format(date)
+        s"'$dateStr'"
+      case SqlColumnType.NUMBER =>
+        val dateStr = dateFormatterApp.format(date)
+        s"$dateStr"
     }
   }
 

@@ -133,10 +133,11 @@ class SqlGeneratorSas(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGene
 
   override def getDateLiteral(date: LocalDate): String = {
     sqlConfig.infoDateType match {
-      case SqlColumnType.DATE   =>
-        val dateStr = dateFormatterOracle.format(date)
+      case SqlColumnType.DATE =>
+        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
         s"date'$dateStr'"
-      case SqlColumnType.DATETIME => throw new NotImplementedError("DATETIME support for Denodo is not supported yet.")
+      case SqlColumnType.DATETIME =>
+        throw new NotImplementedError("DATETIME support for SAS is not supported yet.")
       case SqlColumnType.STRING =>
         val dateStr = dateFormatterApp.format(date)
         s"'$dateStr'"

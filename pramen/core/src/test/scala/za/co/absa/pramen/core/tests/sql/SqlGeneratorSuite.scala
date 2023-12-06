@@ -536,16 +536,16 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     "generate ranged count queries" when {
       "date is in DATE format" in {
         assert(genDate.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) FROM A WHERE D = date'2020-08-17'")
         assert(genDate.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
       "date is in DATETIME format" in {
         assert(genDateTime.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
         assert(genDateTime.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(D AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
       }
 
       "date is in STRING format" in {
@@ -566,16 +566,16 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     "generate ranged data queries" when {
       "date is in DATE format" in {
         assert(genDate.getDataQuery("A", date1, date1, Nil, None) ==
-          "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT * FROM A WHERE D = date'2020-08-17'")
         assert(genDate.getDataQuery("A", date1, date2, Nil, None) ==
-          "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
       "date is in DATETIME format" in {
         assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
-          "SELECT * FROM A WHERE CAST(D AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT * FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
         assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
-          "SELECT * FROM A WHERE CAST(D AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(D AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT * FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
       }
 
       "date is in STRING format" in {
@@ -594,9 +594,9 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "with limit records" in {
         assert(genDate.getDataQuery("A", date1, date1, Nil, Some(100)) ==
-          "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD') LIMIT 100")
+          "SELECT * FROM A WHERE D = date'2020-08-17' LIMIT 100")
         assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
-          "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD') LIMIT 100")
+          "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30' LIMIT 100")
       }
     }
 
@@ -736,9 +736,9 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     "generate ranged count queries" when {
       "date is in DATE format" in {
         assert(genDate.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D = date'2020-08-17'")
         assert(genDate.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS CNT FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
       "date is in DATETIME format" in {
@@ -766,9 +766,9 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     "generate ranged data queries" when {
       "date is in DATE format" in {
         assert(genDate.getDataQuery("A", date1, date1, Nil, None) ==
-          "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT * FROM A WHERE D = date'2020-08-17'")
         assert(genDate.getDataQuery("A", date1, date2, Nil, None) ==
-          "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
       "date is in DATETIME format" in {
@@ -794,9 +794,9 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "with limit records" in {
         assert(genDate.getDataQuery("A", date1, date1, Nil, Some(100)) ==
-          "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD') LIMIT 100")
+          "SELECT * FROM A WHERE D = date'2020-08-17' LIMIT 100")
         assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
-          "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD') LIMIT 100")
+          "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30' LIMIT 100")
       }
     }
 
