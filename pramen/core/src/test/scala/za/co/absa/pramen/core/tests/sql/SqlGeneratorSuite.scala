@@ -254,6 +254,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigDate, config)
     val genStr = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigString, config)
     val genNum = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigNumber, config)
+    val genDateTime = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigDateTime, config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -279,6 +280,13 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT COUNT(*) FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
       }
 
+      "date is in DATETIME format" in {
+        assert(genDateTime.getCountQuery("A", date1, date1) ==
+          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
+        assert(genDateTime.getCountQuery("A", date1, date2) ==
+          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
+      }
+
       "date is in STRING format" in {
         assert(genStr.getCountQuery("A", date1, date1) ==
           "SELECT COUNT(*) FROM A WHERE D = '2020-08-17'")
@@ -300,6 +308,13 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM A WHERE D = date'2020-08-17'")
         assert(gen.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
+      }
+
+      "date is in DATETIME format" in {
+        assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
+          "SELECT * FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
+        assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
+          "SELECT * FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
       }
 
       "date is in STRING format" in {
@@ -430,6 +445,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDate, config)
     val genStr = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigString, config)
     val genNum = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigNumber, config)
+    val genDateTime = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDateTime, config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -455,6 +471,13 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT COUNT(*) FROM A WHERE D >= to_date('2020-08-17') AND D <= to_date('2020-08-30')")
       }
 
+      "date is in DATETIME format" in {
+        assert(genDateTime.getCountQuery("A", date1, date1) ==
+          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) = to_date('2020-08-17')")
+        assert(genDateTime.getCountQuery("A", date1, date2) ==
+          "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) >= to_date('2020-08-17') AND CAST(D AS DATE) <= to_date('2020-08-30')")
+      }
+
       "date is in STRING format" in {
         assert(genStr.getCountQuery("A", date1, date1) ==
           "SELECT COUNT(*) FROM A WHERE D = '2020-08-17'")
@@ -476,6 +499,13 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM A WHERE D = to_date('2020-08-17')")
         assert(gen.getDataQuery("A", date1, date2, Nil, None) ==
           "SELECT * FROM A WHERE D >= to_date('2020-08-17') AND D <= to_date('2020-08-30')")
+      }
+
+      "date is in DATETIME format" in {
+        assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
+          "SELECT * FROM A WHERE CAST(D AS DATE) = to_date('2020-08-17')")
+        assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
+          "SELECT * FROM A WHERE CAST(D AS DATE) >= to_date('2020-08-17') AND CAST(D AS DATE) <= to_date('2020-08-30')")
       }
 
       "date is in STRING format" in {

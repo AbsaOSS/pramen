@@ -69,12 +69,19 @@ class SqlGeneratorHive(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGen
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val infoDateColumn = sqlConfig.infoDateColumn
+    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
+
+    val infoDateColumnAdjusted =
+      if (dateTypes.contains(sqlConfig.infoDateType)) {
+        s"CAST(${sqlConfig.infoDateColumn} AS DATE)"
+      } else {
+        sqlConfig.infoDateColumn
+      }
 
     if (dateBeginLit == dateEndLit) {
-      s"$infoDateColumn = $dateBeginLit"
+      s"$infoDateColumnAdjusted = $dateBeginLit"
     } else {
-      s"$infoDateColumn >= $dateBeginLit AND $infoDateColumn <= $dateEndLit"
+      s"$infoDateColumnAdjusted >= $dateBeginLit AND $infoDateColumnAdjusted <= $dateEndLit"
     }
   }
 
