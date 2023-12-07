@@ -59,7 +59,7 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig, extraConfig: Config) extends SqlG
 
     val infoDateColumnAdjusted =
       if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"TO_DATE(${sqlConfig.infoDateColumn}, 'YYYY-MM-DD')"
+        s"CAST(${sqlConfig.infoDateColumn} AS DATE)"
       } else {
         sqlConfig.infoDateColumn
       }
