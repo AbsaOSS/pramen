@@ -58,9 +58,35 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |
          |  information.date.column = "INFO_DATE"
          |  information.date.type = "number"
-         |  information.date.app.format = "yyyy-MM-DD"
-         |  information.date.sql.format = "YYYY-mm-DD"
+         |  information.date.format = "yyyy-MM-DD"
+         |}
+         |reader_legacy {
+         |  jdbc {
+         |    driver = "$driver"
+         |    connection.string = "$url"
+         |    user = "$user"
+         |    password = "$password"
+         |  }
          |
+         |  has.information.date.column = true
+         |
+         |  information.date.column = "INFO_DATE"
+         |  information.date.type = "date"
+         |  information.date.app.format = "YYYY-MM-dd"
+         |
+         |}
+         |reader_minimal {
+         |  jdbc {
+         |    driver = "$driver"
+         |    connection.string = "$url"
+         |    user = "$user"
+         |    password = "$password"
+         |  }
+         |
+         |  has.information.date.column = true
+         |
+         |  information.date.column = "INFO_DATE"
+         |  information.date.type = "date"
          |}""".stripMargin)
 
     "be able to be constructed properly from config" in {
@@ -75,8 +101,42 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
       assert(jdbc.infoDateType == "number")
-      assert(jdbc.infoDateFormatApp == "yyyy-MM-DD")
+      assert(jdbc.infoDateFormat == "yyyy-MM-DD")
       assert(!jdbc.hasInfoDate)
+      assert(!jdbc.saveTimestampsAsDates)
+    }
+
+    "be able to be constructed properly from legacy config" in {
+      val reader = TableReaderJdbc(conf.getConfig("reader_legacy"), "reader_legacy")
+
+      val jdbc = reader.getJdbcConfig
+
+      assert(jdbc.jdbcConfig.database.isEmpty)
+      assert(jdbc.jdbcConfig.driver == driver)
+      assert(jdbc.jdbcConfig.primaryUrl.get == url)
+      assert(jdbc.jdbcConfig.user.contains(user))
+      assert(jdbc.jdbcConfig.password.contains(password))
+      assert(jdbc.infoDateColumn == "INFO_DATE")
+      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateFormat == "YYYY-MM-dd")
+      assert(jdbc.hasInfoDate)
+      assert(!jdbc.saveTimestampsAsDates)
+    }
+
+    "be able to be constructed properly from minimal config" in {
+      val reader = TableReaderJdbc(conf.getConfig("reader_minimal"), "reader_minimal")
+
+      val jdbc = reader.getJdbcConfig
+
+      assert(jdbc.jdbcConfig.database.isEmpty)
+      assert(jdbc.jdbcConfig.driver == driver)
+      assert(jdbc.jdbcConfig.primaryUrl.get == url)
+      assert(jdbc.jdbcConfig.user.contains(user))
+      assert(jdbc.jdbcConfig.password.contains(password))
+      assert(jdbc.infoDateColumn == "INFO_DATE")
+      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateFormat == "yyyy-MM-dd")
+      assert(jdbc.hasInfoDate)
       assert(!jdbc.saveTimestampsAsDates)
     }
 
@@ -217,7 +277,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
           .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
-          .withValue("information.date.app.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
+          .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
         val reader = TableReaderJdbc(testConfig, "reader")
 
@@ -240,7 +300,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
           .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
-          .withValue("information.date.app.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
+          .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
         val reader = TableReaderJdbc(testConfig, "reader")
 
@@ -276,7 +336,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
           .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
-          .withValue("information.date.app.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
+          .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
           .withValue("correct.decimals.in.schema", ConfigValueFactory.fromAnyRef(true))
 
         val reader = TableReaderJdbc(testConfig, "reader")
@@ -311,7 +371,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
           .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
-          .withValue("information.date.app.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
+          .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
         val reader = TableReaderJdbc(testConfig, "reader")
 

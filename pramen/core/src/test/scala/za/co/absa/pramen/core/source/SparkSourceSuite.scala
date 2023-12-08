@@ -70,8 +70,7 @@ class SparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDirFi
        |      has.information.date.column = true
        |      information.date.column = "INFO_DATE"
        |      information.date.type = "date"
-       |      information.date.app.format = "yyyy-MM-DD"
-       |      information.date.sql.format = "YYYY-mm-DD"
+       |      information.date.format = "yyyy-MM-DD"
        |    },
        |    {
        |      name = "spark2"

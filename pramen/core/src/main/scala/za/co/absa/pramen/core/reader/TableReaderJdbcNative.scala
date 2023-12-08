@@ -20,17 +20,16 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{Query, TableReader}
-import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.INFORMATION_DATE_APP_FORMAT
-import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, TimeUtils}
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.getInfoDateFormat
+import za.co.absa.pramen.core.utils.{JdbcNativeUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
 class TableReaderJdbcNative(jdbcConfig: JdbcConfig,
                             jdbcUrlSelector: JdbcUrlSelector,
-                            infoDateFormatPattern: String)
+                            val infoDateFormatPattern: String)
                            (implicit spark: SparkSession) extends TableReader {
   import TableReaderJdbcNative._
 
@@ -89,7 +88,8 @@ object TableReaderJdbcNative {
            (implicit spark: SparkSession): TableReaderJdbcNative = {
     val jdbcConfig = JdbcConfig.load(conf, parent)
     val urlSelector = JdbcUrlSelector(jdbcConfig)
-    val infoDateFormat = ConfigUtils.getOptionString(conf, INFORMATION_DATE_APP_FORMAT).getOrElse(DEFAULT_DATE_FORMAT)
+
+    val infoDateFormat = getInfoDateFormat(conf)
 
     new TableReaderJdbcNative(jdbcConfig, urlSelector, infoDateFormat)
   }

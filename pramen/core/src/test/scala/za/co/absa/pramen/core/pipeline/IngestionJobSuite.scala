@@ -73,8 +73,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
        |      has.information.date.column = true
        |      information.date.column = "info_date"
        |      information.date.type = "string"
-       |      information.date.app.format = "yyyy-MM-dd"
-       |      information.date.sql.format = "YYYY-MM-DD"
+       |      information.date.format = "yyyy-MM-dd"
        |    },
        |  ]
        | }

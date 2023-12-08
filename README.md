@@ -2120,8 +2120,7 @@ pramen.sources = [
     has.information.date.column = true
     information.date.column = "info_date"
     information.date.type = "date"
-    information.date.app.format = "yyyy-MM-dd"
-    information.date.sql.format = "YYYY-MM-DD"
+    information.date.format = "yyyy-MM-dd"
   }
 ]
 

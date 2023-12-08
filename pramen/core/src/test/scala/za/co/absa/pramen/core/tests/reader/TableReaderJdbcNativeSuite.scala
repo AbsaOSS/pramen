@@ -43,9 +43,36 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |
        |  information.date.column = "FOUNDED"
        |  information.date.type = "date"
-       |  information.date.app.format = "yyyy-MM-dd"
-       |  information.date.sql.format = "YYYY-mm-DD"
+       |  information.date.format = "YYYY-MM-dd"
        |
+       |}
+       |reader_legacy {
+       |  jdbc {
+       |    driver = "$driver"
+       |    connection.string = "$url"
+       |    user = "$user"
+       |    password = "$password"
+       |  }
+       |
+       |  has.information.date.column = true
+       |
+       |  information.date.column = "FOUNDED"
+       |  information.date.type = "date"
+       |  information.date.app.format = "yyyy-MM-DD"
+       |
+       |}
+       |reader_minimal {
+       |  jdbc {
+       |    driver = "$driver"
+       |    connection.string = "$url"
+       |    user = "$user"
+       |    password = "$password"
+       |  }
+       |
+       |  has.information.date.column = true
+       |
+       |  information.date.column = "FOUNDED"
+       |  information.date.type = "date"
        |}""".stripMargin)
 
   override protected def beforeAll(): Unit = {
@@ -63,7 +90,19 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
 
   "TableReaderJdbcNative factory" should {
     "construct a reader object" in {
-      assert(getReader != null)
+      val reader = getReader
+      assert(reader != null)
+      assert(reader.infoDateFormatPattern == "YYYY-MM-dd")
+    }
+
+    "work with legacy config" in {
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_legacy"), "reader_legacy")
+      assert(reader.infoDateFormatPattern == "yyyy-MM-DD")
+    }
+
+    "work with minimal config" in {
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), "reader_minimal")
+      assert(reader.infoDateFormatPattern == "yyyy-MM-dd")
     }
 
     "throw an exception if config is missing" in {

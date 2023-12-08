@@ -41,7 +41,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private val jdbcRetries = jdbcReaderConfig.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
 
-  private val infoDateFormatter = DateTimeFormatter.ofPattern(jdbcReaderConfig.infoDateFormatApp)
+  private val infoDateFormatter = DateTimeFormatter.ofPattern(jdbcReaderConfig.infoDateFormat)
 
   logConfiguration()
 
@@ -210,7 +210,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       case Some(infoDateType) =>
         SqlConfig(jdbcReaderConfig.infoDateColumn,
           infoDateType,
-          jdbcReaderConfig.infoDateFormatApp)
+          jdbcReaderConfig.infoDateFormat)
       case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
         s"It should be one of: date, string, number")
     }
@@ -232,7 +232,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     if (jdbcReaderConfig.hasInfoDate) {
       log.info(s"Info date column name:        ${jdbcReaderConfig.infoDateColumn}")
       log.info(s"Info date column data type:   ${jdbcReaderConfig.infoDateType}")
-      log.info(s"Info date format:             ${jdbcReaderConfig.infoDateFormatApp}")
+      log.info(s"Info date format:             ${jdbcReaderConfig.infoDateFormat}")
     }
     log.info(s"Save timestamp as dates:      ${jdbcReaderConfig.saveTimestampsAsDates}")
     log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
