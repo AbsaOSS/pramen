@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.LocalFsUtils
 
-import java.io.{File, IOException}
+import java.io.File
 import java.nio.file.Paths
 import java.time.LocalDate
 
@@ -68,8 +68,7 @@ class LocalSparkSourceSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
        |      has.information.date.column = true
        |      information.date.column = "INFO_DATE"
        |      information.date.type = "date"
-       |      information.date.app.format = "yyyy-MM-DD"
-       |      information.date.sql.format = "YYYY-mm-DD"
+       |      information.date.format = "yyyy-MM-DD"
        |    },
        |    {
        |      name = "spark2"

@@ -25,7 +25,7 @@ case class TableReaderJdbcConfig(
                                   hasInfoDate: Boolean,
                                   infoDateColumn: String,
                                   infoDateType: String,
-                                  infoDateFormatApp: String = "yyyy-MM-dd",
+                                  infoDateFormat: String = "yyyy-MM-dd",
                                   limitRecords: Option[Int] = None,
                                   saveTimestampsAsDates: Boolean = false,
                                   correctDecimalsInSchema: Boolean = false,
@@ -40,6 +40,7 @@ object TableReaderJdbcConfig {
   val HAS_INFO_DATE = "has.information.date.column"
   val INFORMATION_DATE_COLUMN = "information.date.column"
   val INFORMATION_DATE_TYPE = "information.date.type"
+  val INFORMATION_DATE_FORMAT = "information.date.format"
   val INFORMATION_DATE_APP_FORMAT = "information.date.app.format"
 
   val JDBC_SYNC_LIMIT_RECORDS = "limit.records"
@@ -66,12 +67,14 @@ object TableReaderJdbcConfig {
       log.warn(s"An obsolete flag '$JDBC_TIMESTAMPS_AS_DATES' is used. Please, use inline column transformations instead ('transformations = { ... }').")
     }
 
+    val infoDateFormat = getInfoDateFormat(conf)
+
     TableReaderJdbcConfig(
       jdbcConfig = JdbcConfig.load(conf, parent),
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
       infoDateColumn = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN).getOrElse(""),
       infoDateType = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date"),
-      infoDateFormatApp = ConfigUtils.getOptionString(conf, INFORMATION_DATE_APP_FORMAT).getOrElse("yyyy-MM-dd"),
+      infoDateFormat,
       limitRecords = ConfigUtils.getOptionInt(conf, JDBC_SYNC_LIMIT_RECORDS),
       saveTimestampsAsDates,
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),
@@ -79,5 +82,15 @@ object TableReaderJdbcConfig {
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
       useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false)
     )
+  }
+
+  def getInfoDateFormat(conf: Config): String = {
+    if (conf.hasPath(INFORMATION_DATE_APP_FORMAT)) {
+      log.warn(s"An obsolete option is used: '$INFORMATION_DATE_APP_FORMAT'. Please, replace it with '$INFORMATION_DATE_FORMAT'.")
+      conf.getString(INFORMATION_DATE_APP_FORMAT)
+    } else if (conf.hasPath(INFORMATION_DATE_FORMAT))
+      conf.getString(INFORMATION_DATE_FORMAT)
+    else
+      "yyyy-MM-dd"
   }
 }

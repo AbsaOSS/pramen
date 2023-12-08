@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderSpark
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.{HAS_INFO_DATE, INFORMATION_DATE_COLUMN, getInfoDateFormat}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
@@ -86,9 +87,6 @@ class SparkSource(val format: Option[String],
 object SparkSource extends ExternalChannelFactory[SparkSource] {
   val FORMAT = "format"
   val SCHEMA = "schema"
-  val HAS_INFO_DATE = "has.information.date.column"
-  val INFO_COLUMN_NAME = "information.date.column"
-  val INFO_COLUMN_FORMAT = "information.date.app.format"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): SparkSource = {
     val format = ConfigUtils.getOptionString(conf, FORMAT)
@@ -96,7 +94,7 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
 
     val hasInfoDate = conf.hasPath(HAS_INFO_DATE) && conf.getBoolean(HAS_INFO_DATE)
     val (infoDateColumn, infoDateFormat) = if (hasInfoDate) {
-      (conf.getString(INFO_COLUMN_NAME), conf.getString(INFO_COLUMN_FORMAT))
+      (conf.getString(INFORMATION_DATE_COLUMN), getInfoDateFormat(conf))
     } else {
       ("", "")
     }
