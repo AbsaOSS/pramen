@@ -26,7 +26,6 @@ case class TableReaderJdbcConfig(
                                   infoDateColumn: String,
                                   infoDateType: String,
                                   infoDateFormatApp: String = "yyyy-MM-dd",
-                                  infoDateFormatSql: String = "YYYY-MM-DD",
                                   limitRecords: Option[Int] = None,
                                   saveTimestampsAsDates: Boolean = false,
                                   correctDecimalsInSchema: Boolean = false,
@@ -42,7 +41,6 @@ object TableReaderJdbcConfig {
   val INFORMATION_DATE_COLUMN = "information.date.column"
   val INFORMATION_DATE_TYPE = "information.date.type"
   val INFORMATION_DATE_APP_FORMAT = "information.date.app.format"
-  val INFORMATION_DATE_SQL_FORMAT = "information.date.sql.format"
 
   val JDBC_SYNC_LIMIT_RECORDS = "limit.records"
   val JDBC_TIMESTAMPS_AS_DATES = "save.timestamps.as.dates"
@@ -74,7 +72,6 @@ object TableReaderJdbcConfig {
       infoDateColumn = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN).getOrElse(""),
       infoDateType = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date"),
       infoDateFormatApp = ConfigUtils.getOptionString(conf, INFORMATION_DATE_APP_FORMAT).getOrElse("yyyy-MM-dd"),
-      infoDateFormatSql = ConfigUtils.getOptionString(conf, INFORMATION_DATE_SQL_FORMAT).getOrElse("YYYY-MM-DD"),
       limitRecords = ConfigUtils.getOptionInt(conf, JDBC_SYNC_LIMIT_RECORDS),
       saveTimestampsAsDates,
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),

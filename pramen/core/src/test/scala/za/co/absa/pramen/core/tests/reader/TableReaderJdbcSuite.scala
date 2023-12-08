@@ -76,7 +76,6 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.infoDateColumn == "INFO_DATE")
       assert(jdbc.infoDateType == "number")
       assert(jdbc.infoDateFormatApp == "yyyy-MM-DD")
-      assert(jdbc.infoDateFormatSql == "YYYY-mm-DD")
       assert(!jdbc.hasInfoDate)
       assert(!jdbc.saveTimestampsAsDates)
     }

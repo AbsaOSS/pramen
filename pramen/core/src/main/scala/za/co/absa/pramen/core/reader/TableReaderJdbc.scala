@@ -210,7 +210,6 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       case Some(infoDateType) =>
         SqlConfig(jdbcReaderConfig.infoDateColumn,
           infoDateType,
-          jdbcReaderConfig.infoDateFormatSql,
           jdbcReaderConfig.infoDateFormatApp)
       case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
         s"It should be one of: date, string, number")
@@ -233,8 +232,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     if (jdbcReaderConfig.hasInfoDate) {
       log.info(s"Info date column name:        ${jdbcReaderConfig.infoDateColumn}")
       log.info(s"Info date column data type:   ${jdbcReaderConfig.infoDateType}")
-      log.info(s"Info date format (SQL):       ${jdbcReaderConfig.infoDateFormatSql}")
-      log.info(s"Info date format (App):       ${jdbcReaderConfig.infoDateFormatApp}")
+      log.info(s"Info date format:             ${jdbcReaderConfig.infoDateFormatApp}")
     }
     log.info(s"Save timestamp as dates:      ${jdbcReaderConfig.saveTimestampsAsDates}")
     log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
