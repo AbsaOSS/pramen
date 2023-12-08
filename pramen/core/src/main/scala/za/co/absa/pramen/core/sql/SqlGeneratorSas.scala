@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.sql
 
-import com.typesafe.config.Config
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.sql.impl.SasDialect
@@ -39,11 +38,8 @@ object SqlGeneratorSas {
   }
 }
 
-class SqlGeneratorSas(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGeneratorBase(sqlConfig) {
-  val ORACLE_DATE_PATTERN = "yyyy-MM-dd"
-
+class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
-  private val dateFormatterOracle = DateTimeFormatter.ofPattern(ORACLE_DATE_PATTERN)
 
   private var connection: Connection = _
 
@@ -150,5 +146,4 @@ class SqlGeneratorSas(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGene
   private def getLimit(limit: Option[Int], hasWhere: Boolean): String = {
     limit.map(n => s" LIMIT $n").getOrElse("")
   }
-
 }

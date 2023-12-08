@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.sql
 
-import com.typesafe.config.Config
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.sql.impl.HiveDialect
@@ -37,8 +36,7 @@ object SqlGeneratorHive {
   }
 }
 
-class SqlGeneratorHive(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGeneratorBase(sqlConfig) {
-
+class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
   SqlGeneratorHive.registerDialect

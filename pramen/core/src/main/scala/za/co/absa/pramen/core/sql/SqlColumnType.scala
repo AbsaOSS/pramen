@@ -19,7 +19,6 @@ package za.co.absa.pramen.core.sql
 sealed trait SqlColumnType
 
 object SqlColumnType {
-
   case object DATE extends SqlColumnType {
     override val toString: String = "date"
   }
@@ -38,12 +37,11 @@ object SqlColumnType {
 
   def fromString(s: String): Option[SqlColumnType] = {
     s.toLowerCase() match {
-      case DATE.toString => Some(DATE)
+      case DATE.toString     => Some(DATE)
       case DATETIME.toString => Some(DATETIME)
-      case STRING.toString => Some(STRING)
-      case NUMBER.toString => Some(NUMBER)
+      case STRING.toString   => Some(STRING)
+      case NUMBER.toString   => Some(NUMBER)
       case _ => None
     }
   }
-
 }

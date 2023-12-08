@@ -20,7 +20,6 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
-
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
   override def getDtable(sql: String): String = {
@@ -76,7 +75,7 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
         s"date'$dateStr'"
       case SqlColumnType.DATETIME =>
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
-        s"TO_DATE('$dateStr', 'YYYY-MM-DD')"
+        s"date'$dateStr'"
       case SqlColumnType.STRING =>
         val dateStr = dateFormatterApp.format(date)
         s"'$dateStr'"

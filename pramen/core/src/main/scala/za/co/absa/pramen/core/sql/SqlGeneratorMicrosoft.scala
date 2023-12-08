@@ -16,13 +16,10 @@
 
 package za.co.absa.pramen.core.sql
 
-import com.typesafe.config.Config
-
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-class SqlGeneratorMicrosoft(sqlConfig: SqlConfig, extraConfig: Config) extends SqlGeneratorBase(sqlConfig) {
-
+class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
   override def getDtable(sql: String): String = {
