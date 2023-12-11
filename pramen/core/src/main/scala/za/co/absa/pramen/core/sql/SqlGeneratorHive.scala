@@ -100,8 +100,12 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
     }
   }
 
-  override final def wrapIdentifier(columnName: String): String = {
-    s"`$columnName`"
+  override final def wrapIdentifier(identifier: String): String = {
+    if (identifier.startsWith("`") && identifier.endsWith("`")) {
+      identifier
+    } else {
+      s"`$identifier`"
+    }
   }
 
   private def getLimit(limit: Option[Int]): String = {
