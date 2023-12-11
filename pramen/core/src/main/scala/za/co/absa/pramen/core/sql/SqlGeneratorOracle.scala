@@ -31,21 +31,21 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
   }
 
   def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) FROM $tableName"
+    s"SELECT COUNT(*) FROM ${escapeIdentifier(tableName)}"
   }
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) FROM $tableName WHERE $where"
+    s"SELECT COUNT(*) FROM ${escapeIdentifier(tableName)} WHERE $where"
   }
 
   def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${columnExpr(columns)} FROM $tableName${getLimit(limit, hasWhere = false)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)}${getLimit(limit, hasWhere = false)}"
   }
 
   def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${columnExpr(columns)} FROM $tableName WHERE $where${getLimit(limit, hasWhere = true)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WHERE $where${getLimit(limit, hasWhere = true)}"
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
@@ -56,9 +56,9 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
 
     val infoDateColumnAdjusted =
       if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"TO_DATE(${sqlConfig.infoDateColumn}, 'YYYY-MM-DD')"
+        s"TO_DATE($infoDateColumn, 'YYYY-MM-DD')"
       } else {
-        sqlConfig.infoDateColumn
+        infoDateColumn
       }
 
     if (dateBeginLit == dateEndLit) {
@@ -83,6 +83,11 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
     }
+  }
+
+  override final def wrapIdentifier(columnName: String): String = {
+    val q = "\""
+    s"$q$columnName$q"
   }
 
   private def getLimit(limit: Option[Int], hasWhere: Boolean): String = {

@@ -58,28 +58,28 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
   }
 
   def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS cnt 'cnt' FROM $tableName"
+    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escapeIdentifier(tableName)}"
   }
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS cnt 'cnt' FROM $tableName WHERE $where"
+    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escapeIdentifier(tableName)} WHERE $where"
   }
 
   def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${getColumnSql(tableName, columns)} FROM $tableName${getLimit(limit, hasWhere = false)}"
+    s"SELECT ${getColumnSql(tableName, columns)} FROM ${escapeIdentifier(tableName)}${getLimit(limit, hasWhere = false)}"
   }
 
   def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${getColumnSql(tableName, columns)} FROM $tableName WHERE $where${getLimit(limit, hasWhere = true)}"
+    s"SELECT ${getColumnSql(tableName, columns)} FROM ${escapeIdentifier(tableName)} WHERE $where${getLimit(limit, hasWhere = true)}"
   }
 
   private def getColumnSql(tableName: String, columns: Seq[String]): String = {
     if (columns.isEmpty) {
-      getColumns(tableName).map(name => s"$name '$name'").mkString(", ")
+      getColumns(tableName).map(name => s"${escapeIdentifier(name)} '${escapeIdentifier(name)}'").mkString(", ")
     } else {
-      columns.mkString(", ")
+      columns.map(escapeIdentifier).mkString(", ")
     }
   }
 
@@ -118,8 +118,6 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val infoDateColumn = sqlConfig.infoDateColumn
-
     if (dateBeginLit == dateEndLit) {
       s"$infoDateColumn = $dateBeginLit"
     } else {
@@ -141,6 +139,10 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
     }
+  }
+
+  override final def wrapIdentifier(columnName: String): String = {
+    s"'$columnName'n"
   }
 
   private def getLimit(limit: Option[Int], hasWhere: Boolean): String = {

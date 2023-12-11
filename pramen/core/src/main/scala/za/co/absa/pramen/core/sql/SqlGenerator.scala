@@ -35,7 +35,11 @@ trait SqlGenerator {
 
   def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String
 
+  /** Returns the date literal for the dialect of the SQL. */
   def getDateLiteral(date: LocalDate): String
+
+  /** This validates and escapes an identifier if needed. Escaping does not happen always to maintain backwards compatibility. */
+  def escapeIdentifier(identifier: String): String
 
   def requiresConnection: Boolean = false
 
