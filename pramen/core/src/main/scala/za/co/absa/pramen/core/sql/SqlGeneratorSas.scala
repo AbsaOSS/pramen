@@ -131,7 +131,7 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
         s"date'$dateStr'"
       case SqlColumnType.DATETIME =>
-        throw new NotImplementedError("DATETIME support for SAS is not supported yet.")
+        throw new UnsupportedOperationException("DATETIME support for SAS is not supported yet.")
       case SqlColumnType.STRING =>
         val dateStr = dateFormatterApp.format(date)
         s"'$dateStr'"

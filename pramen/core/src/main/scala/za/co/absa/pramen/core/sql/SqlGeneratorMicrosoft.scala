@@ -21,6 +21,7 @@ import java.time.format.DateTimeFormatter
 
 class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
+  private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
 
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
@@ -52,14 +53,12 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
-
-    val infoDateColumnAdjusted =
-      if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"CONVERT(DATE, $infoDateColumn)"
-      } else {
-        infoDateColumn
-      }
+    val infoDateColumnAdjusted = if (sqlConfig.infoDateType == SqlColumnType.DATETIME ||
+      (sqlConfig.infoDateType == SqlColumnType.STRING && isIso)) {
+      s"CONVERT(DATE, $infoDateColumn)"
+    } else {
+      infoDateColumn
+    }
 
     if (dateBeginLit == dateEndLit) {
       s"$infoDateColumnAdjusted = $dateBeginLit"
@@ -77,16 +76,25 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
         s"CONVERT(DATE, '$dateStr')"
       case SqlColumnType.STRING =>
-        val dateStr = dateFormatterApp.format(date)
-        s"'$dateStr'"
+        if (isIso) {
+          val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
+          s"CONVERT(DATE, '$dateStr')"
+        } else {
+          val dateStr = dateFormatterApp.format(date)
+          s"'$dateStr'"
+        }
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
     }
   }
 
-  override final def wrapIdentifier(columnName: String): String = {
-    s"[$columnName]"
+  override final def wrapIdentifier(identifier: String): String = {
+    if (identifier.startsWith("[") && identifier.endsWith("]")) {
+      identifier
+    } else {
+      s"[$identifier]"
+    }
   }
 
   private def getLimit(limit: Option[Int]): String = {

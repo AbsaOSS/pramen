@@ -58,8 +58,8 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 }
 
 object SqlGeneratorBase {
-  val forbiddenCharacters = ";`'\"[](){}<>="
-  val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+  val forbiddenCharacters = ";'\""
+  val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
   val sqlKeywords: Set[String] = Set(
     "ABORT", "ABS", "ABSOLUTE", "ACCESS", "ADMIN", "AFTER", "AGGREGATE", "ALIAS", "ALL", "ALLOCATE",
     "ALSO", "ALTER", "ALWAYS", "ANALYSE", "ANALYZE", "AND", "ANY", "ARE", "ARRAY", "AS", "ASC", "ASENSITIVE", "ASSERTION",

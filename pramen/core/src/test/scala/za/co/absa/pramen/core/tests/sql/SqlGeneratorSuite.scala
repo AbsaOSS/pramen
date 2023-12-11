@@ -70,6 +70,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigDate, config)
     val genStr = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigString, config)
     val genNum = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigNumber, config)
+    val genDateTime = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigDateTime, config)
     val genEscaped = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigEscape, config)
 
     "generate count queries without date ranges" in {
@@ -140,6 +141,13 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM AA WHERE DD >= 20200817 AND DD <= 20200830")
       }
 
+      "date is in DATETIME format" in {
+        assert(genDateTime.getDataQuery("AA", date1, date1, Nil, None) ==
+          "SELECT * FROM AA WHERE TO_DATE(DD, 'YYYY-MM-DD') = date'2020-08-17'")
+        assert(genDateTime.getDataQuery("AA", date1, date2, Nil, None) ==
+          "SELECT * FROM AA WHERE TO_DATE(DD, 'YYYY-MM-DD') >= date'2020-08-17' AND TO_DATE(DD, 'YYYY-MM-DD') <= date'2020-08-30'")
+      }
+
       "with limit records" in {
         assert(gen.getDataQuery("AA", date1, date1, Nil, Some(100)) ==
           "SELECT * FROM AA WHERE DD = date'2020-08-17' AND ROWNUM <= 100")
@@ -163,8 +171,10 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genDate = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigDate, config)
     val genDateTime = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigDateTime, config)
     val genStr = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigString, config)
+    val genStr2 = fromDriverName("net.sourceforge.jtds.jdbc.Driver", DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, dateFormatApp = "yyyyMMdd",  infoDateColumn = "DD"), config)
     val genNum = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigNumber, config)
     val genEscaped = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigEscape, config)
+    val genEscaped2 = fromDriverName("net.sourceforge.jtds.jdbc.Driver",  DummySqlConfigFactory.getDummyConfig(infoDateColumn = "[Info date]"), config)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("AA") == "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK)")
@@ -197,11 +207,18 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK) WHERE CONVERT(DATE, DD) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, DD) <= CONVERT(DATE, '2020-08-30')")
     }
 
-      "date is in STRING format" in {
+      "date is in STRING ISO format" in {
         assert(genStr.getCountQuery("AA", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK) WHERE DD = '2020-08-17'")
+          "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK) WHERE CONVERT(DATE, DD) = CONVERT(DATE, '2020-08-17')")
         assert(genStr.getCountQuery("AA", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK) WHERE DD >= '2020-08-17' AND DD <= '2020-08-30'")
+          "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK) WHERE CONVERT(DATE, DD) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, DD) <= CONVERT(DATE, '2020-08-30')")
+      }
+
+      "date is in STRING non ISO format" in {
+        assert(genStr2.getCountQuery("AA", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK) WHERE DD = '20200817'")
+        assert(genStr2.getCountQuery("AA", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM AA WITH (NOLOCK) WHERE DD >= '20200817' AND DD <= '20200830'")
       }
 
       "date is in NUMBER format" in {
@@ -215,6 +232,13 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
           "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17')")
         assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17') AND [Info date] <= CONVERT(DATE, '2020-08-30')")
+      }
+
+      "the table name and column name already escaped" in {
+        assert(genEscaped2.getCountQuery("Input Table", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17')")
+        assert(genEscaped2.getCountQuery("Input Table", date1, date2) ==
           "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17') AND [Info date] <= CONVERT(DATE, '2020-08-30')")
       }
     }
@@ -234,11 +258,18 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM AA WITH (NOLOCK) WHERE CONVERT(DATE, DD) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, DD) <= CONVERT(DATE, '2020-08-30')")
       }
 
-      "date is in STRING format" in {
+      "date is in STRING ISO format" in {
         assert(genStr.getDataQuery("AA", date1, date1, Nil, None) ==
-          "SELECT * FROM AA WITH (NOLOCK) WHERE DD = '2020-08-17'")
+          "SELECT * FROM AA WITH (NOLOCK) WHERE CONVERT(DATE, DD) = CONVERT(DATE, '2020-08-17')")
         assert(genStr.getDataQuery("AA", date1, date2, Nil, None) ==
-          "SELECT * FROM AA WITH (NOLOCK) WHERE DD >= '2020-08-17' AND DD <= '2020-08-30'")
+          "SELECT * FROM AA WITH (NOLOCK) WHERE CONVERT(DATE, DD) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, DD) <= CONVERT(DATE, '2020-08-30')")
+      }
+
+      "date is in STRING non-ISO format" in {
+        assert(genStr2.getDataQuery("AA", date1, date1, Nil, None) ==
+          "SELECT * FROM AA WITH (NOLOCK) WHERE DD = '20200817'")
+        assert(genStr2.getDataQuery("AA", date1, date2, Nil, None) ==
+          "SELECT * FROM AA WITH (NOLOCK) WHERE DD >= '20200817' AND DD <= '20200830'")
       }
 
       "date is in NUMBER format" in {
@@ -381,6 +412,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val gen = fromDriverName("com.sas.rio.MVADriver", sqlConfigDate, config)
     val genStr = fromDriverName("com.sas.rio.MVADriver", sqlConfigString, config)
     val genNum = fromDriverName("com.sas.rio.MVADriver", sqlConfigNumber, config)
+    val genDateTime = fromDriverName("com.sas.rio.MVADriver", sqlConfigDateTime, config)
     val genEscaped = fromDriverName("com.sas.rio.MVADriver", sqlConfigEscape, config)
 
     gen.setConnection(connection)
@@ -423,6 +455,12 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT COUNT(*) AS cnt 'cnt' FROM AA WHERE DD = 20200817")
         assert(genNum.getCountQuery("AA", date1, date2) ==
           "SELECT COUNT(*) AS cnt 'cnt' FROM AA WHERE DD >= 20200817 AND DD <= 20200830")
+      }
+
+      "date is in DATETIME format" in {
+        assertThrows[UnsupportedOperationException] {
+          genDateTime.getDataQuery("AA", date1, date1, Nil, None)
+        }
       }
 
       "the table name and column name need to be escaped" in {
@@ -480,6 +518,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genNum = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigNumber, config)
     val genDateTime = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDateTime, config)
     val genEscaped = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigEscape, config)
+    val genEscaped2 = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", DummySqlConfigFactory.getDummyConfig(infoDateColumn = "`Info date`"), config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("AA") == "SELECT COUNT(*) FROM AA")
@@ -530,6 +569,13 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
           "SELECT COUNT(*) FROM `Input Table` WHERE `Info date` = to_date('2020-08-17')")
         assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
+          "SELECT COUNT(*) FROM `Input Table` WHERE `Info date` >= to_date('2020-08-17') AND `Info date` <= to_date('2020-08-30')")
+      }
+
+      "the table name and column name already escaped" in {
+        assert(genEscaped2.getCountQuery("Input Table", date1, date1) ==
+          "SELECT COUNT(*) FROM `Input Table` WHERE `Info date` = to_date('2020-08-17')")
+        assert(genEscaped2.getCountQuery("Input Table", date1, date2) ==
           "SELECT COUNT(*) FROM `Input Table` WHERE `Info date` >= to_date('2020-08-17') AND `Info date` <= to_date('2020-08-30')")
       }
     }
@@ -918,27 +964,9 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         }
       }
 
-      "throw an exception if a column contains a back quote" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC ` DEF")
-        }
-      }
-
       "throw an exception if a column contains a semicolon" in {
         assertThrows[IllegalArgumentException] {
           genDate.escapeIdentifier("ABC ; DEF")
-        }
-      }
-
-      "throw an exception if a column contains an opening square bracket" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC [ DEF")
-        }
-      }
-
-      "throw an exception if a column contains a closing square bracket" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC ] DEF")
         }
       }
     }
@@ -1064,27 +1092,9 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         }
       }
 
-      "throw an exception if a column contains a back quote" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC ` DEF")
-        }
-      }
-
       "throw an exception if a column contains a semicolon" in {
         assertThrows[IllegalArgumentException] {
           genDate.escapeIdentifier("ABC ; DEF")
-        }
-      }
-
-      "throw an exception if a column contains an opening square bracket" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC [ DEF")
-        }
-      }
-
-      "throw an exception if a column contains a closing square bracket" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC ] DEF")
         }
       }
     }
