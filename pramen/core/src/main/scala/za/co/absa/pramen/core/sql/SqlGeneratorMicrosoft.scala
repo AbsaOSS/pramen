@@ -31,21 +31,21 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
   }
 
   def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS CNT FROM $tableName WITH (NOLOCK)"
+    s"SELECT COUNT(*) AS CNT FROM ${escapeIdentifier(tableName)} WITH (NOLOCK)"
   }
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS CNT FROM $tableName WITH (NOLOCK) WHERE $where"
+    s"SELECT COUNT(*) AS CNT FROM ${escapeIdentifier(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM $tableName WITH (NOLOCK)"
+    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WITH (NOLOCK)"
   }
 
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM $tableName WITH (NOLOCK) WHERE $where"
+    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
@@ -56,9 +56,9 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
 
     val infoDateColumnAdjusted =
       if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"CONVERT(DATE, ${sqlConfig.infoDateColumn})"
+        s"CONVERT(DATE, $infoDateColumn)"
       } else {
-        sqlConfig.infoDateColumn
+        infoDateColumn
       }
 
     if (dateBeginLit == dateEndLit) {
@@ -83,6 +83,10 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
     }
+  }
+
+  override final def wrapIdentifier(columnName: String): String = {
+    s"[$columnName]"
   }
 
   private def getLimit(limit: Option[Int]): String = {

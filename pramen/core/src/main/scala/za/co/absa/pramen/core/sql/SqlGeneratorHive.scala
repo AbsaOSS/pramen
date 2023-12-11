@@ -46,21 +46,21 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
   }
 
   override def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) FROM $tableName"
+    s"SELECT COUNT(*) FROM ${escapeIdentifier(tableName)}"
   }
 
   override def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) FROM $tableName WHERE $where"
+    s"SELECT COUNT(*) FROM ${escapeIdentifier(tableName)} WHERE $where"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${columnExpr(columns)} FROM $tableName${getLimit(limit)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)}${getLimit(limit)}"
   }
 
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${columnExpr(columns)} FROM $tableName WHERE $where${getLimit(limit)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WHERE $where${getLimit(limit)}"
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
@@ -71,9 +71,9 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
 
     val infoDateColumnAdjusted =
       if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"CAST(${sqlConfig.infoDateColumn} AS DATE)"
+        s"CAST($infoDateColumn AS DATE)"
       } else {
-        sqlConfig.infoDateColumn
+        infoDateColumn
       }
 
     if (dateBeginLit == dateEndLit) {
@@ -98,6 +98,10 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
     }
+  }
+
+  override final def wrapIdentifier(columnName: String): String = {
+    s"`$columnName`"
   }
 
   private def getLimit(limit: Option[Int]): String = {
