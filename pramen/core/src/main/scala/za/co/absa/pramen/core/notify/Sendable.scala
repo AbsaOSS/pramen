@@ -84,6 +84,20 @@ trait Sendable {
     message.setSubject(getSubject)
     message.setText(getBody, getEncoding, getFormat)
 
+    if (getFiles.nonEmpty) {
+      setFiles(message)
+    }
+
+    // Send it
+    try {
+      Transport.send(message)
+      log.info(s"$VOLTAGE An email has been sent successfully.")
+    } catch {
+      case NonFatal(ex) => log.error(s"$FAILURE Failed to send an email.", ex)
+    }
+  }
+
+  private def setFiles(message: MimeMessage): Unit = {
     val multipart = new MimeMultipart()
 
     // Attach the message body
@@ -95,14 +109,6 @@ trait Sendable {
     attachFiles(getFiles, multipart)
 
     message.setContent(multipart)
-
-    // Send it
-    try {
-      Transport.send(message)
-      log.info(s"$VOLTAGE An email has been sent successfully.")
-    } catch {
-      case NonFatal(ex) => log.error(s"$FAILURE Failed to send an email.", ex)
-    }
   }
 
   private def attachFiles(files: Seq[NotificationEntry.AttachedFile], multipart: MimeMultipart): Unit = {
