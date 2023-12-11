@@ -798,6 +798,152 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     }
   }
 
+  "HSQL generator" should {
+    val genDate = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigDate, config)
+    val genDateTime = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigDateTime, config)
+    val genStr = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigString, config)
+    val genNum = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigNumber, config)
+    val genEscaped = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigEscape, config)
+
+    "generate count queries without date ranges" in {
+      assert(genDate.getCountQuery("AA") == "SELECT COUNT(*) AS CNT FROM AA")
+    }
+
+    "generate data queries without date ranges" in {
+      assert(genDate.getDataQuery("AA", Nil, None) == "SELECT * FROM AA")
+    }
+
+    "generate data queries when list of columns is specified" in {
+      assert(genDate.getDataQuery("AA", columns, None) == "SELECT AA, DD, \"Column with spaces\" FROM AA")
+    }
+
+    "generate data queries with limit clause date ranges" in {
+      assert(genDate.getDataQuery("AA", Nil, Some(100)) == "SELECT * FROM AA LIMIT 100")
+    }
+
+    "generate ranged count queries" when {
+      "date is in DATE format" in {
+        assert(genDate.getCountQuery("AA", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE DD = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+        assert(genDate.getCountQuery("AA", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE DD >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND DD <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+      }
+
+      "date is in DATETIME format" in {
+        assert(genDateTime.getCountQuery("AA", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE CAST(DD AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+        assert(genDateTime.getCountQuery("AA", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE CAST(DD AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(DD AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+      }
+
+      "date is in STRING format" in {
+        assert(genStr.getCountQuery("AA", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE DD = '2020-08-17'")
+        assert(genStr.getCountQuery("AA", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE DD >= '2020-08-17' AND DD <= '2020-08-30'")
+      }
+
+      "date is in NUMBER format" in {
+        assert(genNum.getCountQuery("AA", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE DD = 20200817")
+        assert(genNum.getCountQuery("AA", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM AA WHERE DD >= 20200817 AND DD <= 20200830")
+      }
+
+      "the table name and column name need to be escaped" in {
+        assert(genEscaped.getCountQuery("SELECT", date1, date1) ==
+          "SELECT COUNT(*) AS CNT FROM \"SELECT\" WHERE \"Info date\" = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+        assert(genEscaped.getCountQuery("SELECT", date1, date2) ==
+          "SELECT COUNT(*) AS CNT FROM \"SELECT\" WHERE \"Info date\" >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND \"Info date\" <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+      }
+    }
+
+    "generate ranged data queries" when {
+      "date is in DATE format" in {
+        assert(genDate.getDataQuery("AA", date1, date1, Nil, None) ==
+          "SELECT * FROM AA WHERE DD = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+        assert(genDate.getDataQuery("AA", date1, date2, Nil, None) ==
+          "SELECT * FROM AA WHERE DD >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND DD <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+      }
+
+      "date is in DATETIME format" in {
+        assert(genDateTime.getDataQuery("AA", date1, date1, Nil, None) ==
+          "SELECT * FROM AA WHERE CAST(DD AS DATE) = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+        assert(genDateTime.getDataQuery("AA", date1, date2, Nil, None) ==
+          "SELECT * FROM AA WHERE CAST(DD AS DATE) >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND CAST(DD AS DATE) <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+      }
+
+      "date is in STRING format" in {
+        assert(genStr.getDataQuery("AA", date1, date1, Nil, None) ==
+          "SELECT * FROM AA WHERE DD = '2020-08-17'")
+        assert(genStr.getDataQuery("AA", date1, date2, Nil, None) ==
+          "SELECT * FROM AA WHERE DD >= '2020-08-17' AND DD <= '2020-08-30'")
+      }
+
+      "date is in NUMBER format" in {
+        assert(genNum.getDataQuery("AA", date1, date1, Nil, None) ==
+          "SELECT * FROM AA WHERE DD = 20200817")
+        assert(genNum.getDataQuery("AA", date1, date2, Nil, None) ==
+          "SELECT * FROM AA WHERE DD >= 20200817 AND DD <= 20200830")
+      }
+
+      "with limit records" in {
+        assert(genDate.getDataQuery("AA", date1, date1, Nil, Some(100)) ==
+          "SELECT * FROM AA WHERE DD = TO_DATE('2020-08-17', 'YYYY-MM-DD') LIMIT 100")
+        assert(genDate.getDataQuery("AA", date1, date2, Nil, Some(100)) ==
+          "SELECT * FROM AA WHERE DD >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND DD <= TO_DATE('2020-08-30', 'YYYY-MM-DD') LIMIT 100")
+      }
+    }
+
+    "getDtable" should {
+      "return the original table when a table is provided" in {
+        assert(genDate.getDtable("AA") == "AA")
+      }
+
+      "wrapped query without alias for SQL queries " in {
+        assert(genDate.getDtable("SELECT A FROM B") == "(SELECT A FROM B) t")
+      }
+    }
+
+    "escapeIdentifier" should {
+      "throw an exception if a column contains a single quote" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC ' DEF")
+        }
+      }
+
+      "throw an exception if a column contains a double quote" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC \" DEF")
+        }
+      }
+
+      "throw an exception if a column contains a back quote" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC ` DEF")
+        }
+      }
+
+      "throw an exception if a column contains a semicolon" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC ; DEF")
+        }
+      }
+
+      "throw an exception if a column contains an opening square bracket" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC [ DEF")
+        }
+      }
+
+      "throw an exception if a column contains a closing square bracket" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC ] DEF")
+        }
+      }
+    }
+  }
+
   "Generic SQL generator" should {
     val genDate = fromDriverName("generic", sqlConfigDate, config)
     val genDateTime = fromDriverName("generic", sqlConfigDateTime, config)
