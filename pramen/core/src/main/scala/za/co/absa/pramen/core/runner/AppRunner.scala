@@ -146,6 +146,7 @@ object AppRunner {
       val banner = ResourceUtils.getResourceString("/pramen_banner.txt")
         .replace("""project_version""", version)
       log.info(s"\n$banner")
+      log.info(s"Runtime Spark version: ${spark.version}")
 
       spark.sparkContext.uiWebUrl.foreach(url => log.info(s"Spark URL: $url"))
     }
