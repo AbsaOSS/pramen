@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.{Path => HadoopPath}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult, TableReader}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.utils.traverser.{FsTraverser, FsTraverserLocal}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
@@ -101,13 +101,13 @@ class LocalSparkSource(sparkSource: SparkSource,
   }
 }
 
-object LocalSparkSource extends ExternalChannelFactory[LocalSparkSource] {
+object LocalSparkSource extends ExternalChannelFactoryV2[LocalSparkSource] {
   val TEMP_HADOOP_PATH_KEY = "temp.hadoop.path"
   val FILE_NAME_PATTERN_KEY = "file.name.pattern"
   val RECURSIVE_KEY = "recursive"
   val DEFAULT_FILE_NAME_PATTERN = "*"
 
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): LocalSparkSource = {
+  override def apply(conf: Config, workflowConfig: Config, parentPath: String, spark: SparkSession): LocalSparkSource = {
     ConfigUtils.validatePathsExistence(conf, parentPath, Seq(TEMP_HADOOP_PATH_KEY))
 
     val tempHadoopPath = conf.getString(TEMP_HADOOP_PATH_KEY)

@@ -18,8 +18,9 @@ package za.co.absa.pramen.core
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.ExternalChannel
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.mocks.ExternalChannelMock
+import za.co.absa.pramen.core.mocks.{ExternalChannelMock, ExternalChannelV2Mock}
 
 class ExternalChannelFactorySuite extends AnyWordSpec with SparkTestBase {
   "fromConfig" should {
@@ -30,11 +31,31 @@ class ExternalChannelFactorySuite extends AnyWordSpec with SparkTestBase {
           |key2 = "test2"
           |""".stripMargin)
 
-      val channel = ExternalChannelFactoryReflect.fromConfig[ExternalChannelMock](conf, "", "dummy")
+      val channel = ExternalChannelFactoryReflect.fromConfig[ExternalChannelMock](conf, conf, "", "dummy")
 
       assert(channel.isInstanceOf[ExternalChannelMock])
       assert(channel.value1 == "test1")
       assert(channel.value2 == "test2")
+    }
+
+    "be able to construct a channel from factory v2" in {
+      val workflowConf = ConfigFactory.parseString(
+        """test = "test"
+          |""".stripMargin)
+
+
+      val conf = ConfigFactory.parseString(
+        """factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelV2Mock"
+          |key1 = "test1"
+          |key2 = "test2"
+          |""".stripMargin)
+
+      val channel = ExternalChannelFactoryReflect.fromConfig[ExternalChannelV2Mock](conf, workflowConf, "", "dummy")
+
+      assert(channel.isInstanceOf[ExternalChannelV2Mock])
+      assert(channel.value1 == "test1")
+      assert(channel.value2 == "test2")
+      assert(channel.workflowConfig.hasPath("test"))
     }
 
     "throw an exception if a class is not specified" in {
@@ -44,7 +65,7 @@ class ExternalChannelFactorySuite extends AnyWordSpec with SparkTestBase {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        ExternalChannelFactoryReflect.fromConfig[ExternalChannelMock](conf, "", "dummy")
+        ExternalChannelFactoryReflect.fromConfig[ExternalChannelMock](conf, conf, "", "dummy")
       }
 
       assert(ex.getMessage.contains("A class should be specified for the dummy"))
@@ -69,6 +90,30 @@ class ExternalChannelFactorySuite extends AnyWordSpec with SparkTestBase {
       assert(channel.isInstanceOf[ExternalChannelMock])
       assert(channel.value1 == "test1")
       assert(channel.value2 == "test2")
+    }
+
+    "be able to construct a channel from array and name v2" in {
+      val conf = ConfigFactory.parseString(
+        """test = "test"
+          |channels = [
+          | {
+          |   name = "test_name"
+          |   factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelV2Mock"
+          |   key1 = "test1"
+          |   key2 = "test2"
+          | }
+          |]
+          |""".stripMargin)
+
+      val externalChannel = ExternalChannelFactoryReflect.fromConfigByName[ExternalChannel](conf, None, "channels", "test_name", "dummy")
+
+      assert(externalChannel.isInstanceOf[ExternalChannelV2Mock])
+      val channel = externalChannel.asInstanceOf[ExternalChannelV2Mock]
+      assert(channel.value1 == "test1")
+      assert(channel.value2 == "test2")
+      assert(channel.workflowConfig.hasPath("test"))
+      assert(channel.workflowConfig.hasPath("channels"))
+      assert(channel.config.hasPath("key1"))
     }
 
     "be able to construct a channel with a config override" in {

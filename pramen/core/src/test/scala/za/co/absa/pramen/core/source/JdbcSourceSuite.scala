@@ -95,7 +95,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
 
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
 
       assert(src.jdbcReaderConfig.infoDateColumn == "INFO_DATE")
     }
@@ -205,7 +205,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
     "return true if JDBC is configured with info date column" in {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
 
       assert(src.hasInfoDateColumn(null))
     }
@@ -213,7 +213,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
     "return false if JDBC is configured without info date column" in {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(1)
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.1", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.1", "source").asInstanceOf[JdbcSource]
 
       assert(!src.hasInfoDateColumn(null))
     }
@@ -223,7 +223,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
     "return JDBC table reader when a table is specified" in {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Table("company")
 
       val reader = src.getReader(query)
@@ -237,7 +237,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
     "return JDBC Native table reader when a SQL query is specified" in {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Sql("SELECT * FROM company")
 
       val reader = src.getReader(query)
@@ -250,7 +250,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
     "return JDBC table reader when a SELECT query is specified and jdbc native is not enabled" in {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0).withoutPath(USE_JDBC_NATIVE)
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Sql("SELECT * FROM company")
 
       val reader = src.getReader(query)
@@ -263,7 +263,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
     "return JDBC Native table reader when a non-SELECT query is specified and jdbc native is not enabled" in {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Sql("EXECUTE SELECT * FROM company")
 
       val reader = src.getReader(query)
@@ -274,7 +274,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
     "throw an exception on unknown query type" in {
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
-      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
 
       val ex =  intercept[IllegalArgumentException] {
         src.getReader(Query.Path("/dummy"))
