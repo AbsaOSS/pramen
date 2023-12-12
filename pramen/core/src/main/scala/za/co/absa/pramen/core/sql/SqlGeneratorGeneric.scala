@@ -85,9 +85,13 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
     }
   }
 
-  override final def wrapIdentifier(columnName: String): String = {
-    val q = "\""
-    s"$q$columnName$q"
+  override final def wrapIdentifier(identifier: String): String = {
+    if (identifier.startsWith("\"") && identifier.endsWith("\"")) {
+      identifier
+    } else {
+      val q = "\""
+      s"$q$identifier$q"
+    }
   }
 
   private def getLimit(limit: Option[Int]): String = {

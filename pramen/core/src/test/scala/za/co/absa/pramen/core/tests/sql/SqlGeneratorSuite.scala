@@ -165,6 +165,14 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(gen.getDtable("SELECT A FROM B") == "(SELECT A FROM B)")
       }
     }
+
+    "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = gen.escapeIdentifier("System User.\"Table Name\"")
+
+        assert(actual == "\"System User\".\"Table Name\"")
+      }
+    }
   }
 
   "Microsoft SQL generator" should {
@@ -296,6 +304,14 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(genDate.getDtable("SELECT A FROM B") == "(SELECT A FROM B) AS tbl")
       }
     }
+
+    "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = genDate.escapeIdentifier("System User.[Table Name]")
+
+        assert(actual == "[System User].[Table Name]")
+      }
+    }
   }
 
   "Denodo SQL generator" should {
@@ -402,6 +418,14 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "wrapped query without alias for SQL queries " in {
         assert(gen.getDtable("SELECT A FROM B") == "(SELECT A FROM B) tbl")
+      }
+    }
+
+    "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = gen.escapeIdentifier("System User.\"Table Name\"")
+
+        assert(actual == "\"System User\".\"Table Name\"")
       }
     }
   }
@@ -626,6 +650,14 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(gen.getDtable("SELECT A FROM B") == "(SELECT A FROM B) tbl")
       }
     }
+
+    "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = gen.escapeIdentifier("System User.`Table Name`")
+
+        assert(actual == "`System User`.`Table Name`")
+      }
+    }
   }
 
   "PostgreSQL SQL generator" should {
@@ -734,6 +766,14 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(genDate.getDtable("SELECT A FROM B") == "(SELECT A FROM B) t")
       }
     }
+
+    "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = genDate.escapeIdentifier("System User.\"Table Name\"")
+
+        assert(actual == "\"System User\".\"Table Name\"")
+      }
+    }
   }
 
   "DB2 SQL generator" should {
@@ -840,6 +880,14 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "wrapped query without alias for SQL queries " in {
         assert(genDate.getDtable("SELECT A FROM B") == "(SELECT A FROM B) AS T")
+      }
+    }
+
+    "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = genDate.escapeIdentifier("System User.\"Table Name\"")
+
+        assert(actual == "\"System User\".\"Table Name\"")
       }
     }
   }
@@ -952,15 +1000,15 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     }
 
     "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = genDate.escapeIdentifier("System User.\"Table Name\"")
+
+        assert(actual == "\"System User\".\"Table Name\"")
+      }
+
       "throw an exception if a column contains a single quote" in {
         assertThrows[IllegalArgumentException] {
           genDate.escapeIdentifier("ABC ' DEF")
-        }
-      }
-
-      "throw an exception if a column contains a double quote" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC \" DEF")
         }
       }
 
@@ -1080,15 +1128,24 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     }
 
     "escapeIdentifier" should {
+      "escape each subfields separately" in {
+        val actual = genDate.escapeIdentifier("System User.\"Table Name\"")
+
+        assert(actual == "\"System User\".\"Table Name\"")
+      }
+
+      "escape should not escape if turned off by config" in {
+        val sql = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "DD", escapeIdentifiers = false)
+        val genDate = fromDriverName("generic", sql, config)
+
+        val actual = genDate.escapeIdentifier("System User.\"Table Name\"")
+
+        assert(actual == "System User.\"Table Name\"")
+      }
+
       "throw an exception if a column contains a single quote" in {
         assertThrows[IllegalArgumentException] {
           genDate.escapeIdentifier("ABC ' DEF")
-        }
-      }
-
-      "throw an exception if a column contains a double quote" in {
-        assertThrows[IllegalArgumentException] {
-          genDate.escapeIdentifier("ABC \" DEF")
         }
       }
 

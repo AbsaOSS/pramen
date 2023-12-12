@@ -21,9 +21,11 @@ import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig}
 object DummySqlConfigFactory {
   def getDummyConfig(infoDateColumn: String = "col",
                      infoDateType: SqlColumnType = SqlColumnType.DATE,
-                     dateFormatApp: String = "yyyy-MM-dd"
+                     dateFormatApp: String = "yyyy-MM-dd",
+                     escapeIdentifiers: Boolean = true
                     ): SqlConfig = SqlConfig(
     infoDateColumn = infoDateColumn,
     infoDateType = infoDateType,
-    dateFormatApp = dateFormatApp)
+    dateFormatApp = dateFormatApp,
+    escapeIdentifiers = escapeIdentifiers)
 }
