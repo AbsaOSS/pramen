@@ -18,7 +18,7 @@ package za.co.absa.pramen.core
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory}
+import za.co.absa.pramen.api.{ExternalChannel, ExternalChannelFactory, ExternalChannelFactoryV2}
 import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 
 import scala.collection.mutable.ListBuffer
@@ -33,6 +33,7 @@ object ExternalChannelFactoryReflect {
   val NAME_KEY = "name"
 
   def fromConfig[T <: ExternalChannel : ClassTag : universe.TypeTag](conf: Config,
+                                                                     workflowConfig: Config,
                                                                      parentPath: String,
                                                                      channelType: String)
                                                                     (implicit spark: SparkSession): T = {
@@ -40,9 +41,14 @@ object ExternalChannelFactoryReflect {
       throw new IllegalArgumentException(s"A class should be specified for the $channelType at '$parentPath'.")
     }
     val clazz = conf.getString(FACTORY_CLASS_KEY)
-    val factory = ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactory[T]](clazz)
-
-    factory.apply(conf, parentPath, spark)
+    try {
+      val factory = ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactoryV2[T]](clazz)
+      factory.apply(conf, workflowConfig, parentPath, spark)
+    } catch {
+      case _: Throwable =>
+        val factory = ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactory[T]](clazz)
+        factory.apply(conf, parentPath, spark)
+    }
   }
 
   def fromConfigByName[T <: ExternalChannel : ClassTag : universe.TypeTag](conf: Config,
@@ -63,7 +69,7 @@ object ExternalChannelFactoryReflect {
           case Some(oc) => oc.withFallback(cfg)
           case None     => cfg
         }
-        fromConfig(effectiveConf, s"$arrayPath[$idx]", channelType)
+        fromConfig(effectiveConf, conf, s"$arrayPath[$idx]", channelType)
       case None             =>
         throw new IllegalArgumentException(s"Unknown name of a data $channelType: $name.")
     }
