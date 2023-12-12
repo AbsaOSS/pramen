@@ -19,5 +19,6 @@ package za.co.absa.pramen.core.sql
 case class SqlConfig(
                       infoDateColumn: String,
                       infoDateType: SqlColumnType,
-                      dateFormatApp: String
+                      dateFormatApp: String,
+                      escapeIdentifiers: Boolean
                     )

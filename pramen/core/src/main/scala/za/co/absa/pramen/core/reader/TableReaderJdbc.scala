@@ -210,7 +210,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       case Some(infoDateType) =>
         SqlConfig(jdbcReaderConfig.infoDateColumn,
           infoDateType,
-          jdbcReaderConfig.infoDateFormat)
+          jdbcReaderConfig.infoDateFormat,
+          jdbcReaderConfig.escapeIdentifiers)
       case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
         s"It should be one of: date, string, number")
     }
@@ -236,6 +237,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
     log.info(s"Save timestamp as dates:      ${jdbcReaderConfig.saveTimestampsAsDates}")
     log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
+    log.info(s"Escape identifiers:           ${jdbcReaderConfig.escapeIdentifiers}")
     jdbcReaderConfig.limitRecords.foreach(n => log.info(s"Limit records:                $n"))
 
     log.info("Extra JDBC reader Spark options:")

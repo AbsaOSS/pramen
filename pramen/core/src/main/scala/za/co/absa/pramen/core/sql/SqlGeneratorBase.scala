@@ -29,12 +29,16 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 
   /** This validates and escapes the column name is needed. Escaping does not happen always to maintain backwards compatibility. */
   final override def escapeIdentifier(identifier: String): String = {
-    validateIdentifier(identifier)
+    if (sqlConfig.escapeIdentifiers) {
+      validateIdentifier(identifier)
 
-    if (identifierNeedsEscaping(identifier))
-      wrapIdentifier(identifier)
-    else
+      if (identifierNeedsEscaping(identifier)) {
+        identifier.split('.').map(wrapIdentifier).mkString(".")
+      } else
+        identifier
+    } else {
       identifier
+    }
   }
 
   /**
@@ -58,7 +62,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 }
 
 object SqlGeneratorBase {
-  val forbiddenCharacters = ";'\""
+  val forbiddenCharacters = ";'"
   val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
   val sqlKeywords: Set[String] = Set(
     "ABORT", "ABS", "ABSOLUTE", "ACCESS", "ADMIN", "AFTER", "AGGREGATE", "ALIAS", "ALL", "ALLOCATE",
