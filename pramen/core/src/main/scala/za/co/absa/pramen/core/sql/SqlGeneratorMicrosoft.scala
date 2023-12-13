@@ -23,6 +23,8 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
   private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
 
+  override val beginEndEscapeChars: (Char, Char) = ('[', ']')
+
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
       s"($sql) AS tbl"

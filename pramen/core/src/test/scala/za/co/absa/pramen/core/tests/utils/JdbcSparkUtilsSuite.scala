@@ -28,6 +28,8 @@ import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.JdbcSparkUtils
 import za.co.absa.pramen.core.utils.impl.JdbcFieldMetadata
 
+import java.sql.ResultSet
+
 class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase with RelationalDbFixture with TextComparisonFixture {
   import spark.implicits._
 
@@ -216,6 +218,56 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
         assert(actualVarchar == expectedVarchar)
       }
+    }
+
+    "test SQL injesction" in {
+      val conn = getConnection
+      //val st: PreparedStatement = conn.prepareStatement("SELECT 1 FROM COMPANY;drop table company;SELECT * FROM COMPANY")
+      val st = conn.createStatement()
+
+      //st.setString(1, "1; drop table company;")
+      //st.setString(1, "description")
+
+      val metadata = conn.getMetaData
+
+      try {
+        val resultSet = metadata.getTables(null, null, "COMPANY", null)
+        try {
+          println(s"${resultSet.getMetaData.getColumnName(1)}  ${resultSet.getMetaData.getColumnName(2)}   ${resultSet.getMetaData.getColumnName(3)}")
+          while(resultSet.next()) {
+
+            println(s"${resultSet.getString(1)}  ${resultSet.getString(2)}   ${resultSet.getString(3)}")
+          }
+        }
+        catch {
+          case _: Throwable =>
+            println("crap")
+        }
+        finally
+          if (resultSet != null) resultSet.close()
+      }
+
+      println(st.toString)
+
+      val rs: ResultSet = st.executeQuery("SELECT * FROM company")
+
+      while(rs.next()) {
+        println(rs.getString(1))
+      }
+      rs.close()
+      st.close()
+//
+//      println("--------------")
+//      val st1: Statement = conn.createStatement()
+//
+//      val rs1: ResultSet = st1.executeQuery("SELECT * FROM COMPANY")
+//      while(rs1.next()) {
+//        println(rs1.getString(1))
+//      }
+//      rs1.close()
+//      st1.close()
+
+      conn.close()
     }
   }
 

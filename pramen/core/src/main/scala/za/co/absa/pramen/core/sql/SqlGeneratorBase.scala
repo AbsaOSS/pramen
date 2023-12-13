@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.sql
 
+import scala.collection.mutable.ListBuffer
+
 /**
   * This class contains implementation of methods that are common across all SQL dialects.
   *
@@ -33,7 +35,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
       validateIdentifier(identifier)
 
       if (identifierNeedsEscaping(identifier)) {
-        identifier.split('.').map(wrapIdentifier).mkString(".")
+        splitComplexIdentifier(identifier).map(wrapIdentifier).mkString(".")
       } else
         identifier
     } else {
@@ -53,6 +55,67 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
+  final def splitComplexIdentifier(identifier: String): Seq[String] = {
+    val trimmedIdentifier = identifier.trim
+
+    if (trimmedIdentifier.isEmpty) {
+      throw new IllegalArgumentException(f"Found an empty table name or column name ('$identifier').")
+    }
+
+    val (escapeBegin, escapeEnd) = beginEndEscapeChars
+    val sameEscapeChar = escapeBegin == escapeEnd
+
+    val output = new ListBuffer[String]
+    val curColumn = new StringBuffer()
+    val len = trimmedIdentifier.length
+    var nestingLevel = 0
+    var i = 0
+
+    while (i < len) {
+      val c = trimmedIdentifier(i)
+      val previousChar = if (i == 0) ' ' else trimmedIdentifier(i - 1)
+      val nextChar = if (i == len - 1) ' ' else trimmedIdentifier(i + 1)
+
+      if (nestingLevel == 0 && c == '.') {
+        output += curColumn.toString
+        curColumn.setLength(0)
+      } else {
+        curColumn.append(c)
+      }
+
+      if (sameEscapeChar) {
+        if (c == escapeBegin) {
+          if (nestingLevel == 0) {
+            if (curColumn.length() != 1 && previousChar != escapeBegin && nextChar != escapeBegin)
+              throw new IllegalArgumentException(f"Invalid character '$escapeBegin' in the identifier '$identifier', position $i.")
+            nestingLevel += 1
+          } else
+            nestingLevel -= 1
+        }
+      } else {
+        if (c == escapeBegin) {
+          nestingLevel += 1
+          if (curColumn.length() != 1)
+            throw new IllegalArgumentException(f"Invalid character '$escapeBegin' in the identifier '$identifier', position $i.")
+        } else if (c == escapeEnd)
+          nestingLevel -= 1
+      }
+
+      if (nestingLevel < 0) {
+        throw new IllegalArgumentException(f"Found not matching '$escapeEnd' in the identifier '$identifier'.")
+      }
+      i += 1
+    }
+
+    if (nestingLevel != 0)
+      throw new IllegalArgumentException(f"Found not matching '$escapeBegin' in the identifier '$identifier'.")
+
+    if (curColumn.toString.nonEmpty)
+      output += curColumn.toString
+
+    output.toSeq
+  }
+
   /**
     * This escapes the information date column properly.
     */
@@ -62,7 +125,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 }
 
 object SqlGeneratorBase {
-  val forbiddenCharacters = ";'"
+  val forbiddenCharacters = ";'\\"
   val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
   val sqlKeywords: Set[String] = Set(
     "ABORT", "ABS", "ABSOLUTE", "ACCESS", "ADMIN", "AFTER", "AGGREGATE", "ALIAS", "ALL", "ALLOCATE",
@@ -103,8 +166,8 @@ object SqlGeneratorBase {
 
   final def validateIdentifier(identifier: String): Unit = {
     identifier.foreach { c =>
-      if (forbiddenCharacters.contains(c))
-        throw new IllegalArgumentException(s"The character '$c' cannot be used as part of column name in '$identifier'.")
+      if (forbiddenCharacters.contains(c) || c.toInt < 32)
+        throw new IllegalArgumentException(f"The character '$c' (0x${c.toInt}%02X) cannot be used as part of column name in '$identifier'.")
     }
   }
 

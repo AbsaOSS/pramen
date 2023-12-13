@@ -21,7 +21,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
 import za.co.absa.pramen.core.samples.RdbExampleTable
-import za.co.absa.pramen.core.sql.{SqlColumnType, SqlGeneratorGeneric, SqlGeneratorMicrosoft, SqlGeneratorOracle}
+import za.co.absa.pramen.core.sql._
 
 import java.time.LocalDate
 
@@ -312,6 +312,56 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(actual == "[System User].[Table Name]")
       }
     }
+
+    "splitComplexIdentifier" should {
+      "throw on an empty identifier" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier(" ")
+        }
+      }
+
+      "keep original column name as is" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User")
+
+        assert(actual == Seq("System User"))
+      }
+
+      "split a complex column" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.[Table Name]")
+
+        assert(actual == Seq("System User", "[Table Name]"))
+      }
+
+      "handle escaped dots" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("[System User.Table Name]")
+
+        assert(actual == Seq("[System User.Table Name]"))
+      }
+
+      "throw an exception if brackets are found inside the identifier" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System Use[r.T]able Name")
+        }
+
+        assert(ex.getMessage.contains("Invalid character '[' in the identifier 'System Use[r.T]able Name', position 10."))
+      }
+
+      "throw on unmatched open bracket" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.[Table Name")
+        }
+
+        assert(ex.getMessage.contains("Found not matching '[' in the identifier 'System User.[Table Name'"))
+      }
+
+      "throw on unmatched closing bracket" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.Table Name]")
+        }
+
+        assert(ex.getMessage.contains("Found not matching ']' in the identifier 'System User.Table Name]'"))
+      }
+    }
   }
 
   "Denodo SQL generator" should {
@@ -426,6 +476,62 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         val actual = gen.escapeIdentifier("System User.\"Table Name\"")
 
         assert(actual == "\"System User\".\"Table Name\"")
+      }
+    }
+
+    "splitComplexIdentifier" should {
+      "throw on an empty identifier" in {
+        assertThrows[IllegalArgumentException] {
+          gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier(" ")
+        }
+      }
+
+      "keep original column name as is" in {
+        val actual = gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User")
+
+        assert(actual == Seq("System User"))
+      }
+
+      "split a complex column" in {
+        val actual = gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.\"Table Name\"")
+
+        assert(actual == Seq("System User", "\"Table Name\""))
+      }
+
+      "handle escaped dots" in {
+        val actual = gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System User.Table Name\"")
+
+        assert(actual == Seq("\"System User.Table Name\""))
+      }
+
+      "handle escaped quotes" in {
+        val actual = gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"User\"\".Table Name\"")
+
+        assert(actual == Seq("\"System \"\"User\"\".Table Name\""))
+      }
+
+      "throw an exception if quotes are found inside an identifier" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System Use\"r.T\"able Name")
+        }
+
+        assert(ex.getMessage.contains("Invalid character '\"' in the identifier 'System Use\"r.T\"able Name'"))
+      }
+
+      "throw on unmatched open bracket" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.\"Table Name")
+        }
+
+        assert(ex.getMessage.contains("Found not matching '\"' in the identifier 'System User.\"Table Name'."))
+      }
+
+      "throw on unmatched closing bracket" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.Table Name\"")
+        }
+
+        assert(ex.getMessage.contains("Invalid character '\"' in the identifier 'System User.Table Name\"'"))
       }
     }
   }
@@ -1150,8 +1256,22 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
       }
 
       "throw an exception if a column contains a semicolon" in {
-        assertThrows[IllegalArgumentException] {
+        val ex = intercept[IllegalArgumentException] {
           genDate.escapeIdentifier("ABC ; DEF")
+        }
+
+        assert(ex.getMessage == "The character ';' (0x3B) cannot be used as part of column name in 'ABC ; DEF'.")
+      }
+
+      "throw an exception if a column contains a back slash" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC \\n DEF")
+        }
+      }
+
+      "throw an exception if a column contains a new line" in {
+        assertThrows[IllegalArgumentException] {
+          genDate.escapeIdentifier("ABC \n DEF")
         }
       }
     }

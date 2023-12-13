@@ -22,6 +22,8 @@ import java.time.format.DateTimeFormatter
 class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
+  override val beginEndEscapeChars: (Char, Char) = ('\"', '\"')
+
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
       s"($sql) t"

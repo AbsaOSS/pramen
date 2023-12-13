@@ -39,6 +39,8 @@ object SqlGeneratorHive {
 class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
+  override val beginEndEscapeChars: (Char, Char) = ('`', '`')
+
   SqlGeneratorHive.registerDialect
 
   override def getDtable(sql: String): String = {

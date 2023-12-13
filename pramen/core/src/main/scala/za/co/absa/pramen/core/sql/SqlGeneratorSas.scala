@@ -41,6 +41,8 @@ object SqlGeneratorSas {
 class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
+  override val beginEndEscapeChars: (Char, Char) = ('\'', '\'')
+
   private var connection: Connection = _
 
   SqlGeneratorSas.registerDialect

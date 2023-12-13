@@ -41,6 +41,14 @@ trait SqlGenerator {
   /** This validates and escapes an identifier if needed. Escaping does not happen always to maintain backwards compatibility. */
   def escapeIdentifier(identifier: String): String
 
+  /**
+    * This returns characters used for escaping into a mode that allows special characters in identifiers.
+    * For example,
+    *  - in Hive, column name 'my column' should be escaped with back quotes `my column`, in MS SQL Server
+    *  - in MS SQL server square braces are used instead [my column].
+    */
+  def beginEndEscapeChars: (Char, Char)
+
   def requiresConnection: Boolean = false
 
   def setConnection(connection: Connection): Unit = {}
