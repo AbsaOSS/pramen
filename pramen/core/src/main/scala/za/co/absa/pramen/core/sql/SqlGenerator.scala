@@ -38,16 +38,12 @@ trait SqlGenerator {
   /** Returns the date literal for the dialect of the SQL. */
   def getDateLiteral(date: LocalDate): String
 
-  /** This validates and escapes an identifier if needed. Escaping does not happen always to maintain backwards compatibility. */
-  def escapeIdentifier(identifier: String): String
-
   /**
-    * This returns characters used for escaping into a mode that allows special characters in identifiers.
-    * For example,
-    *  - in Hive, column name 'my column' should be escaped with back quotes `my column`, in MS SQL Server
-    *  - in MS SQL server square braces are used instead [my column].
+    * This quotes an identifier name with characters specific to SQL dialects.
+    * If the identifier already wrapped, it won't be double wrapped.
+    * It supports compled identifiers. E.g. '"my_catalog".my table' will be quoted as '"my_catalog"."my table"'.
     */
-  def beginEndEscapeChars: (Char, Char)
+  def quote(identifier: String): String
 
   def requiresConnection: Boolean = false
 

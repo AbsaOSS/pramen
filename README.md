@@ -480,6 +480,10 @@ is determined by the pipeline configuration.
     # Useful for auto-retrying ingestion pipelines.
     fail.if.no.data = false
 
+    # When 'true', all input table names and column names will be validated and quoted, if not quoted already.
+    # Keep in mind that quoted identifiers are case sensitive in most relational databases.
+    validate.and.quote.identifiers = true
+
     # Specifies if tables of the data source have an information date colunn
     has.information.date.column = true
     

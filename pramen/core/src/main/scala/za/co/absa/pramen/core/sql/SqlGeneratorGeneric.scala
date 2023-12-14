@@ -33,21 +33,21 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
   }
 
   override def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS CNT FROM ${escapeIdentifier(tableName)}"
+    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)}"
   }
 
   override def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS CNT FROM ${escapeIdentifier(tableName)} WHERE $where"
+    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)} WHERE $where"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)}${getLimit(limit)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)}${getLimit(limit)}"
   }
 
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WHERE $where${getLimit(limit)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
@@ -84,15 +84,6 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
-    }
-  }
-
-  override final def wrapIdentifier(identifier: String): String = {
-    if (identifier.startsWith("\"") && identifier.endsWith("\"")) {
-      identifier
-    } else {
-      val q = "\""
-      s"$q$identifier$q"
     }
   }
 

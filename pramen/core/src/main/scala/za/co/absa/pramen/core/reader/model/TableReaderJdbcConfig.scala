@@ -32,7 +32,7 @@ case class TableReaderJdbcConfig(
                                   correctDecimalsFixPrecision: Boolean = false,
                                   enableSchemaMetadata: Boolean = false,
                                   useJdbcNative: Boolean = false,
-                                  escapeIdentifiers: Boolean = true
+                                  validateAndQuoteIdentifiers: Boolean = true
                                 )
 
 object TableReaderJdbcConfig {
@@ -50,7 +50,7 @@ object TableReaderJdbcConfig {
   val CORRECT_DECIMALS_FIX_PRECISION = "correct.decimals.fix.precision"
   val ENABLE_SCHEMA_METADATA_KEY = "enable.schema.metadata"
   val USE_JDBC_NATIVE = "use.jdbc.native"
-  val ESCAPE_IDENTIFIERS = "escape.identifiers"
+  val VALIDATE_AND_QUOTE_IDENTIFIERS = "validate.and.quote.identifiers"
 
   def load(conf: Config, parent: String = ""): TableReaderJdbcConfig = {
     ConfigUtils.validatePathsExistence(conf, parent, HAS_INFO_DATE :: Nil)
@@ -83,7 +83,7 @@ object TableReaderJdbcConfig {
       correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
       useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false),
-      escapeIdentifiers = ConfigUtils.getOptionBoolean(conf, ESCAPE_IDENTIFIERS).getOrElse(true)
+      validateAndQuoteIdentifiers = ConfigUtils.getOptionBoolean(conf, VALIDATE_AND_QUOTE_IDENTIFIERS).getOrElse(false)
     )
   }
 

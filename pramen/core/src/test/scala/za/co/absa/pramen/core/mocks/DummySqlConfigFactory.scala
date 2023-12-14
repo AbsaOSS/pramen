@@ -22,10 +22,10 @@ object DummySqlConfigFactory {
   def getDummyConfig(infoDateColumn: String = "col",
                      infoDateType: SqlColumnType = SqlColumnType.DATE,
                      dateFormatApp: String = "yyyy-MM-dd",
-                     escapeIdentifiers: Boolean = true
+                     escapeIdentifiers: Boolean = false
                     ): SqlConfig = SqlConfig(
     infoDateColumn = infoDateColumn,
     infoDateType = infoDateType,
     dateFormatApp = dateFormatApp,
-    escapeIdentifiers = escapeIdentifiers)
+    validateAndQuoteIdentifiers = escapeIdentifiers)
 }

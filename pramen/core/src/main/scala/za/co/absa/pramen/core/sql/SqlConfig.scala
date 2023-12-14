@@ -20,5 +20,5 @@ case class SqlConfig(
                       infoDateColumn: String,
                       infoDateType: SqlColumnType,
                       dateFormatApp: String,
-                      escapeIdentifiers: Boolean
+                      validateAndQuoteIdentifiers: Boolean
                     )

@@ -60,28 +60,28 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
   }
 
   def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escapeIdentifier(tableName)}"
+    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escape(tableName)}"
   }
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escapeIdentifier(tableName)} WHERE $where"
+    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escape(tableName)} WHERE $where"
   }
 
   def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${getColumnSql(tableName, columns)} FROM ${escapeIdentifier(tableName)}${getLimit(limit, hasWhere = false)}"
+    s"SELECT ${getColumnSql(tableName, columns)} FROM ${escape(tableName)}${getLimit(limit, hasWhere = false)}"
   }
 
   def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${getColumnSql(tableName, columns)} FROM ${escapeIdentifier(tableName)} WHERE $where${getLimit(limit, hasWhere = true)}"
+    s"SELECT ${getColumnSql(tableName, columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit, hasWhere = true)}"
   }
 
   private def getColumnSql(tableName: String, columns: Seq[String]): String = {
     if (columns.isEmpty) {
-      getColumns(tableName).map(name => s"${escapeIdentifier(name)} '${escapeIdentifier(name)}'").mkString(", ")
+      getColumns(tableName).map(name => s"${escape(name)} '${escape(name)}'").mkString(", ")
     } else {
-      columns.map(escapeIdentifier).mkString(", ")
+      columns.map(escape).mkString(", ")
     }
   }
 
@@ -143,8 +143,12 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
     }
   }
 
-  override final def wrapIdentifier(columnName: String): String = {
-    s"'$columnName'n"
+  override final def quoteSingleIdentifier(identifier: String): String = {
+    if (identifier.startsWith(".") && identifier.toLowerCase.endsWith("n")) {
+      identifier
+    } else {
+      s"'$identifier'n"
+    }
   }
 
   private def getLimit(limit: Option[Int], hasWhere: Boolean): String = {
