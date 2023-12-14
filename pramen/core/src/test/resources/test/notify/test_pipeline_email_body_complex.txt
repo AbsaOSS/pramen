@@ -100,7 +100,7 @@
 </style>
 <body><p>Hi,</p>
 
-<p><b>(DRY RUN) </b>This is a notification from Pramen for <b>MyApp</b> on <b>MyEnv</b>. The job has <span class="tdgreen">succeeded</span>. Application ID: <b>app_123</b>.</p>
+<p><b>(DRY RUN) </b>This is a notification from Pramen for <b>MyApp</b> on <b>MyEnv</b>. The job has <span class="tdwarn">succeeded with warnings</span>. Application ID: <b>app_123</b>.</p>
 
 <p>Job started at <b>2022-03-21 16:29 +0200</b>, finished at <b>2022-03-21 19:16 +0200</b>. Elapsed time: <b>2 hours and 46 minutes</b>. The job ran in <i>undercover</i> mode - no updates to bookkeeping tables are saved.</p>
 

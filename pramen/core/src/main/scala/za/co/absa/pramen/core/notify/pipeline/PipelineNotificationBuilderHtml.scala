@@ -106,12 +106,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     val dryRunStr = if (isDryRun) "(DRY RUN) " else ""
 
-    if (!someTasksFailed) {
-      s"${dryRunStr}Notification for $appName at $timeCreatedStr"
-    } else if (someTasksSucceeded && someTasksFailed) {
-      s"${dryRunStr}Notification of partial success for $appName at $timeCreatedStr"
-    } else {
-      s"${dryRunStr}Notification of FAILURE for $appName at $timeCreatedStr"
+    pipelineStatus match {
+      case PipelineStatus.Success        => s"${dryRunStr}Notification of SUCCESS for $appName at $timeCreatedStr"
+      case PipelineStatus.Warning        => s"${dryRunStr}Notification of WARNING for $appName at $timeCreatedStr"
+      case PipelineStatus.PartialSuccess => s"${dryRunStr}Notification of PARTIAL SUCCESS for $appName at $timeCreatedStr"
+      case PipelineStatus.Failure        => s"${dryRunStr}Notification of FAILURE for $appName at $timeCreatedStr"
     }
   }
 
@@ -150,6 +149,24 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.renderBody
   }
 
+  def pipelineStatus: PipelineStatus = {
+    val isCertainFailure = appException.nonEmpty
+    val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
+    val hasAtLeastOneWarning = hasWarnings
+
+    if (isCertainFailure) {
+      PipelineStatus.Failure
+    } else if (!someTasksFailed && !hasAtLeastOneWarning) {
+      PipelineStatus.Success
+    } else if (someTasksSucceeded && someTasksFailed) {
+      PipelineStatus.PartialSuccess
+    } else if (someTasksSucceeded && hasAtLeastOneWarning) {
+      PipelineStatus.Warning
+    } else {
+      PipelineStatus.Failure
+    }
+  }
+
   private[core] def renderHeader(builder: MessageBuilder): MessageBuilder = {
     val introParagraph = ParagraphBuilder()
 
@@ -163,13 +180,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       .withText(envName, Style.Bold)
       .withText(". The job has ")
 
-    val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
-
-    appException match {
-      case None if someTasksSucceeded && someTasksFailed  => introParagraph.withText("partially succeeded", Style.Warning)
-      case None if someTasksFailed                        => introParagraph.withText("FAILED", Style.Error)
-      case None                                           => introParagraph.withText("succeeded", Style.Success)
-      case Some(_)                                        => introParagraph.withText("FAILED", Style.Error)
+    pipelineStatus match {
+      case PipelineStatus.Success        => introParagraph.withText("succeeded", Style.Success)
+      case PipelineStatus.Warning        => introParagraph.withText("succeeded with warnings", Style.Warning)
+      case PipelineStatus.PartialSuccess => introParagraph.withText("partially succeeded", Style.Warning)
+      case PipelineStatus.Failure        => introParagraph.withText("FAILED", Style.Error)
     }
 
     introParagraph.withText(".")
@@ -215,6 +230,18 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     val someTasksSucceeded = completedTasks.exists(_.runStatus.isInstanceOf[Succeeded]) && appException.isEmpty
     val someTasksFailed = completedTasks.exists(t => t.runStatus.isFailure) || hasNotificationFailures || appException.nonEmpty
     (someTasksSucceeded, someTasksFailed)
+  }
+
+  private[core] def hasWarnings: Boolean = {
+    completedTasks.exists{task =>
+      val hasDependencyWarnings = task.dependencyWarnings.nonEmpty
+      val hasNotificationErrors = task.notificationTargetErrors.nonEmpty
+      val hasTaskWarnings = task.runStatus.isInstanceOf[RunStatus.Succeeded] && task.runStatus.asInstanceOf[RunStatus.Succeeded].warnings.nonEmpty
+      val hasSkippedWithWarnings = task.runStatus.isInstanceOf[RunStatus.Skipped] && task.runStatus.asInstanceOf[RunStatus.Skipped].isWarning
+      val hasSchemaChanges = task.schemaChanges.nonEmpty
+
+      hasDependencyWarnings || hasNotificationErrors || hasTaskWarnings || hasSkippedWithWarnings || hasSchemaChanges
+    }
   }
 
   private[core] def getZoneId: ZoneId = {

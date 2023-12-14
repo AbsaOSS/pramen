@@ -51,7 +51,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       builder.addAppName("MyApp")
 
-      assert(builder.renderSubject().startsWith("Notification for MyApp at"))
+      assert(builder.renderSubject().startsWith("Notification of SUCCESS for MyApp at"))
     }
 
     "render a dry run subject" in {
@@ -60,7 +60,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       builder.addAppName("MyNewApp")
       builder.addDryRun(true)
 
-      assert(builder.renderSubject().startsWith("(DRY RUN) Notification for MyNewApp at"))
+      assert(builder.renderSubject().startsWith("(DRY RUN) Notification of SUCCESS for MyNewApp at"))
     }
 
     "render failure" in {
@@ -72,6 +72,15 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       assert(builder.renderSubject().startsWith("Notification of FAILURE for MyNewApp"))
     }
 
+    "render warning" in {
+      val builder = getBuilder
+
+      builder.addAppName("MyNewApp")
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusWarning))
+
+      assert(builder.renderSubject().startsWith("Notification of WARNING for MyNewApp"))
+    }
+
     "render partial failure" in {
       val builder = getBuilder
 
@@ -79,7 +88,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult( runStatus = TestPrototypes.runStatusWarning))
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult( runStatus = TestPrototypes.runStatusFailure))
 
-      assert(builder.renderSubject().startsWith("Notification of partial success for MyNewApp at"))
+      assert(builder.renderSubject().startsWith("Notification of PARTIAL SUCCESS for MyNewApp at"))
     }
   }
 
