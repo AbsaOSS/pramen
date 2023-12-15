@@ -16,9 +16,11 @@
 
 package za.co.absa.pramen.core.sql
 
+import za.co.absa.pramen.core.reader.model.QuotingPolicy
+
 case class SqlConfig(
                       infoDateColumn: String,
                       infoDateType: SqlColumnType,
                       dateFormatApp: String,
-                      validateAndQuoteIdentifiers: Boolean
+                      identifierQuotingPolicy: QuotingPolicy
                     )

@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.sql
 
+import za.co.absa.pramen.core.reader.model.QuotingPolicy
+
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -49,10 +51,9 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
   }
 
-
   /** This validates and escapes an identifier (table of column name) if needed. Escaping does not happen always to maintain backwards compatibility. */
   final def escape(identifier: String): String = {
-    if (sqlConfig.validateAndQuoteIdentifiers) {
+    if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
       quote(identifier)
     } else {
       identifier
@@ -142,11 +143,20 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 
 object SqlGeneratorBase {
   val forbiddenCharacters = ";'\\"
+  val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
 
   final def validateIdentifier(identifier: String): Unit = {
     identifier.foreach { c =>
       if (forbiddenCharacters.contains(c) || c.toInt < 32)
         throw new IllegalArgumentException(f"The character '$c' (0x${c.toInt}%02X) cannot be used as part of column name in '$identifier'.")
+    }
+  }
+
+  final def needsEscaping(policy: QuotingPolicy, identifier: String): Boolean = {
+    policy match {
+      case QuotingPolicy.Always => true
+      case QuotingPolicy.Never => false
+      case QuotingPolicy.Auto => !identifier.forall(normalCharacters.contains(_))
     }
   }
 }

@@ -32,7 +32,7 @@ case class TableReaderJdbcConfig(
                                   correctDecimalsFixPrecision: Boolean = false,
                                   enableSchemaMetadata: Boolean = false,
                                   useJdbcNative: Boolean = false,
-                                  validateAndQuoteIdentifiers: Boolean = true
+                                  identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto
                                 )
 
 object TableReaderJdbcConfig {
@@ -50,7 +50,7 @@ object TableReaderJdbcConfig {
   val CORRECT_DECIMALS_FIX_PRECISION = "correct.decimals.fix.precision"
   val ENABLE_SCHEMA_METADATA_KEY = "enable.schema.metadata"
   val USE_JDBC_NATIVE = "use.jdbc.native"
-  val VALIDATE_AND_QUOTE_IDENTIFIERS = "validate.and.quote.identifiers"
+  val IDENTIFIER_QUOTING_POLICY = "identifier.quoting.policy"
 
   def load(conf: Config, parent: String = ""): TableReaderJdbcConfig = {
     ConfigUtils.validatePathsExistence(conf, parent, HAS_INFO_DATE :: Nil)
@@ -71,6 +71,10 @@ object TableReaderJdbcConfig {
 
     val infoDateFormat = getInfoDateFormat(conf)
 
+    val identifierQuotingPolicy = ConfigUtils.getOptionString(conf, IDENTIFIER_QUOTING_POLICY)
+      .map(s => QuotingPolicy.fromString(s))
+      .getOrElse(QuotingPolicy.Auto)
+
     TableReaderJdbcConfig(
       jdbcConfig = JdbcConfig.load(conf, parent),
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
@@ -83,7 +87,7 @@ object TableReaderJdbcConfig {
       correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
       useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false),
-      validateAndQuoteIdentifiers = ConfigUtils.getOptionBoolean(conf, VALIDATE_AND_QUOTE_IDENTIFIERS).getOrElse(false)
+      identifierQuotingPolicy = identifierQuotingPolicy
     )
   }
 

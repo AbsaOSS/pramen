@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
+import za.co.absa.pramen.core.reader.model.QuotingPolicy
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql._
 
@@ -30,7 +31,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
   import za.co.absa.pramen.core.sql.SqlGenerator._
 
   private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D")
-  private val sqlConfigEscape = DummySqlConfigFactory.getDummyConfig(infoDateColumn = "Info date", escapeIdentifiers = true)
+  private val sqlConfigEscape = DummySqlConfigFactory.getDummyConfig(infoDateColumn = "Info date", identifierQuotingPolicy = QuotingPolicy.Always)
   private val sqlConfigDateTime = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATETIME, infoDateColumn = "D")
   private val sqlConfigString = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, infoDateColumn = "D")
   private val sqlConfigNumber = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.NUMBER, infoDateColumn = "D", dateFormatApp = "yyyyMMdd")
@@ -82,7 +83,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     }
 
    "generate data queries when list of columns is specified" in {
-      assert(gen.getDataQuery("A", columns, None) == "SELECT A, D, Column with spaces FROM A")
+      assert(gen.getDataQuery("A", columns, None) == "SELECT A, D, \"Column with spaces\" FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
@@ -182,7 +183,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genStr2 = fromDriverName("net.sourceforge.jtds.jdbc.Driver", DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, dateFormatApp = "yyyyMMdd",  infoDateColumn = "D"), config)
     val genNum = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigNumber, config)
     val genEscaped = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigEscape, config)
-    val genEscaped2 = fromDriverName("net.sourceforge.jtds.jdbc.Driver",  DummySqlConfigFactory.getDummyConfig(infoDateColumn = "[Info date]", escapeIdentifiers = true), config)
+    val genEscaped2 = fromDriverName("net.sourceforge.jtds.jdbc.Driver",  DummySqlConfigFactory.getDummyConfig(infoDateColumn = "[Info date]", identifierQuotingPolicy = QuotingPolicy.Auto), config)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK)")
@@ -370,6 +371,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genNum = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigNumber, config)
     val genDateTime = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigDateTime, config)
     val genEscaped = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigEscape, config)
+    val genEscapedAuto = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigEscape.copy(identifierQuotingPolicy = QuotingPolicy.Auto), config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -379,8 +381,12 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
       assert(gen.getDataQuery("A", Nil, None) == "SELECT * FROM A")
     }
 
-    "generate data queries when list of columns is specified" in {
+    "generate data queries when list of columns is specified with escaping" in {
       assert(genEscaped.getDataQuery("A", columns, None) == "SELECT \"A\", \"D\", \"Column with spaces\" FROM \"A\"")
+    }
+
+    "generate data queries when list of columns is specified with auto escaping" in {
+      assert(genEscapedAuto.getDataQuery("A", columns, None) == "SELECT A, D, \"Column with spaces\" FROM A")
     }
 
     "generate data queries with limit clause date ranges" in {
@@ -419,7 +425,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
       "the table name and column name need to be escaped" in {
         assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
           "SELECT COUNT(*) FROM \"Input Table\" WHERE \"Info date\" = date'2020-08-17'")
-        assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
+        assert(genEscapedAuto.getCountQuery("Input Table", date1, date2) ==
           "SELECT COUNT(*) FROM \"Input Table\" WHERE \"Info date\" >= date'2020-08-17' AND \"Info date\" <= date'2020-08-30'")
       }
     }
@@ -648,7 +654,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     val genNum = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigNumber, config)
     val genDateTime = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDateTime, config)
     val genEscaped = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigEscape, config)
-    val genEscaped2 = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", DummySqlConfigFactory.getDummyConfig(infoDateColumn = "`Info date`", escapeIdentifiers = true), config)
+    val genEscaped2 = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", DummySqlConfigFactory.getDummyConfig(infoDateColumn = "`Info date`", identifierQuotingPolicy = QuotingPolicy.Auto), config)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -1241,7 +1247,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
       }
 
       "escape should not escape if turned off by config" in {
-        val sql = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", escapeIdentifiers = false)
+        val sql = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", identifierQuotingPolicy = QuotingPolicy.Never)
         val genDate = fromDriverName("generic", sql, config)
 
         val actual = genDate.asInstanceOf[SqlGeneratorBase].escape("System User.\"Table Name\"")
