@@ -51,7 +51,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
   }
 
-  /** This validates and escapes an identifier (table of column name) if needed. Escaping does not happen always to maintain backwards compatibility. */
+  /** This validates and escapes an identifier (table or column name) if needed. Escaping does not happen always to maintain backwards compatibility. */
   final def escape(identifier: String): String = {
     if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
       quote(identifier)
