@@ -40,7 +40,7 @@ trait SqlGenerator {
 
   /**
     * This quotes an identifier name with characters specific to SQL dialects.
-    * If the identifier already wrapped, it won't be double wrapped.
+    * If the identifier is already wrapped, it won't be double wrapped.
     * It supports compled identifiers. E.g. '"my_catalog".my table' will be quoted as '"my_catalog"."my table"'.
     */
   def quote(identifier: String): String
