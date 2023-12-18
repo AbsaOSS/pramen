@@ -90,7 +90,6 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 
     while (i < len) {
       val c = trimmedIdentifier(i)
-      val previousChar = if (i == 0) ' ' else trimmedIdentifier(i - 1)
       val nextChar = if (i == len - 1) ' ' else trimmedIdentifier(i + 1)
 
       if (nestingLevel == 0 && c == '.') {
@@ -103,7 +102,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
       if (sameEscapeChar) {
         if (c == escapeBegin) {
           if (nestingLevel == 0) {
-            if (curColumn.length() != 1 && previousChar != escapeBegin && nextChar != escapeBegin)
+            if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
               throw new IllegalArgumentException(f"Invalid character '$escapeBegin' in the identifier '$identifier', position $i.")
             nestingLevel += 1
           } else

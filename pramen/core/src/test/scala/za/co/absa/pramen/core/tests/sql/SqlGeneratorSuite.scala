@@ -510,10 +510,20 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(actual == Seq("\"System User.Table Name\""))
       }
 
-      "handle escaped quotes" in {
-        val actual = gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"User\"\".Table Name\"")
+      "handle escaped 2 quotes (maybe support this eventually)" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"User\"\".Table Name\"")
+        }
 
-        assert(actual == Seq("\"System \"\"User\"\".Table Name\""))
+        assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"User\"\".Table Name\"', position 9.")
+      }
+
+      "handle escaped 3 quotes (this is never supported)" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"\"User\"\"\".Table Name\"")
+        }
+
+        assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"\"User\"\"\".Table Name\"', position 9.")
       }
 
       "throw an exception if quotes are found inside an identifier" in {
@@ -537,7 +547,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.Table Name\"")
         }
 
-        assert(ex.getMessage.contains("Invalid character '\"' in the identifier 'System User.Table Name\"'"))
+        assert(ex.getMessage.contains("Found not matching '\"' in the identifier 'System User.Table Name\"'."))
       }
     }
   }
