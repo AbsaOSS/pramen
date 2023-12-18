@@ -55,9 +55,10 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val infoDateColumnAdjusted = if (sqlConfig.infoDateType == SqlColumnType.DATETIME ||
-      (sqlConfig.infoDateType == SqlColumnType.STRING && isIso)) {
+    val infoDateColumnAdjusted = if (sqlConfig.infoDateType == SqlColumnType.DATETIME) {
       s"CONVERT(DATE, $infoDateColumn)"
+    } else if (sqlConfig.infoDateType == SqlColumnType.STRING && isIso) {
+      s"(CASE WHEN ISDATE($infoDateColumn) = 1 THEN CONVERT(DATE, $infoDateColumn) ELSE NULL END)"
     } else {
       infoDateColumn
     }
