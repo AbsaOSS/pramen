@@ -101,9 +101,9 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 
       if (sameEscapeChar) {
         if (c == escapeBegin) {
+          if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
+            throw new IllegalArgumentException(f"Invalid character '$escapeBegin' in the identifier '$identifier', position $i.")
           if (nestingLevel == 0) {
-            if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
-              throw new IllegalArgumentException(f"Invalid character '$escapeBegin' in the identifier '$identifier', position $i.")
             nestingLevel += 1
           } else
             nestingLevel -= 1

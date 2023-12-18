@@ -510,12 +510,24 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         assert(actual == Seq("\"System User.Table Name\""))
       }
 
+      "handle first identifier escaped" in {
+        val actual = gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System User\".Table Name")
+
+        assert(actual == Seq("\"System User\"", "Table Name"))
+      }
+
+      "handle multiple level of identifiers" in {
+        val actual = gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("My Catalog.My Schema.\"My Table\".My column")
+
+        assert(actual == Seq("My Catalog", "My Schema", "\"My Table\"", "My column"))
+      }
+
       "handle escaped 2 quotes (maybe support this eventually)" in {
         val ex = intercept[IllegalArgumentException] {
           gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"User\"\".Table Name\"")
         }
 
-        assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"User\"\".Table Name\"', position 9.")
+        assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"User\"\".Table Name\"', position 8.")
       }
 
       "handle escaped 3 quotes (this is never supported)" in {
@@ -523,7 +535,7 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
           gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"\"User\"\"\".Table Name\"")
         }
 
-        assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"\"User\"\"\".Table Name\"', position 9.")
+        assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"\"User\"\"\".Table Name\"', position 8.")
       }
 
       "throw an exception if quotes are found inside an identifier" in {
@@ -532,6 +544,14 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
         }
 
         assert(ex.getMessage.contains("Invalid character '\"' in the identifier 'System Use\"r.T\"able Name'"))
+      }
+
+      "handle multiple level of identifiers of multiple levels" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("My Catalog.My Schema.\"My Tab\"le.My column")
+        }
+
+        assert(ex.getMessage == "Invalid character '\"' in the identifier 'My Catalog.My Schema.\"My Tab\"le.My column', position 28.")
       }
 
       "throw on unmatched open bracket" in {
