@@ -23,6 +23,9 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
   private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
 
+  // 23 is "yyyy-MM-dd", see https://www.mssqltips.com/sqlservertip/1145/date-and-time-conversions-using-sql-server/
+  private val isoFormatMsSqlRef = 23
+
   override val beginEndEscapeChars: (Char, Char) = ('[', ']')
 
   override def getDtable(sql: String): String = {
@@ -56,9 +59,9 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
     val dateEndLit = getDateLiteral(dateEnd)
 
     val infoDateColumnAdjusted = if (sqlConfig.infoDateType == SqlColumnType.DATETIME) {
-      s"CONVERT(DATE, $infoDateColumn)"
+      s"CONVERT(DATE, $infoDateColumn, $isoFormatMsSqlRef)"
     } else if (sqlConfig.infoDateType == SqlColumnType.STRING && isIso) {
-      s"(CASE WHEN ISDATE($infoDateColumn) = 1 THEN CONVERT(DATE, $infoDateColumn) ELSE NULL END)"
+      s"TRY_CONVERT(DATE, $infoDateColumn, $isoFormatMsSqlRef)"
     } else {
       infoDateColumn
     }
@@ -74,14 +77,14 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
     sqlConfig.infoDateType match {
       case SqlColumnType.DATE =>
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
-        s"CONVERT(DATE, '$dateStr')"
+        s"CONVERT(DATE, '$dateStr', $isoFormatMsSqlRef)"
       case SqlColumnType.DATETIME =>
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
-        s"CONVERT(DATE, '$dateStr')"
+        s"CONVERT(DATE, '$dateStr', $isoFormatMsSqlRef)"
       case SqlColumnType.STRING =>
         if (isIso) {
           val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
-          s"CONVERT(DATE, '$dateStr')"
+          s"CONVERT(DATE, '$dateStr', $isoFormatMsSqlRef)"
         } else {
           val dateStr = dateFormatterApp.format(date)
           s"'$dateStr'"

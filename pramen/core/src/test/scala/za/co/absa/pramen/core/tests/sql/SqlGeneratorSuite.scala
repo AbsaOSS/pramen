@@ -204,24 +204,24 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
     "generate ranged count queries" when {
       "date is in DATE format" in {
         assert(genDate.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23)")
         assert(genDate.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17') AND D <= CONVERT(DATE, '2020-08-30')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17', 23) AND D <= CONVERT(DATE, '2020-08-30', 23)")
       }
 
       "date is in DATETIME format" in {
         assert(genDateTime.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) = CONVERT(DATE, '2020-08-17')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
         assert(genDateTime.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, D) <= CONVERT(DATE, '2020-08-30')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) AND CONVERT(DATE, D, 23) <= CONVERT(DATE, '2020-08-30', 23)")
     }
 
       "date is in STRING ISO format" in {
         assert(genStr.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) = CONVERT(DATE, '2020-08-17')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
         assert(genStr.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) >= CONVERT(DATE, '2020-08-17') " +
-            "AND (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) <= CONVERT(DATE, '2020-08-30')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) " +
+            "AND TRY_CONVERT(DATE, D, 23) <= CONVERT(DATE, '2020-08-30', 23)")
       }
 
       "date is in STRING non ISO format" in {
@@ -240,40 +240,40 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "the table name and column name need to be escaped" in {
         assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17')")
+          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
         assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17') AND [Info date] <= CONVERT(DATE, '2020-08-30')")
+          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
       }
 
       "the table name and column name already escaped" in {
         assert(genEscaped2.getCountQuery("Input Table", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17')")
+          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
         assert(genEscaped2.getCountQuery("Input Table", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17') AND [Info date] <= CONVERT(DATE, '2020-08-30')")
+          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
       }
     }
 
     "generate ranged data queries" when {
       "date is in DATE format" in {
         assert(genDate.getDataQuery("A", date1, date1, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23)")
         assert(genDate.getDataQuery("A", date1, date2, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17') AND D <= CONVERT(DATE, '2020-08-30')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17', 23) AND D <= CONVERT(DATE, '2020-08-30', 23)")
       }
 
       "date is in DATETIME format" in {
         assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) = CONVERT(DATE, '2020-08-17')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
         assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, D) <= CONVERT(DATE, '2020-08-30')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) AND CONVERT(DATE, D, 23) <= CONVERT(DATE, '2020-08-30', 23)")
       }
 
       "date is in STRING ISO format" in {
         assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) = CONVERT(DATE, '2020-08-17')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
         assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) >= CONVERT(DATE, '2020-08-17') " +
-            "AND (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) <= CONVERT(DATE, '2020-08-30')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) " +
+            "AND TRY_CONVERT(DATE, D, 23) <= CONVERT(DATE, '2020-08-30', 23)")
       }
 
       "date is in STRING non-ISO format" in {
@@ -292,9 +292,9 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "with limit records" in {
         assert(genDate.getDataQuery("A", date1, date1, Nil, Some(100)) ==
-          "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17')")
+          "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23)")
         assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
-          "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17') AND D <= CONVERT(DATE, '2020-08-30')")
+          "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17', 23) AND D <= CONVERT(DATE, '2020-08-30', 23)")
       }
     }
 
