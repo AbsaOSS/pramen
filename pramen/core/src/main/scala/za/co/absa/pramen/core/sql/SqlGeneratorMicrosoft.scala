@@ -23,6 +23,8 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
   private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
 
+  override val beginEndEscapeChars: (Char, Char) = ('[', ']')
+
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
       s"($sql) AS tbl"
@@ -32,21 +34,21 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
   }
 
   def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS CNT FROM ${escapeIdentifier(tableName)} WITH (NOLOCK)"
+    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)} WITH (NOLOCK)"
   }
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS CNT FROM ${escapeIdentifier(tableName)} WITH (NOLOCK) WHERE $where"
+    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WITH (NOLOCK)"
+    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escape(tableName)} WITH (NOLOCK)"
   }
 
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WITH (NOLOCK) WHERE $where"
+    s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
@@ -86,14 +88,6 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
-    }
-  }
-
-  override final def wrapIdentifier(identifier: String): String = {
-    if (identifier.startsWith("[") && identifier.endsWith("]")) {
-      identifier
-    } else {
-      s"[$identifier]"
     }
   }
 

@@ -16,16 +16,17 @@
 
 package za.co.absa.pramen.core.mocks
 
+import za.co.absa.pramen.core.reader.model.QuotingPolicy
 import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig}
 
 object DummySqlConfigFactory {
   def getDummyConfig(infoDateColumn: String = "col",
                      infoDateType: SqlColumnType = SqlColumnType.DATE,
                      dateFormatApp: String = "yyyy-MM-dd",
-                     escapeIdentifiers: Boolean = true
+                     identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto
                     ): SqlConfig = SqlConfig(
     infoDateColumn = infoDateColumn,
     infoDateType = infoDateType,
     dateFormatApp = dateFormatApp,
-    escapeIdentifiers = escapeIdentifiers)
+    identifierQuotingPolicy = identifierQuotingPolicy)
 }

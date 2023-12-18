@@ -480,6 +480,14 @@ is determined by the pipeline configuration.
     # Useful for auto-retrying ingestion pipelines.
     fail.if.no.data = false
 
+    # One of: auto (default), always, never 
+    # - When 'auto', an identifier will be quoted if it contains invalid characters. This includes any characters 
+    #   outside the scope of A-Z, a-z, 0-9, and underscore (_).
+    # - When 'always', all input table names and column names will be validated and quoted, if not quoted already.
+    # - When 'never', Pramen will use names as configured without changing them.
+    # Keep in mind that quoted identifiers are case sensitive in most relational databases.
+    identifier.quoting.policy = "auto"
+
     # Specifies if tables of the data source have an information date colunn
     has.information.date.column = true
     

@@ -39,6 +39,8 @@ object SqlGeneratorHive {
 class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
 
+  override val beginEndEscapeChars: (Char, Char) = ('`', '`')
+
   SqlGeneratorHive.registerDialect
 
   override def getDtable(sql: String): String = {
@@ -46,21 +48,21 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
   }
 
   override def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) FROM ${escapeIdentifier(tableName)}"
+    s"SELECT COUNT(*) FROM ${escape(tableName)}"
   }
 
   override def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) FROM ${escapeIdentifier(tableName)} WHERE $where"
+    s"SELECT COUNT(*) FROM ${escape(tableName)} WHERE $where"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
-    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)}${getLimit(limit)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)}${getLimit(limit)}"
   }
 
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${columnExpr(columns)} FROM ${escapeIdentifier(tableName)} WHERE $where${getLimit(limit)}"
+    s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
@@ -97,14 +99,6 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
-    }
-  }
-
-  override final def wrapIdentifier(identifier: String): String = {
-    if (identifier.startsWith("`") && identifier.endsWith("`")) {
-      identifier
-    } else {
-      s"`$identifier`"
     }
   }
 

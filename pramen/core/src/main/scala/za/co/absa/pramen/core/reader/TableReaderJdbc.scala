@@ -211,7 +211,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
         SqlConfig(jdbcReaderConfig.infoDateColumn,
           infoDateType,
           jdbcReaderConfig.infoDateFormat,
-          jdbcReaderConfig.escapeIdentifiers)
+          jdbcReaderConfig.identifierQuotingPolicy)
       case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
         s"It should be one of: date, string, number")
     }
@@ -231,13 +231,13 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     log.info(s"JDBC Reader Configuration:")
     log.info(s"Has information date column:  ${jdbcReaderConfig.hasInfoDate}")
     if (jdbcReaderConfig.hasInfoDate) {
-      log.info(s"Info date column name:        ${jdbcReaderConfig.infoDateColumn}")
-      log.info(s"Info date column data type:   ${jdbcReaderConfig.infoDateType}")
-      log.info(s"Info date format:             ${jdbcReaderConfig.infoDateFormat}")
+      log.info(s"Info date column name:      ${jdbcReaderConfig.infoDateColumn}")
+      log.info(s"Info date column data type: ${jdbcReaderConfig.infoDateType}")
+      log.info(s"Info date format:           ${jdbcReaderConfig.infoDateFormat}")
     }
     log.info(s"Save timestamp as dates:      ${jdbcReaderConfig.saveTimestampsAsDates}")
     log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
-    log.info(s"Escape identifiers:           ${jdbcReaderConfig.escapeIdentifiers}")
+    log.info(s"Identifier quoting policy:    ${jdbcReaderConfig.identifierQuotingPolicy.name}")
     jdbcReaderConfig.limitRecords.foreach(n => log.info(s"Limit records:                $n"))
 
     log.info("Extra JDBC reader Spark options:")

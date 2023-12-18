@@ -23,7 +23,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
+import za.co.absa.pramen.core.reader.model.{QuotingPolicy, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc}
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql.SqlGeneratorHsqlDb
@@ -59,6 +59,8 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |  information.date.column = "INFO_DATE"
          |  information.date.type = "number"
          |  information.date.format = "yyyy-MM-DD"
+         |
+         |  identifier.quoting.policy = "never"
          |}
          |reader_legacy {
          |  jdbc {
@@ -73,7 +75,6 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |  information.date.column = "INFO_DATE"
          |  information.date.type = "date"
          |  information.date.app.format = "YYYY-MM-dd"
-         |
          |}
          |reader_minimal {
          |  jdbc {
@@ -216,6 +217,8 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
         reader.getWithRetry("company", isDataQuery = true, 2) { df =>
           assert(!df.isEmpty)
         }
+
+        assert(jdbcTableReaderConfig.identifierQuotingPolicy == QuotingPolicy.Never)
       }
 
       "pass the exception when out of retries" in {
