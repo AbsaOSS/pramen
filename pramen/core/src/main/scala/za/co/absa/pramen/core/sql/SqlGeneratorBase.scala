@@ -31,7 +31,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
   /**
     * This returns characters used for escaping into a mode that allows special characters in identifiers.
     * For example,
-    *  - in Hive, column name 'my column' should be escaped with back quotes `my column`, in MS SQL Server
+    *  - in Hive, column name 'my column' should be escaped with back quotes `my column`,
     *  - in MS SQL server square braces are used instead [my column].
     */
   def beginEndEscapeChars: (Char, Char)
@@ -46,7 +46,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
-  final def quote(identifier: String): String = {
+  override final def quote(identifier: String): String = {
     validateIdentifier(identifier)
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
   }
