@@ -218,9 +218,10 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "date is in STRING ISO format" in {
         assert(genStr.getCountQuery("A", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) = CONVERT(DATE, '2020-08-17')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) = CONVERT(DATE, '2020-08-17')")
         assert(genStr.getCountQuery("A", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, D) <= CONVERT(DATE, '2020-08-30')")
+          "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) >= CONVERT(DATE, '2020-08-17') " +
+            "AND (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) <= CONVERT(DATE, '2020-08-30')")
       }
 
       "date is in STRING non ISO format" in {
@@ -269,9 +270,10 @@ class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
 
       "date is in STRING ISO format" in {
         assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) = CONVERT(DATE, '2020-08-17')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) = CONVERT(DATE, '2020-08-17')")
         assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
-          "SELECT * FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D) >= CONVERT(DATE, '2020-08-17') AND CONVERT(DATE, D) <= CONVERT(DATE, '2020-08-30')")
+          "SELECT * FROM A WITH (NOLOCK) WHERE (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) >= CONVERT(DATE, '2020-08-17') " +
+            "AND (CASE WHEN ISDATE(D) = 1 THEN CONVERT(DATE, D) ELSE NULL END) <= CONVERT(DATE, '2020-08-30')")
       }
 
       "date is in STRING non-ISO format" in {
