@@ -173,7 +173,7 @@ sbt -DSPARK_VERSION="3.4.1" -Dassembly.features="includeDelta" ++2.13.12 assembl
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
 ```sh
-$ spark-shell --jars pramen-runner_2.12-1.7.1-SNAPSHOT.jar
+$ spark-shell --jars pramen-runner_2.12-1.7.4-SNAPSHOT.jar
 ```
 
 # Creating a data pipeline
