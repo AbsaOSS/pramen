@@ -45,10 +45,25 @@ class CmdLineConfigSuite extends AnyWordSpec {
       "parse workflow location" in {
         val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
         assert(cmd.nonEmpty)
-        assert(cmd.get.configPathName.contains("dummy.config"))
+        assert(cmd.get.configPathNames.contains("dummy.config"))
         assert(cmd.get.dryRun.isEmpty)
         assert(cmd.get.undercover.isEmpty)
         assert(cmd.get.useLock.isEmpty)
+      }
+
+      "parse workflow locations" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflows", "dummy1.config,dummy2.config"))
+        assert(cmd.nonEmpty)
+        assert(cmd.get.configPathNames.contains("dummy1.config"))
+        assert(cmd.get.configPathNames.contains("dummy2.config"))
+        assert(cmd.get.dryRun.isEmpty)
+        assert(cmd.get.undercover.isEmpty)
+        assert(cmd.get.useLock.isEmpty)
+      }
+
+      "both workflow and workflows are not allowed together" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--workflows", "dummy1.config,dummy2.config"))
+        assert(cmd.isEmpty)
       }
 
       "parse the list of files to fetch" in {

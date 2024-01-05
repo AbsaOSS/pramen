@@ -27,7 +27,7 @@ import java.time.LocalDate
 import scala.collection.JavaConverters.asJavaIterableConverter
 
 case class CmdLineConfig(
-                          configPathName: Option[String] = None,
+                          configPathNames: Seq[String] = Seq.empty,
                           files: Seq[String] = Seq.empty[String],
                           operations: Seq[String] = Seq.empty[String],
                           currentDate: Option[LocalDate] = None,
@@ -126,9 +126,27 @@ object CmdLineConfig {
   private class CmdParser(programName: String) extends OptionParser[CmdLineConfig](programName) {
     head("\nPramen Workflow Runner")
 
-    opt[String]("workflow").required().action((value, config) =>
-      config.copy(configPathName = Option(value)))
+    opt[String]("workflow").optional().action((value, config) =>
+      config.copy(configPathNames = Seq(value)))
       .text("Path to a workflow configuration")
+
+    opt[String]("workflows").optional()
+      .action((value, config) =>
+        if (config.configPathNames.nonEmpty) {
+          throw new IllegalArgumentException(s"Cannot use both --workflow and --workflows options together")
+        } else {
+          config.copy(configPathNames = value.split(',').map(_.trim))
+        }
+      )
+      .text("Path to a comma separated list of workflow configurations")
+
+    checkConfig(c =>
+      if (c.configPathNames.isEmpty) {
+        failure("Either --workflow or --workflows option must be specified")
+      } else {
+        success
+      }
+    )
 
     opt[String]("files").optional().action((value, config) =>
       config.copy(files = value.split(',').map(_.trim)))

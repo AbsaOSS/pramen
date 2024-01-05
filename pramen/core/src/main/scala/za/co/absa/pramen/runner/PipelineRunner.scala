@@ -17,17 +17,24 @@
 package za.co.absa.pramen.runner
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.core.RunnerCommons._
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.runner.AppRunner
-import za.co.absa.pramen.core.RunnerCommons._
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 object PipelineRunner {
   def main(args: Array[String]): Unit = {
-    implicit val conf: Config = getMainContext(args)
+    val configs: Seq[Config] = getMainContext(args)
 
-    val isExitCodeEnabled = conf.getBoolean(Keys.EXIT_CODE_ENABLED)
+    val isExitCodeEnabled = configs.head.getBoolean(Keys.EXIT_CODE_ENABLED)
 
-    val exitCode = AppRunner.runPipeline
+    var exitCode = 0
+
+    configs.foreach { conf =>
+      ConfigUtils.logEffectiveConfigProps(conf, Keys.CONFIG_KEYS_TO_REDACT, Keys.KEYS_TO_REDACT)
+
+      exitCode |= AppRunner.runPipeline(conf)
+    }
 
     if (isExitCodeEnabled && exitCode != 0) {
       System.exit(exitCode)

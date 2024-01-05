@@ -23,8 +23,7 @@ import org.apache.log4j.{Level, Logger}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.RuntimeConfig.VERBOSE
 import za.co.absa.pramen.core.cmd.CmdLineConfig
-import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.utils.{ConfigUtils, JavaXConfig}
+import za.co.absa.pramen.core.utils.JavaXConfig
 
 import java.io.File
 import java.nio.file.{FileSystems, Files, Paths}
@@ -33,7 +32,7 @@ import scala.util.Try
 object RunnerCommons {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def getMainContext(args: Array[String]): Config = {
+  def getMainContext(args: Array[String]): Seq[Config] = {
     val rootLogger = Logger.getRootLogger
 
     val cmdLineConfig = CmdLineConfig(args)
@@ -45,13 +44,12 @@ object RunnerCommons {
       copyFilesToLocal(cmdLineConfig.files, hadoopConfig)
     }
 
-    val conf: Config = getConfig(cmdLineConfig.configPathName, cmdLineConfig)
+    val configs: Seq[Config] = getConfigs(cmdLineConfig.configPathNames, cmdLineConfig)
+    val primaryConfig = configs.head
 
-    JavaXConfig.setJavaXProperties(conf)
+    JavaXConfig.setJavaXProperties(primaryConfig)
 
-    ConfigUtils.logEffectiveConfigProps(conf, Keys.CONFIG_KEYS_TO_REDACT, Keys.KEYS_TO_REDACT)
-
-    if (!conf.getBoolean(VERBOSE)) {
+    if (!primaryConfig.getBoolean(VERBOSE)) {
       // Switch logging level to WARN
       Logger.getLogger("org").setLevel(Level.WARN)
       Logger.getLogger("akka").setLevel(Level.WARN)
@@ -70,7 +68,15 @@ object RunnerCommons {
       }
     }
 
-    conf
+    configs
+  }
+
+  def getConfigs(configPaths: Seq[String], cmd: CmdLineConfig): Seq[Config] = {
+    if (configPaths.isEmpty) {
+      Seq(getConfig(None, cmd))
+    } else {
+      configPaths.map(path => getConfig(Some(path), cmd))
+    }
   }
 
   def getConfig(configPath: Option[String], cmd: CmdLineConfig): Config = {
