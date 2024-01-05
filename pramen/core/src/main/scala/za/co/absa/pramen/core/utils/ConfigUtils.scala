@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.utils
 
 import com.typesafe.config._
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.pipeline.PipelineDef.PIPELINE_NAME_KEY
 import za.co.absa.pramen.core.utils.StringUtils.{escapeString, trimLeft}
 
 import java.io.{File, PrintWriter}
@@ -430,9 +431,12 @@ object ConfigUtils {
                               keysToRedact: Set[String] = Set(),
                               tokensToRedact: Set[String] = Set()): Unit = {
     val rendered = renderEffectiveConfigProps(conf, keysToRedact, tokensToRedact)
+    val pipelineNameOpt = getOptionString(conf, PIPELINE_NAME_KEY)
 
-    log.info(s"Effective configuration:\n$rendered")
-
+    pipelineNameOpt match {
+      case Some(pipelineName) => log.info(s"Effective configuration for '$pipelineName':\n$rendered")
+      case None               => log.info(s"Effective configuration:\n$rendered")
+    }
   }
 
   /**

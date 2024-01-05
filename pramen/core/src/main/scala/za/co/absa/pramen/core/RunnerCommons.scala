@@ -32,6 +32,26 @@ import scala.util.Try
 object RunnerCommons {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  /**
+    * The method parses command line parameters and returns workflow configs.
+    *
+    * The method is guaranteed to return at least one workflow configuration.
+    *
+    * The first configuration in the list is considered the 'primary one'. For options
+    * that affect the whole runtime, and cannot be different for different pipeline, will
+    * be used from the primary configuration.
+    *
+    * Such options are:
+    * - pramen.exit.code.enabled
+    * - JVM security options: javax.*, java.* (see JavaXConfig.setJavaXProperties)
+    * - Spark Session config: pramen.spark.conf.option.*
+    *   This is because restarting Spark is not supported by most of runtimes.
+    *
+    * On the other hand, Hadoop options (hadoop.option.*), will be applied for each workflow.
+    *
+    * @param args Arguments passed to the command line.
+    * @return Workflow configs. At least one configuration will be returned.
+    */
   def getMainContext(args: Array[String]): Seq[Config] = {
     val rootLogger = Logger.getRootLogger
 
@@ -71,6 +91,11 @@ object RunnerCommons {
     configs
   }
 
+  /**
+    * Returns workflow configurations defined in the command line config. One
+    * configuration is always returned. Event if workflow path is not defined,
+    * the default TypeSafe config (application.conf + reference.conf) is returned.
+    */
   def getConfigs(configPaths: Seq[String], cmd: CmdLineConfig): Seq[Config] = {
     if (configPaths.isEmpty) {
       Seq(getConfig(None, cmd))
@@ -79,6 +104,10 @@ object RunnerCommons {
     }
   }
 
+  /**
+    * Returns the workflow configuration defined either by the workflow path or
+    * from the default TypeSafe configuration source (application.conf + reference.conf).
+    */
   def getConfig(configPath: Option[String], cmd: CmdLineConfig): Config = {
     val originalConfig = ConfigFactory.load()
 
@@ -100,6 +129,7 @@ object RunnerCommons {
     CmdLineConfig.applyCmdLineToConfig(conf, cmd)
   }
 
+  /** Checks path existence at the absolute location and in the current path, an returns whichever works. */
   def getExistingWorkflowPath(pathStr: String): String = {
     val path = Paths.get(pathStr)
 
@@ -119,6 +149,10 @@ object RunnerCommons {
     throw new IllegalArgumentException(s"The workflow configuration '$pathStr' does not exist at the driver node.")
   }
 
+  /**
+    * Copies the list of files from a Hadoop location (S3, HDFS, etc) to the current directory.
+    * The Spark Session is not required to be started at this point, Hadoop FileSystem API is used.
+    */
   def copyFilesToLocal(files: Seq[String], hadoopConfig: Configuration): Unit = {
     val currentPath = new Path(".")
 
