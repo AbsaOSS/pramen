@@ -25,14 +25,11 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 object PipelineRunner {
   def main(args: Array[String]): Unit = {
     val configs: Seq[Config] = getMainContext(args)
-
     val isExitCodeEnabled = configs.head.getBoolean(Keys.EXIT_CODE_ENABLED)
-
     var exitCode = 0
 
     configs.foreach { conf =>
       ConfigUtils.logEffectiveConfigProps(conf, Keys.CONFIG_KEYS_TO_REDACT, Keys.KEYS_TO_REDACT)
-
       exitCode |= AppRunner.runPipeline(conf)
     }
 
