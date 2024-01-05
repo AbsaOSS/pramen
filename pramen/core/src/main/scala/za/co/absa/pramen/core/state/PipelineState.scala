@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.state
 
 import za.co.absa.pramen.core.runner.task.TaskResult
 
-trait PipelineState {
+trait PipelineState extends AutoCloseable {
   def getState(): PipelineStateSnapshot
 
   def setShutdownHookCanRun(): Unit

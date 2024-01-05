@@ -20,8 +20,6 @@ import za.co.absa.pramen.core.pipeline.{Job, TaskPreDef}
 
 import scala.concurrent.Future
 
-trait TaskRunner {
+trait TaskRunner extends AutoCloseable {
   def runJobTasks(job: Job, infoDates: Seq[TaskPreDef]): Future[Seq[RunStatus]]
-
-  def shutdown(): Unit
 }

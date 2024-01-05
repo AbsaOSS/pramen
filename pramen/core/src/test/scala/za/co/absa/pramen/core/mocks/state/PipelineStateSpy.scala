@@ -28,6 +28,7 @@ class PipelineStateSpy extends PipelineState {
   var jobFailureCalled = 0
   val failures = new ListBuffer[(String, Throwable)]
   val completedStatuses = new ListBuffer[TaskResult]
+  var closeCalled = 0
 
   override def getState(): PipelineStateSnapshot = {
     PipelineStateSnapshot(
@@ -60,4 +61,6 @@ class PipelineStateSpy extends PipelineState {
     getExitCodeCalled += 1
     0
   }
+
+  override def close(): Unit = closeCalled += 1
 }

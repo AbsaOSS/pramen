@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.runner
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
@@ -37,6 +38,7 @@ import scala.util.{Failure, Success, Try}
 object AppRunner {
   val ERROR_CODE_MAJOR_FAILURE = 2
   val ERROR_CODE_FAILURE = 1
+  private var bannerShown = false
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -64,13 +66,15 @@ object AppRunner {
       _          <- validateShutdownHook(state, appContext.appConfig.hookConfig)
       _          <- validatePipeline(jobs, state, appContext, spark)
       _          <- runPipeline(conf, jobs, state, appContext, taskRunner, spark)
-      _          <- shutdown(taskRunner, state)
+      _          <- shutdownTaskRunner(taskRunner, state)
     } yield {
       val exitCode = state.getExitCode
       val emoji = if (exitCode == 0) SUCCESS else FAILURE
       log.info(s"$emoji The pipeline has finished. Exit code = $exitCode")
       exitCode
     }
+
+    resetState(state)
 
     exitCodeTry match {
       case Success(exitCode)      =>
@@ -141,14 +145,19 @@ object AppRunner {
   }
 
   private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {
-    Try {
-      val version = BuildPropertyUtils.instance.getFullVersion
-      val banner = ResourceUtils.getResourceString("/pramen_banner.txt")
-        .replace("""project_version""", version)
-      log.info(s"\n$banner")
-      log.info(s"Runtime Spark version: ${spark.version}")
+    if (!bannerShown) {
+      Try {
+        bannerShown = true
+        val version = BuildPropertyUtils.instance.getFullVersion
+        val banner = ResourceUtils.getResourceString("/pramen_banner.txt")
+          .replace("""project_version""", version)
+        log.info(s"\n$banner")
+        log.info(s"Runtime Spark version: ${spark.version}")
 
-      spark.sparkContext.uiWebUrl.foreach(url => log.info(s"Spark URL: $url"))
+        spark.sparkContext.uiWebUrl.foreach(url => log.info(s"Spark URL: $url"))
+      }
+    } else {
+      Success(()) // Short version of the Darth Vader ship? (-()-)
     }
   }
 
@@ -281,10 +290,31 @@ object AppRunner {
     handleFailure(tryHandler, state, "validating the shutdown hook")
   }
 
-  private[core] def shutdown(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {
+  private[core] def shutdownTaskRunner(taskRunner: TaskRunner, state: PipelineState): Try[Unit] = {
     handleFailure(Try {
-      taskRunner.shutdown()
-      MetastorePersistenceTransient.cleanup()
+      taskRunner.close()
     }, state, "shutting down task runner execution context")
+  }
+
+  private[core] def resetState(state: PipelineState): Unit = {
+    // Neither of these should throw any exceptions.
+    // The handling of exceptions is added as a precaution.
+    runIgnoringExceptions {
+      MetastorePersistenceTransient.reset()
+    }
+    runIgnoringExceptions {
+      PramenImpl.reset()
+    }
+    runIgnoringExceptions {
+      state.close()
+    }
+  }
+
+  private [core] def runIgnoringExceptions(action: => Unit): Unit = {
+    Try {
+      action
+    }.recover({
+      case ex: Throwable => log.error("Error cleaning up the app state.", ex)
+    })
   }
 }
