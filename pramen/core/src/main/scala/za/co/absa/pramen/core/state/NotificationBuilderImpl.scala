@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.state
 import org.apache.spark.sql.DataFrame
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.NotificationBuilder
-import za.co.absa.pramen.api.notification.{Align, NotificationEntry, Style, TableHeader, TextElement}
+import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.utils.SparkUtils
 
 import scala.collection.mutable.ListBuffer
@@ -60,7 +60,7 @@ class NotificationBuilderImpl extends NotificationBuilder {
     }
   }
 
-  def setSignature(text: TextElement*): Unit = {
+  def setSignature(text: TextElement*): Unit = synchronized {
     notificationSignature = text
   }
 
@@ -85,5 +85,10 @@ class NotificationBuilderImpl extends NotificationBuilder {
       }
     case _ =>
       true
+  }
+
+  private[core] def reset(): Unit = synchronized {
+    notificationEntries.clear()
+    notificationSignature = Seq.empty
   }
 }

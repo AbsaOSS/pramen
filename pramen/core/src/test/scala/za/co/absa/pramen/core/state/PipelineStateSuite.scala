@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.state
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import org.slf4j.{Logger, LoggerFactory}
+import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.HookConfig.SHUTDOWN_HOOK_CLASS_KEY
 import za.co.absa.pramen.core.mocks.TaskResultFactory
 import za.co.absa.pramen.core.mocks.state.{ShutdownHookFailureMock, ShutdownHookSuccessMock}
@@ -35,7 +36,7 @@ class PipelineStateSuite extends AnyWordSpec {
 
   "setShutdownHookCanRun" should {
     "set the flag to true" in {
-      val stateManager = new PipelineStateImpl()
+      val stateManager = new PipelineStateImpl()(conf, PramenImpl.instance.notificationBuilder)
 
       assert(!stateManager.getState().customShutdownHookCanRun)
 
@@ -153,7 +154,7 @@ class PipelineStateSuite extends AnyWordSpec {
       case None =>
         conf
     }
-    new PipelineStateImpl()(effectiveConfig) {
+    new PipelineStateImpl()(effectiveConfig, PramenImpl.instance.notificationBuilder) {
       override val log: Logger = LoggerFactory.getLogger("za.co.absa.pramen.core.state.PipelineStateImpl")
 
       override def sendNotificationEmail(): Unit = {

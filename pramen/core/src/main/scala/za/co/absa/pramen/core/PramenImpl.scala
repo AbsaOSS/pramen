@@ -42,15 +42,25 @@ class PramenImpl extends Pramen {
     throw new IllegalStateException("Metadata manager is not available at the context.")
   )
 
-  private[core] def setWorkflowConfig(config: Config): Unit = _workflowConfig = Option(config)
+  private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
+    _workflowConfig = Option(config)
+  }
 
-  private[core] def setMetadataManager(m: MetadataManager): Unit = _metadataManager = Option(m)
+  private[core] def setMetadataManager(m: MetadataManager): Unit = synchronized {
+    _metadataManager = Option(m)
+  }
+
+  private[core] def reset(): Unit = synchronized {
+    notificationBuilderImpl.reset()
+    _workflowConfig = None
+    _metadataManager = None
+  }
 }
 
 object PramenImpl extends PramenFactory {
-  var instance: Pramen = new PramenImpl
+  val instance: Pramen = new PramenImpl
 
-  private[core] def reset(): Unit = {
-    instance = new PramenImpl
+  private[core] def reset(): Unit = this.synchronized {
+    instance.asInstanceOf[PramenImpl].reset()
   }
 }
