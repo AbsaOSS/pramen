@@ -18,11 +18,12 @@ package za.co.absa.pramen.core.fixtures
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.core.app.AppContext
+import za.co.absa.pramen.core.InfoDateConfigFactory
+import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperNull}
 import za.co.absa.pramen.core.journal.{Journal, JournalNull}
 import za.co.absa.pramen.core.utils.ResourceUtils
-import za.co.absa.pramen.core.{AppContextFactory, InfoDateConfigFactory}
 
 trait AppContextFixture {
 
@@ -63,11 +64,19 @@ trait AppContextFixture {
 
     val infoDateConfig = InfoDateConfigFactory.getDummyInfoDateConfig()
     val journal: Journal = new JournalNull()
-    val context = AppContextFactory.createMockAppContext(conf, infoDateConfig, bookkeeper, journal)(spark)
+    val context = createMockAppContext(conf, infoDateConfig, bookkeeper, journal)(spark)
 
     f(context)
 
     context.close()
+  }
+
+  private def createMockAppContext(conf: Config,
+                                   infoDateConfig: InfoDateConfig,
+                                   bookkeeper: Bookkeeper,
+                                   journal: Journal
+                                  )(implicit spark: SparkSession): AppContext = this.synchronized {
+    AppContextImpl.getMock(conf, infoDateConfig, bookkeeper, journal)
   }
 
 }
