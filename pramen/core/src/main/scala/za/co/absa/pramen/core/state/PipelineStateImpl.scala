@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.state
 
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
-import za.co.absa.pramen.api.Pramen
+import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
@@ -32,7 +32,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-class PipelineStateImpl(implicit conf: Config) extends PipelineState {
+class PipelineStateImpl(implicit conf: Config, notificationBuilder: NotificationBuilder) extends PipelineState {
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   // Config
@@ -153,9 +153,9 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
         taskResults.filterNot(_.isTransient)
       }
       val finishedInstant = Instant.now
-      val notificationBuilder = Pramen.instance.notificationBuilder.asInstanceOf[NotificationBuilderImpl]
-      val customEntries = notificationBuilder.entries
-      val customSignature = notificationBuilder.signature
+      val notificationBuilderImpl = notificationBuilder.asInstanceOf[NotificationBuilderImpl]
+      val customEntries = notificationBuilderImpl.entries
+      val customSignature = notificationBuilderImpl.signature
 
       val notification = PipelineNotification(failureException,
         pipelineName,

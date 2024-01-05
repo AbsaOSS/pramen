@@ -94,7 +94,7 @@ object AppRunner {
 
   private[core] def createPipelineState(implicit conf: Config): Try[PipelineState] = {
     Try {
-      new PipelineStateImpl
+      new PipelineStateImpl()(conf, PramenImpl.instance.notificationBuilder)
     }
   }
 
@@ -300,12 +300,15 @@ object AppRunner {
     // Neither of these should throw any exceptions.
     // The handling of exceptions is added as a precaution.
     runIgnoringExceptions {
+      log.info("Cleaning metastore state...")
       MetastorePersistenceTransient.reset()
     }
     runIgnoringExceptions {
+      log.info("Cleaning pramen impl...")
       PramenImpl.reset()
     }
     runIgnoringExceptions {
+      log.info("Cleaning pramen state...")
       state.close()
     }
   }
