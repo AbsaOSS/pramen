@@ -43,8 +43,8 @@ object AppRunner {
   /**
     * Runs the pipeline defined in the given config.
     */
-  def runPipeline(implicit conf: Config): Int = {
-    implicit val state: PipelineState = createPipelineState match {
+  def runPipeline(conf: Config): Int = {
+    implicit val state: PipelineState = createPipelineState(conf) match {
       case Success(st) => st
       case Failure(ex)  =>
         log.error(s"An error has occurred before notification configuration is available. No notifications will be sent.", ex)
@@ -52,7 +52,7 @@ object AppRunner {
     }
 
     val exitCodeTry = for {
-      spark      <- getSparkSession
+      spark      <- getSparkSession(conf, state)
       _          <- logBanner(spark)
       _          <- logExecutorNodes(conf, state, spark)
       appContext <- createAppContext(conf, state, spark)
