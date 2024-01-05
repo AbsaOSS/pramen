@@ -199,8 +199,6 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
       val appContext = AppRunner.createAppContext.get
 
       assert(appContext.bookkeeper != null)
-
-      AppContextFactory.close()
     }
 
     "return a failure on error" in {
@@ -216,8 +214,6 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
           assert(ex.getMessage.contains("An error occurred during initialization of the pipeline"))
           assert(ex.getCause.getMessage.contains("No configuration setting found for key 'pramen'"))
       }
-
-      AppContextFactory.close()
     }
   }
 
