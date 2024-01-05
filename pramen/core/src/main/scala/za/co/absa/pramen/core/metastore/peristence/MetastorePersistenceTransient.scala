@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
@@ -170,7 +169,7 @@ object MetastorePersistenceTransient {
     }
   }
 
-  private[core] def cleanup(): Unit = synchronized {
+  private[core] def reset(): Unit = synchronized {
     rawDataframes.clear()
     cachedDataframes.foreach { case (_, df) => df.unpersist() }
     cachedDataframes.clear()

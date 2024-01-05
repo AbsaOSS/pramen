@@ -118,7 +118,7 @@ class TaskRunnerMultithreaded(conf: Config,
     }
   }
 
-  override def shutdown(): Unit = {
+  override def close(): Unit = {
     executionContext.shutdown()
   }
 }

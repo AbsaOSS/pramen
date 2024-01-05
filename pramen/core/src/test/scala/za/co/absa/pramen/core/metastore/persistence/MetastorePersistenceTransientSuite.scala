@@ -48,8 +48,8 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
     super.afterAll()
   }
 
-  "cleanup should do nothing if spark session is not available" in {
-    MetastorePersistenceTransient.cleanup()
+  "reset should do nothing if spark session is not available" in {
+    MetastorePersistenceTransient.reset()
   }
 
   "loadTable" should {
@@ -62,7 +62,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(df.count() == 3)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "return an empty dataframe if data is not available but schema is available" in {
@@ -74,7 +74,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(df.isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "throw an exception if the data and schema are not available" in {
@@ -86,7 +86,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(ex.getMessage.contains("No data for transient table 'table2' for '2022-02-19'"))
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "throw an exception on range queries" in {
@@ -100,7 +100,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(ex.getMessage.contains("Metastore 'transient' format does not support ranged queries"))
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "throw an exception if info date is not provided" in {
@@ -112,7 +112,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(ex.getMessage.contains("Metastore 'transient' format requires info date for querying its contents"))
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
   }
 
@@ -125,7 +125,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(saveResult.recordCount == 10)
       assert(saveResult.dataSizeBytes.isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "work with cached data frames" in {
@@ -136,7 +136,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(saveResult.recordCount == 3)
       assert(saveResult.dataSizeBytes.isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "work with persisted data frames" in {
@@ -148,7 +148,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(saveResult.dataSizeBytes.isDefined)
       assert(saveResult.dataSizeBytes.exists(_ > 100))
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
   }
 
@@ -190,7 +190,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(df.count() == 3)
       assert(size.isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
   }
 
@@ -202,7 +202,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(df.count() == 3)
       assert(size.isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
   }
 
@@ -214,7 +214,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(size.isDefined)
       assert(size.exists(_ > 100))
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
   }
 
@@ -224,7 +224,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(!MetastorePersistenceTransient.getDataForTheDate("table_not_cached3", infoDate).isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "work for cached dataframes" in {
@@ -232,7 +232,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(!MetastorePersistenceTransient.getDataForTheDate("table_cached3", infoDate).isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "work for persisted dataframes" in {
@@ -240,7 +240,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
 
       assert(!MetastorePersistenceTransient.getDataForTheDate("table_persist3", infoDate).isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "return an empty dataframe if data not found but schema found" in {
@@ -251,7 +251,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(df.isEmpty)
       assert(df.schema.sameElements(exampleDf.schema))
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
 
     "throw an exception if data nor schema not found" in {
@@ -259,7 +259,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
         MetastorePersistenceTransient.getDataForTheDate("table_cache", infoDate.plusDays(1))
       }
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
     }
   }
 
@@ -273,7 +273,7 @@ class MetastorePersistenceTransientSuite extends AnyWordSpec with BeforeAndAfter
       assert(!MetastorePersistenceTransient.getDataForTheDate("table_cached4", infoDate).isEmpty)
       assert(!MetastorePersistenceTransient.getDataForTheDate("table_persist4", infoDate).isEmpty)
 
-      MetastorePersistenceTransient.cleanup()
+      MetastorePersistenceTransient.reset()
 
       assertThrows[IllegalStateException] {
         MetastorePersistenceTransient.getDataForTheDate("table_not_cached4", infoDate)

@@ -29,8 +29,8 @@ import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer
-import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Success, Try}
 
 class PipelineStateImpl(implicit conf: Config) extends PipelineState {
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
@@ -99,7 +99,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
       throw new IllegalStateException(s"Attempt to run post finish tasks multiple times")
     }
     isFinished = true
-    Runtime.getRuntime.removeShutdownHook(shutdownHook)
+    close()
   }
 
   private val shutdownHook = new Thread() {
@@ -113,7 +113,7 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
         sendNotificationEmail()
         Try {
           // Clean up transient metastore tables if any
-          MetastorePersistenceTransient.cleanup()
+          MetastorePersistenceTransient.reset()
         }.recover {
           case NonFatal(ex) => log.error("Unable to clean up transient metastore tables.", ex)
         }
@@ -175,4 +175,6 @@ class PipelineStateImpl(implicit conf: Config) extends PipelineState {
       case NonFatal(ex) => log.error(s"Unable to send an email notification.", ex)
     }
   }
+
+  override def close(): Unit = Runtime.getRuntime.removeShutdownHook(shutdownHook)
 }

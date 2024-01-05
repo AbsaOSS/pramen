@@ -142,7 +142,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec {
     "make threads not runnable afterwards" in {
       val runner = getRunner()
 
-      runner.shutdown()
+      runner.close()
 
       assert(runner.executionContext.isShutdown)
     }

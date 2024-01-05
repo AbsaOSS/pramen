@@ -71,6 +71,8 @@ class PipelineRunnerSuite extends AnyWordSpec with BeforeAndAfterAll with TempDi
 
         try {
           PipelineRunner.main(Array("--workflow", workflowPath))
+          assert(PipelineRunner.getExitCodes.length == 1)
+          assert(PipelineRunner.getExitCodes.head == 0)
         } catch {
           case e: ExitException =>
             assert(e.status == 0)
