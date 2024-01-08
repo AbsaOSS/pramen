@@ -1378,7 +1378,6 @@ pramen {
   spark.app.name = "Pramen - "${pramen.pipeline.name}
 
   # The number of tasks to run in parallel. A task is a source, transformer, or sink running for a specified information date.
-  # This feature is experimental, use more than 1 with caution. 
   parallel.tasks = 1
 
   # You can set this option so that Pramen never writes to partitions older than the specified date
@@ -1456,7 +1455,6 @@ pramen.operations = [
     # By setting 'consume.threads' to greater value than 1, the task will appear to require more than 1 thread to run. 
     # Thus, the task will take up multiple "slots" in 'pramen.parallel.tasks' setting.
     # This is useful if some tasks consume lot of memory and CPU and should not be running with other tasks in parallel.
-    # This feature is experimental. Use with caution.
     consume.threads = 2
 
     tables = [
@@ -2764,6 +2762,17 @@ Use `spark-submit` to run `pramen` jobs.
 spark-submit --class za.co.absa.pramen.runner.PipelineRunner \
   pramen-runner_2.11-x.y.z.jar --workflow my_workflow.conf
 ```
+
+**Experimental:** Use `--workflows` (plural) to specify comma-separated list of multiple workflows to run in
+a single Spark Session.
+```sh
+spark-submit --class za.co.absa.pramen.runner.PipelineRunner \
+  pramen-runner_2.11-x.y.z.jar --workflows /path/my_workflow1.conf,/path/my_workflow2.conf
+```
+
+If one of workflows fails, the rest will still be attempted. The command will return non-zero exit code if at least one
+of pipelines fail.
+
 
 ### Running built-in jobs
 
