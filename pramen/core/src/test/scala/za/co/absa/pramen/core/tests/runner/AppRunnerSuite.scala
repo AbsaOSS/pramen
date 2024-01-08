@@ -243,6 +243,37 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
     }
   }
 
+  "runIgnoringExceptions()" should {
+    "run an action that does not throw an exception" in {
+      var reached = false
+      AppRunner.runIgnoringExceptions( {
+        reached = true
+      })
+      assert(reached)
+    }
+
+    "do not throw non-fatal exceptions" in {
+      var reached = false
+      AppRunner.runIgnoringExceptions( {
+        reached = true
+        throw new RuntimeException("Test exception")
+      })
+      assert(reached)
+    }
+
+    "throw a fatal exception" in {
+      var reached = false
+      val ex = intercept[AbstractMethodError] {
+        AppRunner.runIgnoringExceptions( {
+          reached = true
+          throw new AbstractMethodError("Test exception")
+        })
+      }
+      assert(reached)
+      assert(ex.getMessage.contains("Test exception"))
+    }
+  }
+
   private def getTestConfig(extraConf: Config = ConfigFactory.empty()): Config = {
     val configStr = ResourceUtils.getResourceString("/test/config/pipeline_v2_empty.conf")
 
