@@ -37,7 +37,7 @@ object RunnerCommons {
     *
     * The method is guaranteed to return at least one workflow configuration.
     *
-    * The first configuration in the list is considered the 'primary one'. For options
+    * The first configuration in the list is considered the 'primary one'. Options
     * that affect the whole runtime, and cannot be different for different pipeline, will
     * be used from the primary configuration.
     *
@@ -93,7 +93,7 @@ object RunnerCommons {
 
   /**
     * Returns workflow configurations defined in the command line config. One
-    * configuration is always returned. Event if workflow path is not defined,
+    * configuration is always returned. Event if no workflow path is defined,
     * the default TypeSafe config (application.conf + reference.conf) is returned.
     */
   def getConfigs(configPaths: Seq[String], cmd: CmdLineConfig): Seq[Config] = {
@@ -129,7 +129,7 @@ object RunnerCommons {
     CmdLineConfig.applyCmdLineToConfig(conf, cmd)
   }
 
-  /** Checks path existence at the absolute location and in the current path, an returns whichever works. */
+  /** Checks path existence at the absolute location and in the current path, and returns whichever works. */
   def getExistingWorkflowPath(pathStr: String): String = {
     val path = Paths.get(pathStr)
 
