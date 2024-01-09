@@ -2770,8 +2770,8 @@ spark-submit --class za.co.absa.pramen.runner.PipelineRunner \
   pramen-runner_2.11-x.y.z.jar --workflows /path/my_workflow1.conf,/path/my_workflow2.conf
 ```
 
-If one of workflows fails, the rest will still be attempted. The command will return non-zero exit code if at least one
-of pipelines fail.
+If one of the workflows fails, the rest will still be attempted. The command will return a non-zero exit code if at least one
+of the pipelines fails.
 
 
 ### Running built-in jobs
