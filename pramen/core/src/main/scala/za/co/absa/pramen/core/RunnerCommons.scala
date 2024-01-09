@@ -93,7 +93,7 @@ object RunnerCommons {
 
   /**
     * Returns workflow configurations defined in the command line config. One
-    * configuration is always returned. Event if no workflow path is defined,
+    * configuration is always returned. Even if no workflow path is defined,
     * the default TypeSafe config (application.conf + reference.conf) is returned.
     */
   def getConfigs(configPaths: Seq[String], cmd: CmdLineConfig): Seq[Config] = {
