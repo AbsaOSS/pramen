@@ -122,10 +122,10 @@
 <td>table_out</td>
 <td>db.table1</td>
 <td style="text-align:center">2022-02-18</td>
-<td style="text-align:right">200 (+100)</td>
+<td style="text-align:right">20000 (+10000)</td>
 <td style="text-align:center">01:14:04</td>
-<td style="text-align:right">1000 B</td>
-<td class="tdwarn" style="text-align:right">0</td>
+<td style="text-align:right">97 KiB</td>
+<td class="tdwarn" style="text-align:right">4</td>
 <td style="text-align:center">1970-01-01 03:34 +0200</td>
 <td class="tdwarn" style="text-align:center">Warning</td>
 <td>Test warning</td></tr></tbody>
