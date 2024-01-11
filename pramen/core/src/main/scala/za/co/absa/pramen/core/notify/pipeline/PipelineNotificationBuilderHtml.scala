@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
-import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.MIN_RPS_JOB_DURATION_SECONDS
+import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
 import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus, TaskResult}
@@ -36,6 +36,7 @@ import scala.collection.mutable.ListBuffer
 
 object PipelineNotificationBuilderHtml {
   val MIN_RPS_JOB_DURATION_SECONDS = 60
+  val MIN_RPS_RECORDS = 1000
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
@@ -450,7 +451,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     task.runInfo match {
       case Some(runInfo) =>
         val jobDuration = Duration.between(runInfo.started, runInfo.finished).getSeconds
-        if (jobDuration > MIN_RPS_JOB_DURATION_SECONDS && recordCount > 0L) {
+        if (jobDuration > MIN_RPS_JOB_DURATION_SECONDS && recordCount >= MIN_RPS_RECORDS) {
           val throughput = recordCount / jobDuration
 
           throughput match {
