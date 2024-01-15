@@ -18,7 +18,6 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
-import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -79,7 +78,7 @@ class PythonTransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
-    if (outputTable.format.isInstanceOf[DataFormat.Transient]) {
+    if (outputTable.format.isTransient) {
       Reason.NotReady(s"Python transformations cannot output to transient tables. Please, change teh format of ${outputTable.name}")
     } else {
       Reason.Ready
