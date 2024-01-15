@@ -71,7 +71,7 @@ class MetastoreImpl(appConfig: Config,
 
   override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
     val mt = getTableDef(tableName)
-    val isTransient = mt.format.isInstanceOf[DataFormat.Transient]
+    val isTransient = mt.format.isTransient
     val start = Instant.now.getEpochSecond
     val stats = MetastorePersistence.fromMetaTable(mt, appConfig).saveTable(infoDate, df, inputRecordCount)
     val finish = Instant.now.getEpochSecond

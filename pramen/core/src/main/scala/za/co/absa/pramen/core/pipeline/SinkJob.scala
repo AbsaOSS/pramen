@@ -18,8 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, Reason, Sink}
+import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
@@ -126,7 +125,7 @@ class SinkJob(operationDef: OperationDef,
       )
       val jobFinished = Instant.now
 
-      val isTransient = outputTable.format.isInstanceOf[DataFormat.Transient]
+      val isTransient = outputTable.format.isTransient
 
       bookkeeper.setRecordCount(outputTable.name,
         infoDate,

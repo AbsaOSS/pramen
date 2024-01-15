@@ -123,7 +123,7 @@ abstract class TaskRunnerBase(conf: Config,
     val now = Instant.now()
     val runStatus = RunStatus.Skipped(reason, isWarning)
     val runInfo = RunInfo(task.infoDate, now, now)
-    val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
+    val isTransient = task.job.outputTable.format.isTransient
     val taskResult = TaskResult(task.job, runStatus, Some(runInfo), applicationId, isTransient, Nil, Nil, Nil)
 
     onTaskCompletion(task, taskResult)
@@ -141,7 +141,7 @@ abstract class TaskRunnerBase(conf: Config,
     */
   private[core] def preRunCheck(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
     val outputTable = task.job.outputTable.name
-    val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
+    val isTransient = task.job.outputTable.format.isTransient
 
     Try {
       task.job.preRunCheck(task.infoDate, conf)
@@ -196,7 +196,7 @@ abstract class TaskRunnerBase(conf: Config,
     */
   private[core] def validate(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
     val outputTable = task.job.outputTable.name
-    val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
+    val isTransient = task.job.outputTable.format.isTransient
 
     preRunCheck(task, started) match {
       case Left(result) =>
@@ -219,7 +219,7 @@ abstract class TaskRunnerBase(conf: Config,
               case Reason.Skip(msg) =>
                 log.info(s"SKIP validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
                 if (bookkeeper.getLatestDataChunk(outputTable, task.infoDate, task.infoDate).isEmpty) {
-                  val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
+                  val isTransient = task.job.outputTable.format.isTransient
                   bookkeeper.setRecordCount(outputTable, task.infoDate, task.infoDate, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
                 }
                 Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))
@@ -243,7 +243,7 @@ abstract class TaskRunnerBase(conf: Config,
     * @return an instance of TaskResult.
     */
   private[core] def run(task: Task, started: Instant, validationResult: JobPreRunResult): TaskResult = {
-    val isTransient = task.job.outputTable.format.isInstanceOf[DataFormat.Transient]
+    val isTransient = task.job.outputTable.format.isTransient
     val lock = lockFactory.getLock(getTokenName(task))
 
     val attempt = try {

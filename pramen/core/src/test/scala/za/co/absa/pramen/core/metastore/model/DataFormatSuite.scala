@@ -18,8 +18,8 @@ package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.DataFormat.{Delta, Parquet, Raw, Transient}
-import za.co.absa.pramen.api.{CachePolicy, DataFormat, Query}
+import za.co.absa.pramen.api.DataFormat._
+import za.co.absa.pramen.api.{CachePolicy, Query}
 import za.co.absa.pramen.core.metastore.model.DataFormatParser.{PATH_KEY, TABLE_KEY}
 
 class DataFormatSuite extends AnyWordSpec {
@@ -30,6 +30,7 @@ class DataFormatSuite extends AnyWordSpec {
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "parquet")
+      assert(!format.isTransient)
       assert(format.isInstanceOf[Parquet])
       assert(format.asInstanceOf[Parquet].path == "/a/b/c")
       assert(format.asInstanceOf[Parquet].recordsPerPartition.isEmpty)
@@ -45,6 +46,7 @@ class DataFormatSuite extends AnyWordSpec {
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "parquet")
+      assert(!format.isTransient)
       assert(format.isInstanceOf[Parquet])
       assert(format.asInstanceOf[Parquet].path == "/a/b/c")
       assert(format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
@@ -60,6 +62,7 @@ class DataFormatSuite extends AnyWordSpec {
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "delta")
+      assert(!format.isTransient)
       assert(format.isInstanceOf[Delta])
       assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
       assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
@@ -75,6 +78,7 @@ class DataFormatSuite extends AnyWordSpec {
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "raw")
+      assert(!format.isTransient)
       assert(format.isInstanceOf[Raw])
       assert(format.asInstanceOf[Raw].path == "/a/b/c")
     }
@@ -85,6 +89,7 @@ class DataFormatSuite extends AnyWordSpec {
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "transient")
+      assert(format.isTransient)
       assert(format.isInstanceOf[Transient])
       assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.NoCache)
     }
@@ -98,8 +103,34 @@ class DataFormatSuite extends AnyWordSpec {
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "transient")
+      assert(format.isTransient)
       assert(format.isInstanceOf[Transient])
       assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.Cache)
+    }
+
+    "use 'on_demand' when specified explicitly" in {
+      val conf = ConfigFactory.parseString("format = on_demand")
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "on_demand")
+      assert(format.isTransient)
+      assert(format.isInstanceOf[OnDemand])
+      assert(format.asInstanceOf[OnDemand].cachePolicy == CachePolicy.NoCache)
+    }
+
+    "support cache policies for 'on_demand' format" in {
+      val conf = ConfigFactory.parseString(
+        """format = on_demand
+          |cache.policy = cache
+          |""".stripMargin)
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "on_demand")
+      assert(format.isTransient)
+      assert(format.isInstanceOf[OnDemand])
+      assert(format.asInstanceOf[OnDemand].cachePolicy == CachePolicy.Cache)
     }
 
     "use default records per partition" in {
@@ -113,6 +144,7 @@ class DataFormatSuite extends AnyWordSpec {
       val format = DataFormatParser.fromConfig(conf, appConf)
 
       assert(format.name == "delta")
+      assert(!format.isTransient)
       assert(format.isInstanceOf[Delta])
       assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
       assert(format.asInstanceOf[Delta].query.query == "/a/b/c")

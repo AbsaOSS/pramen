@@ -63,6 +63,13 @@ object MetastorePersistence {
         } else {
           throw new IllegalArgumentException(s"Transient metastore tables require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
         }
+      case DataFormat.OnDemand(cachePolicy) =>
+        if (conf.hasPath(TEMPORARY_DIRECTORY_KEY) && conf.getString(TEMPORARY_DIRECTORY_KEY).nonEmpty) {
+          val tempPath = conf.getString(TEMPORARY_DIRECTORY_KEY)
+          new MetastorePersistenceOnDemand(tempPath, metaTable.name, cachePolicy)
+        } else {
+          throw new IllegalArgumentException(s"On demand metastore tables require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
+        }
       case DataFormat.Null() =>
         throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
     }

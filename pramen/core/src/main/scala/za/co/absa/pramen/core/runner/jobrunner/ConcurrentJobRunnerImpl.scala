@@ -18,7 +18,6 @@ package za.co.absa.pramen.core.runner.jobrunner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
@@ -81,7 +80,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
 
   private def workerLoop(workerNum: Int, incomingJobs: ReadChannel[Job]): Unit = {
     incomingJobs.foreach { job =>
-      val isTransient = job.outputTable.format.isInstanceOf[DataFormat.Transient]
+      val isTransient = job.outputTable.format.isTransient
       try {
         log.info(s"Worker $workerNum starting job '${job.name}' that outputs to '${job.outputTable.name}'...")
         val isSucceeded = runJob(job)

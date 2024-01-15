@@ -25,6 +25,7 @@ object DataFormatParser {
   val FORMAT_DELTA = "delta"
   val FORMAT_RAW = "raw"
   val FORMAT_TRANSIENT = "transient"
+  val FORMAT_ON_DEMAND = "on_demand"
 
   val FORMAT_KEY = "format"
   val PATH_KEY = "path"
@@ -58,6 +59,9 @@ object DataFormatParser {
       case FORMAT_TRANSIENT =>
         val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
         DataFormat.Transient(cachePolicy)
+      case FORMAT_ON_DEMAND =>
+        val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
+        DataFormat.OnDemand(cachePolicy)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
     }
   }
