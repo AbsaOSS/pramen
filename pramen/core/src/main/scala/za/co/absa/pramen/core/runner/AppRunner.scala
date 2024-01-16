@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
 import za.co.absa.pramen.core.exceptions.ValidationException
-import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
+import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistenceOnDemand, MetastorePersistenceTransient}
 import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
@@ -241,6 +241,8 @@ object AppRunner {
         taskRunner,
         spark.sparkContext.applicationId)
 
+      MetastorePersistenceOnDemand.setTaskRunner(taskRunner)
+
       val orchestrator = new OrchestratorImpl()
 
       orchestrator.runJobs(jobs)
@@ -300,8 +302,12 @@ object AppRunner {
     // Neither of these should throw any exceptions.
     // The handling of exceptions is added as a precaution.
     runIgnoringExceptions {
-      log.info("Cleaning metastore state...")
+      log.info("Cleaning metastore transient state...")
       MetastorePersistenceTransient.reset()
+    }
+    runIgnoringExceptions {
+      log.info("Cleaning metastore on demand state...")
+      MetastorePersistenceOnDemand.reset()
     }
     runIgnoringExceptions {
       log.info("Cleaning pramen impl...")

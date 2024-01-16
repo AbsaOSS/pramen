@@ -145,6 +145,24 @@ object MetastorePersistenceTransient {
     (spark.read.parquet(outputPath), Option(sizeBytes))
   }
 
+  private[core] def hasDataForTheDate(tableName: String, infoDate: LocalDate)(implicit spark: SparkSession): Boolean = synchronized {
+    val partition = getMetastorePartition(tableName, infoDate)
+
+    if (MetastorePersistenceTransient.rawDataframes.contains(partition)) {
+      true
+    } else if (MetastorePersistenceTransient.cachedDataframes.contains(partition)) {
+      true
+    } else if (MetastorePersistenceTransient.persistedLocations.contains(partition)) {
+      true
+    } else {
+      if (schemas.contains(tableName.toLowerCase)) {
+        true
+      } else {
+        false
+      }
+    }
+  }
+
   private[core] def getDataForTheDate(tableName: String, infoDate: LocalDate)(implicit spark: SparkSession): DataFrame = synchronized {
     val partition = getMetastorePartition(tableName, infoDate)
 

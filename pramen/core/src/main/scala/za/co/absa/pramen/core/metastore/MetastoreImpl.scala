@@ -48,7 +48,14 @@ class MetastoreImpl(appConfig: Config,
   }
 
   override def isDataAvailable(tableName: String, infoDateFromOpt: Option[LocalDate], infoDateToOpt: Option[LocalDate]): Boolean = {
-    bookkeeper.getDataChunksCount(tableName, infoDateFromOpt, infoDateToOpt) > 0
+    val mt = getTableDef(tableName)
+    val isOnDemand = mt.format.isInstanceOf[DataFormat.OnDemand]
+
+    if (isOnDemand) {
+      true
+    } else {
+      bookkeeper.getDataChunksCount(tableName, infoDateFromOpt, infoDateToOpt) > 0
+    }
   }
 
   override def getTableDef(tableName: String): MetaTable = {

@@ -20,6 +20,7 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
@@ -91,8 +92,10 @@ class OrchestratorImpl extends Orchestrator {
           log.info(s"There is another job outputting to ${finishedJob.outputTable.name}. Waiting for it to finish before marking the table as finished.")
         }
 
+        val isOnDemand = finishedJob.outputTable.format.isInstanceOf[DataFormat.OnDemand]
+
         if (!hasAnotherUnfinishedJob || !isSucceeded) {
-          updateDependencyResolver(dependencyResolver, finishedJob, isSucceeded)
+          updateDependencyResolver(dependencyResolver, finishedJob, isSucceeded, isOnDemand)
         }
 
         state.addTaskCompletion(taskResults)
@@ -182,11 +185,19 @@ class OrchestratorImpl extends Orchestrator {
     })
   }
 
-  private def updateDependencyResolver(dependencyResolver: DependencyResolver, job: Job, isSucceeded: Boolean): Unit = {
+  private def updateDependencyResolver(dependencyResolver: DependencyResolver,
+                                       job: Job,
+                                       isSucceeded: Boolean,
+                                       isOnDemand: Boolean): Unit = {
     val outputTable = job.outputTable
 
     if (isSucceeded) {
-      log.info(s"$SUCCESS Job '${job.name}' outputting to '${outputTable.name}' has SUCCEEDED.")
+      if (isOnDemand) {
+        log.info(s"$SUCCESS On-demand job '${job.name}' outputting to '${outputTable.name}' has been registered for the future use.")
+      } else {
+        log.info(s"$SUCCESS Job '${job.name}' outputting to '${outputTable.name}' has SUCCEEDED.")
+      }
+
       dependencyResolver.setAvailableTable(outputTable.name)
     } else {
       log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED.")

@@ -38,4 +38,8 @@ object TaskRunReason {
   case class Skip(reason: String) extends TaskRunReason {
     override def toString: String = "Skip"
   }
+
+  case object OnDemand extends TaskRunReason {
+    override def toString: String = "On Demand"
+  }
 }
