@@ -83,6 +83,17 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
+  override def runOnDemand(job: Job, infoDate: LocalDate): RunStatus = {
+    val started = Instant.now()
+    val task = Task(job, infoDate, TaskRunReason.OnDemand)
+    val result: TaskResult = validate(task, started) match {
+      case Left(failedResult) => failedResult
+      case Right(validationResult) => run(task, started, validationResult)
+    }
+
+    onTaskCompletion(task, result, isOnDemand = true)
+  }
+
   /** Runs multiple tasks in the single thread in the order of info dates. If one task fails, the rest will be skipped. */
   protected def runDependentTasks(tasks: Seq[Task]): Seq[RunStatus] = {
     val sortedTasks = tasks.sortBy(_.infoDate)
@@ -114,7 +125,7 @@ abstract class TaskRunnerBase(conf: Config,
           case Left(failedResult) => failedResult
           case Right(validationResult) => run(task, started, validationResult)
         }
-        onTaskCompletion(task, result)
+        onTaskCompletion(task, result, isOnDemand = false)
     }
   }
 
@@ -126,7 +137,7 @@ abstract class TaskRunnerBase(conf: Config,
     val isTransient = task.job.outputTable.format.isTransient
     val taskResult = TaskResult(task.job, runStatus, Some(runInfo), applicationId, isTransient, Nil, Nil, Nil)
 
-    onTaskCompletion(task, taskResult)
+    onTaskCompletion(task, taskResult, isOnDemand = false)
   }
 
   /**
@@ -347,11 +358,11 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   /** Logs task completion and sends corresponding notifications. */
-  private def onTaskCompletion(task: Task, taskResult: TaskResult): RunStatus = {
+  private def onTaskCompletion(task: Task, taskResult: TaskResult, isOnDemand: Boolean): RunStatus = {
     val notificationTargetErrors = sendNotifications(task, taskResult)
     val updatedResult = taskResult.copy(notificationTargetErrors = notificationTargetErrors)
 
-    logTaskResult(updatedResult)
+    logTaskResult(updatedResult, isOnDemand)
     pipelineState.addTaskCompletion(Seq(updatedResult))
     addJournalEntry(task, updatedResult)
 
@@ -432,33 +443,39 @@ abstract class TaskRunnerBase(conf: Config,
     Some(RunInfo(infoDate, started, Instant.now()))
   }
 
-  private def logTaskResult(result: TaskResult): Unit = synchronized {
+  private def logTaskResult(result: TaskResult, isOnDemand: Boolean): Unit = synchronized {
     val infoDateMsg = result.runInfo match {
-      case Some(date) => s" for $date"
+      case Some(date) => s" for ${date.infoDate}"
       case None => ""
+    }
+
+    val taskStr = if (isOnDemand) {
+      "On demand task"
+    } else {
+      "Task"
     }
 
     val emoji = if (result.runStatus.isFailure) s"$FAILURE" else s"$WARNING"
 
     result.runStatus match {
       case _: RunStatus.Succeeded =>
-        log.info(s"$SUCCESS Task '${result.job.name}'$infoDateMsg has SUCCEEDED.")
+        log.info(s"$SUCCESS $taskStr '${result.job.name}'$infoDateMsg has SUCCEEDED.")
       case RunStatus.ValidationFailed(ex) =>
-        log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
+        log.error(s"$FAILURE $taskStr '${result.job.name}'$infoDateMsg has FAILED VALIDATION", ex)
       case RunStatus.Failed(ex) =>
-        log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has FAILED", ex)
+        log.error(s"$FAILURE $taskStr '${result.job.name}'$infoDateMsg has FAILED", ex)
       case RunStatus.MissingDependencies(_, tables) =>
-        log.error(s"$emoji Task '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
+        log.error(s"$emoji $taskStr '${result.job.name}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
       case RunStatus.FailedDependencies(_, deps) =>
-        log.error(s"$emoji Task '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
+        log.error(s"$emoji $taskStr '${result.job.name}'$infoDateMsg has FAILED DEPENDENCIES: ${deps.map(_.renderText).mkString("; ")}")
       case _: RunStatus.NoData =>
-        log.warn(s"$emoji Task '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
+        log.warn(s"$emoji $taskStr '${result.job.name}'$infoDateMsg has NO DATA AT SOURCE.")
       case _: RunStatus.InsufficientData =>
-        log.error(s"$FAILURE Task '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")
+        log.error(s"$FAILURE $taskStr '${result.job.name}'$infoDateMsg has INSUFFICIENT DATA AT SOURCE.")
       case RunStatus.Skipped(msg, _) =>
-        log.warn(s"$WARNING Task '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
+        log.warn(s"$WARNING $taskStr '${result.job.name}'$infoDateMsg is SKIPPED: $msg.")
       case RunStatus.NotRan =>
-        log.info(s"Task '${result.job.name}'$infoDateMsg is SKIPPED.")
+        log.info(s"$taskStr '${result.job.name}'$infoDateMsg is SKIPPED.")
     }
   }
 }

@@ -144,6 +144,33 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(journalEntries.length == 2)
       assert(journalEntries.head.status == "Failed")
     }
+
+    "run a singe on-demand job" in {
+      val now = Instant.now()
+      val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskNotification) => ())
+      val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
+      val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), jobNotificationTargets = Seq(jobNotificationTarget))
+
+      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
+
+      val result = runner.runOnDemand(tasks.head.job, infoDate)
+
+      val job = tasks.head.job.asInstanceOf[JobSpy]
+
+      assert(job.validateCount == 1)
+      assert(job.runCount == 1)
+      assert(job.postProcessingCount == 1)
+      assert(job.saveCount == 1)
+      assert(job.createHiveTableCount == 0)
+      assert(result.isInstanceOf[Succeeded])
+      assert(notificationTarget.notificationsSent.length == 1)
+      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[TaskStatus.Succeeded])
+
+      val journalEntries = journal.getEntries(now, now.plusSeconds(30))
+
+      assert(journalEntries.length == 1)
+      assert(journalEntries.head.status == "On Demand")
+    }
   }
 
   "run multiple failure jobs sequential execution" in {

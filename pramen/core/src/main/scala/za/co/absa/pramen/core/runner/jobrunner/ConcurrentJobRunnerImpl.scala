@@ -18,9 +18,11 @@ package za.co.absa.pramen.core.runner.jobrunner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceOnDemand
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.core.runner.splitter.ScheduleParams
@@ -106,6 +108,14 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runJob(job: Job): Boolean = {
+    if (job.outputTable.format.isInstanceOf[DataFormat.OnDemand]) {
+      runLazyJob(job)
+    } else {
+      runEagerJob(job)
+    }
+  }
+
+  private[core] def runEagerJob(job: Job): Boolean = {
     val scheduleParams = ScheduleParams.fromRuntimeConfig(runtimeConfig, job.trackDays, job.operation.expectedDelayDays)
 
     val taskDefs = job.scheduleStrategy.getDaysToRun(
@@ -134,6 +144,11 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
     }
 
     statuses.forall(s => !s.isFailure)
+  }
+
+  private[core] def runLazyJob(job: Job): Boolean = {
+    MetastorePersistenceOnDemand.addOnDemandJob(job)
+    true
   }
 
 }
