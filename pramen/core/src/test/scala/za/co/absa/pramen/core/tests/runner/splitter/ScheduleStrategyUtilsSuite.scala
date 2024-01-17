@@ -407,4 +407,145 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       assert(nextExpected == LocalDate.parse("2022-07-09"))
     }
   }
+
+  "getMinRunDateFromInfoDate" should {
+    "return correct date for a daily schedule" in {
+      val schedule = Schedule.EveryDay()
+
+      val expected = LocalDate.parse("2023-11-12")
+
+      val actual = getMinRunDateFromInfoDate(LocalDate.parse("2023-11-12"), schedule)
+
+      assert(actual == expected)
+    }
+
+    "return correct date for a weekly schedule" in {
+      val schedule = Schedule.Weekly(Seq(DayOfWeek.MONDAY))
+
+      val expected = LocalDate.parse("2023-11-06")
+
+      val actual = getMinRunDateFromInfoDate(LocalDate.parse("2023-11-12"), schedule)
+
+      assert(actual == expected)
+    }
+
+    "return correct date for a monthly schedule" in {
+      val schedule = Schedule.Monthly(Seq(1))
+
+      val expected = LocalDate.parse("2023-11-01")
+
+      val actual = getMinRunDateFromInfoDate(LocalDate.parse("2023-11-12"), schedule)
+
+      assert(actual == expected)
+
+    }
+  }
+
+  "getActiveInfoDates" should {
+    "return correct dates for a daily schedule" in {
+      val schedule = Schedule.EveryDay()
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val expected = List(
+        LocalDate.parse("2023-11-12"),
+        LocalDate.parse("2023-11-13"),
+        LocalDate.parse("2023-11-14"),
+        LocalDate.parse("2023-11-15")
+      )
+
+      val actual = getActiveInfoDates(LocalDate.parse("2023-11-12"), LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+
+      assert(actual == expected)
+    }
+
+    "return correct dates for a weekly schedule" in {
+      val schedule = Schedule.Weekly(Seq(DayOfWeek.MONDAY))
+      val infoDateExpression = "lastSunday(@runDate)"
+
+      val expected = List(
+        LocalDate.parse("2023-11-12"),
+        LocalDate.parse("2023-11-19"),
+        LocalDate.parse("2023-11-26"),
+        LocalDate.parse("2023-12-03")
+      )
+
+      val actual = getActiveInfoDates(LocalDate.parse("2023-11-11"), LocalDate.parse("2023-12-04"), infoDateExpression, schedule)
+
+      assert(actual == expected)
+    }
+
+    "return correct dates for a monthly schedule" in {
+      val schedule = Schedule.Monthly(Seq(1))
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val expected = List(
+        LocalDate.parse("2023-11-30"),
+        LocalDate.parse("2023-12-31"),
+        LocalDate.parse("2024-01-31"),
+        LocalDate.parse("2024-02-29")
+      )
+
+      val actual = getActiveInfoDates(LocalDate.parse("2023-11-28"), LocalDate.parse("2024-03-01"), infoDateExpression, schedule)
+
+      assert(actual == expected)
+    }
+
+    "throw an exception for forward looking info date expression" in {
+      val schedule = Schedule.EveryDay()
+      val infoDateExpression = "plusDays(@runDate,1)"
+
+      val ex = intercept[IllegalArgumentException] {
+        getActiveInfoDates(LocalDate.parse("2023-11-12"), LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+      }
+
+      assert(ex.getMessage.contains(s"Could not use forward looking info date expression ($infoDateExpression) in this context."))
+
+    }
+  }
+
+  "getLatestActiveInfoDate" should {
+    "return correct date for a daily schedule" in {
+      val schedule = Schedule.EveryDay()
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val expected = LocalDate.parse("2023-11-15")
+
+      val actual = getLatestActiveInfoDate(LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+
+      assert(actual == expected)
+    }
+
+    "return correct date for a weekly schedule" in {
+      val schedule = Schedule.Weekly(Seq(DayOfWeek.MONDAY))
+      val infoDateExpression = "lastSunday(@runDate)"
+
+      val expected = LocalDate.parse("2023-12-03")
+
+      val actual = getLatestActiveInfoDate(LocalDate.parse("2023-12-05"), infoDateExpression, schedule)
+
+      assert(actual == expected)
+    }
+
+    "return correct date for a monthly schedule" in {
+      val schedule = Schedule.Monthly(Seq(1))
+      val infoDateExpression = "minusDays(@runDate,1)"
+
+      val expected = LocalDate.parse("2024-02-29")
+
+      val actual = getLatestActiveInfoDate(LocalDate.parse("2024-03-20"), infoDateExpression, schedule)
+
+      assert(actual == expected)
+    }
+
+    "throw an exception for forward looking info date expression" in {
+      val schedule = Schedule.EveryDay()
+      val infoDateExpression = "plusDays(@runDate,1)"
+
+      val ex = intercept[IllegalArgumentException] {
+        getLatestActiveInfoDate(LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+      }
+
+      assert(ex.getMessage.contains(s"Could not use forward looking info date expression ($infoDateExpression) in this context."))
+    }
+  }
 }

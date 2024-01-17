@@ -274,7 +274,7 @@ object ScheduleStrategyUtils {
     * @param logExpression Whether to log the expression.
     * @return The info date
     */
-  private[core] def evaluateRunDate(runDate: LocalDate, expression: String, logExpression: Boolean = true): LocalDate = {
+  def evaluateRunDate(runDate: LocalDate, expression: String, logExpression: Boolean = true): LocalDate = {
     val evaluator = new DateExprEvaluator
 
     evaluator.setValue(RUN_DATE_VAR1, runDate)
@@ -295,7 +295,7 @@ object ScheduleStrategyUtils {
     * @param expression A date expression that uses the info date as a variable
     * @return The info date
     */
-  private[core] def evaluateFromInfoDate(infoDate: LocalDate, expression: String): LocalDate = {
+  def evaluateFromInfoDate(infoDate: LocalDate, expression: String): LocalDate = {
     val evaluator = new DateExprEvaluator
 
     evaluator.setValue(INFO_DATE_VAR, infoDate)
@@ -306,7 +306,7 @@ object ScheduleStrategyUtils {
   /**
     * Renders date range (for logging).
     */
-  private[core] def renderPeriod(dateFrom: Option[LocalDate], dateTo: Option[LocalDate]): String = {
+  def renderPeriod(dateFrom: Option[LocalDate], dateTo: Option[LocalDate]): String = {
     (dateFrom, dateTo) match {
       case (Some(from), Some(to)) =>
         s" (from $from to $to)"
@@ -320,7 +320,7 @@ object ScheduleStrategyUtils {
   }
 
 
-  private[core] def getNextExpectedInfoDate(infoDate: LocalDate, infoDateExpression: String, schedule: Schedule): LocalDate = {
+  def getNextExpectedInfoDate(infoDate: LocalDate, infoDateExpression: String, schedule: Schedule): LocalDate = {
     val MAX_ITERATIONS = 100
     var currentInfoDate = infoDate
     var currentRunDate = infoDate
@@ -350,4 +350,76 @@ object ScheduleStrategyUtils {
     currentInfoDate
   }
 
+  /**
+    * Returns the most recent run date that is before the given information date.
+    */
+  private[core] def getMinRunDateFromInfoDate(infoDate: LocalDate, schedule: Schedule): LocalDate = {
+    var currentRunDate = infoDate
+    while (!schedule.isEnabled(currentRunDate)) {
+      currentRunDate = currentRunDate.minusDays(1)
+    }
+    currentRunDate
+  }
+
+  /**
+    * Returns information dates for which the job is enabled in range from infoDateFrom to infoDateTo inclusively.
+    */
+  def getActiveInfoDates(infoDateFrom: LocalDate, infoDateTo: LocalDate, infoDateExpression: String, schedule: Schedule): Seq[LocalDate] = {
+    if (infoDateTo.isBefore(infoDateFrom))
+      return Seq.empty
+
+    val testRunDate = evaluateRunDate(infoDateFrom, infoDateExpression, logExpression = false)
+
+    if (testRunDate.isAfter(infoDateFrom)) {
+      throw new IllegalArgumentException(s"Could not use forward looking info date expression ($infoDateExpression) in this context.")
+    }
+
+    val infoDates = new ListBuffer[LocalDate]
+    val minInfoDate = infoDateFrom.minusDays(1)
+    val maxInfoDate = infoDateTo.plusDays(1)
+    var currentRunDate = getMinRunDateFromInfoDate(infoDateFrom, schedule)
+    var currentInfoDate = infoDateFrom
+    var lastInfoDate = minInfoDate
+    while (currentInfoDate.isBefore(maxInfoDate)) {
+      if (schedule.isEnabled(currentRunDate)) {
+        currentInfoDate = evaluateRunDate(currentRunDate, infoDateExpression, logExpression = false)
+        if (currentInfoDate.isAfter(minInfoDate) && currentInfoDate.isBefore(maxInfoDate) && currentInfoDate != lastInfoDate) {
+          infoDates += currentInfoDate
+          lastInfoDate = currentInfoDate
+        }
+      }
+
+      currentRunDate = currentRunDate.plusDays(1)
+    }
+    log.info(s"For the period '$infoDateFrom..$infoDateTo' found info dates: ${infoDates.mkString(", ")}")
+    infoDates.toSeq
+  }
+
+  /**
+    * Returns the most recent information date that is before or at the given information date.
+    */
+  def getLatestActiveInfoDate(infoDateUntil: LocalDate, infoDateExpression: String, schedule: Schedule): LocalDate = {
+    val testRunDate = evaluateRunDate(infoDateUntil, infoDateExpression, logExpression = false)
+
+    if (testRunDate.isAfter(infoDateUntil)) {
+      throw new IllegalArgumentException(s"Could not use forward looking info date expression ($infoDateExpression) in this context.")
+    }
+
+    val maxInfoDate = infoDateUntil.plusDays(1)
+    var lastInfoDate = maxInfoDate
+    var currentRunDate = getMinRunDateFromInfoDate(infoDateUntil, schedule)
+    var currentInfoDate = infoDateUntil
+    while (currentInfoDate.isBefore(maxInfoDate)) {
+      if (schedule.isEnabled(currentRunDate)) {
+        currentInfoDate = evaluateRunDate(currentRunDate, infoDateExpression, logExpression = false)
+        if (currentInfoDate.isBefore(maxInfoDate) && currentInfoDate != lastInfoDate) {
+          lastInfoDate = currentInfoDate
+        }
+      }
+
+      currentRunDate = currentRunDate.plusDays(1)
+    }
+    log.info(s"For the info date '$infoDateUntil' the most recent snapshot date is '$lastInfoDate'.")
+    lastInfoDate
+  }
 }
