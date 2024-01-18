@@ -93,7 +93,8 @@ object MetastorePersistenceOnDemand {
                                              infoDateTo: LocalDate): Seq[LocalDate] = {
     val job = getJob(outputTableName)
 
-    ScheduleStrategyUtils.getActiveInfoDates(infoDateFrom,
+    ScheduleStrategyUtils.getActiveInfoDates(outputTableName,
+      infoDateFrom,
       infoDateTo,
       job.operation.outputInfoDateExpression,
       job.operation.schedule)
@@ -103,7 +104,8 @@ object MetastorePersistenceOnDemand {
                                                  infoDateUntil: LocalDate): LocalDate = {
     val job = getJob(outputTableName)
 
-    ScheduleStrategyUtils.getLatestActiveInfoDate(infoDateUntil,
+    ScheduleStrategyUtils.getLatestActiveInfoDate(outputTableName,
+      infoDateUntil,
       job.operation.outputInfoDateExpression,
       job.operation.schedule)
   }

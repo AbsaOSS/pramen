@@ -364,14 +364,14 @@ object ScheduleStrategyUtils {
   /**
     * Returns information dates for which the job is enabled in range from infoDateFrom to infoDateTo inclusively.
     */
-  def getActiveInfoDates(infoDateFrom: LocalDate, infoDateTo: LocalDate, infoDateExpression: String, schedule: Schedule): Seq[LocalDate] = {
+  def getActiveInfoDates(tableName: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, infoDateExpression: String, schedule: Schedule): Seq[LocalDate] = {
     if (infoDateTo.isBefore(infoDateFrom))
       return Seq.empty
 
     val testRunDate = evaluateRunDate(infoDateFrom, infoDateExpression, logExpression = false)
 
     if (testRunDate.isAfter(infoDateFrom)) {
-      throw new IllegalArgumentException(s"Could not use forward looking info date expression ($infoDateExpression) in this context.")
+      throw new IllegalArgumentException(s"Could not use forward looking info date expression ($infoDateExpression) for the table '$tableName'.")
     }
 
     val infoDates = new ListBuffer[LocalDate]
@@ -391,18 +391,18 @@ object ScheduleStrategyUtils {
 
       currentRunDate = currentRunDate.plusDays(1)
     }
-    log.info(s"For the period '$infoDateFrom..$infoDateTo' found info dates: ${infoDates.mkString(", ")}")
+    log.info(s"For the table '$tableName' period '$infoDateFrom..$infoDateTo' found info dates: ${infoDates.mkString(", ")}")
     infoDates.toSeq
   }
 
   /**
     * Returns the most recent information date that is before or at the given information date.
     */
-  def getLatestActiveInfoDate(infoDateUntil: LocalDate, infoDateExpression: String, schedule: Schedule): LocalDate = {
+  def getLatestActiveInfoDate(tableName: String, infoDateUntil: LocalDate, infoDateExpression: String, schedule: Schedule): LocalDate = {
     val testRunDate = evaluateRunDate(infoDateUntil, infoDateExpression, logExpression = false)
 
     if (testRunDate.isAfter(infoDateUntil)) {
-      throw new IllegalArgumentException(s"Could not use forward looking info date expression ($infoDateExpression) in this context.")
+      throw new IllegalArgumentException(s"Could not use forward looking info date expression ($infoDateExpression) for the table '$tableName'.")
     }
 
     val maxInfoDate = infoDateUntil.plusDays(1)
@@ -419,7 +419,7 @@ object ScheduleStrategyUtils {
 
       currentRunDate = currentRunDate.plusDays(1)
     }
-    log.info(s"For the info date '$infoDateUntil' the most recent snapshot date is '$lastInfoDate'.")
+    log.info(s"For the table '$tableName' info date '$infoDateUntil' the most recent snapshot date is '$lastInfoDate'.")
     lastInfoDate
   }
 }
