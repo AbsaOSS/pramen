@@ -453,7 +453,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
         LocalDate.parse("2023-11-15")
       )
 
-      val actual = getActiveInfoDates(LocalDate.parse("2023-11-12"), LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+      val actual = getActiveInfoDates("dummy_table", LocalDate.parse("2023-11-12"), LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
 
       assert(actual == expected)
     }
@@ -469,7 +469,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
         LocalDate.parse("2023-12-03")
       )
 
-      val actual = getActiveInfoDates(LocalDate.parse("2023-11-11"), LocalDate.parse("2023-12-04"), infoDateExpression, schedule)
+      val actual = getActiveInfoDates("dummy_table", LocalDate.parse("2023-11-11"), LocalDate.parse("2023-12-04"), infoDateExpression, schedule)
 
       assert(actual == expected)
     }
@@ -485,7 +485,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
         LocalDate.parse("2024-02-29")
       )
 
-      val actual = getActiveInfoDates(LocalDate.parse("2023-11-28"), LocalDate.parse("2024-03-01"), infoDateExpression, schedule)
+      val actual = getActiveInfoDates("dummy_table", LocalDate.parse("2023-11-28"), LocalDate.parse("2024-03-01"), infoDateExpression, schedule)
 
       assert(actual == expected)
     }
@@ -495,10 +495,10 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       val infoDateExpression = "plusDays(@runDate,1)"
 
       val ex = intercept[IllegalArgumentException] {
-        getActiveInfoDates(LocalDate.parse("2023-11-12"), LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+        getActiveInfoDates("dummy_table", LocalDate.parse("2023-11-12"), LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
       }
 
-      assert(ex.getMessage.contains(s"Could not use forward looking info date expression ($infoDateExpression) in this context."))
+      assert(ex.getMessage.contains(s"Could not use forward looking info date expression (plusDays(@runDate,1)) for the table 'dummy_table'."))
 
     }
   }
@@ -510,7 +510,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
 
       val expected = LocalDate.parse("2023-11-15")
 
-      val actual = getLatestActiveInfoDate(LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+      val actual = getLatestActiveInfoDate("dummy_table", LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
 
       assert(actual == expected)
     }
@@ -521,7 +521,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
 
       val expected = LocalDate.parse("2023-12-03")
 
-      val actual = getLatestActiveInfoDate(LocalDate.parse("2023-12-05"), infoDateExpression, schedule)
+      val actual = getLatestActiveInfoDate("dummy_table", LocalDate.parse("2023-12-05"), infoDateExpression, schedule)
 
       assert(actual == expected)
     }
@@ -532,7 +532,7 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
 
       val expected = LocalDate.parse("2024-02-29")
 
-      val actual = getLatestActiveInfoDate(LocalDate.parse("2024-03-20"), infoDateExpression, schedule)
+      val actual = getLatestActiveInfoDate("dummy_table", LocalDate.parse("2024-03-20"), infoDateExpression, schedule)
 
       assert(actual == expected)
     }
@@ -542,10 +542,10 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
       val infoDateExpression = "plusDays(@runDate,1)"
 
       val ex = intercept[IllegalArgumentException] {
-        getLatestActiveInfoDate(LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
+        getLatestActiveInfoDate("dummy_table", LocalDate.parse("2023-11-15"), infoDateExpression, schedule)
       }
 
-      assert(ex.getMessage.contains(s"Could not use forward looking info date expression ($infoDateExpression) in this context."))
+      assert(ex.getMessage.contains(s"Could not use forward looking info date expression (plusDays(@runDate,1)) for the table 'dummy_table'."))
     }
   }
 }
