@@ -70,9 +70,15 @@ class MetastoreImpl(appConfig: Config,
   }
 
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
-    bookkeeper.getLatestProcessedDate(tableName, until) match {
-      case Some(infoDate) => getTable(tableName, Some(infoDate), Some(infoDate))
-      case None           => throw new NoDataInTable(tableName)
+    val mt = getTableDef(tableName)
+    val isOnDemand = mt.format.isInstanceOf[DataFormat.OnDemand]
+    if (isOnDemand) {
+      MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(None, until)
+    } else {
+      bookkeeper.getLatestProcessedDate(tableName, until) match {
+        case Some(infoDate) => getTable(tableName, Some(infoDate), Some(infoDate))
+        case None           => throw new NoDataInTable(tableName)
+      }
     }
   }
 
