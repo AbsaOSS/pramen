@@ -17,15 +17,20 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunner}
+import za.co.absa.pramen.core.utils.TimeUtils
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 import scala.collection.mutable
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future, Promise}
+import scala.util.{Failure, Success}
 
 class MetastorePersistenceOnDemand(tempPath: String,
                                    tableName: String,
@@ -68,7 +73,10 @@ class MetastorePersistenceOnDemand(tempPath: String,
 }
 
 object MetastorePersistenceOnDemand {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   private val onDemandJobs = new mutable.HashMap[String, Job]()
+  private val runningJobs = new mutable.HashMap[MetastorePartition, Future[DataFrame]]()
   private var taskRunnerOpt: Option[TaskRunner] = None
 
   private[core] def setTaskRunner(taskRunner_ : TaskRunner): Unit = synchronized {
@@ -81,16 +89,66 @@ object MetastorePersistenceOnDemand {
 
   private[core] def runOnDemandJob(outputTableName: String,
                                    infoDate: LocalDate)
-                                  (implicit sparkSession: SparkSession): DataFrame = synchronized {
-    val job = onDemandJobs.get(outputTableName.toLowerCase)
-    job match {
-      case Some(job) => runJob(job, infoDate)
-      case None => throw new IllegalArgumentException(s"On-demand job with output table name '$outputTableName' not found or haven't registered yet.")
+                                  (implicit sparkSession: SparkSession): DataFrame = {
+    val start = Instant.now()
+    val fut = getOnDemandJobFuture(outputTableName, infoDate)
+
+    log.info(s"Waiting for the dependent task to finish ($outputTableName for $infoDate)...")
+    val df = Await.result(fut, Duration.Inf)
+    val finish = Instant.now()
+    log.info(s"The task has finished ($outputTableName for $infoDate). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
+    df
+  }
+
+  private[core] def getOnDemandJobFuture(outputTableName: String,
+                                         infoDate: LocalDate)
+                                        (implicit sparkSession: SparkSession): Future[DataFrame] = {
+    val metastorePartition = MetastorePersistenceTransient.getMetastorePartition(outputTableName, infoDate)
+    val promise = Promise[DataFrame]()
+
+    val futOpt = synchronized {
+      if (MetastorePersistenceTransient.hasDataForTheDate(outputTableName, infoDate)) {
+        log.info(s"The task ($outputTableName for $infoDate) has the data already.")
+        Some(Future.successful(MetastorePersistenceTransient.getDataForTheDate(outputTableName, infoDate)))
+      }
+
+      if (runningJobs.contains(metastorePartition)) {
+        log.info(s"The task ($outputTableName for $infoDate) is already running. Waiting for results...")
+        Some(runningJobs(metastorePartition))
+      } else {
+        log.info(s"Running the on-demand task ($outputTableName for $infoDate)...")
+        runningJobs += metastorePartition -> promise.future
+        None
+      }
+    }
+
+    futOpt match {
+      case Some(fut) =>
+        fut
+      case None =>
+        val jobOpt = onDemandJobs.get(outputTableName.toLowerCase)
+        jobOpt match {
+          case Some(job) =>
+            val fut = promise.future
+            try {
+              promise.complete(Success(runJob(job, infoDate)))
+            } catch {
+              case ex: Throwable =>
+                promise.complete(Failure(ex))
+            }
+            this.synchronized {
+              runningJobs -= metastorePartition
+            }
+            fut
+          case None =>
+            throw new IllegalArgumentException(s"On-demand job with output table name '$outputTableName' not found or haven't registered yet.")
+        }
     }
   }
 
   private[core] def reset(): Unit = synchronized {
     onDemandJobs.clear()
+    runningJobs.clear()
     taskRunnerOpt = None
   }
 
