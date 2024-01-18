@@ -155,36 +155,36 @@ object MetastorePersistenceOnDemand {
     val metastorePartition = MetastorePersistenceTransient.getMetastorePartition(outputTableName, infoDate)
     val promise = Promise[DataFrame]()
 
-    val futOpt = synchronized {
+    val cachedDfFuture = synchronized {
       if (MetastorePersistenceTransient.hasDataForTheDate(outputTableName, infoDate)) {
         log.info(s"The task ($outputTableName for $infoDate) has the data already.")
         Some(Future.successful(MetastorePersistenceTransient.getDataForTheDate(outputTableName, infoDate)))
-      }
-
-      if (runningJobs.contains(metastorePartition)) {
-        log.info(s"The task ($outputTableName for $infoDate) is already running. Waiting for results...")
-        Some(runningJobs(metastorePartition))
       } else {
-        log.info(s"Running the on-demand task ($outputTableName for $infoDate)...")
-        runningJobs += metastorePartition -> promise.future
-        None
+        if (runningJobs.contains(metastorePartition)) {
+          log.info(s"The task ($outputTableName for $infoDate) is already running. Waiting for results...")
+          Some(runningJobs(metastorePartition))
+        } else {
+          log.info(s"Running the on-demand task ($outputTableName for $infoDate)...")
+          runningJobs += metastorePartition -> promise.future
+          None
+        }
       }
     }
 
-    futOpt match {
+    cachedDfFuture match {
       case Some(fut) =>
         fut
       case None =>
         val job = getJob(outputTableName)
         val fut = promise.future
-        try {
-          promise.complete(Success(runJob(job, infoDate)))
+        val resultTry = try {
+          Success(runJob(job, infoDate))
         } catch {
-          case ex: Throwable =>
-            promise.complete(Failure(ex))
+          case ex: Throwable => Failure(ex)
         }
         this.synchronized {
           runningJobs -= metastorePartition
+          promise.complete(resultTry)
         }
         fut
     }
@@ -212,8 +212,11 @@ object MetastorePersistenceOnDemand {
     taskRunnerOpt match {
       case Some(taskRunner) =>
         taskRunner.runOnDemand(job, infoDate) match {
-          case _: RunStatus.Succeeded => MetastorePersistenceTransient.getDataForTheDate(job.outputTable.name, infoDate)
-          case _ => throw new IllegalStateException("On-demand job failed to run.")
+          case _: RunStatus.Succeeded         => MetastorePersistenceTransient.getDataForTheDate(job.outputTable.name, infoDate)
+          case s: RunStatus.Skipped           => throw new IllegalStateException(s"On-demand job has skipped. ${s.msg}")
+          case RunStatus.ValidationFailed(ex) => throw ex
+          case RunStatus.Failed(ex)           => throw ex
+          case runStatus                      => throw new IllegalStateException(runStatus.getReason().getOrElse("On-demand job failed to run."))
         }
       case None =>
         throw new IllegalStateException("Task runner is not set.")
