@@ -22,9 +22,10 @@ import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils
 import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunner}
-import za.co.absa.pramen.core.utils.TimeUtils
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
+import za.co.absa.pramen.core.utils.{Emoji, TimeUtils}
 
 import java.time.{Instant, LocalDate}
 import scala.collection.mutable
@@ -43,16 +44,14 @@ class MetastorePersistenceOnDemand(tempPath: String,
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     (infoDateFrom, infoDateTo) match {
       case (Some(from), Some(to)) if from == to =>
-        if (MetastorePersistenceTransient.hasDataForTheDate(tableName, from)) {
-          MetastorePersistenceTransient.getDataForTheDate(tableName, from)
-        } else
-          runOnDemandJob(tableName, from)
-      case (Some(_), Some(_)) =>
-        throw new IllegalArgumentException("Metastore 'on_demand' format does not support ranged queries.")
+        runOnDemandTask(tableName, from)
+      case (Some(from), Some(to)) =>
+        runOnDemandTasks(tableName, selectInfoDatesToExecute(tableName, from, to))
+      case (None, Some(until)) =>
+        runOnDemandTask(tableName, selectLatestOnDemandSnapshot(tableName, until))
       case _ =>
         throw new IllegalArgumentException("Metastore 'on_demand' format requires info date for querying its contents.")
     }
-
   }
 
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
@@ -73,8 +72,10 @@ class MetastorePersistenceOnDemand(tempPath: String,
 }
 
 object MetastorePersistenceOnDemand {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  val WARN_UNIONS = 5
+  val MAXIMUM_UNIONS = 50
 
+  private val log = LoggerFactory.getLogger(this.getClass)
   private val onDemandJobs = new mutable.HashMap[String, Job]()
   private val runningJobs = new mutable.HashMap[MetastorePartition, Future[DataFrame]]()
   private var taskRunnerOpt: Option[TaskRunner] = None
@@ -87,22 +88,68 @@ object MetastorePersistenceOnDemand {
     onDemandJobs += job.outputTable.name.toLowerCase -> job
   }
 
-  private[core] def runOnDemandJob(outputTableName: String,
-                                   infoDate: LocalDate)
-                                  (implicit sparkSession: SparkSession): DataFrame = {
-    val start = Instant.now()
-    val fut = getOnDemandJobFuture(outputTableName, infoDate)
+  private[core] def selectInfoDatesToExecute(outputTableName: String,
+                                             infoDateFrom: LocalDate,
+                                             infoDateTo: LocalDate): Seq[LocalDate] = {
+    val job = getJob(outputTableName)
 
-    log.info(s"Waiting for the dependent task to finish ($outputTableName for $infoDate)...")
+    ScheduleStrategyUtils.getActiveInfoDates(infoDateFrom,
+      infoDateTo,
+      job.operation.outputInfoDateExpression,
+      job.operation.schedule)
+  }
+
+  private[core] def selectLatestOnDemandSnapshot(outputTableName: String,
+                                                 infoDateUntil: LocalDate): LocalDate = {
+    val job = getJob(outputTableName)
+
+    ScheduleStrategyUtils.getLatestActiveInfoDate(infoDateUntil,
+      job.operation.outputInfoDateExpression,
+      job.operation.schedule)
+  }
+
+  private[core] def runOnDemandTasks(outputTableName: String,
+                                     infoDates: Seq[LocalDate])
+                                    (implicit spark: SparkSession): DataFrame = {
+    val dfs = infoDates.map(infoDate => runOnDemandTask(outputTableName, infoDate))
+
+    if (dfs.isEmpty) {
+      spark.emptyDataFrame
+    } else {
+      if (infoDates.length > WARN_UNIONS) {
+        log.warn(s"${Emoji.WARNING} Performance may be degraded for the task ($outputTableName for ${infoDates.mkString(", ")}) " +
+          s"since the number of dataframe unions is too big (${infoDates.length} > $WARN_UNIONS)")
+      }
+      if (infoDates.length > MAXIMUM_UNIONS) {
+        throw new IllegalArgumentException(s"The number of subtasks requested for the on-demand job contains too many " +
+          s"dataframe unions (${infoDates.length} > $MAXIMUM_UNIONS)")
+      }
+
+      infoDates.tail.foldLeft(runOnDemandTask(outputTableName, infoDates.head))(
+        (acc, infoDate) => acc.union(runOnDemandTask(outputTableName, infoDate))
+      )
+    }
+  }
+
+  private[core] def runOnDemandTask(outputTableName: String,
+                                    infoDate: LocalDate)
+                                   (implicit sparkSession: SparkSession): DataFrame = {
+    val start = Instant.now()
+    val fut = getOnDemandTaskFuture(outputTableName, infoDate)
+
+    if (!fut.isCompleted) {
+      log.info(s"Waiting for the dependent task to finish ($outputTableName for $infoDate)...")
+    }
     val df = Await.result(fut, Duration.Inf)
     val finish = Instant.now()
     log.info(s"The task has finished ($outputTableName for $infoDate). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
+
     df
   }
 
-  private[core] def getOnDemandJobFuture(outputTableName: String,
-                                         infoDate: LocalDate)
-                                        (implicit sparkSession: SparkSession): Future[DataFrame] = {
+  private[core] def getOnDemandTaskFuture(outputTableName: String,
+                                          infoDate: LocalDate)
+                                         (implicit sparkSession: SparkSession): Future[DataFrame] = {
     val metastorePartition = MetastorePersistenceTransient.getMetastorePartition(outputTableName, infoDate)
     val promise = Promise[DataFrame]()
 
@@ -126,23 +173,28 @@ object MetastorePersistenceOnDemand {
       case Some(fut) =>
         fut
       case None =>
-        val jobOpt = onDemandJobs.get(outputTableName.toLowerCase)
-        jobOpt match {
-          case Some(job) =>
-            val fut = promise.future
-            try {
-              promise.complete(Success(runJob(job, infoDate)))
-            } catch {
-              case ex: Throwable =>
-                promise.complete(Failure(ex))
-            }
-            this.synchronized {
-              runningJobs -= metastorePartition
-            }
-            fut
-          case None =>
-            throw new IllegalArgumentException(s"On-demand job with output table name '$outputTableName' not found or haven't registered yet.")
+        val job = getJob(outputTableName)
+        val fut = promise.future
+        try {
+          promise.complete(Success(runJob(job, infoDate)))
+        } catch {
+          case ex: Throwable =>
+            promise.complete(Failure(ex))
         }
+        this.synchronized {
+          runningJobs -= metastorePartition
+        }
+        fut
+    }
+  }
+
+
+  private[core] def getJob(outputTableName: String): Job = {
+    val jobOpt = onDemandJobs.get(outputTableName.toLowerCase)
+
+    jobOpt match {
+      case Some(job) => job
+      case None => throw new IllegalArgumentException(s"On-demand job with output table name '$outputTableName' not found or haven't registered yet.")
     }
   }
 
