@@ -88,8 +88,6 @@ class MetastorePersistenceTransient(tempPath: String,
 object MetastorePersistenceTransient {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  case class MetastorePartition(tableName: String, infoDateStr: String)
-
   private val rawDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val cachedDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val persistedLocations = new mutable.HashMap[MetastorePartition, String]()
@@ -204,7 +202,7 @@ object MetastorePersistenceTransient {
     }
   }
 
-  private def getMetastorePartition(tableName: String, infoDate: LocalDate): MetastorePartition = {
-    MetastorePersistenceTransient.MetastorePartition(tableName.toLowerCase, infoDate.toString)
+  private[core] def getMetastorePartition(tableName: String, infoDate: LocalDate): MetastorePartition = {
+    MetastorePartition(tableName.toLowerCase, infoDate.toString)
   }
 }
