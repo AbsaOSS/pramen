@@ -193,7 +193,7 @@ class OrchestratorImpl extends Orchestrator {
 
     if (isSucceeded) {
       if (isOnDemand) {
-        log.info(s"$SUCCESS On-demand job '${job.name}' outputting to '${outputTable.name}' has been registered for the future use.")
+        log.info(s"On-demand job '${job.name}' outputting to '${outputTable.name}' has been registered for the future use.")
       } else {
         log.info(s"$SUCCESS Job '${job.name}' outputting to '${outputTable.name}' has SUCCEEDED.")
       }

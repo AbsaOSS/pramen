@@ -31,20 +31,14 @@ class OnDemandTablesSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
   "Transient metastore tables" should {
     val expected =
-      """{"id":"1","name":"John"}
-        |{"id":"2","name":"Jack"}
-        |{"id":"3","name":"Jill"}
-        |{"id":"4","name":"Mary"}
-        |{"id":"5","name":"Jane"}
-        |{"id":"6","name":"Kate"}
+      """{"a":"D","b":4}
+        |{"a":"E","b":5}
+        |{"a":"F","b":6}
         |""".stripMargin
 
     "work end to end with a no_cache policy" in {
-      withTempDirectory("integration_file_based") { tempDir =>
+      withTempDirectory("transient_nocache") { tempDir =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
-
-        fsUtils.writeFile(new Path(tempDir, "landing_file1.csv"), "id,name\n1,John\n2,Jack\n3,Jill\n")
-        fsUtils.writeFile(new Path(tempDir, "landing_file2.csv"), "id,name\n4,Mary\n5,Jane\n6,Kate\n")
 
         val conf = getConfig(tempDir)
 
@@ -52,24 +46,35 @@ class OnDemandTablesSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
         assert(exitCode == 0)
 
-        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=${infoDate.minusDays(1)}")
-        val table3Path = new Path(new Path(tempDir, "table3"), s"pramen_info_date=${infoDate.minusDays(1)}")
+        val table2Path = new Path(tempDir, "table2")
+        val table3Path = new Path(tempDir, "table3")
+        val table4Path = new Path(tempDir, "table4")
+        val table5Path = new Path(new Path(tempDir, "table5"), s"pramen_info_date=${infoDate.minusDays(1)}")
+        val table6Path = new Path(new Path(tempDir, "table6"), s"pramen_info_date=$infoDate")
+        val table7Path = new Path(new Path(tempDir, "table7"), s"pramen_info_date=$infoDate")
 
         assert(!fsUtils.exists(table2Path))
+        assert(!fsUtils.exists(table3Path))
+        assert(!fsUtils.exists(table4Path))
 
-        val df = spark.read.parquet(table3Path.toString)
-        val actual = df.orderBy("id").toJSON.collect().mkString("\n")
+        val df5 = spark.read.parquet(table5Path.toString)
+        val actual5 = df5.orderBy("a").toJSON.collect().mkString("\n")
 
-        compareText(actual, expected)
+        val df6 = spark.read.parquet(table6Path.toString)
+        val actual6 = df6.orderBy("a").toJSON.collect().mkString("\n")
+
+        val df7 = spark.read.parquet(table7Path.toString)
+        val actual7 = df7.orderBy("a").toJSON.collect().mkString("\n")
+
+        compareText(actual5, expected)
+        compareText(actual6, expected)
+        compareText(actual7, expected)
       }
     }
 
     "work end to end with a persist policy" in {
-      withTempDirectory("integration_file_based") { tempDir =>
+      withTempDirectory("transient_persist") { tempDir =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
-
-        fsUtils.writeFile(new Path(tempDir, "landing_file1.csv"), "id,name\n1,John\n2,Jack\n3,Jill\n")
-        fsUtils.writeFile(new Path(tempDir, "landing_file2.csv"), "id,name\n4,Mary\n5,Jane\n6,Kate\n")
 
         val conf = getConfig(tempDir, cachePolicy = "persist")
 
@@ -77,15 +82,29 @@ class OnDemandTablesSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
         assert(exitCode == 0)
 
-        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=${infoDate.minusDays(1)}")
-        val table3Path = new Path(new Path(tempDir, "table3"), s"pramen_info_date=${infoDate.minusDays(1)}")
+        val table2Path = new Path(tempDir, "table2")
+        val table3Path = new Path(tempDir, "table3")
+        val table4Path = new Path(tempDir, "table4")
+        val table5Path = new Path(new Path(tempDir, "table5"), s"pramen_info_date=${infoDate.minusDays(1)}")
+        val table6Path = new Path(new Path(tempDir, "table6"), s"pramen_info_date=$infoDate")
+        val table7Path = new Path(new Path(tempDir, "table7"), s"pramen_info_date=$infoDate")
 
         assert(!fsUtils.exists(table2Path))
+        assert(!fsUtils.exists(table3Path))
+        assert(!fsUtils.exists(table4Path))
 
-        val df = spark.read.parquet(table3Path.toString)
-        val actual = df.orderBy("id").toJSON.collect().mkString("\n")
+        val df5 = spark.read.parquet(table5Path.toString)
+        val actual5 = df5.orderBy("a").toJSON.collect().mkString("\n")
 
-        compareText(actual, expected)
+        val df6 = spark.read.parquet(table6Path.toString)
+        val actual6 = df6.orderBy("a").toJSON.collect().mkString("\n")
+
+        val df7 = spark.read.parquet(table7Path.toString)
+        val actual7 = df7.orderBy("a").toJSON.collect().mkString("\n")
+
+        compareText(actual5, expected)
+        compareText(actual6, expected)
+        compareText(actual7, expected)
       }
     }
   }
