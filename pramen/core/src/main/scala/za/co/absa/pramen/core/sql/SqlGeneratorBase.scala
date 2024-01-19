@@ -52,7 +52,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
   }
 
   /** This validates and escapes an identifier (table or column name) if needed. Escaping does not happen always to maintain backwards compatibility. */
-  final def escape(identifier: String): String = {
+  override final def escape(identifier: String): String = {
     if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
       quote(identifier)
     } else {
