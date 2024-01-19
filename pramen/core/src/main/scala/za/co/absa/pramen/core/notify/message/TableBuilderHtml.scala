@@ -88,7 +88,8 @@ class TableBuilderHtml extends TableBuilder {
   private def renderStyleClass(style: Style): String = {
     style match {
       case Style.Normal    => ""
-      case Style.Bold      => """ class="tdgreen""""
+      case Style.Bold      => """ style="font-style: bold;""""
+      case Style.Italic    => """ style="font-style: italic;""""
       case Style.Success   => """ class="tdgreen""""
       case Style.Warning   => """ class="tdwarn""""
       case Style.Error     => """ class="tdred""""

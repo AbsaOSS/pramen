@@ -79,10 +79,10 @@ class TableBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
           |<tbody><tr><td class="tdwarn">1</td>
           |<td class="tdgreen" style="text-align:center">2</td>
           |<td style="text-align:right">3</td></tr>
-          |<tr class="alt"><td class="tdwarn">444</td>
+          |<tr class="alt"><td style="font-style: italic;">444</td>
           |<td class="tdgreen" style="text-align:center">555</td>
           |<td style="text-align:right">666</td></tr>
-          |<tr><td class="tdgreen">7</td>
+          |<tr><td style="font-style: bold;">7</td>
           |<td class="tdwarn" style="text-align:center">8</td>
           |<td class="tderr" style="text-align:right">9</td></tr></tbody>
           |</table></div>
@@ -92,7 +92,7 @@ class TableBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
 
       val actual = builder.withHeaders(Seq(TableHeader(TextElement("a", Style.Bold), Align.Left), TableHeader(TextElement("b", Style.Warning), Align.Center), TableHeader(TextElement("c", Style.Exception), Align.Right)))
         .withRow(Seq(TextElement("1", Style.Warning), TextElement("2", Style.Success), TextElement("3", Style.Normal)))
-        .withRow(Seq(TextElement("444", Style.Warning), TextElement("555", Style.Success), TextElement("666", Style.Normal)))
+        .withRow(Seq(TextElement("444", Style.Italic), TextElement("555", Style.Success), TextElement("666", Style.Normal)))
         .withRow(Seq(TextElement("7", Style.Bold), TextElement("8", Style.Warning), TextElement("9", Style.Exception)))
         .renderTable
 
