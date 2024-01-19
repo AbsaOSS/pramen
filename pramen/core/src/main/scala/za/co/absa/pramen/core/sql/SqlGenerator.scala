@@ -39,7 +39,12 @@ trait SqlGenerator {
   def getDateLiteral(date: LocalDate): String
 
   /**
-    * This quotes an identifier name with characters specific to SQL dialects.
+    * Quotes an identifier, if needed according to the generator configuration.
+    */
+  def escape(identifier: String): String
+
+  /**
+    * Always quotes an identifier name with characters specific to SQL dialects.
     * If the identifier is already wrapped, it won't be double wrapped.
     * It supports partially quoted identifiers. E.g. '"my_catalog".my table' will be quoted as '"my_catalog"."my table"'.
     */
