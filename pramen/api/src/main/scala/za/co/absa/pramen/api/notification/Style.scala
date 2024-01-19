@@ -23,6 +23,8 @@ object Style {
 
   case object Bold extends Style
 
+  case object Italic extends Style
+
   case object Success extends Style
 
   case object Warning extends Style

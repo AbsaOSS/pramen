@@ -354,8 +354,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     tasks.foreach(task => {
       val row = new ListBuffer[TextElement]
 
-      row.append(TextElement(task.job.name))
-      row.append(TextElement(task.job.outputTable.name))
+      row.append(TextElement(task.job.name, getTransientTextStyle(task)))
+      row.append(TextElement(task.job.outputTable.name, getTransientTextStyle(task)))
 
       if (haveHiveColumn) {
         val hiveTable = task.runStatus match {
@@ -633,6 +633,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case _: NotificationEntry.AttachedFile       => // Skipping... This is going to be added elsewhere.
       case c                                       => log.error(s"Notification entry ${c.getClass} is not supported. Maybe this is related to Pramen runtime version mismatch.")
     }
+  }
+
+  private[core] def getTransientTextStyle(task: TaskResult): Style = {
+    if (task.isTransient)
+      Style.Italic
+    else
+      Style.Normal
   }
 
   def renderSignature(builder: MessageBuilder): MessageBuilder = {

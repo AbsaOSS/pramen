@@ -94,6 +94,7 @@ class MessageBuilderHtml extends MessageBuilder {
     val (styleOp, styleCl) = te.style match {
       case Style.Normal => ("", "")
       case Style.Bold => ("<b>", "</b>")
+      case Style.Italic => ("<i>", "</i>")
       case Style.Success => ("""<span class="tdgreen">""", "</span>")
       case Style.Warning   => ("""<span class="tdwarn">""", "</span>")
       case Style.Exception => ("""<span class="tdred">""", "</span>")
