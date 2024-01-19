@@ -21,7 +21,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
-import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransientEager
+import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
 import za.co.absa.pramen.core.runner.task.RunStatus.NotRan
@@ -112,8 +112,9 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         runCustomShutdownHook()
         sendNotificationEmail()
         Try {
-          // Clean up transient metastore tables if any
-          MetastorePersistenceTransientEager.reset()
+          // Clean up transient metastore state if any
+          TransientTableManager.reset()
+          TransientJobManager.reset()
         }.recover {
           case NonFatal(ex) => log.error("Unable to clean up transient metastore tables.", ex)
         }

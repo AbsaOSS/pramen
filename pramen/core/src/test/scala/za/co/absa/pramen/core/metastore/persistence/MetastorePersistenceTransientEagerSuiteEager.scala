@@ -22,12 +22,11 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
-import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransientEager
+import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistenceTransientEager, TransientTableManager}
 
 import java.time.LocalDate
 
 class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase with TempDirFixture {
-
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
@@ -48,10 +47,6 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
     super.afterAll()
   }
 
-  "reset should do nothing if spark session is not available" in {
-    MetastorePersistenceTransientEager.reset()
-  }
-
   "loadTable" should {
     "return data for a date when it is available" in {
       val persistor = new MetastorePersistenceTransientEager(None, "table1", CachePolicy.NoCache)
@@ -62,7 +57,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       assert(df.count() == 3)
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
 
     "return an empty dataframe if data is not available but schema is available" in {
@@ -74,7 +69,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       assert(df.isEmpty)
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
 
     "throw an exception if the data and schema are not available" in {
@@ -86,7 +81,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       assert(ex.getMessage.contains("No data for transient table 'table2' for '2022-02-19'"))
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
 
     "throw an exception on range queries" in {
@@ -100,7 +95,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       assert(ex.getMessage.contains("Metastore 'transient' format does not support ranged queries"))
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
 
     "throw an exception if info date is not provided" in {
@@ -112,7 +107,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       assert(ex.getMessage.contains("Metastore 'transient' format requires info date for querying its contents"))
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
   }
 
@@ -125,7 +120,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
       assert(saveResult.recordCount == 10)
       assert(saveResult.dataSizeBytes.isEmpty)
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
 
     "work with cached data frames" in {
@@ -136,7 +131,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
       assert(saveResult.recordCount == 3)
       assert(saveResult.dataSizeBytes.isEmpty)
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
 
     "work with persisted data frames" in {
@@ -148,7 +143,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
       assert(saveResult.dataSizeBytes.isDefined)
       assert(saveResult.dataSizeBytes.exists(_ > 100))
 
-      MetastorePersistenceTransientEager.reset()
+      TransientTableManager.reset()
     }
   }
 
@@ -178,113 +173,6 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       assertThrows[UnsupportedOperationException] {
         persistor.repairHiveTable(null, null, null)
-      }
-    }
-  }
-
-  "addRawDataFrame" should {
-    "return dataframe only" in {
-      val (df, size) = MetastorePersistenceTransientEager.addRawDataFrame("table_not_cached2", infoDate, exampleDf)
-
-      assert(df.schema.treeString == exampleDf.schema.treeString)
-      assert(df.count() == 3)
-      assert(size.isEmpty)
-
-      MetastorePersistenceTransientEager.reset()
-    }
-  }
-
-  "cachedDataframes" should {
-    "return dataframe only" in {
-      val (df, size) = MetastorePersistenceTransientEager.addCachedDataframe("table_cached2", infoDate, exampleDf)
-
-      assert(df.schema.treeString == exampleDf.schema.treeString)
-      assert(df.count() == 3)
-      assert(size.isEmpty)
-
-      MetastorePersistenceTransientEager.reset()
-    }
-  }
-
-  "addPersistedLocation" should {
-    "return dataframe and size" in {
-      val (df, size) = MetastorePersistenceTransientEager.addPersistedDataFrame("table_persist2", infoDate, exampleDf, tempDir)
-
-      assert(df.count() == 3)
-      assert(size.isDefined)
-      assert(size.exists(_ > 100))
-
-      MetastorePersistenceTransientEager.reset()
-    }
-  }
-
-  "getDataForTheDate" should {
-    "work for non-cached dataframes" in {
-      MetastorePersistenceTransientEager.addRawDataFrame("table_not_cached3", infoDate, exampleDf)
-
-      assert(!MetastorePersistenceTransientEager.getDataForTheDate("table_not_cached3", infoDate).isEmpty)
-
-      MetastorePersistenceTransientEager.reset()
-    }
-
-    "work for cached dataframes" in {
-      MetastorePersistenceTransientEager.addCachedDataframe("table_cached3", infoDate, exampleDf)
-
-      assert(!MetastorePersistenceTransientEager.getDataForTheDate("table_cached3", infoDate).isEmpty)
-
-      MetastorePersistenceTransientEager.reset()
-    }
-
-    "work for persisted dataframes" in {
-      MetastorePersistenceTransientEager.addPersistedDataFrame("table_persist3", infoDate, exampleDf, tempDir)
-
-      assert(!MetastorePersistenceTransientEager.getDataForTheDate("table_persist3", infoDate).isEmpty)
-
-      MetastorePersistenceTransientEager.reset()
-    }
-
-    "return an empty dataframe if data not found but schema found" in {
-      MetastorePersistenceTransientEager.addCachedDataframe("table_cache", infoDate, exampleDf)
-
-      val df = MetastorePersistenceTransientEager.getDataForTheDate("table_cache", infoDate.plusDays(1))
-
-      assert(df.isEmpty)
-      assert(df.schema.sameElements(exampleDf.schema))
-
-      MetastorePersistenceTransientEager.reset()
-    }
-
-    "throw an exception if data nor schema not found" in {
-      assertThrows[IllegalStateException] {
-        MetastorePersistenceTransientEager.getDataForTheDate("table_cache", infoDate.plusDays(1))
-      }
-
-      MetastorePersistenceTransientEager.reset()
-    }
-  }
-
-  "cleanup" should {
-    "remove all types of transient tables from the internal state" in {
-      MetastorePersistenceTransientEager.addRawDataFrame("table_not_cached4", infoDate, exampleDf)
-      MetastorePersistenceTransientEager.addCachedDataframe("table_cached4", infoDate, exampleDf)
-      MetastorePersistenceTransientEager.addPersistedDataFrame("table_persist4", infoDate, exampleDf, tempDir)
-
-      assert(!MetastorePersistenceTransientEager.getDataForTheDate("table_not_cached4", infoDate).isEmpty)
-      assert(!MetastorePersistenceTransientEager.getDataForTheDate("table_cached4", infoDate).isEmpty)
-      assert(!MetastorePersistenceTransientEager.getDataForTheDate("table_persist4", infoDate).isEmpty)
-
-      MetastorePersistenceTransientEager.reset()
-
-      assertThrows[IllegalStateException] {
-        MetastorePersistenceTransientEager.getDataForTheDate("table_not_cached4", infoDate)
-      }
-
-      assertThrows[IllegalStateException] {
-        MetastorePersistenceTransientEager.getDataForTheDate("table_cached4", infoDate)
-      }
-
-      assertThrows[IllegalStateException] {
-        MetastorePersistenceTransientEager.getDataForTheDate("table_persist4", infoDate)
       }
     }
   }

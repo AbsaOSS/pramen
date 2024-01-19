@@ -56,9 +56,9 @@ object MetastorePersistence {
       case DataFormat.Raw(path)                          =>
         new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat)
       case DataFormat.TransientEager(cachePolicy)             =>
-        new MetastorePersistenceTransientEager(MetastorePersistenceTransientEager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
+        new MetastorePersistenceTransientEager(TransientTableManager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Transient(cachePolicy) =>
-        new MetastorePersistenceTransient(MetastorePersistenceTransientEager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
+        new MetastorePersistenceTransient(TransientTableManager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Null() =>
         throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
     }
