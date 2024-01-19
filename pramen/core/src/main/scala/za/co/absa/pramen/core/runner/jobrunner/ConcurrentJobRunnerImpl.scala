@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
-import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceOnDemand
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.core.runner.splitter.ScheduleParams
@@ -108,7 +108,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runJob(job: Job): Boolean = {
-    if (job.outputTable.format.isInstanceOf[DataFormat.OnDemand]) {
+    if (job.outputTable.format.isInstanceOf[DataFormat.Transient]) {
       runLazyJob(job)
     } else {
       runEagerJob(job)
@@ -147,7 +147,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runLazyJob(job: Job): Boolean = {
-    MetastorePersistenceOnDemand.addOnDemandJob(job)
+    MetastorePersistenceTransient.addOnDemandJob(job)
     true
   }
 

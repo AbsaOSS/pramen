@@ -84,17 +84,45 @@ class DataFormatSuite extends AnyWordSpec {
     }
 
     "use 'transient' when specified explicitly" in {
+      val conf = ConfigFactory.parseString("format = transient_eager")
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "transient_eager")
+      assert(format.isTransient)
+      assert(!format.isLazy)
+      assert(format.isInstanceOf[TransientEager])
+      assert(format.asInstanceOf[TransientEager].cachePolicy == CachePolicy.NoCache)
+    }
+
+    "support cache policies for 'transient' format" in {
+      val conf = ConfigFactory.parseString(
+        """format = transient_eager
+          |cache.policy = cache
+          |""".stripMargin)
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "transient_eager")
+      assert(format.isTransient)
+      assert(!format.isLazy)
+      assert(format.isInstanceOf[TransientEager])
+      assert(format.asInstanceOf[TransientEager].cachePolicy == CachePolicy.Cache)
+    }
+
+    "use 'on_demand' when specified explicitly" in {
       val conf = ConfigFactory.parseString("format = transient")
 
       val format = DataFormatParser.fromConfig(conf, conf)
 
       assert(format.name == "transient")
       assert(format.isTransient)
+      assert(format.isLazy)
       assert(format.isInstanceOf[Transient])
       assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.NoCache)
     }
 
-    "support cache policies for 'transient' format" in {
+    "support cache policies for 'on_demand' format" in {
       val conf = ConfigFactory.parseString(
         """format = transient
           |cache.policy = cache
@@ -106,31 +134,6 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.isTransient)
       assert(format.isInstanceOf[Transient])
       assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.Cache)
-    }
-
-    "use 'on_demand' when specified explicitly" in {
-      val conf = ConfigFactory.parseString("format = on_demand")
-
-      val format = DataFormatParser.fromConfig(conf, conf)
-
-      assert(format.name == "on_demand")
-      assert(format.isTransient)
-      assert(format.isInstanceOf[OnDemand])
-      assert(format.asInstanceOf[OnDemand].cachePolicy == CachePolicy.NoCache)
-    }
-
-    "support cache policies for 'on_demand' format" in {
-      val conf = ConfigFactory.parseString(
-        """format = on_demand
-          |cache.policy = cache
-          |""".stripMargin)
-
-      val format = DataFormatParser.fromConfig(conf, conf)
-
-      assert(format.name == "on_demand")
-      assert(format.isTransient)
-      assert(format.isInstanceOf[OnDemand])
-      assert(format.asInstanceOf[OnDemand].cachePolicy == CachePolicy.Cache)
     }
 
     "use default records per partition" in {

@@ -24,7 +24,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{CachePolicy, DataFormat, Query}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet, MetastorePersistenceTransient}
+import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet, MetastorePersistenceTransientEager}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.utils.{LocalFsUtils, SparkUtils}
 
@@ -511,14 +511,14 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       )
 
       val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
-        format = DataFormat.Transient(CachePolicy.Cache),
+        format = DataFormat.TransientEager(CachePolicy.Cache),
         infoDateColumn = infoDateColumn,
         infoDateFormat = infoDateFormat
       )
 
       val persistence = MetastorePersistence.fromMetaTable(mt, conf)
 
-      assert(persistence.isInstanceOf[MetastorePersistenceTransient])
+      assert(persistence.isInstanceOf[MetastorePersistenceTransientEager])
     }
   }
 

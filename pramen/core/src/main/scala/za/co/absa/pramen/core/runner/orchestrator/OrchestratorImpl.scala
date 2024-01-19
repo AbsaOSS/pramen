@@ -92,7 +92,7 @@ class OrchestratorImpl extends Orchestrator {
           log.info(s"There is another job outputting to ${finishedJob.outputTable.name}. Waiting for it to finish before marking the table as finished.")
         }
 
-        val isOnDemand = finishedJob.outputTable.format.isInstanceOf[DataFormat.OnDemand]
+        val isOnDemand = finishedJob.outputTable.format.isInstanceOf[DataFormat.Transient]
 
         if (!hasAnotherUnfinishedJob || !isSucceeded) {
           updateDependencyResolver(dependencyResolver, finishedJob, isSucceeded, isOnDemand)
