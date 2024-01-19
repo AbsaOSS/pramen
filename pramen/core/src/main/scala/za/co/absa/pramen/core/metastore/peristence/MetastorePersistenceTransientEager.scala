@@ -16,26 +16,20 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import com.typesafe.config.Config
-import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
-import org.slf4j.LoggerFactory
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
-import za.co.absa.pramen.core.utils.FsUtils
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
 import java.time.LocalDate
-import scala.collection.mutable
 
 class MetastorePersistenceTransientEager(tempPathOpt: Option[String],
                                          tableName: String,
                                          cachePolicy: CachePolicy
                                    )(implicit spark: SparkSession) extends MetastorePersistence {
-  import MetastorePersistenceTransientEager._
+  import TransientTableManager._
 
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     (infoDateFrom, infoDateTo) match {
@@ -85,129 +79,5 @@ class MetastorePersistenceTransientEager(tempPathOpt: Option[String],
                                queryExecutor: QueryExecutor,
                                hiveConfig: HiveConfig): Unit = {
     throw new UnsupportedOperationException("Transient format does not support Hive tables.")
-  }
-}
-
-object MetastorePersistenceTransientEager {
-  private val log = LoggerFactory.getLogger(this.getClass)
-
-  private val rawDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
-  private val cachedDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
-  private val persistedLocations = new mutable.HashMap[MetastorePartition, String]()
-  private val schemas = new mutable.HashMap[String, StructType]()
-  private var spark: SparkSession = _
-
-  private[core] def addRawDataFrame(tableName: String, infoDate: LocalDate, df: DataFrame): (DataFrame, Option[Long]) = synchronized {
-    spark = df.sparkSession
-    val partition = getMetastorePartition(tableName, infoDate)
-
-    rawDataframes += partition -> df
-    schemas += partition.tableName -> df.schema
-
-    (df, None)
-  }
-
-  private[core] def addCachedDataframe(tableName: String, infoDate: LocalDate, df: DataFrame): (DataFrame, Option[Long]) = {
-    val partition = getMetastorePartition(tableName, infoDate)
-
-    val cachedDf = df.cache()
-
-    this.synchronized {
-      spark = df.sparkSession
-      cachedDataframes += partition -> cachedDf
-      schemas += partition.tableName -> df.schema
-    }
-
-    (cachedDf, None)
-  }
-
-  private[core] def addPersistedDataFrame(tableName: String, infoDate: LocalDate, df: DataFrame, tempDir: String): (DataFrame,  Option[Long]) = {
-    val partition = getMetastorePartition(tableName, infoDate)
-    this.synchronized {
-      spark = df.sparkSession
-    }
-
-    val partitionFolder = s"temp_partition_date=$infoDate"
-    val outputPath = new Path(tempDir, partitionFolder).toString
-
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPath)
-
-    fsUtils.createDirectoryRecursive(new Path(outputPath))
-
-    df.write.mode(SaveMode.Overwrite).parquet(outputPath)
-
-    val sizeBytes = fsUtils.getDirectorySize(outputPath)
-
-    this.synchronized {
-      persistedLocations += partition -> outputPath
-      schemas += partition.tableName -> df.schema
-    }
-
-    (spark.read.parquet(outputPath), Option(sizeBytes))
-  }
-
-  private[core] def hasDataForTheDate(tableName: String, infoDate: LocalDate): Boolean = synchronized {
-    val partition = getMetastorePartition(tableName, infoDate)
-
-    MetastorePersistenceTransientEager.rawDataframes.contains(partition) ||
-      MetastorePersistenceTransientEager.cachedDataframes.contains(partition) ||
-      MetastorePersistenceTransientEager.persistedLocations.contains(partition)
-  }
-
-  private[core] def getDataForTheDate(tableName: String, infoDate: LocalDate)(implicit spark: SparkSession): DataFrame = synchronized {
-    val partition = getMetastorePartition(tableName, infoDate)
-
-    if (MetastorePersistenceTransientEager.rawDataframes.contains(partition)) {
-      log.info(s"Using non-cached dataframe for '$tableName' for '$infoDate'...")
-      MetastorePersistenceTransientEager.rawDataframes(partition)
-    } else if (MetastorePersistenceTransientEager.cachedDataframes.contains(partition)) {
-      log.info(s"Using cached dataframe for '$tableName' for '$infoDate'...")
-      MetastorePersistenceTransientEager.cachedDataframes(partition)
-    } else if (MetastorePersistenceTransientEager.persistedLocations.contains(partition)) {
-      val path = MetastorePersistenceTransientEager.persistedLocations(partition)
-      log.info(s"Reading persisted transient table from $path...")
-      spark.read.parquet(path)
-    } else {
-      if (schemas.contains(tableName.toLowerCase)) {
-        val schema = schemas(tableName.toLowerCase)
-        val emptyRDD = spark.sparkContext.emptyRDD[Row]
-        spark.createDataFrame(emptyRDD, schema)
-      } else {
-        throw new IllegalStateException(s"No data for transient table '$tableName' for '$infoDate'")
-      }
-    }
-  }
-
-  private[core] def reset(): Unit = synchronized {
-    rawDataframes.clear()
-    cachedDataframes.foreach { case (_, df) => df.unpersist() }
-    cachedDataframes.clear()
-    schemas.clear()
-
-    if (spark != null) {
-      persistedLocations.foreach { case (_, path) =>
-        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-
-        log.info(s"Deleting $path...")
-        fsUtils.deleteDirectoryRecursively(new Path(path))
-      }
-      persistedLocations.clear()
-    }
-  }
-
-  private[core] def getMetastorePartition(tableName: String, infoDate: LocalDate): MetastorePartition = {
-    MetastorePartition(tableName.toLowerCase, infoDate.toString)
-  }
-
-  private[core] def getTempDirectory(cachePolicy: CachePolicy, conf: Config): Option[String] = {
-    if (cachePolicy == CachePolicy.Persist) {
-      if (conf.hasPath(TEMPORARY_DIRECTORY_KEY) && conf.getString(TEMPORARY_DIRECTORY_KEY).nonEmpty) {
-        Option(conf.getString(TEMPORARY_DIRECTORY_KEY))
-      } else {
-        throw new IllegalArgumentException(s"Transient metastore tables with persist cache policy require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
-      }
-    } else {
-      None
-    }
   }
 }

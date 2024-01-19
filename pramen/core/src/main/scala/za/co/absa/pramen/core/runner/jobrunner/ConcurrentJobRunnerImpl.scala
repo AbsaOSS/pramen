@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
-import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceTransient
+import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.core.runner.splitter.ScheduleParams
@@ -147,7 +147,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runLazyJob(job: Job): Boolean = {
-    MetastorePersistenceTransient.addOnDemandJob(job)
+    TransientJobManager.addOnDemandJob(job)
     true
   }
 
