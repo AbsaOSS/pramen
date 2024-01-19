@@ -86,7 +86,7 @@ testpaths = "tests/"
 
 [tool.poetry]
 name = "pramen-py"
-version = "1.7.5"
+version = "1.8.0"
 description = "Pramen transformations written in python"
 authors = [
     "Artem Zhukov <iam@zhukovgreen.pro>",
