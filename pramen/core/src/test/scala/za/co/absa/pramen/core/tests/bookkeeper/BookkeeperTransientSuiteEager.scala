@@ -21,7 +21,7 @@ import za.co.absa.pramen.core.bookkeeper.{BookkeeperBase, BookkeeperNull}
 
 import java.time.LocalDate
 
-class BookkeeperTransientSuite extends AnyWordSpec {
+class BookkeeperTransientSuiteEager extends AnyWordSpec {
   private val infoDate1 = LocalDate.of(2020, 8, 11)
   private val infoDate2 = LocalDate.of(2020, 8, 12)
   private val infoDate3 = LocalDate.of(2020, 8, 13)

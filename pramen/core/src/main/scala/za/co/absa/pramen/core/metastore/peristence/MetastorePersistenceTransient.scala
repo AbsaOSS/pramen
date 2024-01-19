@@ -16,183 +16,210 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
-import za.co.absa.pramen.core.utils.FsUtils
+import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils
+import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunner}
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
+import za.co.absa.pramen.core.utils.{Emoji, TimeUtils}
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 import scala.collection.mutable
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future, Promise}
+import scala.util.{Failure, Success}
 
-class MetastorePersistenceTransient(tempPath: String,
+class MetastorePersistenceTransient(tempPath: Option[String],
                                     tableName: String,
                                     cachePolicy: CachePolicy
-                                   )(implicit spark: SparkSession) extends MetastorePersistence {
+                                  )(implicit spark: SparkSession) extends MetastorePersistence {
+  val transientPersistence = new MetastorePersistenceTransientEager(tempPath, tableName, cachePolicy)
+
   import MetastorePersistenceTransient._
 
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     (infoDateFrom, infoDateTo) match {
       case (Some(from), Some(to)) if from == to =>
-        getDataForTheDate(tableName, from)
-      case (Some(_), Some(_)) =>
-        throw new IllegalArgumentException("Metastore 'transient' format does not support ranged queries.")
+        runOnDemandTask(tableName, from)
+      case (Some(from), Some(to)) =>
+        runOnDemandTasks(tableName, selectInfoDatesToExecute(tableName, from, to))
+      case (None, Some(until)) =>
+        runOnDemandTask(tableName, selectLatestOnDemandSnapshot(tableName, until))
       case _ =>
-        throw new IllegalArgumentException("Metastore 'transient' format requires info date for querying its contents.")
+        throw new IllegalArgumentException("Metastore 'on_demand' format requires info date for querying its contents.")
     }
   }
 
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
-    val (dfOut, sizeBytesOpt) = cachePolicy match {
-      case CachePolicy.NoCache =>
-        addRawDataFrame(tableName, infoDate, df)
-      case CachePolicy.Cache =>
-        addCachedDataframe(tableName, infoDate, df)
-      case CachePolicy.Persist =>
-        addPersistedDataFrame(tableName, infoDate, df, tempPath)
-    }
-
-    val recordCount = numberOfRecordsEstimate match {
-      case Some(n) => n
-      case None => dfOut.count()
-    }
-
-    MetaTableStats(
-      recordCount,
-      sizeBytesOpt
-    )
+    transientPersistence.saveTable(infoDate, df, numberOfRecordsEstimate)
   }
 
   override def getStats(infoDate: LocalDate): MetaTableStats = {
-    throw new UnsupportedOperationException("Transient format does not support getting record count and size statistics.")
+    throw new UnsupportedOperationException("On demand format does not support getting record count and size statistics.")
   }
 
-  override def createOrUpdateHiveTable(infoDate: LocalDate,
-                                       hiveTableName: String,
-                                       queryExecutor: QueryExecutor,
-                                       hiveConfig: HiveConfig): Unit = {
-    throw new UnsupportedOperationException("Transient format does not support Hive tables.")
+  override def createOrUpdateHiveTable(infoDate: LocalDate, hiveTableName: String, queryExecutor: QueryExecutor, hiveConfig: HiveConfig): Unit = {
+    throw new UnsupportedOperationException("On demand format does not support Hive tables.")
   }
 
-  override def repairHiveTable(hiveTableName: String,
-                               queryExecutor: QueryExecutor,
-                               hiveConfig: HiveConfig): Unit = {
-    throw new UnsupportedOperationException("Transient format does not support Hive tables.")
+  override def repairHiveTable(hiveTableName: String, queryExecutor: QueryExecutor, hiveConfig: HiveConfig): Unit = {
+    throw new UnsupportedOperationException("On demand format does not support Hive tables.")
   }
 }
 
 object MetastorePersistenceTransient {
+  val WARN_UNIONS = 5
+  val MAXIMUM_UNIONS = 50
+
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val onDemandJobs = new mutable.HashMap[String, Job]()
+  private val runningJobs = new mutable.HashMap[MetastorePartition, Future[DataFrame]]()
+  private var taskRunnerOpt: Option[TaskRunner] = None
 
-  private val rawDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
-  private val cachedDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
-  private val persistedLocations = new mutable.HashMap[MetastorePartition, String]()
-  private val schemas = new mutable.HashMap[String, StructType]()
-  private var spark: SparkSession = _
-
-  private[core] def addRawDataFrame(tableName: String, infoDate: LocalDate, df: DataFrame): (DataFrame, Option[Long]) = synchronized {
-    spark = df.sparkSession
-    val partition = getMetastorePartition(tableName, infoDate)
-
-    rawDataframes += partition -> df
-    schemas += partition.tableName -> df.schema
-
-    (df, None)
+  private[core] def setTaskRunner(taskRunner_ : TaskRunner): Unit = synchronized {
+    taskRunnerOpt = Option(taskRunner_)
   }
 
-  private[core] def addCachedDataframe(tableName: String, infoDate: LocalDate, df: DataFrame): (DataFrame, Option[Long]) = {
-    val partition = getMetastorePartition(tableName, infoDate)
-
-    val cachedDf = df.cache()
-
-    this.synchronized {
-      spark = df.sparkSession
-      cachedDataframes += partition -> cachedDf
-      schemas += partition.tableName -> df.schema
-    }
-
-    (cachedDf, None)
+  private[core] def addOnDemandJob(job: Job): Unit = synchronized {
+    onDemandJobs += job.outputTable.name.toLowerCase -> job
   }
 
-  private[core] def addPersistedDataFrame(tableName: String, infoDate: LocalDate, df: DataFrame, tempDir: String): (DataFrame,  Option[Long]) = {
-    val partition = getMetastorePartition(tableName, infoDate)
-    this.synchronized {
-      spark = df.sparkSession
-    }
+  private[core] def selectInfoDatesToExecute(outputTableName: String,
+                                             infoDateFrom: LocalDate,
+                                             infoDateTo: LocalDate): Seq[LocalDate] = {
+    val job = getJob(outputTableName)
 
-    val partitionFolder = s"temp_partition_date=$infoDate"
-    val outputPath = new Path(tempDir, partitionFolder).toString
-
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPath)
-
-    fsUtils.createDirectoryRecursive(new Path(outputPath))
-
-    df.write.mode(SaveMode.Overwrite).parquet(outputPath)
-
-    val sizeBytes = fsUtils.getDirectorySize(outputPath)
-
-    this.synchronized {
-      persistedLocations += partition -> outputPath
-      schemas += partition.tableName -> df.schema
-    }
-
-    (spark.read.parquet(outputPath), Option(sizeBytes))
+    ScheduleStrategyUtils.getActiveInfoDates(outputTableName,
+      infoDateFrom,
+      infoDateTo,
+      job.operation.outputInfoDateExpression,
+      job.operation.schedule)
   }
 
-  private[core] def hasDataForTheDate(tableName: String, infoDate: LocalDate): Boolean = synchronized {
-    val partition = getMetastorePartition(tableName, infoDate)
+  private[core] def selectLatestOnDemandSnapshot(outputTableName: String,
+                                                 infoDateUntil: LocalDate): LocalDate = {
+    val job = getJob(outputTableName)
 
-    MetastorePersistenceTransient.rawDataframes.contains(partition) ||
-      MetastorePersistenceTransient.cachedDataframes.contains(partition) ||
-      MetastorePersistenceTransient.persistedLocations.contains(partition)
+    ScheduleStrategyUtils.getLatestActiveInfoDate(outputTableName,
+      infoDateUntil,
+      job.operation.outputInfoDateExpression,
+      job.operation.schedule)
   }
 
-  private[core] def getDataForTheDate(tableName: String, infoDate: LocalDate)(implicit spark: SparkSession): DataFrame = synchronized {
-    val partition = getMetastorePartition(tableName, infoDate)
+  private[core] def runOnDemandTasks(outputTableName: String,
+                                     infoDates: Seq[LocalDate])
+                                    (implicit spark: SparkSession): DataFrame = {
+    val dfs = infoDates.map(infoDate => runOnDemandTask(outputTableName, infoDate))
 
-    if (MetastorePersistenceTransient.rawDataframes.contains(partition)) {
-      log.info(s"Using non-cached dataframe for '$tableName' for '$infoDate'...")
-      MetastorePersistenceTransient.rawDataframes(partition)
-    } else if (MetastorePersistenceTransient.cachedDataframes.contains(partition)) {
-      log.info(s"Using cached dataframe for '$tableName' for '$infoDate'...")
-      MetastorePersistenceTransient.cachedDataframes(partition)
-    } else if (MetastorePersistenceTransient.persistedLocations.contains(partition)) {
-      val path = MetastorePersistenceTransient.persistedLocations(partition)
-      log.info(s"Reading persisted transient table from $path...")
-      spark.read.parquet(path)
+    if (dfs.isEmpty) {
+      spark.emptyDataFrame
     } else {
-      if (schemas.contains(tableName.toLowerCase)) {
-        val schema = schemas(tableName.toLowerCase)
-        val emptyRDD = spark.sparkContext.emptyRDD[Row]
-        spark.createDataFrame(emptyRDD, schema)
-      } else {
-        throw new IllegalStateException(s"No data for transient table '$tableName' for '$infoDate'")
+      if (infoDates.length > WARN_UNIONS) {
+        log.warn(s"${Emoji.WARNING} Performance may be degraded for the task ($outputTableName for ${infoDates.mkString(", ")}) " +
+          s"since the number of dataframe unions is too big (${infoDates.length} > $WARN_UNIONS)")
       }
+      if (infoDates.length > MAXIMUM_UNIONS) {
+        throw new IllegalArgumentException(s"The number of subtasks requested for the on-demand job contains too many " +
+          s"dataframe unions (${infoDates.length} > $MAXIMUM_UNIONS)")
+      }
+
+      infoDates.tail.foldLeft(runOnDemandTask(outputTableName, infoDates.head))(
+        (acc, infoDate) => acc.union(runOnDemandTask(outputTableName, infoDate))
+      )
+    }
+  }
+
+  private[core] def runOnDemandTask(outputTableName: String,
+                                    infoDate: LocalDate)
+                                   (implicit sparkSession: SparkSession): DataFrame = {
+    val start = Instant.now()
+    val fut = getOnDemandTaskFuture(outputTableName, infoDate)
+
+    if (!fut.isCompleted) {
+      log.info(s"Waiting for the dependent task to finish ($outputTableName for $infoDate)...")
+    }
+    val df = Await.result(fut, Duration.Inf)
+    val finish = Instant.now()
+    log.info(s"The task has finished ($outputTableName for $infoDate). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
+
+    df
+  }
+
+  private[core] def getOnDemandTaskFuture(outputTableName: String,
+                                          infoDate: LocalDate)
+                                         (implicit sparkSession: SparkSession): Future[DataFrame] = {
+    val metastorePartition = MetastorePersistenceTransientEager.getMetastorePartition(outputTableName, infoDate)
+    val promise = Promise[DataFrame]()
+
+    val cachedDfFuture = synchronized {
+      if (MetastorePersistenceTransientEager.hasDataForTheDate(outputTableName, infoDate)) {
+        log.info(s"The task ($outputTableName for $infoDate) has the data already.")
+        Some(Future.successful(MetastorePersistenceTransientEager.getDataForTheDate(outputTableName, infoDate)))
+      } else {
+        if (runningJobs.contains(metastorePartition)) {
+          log.info(s"The task ($outputTableName for $infoDate) is already running. Waiting for results...")
+          Some(runningJobs(metastorePartition))
+        } else {
+          log.info(s"Running the on-demand task ($outputTableName for $infoDate)...")
+          runningJobs += metastorePartition -> promise.future
+          None
+        }
+      }
+    }
+
+    cachedDfFuture match {
+      case Some(fut) =>
+        fut
+      case None =>
+        val job = getJob(outputTableName)
+        val fut = promise.future
+        val resultTry = try {
+          Success(runJob(job, infoDate))
+        } catch {
+          case ex: Throwable => Failure(ex)
+        }
+        this.synchronized {
+          runningJobs -= metastorePartition
+          promise.complete(resultTry)
+        }
+        fut
+    }
+  }
+
+
+  private[core] def getJob(outputTableName: String): Job = {
+    val jobOpt = onDemandJobs.get(outputTableName.toLowerCase)
+
+    jobOpt match {
+      case Some(job) => job
+      case None => throw new IllegalArgumentException(s"On-demand job with output table name '$outputTableName' not found or haven't registered yet.")
     }
   }
 
   private[core] def reset(): Unit = synchronized {
-    rawDataframes.clear()
-    cachedDataframes.foreach { case (_, df) => df.unpersist() }
-    cachedDataframes.clear()
-    schemas.clear()
-
-    if (spark != null) {
-      persistedLocations.foreach { case (_, path) =>
-        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-
-        log.info(s"Deleting $path...")
-        fsUtils.deleteDirectoryRecursively(new Path(path))
-      }
-      persistedLocations.clear()
-    }
+    onDemandJobs.clear()
+    runningJobs.clear()
+    taskRunnerOpt = None
   }
 
-  private[core] def getMetastorePartition(tableName: String, infoDate: LocalDate): MetastorePartition = {
-    MetastorePartition(tableName.toLowerCase, infoDate.toString)
+  private[core] def runJob(job: Job,
+                           infoDate: LocalDate)
+                          (implicit sparkSession: SparkSession): DataFrame = {
+    taskRunnerOpt match {
+      case Some(taskRunner) =>
+        taskRunner.runOnDemand(job, infoDate) match {
+          case _: RunStatus.Succeeded         => MetastorePersistenceTransientEager.getDataForTheDate(job.outputTable.name, infoDate)
+          case s: RunStatus.Skipped           => throw new IllegalStateException(s"On-demand job has skipped. ${s.msg}")
+          case RunStatus.ValidationFailed(ex) => throw ex
+          case RunStatus.Failed(ex)           => throw ex
+          case runStatus                      => throw new IllegalStateException(runStatus.getReason().getOrElse("On-demand job failed to run."))
+        }
+      case None =>
+        throw new IllegalStateException("Task runner is not set.")
+    }
   }
 }

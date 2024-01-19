@@ -19,7 +19,6 @@ package za.co.absa.pramen.core.metastore.peristence
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.DataFormat
-import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
@@ -56,20 +55,10 @@ object MetastorePersistence {
         )
       case DataFormat.Raw(path)                          =>
         new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat)
-      case DataFormat.Transient(cachePolicy)             =>
-        if (conf.hasPath(TEMPORARY_DIRECTORY_KEY) && conf.getString(TEMPORARY_DIRECTORY_KEY).nonEmpty) {
-          val tempPath = conf.getString(TEMPORARY_DIRECTORY_KEY)
-          new MetastorePersistenceTransient(tempPath, metaTable.name, cachePolicy)
-        } else {
-          throw new IllegalArgumentException(s"Transient metastore tables require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
-        }
-      case DataFormat.OnDemand(cachePolicy) =>
-        if (conf.hasPath(TEMPORARY_DIRECTORY_KEY) && conf.getString(TEMPORARY_DIRECTORY_KEY).nonEmpty) {
-          val tempPath = conf.getString(TEMPORARY_DIRECTORY_KEY)
-          new MetastorePersistenceOnDemand(tempPath, metaTable.name, cachePolicy)
-        } else {
-          throw new IllegalArgumentException(s"On demand metastore tables require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
-        }
+      case DataFormat.TransientEager(cachePolicy)             =>
+        new MetastorePersistenceTransientEager(MetastorePersistenceTransientEager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
+      case DataFormat.Transient(cachePolicy) =>
+        new MetastorePersistenceTransient(MetastorePersistenceTransientEager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Null() =>
         throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
     }

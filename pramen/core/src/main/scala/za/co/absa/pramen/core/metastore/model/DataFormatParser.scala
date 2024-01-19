@@ -24,8 +24,8 @@ object DataFormatParser {
   val FORMAT_PARQUET = "parquet"
   val FORMAT_DELTA = "delta"
   val FORMAT_RAW = "raw"
+  val FORMAT_TRANSIENT_EAGER = "transient_eager"
   val FORMAT_TRANSIENT = "transient"
-  val FORMAT_ON_DEMAND = "on_demand"
 
   val FORMAT_KEY = "format"
   val PATH_KEY = "path"
@@ -56,12 +56,12 @@ object DataFormatParser {
         if (!conf.hasPath(PATH_KEY)) throw new IllegalArgumentException(s"Mandatory option for a metastore table having 'raw' format: $PATH_KEY")
         val path = Query.Path(conf.getString(PATH_KEY)).path
         DataFormat.Raw(path)
+      case FORMAT_TRANSIENT_EAGER =>
+        val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
+        DataFormat.TransientEager(cachePolicy)
       case FORMAT_TRANSIENT =>
         val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
         DataFormat.Transient(cachePolicy)
-      case FORMAT_ON_DEMAND =>
-        val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
-        DataFormat.OnDemand(cachePolicy)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
     }
   }
