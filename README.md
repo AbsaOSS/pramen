@@ -2302,6 +2302,8 @@ val spark = SparkSession.builder().getOrCreate()
 ```
 
 ### Transient tables in the metastore
+> This feature is experimental. Please, let know if there are any issues when using transient metastore table format.
+
 Transformers are useful as reusable components and for persisting intermediate reusable results. However, when splitting
 up the pipeline into small reusable components, it is not always desirable to persist intermediate results. This is
 solved by transient tables. You can define a table as transient in the metastore and it won't be persisted to a storage.
@@ -2325,7 +2327,9 @@ The cache policy can be:
 - `cache` - the table is cached using Spark cache
 - `persist` - the table is persisted in the temporary directory for the duration of the pipeline run.
 
-This feature is experimental. Please, let know if there are any issues when using transient metastore table format.
+Transient tables are calculated on-demand by executing the operation that outputs to that table. This occurs when a 
+transformer or a sink invokes metastore.getTable() or metastore.getLatest(). Pramen ensures that if the same data is 
+required by multiple transformers (for the same job for the same date), the job will run only once.
 
 ### File-based sourcing
 Let's consider a use case when your data lake has 'landing' area where data is loaded from external sources, in addition
