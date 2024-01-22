@@ -27,7 +27,7 @@ import java.time.{Instant, LocalDate}
 import scala.collection.mutable
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future, Promise}
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Try}
 
 object TransientJobManager {
   val WARN_UNIONS = 5
@@ -80,7 +80,7 @@ object TransientJobManager {
     if (dfs.isEmpty) {
       spark.emptyDataFrame
     } else {
-      if (infoDates.length > WARN_UNIONS) {
+      if (infoDates.length > WARN_UNIONS && infoDates.length <= MAXIMUM_UNIONS) {
         log.warn(s"${Emoji.WARNING} Performance may be degraded for the task ($outputTableName for ${infoDates.mkString(", ")}) " +
           s"since the number of dataframe unions is too big (${infoDates.length} > $WARN_UNIONS)")
       }
@@ -104,6 +104,7 @@ object TransientJobManager {
     if (!fut.isCompleted) {
       log.info(s"Waiting for the dependent task to finish ($outputTableName for $infoDate)...")
     }
+
     val df = Await.result(fut, Duration.Inf)
     val finish = Instant.now()
     log.info(s"The task has finished ($outputTableName for $infoDate). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
@@ -114,7 +115,7 @@ object TransientJobManager {
   private[core] def getOnDemandTaskFuture(outputTableName: String,
                                           infoDate: LocalDate)
                                          (implicit sparkSession: SparkSession): Future[DataFrame] = {
-    val metastorePartition = TransientTableManager.getMetastorePartition(outputTableName, infoDate)
+
     val promise = Promise[DataFrame]()
 
     val cachedDfFuture = synchronized {
@@ -122,14 +123,7 @@ object TransientJobManager {
         log.info(s"The task ($outputTableName for $infoDate) has the data already.")
         Some(Future.successful(TransientTableManager.getDataForTheDate(outputTableName, infoDate)))
       } else {
-        if (runningJobs.contains(metastorePartition)) {
-          log.info(s"The task ($outputTableName for $infoDate) is already running. Waiting for results...")
-          Some(runningJobs(metastorePartition))
-        } else {
-          log.info(s"Running the on-demand task ($outputTableName for $infoDate)...")
-          runningJobs += metastorePartition -> promise.future
-          None
-        }
+        testAndSetRunningJobFuture(outputTableName, infoDate, promise.future)
       }
     }
 
@@ -140,18 +134,53 @@ object TransientJobManager {
         val job = getJob(outputTableName)
         val fut = promise.future
         val resultTry = try {
-          Success(runJob(job, infoDate))
+          Try(runJob(job, infoDate))
         } catch {
           case ex: Throwable => Failure(ex)
         }
         this.synchronized {
-          runningJobs -= metastorePartition
+          removeRunningJobFuture(outputTableName, infoDate)
           promise.complete(resultTry)
         }
         fut
     }
   }
 
+  /**
+    * Checks if a transient job that outputs to the specified output table for the specified information date
+    * is already running. If yes, returns the future to keep track of the resulting dataframe.
+    * If the job is not running, add the future provided for the new job execution, and add it to the
+    * map of running jobs.
+    * The logic is designed to work in a multi-threaded environments, that's why the check and the shared state
+    * modifications are performed inside a single synchronized block.
+    *
+    * @param outputTableName The output table of the job.
+    * @param infoDate        The information date of the job execution.
+    * @param newJonFuture    The future to register as a running job if no other jobs are running.
+    * @return The future of the job that is already running in case there is one.
+    */
+  private[core] def testAndSetRunningJobFuture(outputTableName: String,
+                                               infoDate: LocalDate,
+                                               newJonFuture: Future[DataFrame]): Option[Future[DataFrame]] = synchronized {
+    val metastorePartition = TransientTableManager.getMetastorePartition(outputTableName, infoDate)
+
+    if (runningJobs.contains(metastorePartition)) {
+      log.info(s"The task ($outputTableName for $infoDate) is already running. Waiting for results...")
+      Some(runningJobs(metastorePartition))
+    } else {
+      log.info(s"Running the on-demand task ($outputTableName for $infoDate)...")
+      runningJobs += metastorePartition -> newJonFuture
+      None
+    }
+  }
+
+  private[core] def removeRunningJobFuture(outputTableName: String,
+                                           infoDate: LocalDate
+                                          ): Unit = synchronized {
+    val metastorePartition = TransientTableManager.getMetastorePartition(outputTableName, infoDate)
+
+    runningJobs -= metastorePartition
+  }
 
   private[core] def getJob(outputTableName: String): Job = {
     val jobOpt = onDemandJobs.get(outputTableName.toLowerCase)
@@ -174,11 +203,11 @@ object TransientJobManager {
     taskRunnerOpt match {
       case Some(taskRunner) =>
         taskRunner.runOnDemand(job, infoDate) match {
-          case _: RunStatus.Succeeded         => TransientTableManager.getDataForTheDate(job.outputTable.name, infoDate)
-          case s: RunStatus.Skipped           => throw new IllegalStateException(s"On-demand job has skipped. ${s.msg}")
+          case _: RunStatus.Succeeded => TransientTableManager.getDataForTheDate(job.outputTable.name, infoDate)
+          case s: RunStatus.Skipped => throw new IllegalStateException(s"On-demand job has skipped. ${s.msg}")
           case RunStatus.ValidationFailed(ex) => throw ex
-          case RunStatus.Failed(ex)           => throw ex
-          case runStatus                      => throw new IllegalStateException(runStatus.getReason().getOrElse("On-demand job failed to run."))
+          case RunStatus.Failed(ex) => throw ex
+          case runStatus => throw new IllegalStateException(runStatus.getReason().getOrElse("On-demand job failed to run."))
         }
       case None =>
         throw new IllegalStateException("Task runner is not set.")

@@ -16,9 +16,11 @@
 
 package za.co.absa.pramen.core.metastore.persistence
 
+import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.metastore.peristence.TransientTableManager
@@ -154,6 +156,19 @@ class TransientTableManagerSuite extends AnyWordSpec with BeforeAndAfterAll with
       assertThrows[IllegalStateException] {
         TransientTableManager.getDataForTheDate("table_persist4", infoDate)
       }
+    }
+  }
+
+  "getTempDirectory" should {
+    val conf = ConfigFactory.parseString("""pramen.temporary.directory = "/a/b/c"""")
+
+    "return None for non-persistent policies" in {
+      assert(TransientTableManager.getTempDirectory(CachePolicy.NoCache, conf).isEmpty)
+      assert(TransientTableManager.getTempDirectory(CachePolicy.Cache, conf).isEmpty)
+    }
+
+    "return the directory for the persist policy" in {
+      assert(TransientTableManager.getTempDirectory(CachePolicy.Persist, conf).contains("/a/b/c"))
     }
   }
 }
