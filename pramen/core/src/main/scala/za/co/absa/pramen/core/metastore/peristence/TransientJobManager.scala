@@ -97,7 +97,7 @@ object TransientJobManager {
 
   private[core] def runOnDemandTask(outputTableName: String,
                                     infoDate: LocalDate)
-                                   (implicit sparkSession: SparkSession): DataFrame = {
+                                   (implicit spark: SparkSession): DataFrame = {
     val start = Instant.now()
     val fut = getOnDemandTaskFuture(outputTableName, infoDate)
 
@@ -114,7 +114,7 @@ object TransientJobManager {
 
   private[core] def getOnDemandTaskFuture(outputTableName: String,
                                           infoDate: LocalDate)
-                                         (implicit sparkSession: SparkSession): Future[DataFrame] = {
+                                         (implicit spark: SparkSession): Future[DataFrame] = {
 
     val promise = Promise[DataFrame]()
 
@@ -199,15 +199,16 @@ object TransientJobManager {
 
   private[core] def runJob(job: Job,
                            infoDate: LocalDate)
-                          (implicit sparkSession: SparkSession): DataFrame = {
+                          (implicit spark: SparkSession): DataFrame = {
+    val jobStr = s"On-demand job outputting to '${job.outputTable.name}' for '$infoDate'"
     taskRunnerOpt match {
       case Some(taskRunner) =>
         taskRunner.runOnDemand(job, infoDate) match {
-          case _: RunStatus.Succeeded => TransientTableManager.getDataForTheDate(job.outputTable.name, infoDate)
-          case s: RunStatus.Skipped => throw new IllegalStateException(s"On-demand job has skipped. ${s.msg}")
-          case RunStatus.ValidationFailed(ex) => throw ex
-          case RunStatus.Failed(ex) => throw ex
-          case runStatus => throw new IllegalStateException(runStatus.getReason().getOrElse("On-demand job failed to run."))
+          case _: RunStatus.Succeeded         => TransientTableManager.getDataForTheDate(job.outputTable.name, infoDate)
+          case _: RunStatus.Skipped           => spark.emptyDataFrame
+          case RunStatus.ValidationFailed(ex) => throw new IllegalStateException(s"$jobStr validation failed.", ex)
+          case RunStatus.Failed(ex)           => throw new IllegalStateException(s"$jobStr failed.", ex)
+          case runStatus                      => throw new IllegalStateException(s"$jobStr failed to run ${runStatus.getReason().map(a => s"($a)").getOrElse("")}.")
         }
       case None =>
         throw new IllegalStateException("Task runner is not set.")

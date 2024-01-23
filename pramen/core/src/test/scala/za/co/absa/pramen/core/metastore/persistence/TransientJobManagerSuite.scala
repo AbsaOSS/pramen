@@ -184,28 +184,29 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
     "throw if the task runner is not set" in {
       TransientJobManager.reset()
-
-      val ex = intercept[IllegalStateException] {
-        TransientJobManager.runJob(null, infoDate)
-      }
-
-      assert(ex.getMessage == "Task runner is not set.")
-    }
-
-    "throw if the job runner returns 'Skipped'" in {
-      val taskRunner = mock(classOf[TaskRunner])
       val job = mock(classOf[Job])
-      val status = RunStatus.Skipped("dummy")
-
-      whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
-
-      TransientJobManager.setTaskRunner(taskRunner)
+      whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
       val ex = intercept[IllegalStateException] {
         TransientJobManager.runJob(job, infoDate)
       }
 
-      assert(ex.getMessage == "On-demand job has skipped. dummy")
+      assert(ex.getMessage == "Task runner is not set.")
+    }
+
+    "return an empty dataframe on success skip" in {
+      val taskRunner = mock(classOf[TaskRunner])
+      val job = mock(classOf[Job])
+      val status = RunStatus.Skipped("dummy")
+
+      whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
+      whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
+
+      TransientJobManager.setTaskRunner(taskRunner)
+
+      val df = TransientJobManager.runJob(job, infoDate)
+
+      assert(df.isEmpty)
 
       TransientJobManager.reset()
     }
@@ -216,14 +217,16 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       val status = RunStatus.ValidationFailed(new RuntimeException("dummy"))
 
       whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
+      whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
       TransientJobManager.setTaskRunner(taskRunner)
 
-      val ex = intercept[RuntimeException] {
+      val ex = intercept[IllegalStateException] {
         TransientJobManager.runJob(job, infoDate)
       }
 
-      assert(ex.getMessage == "dummy")
+      assert(ex.getMessage == "On-demand job outputting to 'table1' for '2022-02-18' validation failed.")
+      assert(ex.getCause.getMessage == "dummy")
 
       TransientJobManager.reset()
     }
@@ -234,6 +237,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       val status = RunStatus.Failed(new RuntimeException("dummy"))
 
       whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
+      whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
       TransientJobManager.setTaskRunner(taskRunner)
 
@@ -241,7 +245,8 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
         TransientJobManager.runJob(job, infoDate)
       }
 
-      assert(ex.getMessage == "dummy")
+      assert(ex.getMessage == "On-demand job outputting to 'table1' for '2022-02-18' failed.")
+      assert(ex.getCause.getMessage == "dummy")
 
       TransientJobManager.reset()
     }
@@ -251,6 +256,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       val job = mock(classOf[Job])
       val status = RunStatus.NoData(true)
 
+      whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
       whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
 
       TransientJobManager.setTaskRunner(taskRunner)
@@ -259,7 +265,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
         TransientJobManager.runJob(job, infoDate)
       }
 
-      assert(ex.getMessage == "No data at the source")
+      assert(ex.getMessage == "On-demand job outputting to 'table_dummy1' for '2022-02-18' failed to run (No data at the source).")
 
       TransientJobManager.reset()
     }
