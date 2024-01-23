@@ -270,4 +270,49 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       TransientJobManager.reset()
     }
   }
+
+  "safeUnion" should {
+    "work when both dataframes are not empty" in {
+      val df1 = exampleDf
+      val df2 = exampleDf
+
+      val df = TransientJobManager.safeUnion(df1, df2)
+
+      assert(df.count() == 6)
+      assert(df.schema.fields.head.name == "a")
+      assert(df.schema.fields(1).name == "b")
+    }
+
+    "work when the first dataframe is empty" in {
+      val df1 = spark.emptyDataFrame
+      val df2 = exampleDf
+
+      val df = TransientJobManager.safeUnion(df1, df2)
+
+      assert(df.count() == 3)
+      assert(df.schema.fields.head.name == "a")
+      assert(df.schema.fields(1).name == "b")
+    }
+
+    "work when the second dataframe is empty" in {
+      val df1 = exampleDf
+      val df2 = spark.emptyDataFrame
+
+      val df = TransientJobManager.safeUnion(df1, df2)
+
+      assert(df.count() == 3)
+      assert(df.schema.fields.head.name == "a")
+      assert(df.schema.fields(1).name == "b")
+    }
+
+    "work when both dataframes are empty" in {
+      val df1 = spark.emptyDataFrame
+      val df2 = spark.emptyDataFrame
+
+      val df = TransientJobManager.safeUnion(df1, df2)
+
+      assert(df.isEmpty)
+      assert(df.schema.fields.isEmpty)
+    }
+  }
 }

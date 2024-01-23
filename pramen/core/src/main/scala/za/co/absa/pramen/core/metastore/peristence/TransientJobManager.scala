@@ -78,7 +78,7 @@ object TransientJobManager {
     val dfs = infoDates.map(infoDate => runOnDemandTask(outputTableName, infoDate))
 
     if (dfs.isEmpty) {
-      spark.emptyDataFrame
+      TransientTableManager.getEmptyDfForTable(outputTableName).getOrElse(spark.emptyDataFrame)
     } else {
       if (infoDates.length > WARN_UNIONS && infoDates.length <= MAXIMUM_UNIONS) {
         log.warn(s"${Emoji.WARNING} Performance may be degraded for the task ($outputTableName for ${infoDates.mkString(", ")}) " +
@@ -90,8 +90,26 @@ object TransientJobManager {
       }
 
       infoDates.tail.foldLeft(runOnDemandTask(outputTableName, infoDates.head))(
-        (acc, infoDate) => acc.union(runOnDemandTask(outputTableName, infoDate))
+        (acc, infoDate) => {
+          val df = runOnDemandTask(outputTableName, infoDate)
+          safeUnion(acc, df)
+        }
       )
+    }
+  }
+
+  def safeUnion(df1: DataFrame, df2: DataFrame): DataFrame = {
+    val df1Empty = df1.schema.fields.isEmpty
+    val df2Empty = df2.schema.fields.isEmpty
+
+    if (df1Empty && df2Empty) {
+      df1
+    } else if (!df1Empty && df2Empty) {
+      df1
+    } else if (df1Empty && !df2Empty) {
+      df2
+    } else {
+      df1.union(df2)
     }
   }
 
