@@ -124,17 +124,22 @@ object TransientTableManager {
       case None => // nothing to do
     }
 
-    val schemaOpt = this.synchronized {
-      schemas.get(tableName.toLowerCase)
-    }
+    getEmptyDfForTable(tableName).getOrElse(
+      throw new IllegalStateException(s"No data for transient table '$tableName' for '$infoDate'")
+    )
+  }
 
-    schemaOpt match {
-      case Some(schema) =>
-        val emptyRDD = spark.sparkContext.emptyRDD[Row]
-        spark.createDataFrame(emptyRDD, schema)
-      case None =>
-        throw new IllegalStateException(s"No data for transient table '$tableName' for '$infoDate'")
+  private[core] def getEmptyDfForTable(tableName: String): Option[DataFrame] = {
+    val schemaOpt = getSchemaForTable(tableName)
+
+    schemaOpt.map { schema =>
+      val emptyRDD = spark.sparkContext.emptyRDD[Row]
+      spark.createDataFrame(emptyRDD, schema)
     }
+  }
+
+  private[core] def getSchemaForTable(tableName: String): Option[StructType] = this.synchronized {
+    schemas.get(tableName.toLowerCase)
   }
 
   private[core] def reset(): Unit = synchronized {
