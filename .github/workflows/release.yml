@@ -1,0 +1,74 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+  # temporary
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  release-sbt:
+    runs-on: ubuntu-latest
+    name: Release Scala Artifacts
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Setup Scala
+        uses: olafurpg/setup-scala@v14
+        with:
+          java-version: "adopt@1.8"
+
+      - name: Import GPG Key
+        shell: bash
+        run: |
+          echo "${{ secrets.SONATYPE_GPG_KEY }}" > gpg-secret-key.asc
+          gpg --import --batch gpg-secret-key.asc && rm -rf gpg-secret-key.asc
+          mkdir -p ~/.gnupg
+          echo "pinentry-mode loopback" > ~/.gnupg/gpg.conf
+          git config --global user.email "absa_ci_cd_bot@absa.africa"
+          git config --global user.name "CI/CD bot"
+
+      - name: Setup SonaType config
+        shell: bash
+        run: |
+          mkdir -p ~/.sbt/1.0
+          echo "${{ secrets.SONATYPE_CONFIG }}" | base64 --decode > ~/.sbt/1.0/sonatype.sbt
+
+      - name: Prepare the release branch
+        id: release_branch
+        shell: bash
+        working-directory: ./pramen
+        run: |
+          VERSION=$(grep "ThisBuild / version" version.sbt | cut -d\" -f2 | sed 's/-SNAPSHOT//')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          git checkout -b release/$VERSION
+          git push --set-upstream origin release/$VERSION
+
+      - name: Run the release plugin
+        shell: bash
+        working-directory: ./pramen
+        run: |
+          export GPG_TTY=$(tty)
+          export PGP_PASSPHRASE="${{ secrets.PGP_PASSPHRASE }}"
+          #sbt releaseNow
+
+      - name: Create Pull Request
+        shell: bash
+        run: gh pr create -B main -H "release/$VERSION" --title "Release version $VERSION" --body 'Created by Github action'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.release_branch.outputs.VERSION }}
+
+#      - name: Create Pull Request
+#        uses: peter-evans/create-pull-request@v3
+#        with:
+#          commit-message: "Release version $VERSION"
+#          branch: release/$VERSION
+#          title: "Release version $VERSION"
+#          body: "Automated release created by GitHub Action."
+#          token: ${{ secrets.GITHUB_TOKEN }}
