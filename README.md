@@ -132,7 +132,39 @@ In order to implement custom sources, transformers and sinks you need to link Pr
 Pramen libraries are available at [Maven Central (API)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api)
 and [Maven Central (framework)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core)
 
-The latest version is `1.6.5`.
+You can link against Pramen to build your transformers in Scala at the following coordinates:
+
+API (for defining custom sources, transformers, and sinks):
+<table>
+<tr><th>Scala 2.11</th><th>Scala 2.12</th><th>Scala 2.13</th></tr>
+<tr>
+<td align="center">
+<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.11"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.11/badge.svg" alt="Maven Central"></a><br>
+</td>
+<td align="center">
+<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.12"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.12/badge.svg" alt="Maven Central"></a><br>
+</td>
+<td align="center">
+<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.13"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.13/badge.svg" alt="Maven Central"></a><br>
+</td>
+</tr>
+</table>
+
+Framework core (for advanced usage):
+<table>
+<tr><th>Scala 2.11</th><th>Scala 2.12</th><th>Scala 2.13</th></tr>
+<tr>
+<td align="center">
+<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.11"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.11/badge.svg" alt="Maven Central"></a><br>
+</td>
+<td align="center">
+<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.12"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.12/badge.svg" alt="Maven Central"></a><br>
+</td>
+<td align="center">
+<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.13"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.13/badge.svg" alt="Maven Central"></a><br>
+</td>
+</tr>
+</table>
 
 The following Scala and Spark combinations are supported:
 
@@ -141,6 +173,8 @@ The following Scala and Spark combinations are supported:
 |     2.11      |     2.4.8     |
 |     2.12      | 3.0 and above |
 |     2.13      | 3.2 and above |
+
+Pramen for Python transformers ia available in PyPi: [![PyPI](https://badge.fury.io/py/pramen-py.svg)](https://badge.fury.io/py/pramen-py)
 
 ## Getting Pramen runner for your environment
 
