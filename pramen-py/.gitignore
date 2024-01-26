@@ -143,12 +143,6 @@ dmypy.json
 /cdk.out
 /cdk.context.json
 
-# DotENV files
-!.env.local
-!.env.example
-!.env.ci
-!*.secret
-
 # Makefile target
 .install*
 
