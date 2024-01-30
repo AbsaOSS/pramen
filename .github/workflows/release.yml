@@ -3,10 +3,6 @@ name: Release
 on:
   workflow_dispatch:
 
-  # temporary
-  #pull_request:
-  #  branches: [ main ]
-
 defaults:
   run:
     shell: bash
@@ -22,21 +18,26 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: main
+          
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          
       - name: setup poetry
         uses: abatilo/actions-poetry@v2.1.6
         with:
           poetry-version: 1.4.2
+          
       - name: install dependencies
         working-directory: "./pramen-py"
         run: make --silent install
+        
       - name: test
         working-directory: "./pramen-py"
         env:
           ENV: ci
         run: make --silent test
+        
   release-oython:
     needs: [ "test-python" ]
     runs-on: ubuntu-latest
@@ -46,6 +47,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          
       - name: Prepare the release branch
         id: release_branch1
         working-directory: "./pramen"
@@ -56,6 +58,7 @@ jobs:
           git config --global user.name "CI/CD bot"
           git checkout -b release/$VERSION
           git push --set-upstream origin release/$VERSION
+          
       - name: Update version number
         id: release_branch
         working-directory: "./pramen-py"
@@ -70,20 +73,25 @@ jobs:
             git push
             cat pyproject.toml 
           fi
+          
       - name: install project dependencies
         run: |
           sudo apt install -y --no-install-recommends \
             libssl-dev \
             make
+          
       - uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+          
       - uses: abatilo/actions-poetry@v2.1.6
         with:
           poetry-version: 1.4.2
+          
       - name: Install dependencies
         working-directory: "./pramen-py"
         run: poetry install --no-interaction --no-root
+        
       - name: build and publish the wheel to jfrog
         working-directory: "./pramen-py"
         env:
