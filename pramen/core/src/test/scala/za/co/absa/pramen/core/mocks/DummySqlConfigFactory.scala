@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.core.reader.model.QuotingPolicy
-import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig}
+import com.typesafe.config.ConfigFactory
+import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlConfig}
 
 object DummySqlConfigFactory {
   def getDummyConfig(infoDateColumn: String = "col",
@@ -28,5 +28,6 @@ object DummySqlConfigFactory {
     infoDateColumn = infoDateColumn,
     infoDateType = infoDateType,
     dateFormatApp = dateFormatApp,
-    identifierQuotingPolicy = identifierQuotingPolicy)
+    identifierQuotingPolicy = identifierQuotingPolicy,
+    ConfigFactory.empty())
 }

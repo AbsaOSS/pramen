@@ -21,9 +21,10 @@ import org.mockito.Mockito.{mock, when => whenMock}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.api.sql.QuotingPolicy
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.reader.model.{QuotingPolicy, TableReaderJdbcConfig}
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc}
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql.SqlGeneratorHsqlDb

@@ -19,10 +19,11 @@ package za.co.absa.pramen.core.reader
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig}
 import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.sql.{SqlColumnType, SqlConfig, SqlGenerator}
+import za.co.absa.pramen.core.sql.SqlGeneratorLoader
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcSparkUtils, TimeUtils}
 
@@ -46,9 +47,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   logConfiguration()
 
   private[core] lazy val sqlGen = {
-    val gen = SqlGenerator.fromDriverName(jdbcReaderConfig.jdbcConfig.driver,
-      getSqlConfig,
-      ConfigUtils.getExtraConfig(conf, "sql"))
+    val gen = SqlGeneratorLoader.fromDriverName(jdbcReaderConfig.jdbcConfig.driver, getSqlConfig, conf)
 
     if (gen.requiresConnection) {
       val (connection, url) = jdbcUrlSelector.getWorkingConnection(jdbcRetries)
@@ -211,7 +210,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
         SqlConfig(jdbcReaderConfig.infoDateColumn,
           infoDateType,
           jdbcReaderConfig.infoDateFormat,
-          jdbcReaderConfig.identifierQuotingPolicy)
+          jdbcReaderConfig.identifierQuotingPolicy,
+          ConfigUtils.getExtraConfig(conf, "sql"))
       case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
         s"It should be one of: date, string, number")
     }

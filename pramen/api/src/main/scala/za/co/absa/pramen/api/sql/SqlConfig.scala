@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sql
+package za.co.absa.pramen.api.sql
 
-import za.co.absa.pramen.core.reader.model.QuotingPolicy
+import com.typesafe.config.Config
 
 case class SqlConfig(
                       infoDateColumn: String,
                       infoDateType: SqlColumnType,
                       dateFormatApp: String,
-                      identifierQuotingPolicy: QuotingPolicy
+                      identifierQuotingPolicy: QuotingPolicy,
+                      extraConfig: Config
                     )
