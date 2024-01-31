@@ -21,12 +21,17 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.{CachePolicy, DataFormat}
+import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
+import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
+import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
+import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.hive.{HiveHelperSql, HiveQueryTemplates, QueryExecutorSpark}
 
@@ -42,10 +47,11 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         val actual = m.getRegisteredTables
 
-        assert(actual.size == 6)
+        assert(actual.size == 7)
         assert(actual.contains("table1"))
         assert(actual.contains("table2"))
         assert(actual.contains("table3"))
+        assert(actual.contains("transient_table"))
       }
     }
   }
@@ -62,6 +68,48 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         assert(!m.isTableAvailable("table1", infoDate.minusDays(1)))
         assert(!m.isTableAvailable("table2", infoDate))
       }
+    }
+
+    "return true if an on-demand table is available for the info date" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        assert(!m.isTableAvailable("transient_table", infoDate))
+        assert(m.isTableAvailable("transient_table", infoDate.minusDays(11))) // First day of the month as per use case
+      }
+    }
+  }
+
+  "isDataAvailable()" should {
+    "return true if a table is available for a certain info date period" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        m.saveTable("table1", infoDate, getDf)
+
+        assert(m.isDataAvailable("table1", Some(infoDate), Some(infoDate.plusDays(1))))
+        assert(!m.isDataAvailable("table1", Some(infoDate.plusDays(1)), Some(infoDate.plusDays(2))))
+        assert(!m.isDataAvailable("table1", Some(infoDate.minusDays(2)), Some(infoDate.minusDays(1))))
+        assert(!m.isDataAvailable("table2", Some(infoDate), Some(infoDate.plusDays(1))))
+      }
+    }
+
+    "return true for an open interval if the table is on-demand" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        val firstDayOfMonth = infoDate.minusDays(11)
+
+        assert(m.isDataAvailable("transient_table", Some(firstDayOfMonth), Some(firstDayOfMonth)))
+        assert(m.isDataAvailable("transient_table", Some(firstDayOfMonth.minusDays(1)), Some(firstDayOfMonth.plusDays(1))))
+        assert(!m.isDataAvailable("transient_table", Some(firstDayOfMonth.plusDays(1)), Some(firstDayOfMonth.plusDays(2))))
+
+        // For on-demand tables half-intervals data availability is always true
+        assert(m.isDataAvailable("transient_table", Some(firstDayOfMonth), None))
+        assert(m.isDataAvailable("transient_table", None, Some(firstDayOfMonth)))
+        assert(m.isDataAvailable("transient_table", None, None))
+      }
+
     }
   }
 
@@ -430,6 +478,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
   }
 
   def getTestCase(tempDir: String, undercover: Boolean = false): (Metastore, SyncBookkeeperMock) = {
+    TransientJobManager.reset()
     val tempDirEscaped = tempDir.replace("\\","\\\\")
 
     val confString =
@@ -461,6 +510,10 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
          |     path = "$tempDirEscaped/table3"
          |   },
          |   {
+         |     name = "transient_table"
+         |     format = "transient"
+         |   },
+         |   {
          |     name = "table_hive_parquet"
          |     format = "parquet"
          |     path = "$tempDirEscaped/table_hive_parquet"
@@ -486,6 +539,13 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     val conf = ConfigFactory.parseString(
       confString
     ).withFallback(ConfigFactory.load())
+
+    val schedule = Schedule.Monthly(Seq(1))
+    TransientJobManager.addOnDemandJob(
+      new JobSpy(outputTableIn = "transient_table",
+        outputTableFormat = DataFormat.Transient(CachePolicy.NoCache),
+        operationDef = OperationDefFactory.getDummyOperationDef(schedule = schedule))
+    )
 
     val infoDateConfig = InfoDateConfig.fromConfig(conf)
     val bk = new SyncBookkeeperMock

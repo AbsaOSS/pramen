@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
+import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 
@@ -44,7 +44,7 @@ class MetastoreImpl(appConfig: Config,
   override def getRegisteredMetaTables: Seq[MetaTable] = tableDefs
 
   override def isTableAvailable(tableName: String, infoDate: LocalDate): Boolean = {
-    bookkeeper.getDataChunks(tableName, infoDate, infoDate).nonEmpty
+    isDataAvailable(tableName, Option(infoDate), Option(infoDate))
   }
 
   override def isDataAvailable(tableName: String, infoDateFromOpt: Option[LocalDate], infoDateToOpt: Option[LocalDate]): Boolean = {
@@ -52,7 +52,12 @@ class MetastoreImpl(appConfig: Config,
     val isOnDemand = mt.format.isLazy
 
     if (isOnDemand) {
-      true
+      (infoDateFromOpt, infoDateToOpt) match {
+        case (Some(infoDateFrom), Some(infoDateTo)) =>
+          TransientJobManager.selectInfoDatesToExecute(tableName, infoDateFrom, infoDateTo).nonEmpty
+        case _ =>
+          true // always has data in a half interval
+      }
     } else {
       bookkeeper.getDataChunksCount(tableName, infoDateFromOpt, infoDateToOpt) > 0
     }
