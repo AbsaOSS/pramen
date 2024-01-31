@@ -259,7 +259,7 @@ abstract class TaskRunnerBase(conf: Config,
 
     val attempt = try {
       Try {
-        if (!task.job.outputTable.format.isTransient) {
+        if (!isTransient) {
           if (runtimeConfig.useLocks && !lock.tryAcquire())
             throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
         }
@@ -343,7 +343,7 @@ abstract class TaskRunnerBase(conf: Config,
     } catch {
       case ex: Throwable => Failure(new FatalErrorWrapper("Fatal error has occurred.", ex))
     } finally {
-      if (!task.job.outputTable.format.isTransient) {
+      if (!isTransient) {
         lock.release()
       }
     }

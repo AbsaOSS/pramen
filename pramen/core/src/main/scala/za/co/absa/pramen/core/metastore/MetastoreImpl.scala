@@ -49,7 +49,7 @@ class MetastoreImpl(appConfig: Config,
 
   override def isDataAvailable(tableName: String, infoDateFromOpt: Option[LocalDate], infoDateToOpt: Option[LocalDate]): Boolean = {
     val mt = getTableDef(tableName)
-    val isOnDemand = mt.format.isInstanceOf[DataFormat.Transient]
+    val isOnDemand = mt.format.isLazy
 
     if (isOnDemand) {
       true
@@ -71,7 +71,7 @@ class MetastoreImpl(appConfig: Config,
 
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
-    val isOnDemand = mt.format.isInstanceOf[DataFormat.Transient]
+    val isOnDemand = mt.format.isLazy
     if (isOnDemand) {
       MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(None, until)
     } else {

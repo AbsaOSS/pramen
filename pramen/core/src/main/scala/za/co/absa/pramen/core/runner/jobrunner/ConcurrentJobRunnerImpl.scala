@@ -18,7 +18,6 @@ package za.co.absa.pramen.core.runner.jobrunner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
@@ -108,7 +107,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runJob(job: Job): Boolean = {
-    if (job.outputTable.format.isInstanceOf[DataFormat.Transient]) {
+    if (job.outputTable.format.isLazy) {
       runLazyJob(job)
     } else {
       runEagerJob(job)
