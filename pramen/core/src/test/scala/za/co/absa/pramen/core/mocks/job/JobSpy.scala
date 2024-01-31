@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.mocks.job
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
-import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -31,6 +31,7 @@ import java.time.{Instant, LocalDate}
 
 class JobSpy(jobName: String = "DummyJob",
              outputTableIn: String = "table_out",
+             outputTableFormat: DataFormat = DataFormat.Parquet("/tmp/dummy", None),
              hiveTable: Option[String] = None,
              operationDef: OperationDef = OperationDefFactory.getDummyOperationDef(),
              preRunCheckFunction: () => JobPreRunResult = () => JobPreRunResult(JobPreRunStatus.Ready, None, Nil, Nil),
@@ -53,7 +54,7 @@ class JobSpy(jobName: String = "DummyJob",
 
   override val name: String = jobName
 
-  override val outputTable: MetaTable = getDummyMetaTable(outputTableIn, hiveTable = hiveTable)
+  override val outputTable: MetaTable = getDummyMetaTable(outputTableIn, format = outputTableFormat, hiveTable = hiveTable)
 
   override val operation: OperationDef = operationDef
 
