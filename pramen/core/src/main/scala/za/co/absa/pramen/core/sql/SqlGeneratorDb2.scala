@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.sql
 
+import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
+
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

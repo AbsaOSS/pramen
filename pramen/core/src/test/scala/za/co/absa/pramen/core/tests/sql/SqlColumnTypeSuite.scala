@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.sql
 import org.scalatest.wordspec.AnyWordSpec
 
 class SqlColumnTypeSuite extends AnyWordSpec {
-  import za.co.absa.pramen.core.sql.SqlColumnType._
+  import za.co.absa.pramen.api.sql.SqlColumnType._
 
   "fromString()" should {
     "return corresponding type" in {

@@ -18,17 +18,17 @@ package za.co.absa.pramen.core.tests.sql
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGeneratorBase}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
-import za.co.absa.pramen.core.reader.model.QuotingPolicy
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql._
 
 import java.time.LocalDate
 
-class SqlGeneratorSuite extends AnyWordSpec with RelationalDbFixture {
+class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
 
-  import za.co.absa.pramen.core.sql.SqlGenerator._
+  import za.co.absa.pramen.core.sql.SqlGeneratorLoader._
 
   private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D")
   private val sqlConfigEscape = DummySqlConfigFactory.getDummyConfig(infoDateColumn = "Info date", identifierQuotingPolicy = QuotingPolicy.Always)

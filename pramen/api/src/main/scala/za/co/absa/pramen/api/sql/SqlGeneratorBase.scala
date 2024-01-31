@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sql
-
-import za.co.absa.pramen.core.reader.model.QuotingPolicy
+package za.co.absa.pramen.api.sql
 
 import scala.collection.mutable.ListBuffer
 
@@ -51,8 +49,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
   }
 
-  /** This validates and escapes an identifier (table or column name) if needed. Escaping does not happen always to maintain backwards compatibility. */
-  override final def escape(identifier: String): String = {
+  override final def escape(identifier: String): String = {  
     if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
       quote(identifier)
     } else {

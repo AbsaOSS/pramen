@@ -18,47 +18,12 @@ package za.co.absa.pramen.core.sql
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.sql.{SqlConfig, SqlGenerator}
 
-import java.sql.Connection
-import java.time.LocalDate
-
-trait SqlGenerator {
-  def getDtable(sql: String): String
-
-  def getCountQuery(tableName: String): String
-
-  def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String
-
-  def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String
-
-  def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String
-
-  def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String
-
-  /** Returns the date literal for the dialect of the SQL. */
-  def getDateLiteral(date: LocalDate): String
-
-  /**
-    * Quotes an identifier, if needed according to the generator configuration.
-    */
-  def escape(identifier: String): String
-
-  /**
-    * Always quotes an identifier name with characters specific to SQL dialects.
-    * If the identifier is already wrapped, it won't be double wrapped.
-    * It supports partially quoted identifiers. E.g. '"my_catalog".my table' will be quoted as '"my_catalog"."my table"'.
-    */
-  def quote(identifier: String): String
-
-  def requiresConnection: Boolean = false
-
-  def setConnection(connection: Connection): Unit = {}
-}
-
-object SqlGenerator {
+object SqlGeneratorLoader {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def fromDriverName(driver: String, sqlConfig: SqlConfig, extraConfig: Config): SqlGenerator = {
+  def fromDriverName(driver: String, sqlConfig: SqlConfig, conf: Config): SqlGenerator = {
     val sqlGenerator = driver match {
       case "org.postgresql.Driver"                        => new SqlGeneratorPostgreSQL(sqlConfig)
       case "oracle.jdbc.OracleDriver"                     => new SqlGeneratorOracle(sqlConfig)

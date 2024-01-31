@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sql
+package za.co.absa.pramen.api.sql
 
 sealed trait SqlColumnType
 

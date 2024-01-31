@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.reader.model
+package za.co.absa.pramen.api.sql
 
 sealed trait QuotingPolicy {
   def name: String
