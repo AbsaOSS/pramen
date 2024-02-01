@@ -35,13 +35,13 @@ class MetastorePersistenceTransient(tempPath: Option[String],
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     (infoDateFrom, infoDateTo) match {
       case (Some(from), Some(to)) if from == to =>
-        runOnDemandTask(tableName, from)
+        runLazyTask(tableName, from)
       case (Some(from), Some(to)) =>
-        runOnDemandTasks(tableName, selectInfoDatesToExecute(tableName, from, to))
+        runLazyTasks(tableName, selectInfoDatesToExecute(tableName, from, to))
       case (None, Some(until)) =>
-        runOnDemandTask(tableName, selectLatestOnDemandSnapshot(tableName, until))
+        runLazyTask(tableName, selectLatestLazySnapshot(tableName, until))
       case _ =>
-        throw new IllegalArgumentException("Metastore 'on_demand' format requires info date for querying its contents.")
+        throw new IllegalArgumentException("Metastore 'transient' format requires info date for querying its contents.")
     }
   }
 
@@ -50,14 +50,14 @@ class MetastorePersistenceTransient(tempPath: Option[String],
   }
 
   override def getStats(infoDate: LocalDate): MetaTableStats = {
-    throw new UnsupportedOperationException("On demand format does not support getting record count and size statistics.")
+    throw new UnsupportedOperationException("The 'transient' format does not support getting record count and size statistics.")
   }
 
   override def createOrUpdateHiveTable(infoDate: LocalDate, hiveTableName: String, queryExecutor: QueryExecutor, hiveConfig: HiveConfig): Unit = {
-    throw new UnsupportedOperationException("On demand format does not support Hive tables.")
+    throw new UnsupportedOperationException("The 'transient' format does not support Hive tables.")
   }
 
   override def repairHiveTable(hiveTableName: String, queryExecutor: QueryExecutor, hiveConfig: HiveConfig): Unit = {
-    throw new UnsupportedOperationException("On demand format does not support Hive tables.")
+    throw new UnsupportedOperationException("The 'transient' format does not support Hive tables.")
   }
 }

@@ -70,9 +70,9 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
     }
   }
 
-  "runOnDemandTasks" should {
+  "runLazyTasks" should {
     "return an empty dataframe when the job is not scheduled for the specified information date" in {
-      val df = TransientJobManager.runOnDemandTasks("table1", Seq.empty)
+      val df = TransientJobManager.runLazyTasks("table1", Seq.empty)
 
       assert(df.isEmpty)
       assert(df.schema.fields.isEmpty)
@@ -89,7 +89,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
-      TransientJobManager.runOnDemandTasks("table_dummy1", infoDates)
+      TransientJobManager.runLazyTasks("table_dummy1", infoDates)
 
       TransientJobManager.reset()
       TransientTableManager.reset()
@@ -106,17 +106,17 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
       val ex = intercept[IllegalArgumentException] {
-        TransientJobManager.runOnDemandTasks("table_dummy1", infoDates)
+        TransientJobManager.runLazyTasks("table_dummy1", infoDates)
       }
 
       TransientJobManager.reset()
       TransientTableManager.reset()
 
-      assert(ex.getMessage == "On-demand job with output table name 'table_dummy1' not found or haven't registered yet.")
+      assert(ex.getMessage == "Lazy job with output table name 'table_dummy1' not found or haven't registered yet.")
     }
   }
 
-  "runOnDemandTask" should {
+  "runLazyTask" should {
     "be able to wait for a task that is already running" in {
       val fut = Future {
         Thread.sleep(1000)
@@ -124,7 +124,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       }
 
       TransientJobManager.testAndSetRunningJobFuture("table_dummy2", infoDate, fut)
-      val actualFuture = TransientJobManager.getOnDemandTaskFuture("table_dummy2", infoDate)
+      val actualFuture = TransientJobManager.getLazyTaskFuture("table_dummy2", infoDate)
 
       assert(actualFuture == fut)
 
@@ -143,7 +143,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
-      TransientJobManager.addOnDemandJob(job)
+      TransientJobManager.addLazyJob(job)
 
       assert(TransientJobManager.getJob("table_dummy1") == job)
 
@@ -155,7 +155,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
         TransientJobManager.getJob("table_dummy1")
       }
 
-      assert(ex.getMessage == "On-demand job with output table name 'table_dummy1' not found or haven't registered yet.")
+      assert(ex.getMessage == "Lazy job with output table name 'table_dummy1' not found or haven't registered yet.")
 
       TransientJobManager.reset()
     }
@@ -165,9 +165,9 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
     "runs a job via teh task runner and return the dataframe" in {
       val taskRunner = mock(classOf[TaskRunner])
       val job = mock(classOf[Job])
-      val successStatus = RunStatus.Succeeded(None, 1, None, TaskRunReason.OnDemand, Nil, Nil, Nil, Nil)
+      val successStatus = RunStatus.Succeeded(None, 1, None, TaskRunReason.OnRequest, Nil, Nil, Nil, Nil)
 
-      whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(successStatus)
+      whenMock(taskRunner.runLazyTask(job, infoDate)).thenReturn(successStatus)
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table1", format = DataFormat.Transient(CachePolicy.NoCache)))
       TransientTableManager.addRawDataFrame("table1", infoDate, exampleDf)
 
@@ -200,7 +200,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       val status = RunStatus.Skipped("dummy")
 
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
-      whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
+      whenMock(taskRunner.runLazyTask(job, infoDate)).thenReturn(status)
 
       TransientJobManager.setTaskRunner(taskRunner)
 
@@ -216,7 +216,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       val job = mock(classOf[Job])
       val status = RunStatus.ValidationFailed(new RuntimeException("dummy"))
 
-      whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
+      whenMock(taskRunner.runLazyTask(job, infoDate)).thenReturn(status)
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
       TransientJobManager.setTaskRunner(taskRunner)
@@ -225,7 +225,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
         TransientJobManager.runJob(job, infoDate)
       }
 
-      assert(ex.getMessage == "On-demand job outputting to 'table1' for '2022-02-18' validation failed.")
+      assert(ex.getMessage == "Lazy job outputting to 'table1' for '2022-02-18' validation failed.")
       assert(ex.getCause.getMessage == "dummy")
 
       TransientJobManager.reset()
@@ -236,7 +236,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       val job = mock(classOf[Job])
       val status = RunStatus.Failed(new RuntimeException("dummy"))
 
-      whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
+      whenMock(taskRunner.runLazyTask(job, infoDate)).thenReturn(status)
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table1", format = DataFormat.Transient(CachePolicy.NoCache)))
 
       TransientJobManager.setTaskRunner(taskRunner)
@@ -245,7 +245,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
         TransientJobManager.runJob(job, infoDate)
       }
 
-      assert(ex.getMessage == "On-demand job outputting to 'table1' for '2022-02-18' failed.")
+      assert(ex.getMessage == "Lazy job outputting to 'table1' for '2022-02-18' failed.")
       assert(ex.getCause.getMessage == "dummy")
 
       TransientJobManager.reset()
@@ -257,7 +257,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
       val status = RunStatus.NoData(true)
 
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table_dummy1", format = DataFormat.Transient(CachePolicy.NoCache)))
-      whenMock(taskRunner.runOnDemand(job, infoDate)).thenReturn(status)
+      whenMock(taskRunner.runLazyTask(job, infoDate)).thenReturn(status)
 
       TransientJobManager.setTaskRunner(taskRunner)
 
@@ -265,7 +265,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
         TransientJobManager.runJob(job, infoDate)
       }
 
-      assert(ex.getMessage == "On-demand job outputting to 'table_dummy1' for '2022-02-18' failed to run (No data at the source).")
+      assert(ex.getMessage == "Lazy job outputting to 'table_dummy1' for '2022-02-18' failed to run (No data at the source).")
 
       TransientJobManager.reset()
     }

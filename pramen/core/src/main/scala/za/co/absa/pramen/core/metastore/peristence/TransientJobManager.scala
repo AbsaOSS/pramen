@@ -34,7 +34,7 @@ object TransientJobManager {
   val MAXIMUM_UNIONS = 50
 
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val onDemandJobs = new mutable.HashMap[String, Job]()
+  private val lazyJobs = new mutable.HashMap[String, Job]()
   private val runningJobs = new mutable.HashMap[MetastorePartition, Future[DataFrame]]()
   private var taskRunnerOpt: Option[TaskRunner] = None
 
@@ -46,8 +46,8 @@ object TransientJobManager {
     taskRunnerOpt.isDefined
   }
 
-  private[core] def addOnDemandJob(job: Job): Unit = synchronized {
-    onDemandJobs += job.outputTable.name.toLowerCase -> job
+  private[core] def addLazyJob(job: Job): Unit = synchronized {
+    lazyJobs += job.outputTable.name.toLowerCase -> job
   }
 
   private[core] def selectInfoDatesToExecute(outputTableName: String,
@@ -62,8 +62,8 @@ object TransientJobManager {
       job.operation.schedule)
   }
 
-  private[core] def selectLatestOnDemandSnapshot(outputTableName: String,
-                                                 infoDateUntil: LocalDate): LocalDate = {
+  private[core] def selectLatestLazySnapshot(outputTableName: String,
+                                             infoDateUntil: LocalDate): LocalDate = {
     val job = getJob(outputTableName)
 
     ScheduleStrategyUtils.getLatestActiveInfoDate(outputTableName,
@@ -72,10 +72,10 @@ object TransientJobManager {
       job.operation.schedule)
   }
 
-  private[core] def runOnDemandTasks(outputTableName: String,
-                                     infoDates: Seq[LocalDate])
-                                    (implicit spark: SparkSession): DataFrame = {
-    val dfs = infoDates.map(infoDate => runOnDemandTask(outputTableName, infoDate))
+  private[core] def runLazyTasks(outputTableName: String,
+                                 infoDates: Seq[LocalDate])
+                                (implicit spark: SparkSession): DataFrame = {
+    val dfs = infoDates.map(infoDate => runLazyTask(outputTableName, infoDate))
 
     if (dfs.isEmpty) {
       TransientTableManager.getEmptyDfForTable(outputTableName).getOrElse(spark.emptyDataFrame)
@@ -85,13 +85,13 @@ object TransientJobManager {
           s"since the number of dataframe unions is too big (${infoDates.length} > $WARN_UNIONS)")
       }
       if (infoDates.length > MAXIMUM_UNIONS) {
-        throw new IllegalArgumentException(s"The number of subtasks requested for the on-demand job contains too many " +
+        throw new IllegalArgumentException(s"The number of subtasks requested for the lazy job contains too many " +
           s"dataframe unions (${infoDates.length} > $MAXIMUM_UNIONS)")
       }
 
-      infoDates.tail.foldLeft(runOnDemandTask(outputTableName, infoDates.head))(
+      infoDates.tail.foldLeft(runLazyTask(outputTableName, infoDates.head))(
         (acc, infoDate) => {
-          val df = runOnDemandTask(outputTableName, infoDate)
+          val df = runLazyTask(outputTableName, infoDate)
           safeUnion(acc, df)
         }
       )
@@ -113,11 +113,11 @@ object TransientJobManager {
     }
   }
 
-  private[core] def runOnDemandTask(outputTableName: String,
-                                    infoDate: LocalDate)
-                                   (implicit spark: SparkSession): DataFrame = {
+  private[core] def runLazyTask(outputTableName: String,
+                                infoDate: LocalDate)
+                               (implicit spark: SparkSession): DataFrame = {
     val start = Instant.now()
-    val fut = getOnDemandTaskFuture(outputTableName, infoDate)
+    val fut = getLazyTaskFuture(outputTableName, infoDate)
 
     if (!fut.isCompleted) {
       log.info(s"Waiting for the dependent task to finish ($outputTableName for $infoDate)...")
@@ -130,9 +130,9 @@ object TransientJobManager {
     df
   }
 
-  private[core] def getOnDemandTaskFuture(outputTableName: String,
-                                          infoDate: LocalDate)
-                                         (implicit spark: SparkSession): Future[DataFrame] = {
+  private[core] def getLazyTaskFuture(outputTableName: String,
+                                      infoDate: LocalDate)
+                                     (implicit spark: SparkSession): Future[DataFrame] = {
 
     val promise = Promise[DataFrame]()
 
@@ -186,7 +186,7 @@ object TransientJobManager {
       log.info(s"The task ($outputTableName for $infoDate) is already running. Waiting for results...")
       Some(runningJobs(metastorePartition))
     } else {
-      log.info(s"Running the on-demand task ($outputTableName for $infoDate)...")
+      log.info(s"Running (materializing) the lazy task ($outputTableName for $infoDate)...")
       runningJobs += metastorePartition -> newJonFuture
       None
     }
@@ -201,16 +201,16 @@ object TransientJobManager {
   }
 
   private[core] def getJob(outputTableName: String): Job = {
-    val jobOpt = onDemandJobs.get(outputTableName.toLowerCase)
+    val jobOpt = lazyJobs.get(outputTableName.toLowerCase)
 
     jobOpt match {
       case Some(job) => job
-      case None => throw new IllegalArgumentException(s"On-demand job with output table name '$outputTableName' not found or haven't registered yet.")
+      case None => throw new IllegalArgumentException(s"Lazy job with output table name '$outputTableName' not found or haven't registered yet.")
     }
   }
 
   private[core] def reset(): Unit = synchronized {
-    onDemandJobs.clear()
+    lazyJobs.clear()
     runningJobs.clear()
     taskRunnerOpt = None
   }
@@ -218,10 +218,10 @@ object TransientJobManager {
   private[core] def runJob(job: Job,
                            infoDate: LocalDate)
                           (implicit spark: SparkSession): DataFrame = {
-    val jobStr = s"On-demand job outputting to '${job.outputTable.name}' for '$infoDate'"
+    val jobStr = s"Lazy job outputting to '${job.outputTable.name}' for '$infoDate'"
     taskRunnerOpt match {
       case Some(taskRunner) =>
-        taskRunner.runOnDemand(job, infoDate) match {
+        taskRunner.runLazyTask(job, infoDate) match {
           case _: RunStatus.Succeeded         => TransientTableManager.getDataForTheDate(job.outputTable.name, infoDate)
           case _: RunStatus.Skipped           => spark.emptyDataFrame
           case RunStatus.ValidationFailed(ex) => throw new IllegalStateException(s"$jobStr validation failed.", ex)

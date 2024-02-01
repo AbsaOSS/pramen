@@ -83,7 +83,7 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.asInstanceOf[Raw].path == "/a/b/c")
     }
 
-    "use 'transient' when specified explicitly" in {
+    "use 'transient_eager' when specified explicitly" in {
       val conf = ConfigFactory.parseString("format = transient_eager")
 
       val format = DataFormatParser.fromConfig(conf, conf)
@@ -95,7 +95,7 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.asInstanceOf[TransientEager].cachePolicy == CachePolicy.NoCache)
     }
 
-    "support cache policies for 'transient' format" in {
+    "support cache policies for 'transient_eager' format" in {
       val conf = ConfigFactory.parseString(
         """format = transient_eager
           |cache.policy = cache
@@ -110,7 +110,7 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.asInstanceOf[TransientEager].cachePolicy == CachePolicy.Cache)
     }
 
-    "use 'on_demand' when specified explicitly" in {
+    "use 'transient' when specified explicitly" in {
       val conf = ConfigFactory.parseString("format = transient")
 
       val format = DataFormatParser.fromConfig(conf, conf)
@@ -122,7 +122,7 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.asInstanceOf[Transient].cachePolicy == CachePolicy.NoCache)
     }
 
-    "support cache policies for 'on_demand' format" in {
+    "support cache policies for 'transient' format" in {
       val conf = ConfigFactory.parseString(
         """format = transient
           |cache.policy = cache

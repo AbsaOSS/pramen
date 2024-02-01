@@ -49,9 +49,9 @@ class MetastoreImpl(appConfig: Config,
 
   override def isDataAvailable(tableName: String, infoDateFromOpt: Option[LocalDate], infoDateToOpt: Option[LocalDate]): Boolean = {
     val mt = getTableDef(tableName)
-    val isOnDemand = mt.format.isLazy
+    val isLazy = mt.format.isLazy
 
-    if (isOnDemand) {
+    if (isLazy) {
       (infoDateFromOpt, infoDateToOpt) match {
         case (Some(infoDateFrom), Some(infoDateTo)) =>
           TransientJobManager.selectInfoDatesToExecute(tableName, infoDateFrom, infoDateTo).nonEmpty
@@ -76,8 +76,8 @@ class MetastoreImpl(appConfig: Config,
 
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
-    val isOnDemand = mt.format.isLazy
-    if (isOnDemand) {
+    val isLazy = mt.format.isLazy
+    if (isLazy) {
       MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(None, until)
     } else {
       bookkeeper.getLatestProcessedDate(tableName, until) match {
