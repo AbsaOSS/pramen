@@ -145,15 +145,13 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(journalEntries.head.status == "Failed")
     }
 
-    "run a singe on-demand job" in {
+    "run a single lazy job" in {
       val now = Instant.now()
       val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskNotification) => ())
       val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
       val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), jobNotificationTargets = Seq(jobNotificationTarget))
 
-      val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
-
-      val result = runner.runOnDemand(tasks.head.job, infoDate)
+      val result = runner.runLazyTask(tasks.head.job, infoDate)
 
       val job = tasks.head.job.asInstanceOf[JobSpy]
 
@@ -169,7 +167,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val journalEntries = journal.getEntries(now, now.plusSeconds(30))
 
       assert(journalEntries.length == 1)
-      assert(journalEntries.head.status == "On Demand")
+      assert(journalEntries.head.status == "On Request")
     }
   }
 

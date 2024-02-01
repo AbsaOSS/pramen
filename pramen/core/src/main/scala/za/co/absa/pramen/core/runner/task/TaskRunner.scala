@@ -25,6 +25,6 @@ trait TaskRunner extends AutoCloseable {
   /** Run a job for specified information dates as a part of pipeline execution. */
   def runJobTasks(job: Job, infoDates: Seq[TaskPreDef]): Future[Seq[RunStatus]]
 
-  /** Run a job for specified information date on-demand from another job. */
-  def runOnDemand(job: Job, infoDate: LocalDate): RunStatus
+  /** Run a job for specified information date when requested from another job. */
+  def runLazyTask(job: Job, infoDate: LocalDate): RunStatus
 }

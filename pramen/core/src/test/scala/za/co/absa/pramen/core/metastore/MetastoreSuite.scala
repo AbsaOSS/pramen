@@ -70,7 +70,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
       }
     }
 
-    "return true if an on-demand table is available for the info date" in {
+    "return true if an lazy transient table is available for the info date" in {
       withTempDirectory("metastore_test") { tempDir =>
         val (m, _) = getTestCase(tempDir)
 
@@ -94,7 +94,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
       }
     }
 
-    "return true for an open interval if the table is on-demand" in {
+    "return true for an open interval if the table is lazy transient" in {
       withTempDirectory("metastore_test") { tempDir =>
         val (m, _) = getTestCase(tempDir)
 
@@ -104,7 +104,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         assert(m.isDataAvailable("transient_table", Some(firstDayOfMonth.minusDays(1)), Some(firstDayOfMonth.plusDays(1))))
         assert(!m.isDataAvailable("transient_table", Some(firstDayOfMonth.plusDays(1)), Some(firstDayOfMonth.plusDays(2))))
 
-        // For on-demand tables half-intervals data availability is always true
+        // For transient lazy tables half-intervals data availability is always true
         assert(m.isDataAvailable("transient_table", Some(firstDayOfMonth), None))
         assert(m.isDataAvailable("transient_table", None, Some(firstDayOfMonth)))
         assert(m.isDataAvailable("transient_table", None, None))
@@ -541,7 +541,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     ).withFallback(ConfigFactory.load())
 
     val schedule = Schedule.Monthly(Seq(1))
-    TransientJobManager.addOnDemandJob(
+    TransientJobManager.addLazyJob(
       new JobSpy(outputTableIn = "transient_table",
         outputTableFormat = DataFormat.Transient(CachePolicy.NoCache),
         operationDef = OperationDefFactory.getDummyOperationDef(schedule = schedule))

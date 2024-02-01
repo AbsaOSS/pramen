@@ -29,7 +29,7 @@ import java.time.LocalDate
 class TransientTablesSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
   private val infoDate = LocalDate.of(2021, 2, 18)
 
-  "On-demand metastore tables" should {
+  "Lazy transient tables" should {
     val expectedSingle =
       """{"a":"D","b":4}
         |{"a":"E","b":5}

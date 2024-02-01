@@ -2294,7 +2294,8 @@ The cache policy can be:
 - `persist` - the table is persisted in the temporary directory for the duration of the pipeline run.
 
 Transient tables are calculated on-demand by executing the operation that outputs to that table. This occurs when a 
-transformer or a sink invokes metastore.getTable() or metastore.getLatest(). Pramen ensures that if the same data is 
+transformer or a sink invokes metastore.getTable() or metastore.getLatest(). This is also known as 'lazy evaluation'
+therefore jobs that output to transient tables are also known as 'lazy jobs'. Pramen ensures that if the same data is 
 required by multiple transformers (for the same job for the same date), the job will run only once.
 
 ### File-based sourcing

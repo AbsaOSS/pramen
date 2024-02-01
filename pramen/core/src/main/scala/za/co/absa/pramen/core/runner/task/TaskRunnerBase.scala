@@ -83,15 +83,15 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
-  override def runOnDemand(job: Job, infoDate: LocalDate): RunStatus = {
+  override def runLazyTask(job: Job, infoDate: LocalDate): RunStatus = {
     val started = Instant.now()
-    val task = Task(job, infoDate, TaskRunReason.OnDemand)
+    val task = Task(job, infoDate, TaskRunReason.OnRequest)
     val result: TaskResult = validate(task, started) match {
       case Left(failedResult) => failedResult
       case Right(validationResult) => run(task, started, validationResult)
     }
 
-    onTaskCompletion(task, result, isOnDemand = true)
+    onTaskCompletion(task, result, isLazy = true)
   }
 
   /** Runs multiple tasks in the single thread in the order of info dates. If one task fails, the rest will be skipped. */
@@ -125,7 +125,7 @@ abstract class TaskRunnerBase(conf: Config,
           case Left(failedResult) => failedResult
           case Right(validationResult) => run(task, started, validationResult)
         }
-        onTaskCompletion(task, result, isOnDemand = false)
+        onTaskCompletion(task, result, isLazy = false)
     }
   }
 
@@ -137,7 +137,7 @@ abstract class TaskRunnerBase(conf: Config,
     val isTransient = task.job.outputTable.format.isTransient
     val taskResult = TaskResult(task.job, runStatus, Some(runInfo), applicationId, isTransient, Nil, Nil, Nil)
 
-    onTaskCompletion(task, taskResult, isOnDemand = false)
+    onTaskCompletion(task, taskResult, isLazy = false)
   }
 
   /**
@@ -362,11 +362,11 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   /** Logs task completion and sends corresponding notifications. */
-  private def onTaskCompletion(task: Task, taskResult: TaskResult, isOnDemand: Boolean): RunStatus = {
+  private def onTaskCompletion(task: Task, taskResult: TaskResult, isLazy: Boolean): RunStatus = {
     val notificationTargetErrors = sendNotifications(task, taskResult)
     val updatedResult = taskResult.copy(notificationTargetErrors = notificationTargetErrors)
 
-    logTaskResult(updatedResult, isOnDemand)
+    logTaskResult(updatedResult, isLazy)
     pipelineState.addTaskCompletion(Seq(updatedResult))
     addJournalEntry(task, updatedResult)
 
@@ -447,14 +447,14 @@ abstract class TaskRunnerBase(conf: Config,
     Some(RunInfo(infoDate, started, Instant.now()))
   }
 
-  private def logTaskResult(result: TaskResult, isOnDemand: Boolean): Unit = synchronized {
+  private def logTaskResult(result: TaskResult, isLazy: Boolean): Unit = synchronized {
     val infoDateMsg = result.runInfo match {
       case Some(date) => s" for ${date.infoDate}"
       case None => ""
     }
 
-    val taskStr = if (isOnDemand) {
-      "On demand task"
+    val taskStr = if (isLazy) {
+      "Requested lazy task"
     } else {
       "Task"
     }

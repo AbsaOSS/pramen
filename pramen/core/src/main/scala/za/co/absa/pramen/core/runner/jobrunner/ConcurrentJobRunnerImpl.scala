@@ -146,7 +146,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runLazyJob(job: Job): Boolean = {
-    TransientJobManager.addOnDemandJob(job)
+    TransientJobManager.addLazyJob(job)
     true
   }
 
