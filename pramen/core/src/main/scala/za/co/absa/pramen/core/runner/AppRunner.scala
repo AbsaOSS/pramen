@@ -202,7 +202,7 @@ object AppRunner {
           throw new IllegalArgumentException(s"Non-existent or disabled jobs selected for execution. Output tables: ${notFoundJobs.mkString(", ")}")
         }
 
-        jobs.filter(job => selectedTablesSet.contains(job.outputTable.name) || job.outputTable.format.isTransient)
+        jobs.filter(job => selectedTablesSet.contains(job.outputTable.name) || job.outputTable.format.isLazy)
       }
     }, state, "selecting jobs for execution")
   }
