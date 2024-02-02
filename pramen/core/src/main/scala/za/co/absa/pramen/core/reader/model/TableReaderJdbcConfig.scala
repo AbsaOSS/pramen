@@ -33,7 +33,8 @@ case class TableReaderJdbcConfig(
                                   correctDecimalsFixPrecision: Boolean = false,
                                   enableSchemaMetadata: Boolean = false,
                                   useJdbcNative: Boolean = false,
-                                  identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto
+                                  identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto,
+                                  sqlGeneratorClass: Option[String] = None
                                 )
 
 object TableReaderJdbcConfig {
@@ -52,6 +53,7 @@ object TableReaderJdbcConfig {
   val ENABLE_SCHEMA_METADATA_KEY = "enable.schema.metadata"
   val USE_JDBC_NATIVE = "use.jdbc.native"
   val IDENTIFIER_QUOTING_POLICY = "identifier.quoting.policy"
+  val SQL_GENERATOR_CLASS_KEY = "sql.generator.class"
 
   def load(conf: Config, parent: String = ""): TableReaderJdbcConfig = {
     ConfigUtils.validatePathsExistence(conf, parent, HAS_INFO_DATE :: Nil)
@@ -88,7 +90,8 @@ object TableReaderJdbcConfig {
       correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
       useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false),
-      identifierQuotingPolicy = identifierQuotingPolicy
+      identifierQuotingPolicy = identifierQuotingPolicy,
+      sqlGeneratorClass = ConfigUtils.getOptionString(conf, SQL_GENERATOR_CLASS_KEY)
     )
   }
 

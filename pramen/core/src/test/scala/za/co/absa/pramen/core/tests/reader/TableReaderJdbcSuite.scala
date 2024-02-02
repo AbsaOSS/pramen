@@ -24,6 +24,7 @@ import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.api.sql.QuotingPolicy
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.mocks.SqlGeneratorDummy
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc}
 import za.co.absa.pramen.core.samples.RdbExampleTable
@@ -76,6 +77,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |  information.date.column = "INFO_DATE"
          |  information.date.type = "date"
          |  information.date.app.format = "YYYY-MM-dd"
+         |  sql.generator.class = "za.co.absa.pramen.core.mocks.SqlGeneratorDummy"
          |}
          |reader_minimal {
          |  jdbc {
@@ -104,6 +106,8 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.infoDateColumn == "INFO_DATE")
       assert(jdbc.infoDateType == "number")
       assert(jdbc.infoDateFormat == "yyyy-MM-DD")
+      assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Never)
+      assert(jdbc.sqlGeneratorClass.isEmpty)
       assert(!jdbc.hasInfoDate)
       assert(!jdbc.saveTimestampsAsDates)
     }
@@ -121,6 +125,8 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.infoDateColumn == "INFO_DATE")
       assert(jdbc.infoDateType == "date")
       assert(jdbc.infoDateFormat == "YYYY-MM-dd")
+      assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Auto)
+      assert(jdbc.sqlGeneratorClass.contains("za.co.absa.pramen.core.mocks.SqlGeneratorDummy"))
       assert(jdbc.hasInfoDate)
       assert(!jdbc.saveTimestampsAsDates)
     }
@@ -140,12 +146,20 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.infoDateFormat == "yyyy-MM-dd")
       assert(jdbc.hasInfoDate)
       assert(!jdbc.saveTimestampsAsDates)
+      assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Auto)
+      assert(jdbc.sqlGeneratorClass.isEmpty)
     }
 
-    "ensure sql query generator is properly selected" in {
+    "ensure sql query generator is properly selected 1" in {
       val reader = TableReaderJdbc(conf.getConfig("reader"), "reader")
 
       assert(reader.sqlGen.isInstanceOf[SqlGeneratorHsqlDb])
+    }
+
+    "ensure sql query generator is properly selected 2" in {
+      val reader = TableReaderJdbc(conf.getConfig("reader_legacy"), "reader_legacy")
+
+      assert(reader.sqlGen.isInstanceOf[SqlGeneratorDummy])
     }
 
     "ensure jdbc config properties are passed correctly" in {

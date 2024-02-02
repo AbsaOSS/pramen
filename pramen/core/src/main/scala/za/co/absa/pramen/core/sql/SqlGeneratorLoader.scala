@@ -16,15 +16,31 @@
 
 package za.co.absa.pramen.core.sql
 
-import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.sql.{SqlConfig, SqlGenerator}
 
 object SqlGeneratorLoader {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def fromDriverName(driver: String, sqlConfig: SqlConfig, conf: Config): SqlGenerator = {
-    val sqlGenerator = driver match {
+  /**
+    * Loads an SQL generator, If SQL configuration contains a generator class name, it will be loaded.
+    * If not, the generator will be selected based on the driver name based on the internal mapping.
+    * @param driver    The driver class.
+    * @param sqlConfig The SQL configuration.
+    * @return The SQL generator.
+    */
+  def getSqlGenerator(driver: String, sqlConfig: SqlConfig): SqlGenerator = {
+    val sqlGenerator = sqlConfig.sqlGeneratorClass match {
+      case Some(clazz) => fromClass(clazz, sqlConfig)
+      case None        => fromDriverName(driver, sqlConfig)
+    }
+
+    log.info(s"Using SQL generator: ${sqlGenerator.getClass.getCanonicalName}")
+    sqlGenerator
+  }
+
+  def fromDriverName(driver: String, sqlConfig: SqlConfig): SqlGenerator = {
+    driver match {
       case "org.postgresql.Driver"                        => new SqlGeneratorPostgreSQL(sqlConfig)
       case "oracle.jdbc.OracleDriver"                     => new SqlGeneratorOracle(sqlConfig)
       case "net.sourceforge.jtds.jdbc.Driver"             => new SqlGeneratorMicrosoft(sqlConfig)
@@ -40,7 +56,12 @@ object SqlGeneratorLoader {
         log.warn(s"Unsupported JDBC driver: '$d'. Trying to use a generic SQL generator.")
         new SqlGeneratorGeneric(sqlConfig)
     }
-    log.info(s"Using SQL generator: ${sqlGenerator.getClass.getCanonicalName}")
-    sqlGenerator
+  }
+
+  def fromClass(clazz: String, sqlConfig: SqlConfig): SqlGenerator = {
+    Class.forName(clazz)
+      .getConstructor(classOf[SqlConfig])
+      .newInstance(sqlConfig)
+      .asInstanceOf[SqlGenerator]
   }
 }
