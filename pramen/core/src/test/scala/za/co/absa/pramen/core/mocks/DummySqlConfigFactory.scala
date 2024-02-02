@@ -23,11 +23,13 @@ object DummySqlConfigFactory {
   def getDummyConfig(infoDateColumn: String = "col",
                      infoDateType: SqlColumnType = SqlColumnType.DATE,
                      dateFormatApp: String = "yyyy-MM-dd",
-                     identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto
+                     identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto,
+                     sqlGeneratorClass: Option[String] = None
                     ): SqlConfig = SqlConfig(
     infoDateColumn = infoDateColumn,
     infoDateType = infoDateType,
     dateFormatApp = dateFormatApp,
     identifierQuotingPolicy = identifierQuotingPolicy,
+    sqlGeneratorClass = sqlGeneratorClass,
     ConfigFactory.empty())
 }

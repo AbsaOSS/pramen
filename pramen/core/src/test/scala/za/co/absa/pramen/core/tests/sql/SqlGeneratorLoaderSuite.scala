@@ -16,11 +16,10 @@
 
 package za.co.absa.pramen.core.tests.sql
 
-import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGeneratorBase}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
+import za.co.absa.pramen.core.mocks.{DummySqlConfigFactory, SqlGeneratorDummy}
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql._
 
@@ -40,8 +39,6 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   private val date1 = LocalDate.of(2020, 8, 17)
   private val date2 = LocalDate.of(2020, 8, 30)
 
-  private val config = ConfigFactory.empty()
-
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     RdbExampleTable.Company.initTable(getConnection)
@@ -52,27 +49,35 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
     super.afterAll()
   }
 
-  "fromDriverName" should {
+  "loadSqlGenerator" should {
     "return an Oracle SQL generator" in {
-      assert(fromDriverName("oracle.jdbc.OracleDriver", sqlConfigDate, config).isInstanceOf[SqlGeneratorOracle])
+      assert(getSqlGenerator("oracle.jdbc.OracleDriver", sqlConfigDate).isInstanceOf[SqlGeneratorOracle])
     }
 
     "return a Microsoft SQL generator" in {
-      assert(fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigDate, config).isInstanceOf[SqlGeneratorMicrosoft])
-      assert(fromDriverName("com.microsoft.sqlserver.jdbc.SQLServerDriver", sqlConfigDate, config).isInstanceOf[SqlGeneratorMicrosoft])
+      assert(getSqlGenerator("net.sourceforge.jtds.jdbc.Driver", sqlConfigDate).isInstanceOf[SqlGeneratorMicrosoft])
+      assert(getSqlGenerator("com.microsoft.sqlserver.jdbc.SQLServerDriver", sqlConfigDate).isInstanceOf[SqlGeneratorMicrosoft])
     }
 
     "return a generic SQL generator" in {
-      assert(fromDriverName("unknown", sqlConfigDate, config).isInstanceOf[SqlGeneratorGeneric])
+      assert(getSqlGenerator("unknown", sqlConfigDate).isInstanceOf[SqlGeneratorGeneric])
+    }
+
+    "return from a class" in {
+      val sqlConfig = sqlConfigDate.copy(sqlGeneratorClass = Some("za.co.absa.pramen.core.mocks.SqlGeneratorDummy"))
+      val generator = getSqlGenerator("unknown", sqlConfig)
+
+      assert(generator.isInstanceOf[SqlGeneratorDummy])
+      assert(generator.asInstanceOf[SqlGeneratorDummy].getSqlConfig == sqlConfig)
     }
   }
 
   "Oracle SQL generator" should {
-    val gen = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigDate, config)
-    val genStr = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigString, config)
-    val genNum = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigNumber, config)
-    val genDateTime = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigDateTime, config)
-    val genEscaped = fromDriverName("oracle.jdbc.OracleDriver", sqlConfigEscape, config)
+    val gen = getSqlGenerator("oracle.jdbc.OracleDriver", sqlConfigDate)
+    val genStr = getSqlGenerator("oracle.jdbc.OracleDriver", sqlConfigString)
+    val genNum = getSqlGenerator("oracle.jdbc.OracleDriver", sqlConfigNumber)
+    val genDateTime = getSqlGenerator("oracle.jdbc.OracleDriver", sqlConfigDateTime)
+    val genEscaped = getSqlGenerator("oracle.jdbc.OracleDriver", sqlConfigEscape)
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -177,13 +182,13 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   }
 
   "Microsoft SQL generator" should {
-    val genDate = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigDate, config)
-    val genDateTime = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigDateTime, config)
-    val genStr = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigString, config)
-    val genStr2 = fromDriverName("net.sourceforge.jtds.jdbc.Driver", DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, dateFormatApp = "yyyyMMdd",  infoDateColumn = "D"), config)
-    val genNum = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigNumber, config)
-    val genEscaped = fromDriverName("net.sourceforge.jtds.jdbc.Driver", sqlConfigEscape, config)
-    val genEscaped2 = fromDriverName("net.sourceforge.jtds.jdbc.Driver",  DummySqlConfigFactory.getDummyConfig(infoDateColumn = "[Info date]", identifierQuotingPolicy = QuotingPolicy.Auto), config)
+    val genDate = getSqlGenerator("net.sourceforge.jtds.jdbc.Driver", sqlConfigDate)
+    val genDateTime = getSqlGenerator("net.sourceforge.jtds.jdbc.Driver", sqlConfigDateTime)
+    val genStr = getSqlGenerator("net.sourceforge.jtds.jdbc.Driver", sqlConfigString)
+    val genStr2 = getSqlGenerator("net.sourceforge.jtds.jdbc.Driver", DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, dateFormatApp = "yyyyMMdd",  infoDateColumn = "D"))
+    val genNum = getSqlGenerator("net.sourceforge.jtds.jdbc.Driver", sqlConfigNumber)
+    val genEscaped = getSqlGenerator("net.sourceforge.jtds.jdbc.Driver", sqlConfigEscape)
+    val genEscaped2 = getSqlGenerator("net.sourceforge.jtds.jdbc.Driver",  DummySqlConfigFactory.getDummyConfig(infoDateColumn = "[Info date]", identifierQuotingPolicy = QuotingPolicy.Auto))
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK)")
@@ -368,12 +373,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   }
 
   "Denodo SQL generator" should {
-    val gen = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigDate, config)
-    val genStr = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigString, config)
-    val genNum = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigNumber, config)
-    val genDateTime = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigDateTime, config)
-    val genEscaped = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigEscape, config)
-    val genEscapedAuto = fromDriverName("com.denodo.vdp.jdbc.Driver", sqlConfigEscape.copy(identifierQuotingPolicy = QuotingPolicy.Auto), config)
+    val gen = getSqlGenerator("com.denodo.vdp.jdbc.Driver", sqlConfigDate)
+    val genStr = getSqlGenerator("com.denodo.vdp.jdbc.Driver", sqlConfigString)
+    val genNum = getSqlGenerator("com.denodo.vdp.jdbc.Driver", sqlConfigNumber)
+    val genDateTime = getSqlGenerator("com.denodo.vdp.jdbc.Driver", sqlConfigDateTime)
+    val genEscaped = getSqlGenerator("com.denodo.vdp.jdbc.Driver", sqlConfigEscape)
+    val genEscapedAuto = getSqlGenerator("com.denodo.vdp.jdbc.Driver", sqlConfigEscape.copy(identifierQuotingPolicy = QuotingPolicy.Auto))
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -577,11 +582,11 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   "SAS SQL generator" should {
     val connection = getConnection
 
-    val gen = fromDriverName("com.sas.rio.MVADriver", sqlConfigDate, config)
-    val genStr = fromDriverName("com.sas.rio.MVADriver", sqlConfigString, config)
-    val genNum = fromDriverName("com.sas.rio.MVADriver", sqlConfigNumber, config)
-    val genDateTime = fromDriverName("com.sas.rio.MVADriver", sqlConfigDateTime, config)
-    val genEscaped = fromDriverName("com.sas.rio.MVADriver", sqlConfigEscape, config)
+    val gen = getSqlGenerator("com.sas.rio.MVADriver", sqlConfigDate)
+    val genStr = getSqlGenerator("com.sas.rio.MVADriver", sqlConfigString)
+    val genNum = getSqlGenerator("com.sas.rio.MVADriver", sqlConfigNumber)
+    val genDateTime = getSqlGenerator("com.sas.rio.MVADriver", sqlConfigDateTime)
+    val genEscaped = getSqlGenerator("com.sas.rio.MVADriver", sqlConfigEscape)
 
     gen.setConnection(connection)
     genStr.setConnection(connection)
@@ -681,12 +686,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   }
 
   "Hive SQL generator" should {
-    val gen = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDate, config)
-    val genStr = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigString, config)
-    val genNum = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigNumber, config)
-    val genDateTime = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDateTime, config)
-    val genEscaped = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigEscape, config)
-    val genEscaped2 = fromDriverName("com.cloudera.hive.jdbc41.HS2Driver", DummySqlConfigFactory.getDummyConfig(infoDateColumn = "`Info date`", identifierQuotingPolicy = QuotingPolicy.Auto), config)
+    val gen = getSqlGenerator("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDate)
+    val genStr = getSqlGenerator("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigString)
+    val genNum = getSqlGenerator("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigNumber)
+    val genDateTime = getSqlGenerator("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDateTime)
+    val genEscaped = getSqlGenerator("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigEscape)
+    val genEscaped2 = getSqlGenerator("com.cloudera.hive.jdbc41.HS2Driver", DummySqlConfigFactory.getDummyConfig(infoDateColumn = "`Info date`", identifierQuotingPolicy = QuotingPolicy.Auto))
 
     "generate count queries without date ranges" in {
       assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -805,11 +810,11 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   }
 
   "PostgreSQL SQL generator" should {
-    val genDate = fromDriverName("org.postgresql.Driver", sqlConfigDate, config)
-    val genDateTime = fromDriverName("org.postgresql.Driver", sqlConfigDateTime, config)
-    val genStr = fromDriverName("org.postgresql.Driver", sqlConfigString, config)
-    val genNum = fromDriverName("org.postgresql.Driver", sqlConfigNumber, config)
-    val genEscaped = fromDriverName("org.postgresql.Driver", sqlConfigEscape, config)
+    val genDate = getSqlGenerator("org.postgresql.Driver", sqlConfigDate)
+    val genDateTime = getSqlGenerator("org.postgresql.Driver", sqlConfigDateTime)
+    val genStr = getSqlGenerator("org.postgresql.Driver", sqlConfigString)
+    val genNum = getSqlGenerator("org.postgresql.Driver", sqlConfigNumber)
+    val genEscaped = getSqlGenerator("org.postgresql.Driver", sqlConfigEscape)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) FROM A")
@@ -921,11 +926,11 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   }
 
   "DB2 SQL generator" should {
-    val genDate = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigDate, config)
-    val genDateTime = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigDateTime, config)
-    val genStr = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigString, config)
-    val genNum = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigNumber, config)
-    val genEscaped = fromDriverName("com.ibm.db2.jcc.DB2Driver", sqlConfigEscape, config)
+    val genDate = getSqlGenerator("com.ibm.db2.jcc.DB2Driver", sqlConfigDate)
+    val genDateTime = getSqlGenerator("com.ibm.db2.jcc.DB2Driver", sqlConfigDateTime)
+    val genStr = getSqlGenerator("com.ibm.db2.jcc.DB2Driver", sqlConfigString)
+    val genNum = getSqlGenerator("com.ibm.db2.jcc.DB2Driver", sqlConfigNumber)
+    val genEscaped = getSqlGenerator("com.ibm.db2.jcc.DB2Driver", sqlConfigEscape)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A")
@@ -1037,11 +1042,11 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   }
 
   "HSQL generator" should {
-    val genDate = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigDate, config)
-    val genDateTime = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigDateTime, config)
-    val genStr = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigString, config)
-    val genNum = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigNumber, config)
-    val genEscaped = fromDriverName("org.hsqldb.jdbc.JDBCDriver", sqlConfigEscape, config)
+    val genDate = getSqlGenerator("org.hsqldb.jdbc.JDBCDriver", sqlConfigDate)
+    val genDateTime = getSqlGenerator("org.hsqldb.jdbc.JDBCDriver", sqlConfigDateTime)
+    val genStr = getSqlGenerator("org.hsqldb.jdbc.JDBCDriver", sqlConfigString)
+    val genNum = getSqlGenerator("org.hsqldb.jdbc.JDBCDriver", sqlConfigNumber)
+    val genEscaped = getSqlGenerator("org.hsqldb.jdbc.JDBCDriver", sqlConfigEscape)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A")
@@ -1165,11 +1170,11 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   }
 
   "Generic SQL generator" should {
-    val genDate = fromDriverName("generic", sqlConfigDate, config)
-    val genDateTime = fromDriverName("generic", sqlConfigDateTime, config)
-    val genStr = fromDriverName("generic", sqlConfigString, config)
-    val genNum = fromDriverName("generic", sqlConfigNumber, config)
-    val genEscaped = fromDriverName("generic", sqlConfigEscape, config)
+    val genDate = getSqlGenerator("generic", sqlConfigDate)
+    val genDateTime = getSqlGenerator("generic", sqlConfigDateTime)
+    val genStr = getSqlGenerator("generic", sqlConfigString)
+    val genNum = getSqlGenerator("generic", sqlConfigNumber)
+    val genEscaped = getSqlGenerator("generic", sqlConfigEscape)
 
     "generate count queries without date ranges" in {
       assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A")
@@ -1280,7 +1285,7 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
 
       "escape should not escape if turned off by config" in {
         val sql = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", identifierQuotingPolicy = QuotingPolicy.Never)
-        val genDate = fromDriverName("generic", sql, config)
+        val genDate = getSqlGenerator("generic", sql)
 
         val actual = genDate.asInstanceOf[SqlGeneratorBase].escape("System User.\"Table Name\"")
 

@@ -47,7 +47,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   logConfiguration()
 
   private[core] lazy val sqlGen = {
-    val gen = SqlGeneratorLoader.fromDriverName(jdbcReaderConfig.jdbcConfig.driver, getSqlConfig, conf)
+    val gen = SqlGeneratorLoader.getSqlGenerator(jdbcReaderConfig.jdbcConfig.driver, getSqlConfig)
 
     if (gen.requiresConnection) {
       val (connection, url) = jdbcUrlSelector.getWorkingConnection(jdbcRetries)
@@ -211,6 +211,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
           infoDateType,
           jdbcReaderConfig.infoDateFormat,
           jdbcReaderConfig.identifierQuotingPolicy,
+          jdbcReaderConfig.sqlGeneratorClass,
           ConfigUtils.getExtraConfig(conf, "sql"))
       case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
         s"It should be one of: date, string, number")

@@ -23,5 +23,6 @@ case class SqlConfig(
                       infoDateType: SqlColumnType,
                       dateFormatApp: String,
                       identifierQuotingPolicy: QuotingPolicy,
+                      sqlGeneratorClass: Option[String],
                       extraConfig: Config
                     )
