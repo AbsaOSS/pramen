@@ -556,6 +556,10 @@ is determined by the pipeline configuration.
     
     # Specifies the maximum number of records to fetch. Good for testing purposes.
     #limit.records = 100
+
+    # Optionally, you can specify a class for a custom SQL generator for your RDMS engine.
+    # The class whould extend 'za.co.absa.pramen.api.sql.SqlGenerator'
+    #sql.generator.class = "com.example.MySqlGenerator"
   }
 ```
 
