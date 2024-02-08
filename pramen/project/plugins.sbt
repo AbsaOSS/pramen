@@ -19,6 +19,8 @@ addSbtPlugin("com.github.sbt"    % "sbt-release"   % "1.1.0")
 addSbtPlugin("de.heikoseeberger" % "sbt-header"    % "5.7.0")
 addSbtPlugin("com.eed3si9n"      % "sbt-assembly"  % "0.15.0")
 
+addDependencyTreePlugin
+
 // sbt-jacoco - workaround related dependencies required to download
 val ow2Version = "9.5"
 val jacocoVersion = "0.8.10-absa.1"
