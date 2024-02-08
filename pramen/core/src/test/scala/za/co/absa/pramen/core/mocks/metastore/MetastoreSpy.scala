@@ -37,6 +37,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    statsException: Throwable = null,
                    isTableAvailable: Boolean = true,
                    isTableEmpty: Boolean = false,
+                   trackDays: Int = 0,
                    readOptions: Map[String, String] = Map.empty[String, String],
                    writeOptions: Map[String, String] = Map.empty[String, String]) extends Metastore {
 
@@ -59,7 +60,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
       isTableAvailable
   }
 
-  override def getTableDef(tableName: String): MetaTable = MetaTableFactory.getDummyMetaTable(name = tableName)
+  override def getTableDef(tableName: String): MetaTable = MetaTableFactory.getDummyMetaTable(name = tableName, trackDays = trackDays)
 
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     if (tableException != null)

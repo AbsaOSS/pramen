@@ -79,6 +79,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
        |
        |      has.information.date.column = false
        |      limit.records = 100
+       |      disable.count.query = true
        |      information.date.column = "INFO_DATE"
        |      information.date.type = "date"
        |      information.date.app.format = "yyyy-MM-DD"
@@ -98,6 +99,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
 
       assert(src.jdbcReaderConfig.infoDateColumn == "INFO_DATE")
+      assert(!src.disableCountQuery)
     }
 
     "be able to get a source by its name" in {
@@ -106,6 +108,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       assert(src.jdbcReaderConfig.limitRecords.contains(100))
       assert(src.jdbcReaderConfig.jdbcConfig.driver == "driver2")
       assert(src.jdbcReaderConfig.jdbcConfig.extraOptions("database") == "mydb")
+      assert(src.disableCountQuery)
     }
 
     "be able to get a source by its name from the manager" in {

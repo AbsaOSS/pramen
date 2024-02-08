@@ -33,11 +33,14 @@ class SparkSource(val format: Option[String],
                   val hasInfoDateCol: Boolean,
                   val infoDateColumn: String,
                   val infoDateFormat: String,
+                  val disableCountQuery: Boolean,
                   val sourceConfig: Config,
                   val options: Map[String, String])(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override val config: Config = sourceConfig
+
+  override def isDataAlwaysAvailable: Boolean = disableCountQuery
 
   override def hasInfoDateColumn(query: Query): Boolean = hasInfoDateCol
 
@@ -87,6 +90,7 @@ class SparkSource(val format: Option[String],
 object SparkSource extends ExternalChannelFactory[SparkSource] {
   val FORMAT = "format"
   val SCHEMA = "schema"
+  val DISABLE_COUNT_QUERY = "disable.count.query"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): SparkSource = {
     val format = ConfigUtils.getOptionString(conf, FORMAT)
@@ -99,8 +103,9 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
       ("", "")
     }
 
+    val disableCountQuery = ConfigUtils.getOptionBoolean(conf, DISABLE_COUNT_QUERY).getOrElse(false)
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, conf, options)(spark)
+    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, disableCountQuery, conf, options)(spark)
   }
 }
