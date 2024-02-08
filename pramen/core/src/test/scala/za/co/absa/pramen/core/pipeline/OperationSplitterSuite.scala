@@ -33,11 +33,13 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
        |     name = "table1"
        |     format = "delta"
        |     path = "/dummy/path1"
+       |     track.days = 2
        |   },
        |   {
        |     name = "table2"
        |     format = "parquet"
        |     path = "/dummy/path2"
+       |     track.days = 3
        |   }
        | ]
        |
@@ -49,6 +51,21 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
        |     format = "csv"
        |
        |     has.information.date.column = false
+       |
+       |     option {
+       |       header = true
+       |       delimiter = ","
+       |     }
+       |   },
+       |   {
+       |     name = "spark_optimized_source"
+       |     factory.class = "za.co.absa.pramen.core.source.SparkSource"
+       |
+       |     format = "csv"
+       |
+       |     has.information.date.column = false
+       |
+       |     disable.count.query = true
        |
        |     option {
        |       header = true
@@ -123,6 +140,30 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
       assert(job.length == 2)
       assert(job.head.isInstanceOf[IngestionJob])
       assert(job(1).isInstanceOf[IngestionJob])
+      assert(job.head.outputTable.trackDays == 2)
+    }
+
+    "create ingestion jobs with count query optimization" in {
+      val ingestionConf = ConfigFactory.parseString(
+        s"""name = "Sourcing operation"
+           |source = "spark_optimized_source"
+           |""".stripMargin)
+      val (splitter, _) = getUseCase()
+
+      val sourceTable1 = SourceTableFactory.getDummySourceTable(metaTableName = "table1")
+      val sourceTable2 = SourceTableFactory.getDummySourceTable(metaTableName = "table2")
+
+      val ingestionDef = OperationDefFactory.getDummyOperationDef(name = "test",
+        operationConf = ingestionConf,
+        operationType = OperationType.Ingestion("spark_optimized_source", Seq(sourceTable1, sourceTable2))
+      )
+
+      val job = splitter.createJobs(ingestionDef)
+
+      assert(job.length == 2)
+      assert(job.head.isInstanceOf[IngestionJob])
+      assert(job(1).isInstanceOf[IngestionJob])
+      assert(job.head.outputTable.trackDays == 0)
     }
 
     "create transformation jobs" in {
@@ -282,7 +323,7 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
   }
 
   def getUseCase(conf: Config = appConfig): (OperationSplitter, OperationDef) = {
-    val splitter = new OperationSplitter(conf, new MetastoreSpy(), new SyncBookkeeperMock)
+    val splitter = new OperationSplitter(conf, new MetastoreSpy(trackDays = 2), new SyncBookkeeperMock)
     val operation = OperationDefFactory.getDummyOperationDef()
 
     (splitter, operation)

@@ -36,6 +36,8 @@ import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
                         bookkeeper: Bookkeeper)(implicit spark: SparkSession) {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   def createJobs(operationDef: OperationDef): Seq[Job] = {
     operationDef.operationType match {
       case Ingestion(sourceName, sourceTables)            => createIngestion(operationDef, sourceName, sourceTables)
@@ -58,7 +60,15 @@ class OperationSplitter(conf: Config,
         case None               => sourceBase
       }
 
-      val outputTable = metastore.getTableDef(sourceTable.metaTableName)
+      val outputTableFromConfig = metastore.getTableDef(sourceTable.metaTableName)
+
+      val outputTable = if (source.isDataAlwaysAvailable && outputTableFromConfig.trackDays > 0) {
+        log.info(s"The source has count query optimization for table '${outputTableFromConfig.name}'. " +
+          s"Setting track.days from ${outputTableFromConfig.trackDays} to 0.")
+        outputTableFromConfig.copy(trackDays = 0)
+      } else {
+        outputTableFromConfig
+      }
 
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
