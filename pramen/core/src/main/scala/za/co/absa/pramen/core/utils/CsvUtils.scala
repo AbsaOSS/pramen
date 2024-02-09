@@ -37,7 +37,6 @@ object CsvUtils {
     obj.getClass.getDeclaredFields
       .filterNot(_.getName.contains('$'))
       .map(field => {
-        println(field.getName)
         field.setAccessible(true)
         field.get(obj).toString.replace(separator, ' ')
       }).mkString("", s"$separator", "\n")
