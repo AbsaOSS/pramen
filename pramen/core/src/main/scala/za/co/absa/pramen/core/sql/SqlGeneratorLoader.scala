@@ -39,7 +39,7 @@ object SqlGeneratorLoader {
     sqlGenerator
   }
 
-  def fromDriverName(driver: String, sqlConfig: SqlConfig): SqlGenerator = {
+  private def fromDriverName(driver: String, sqlConfig: SqlConfig): SqlGenerator = {
     driver match {
       case "org.postgresql.Driver"                        => new SqlGeneratorPostgreSQL(sqlConfig)
       case "oracle.jdbc.OracleDriver"                     => new SqlGeneratorOracle(sqlConfig)
@@ -58,7 +58,7 @@ object SqlGeneratorLoader {
     }
   }
 
-  def fromClass(clazz: String, sqlConfig: SqlConfig): SqlGenerator = {
+  private def fromClass(clazz: String, sqlConfig: SqlConfig): SqlGenerator = {
     Class.forName(clazz)
       .getConstructor(classOf[SqlConfig])
       .newInstance(sqlConfig)
