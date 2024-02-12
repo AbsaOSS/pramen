@@ -39,7 +39,8 @@ class IngestionJob(operationDef: OperationDef,
                    sourceTable: SourceTable,
                    outputTable: MetaTable,
                    specialCharacters: String,
-                   tempDirectory: Option[String])
+                   tempDirectory: Option[String],
+                   disableCountQuery: Boolean)
                   (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
@@ -170,15 +171,15 @@ class IngestionJob(operationDef: OperationDef,
   }
 
   private def supportsTrackDays(hasInfoDate: Boolean): Boolean = {
-    if (source.isDataAlwaysAvailable && outputTable.trackDays > 0) {
-      log.info(s"The source has count query optimization for ingestion job '$name' for table '${outputTable.name}'. " +
+    if (disableCountQuery && outputTable.trackDays > 0) {
+      log.info(s"The source has count query disabled for ingestion job '$name' for table '${outputTable.name}'. " +
         s"Setting track.days from ${outputTable.trackDays} to 0.")
     }
-    (hasInfoDate || outputTable.trackDaysExplicitlySet) && !source.isDataAlwaysAvailable
+    (hasInfoDate || outputTable.trackDaysExplicitlySet) && !disableCountQuery
   }
 
   private def getRecordCount(source: Source, query: Query, from: LocalDate, to: LocalDate): Long = {
-    if (source.isDataAlwaysAvailable) {
+    if (disableCountQuery) {
       log.info(s"Getting cached record count for '${query.query}' for $from..$to...")
       getCachedDataFrame(source, query, from, to).count()
     } else {
@@ -225,7 +226,7 @@ class IngestionJob(operationDef: OperationDef,
   private def getSourcingResult(infoDate: LocalDate): SourceResult = {
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
-    if (source.isDataAlwaysAvailable) {
+    if (disableCountQuery) {
       log.info(s"Getting cached data for '${sourceTable.query.query}' for $from..$to...")
       SourceResult(getCachedDataFrame(source, sourceTable.query, from, to), Seq.empty, Seq.empty)
     } else {

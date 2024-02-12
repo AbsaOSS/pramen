@@ -24,6 +24,14 @@ import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 object SourceManager {
   val SOURCES_KEY = "pramen.sources"
 
+  /**
+    * Get source object from the list of sources from the workflow config.
+    *
+    * @param name         The name of the source.
+    * @param conf         The workflow configuration.
+    * @param overrideConf The config override, of defined.
+    * @return The source object.
+    */
   def getSourceByName(name: String, conf: Config, overrideConf: Option[Config])(implicit spark: SparkSession): Source = {
     ExternalChannelFactoryReflect.fromConfigByName[Source](conf, overrideConf, SOURCES_KEY, name, "source")
   }

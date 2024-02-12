@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.databricks.DatabricksClient
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.notify.NotificationTargetManager
-import za.co.absa.pramen.core.pipeline.OperationSplitter.{getDatabricksClient, getNotificationTarget, getPramenPyCmdlineConfig}
+import za.co.absa.pramen.core.pipeline.OperationSplitter.{DISABLE_COUNT_QUERY, getDatabricksClient, getNotificationTarget, getPramenPyCmdlineConfig}
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
@@ -62,12 +62,13 @@ class OperationSplitter(conf: Config,
         case None               => sourceBase
       }
 
+      val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
 
-      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, sourceTable, outputTable, specialCharacters, temporaryDirectory)
+      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery)
     })
   }
 
@@ -91,12 +92,13 @@ class OperationSplitter(conf: Config,
         case None               => sinkBase
       }
 
+      val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = transferTable.getMetaTable
 
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
 
-      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, source, transferTable, outputTable, sink, specialCharacters, temporaryDirectory)
+      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, source, transferTable, outputTable, sink, specialCharacters, temporaryDirectory, disableCountQuery)
     })
   }
 
@@ -162,6 +164,7 @@ class OperationSplitter(conf: Config,
 object OperationSplitter {
   val NOTIFICATION_TARGET_KEY = "notification.target"
   val NOTIFICATION_KEY = "notification"
+  val DISABLE_COUNT_QUERY = "disable.count.query"
 
   private val log = LoggerFactory.getLogger(this.getClass)
 

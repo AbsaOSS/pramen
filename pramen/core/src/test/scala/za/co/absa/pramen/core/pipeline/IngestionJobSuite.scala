@@ -369,7 +369,8 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), configOverride),
       outputTable,
       specialCharacters,
-      tempDirectory)
+      tempDirectory,
+      tempDirectory.isDefined)
 
     (bk, metastore, job)
   }
