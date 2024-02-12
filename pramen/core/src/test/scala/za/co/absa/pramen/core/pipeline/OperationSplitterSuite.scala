@@ -163,7 +163,7 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
       assert(job.length == 2)
       assert(job.head.isInstanceOf[IngestionJob])
       assert(job(1).isInstanceOf[IngestionJob])
-      assert(job.head.outputTable.trackDays == 0)
+      assert(job.head.trackDays == 0)
     }
 
     "create transformation jobs" in {

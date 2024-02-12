@@ -115,7 +115,10 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runEagerJob(job: Job): Boolean = {
-    val scheduleParams = ScheduleParams.fromRuntimeConfig(runtimeConfig, job.trackDays, job.operation.expectedDelayDays)
+    val trackDays = job.trackDays
+    log.info(s"Effective track days for ${job.name} outputting to ${job.outputTable.name} = $trackDays")
+
+    val scheduleParams = ScheduleParams.fromRuntimeConfig(runtimeConfig, trackDays, job.operation.expectedDelayDays)
 
     val taskDefs = job.scheduleStrategy.getDaysToRun(
       job.outputTable.name,
