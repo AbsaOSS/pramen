@@ -343,7 +343,8 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
                  rangeFromExpr: Option[String] = None,
                  rangeToExpr: Option[String] = None,
                  minRecords: Option[Int] = None,
-                 trackDaysExplicitlySet: Boolean = false): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
+                 trackDaysExplicitlySet: Boolean = false,
+                 tempDirectory: Option[String] = None): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy
     val operationDef = OperationDefFactory.getDummyOperationDef()
@@ -367,7 +368,8 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
         TransformExpression("NAME_U", Some("upper(NAME)"), None)
       ), Seq("ID > 1"), Seq("ID", "NAME", "NAME_U", "EMAIL"), configOverride),
       outputTable,
-      specialCharacters)
+      specialCharacters,
+      tempDirectory)
 
     (bk, metastore, job)
   }

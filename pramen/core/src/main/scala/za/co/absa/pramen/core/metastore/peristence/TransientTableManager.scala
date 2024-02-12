@@ -41,6 +41,8 @@ object TransientTableManager {
     spark = df.sparkSession
     val partition = getMetastorePartition(tableName, infoDate)
 
+    log.info(s"Adding '$partition' to the non-cached data frames...")
+
     rawDataframes += partition -> df
     schemas += partition.tableName -> df.schema
 
@@ -51,6 +53,8 @@ object TransientTableManager {
     val partition = getMetastorePartition(tableName, infoDate)
 
     val cachedDf = df.cache()
+
+    log.info(s"Adding '$partition' to the cached data frames...")
 
     this.synchronized {
       spark = df.sparkSession
@@ -77,6 +81,8 @@ object TransientTableManager {
     df.write.mode(SaveMode.Overwrite).parquet(outputPath)
 
     val sizeBytes = fsUtils.getDirectorySize(outputPath)
+
+    log.info(s"Adding '$partition' to the persistent cache at '$outputPath'...")
 
     this.synchronized {
       persistedLocations += partition -> outputPath

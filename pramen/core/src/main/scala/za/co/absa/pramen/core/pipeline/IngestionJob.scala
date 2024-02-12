@@ -18,10 +18,12 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.{Reason, Source, SourceResult}
+import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
+import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.peristence.TransientTableManager
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji.WARNING
@@ -36,7 +38,8 @@ class IngestionJob(operationDef: OperationDef,
                    source: Source,
                    sourceTable: SourceTable,
                    outputTable: MetaTable,
-                   specialCharacters: String)
+                   specialCharacters: String,
+                   tempDirectory: Option[String])
                   (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
@@ -52,7 +55,7 @@ class IngestionJob(operationDef: OperationDef,
         true
     }
 
-    if (hasInfoDate || outputTable.trackDaysExplicitlySet)
+    if (supportsTrackDays(hasInfoDate))
       outputTable.trackDays
     else
       0
@@ -88,7 +91,7 @@ class IngestionJob(operationDef: OperationDef,
         return JobPreRunResult(JobPreRunStatus.Skip(msg), None, dependencyWarnings, Nil)
     }
 
-    val recordCount = source.getRecordCount(sourceTable.query, from, to)
+    val recordCount = getRecordCount(source, sourceTable.query, from, to)
 
     minimumRecordsOpt.foreach(n => log.info(s"Minimum records to expect: $n"))
 
@@ -112,22 +115,6 @@ class IngestionJob(operationDef: OperationDef,
         } else {
           processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, failIfNoData, minimumRecordsOpt, None)
         }
-    }
-  }
-
-  private def processInsufficientDataCase(infoDate: LocalDate,
-                                          dependencyWarnings: Seq[DependencyWarning],
-                                          recordCount: Long,
-                                          failIfNoData: Boolean,
-                                          minimumRecordsOpt: Option[Int],
-                                          oldRecordCount: Option[Long]): JobPreRunResult = {
-    minimumRecordsOpt match {
-      case Some(minimumRecords) =>
-        log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")
-        JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords, oldRecordCount), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
-      case None                 =>
-        log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
-        JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
     }
   }
 
@@ -182,13 +169,75 @@ class IngestionJob(operationDef: OperationDef,
     SaveResult(stats)
   }
 
+  private def supportsTrackDays(hasInfoDate: Boolean): Boolean = {
+    if (source.isDataAlwaysAvailable && outputTable.trackDays > 0) {
+      log.info(s"The source has count query optimization for ingestion job '$name' for table '${outputTable.name}'. " +
+        s"Setting track.days from ${outputTable.trackDays} to 0.")
+    }
+    (hasInfoDate || outputTable.trackDaysExplicitlySet) && !source.isDataAlwaysAvailable
+  }
+
+  private def getRecordCount(source: Source, query: Query, from: LocalDate, to: LocalDate): Long = {
+    if (source.isDataAlwaysAvailable) {
+      log.info(s"Getting cached record count for '${query.query}' for $from..$to...")
+      getCachedDataFrame(source, query, from, to).count()
+    } else {
+      source.getRecordCount(sourceTable.query, from, to)
+    }
+  }
+
+  private def getCachedDataFrame(source: Source, query: Query, from: LocalDate, to: LocalDate): DataFrame = {
+    if (tempDirectory.isEmpty) {
+      throw new IllegalArgumentException(s"When count query optimization is set on the source, a temporary directory " +
+        s"in Hadoop (HDFS, S3, etc) should be set at '$TEMPORARY_DIRECTORY_KEY'.")
+    }
+
+    val cacheTableName = getVirtualTableName(query, to)
+    if (TransientTableManager.hasDataForTheDate(cacheTableName, from)) {
+      TransientTableManager.getDataForTheDate(cacheTableName, from)
+    } else {
+      val sourceDf = getData(source, query, from, to).data
+      val (cachedDf, _) = TransientTableManager.addPersistedDataFrame(cacheTableName, from, sourceDf, tempDirectory.get)
+      cachedDf
+    }
+  }
+
+  private def getVirtualTableName(query: Query, infoDateTo: LocalDate): String = {
+    s"jdbc://${query.query}_$infoDateTo"
+  }
+
+  private def processInsufficientDataCase(infoDate: LocalDate,
+                                          dependencyWarnings: Seq[DependencyWarning],
+                                          recordCount: Long,
+                                          failIfNoData: Boolean,
+                                          minimumRecordsOpt: Option[Int],
+                                          oldRecordCount: Option[Long]): JobPreRunResult = {
+    minimumRecordsOpt match {
+      case Some(minimumRecords) =>
+        log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")
+        JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords, oldRecordCount), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
+      case None                 =>
+        log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
+        JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
+    }
+  }
+
   private def getSourcingResult(infoDate: LocalDate): SourceResult = {
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 
+    if (source.isDataAlwaysAvailable) {
+      log.info(s"Getting cached data for '${sourceTable.query.query}' for $from..$to...")
+      SourceResult(getCachedDataFrame(source, sourceTable.query, from, to), Seq.empty, Seq.empty)
+    } else {
+      getData(source, sourceTable.query, from, to)
+    }
+  }
+
+  private def getData(source: Source, query: Query, from: LocalDate, to: LocalDate): SourceResult = {
     val sourceResult = if (sourceTable.transformations.isEmpty && sourceTable.filters.isEmpty)
-      source.getData(sourceTable.query, from, to, sourceTable.columns) // push down the projection
+      source.getData(query, from, to, sourceTable.columns) // push down the projection
     else
-      source.getData(sourceTable.query, from, to, Seq.empty[String]) // column selection and order will be applied later
+      source.getData(query, from, to, Seq.empty[String]) // column selection and order will be applied later
 
     val sanitizedDf = sanitizeDfColumns(sourceResult.data, specialCharacters)
 

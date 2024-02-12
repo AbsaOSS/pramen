@@ -214,7 +214,8 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
                  numberOfRecords: Int = 5,
                  getCountException: Throwable = null,
                  getDataException: Throwable = null,
-                 failOnNoData: Boolean = false): (TransferJob, SyncBookkeeperMock) = {
+                 failOnNoData: Boolean = false,
+                 tempDirectory: Option[String] = None): (TransferJob, SyncBookkeeperMock) = {
     val operation = OperationDefFactory.getDummyOperationDef(extraOptions = Map[String, String]("value" -> "7"))
 
     val bk = new SyncBookkeeperMock
@@ -236,7 +237,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
     val outputTable = transferTable.getMetaTable
 
-    (new TransferJob(operation, metastore, bk, Nil, source, transferTable, outputTable, sink, " "), bk)
+    (new TransferJob(operation, metastore, bk, Nil, source, transferTable, outputTable, sink, " ", tempDirectory), bk)
   }
 
 }

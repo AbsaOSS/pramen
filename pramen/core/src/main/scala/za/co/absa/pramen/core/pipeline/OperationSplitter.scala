@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Transformer
+import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.databricks.DatabricksClient
@@ -52,6 +53,7 @@ class OperationSplitter(conf: Config,
                       sourceName: String,
                       sourceTables: Seq[SourceTable])(implicit spark: SparkSession): Seq[Job] = {
     val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
+    val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
     val sourceBase = SourceManager.getSourceByName(sourceName, conf, None)
 
     sourceTables.map(sourceTable => {
@@ -60,20 +62,12 @@ class OperationSplitter(conf: Config,
         case None               => sourceBase
       }
 
-      val outputTableFromConfig = metastore.getTableDef(sourceTable.metaTableName)
-
-      val outputTable = if (source.isDataAlwaysAvailable && outputTableFromConfig.trackDays > 0) {
-        log.info(s"The source has count query optimization for table '${outputTableFromConfig.name}'. " +
-          s"Setting track.days from ${outputTableFromConfig.trackDays} to 0.")
-        outputTableFromConfig.copy(trackDays = 0)
-      } else {
-        outputTableFromConfig
-      }
+      val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
 
-      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, sourceTable, outputTable, specialCharacters)
+      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, sourceTable, outputTable, specialCharacters, temporaryDirectory)
     })
   }
 
@@ -82,6 +76,7 @@ class OperationSplitter(conf: Config,
                      sinkName: String,
                      tables: Seq[TransferTable])(implicit spark: SparkSession): Seq[Job] = {
     val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
+    val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
     val sourceBase = SourceManager.getSourceByName(sourceName, conf, None)
     val sinkBase = SinkManager.getSinkByName(sinkName, conf, None)
 
@@ -101,7 +96,7 @@ class OperationSplitter(conf: Config,
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
 
-      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, source, transferTable, outputTable, sink, specialCharacters)
+      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, source, transferTable, outputTable, sink, specialCharacters, temporaryDirectory)
     })
   }
 

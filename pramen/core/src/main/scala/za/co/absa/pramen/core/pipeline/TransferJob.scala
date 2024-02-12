@@ -20,8 +20,8 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{Reason, Sink, Source}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
 
 import java.time.{Instant, LocalDate}
@@ -34,11 +34,12 @@ class TransferJob(operationDef: OperationDef,
                   table: TransferTable,
                   bookkeepingMetaTable: MetaTable,
                   sink: Sink,
-                  specialCharacters: String)
+                  specialCharacters: String,
+                  tempDirectory: Option[String])
                  (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable) {
 
-  val ingestionJob = new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, table.getSourceTable, bookkeepingMetaTable, specialCharacters)
+  val ingestionJob = new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, table.getSourceTable, bookkeepingMetaTable, specialCharacters, tempDirectory)
   val sinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable, sink, table.getSinkTable)
 
   override val scheduleStrategy: ScheduleStrategy = ingestionJob.scheduleStrategy
