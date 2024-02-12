@@ -23,6 +23,7 @@ import za.co.absa.pramen.api.{Query, Source}
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
+import za.co.absa.pramen.core.pipeline.OperationSplitter.DISABLE_COUNT_QUERY
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.USE_JDBC_NATIVE
 import za.co.absa.pramen.core.reader.{TableReaderJdbc, TableReaderJdbcNative}
 import za.co.absa.pramen.core.samples.RdbExampleTable
@@ -97,18 +98,22 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       val src1Config = srcConfig.get(0)
 
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
+      val (fetchedConfig, index) = ExternalChannelFactoryReflect.getConfigByName(conf, None, "pramen.sources", "jdbc1", "source")
 
       assert(src.jdbcReaderConfig.infoDateColumn == "INFO_DATE")
-      assert(!src.disableCountQuery)
+      assert(index == 0)
+      assert(!fetchedConfig.hasPath(DISABLE_COUNT_QUERY))
     }
 
     "be able to get a source by its name" in {
       val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "Jdbc2", "source").asInstanceOf[JdbcSource]
+      val (fetchedConfig, index) = ExternalChannelFactoryReflect.getConfigByName(conf, None, "pramen.sources", "jdbc2", "source")
 
       assert(src.jdbcReaderConfig.limitRecords.contains(100))
       assert(src.jdbcReaderConfig.jdbcConfig.driver == "driver2")
       assert(src.jdbcReaderConfig.jdbcConfig.extraOptions("database") == "mydb")
-      assert(src.disableCountQuery)
+      assert(index == 1)
+      assert(fetchedConfig.hasPath(DISABLE_COUNT_QUERY))
     }
 
     "be able to get a source by its name from the manager" in {

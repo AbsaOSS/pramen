@@ -22,20 +22,15 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
-import za.co.absa.pramen.core.source.SparkSource.DISABLE_COUNT_QUERY
-import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.LocalDate
 
 class JdbcSource(sourceConfig: Config,
                  sourceConfigParentPath: String,
-                 val jdbcReaderConfig: TableReaderJdbcConfig,
-                 val disableCountQuery: Boolean)(implicit spark: SparkSession) extends Source {
+                 val jdbcReaderConfig: TableReaderJdbcConfig)(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override val config: Config = sourceConfig
-
-  override def isDataAlwaysAvailable: Boolean = disableCountQuery
 
   override def hasInfoDateColumn(query: Query): Boolean = jdbcReaderConfig.hasInfoDate
 
@@ -79,8 +74,7 @@ class JdbcSource(sourceConfig: Config,
 object JdbcSource extends ExternalChannelFactory[JdbcSource] {
   override def apply(conf: Config, parentPath: String, spark: SparkSession): JdbcSource = {
     val tableReaderJdbc = TableReaderJdbcConfig.load(conf)
-    val disableCountQuery = ConfigUtils.getOptionBoolean(conf, DISABLE_COUNT_QUERY).getOrElse(false)
 
-    new JdbcSource(conf, parentPath, tableReaderJdbc, disableCountQuery)(spark)
+    new JdbcSource(conf, parentPath, tableReaderJdbc)(spark)
   }
 }

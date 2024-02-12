@@ -24,6 +24,14 @@ import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 object SinkManager {
   val SINKS_KEY = "pramen.sinks"
 
+  /**
+    * Get sink object from the list of sink from the workflow config.
+    *
+    * @param name         The name of the sink.
+    * @param conf         The workflow configuration.
+    * @param overrideConf The config override, of defined.
+    * @return The sink object.
+    */
   def getSinkByName(name: String, conf: Config, overrideConf: Option[Config])(implicit spark: SparkSession): Sink = {
     ExternalChannelFactoryReflect.fromConfigByName[Sink](conf, overrideConf, SINKS_KEY, name, "sink")
   }

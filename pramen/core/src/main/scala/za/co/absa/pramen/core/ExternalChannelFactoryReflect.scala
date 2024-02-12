@@ -51,12 +51,21 @@ object ExternalChannelFactoryReflect {
     }
   }
 
-  def fromConfigByName[T <: ExternalChannel : ClassTag : universe.TypeTag](conf: Config,
-                                                                           overrideConf: Option[Config],
-                                                                           arrayPath: String,
-                                                                           name: String,
-                                                                           channelType: String)
-                                                                          (implicit spark: SparkSession): T = {
+  /**
+    * Returns channel (source, sink) config with its index by name and type.
+    *
+    * @param conf         A workflow configuration.
+    * @param overrideConf An override for the source or sink.
+    * @param arrayPath    The path to the array of sources or sinks in the config.
+    * @param name         The name os the source or sink.
+    * @param channelType  The type of the channel (source or sink) ro display in the error message.
+    * @return A pair of channel config and its index in the list.
+    */
+  def getConfigByName(conf: Config,
+                      overrideConf: Option[Config],
+                      arrayPath: String,
+                      name: String,
+                      channelType: String): (Config, Int) = {
     validateConfig(conf, arrayPath, channelType)
 
     val srcConfig = ConfigUtils.getOptionConfigList(conf, arrayPath)
@@ -69,10 +78,31 @@ object ExternalChannelFactoryReflect {
           case Some(oc) => oc.withFallback(cfg)
           case None     => cfg
         }
-        fromConfig(effectiveConf, conf, s"$arrayPath[$idx]", channelType)
+        (effectiveConf, idx)
       case None             =>
         throw new IllegalArgumentException(s"Unknown name of a data $channelType: $name.")
     }
+  }
+
+  /**
+    * Returns an instance of a channel (source, sink) by name and type.
+    *
+    * @param conf         A workflow configuration.
+    * @param overrideConf An override for the source or sink.
+    * @param arrayPath    The path to the array of sources or sinks in the config.
+    * @param name         The name os the source or sink.
+    * @param channelType  The type of the channel (source or sink) ro display in the error message.
+    * @return A pair of channel config and its index in the list.
+    */
+  def fromConfigByName[T <: ExternalChannel : ClassTag : universe.TypeTag](conf: Config,
+                                                                           overrideConf: Option[Config],
+                                                                           arrayPath: String,
+                                                                           name: String,
+                                                                           channelType: String)
+                                                                          (implicit spark: SparkSession): T = {
+    val (effectiveConf, idx) = getConfigByName(conf, overrideConf, arrayPath, name, channelType)
+
+    fromConfig(effectiveConf, conf, s"$arrayPath[$idx]", channelType)
   }
 
   def validateConfig(conf: Config,
