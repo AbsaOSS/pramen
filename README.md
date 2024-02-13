@@ -553,6 +553,13 @@ is determined by the pipeline configuration.
     
     # Fix the input precision interpretation (fixes errors like "Decimal precision 14 exceeds max precision 13")
     correct.decimals.fix.precision = true
+
+    # This is an experimental feature, please use with caution. 
+    # When set to true, Pramen won't query the source for the record count as a separate query. It will always fetch
+    # the data first, cache it in temporary directory first. This is used on very large tables for sources that require
+    # full scan on count queries (for example, Hive 1.0 on Map Reduce)
+    # By default, count queries are enabled.
+    #disable.count.query = true
     
     # Specifies the maximum number of records to fetch. Good for testing purposes.
     #limit.records = 100

@@ -25,8 +25,9 @@ import za.co.absa.pramen.api.CachePolicy
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.utils.FsUtils
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 import scala.collection.mutable
+import scala.util.Random
 
 object TransientTableManager {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -71,10 +72,11 @@ object TransientTableManager {
       spark = df.sparkSession
     }
 
-    val partitionFolder = s"temp_partition_date=$infoDate"
-    val outputPath = new Path(tempDir, partitionFolder).toString
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
-    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, outputPath)
+    val partitionFolder = s"temp_partition_date=$infoDate"
+    val uniquePath = createTimedTempDir(new Path(tempDir), fsUtils)
+    val outputPath = new Path(uniquePath, partitionFolder).toString
 
     fsUtils.createDirectoryRecursive(new Path(outputPath))
 
@@ -90,6 +92,21 @@ object TransientTableManager {
     }
 
     (spark.read.parquet(outputPath), Option(sizeBytes))
+  }
+
+  private[core] def createTimedTempDir(parentDir: Path, fsUtils: FsUtils): Path = {
+    fsUtils.createDirectoryRecursive(parentDir)
+
+    var tempDir = new Path(parentDir, s"${Instant.now().toEpochMilli}_${Random.nextInt()}")
+
+    while (fsUtils.exists(tempDir)) {
+      Thread.sleep(1)
+      tempDir = new Path(parentDir, s"${Instant.now().toEpochMilli}_${Random.nextInt()}")
+    }
+
+    fsUtils.fs.mkdirs(tempDir)
+
+    tempDir
   }
 
   private[core] def hasDataForTheDate(tableName: String, infoDate: LocalDate): Boolean = synchronized {
@@ -172,7 +189,9 @@ object TransientTableManager {
   private[core] def getTempDirectory(cachePolicy: CachePolicy, conf: Config): Option[String] = {
     if (cachePolicy == CachePolicy.Persist) {
       if (conf.hasPath(TEMPORARY_DIRECTORY_KEY) && conf.getString(TEMPORARY_DIRECTORY_KEY).nonEmpty) {
-        Option(conf.getString(TEMPORARY_DIRECTORY_KEY))
+        Option(conf.getString(TEMPORARY_DIRECTORY_KEY)).map { basePath =>
+          new Path(basePath, "cache").toString
+        }
       } else {
         throw new IllegalArgumentException(s"Transient metastore tables with persist cache policy require temporary directory to be defined at: $TEMPORARY_DIRECTORY_KEY")
       }

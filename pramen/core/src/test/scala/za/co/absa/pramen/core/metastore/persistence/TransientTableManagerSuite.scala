@@ -168,7 +168,7 @@ class TransientTableManagerSuite extends AnyWordSpec with BeforeAndAfterAll with
     }
 
     "return the directory for the persist policy" in {
-      assert(TransientTableManager.getTempDirectory(CachePolicy.Persist, conf).contains("/a/b/c"))
+      assert(TransientTableManager.getTempDirectory(CachePolicy.Persist, conf).contains("/a/b/c/cache"))
     }
   }
 }

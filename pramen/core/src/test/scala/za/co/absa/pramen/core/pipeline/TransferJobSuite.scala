@@ -139,7 +139,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
         val preRunCheck = job.preRunCheckJob(infoDate, conf, Seq.empty)
         assert(preRunCheck.status == JobPreRunStatus.Ready)
         assert(preRunCheck.inputRecordsCount.contains(5))
-        assert(TransientTableManager.hasDataForTheDate("jdbc://testsource|table1|2022-01-18", infoDate))
+        assert(TransientTableManager.hasDataForTheDate("source_cache://testsource|table1|2022-01-18", infoDate))
 
         val runResult = job.run(infoDate, conf)
 
