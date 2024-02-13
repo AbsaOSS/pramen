@@ -68,7 +68,7 @@ class OperationSplitter(conf: Config,
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
 
-      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery)
+      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery)
     })
   }
 
@@ -98,7 +98,7 @@ class OperationSplitter(conf: Config,
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
 
-      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, source, transferTable, outputTable, sink, specialCharacters, temporaryDirectory, disableCountQuery)
+      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, transferTable, outputTable, sink, specialCharacters, temporaryDirectory, disableCountQuery)
     })
   }
 

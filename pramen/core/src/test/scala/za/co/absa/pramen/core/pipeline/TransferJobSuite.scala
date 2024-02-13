@@ -22,7 +22,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.metastore.peristence.TransientTableManager
 import za.co.absa.pramen.core.mocks.TransferTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.{SinkSpy, SourceSpy}
@@ -31,7 +32,7 @@ import za.co.absa.pramen.core.utils.SparkUtils
 
 import java.time.{Instant, LocalDate}
 
-class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
+class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 1, 18)
@@ -64,7 +65,8 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
       assert(actual == JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil, Nil))
     }
 
-    "return NeedsUpdate when the number of records do not match" in {
+    "return NeedsUpdate when" +
+      " the number of records do not match" in {
       val (job, bk) = getUseCase(numberOfRecords = 7)
 
       bk.setRecordCount("table1->sink", infoDate, infoDate, infoDate, 3, 3, 10000, 1001, isTableTransient = false)
@@ -128,6 +130,36 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
       val actual = job.run(infoDate, conf).data
 
       assert(actual.count() == 5)
+    }
+
+    "get the source data frame for source with disabled count query" in {
+      withTempDirectory("cached_transfer_data") { tempDir =>
+        val (job, _) = getUseCase(tempDirectory = Option(tempDir), disableCountQuery = true)
+
+        val preRunCheck = job.preRunCheckJob(infoDate, conf, Seq.empty)
+        assert(preRunCheck.status == JobPreRunStatus.Ready)
+        assert(preRunCheck.inputRecordsCount.contains(5))
+        assert(TransientTableManager.hasDataForTheDate("jdbc://testsource|table1|2022-01-18", infoDate))
+
+        val runResult = job.run(infoDate, conf)
+
+        val df = runResult.data
+
+        assert(df.count() == 5)
+        assert(df.schema.fields.head.name == "v")
+
+        TransientTableManager.reset()
+      }
+    }
+
+    "throw an exception when temporary folder is not defined and count query is disabled" in {
+      val (job, _) = getUseCase(disableCountQuery = true)
+
+      val ex = intercept[IllegalArgumentException] {
+        job.run(infoDate, conf)
+      }
+
+      assert(ex.getMessage.contains("a temporary directory in Hadoop (HDFS, S3, etc) should be set at 'pramen.temporary.directory'"))
     }
 
     "throw an exception when the reader throws an exception" in {
@@ -215,7 +247,8 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
                  getCountException: Throwable = null,
                  getDataException: Throwable = null,
                  failOnNoData: Boolean = false,
-                 tempDirectory: Option[String] = None): (TransferJob, SyncBookkeeperMock) = {
+                 tempDirectory: Option[String] = None,
+                 disableCountQuery: Boolean = false): (TransferJob, SyncBookkeeperMock) = {
     val operation = OperationDefFactory.getDummyOperationDef(extraOptions = Map[String, String]("value" -> "7"))
 
     val bk = new SyncBookkeeperMock
@@ -237,7 +270,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
     val outputTable = transferTable.getMetaTable
 
-    (new TransferJob(operation, metastore, bk, Nil, source, transferTable, outputTable, sink, " ", tempDirectory, tempDirectory.isDefined), bk)
+    (new TransferJob(operation, metastore, bk, Nil, "testSource", source, transferTable, outputTable, sink, " ", tempDirectory, disableCountQuery), bk)
   }
 
 }
