@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
+import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
@@ -198,8 +199,9 @@ class IngestionJob(operationDef: OperationDef,
     if (TransientTableManager.hasDataForTheDate(cacheTableName, from)) {
       TransientTableManager.getDataForTheDate(cacheTableName, from)
     } else {
+      val cacheDir = new Path(tempDirectory.get, "cache").toString
       val sourceDf = getData(source, query, from, to).data
-      val (cachedDf, _) = TransientTableManager.addPersistedDataFrame(cacheTableName, from, sourceDf, tempDirectory.get)
+      val (cachedDf, _) = TransientTableManager.addPersistedDataFrame(cacheTableName, from, sourceDf, cacheDir)
       cachedDf
     }
   }
@@ -209,7 +211,7 @@ class IngestionJob(operationDef: OperationDef,
     * infoDateFrom is used as a second key to transient table manager, so it it not used to form the name.
     */
   private def getVirtualTableName(query: Query, infoDateTo: LocalDate): String = {
-    s"jdbc://$sourceName|${query.query}|$infoDateTo"
+    s"source_cache://$sourceName|${query.query}|$infoDateTo"
   }
 
   private def processInsufficientDataCase(infoDate: LocalDate,

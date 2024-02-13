@@ -286,7 +286,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
         val preRunCheck = job.preRunCheckJob(infoDate, conf, Seq.empty)
         assert(preRunCheck.status == JobPreRunStatus.Ready)
         assert(preRunCheck.inputRecordsCount.contains(4))
-        assert(TransientTableManager.hasDataForTheDate("jdbc://jdbc|company|2022-02-18", infoDate))
+        assert(TransientTableManager.hasDataForTheDate("source_cache://jdbc|company|2022-02-18", infoDate))
 
         val runResult = job.run(infoDate, conf)
 
