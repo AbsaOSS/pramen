@@ -23,7 +23,8 @@ import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
-import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.metastore.peristence.TransientTableManager
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
@@ -35,8 +36,7 @@ import za.co.absa.pramen.core.utils.SparkUtils
 import java.sql.SQLSyntaxErrorException
 import java.time.{Instant, LocalDate}
 
-class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with RelationalDbFixture {
-
+class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with RelationalDbFixture with TempDirFixture {
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
@@ -278,6 +278,42 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       assert(df.schema.fields(5).name == "LAST_UPDATED")
     }
 
+    "get the source data frame for source with disabled count query" in {
+      withTempDirectory("cached_ingested_data") { tempDir =>
+
+        val (_, _, job) = getUseCase(tempDirectory = Option(tempDir), disableCountQuery = true)
+
+        val preRunCheck = job.preRunCheckJob(infoDate, conf, Seq.empty)
+        assert(preRunCheck.status == JobPreRunStatus.Ready)
+        assert(preRunCheck.inputRecordsCount.contains(4))
+        assert(TransientTableManager.hasDataForTheDate("jdbc://jdbc|company|2022-02-18", infoDate))
+
+        val runResult = job.run(infoDate, conf)
+
+        val df = runResult.data
+
+        assert(df.count() == 4)
+        assert(df.schema.fields.head.name == "ID")
+        assert(df.schema.fields(1).name == "NAME")
+        assert(df.schema.fields(2).name == "DESCRIPTION")
+        assert(df.schema.fields(3).name == "EMAIL")
+        assert(df.schema.fields(4).name == "FOUNDED")
+        assert(df.schema.fields(5).name == "LAST_UPDATED")
+
+        TransientTableManager.reset()
+      }
+    }
+
+    "throw an exception when temporary folder is not defined and count query is disabled" in {
+      val (_, _, job) = getUseCase(disableCountQuery = true)
+
+      val ex = intercept[IllegalArgumentException] {
+        job.run(infoDate, conf)
+      }
+
+      assert(ex.getMessage.contains("a temporary directory in Hadoop (HDFS, S3, etc) should be set at 'pramen.temporary.directory'"))
+    }
+
     "throw an exception on read failure" in {
       val (_, _, job) = getUseCase(sourceTable = "noSuchTable")
 
@@ -344,7 +380,8 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
                  rangeToExpr: Option[String] = None,
                  minRecords: Option[Int] = None,
                  trackDaysExplicitlySet: Boolean = false,
-                 tempDirectory: Option[String] = None): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
+                 tempDirectory: Option[String] = None,
+                 disableCountQuery: Boolean = false): (SyncBookkeeperMock, MetastoreSpy, IngestionJob) = {
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy
     val operationDef = OperationDefFactory.getDummyOperationDef()
@@ -363,6 +400,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       metastore,
       bk,
       Nil,
+      sourceName,
       source,
       SourceTable("table1", Query.Table(sourceTable), tableConf, rangeFromExpr, rangeToExpr, Seq(
         TransformExpression("NAME_U", Some("upper(NAME)"), None)
@@ -370,7 +408,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       outputTable,
       specialCharacters,
       tempDirectory,
-      tempDirectory.isDefined)
+      disableCountQuery)
 
     (bk, metastore, job)
   }

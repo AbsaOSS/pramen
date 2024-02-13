@@ -35,6 +35,7 @@ class IngestionJob(operationDef: OperationDef,
                    metastore: Metastore,
                    bookkeeper: Bookkeeper,
                    notificationTargets: Seq[JobNotificationTarget],
+                   sourceName: String,
                    source: Source,
                    sourceTable: SourceTable,
                    outputTable: MetaTable,
@@ -203,8 +204,12 @@ class IngestionJob(operationDef: OperationDef,
     }
   }
 
+  /**
+    * Returns a table name to uniquely identify an input query for an ingestion.
+    * infoDateFrom is used as a second key to transient table manager, so it it not used to form the name.
+    */
   private def getVirtualTableName(query: Query, infoDateTo: LocalDate): String = {
-    s"jdbc://${query.query}_$infoDateTo"
+    s"jdbc://$sourceName|${query.query}|$infoDateTo"
   }
 
   private def processInsufficientDataCase(infoDate: LocalDate,
