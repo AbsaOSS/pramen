@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.sql.impl
+package za.co.absa.pramen.core.sql.dialects
 
 import org.apache.spark.sql.jdbc.JdbcDialect
 import org.apache.spark.sql.types.{DataType, MetadataBuilder}

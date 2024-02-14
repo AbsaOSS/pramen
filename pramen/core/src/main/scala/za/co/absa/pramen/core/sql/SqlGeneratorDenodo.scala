@@ -16,13 +16,31 @@
 
 package za.co.absa.pramen.core.sql
 
+import org.apache.spark.sql.jdbc.JdbcDialects
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
+import za.co.absa.pramen.core.sql.dialects.DenodoDialect
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
+object SqlGeneratorDenodo {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
+  /**
+    * This is required for Spark to be able to handle data that comes from Denodo JDBC drivers
+    */
+  lazy val registerDialect: Boolean = {
+    log.info(s"Registering Denodo dialect...")
+    JdbcDialects.registerDialect(DenodoDialect)
+    true
+  }
+}
+
 class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
+
+  SqlGeneratorDenodo.registerDialect
 
   override val beginEndEscapeChars: (Char, Char) = ('\"', '\"')
 
