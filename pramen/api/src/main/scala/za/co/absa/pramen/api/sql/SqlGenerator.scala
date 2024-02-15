@@ -51,6 +51,19 @@ trait SqlGenerator {
     */
   def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String
 
+  /**
+    * Returns an aliased expression for a give expression and alias.
+    * Alias is automatically escaped, the expression is never escaped. If the expression points just to column name,
+    * it needs to be explicitly escaped when needed via escape(name).
+    *
+    * The method handles differences between aliasing rules of various SQL dialects.
+    * For example:
+    * Expression: "d", alias: "InfoDate", possible outputs:
+    * "d AS InfoDate"
+    * "d InfoDate"
+    */
+  def getAliasExpression(expression: String, alias: String): String
+
   /** Returns the date literal for the dialect of the SQL. */
   def getDateLiteral(date: LocalDate): String
 

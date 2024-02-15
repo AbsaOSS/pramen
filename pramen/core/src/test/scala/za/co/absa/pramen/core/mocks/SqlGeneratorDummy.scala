@@ -35,6 +35,8 @@ class SqlGeneratorDummy(sqlConfig: SqlConfig) extends SqlGenerator {
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = null
 
+  override def getAliasExpression(expression: String, alias: String): String = null
+
   override def getDateLiteral(date: LocalDate): String = null
 
   override def escape(identifier: String): String = null

@@ -44,6 +44,10 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
+  override def getAliasExpression(expression: String, alias: String): String = {
+    s"$expression AS ${escape(alias)}"
+  }
+
   override final def quote(identifier: String): String = {
     validateIdentifier(identifier)
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
