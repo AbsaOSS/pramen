@@ -35,12 +35,12 @@ class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
   }
 
   override def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)}"
+    s"SELECT ${getAliasExpression("COUNT(*)", "CNT")} FROM ${escape(tableName)}"
   }
 
   override def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)} WHERE $where"
+    s"SELECT ${getAliasExpression("COUNT(*)", "CNT")} FROM ${escape(tableName)} WHERE $where"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {

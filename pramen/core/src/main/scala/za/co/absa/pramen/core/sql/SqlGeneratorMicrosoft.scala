@@ -32,19 +32,19 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
 
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
-      s"($sql) AS tbl"
+      getAliasExpression(s"($sql)", "tbl")
     } else {
       sql
     }
   }
 
   def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)} WITH (NOLOCK)"
+    s"SELECT ${getAliasExpression("COUNT(*)", "CNT")} FROM ${escape(tableName)} WITH (NOLOCK)"
   }
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS CNT FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
+    s"SELECT ${getAliasExpression("COUNT(*)", "CNT")} FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {

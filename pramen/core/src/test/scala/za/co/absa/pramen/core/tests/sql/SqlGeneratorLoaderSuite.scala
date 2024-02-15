@@ -245,9 +245,9 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
 
       "the table name and column name need to be escaped" in {
         assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
+          "SELECT COUNT(*) AS [CNT] FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
         assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
+          "SELECT COUNT(*) AS [CNT] FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
       }
 
       "the table name and column name already escaped" in {
@@ -979,9 +979,9 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
 
       "the table name and column name need to be escaped" in {
         assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM \"Input Table\" WHERE \"Info date\" = DATE '2020-08-17'")
+          "SELECT COUNT(*) AS \"CNT\" FROM \"Input Table\" WHERE \"Info date\" = DATE '2020-08-17'")
         assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM \"Input Table\" WHERE \"Info date\" >= DATE '2020-08-17' AND \"Info date\" <= DATE '2020-08-30'")
+          "SELECT COUNT(*) AS \"CNT\" FROM \"Input Table\" WHERE \"Info date\" >= DATE '2020-08-17' AND \"Info date\" <= DATE '2020-08-30'")
       }
     }
 
@@ -1095,9 +1095,9 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
 
       "the table name and column name need to be escaped" in {
         assert(genEscaped.getCountQuery("SELECT", date1, date1) ==
-          "SELECT COUNT(*) AS CNT FROM \"SELECT\" WHERE \"Info date\" = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS \"CNT\" FROM \"SELECT\" WHERE \"Info date\" = TO_DATE('2020-08-17', 'YYYY-MM-DD')")
         assert(genEscaped.getCountQuery("SELECT", date1, date2) ==
-          "SELECT COUNT(*) AS CNT FROM \"SELECT\" WHERE \"Info date\" >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND \"Info date\" <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
+          "SELECT COUNT(*) AS \"CNT\" FROM \"SELECT\" WHERE \"Info date\" >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND \"Info date\" <= TO_DATE('2020-08-30', 'YYYY-MM-DD')")
       }
     }
 

@@ -72,6 +72,10 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     }
   }
 
+  override def getAliasExpression(expression: String, alias: String): String = {
+    s"$expression ${escape(alias)}"
+  }
+
   override def getDateLiteral(date: LocalDate): String = {
     sqlConfig.infoDateType match {
       case SqlColumnType.DATE =>

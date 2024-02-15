@@ -61,12 +61,12 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
   }
 
   def getCountQuery(tableName: String): String = {
-    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escape(tableName)}"
+    s"SELECT ${getAliasExpression("COUNT(*)", "cnt")} FROM ${escape(tableName)}"
   }
 
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT COUNT(*) AS cnt 'cnt' FROM ${escape(tableName)} WHERE $where"
+    s"SELECT ${getAliasExpression("COUNT(*)", "cnt")} FROM ${escape(tableName)} WHERE $where"
   }
 
   def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
@@ -126,6 +126,10 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
     } else {
       s"$infoDateColumn >= $dateBeginLit AND $infoDateColumn <= $dateEndLit"
     }
+  }
+
+  override def getAliasExpression(expression: String, alias: String): String = {
+    s"$expression AS $alias '$alias'"
   }
 
   override def getDateLiteral(date: LocalDate): String = {
