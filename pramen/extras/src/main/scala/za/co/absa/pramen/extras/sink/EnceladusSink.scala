@@ -18,17 +18,27 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
+import org.apache.http.HttpStatus
+import org.apache.http.config.RegistryBuilder
+import org.apache.http.conn.socket.{ConnectionSocketFactory, PlainConnectionSocketFactory}
+import org.apache.http.conn.ssl.{NoopHostnameVerifier, SSLConnectionSocketFactory}
+import org.apache.http.entity.StringEntity
+import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
+import org.apache.http.impl.conn.BasicHttpClientConnectionManager
+import org.apache.http.ssl.{SSLContexts, TrustStrategy}
+import org.apache.http.util.EntityUtils
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
-import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates.TEMPLATES_DEFAULT_PREFIX
 import za.co.absa.pramen.core.utils.hive._
+import za.co.absa.pramen.core.utils.{ConfigUtils, Emoji}
 import za.co.absa.pramen.extras.infofile.InfoFileGeneration
 import za.co.absa.pramen.extras.query.{QueryExecutor => EnceladusQueryExecutor, QueryExecutorSpark => EnceladusQueryExecutorSpark}
 import za.co.absa.pramen.extras.sink.EnceladusConfig.DEFAULT_PUBLISH_PARTITION_TEMPLATE
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
+import java.security.cert.X509Certificate
 import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -70,6 +80,11 @@ import scala.util.{Failure, Success, Try}
   *      quoteAll = "false"
   *      header = "false"
   *    }
+  *
+  *    # Optional S3 version buckets cleanup via a special REST API
+  *    cleanup.api.url = "https://hostname/api/path"
+  *    cleanup.api.key = "aabbccdd"
+  *    cleanup.api.trust.all.ssl.certificates = false
   *
   *    # Info file options
   *    info.file {
@@ -176,6 +191,8 @@ class EnceladusSink(sinkConfig: Config,
     }
 
     runEnceladusIfNeeded(tableName, infoDate, infoVersion, basePath, options)
+
+    cleanUpS3Versions(basePath, infoDate, infoVersion, options)
 
     val hiveTable = options.get(HIVE_TABLE_KEY).map(getHiveTableFullName)
 
@@ -290,11 +307,7 @@ class EnceladusSink(sinkConfig: Config,
       val datasetName = options(DATASET_NAME_KEY)
       val datasetVersion = options(DATASET_VERSION_KEY).toInt
 
-      val publishBase = if (options.contains(PUBLISH_BASE_PATH_KEY)) {
-        options(PUBLISH_BASE_PATH_KEY)
-      } else {
-        basePath.toString.replace("/raw/", "/publish/")
-      }
+      val publishBase = getPublishBase(basePath, options)
       val outputPublishPath = getPublishPartitionPath(new Path(publishBase), infoDate, infoVersion)
 
       val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, publishBase)
@@ -337,6 +350,14 @@ class EnceladusSink(sinkConfig: Config,
     }
   }
 
+  private[extras] def getPublishBase(basePath: Path, options: Map[String, String]): String = {
+    if (options.contains(PUBLISH_BASE_PATH_KEY)) {
+      options(PUBLISH_BASE_PATH_KEY)
+    } else {
+      basePath.toString.replace("/raw/", "/publish/")
+    }
+  }
+
   private[extras] def runEnceladus(tableName: String,
                                    datasetName: String,
                                    datasetVersion: Int,
@@ -372,6 +393,98 @@ class EnceladusSink(sinkConfig: Config,
       .replaceAll("@rawPath", basePath.toString)
       .replaceAll("@rawFormat", enceladusConfig.format)
       .split(' ')
+  }
+
+  private[extras] def cleanUpS3Versions(rawBasePath: Path,
+                                        infoDate: LocalDate,
+                                        infoVersion: Int,
+                                        options: Map[String, String]): Unit = {
+    val publishBase = new Path(getPublishBase(rawBasePath, options))
+    val pathStr = rawBasePath.toString
+    if (!pathStr.toLowerCase.startsWith("s3://") && !pathStr.toLowerCase.startsWith("s3a://")) {
+      log.info(s"The base bath ($rawBasePath) is not on S3. S3 versions cleanup won't be done.")
+      return
+    }
+
+    if (!sinkConfig.hasPath(CLEANUP_API_URL_KEY) ||
+      !sinkConfig.hasPath(CLEANUP_API_KEY_KEY)) {
+      log.warn(s"Enceladus sink options: $CLEANUP_API_URL_KEY and $CLEANUP_API_KEY_KEY are not defined. S3 versions cleanup won't be done.")
+      return
+    }
+
+    val apiUrl = sinkConfig.getString(CLEANUP_API_URL_KEY)
+    val apiKey = sinkConfig.getString(CLEANUP_API_KEY_KEY)
+
+    val rawPartitionPath = getOutputPartitionPath(rawBasePath, infoDate, infoVersion)
+    val publishPartitionPath = getPublishPartitionPath(publishBase, infoDate, infoVersion)
+
+    cleanUpS3VersionsForPath(removeAuthority(rawPartitionPath), apiUrl, apiKey)
+    cleanUpS3VersionsForPath(removeAuthority(publishPartitionPath), apiUrl, apiKey)
+  }
+
+  private[extras] def cleanUpS3VersionsForPath(partitionPath: String,
+                                               apiUrl: String,
+                                               apiKey: String): Unit = {
+
+    val body = s"""{"ecs_path":"$partitionPath"}"""
+    log.info(s"Sending: $body")
+
+    // Using Apache HTTP Client.
+    // Tried using com.lihaoyi:requests:0.8.0,
+    // but for some strange reason the EnceladusSink class can't be found/loaded
+    // when this library is used.
+    val httpClient = getHttpClient
+    val httpDelete = new HttpDeleteWithBody(apiUrl)
+
+    httpDelete.addHeader("x-api-key", apiKey)
+    httpDelete.setEntity(new StringEntity(body))
+
+    try {
+      val response = httpClient.execute(httpDelete)
+      val statusCode = response.getStatusLine.getStatusCode
+      val responseBody = EntityUtils.toString(response.getEntity)
+
+      if (statusCode != HttpStatus.SC_OK) {
+        log.error(s"${Emoji.FAILURE} Failed to clean up S3 versions for $partitionPath. Response: $statusCode $responseBody")
+      } else {
+        log.info(s"${Emoji.SUCCESS} S3 versions cleanup for $partitionPath was successful. Response: $responseBody")
+      }
+      httpClient.close()
+    } catch {
+      case ex: Throwable =>
+        log.error(s"${Emoji.FAILURE} Unable to call the cleanup API via URL: $apiUrl.", ex)
+    }
+ }
+
+  private[extras] def removeAuthority(path: Path): String = {
+    s"${path.toUri.getHost}${path.toUri.getPath}"
+  }
+
+  private[extras] def getHttpClient: CloseableHttpClient = {
+    if (sinkConfig.hasPath(CLEANUP_API_TRUST_SSL_KEY) && sinkConfig.getBoolean(CLEANUP_API_TRUST_SSL_KEY)) {
+      log.warn("Trusting all SSL certificates for the cleanup API.")
+      val trustStrategy = new TrustStrategy {
+        override def isTrusted(x509Certificates: Array[X509Certificate], s: String): Boolean = true
+      }
+
+      val sslContext = SSLContexts.custom.loadTrustMaterial(null, trustStrategy).build
+      val sslsf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE)
+
+      val socketFactoryRegistry =
+        RegistryBuilder.create[ConnectionSocketFactory]()
+          .register("https", sslsf)
+          .register("http", new PlainConnectionSocketFactory())
+          .build()
+
+      val connectionManager = new BasicHttpClientConnectionManager(socketFactoryRegistry)
+
+      HttpClients.custom()
+        .setSSLSocketFactory(sslsf)
+        .setConnectionManager(connectionManager)
+        .build()
+    } else {
+      HttpClients.createDefault()
+    }
   }
 
   private[extras] def updateTable(hiveTable: String, publishBase: String)(implicit spark: SparkSession): Unit = {
@@ -428,6 +541,9 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
   val DATASET_VERSION_KEY = "dataset.version"
   val HIVE_TABLE_KEY = "hive.table"
   val PUBLISH_BASE_PATH_KEY = "publish.base.path"
+  val CLEANUP_API_URL_KEY = "cleanup.api.url"
+  val CLEANUP_API_KEY_KEY = "cleanup.api.key"
+  val CLEANUP_API_TRUST_SSL_KEY = "cleanup.api.trust.all.ssl.certificates"
 
   val INFO_VERSION_AUTO_VALUE = "auto"
 

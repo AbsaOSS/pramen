@@ -45,9 +45,10 @@ object Dependencies {
   ) :+ getDeltaDependency(sparkVersion(scalaVersion), isDeltaCompile, isTest = false)
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
-    "org.apache.spark"     %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
-    "net.sourceforge.jtds" %  "jtds"                       % msSqlDriverVersion,
-    "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test
+    "org.apache.spark"          %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
+    "net.sourceforge.jtds"      %  "jtds"                       % msSqlDriverVersion,
+    "org.apache.httpcomponents" %  "httpclient"                 % httpClientVersion,
+    "org.scalatest"             %% "scalatest"                  % scalatestVersion           % Test
   ) ++ Seq(
     getAbrisDependency(scalaVersion),
     getDeltaDependency(sparkVersion(scalaVersion), isCompile = false, isTest = true)

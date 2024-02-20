@@ -35,6 +35,7 @@ object Versions {
   val embeddedMongoDbVersion = "2.2.0"
   val scalatestVersion = "3.2.14"
   val mockitoVersion = "2.28.2"
+  val httpClientVersion = "4.5.14"
 
   def sparkFallbackVersion(scalaVersion: String): String = {
     if (scalaVersion.startsWith("2.11.")) {
