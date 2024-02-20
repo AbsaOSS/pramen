@@ -1224,7 +1224,12 @@ Here is an example configuration of a sink:
     quoteAll = "false"
     header = "false"
   }
-  
+
+  # Optional S3 version buckets cleanup via a special REST API
+  cleanup.api.url = "https://hostname/api/path"
+  cleanup.api.key = "aabbccdd"
+  cleanup.api.trust.all.ssl.certificates = false
+
   # Info file options
   info.file {
     generate = true
