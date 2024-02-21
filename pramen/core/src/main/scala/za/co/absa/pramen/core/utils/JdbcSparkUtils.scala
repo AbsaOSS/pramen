@@ -18,13 +18,13 @@ package za.co.absa.pramen.core.utils
 
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
-import org.apache.spark.sql.types.{DateType, DecimalType, MetadataBuilder, StringType, StructType, TimestampType}
+import org.apache.spark.sql.types._
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.SparkUtils.MAX_LENGTH_METADATA_KEY
+import za.co.absa.pramen.core.utils.SparkUtils.{COMMENT_METADATA_KEY, MAX_LENGTH_METADATA_KEY}
 import za.co.absa.pramen.core.utils.impl.JdbcFieldMetadata
 
-import java.sql.{Connection, ResultSet, ResultSetMetaData}
+import java.sql.{Connection, DatabaseMetaData, ResultSet, ResultSetMetaData}
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
@@ -75,6 +75,93 @@ object JdbcSparkUtils {
           }
       }
     )
+  }
+
+  /**
+    * Adds column descriptions for a Spark schema that corresponds to a table in a JDBC-enabled database.
+    *
+    * Adds 'COMMENT' metadata for columns that have a description.
+    *
+    * All existing metadata fields stay the same.
+    *
+    * @param schema        A schema.
+    * @param tableName     The name of the table in the database. It can contain schema name and catalog name.
+    * @param connection    A JDBC connection to the database engine.
+    * @return The schema with column descriptions added as metadata.
+    */
+  def addColumnDescriptionsFromJdbc(schema: StructType, tableName: String, connection: Connection): StructType = {
+    val fieldToDescriptionMap: Map[String, String] = try {
+      val columns = getColumnMetadata(tableName, connection)
+      val fieldsDescription = new ListBuffer[(String, String)]
+
+      while (columns.next()) {
+        val columnNameOpt = Option(columns.getString("COLUMN_NAME"))
+        val descriptionOpt = Option(columns.getString("REMARKS"))
+
+        (columnNameOpt, descriptionOpt) match {
+          case (Some(columnName), Some(description)) =>
+            fieldsDescription += columnName.toLowerCase -> description
+          case _ =>
+        }
+      }
+      columns.close()
+      fieldsDescription.toMap[String, String]
+    } catch {
+      case ex: Throwable =>
+        log.warn(s"Unable to fetch metadata for database table: $tableName", ex)
+        return schema
+    }
+
+    StructType(
+      schema.fields.map {
+        field =>
+          val fieldNameLowerCase = field.name.toLowerCase
+
+          fieldToDescriptionMap.get(fieldNameLowerCase) match {
+            case Some(description) =>
+              val metadata = new MetadataBuilder
+              metadata.withMetadata(field.metadata)
+              metadata.putString(COMMENT_METADATA_KEY, description)
+              field.copy(metadata = metadata.build())
+            case _ =>
+              field
+          }
+      }
+    )
+  }
+
+  /**
+    * Gets metadata of table columns for database engines that support it.
+    *
+    * @param fullTableName  The name of the table in the database. It can contain schema name and catalog name.
+    * @param connection     A JDBC connection to the database engine.
+    * @return The ResultSet containing metadata for all columns.
+    */
+  def getColumnMetadata(fullTableName: String, connection: Connection): ResultSet = {
+    val dbMetadata: DatabaseMetaData = connection.getMetaData
+
+    if (!dbMetadata.getColumns(null, null, fullTableName, null).next()) {
+      val parts = fullTableName.split('.')
+      if (parts.length == 3) {
+        // database, schema, and table table are all present
+        dbMetadata.getColumns(parts(0), parts(1), parts(2), null)
+      } else if (parts.length == 2) {
+        if (dbMetadata.getColumns(null, parts(0), parts(1), null).next()) {
+          dbMetadata.getColumns(null, parts(0), parts(1), null)
+          // schema and table only
+        } else {
+          // database and table only
+          dbMetadata.getColumns(parts(0), null, parts(1), null)
+        }
+      } else {
+        // table only
+        dbMetadata.getColumns(null, null, fullTableName, null)
+      }
+
+    } else {
+      // table only
+      dbMetadata.getColumns(null, null, fullTableName, null)
+    }
   }
 
   /**
