@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.{Path, PathFilter}
 import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{ArrayType, DataType, MetadataBuilder, StringType, StructField, StructType, TimestampType, VarcharType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.notify.pipeline.FieldChange
@@ -30,7 +30,6 @@ import za.co.absa.pramen.core.pipeline.TransformExpression
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
-import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
@@ -39,6 +38,7 @@ object SparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   val MAX_LENGTH_METADATA_KEY = "maxLength"
+  val COMMENT_METADATA_KEY = "comment"
 
   /** Get Spark StructType from a case class. */
   def getStructType[T: TypeTag]: StructType = ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
