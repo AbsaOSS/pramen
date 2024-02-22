@@ -21,6 +21,7 @@ import java.sql.{Connection, SQLException}
 trait RdbExampleTable {
   val tableName: String
   val ddl: String
+  val comments: Seq[String]
   val inserts: Seq[String]
 
   @throws[SQLException]
@@ -28,6 +29,9 @@ trait RdbExampleTable {
     val statement = connection.createStatement
 
     statement.execute(ddl)
+    connection.commit()
+
+    comments.foreach(sql => statement.executeUpdate(sql))
     connection.commit()
 
     inserts.foreach(sql => statement.executeUpdate(sql))
@@ -63,6 +67,11 @@ object RdbExampleTable {
          |  PRIMARY KEY (id))
          |""".stripMargin
 
+    val comments: Seq[String] = Seq(
+      s"COMMENT ON COLUMN $tableName.id IS 'This is the record id'",
+      s"COMMENT ON COLUMN $tableName.name IS 'This is company name'"
+    )
+
     val inserts: Seq[String] = Seq(
       s"INSERT INTO $tableName VALUES (1,'Company1', 'description1', 'company1@example.com', DATE '2000-10-11', TIMESTAMP '2020-11-04 10:11:00+02:00', '2022-02-18')",
       s"INSERT INTO $tableName VALUES (2,'Company2', 'description2', 'company2@example.com', DATE '2005-03-29', TIMESTAMP '2020-11-04 10:22:33+02:00', '2022-02-18')",
@@ -80,6 +89,8 @@ object RdbExampleTable {
          |  id INT NOT NULL,
          |  PRIMARY KEY (id))
          |""".stripMargin
+
+    val comments = Seq.empty[String]
 
     val inserts = Seq.empty[String]
   }
