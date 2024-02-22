@@ -89,9 +89,10 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   @tailrec
   final private[core] def getWithRetry[T](sql: String,
                                           isDataQuery: Boolean,
-                                          retriesLeft: Int)(f: DataFrame => T): T = {
+                                          retriesLeft: Int,
+                                          tableOpt: Option[String])(f: DataFrame => T): T = {
     Try {
-      val df = getDataFrame(sql, isDataQuery)
+      val df = getDataFrame(sql, isDataQuery, tableOpt)
       f(df)
     } match {
       case Success(result) => result
@@ -101,7 +102,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
           val nextUrl = jdbcUrlSelector.getNextUrl
           log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying...", ex)
           log.info(s"Trying URL: $nextUrl")
-          getWithRetry(sql, isDataQuery, retriesLeft - 1)(f)
+          getWithRetry(sql, isDataQuery, retriesLeft - 1, tableOpt)(f)
         } else {
           log.error(s"JDBC connection error for $currentUrl. No connection attempts left.", ex)
           throw ex
@@ -116,7 +117,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       sqlGen.getCountQuery(tableName)
     }
 
-    getWithRetry[Long](sql, isDataQuery = false, jdbcRetries)(df =>
+    getWithRetry[Long](sql, isDataQuery = false, jdbcRetries, None)(df =>
       // Take first column of the first row, use BigDecimal as the most generic numbers parser,
       // and then convert to Long. This is a safe way if the output is like "0E-11".
       BigDecimal(df.collect()(0)(0).toString).toLong
@@ -125,7 +126,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd, infoDateFormatter)
-    getWithRetry[Long](filteredSql, isDataQuery = false, jdbcRetries)(df => df.count())
+    getWithRetry[Long](filteredSql, isDataQuery = false, jdbcRetries, None)(df => df.count())
   }
 
   private[core] def getDataForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
@@ -135,7 +136,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       sqlGen.getDataQuery(tableName, columns, jdbcReaderConfig.limitRecords)
     }
 
-    val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries)(df => {
+    val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries, Option(tableName))(df => {
       // Make sure connection to the server is made without fetching the data
       log.debug(df.schema.treeString)
       df
@@ -146,10 +147,10 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private[core] def getDataForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd, infoDateFormatter)
-    getWithRetry[DataFrame](filteredSql, isDataQuery = true, jdbcRetries)(df => filterDfColumns(df, columns))
+    getWithRetry[DataFrame](filteredSql, isDataQuery = true, jdbcRetries, None)(df => filterDfColumns(df, columns))
   }
 
-  private[core] def getDataFrame(sql: String, isDataQuery: Boolean): DataFrame = {
+  private[core] def getDataFrame(sql: String, isDataQuery: Boolean, tableOpt: Option[String]): DataFrame = {
     log.info(s"JDBC Query: $sql")
     val qry = sqlGen.getDtable(sql)
 
@@ -187,9 +188,13 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 
     if (isDataQuery && jdbcReaderConfig.enableSchemaMetadata) {
       log.info(s"Reading JDBC metadata from the query: $sql")
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { jdbcMetadata =>
-        val newSchema = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
-        df = spark.createDataFrame(df.rdd, newSchema)
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, jdbcMetadata) =>
+        val schemaWithMetadata = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
+        val schemaWithColumnDescriptions = tableOpt match {
+          case Some(table) => JdbcSparkUtils.addColumnDescriptionsFromJdbc(schemaWithMetadata, table, connection)
+          case None => schemaWithMetadata
+        }
+        df = spark.createDataFrame(df.rdd, schemaWithColumnDescriptions)
       }
     }
 

@@ -155,9 +155,8 @@ object JdbcSparkUtils {
         }
       } else {
         // table only
-        dbMetadata.getColumns(null, null, fullTableName, null)
+        dbMetadata.getColumns(null, null, fullTableName.toUpperCase, null)
       }
-
     } else {
       // table only
       dbMetadata.getColumns(null, null, fullTableName, null)
@@ -170,18 +169,18 @@ object JdbcSparkUtils {
     *
     * @param jdbcConfig  a JDBC configuration.
     * @param nativeQuery a SQL query in the dialect native to the database.
-    * @param action      the action to execute.
+    * @param action      the action to execute on a connection + resultset metadata.
     */
   def withJdbcMetadata(jdbcConfig: JdbcConfig,
                        nativeQuery: String)
-                      (action: ResultSetMetaData => Unit): Unit = {
+                      (action: (Connection, ResultSetMetaData) => Unit): Unit = {
     val (url, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
 
     log.info(s"Successfully connected to JDBC URL: $url")
 
     try {
       withResultSet(connection, nativeQuery) { rs =>
-        action(rs.getMetaData)
+        action(connection, rs.getMetaData)
       }
     } finally {
       connection.close()

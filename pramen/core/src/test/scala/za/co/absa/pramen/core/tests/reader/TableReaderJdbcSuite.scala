@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc}
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql.SqlGeneratorHsqlDb
-import za.co.absa.pramen.core.utils.SparkUtils.MAX_LENGTH_METADATA_KEY
+import za.co.absa.pramen.core.utils.SparkUtils.{COMMENT_METADATA_KEY, MAX_LENGTH_METADATA_KEY}
 
 import java.time.LocalDate
 
@@ -229,7 +229,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
         val reader = new TableReaderJdbc(jdbcTableReaderConfig, urlSelector, readerConfig)
 
-        reader.getWithRetry("company", isDataQuery = true, 2) { df =>
+        reader.getWithRetry("company", isDataQuery = true, 2, None) { df =>
           assert(!df.isEmpty)
         }
 
@@ -250,7 +250,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
         val reader = new TableReaderJdbc(jdbcTableReaderConfig, urlSelector, readerConfig)
 
         val ex = intercept[RuntimeException] {
-          reader.getWithRetry("company", isDataQuery = true, 2) { _ => }
+          reader.getWithRetry("company", isDataQuery = true, 2, None) { _ => }
         }
 
         assert(ex.getMessage.contains("dummy"))
@@ -269,11 +269,12 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
         val reader = new TableReaderJdbc(jdbcTableReaderConfig, urlSelector, readerConfig)
 
-        val df = reader.getDataFrame("SELECT * FROM company", isDataQuery = true)
+        val df = reader.getDataFrame("SELECT * FROM company", isDataQuery = true, Option("company"))
 
         // NAME VARCHAR(50)
         assert(df.schema.fields(1).name == "NAME")
         assert(df.schema.fields(1).metadata.getLong(MAX_LENGTH_METADATA_KEY) == 50L)
+        assert(df.schema.fields(1).metadata.getString(COMMENT_METADATA_KEY) == "This is company name")
         // DESCRIPTION VARCHAR
         assert(df.schema.fields(2).name == "DESCRIPTION")
         assert(!df.schema.fields(2).metadata.contains(MAX_LENGTH_METADATA_KEY))
