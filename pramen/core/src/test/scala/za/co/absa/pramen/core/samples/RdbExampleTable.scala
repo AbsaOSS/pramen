@@ -52,7 +52,9 @@ trait RdbExampleTable {
 
 object RdbExampleTable {
   object Company extends RdbExampleTable {
-    val tableName: String = "company"
+    val tableName: String = "COMPANY"
+    val schemaName: String = "PUBLIC"
+    val databaseName: String = "PUBLIC"
 
     val ddl: String =
       s"""
