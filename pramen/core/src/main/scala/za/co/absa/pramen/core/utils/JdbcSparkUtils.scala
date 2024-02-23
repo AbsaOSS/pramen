@@ -154,8 +154,12 @@ object JdbcSparkUtils {
           dbMetadata.getColumns(parts(0), null, parts(1), null)
         }
       } else {
-        // table only
-        dbMetadata.getColumns(null, null, fullTableName.toUpperCase, null)
+        // Table only. The exact casing was already checked. Checking upper and lower casing in case
+        // the JDBC driver is case-sensitive, but objects ub db metadata are automatically upper- or lower- cased.
+        if (dbMetadata.getColumns(null, null, fullTableName.toUpperCase, null).next())
+          dbMetadata.getColumns(null, null, fullTableName.toUpperCase, null)
+        else
+          dbMetadata.getColumns(null, null, fullTableName.toLowerCase, null)
       }
     } else {
       // table only
