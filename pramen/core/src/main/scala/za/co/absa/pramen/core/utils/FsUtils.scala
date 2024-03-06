@@ -52,20 +52,31 @@ class FsUtils(conf: Configuration, pathBase: String) {
     fs.getContentSummary(hadoopPath).getLength
   }
 
-  def createDirectoryRecursive(path: Path): Unit = {
-    val (prefix, rawPath) = splitUriPath(path)
+  def createDirectoryRecursive(path: Path, skipOnObjectStorage: Boolean = true): Unit = {
+    if (skipOnObjectStorage && isObjectStorage(path)) {
+      log.info(s"Skipping creating directory ${path.toUri.toString} on an object storage...")
+    } else {
+      val (prefix, rawPath) = splitUriPath(path)
 
-    val tokens = rawPath.split("/").filter(_.nonEmpty)
+      val tokens = rawPath.split("/").filter(_.nonEmpty)
 
-    var currPath = prefix
-    tokens.foreach({ dir =>
-      currPath = currPath + "/" + dir
-      val p = new Path(currPath)
-      if (!fs.exists(p)) {
-        log.info(s"Creating ${p.toUri.toString}...")
-        fs.mkdirs(p)
-      }
-    })
+      var currPath = prefix
+      tokens.foreach({ dir =>
+        currPath = currPath + "/" + dir
+        val p = new Path(currPath)
+        if (!fs.exists(p)) {
+          log.info(s"Creating ${p.toUri.toString}...")
+          fs.mkdirs(p)
+        }
+      })
+    }
+  }
+
+  def isObjectStorage(path: Path): Boolean = {
+    // Only s3, s3a, and s3n (s3*) for now since the directory creation
+    // permission issues spotted only on S3 at the moment.
+    // But eventually this might be extended to other object stores.
+    Option(path.toUri.getScheme).exists(_.toLowerCase.startsWith("s3"))
   }
 
   def createDirectoryRecursiveButLast(path: Path): Unit = {
@@ -508,7 +519,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * @param baseTempPath path to a file.
     */
   def getTempPath(baseTempPath: Path): Path = {
-    createDirectoryRecursive(baseTempPath)
+    createDirectoryRecursive(baseTempPath, skipOnObjectStorage = false)
     if (!exists(baseTempPath)) {
       throw new IllegalStateException(s"Unable to create $baseTempPath.")
     }
@@ -608,7 +619,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
       val parent = outputPath.getParent
 
       if (!fs.exists(parent)) {
-        createDirectoryRecursive(parent)
+        createDirectoryRecursive(parent, skipOnObjectStorage = false)
       }
 
       if (dryRun) {
