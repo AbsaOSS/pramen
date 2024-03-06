@@ -55,6 +55,18 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
     }
   }
 
+  "createDirectoryRecursive" should {
+    "do nothing if the storage is in object store" in {
+      fsUtils.createDirectoryRecursive(new Path("s3://some-non-existing-bucket/a/b/c"))
+    }
+
+    "throw an exception if force to create on object storage for a bucket that does not exist" in {
+      assertThrows[RuntimeException] {
+        fsUtils.createDirectoryRecursive(new Path("s3://some-non-existing-bucket/a/b/c"), skipOnObjectStorage = false)
+      }
+    }
+  }
+
   "splitUriPath" should {
     "split a relative path" in {
       assert(fsUtils.splitUriPath(new Path("a/b/c")) == ("", "a/b/c"))
@@ -448,7 +460,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val pathDstFile = new Path(pathDst, "data2.bin")
 
         fsUtils.createDirectoryRecursive(pathSrc)
-        fsUtils.createDirectoryRecursive(pathDst)
+        fsUtils.createDirectoryRecursive(pathDst, skipOnObjectStorage = false)
 
         createBinFile(pathSrc.toString, "data1.bin", 100)
 
