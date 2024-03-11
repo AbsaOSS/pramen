@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.Transformer
+import za.co.absa.pramen.api.{DataFormat, Transformer}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
@@ -151,7 +151,7 @@ class OperationSplitter(conf: Config,
 
       val outputTableName = sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->$sinkName")
 
-      val outputTable = inputTable.copy(name = outputTableName, hiveTable = None)
+      val outputTable = inputTable.copy(name = outputTableName, format = DataFormat.Null(), hiveTable = None)
 
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sinkTable.conf))
