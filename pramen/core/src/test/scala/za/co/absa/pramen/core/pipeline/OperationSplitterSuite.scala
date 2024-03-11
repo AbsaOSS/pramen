@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.databricks.DatabricksClient
@@ -221,7 +222,9 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
 
       assert(job.length == 2)
       assert(job.head.isInstanceOf[SinkJob])
+      assert(job.head.asInstanceOf[SinkJob].outputTable.format.isInstanceOf[DataFormat.Null])
       assert(job(1).isInstanceOf[SinkJob])
+      assert(job(1).asInstanceOf[SinkJob].outputTable.format.isInstanceOf[DataFormat.Null])
     }
 
     "create transfer jobs" in {
