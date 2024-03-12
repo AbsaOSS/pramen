@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
-import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
+import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_MEGABYTES, MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
 import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus, TaskResult}
@@ -37,6 +37,7 @@ import scala.collection.mutable.ListBuffer
 object PipelineNotificationBuilderHtml {
   val MIN_RPS_JOB_DURATION_SECONDS = 60
   val MIN_RPS_RECORDS = 1000
+  val MIN_MEGABYTES = 10
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
@@ -343,7 +344,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     tableHeaders.append(TableHeader(TextElement("Elapsed Time"), Align.Center))
     if (outputSizeKnown)
       tableHeaders.append(TableHeader(TextElement("Size"), Align.Right))
-    tableHeaders.append(TableHeader(TextElement("RPS"), Align.Right))
+    tableHeaders.append(TableHeader(TextElement("Throughput"), Align.Right))
     tableHeaders.append(TableHeader(TextElement("Saved at"), Align.Center))
     tableHeaders.append(TableHeader(TextElement("Status"), Align.Center))
     if (haveReasonColumn)
@@ -375,8 +376,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
       row.append(TextElement(getElapsedTime(task)))
 
-      if (outputSizeKnown)
-        row.append(TextElement(getOutputSize(task)))
+      if (task.isRawFilesJob) {
+        row.append(TextElement(getSizeText(task)))
+      } else {
+        if (outputSizeKnown)
+          row.append(TextElement(getOutputSize(task)))
+      }
 
       row.append(getThroughputRps(task))
       row.append(TextElement(getFinishTime(task)))
@@ -452,16 +457,38 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case Some(runInfo) =>
         val jobDuration = Duration.between(runInfo.started, runInfo.finished).getSeconds
         if (jobDuration > MIN_RPS_JOB_DURATION_SECONDS && recordCount >= MIN_RPS_RECORDS) {
-          val throughput = recordCount / jobDuration
-
-          throughput match {
-            case n if n < minRps   => TextElement(throughput.toString, Style.Warning)
-            case n if n >= goodRps => TextElement(throughput.toString, Style.Success)
-            case _                 => TextElement(throughput.toString)
+          if (task.isRawFilesJob) {
+            getBytesPerSecondsText(recordCount, jobDuration)
+          } else {
+            getRpsText(recordCount, jobDuration)
           }
         } else
           TextElement("")
       case None          => TextElement("")
+    }
+  }
+
+  private[core] def getRpsText(recordOrByteCount: Long, jobDurationSeconds: Long): TextElement = {
+    val throughput = recordOrByteCount / jobDurationSeconds
+    val rps = s"${throughput.toString} r/s"
+
+    throughput match {
+      case n if n < minRps => TextElement(rps, Style.Warning)
+      case n if n >= goodRps => TextElement(rps, Style.Success)
+      case _ => TextElement(rps)
+    }
+  }
+
+  private[core] def getBytesPerSecondsText(totalBytesCount: Long, jobDurationSeconds: Long): TextElement = {
+    val MEGABYTE = 1024L * 1024L
+
+    val sizeMb = totalBytesCount / MEGABYTE
+
+    if (sizeMb < MIN_MEGABYTES) {
+      TextElement("")
+    } else {
+      val throughput = totalBytesCount / jobDurationSeconds
+      TextElement(s"${StringUtils.prettySize(throughput)}/s")
     }
   }
 
@@ -481,9 +508,36 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       }
     }
 
+    if (task.isRawFilesJob) {
+      "-"
+    } else {
+      task.runStatus match {
+        case s: Succeeded        => renderDifference(s.recordCount, s.recordCountOld)
+        case d: InsufficientData => renderDifference(d.actual, d.recordCountOld)
+        case _                   => ""
+      }
+    }
+  }
+
+  private[core] def getSizeText(task: TaskResult): String = {
+    def renderDifferenceSize(numBytes: Long, numBytesOld: Option[Long]): String = {
+      numBytesOld match {
+        case Some(old) if old > 0 =>
+          val diff = numBytes - old
+          if (diff > 0)
+            s"${StringUtils.prettySize(numBytes)} (+${StringUtils.prettySize(diff)})"
+          else if (diff < 0)
+            s"${StringUtils.prettySize(numBytes)} (-${StringUtils.prettySize(Math.abs(diff))})"
+          else {
+            StringUtils.prettySize(numBytes)
+          }
+        case _ => StringUtils.prettySize(numBytes)
+      }
+    }
+
     task.runStatus match {
-      case s: Succeeded        => renderDifference(s.recordCount, s.recordCountOld)
-      case d: InsufficientData => renderDifference(d.actual, d.recordCountOld)
+      case s: Succeeded        => renderDifferenceSize(s.recordCount, s.recordCountOld)
+      case d: InsufficientData => renderDifferenceSize(d.actual, d.recordCountOld)
       case _                   => ""
     }
   }

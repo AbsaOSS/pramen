@@ -39,6 +39,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
         "app_123",
         isTransient = false,
+        isRawFilesJob = false,
         Nil,
         Nil,
         Nil)
@@ -72,6 +73,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         None,
         "app_123",
         isTransient = false,
+        isRawFilesJob = false,
         Nil,
         Nil,
         Nil)

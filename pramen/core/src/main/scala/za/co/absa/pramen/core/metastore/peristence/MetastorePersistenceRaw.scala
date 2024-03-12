@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import org.apache.hadoop.fs.{FileUtil, Path}
+import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -39,9 +39,9 @@ class MetastorePersistenceRaw(path: String,
 
     (infoDateFrom, infoDateTo) match {
       case (Some(from), Some(to)) if from.isEqual(to) =>
-        getListOfFiles(from).toDF("path")
+        getListOfFiles(from).map(_.getPath.toString).toDF("path")
       case (Some(from), Some(to)) =>
-        getListOfFilesRange(from, to).toDF("path")
+        getListOfFilesRange(from, to).map(_.getPath.toString).toDF("path")
       case _ =>
         throw new IllegalArgumentException("Metastore 'raw' format requires info date for querying its contents.")
     }
@@ -82,7 +82,7 @@ class MetastorePersistenceRaw(path: String,
     }
 
     MetaTableStats(
-      files.length,
+      totalSize,
       Some(totalSize)
     )
   }
@@ -97,7 +97,7 @@ class MetastorePersistenceRaw(path: String,
     var totalSize = 0L
 
     files.foreach(file => {
-      totalSize += fsUtils.fs.getContentSummary(new Path(file)).getLength
+      totalSize += file.getLen
     })
 
     MetaTableStats(
@@ -119,13 +119,13 @@ class MetastorePersistenceRaw(path: String,
     throw new UnsupportedOperationException("Raw format does not support Hive tables.")
   }
 
-  private def getListOfFilesRange(infoDateFrom: LocalDate, infoDateTo: LocalDate): Seq[String] = {
+  private def getListOfFilesRange(infoDateFrom: LocalDate, infoDateTo: LocalDate): Seq[FileStatus] = {
     if (infoDateFrom.isAfter(infoDateTo))
-      Seq.empty[String]
+      Seq.empty[FileStatus]
     else {
       val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
       var d = infoDateFrom
-      val files = mutable.ArrayBuffer.empty[String]
+      val files = mutable.ArrayBuffer.empty[FileStatus]
 
       while (d.isBefore(infoDateTo) || d.isEqual(infoDateTo)) {
         val subPath = SparkUtils.getPartitionPath(d, infoDateColumn, infoDateFormat, path)
@@ -138,7 +138,7 @@ class MetastorePersistenceRaw(path: String,
     }
   }
 
-  private def getListOfFiles(infoDate: LocalDate): Seq[String] = {
+  private def getListOfFiles(infoDate: LocalDate): Seq[FileStatus] = {
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
     val subPath = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
@@ -146,7 +146,7 @@ class MetastorePersistenceRaw(path: String,
     if (fsUtils.exists(new Path(path)) && !fsUtils.exists(subPath)) {
       // The absence of the partition folder means no data is there, which is okay quite often.
       // But fsUtils.getHadoopFiles() throws an exception that fails the job and dependent jobs in this case
-      Seq.empty[String]
+      Seq.empty[FileStatus]
     } else {
       fsUtils.getHadoopFiles(subPath).toSeq
     }

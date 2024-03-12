@@ -676,7 +676,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
     *
     * The glob pattern is supported. Maximum depth of recursivity is 1.
     */
-  def getHadoopFiles(path: Path, includeHiddenFiles: Boolean = false): Array[String] = {
+  def getHadoopFiles(path: Path, includeHiddenFiles: Boolean = false): Array[FileStatus] = {
     val fileFilter = if (includeHiddenFiles) anyFileFilter else hiddenFileFilter
 
     val stats: Array[FileStatus] = fs.globStatus(path, fileFilter)
@@ -694,7 +694,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
       }
     })
 
-    allFiles.map(_.getPath.toString).toArray[String]
+    allFiles.toArray[FileStatus]
   }
 
   /**
@@ -704,7 +704,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
     *
     * The glob pattern is supported. Maximum depth of recursivity is 1.
     */
-  def getHadoopFilesCaseInsensitive(path: Path, includeHiddenFiles: Boolean = false): Array[String] = {
+  def getHadoopFilesCaseInsensitive(path: Path, includeHiddenFiles: Boolean = false): Array[FileStatus] = {
     def containsWildcard(input: String): Boolean = {
       val wildcardPattern = "[*?{}!]".r
         wildcardPattern.findFirstIn(input).isDefined
@@ -735,7 +735,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
         }
       })
 
-      allFiles.map(_.getPath.toString).toArray[String]
+      allFiles.toArray[FileStatus]
     }
   }
 

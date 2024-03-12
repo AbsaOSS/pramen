@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.runner.jobrunner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
@@ -103,7 +104,8 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def sendFailure(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
-    completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, applicationId, isTransient, Nil, Nil, Nil) :: Nil, false))
+    completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, applicationId, isTransient,
+      job.outputTable.format.isInstanceOf[DataFormat.Raw], Nil, Nil, Nil) :: Nil, false))
   }
 
   private[core] def runJob(job: Job): Boolean = {

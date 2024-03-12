@@ -29,6 +29,7 @@ object TaskResultFactory {
                          runInfo: Option[RunInfo] = Some(RunInfo(LocalDate.of(2022, 2, 18), Instant.ofEpochSecond(1234), Instant.ofEpochSecond(5678))),
                          applicationId: String = "app_123",
                          isTransient: Boolean = false,
+                         isRawFilesJob: Boolean = false,
                          schemaDifferences: Seq[SchemaDifference] = Nil,
                          dependencyWarnings: Seq[DependencyWarning] = Nil,
                          notificationTargetErrors: Seq[NotificationFailure] = Nil): TaskResult = {
@@ -37,6 +38,7 @@ object TaskResultFactory {
       runInfo,
       applicationId,
       isTransient,
+      isRawFilesJob,
       schemaDifferences,
       dependencyWarnings,
       notificationTargetErrors)
