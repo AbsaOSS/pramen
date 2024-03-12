@@ -135,7 +135,7 @@ abstract class TaskRunnerBase(conf: Config,
     val runStatus = RunStatus.Skipped(reason, isWarning)
     val runInfo = RunInfo(task.infoDate, now, now)
     val isTransient = task.job.outputTable.format.isTransient
-    val taskResult = TaskResult(task.job, runStatus, Some(runInfo), applicationId, isTransient, Nil, Nil, Nil)
+    val taskResult = TaskResult(task.job, runStatus, Some(runInfo), applicationId, isTransient, isRawFilesJob = false, Nil, Nil, Nil)
 
     onTaskCompletion(task, taskResult, isLazy = false)
   }
@@ -153,6 +153,7 @@ abstract class TaskRunnerBase(conf: Config,
   private[core] def preRunCheck(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
     val outputTable = task.job.outputTable.name
     val isTransient = task.job.outputTable.format.isTransient
+    val isRawFileBased = task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
 
     Try {
       task.job.preRunCheck(task.infoDate, conf)
@@ -167,23 +168,23 @@ abstract class TaskRunnerBase(conf: Config,
             Right(validationResult)
           case NoData(isFailure) =>
             log.info(s"NO DATA available for the task: $outputTable for date: ${task.infoDate}.")
-            Left(TaskResult(task.job, RunStatus.NoData(isFailure), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, validationResult.dependencyWarnings, Nil))
+            Left(TaskResult(task.job, RunStatus.NoData(isFailure), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil))
           case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTable for date: ${task.infoDate}. Expected = $expected, actual = $actual")
-            Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, validationResult.dependencyWarnings, Nil))
+            Left(TaskResult(task.job, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil))
           case AlreadyRan =>
             if (runtimeConfig.isRerun) {
               log.info(s"RE-RUNNING the task: $outputTable for date: ${task.infoDate}.")
               Right(validationResult)
             } else {
               log.info(s"SKIPPING already ran job: $outputTable for date: ${task.infoDate}.")
-              Left(TaskResult(task.job, RunStatus.NotRan, getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, validationResult.dependencyWarnings, Nil))
+              Left(TaskResult(task.job, RunStatus.NotRan, getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil))
             }
           case Skip(msg) =>
             log.info(s"SKIPPING job: $outputTable for date: ${task.infoDate}. Reason: msg")
-            Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, validationResult.dependencyWarnings, Nil))
+            Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil))
           case FailedDependencies(isFailure, failures) =>
-            Left(TaskResult(task.job, RunStatus.FailedDependencies(isFailure, failures), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, Nil, Nil))
+            Left(TaskResult(task.job, RunStatus.FailedDependencies(isFailure, failures), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, Nil, Nil))
         }
         if (validationResult.dependencyWarnings.nonEmpty) {
           log.warn(s"$WARNING Validation of the task: $outputTable for date: ${task.infoDate} has " +
@@ -191,7 +192,7 @@ abstract class TaskRunnerBase(conf: Config,
         }
         resultToReturn
       case Failure(ex) =>
-        Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, Nil, Nil))
+        Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, Nil, Nil))
     }
   }
 
@@ -208,6 +209,7 @@ abstract class TaskRunnerBase(conf: Config,
   private[core] def validate(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
     val outputTable = task.job.outputTable.name
     val isTransient = task.job.outputTable.format.isTransient
+    val isRawFileBased = task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
 
     preRunCheck(task, started) match {
       case Left(result) =>
@@ -226,20 +228,20 @@ abstract class TaskRunnerBase(conf: Config,
                 Right(status.copy(warnings = reason.warnings))
               case Reason.NotReady(msg) =>
                 log.info(s"NOT READY validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
-                Left(TaskResult(task.job, RunStatus.ValidationFailed(new ReasonException(Reason.NotReady(msg), msg)), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))
+                Left(TaskResult(task.job, RunStatus.ValidationFailed(new ReasonException(Reason.NotReady(msg), msg)), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil))
               case Reason.Skip(msg) =>
                 log.info(s"SKIP validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
                 if (bookkeeper.getLatestDataChunk(outputTable, task.infoDate, task.infoDate).isEmpty) {
                   val isTransient = task.job.outputTable.format.isTransient
                   bookkeeper.setRecordCount(outputTable, task.infoDate, task.infoDate, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
                 }
-                Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))
+                Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil))
               case Reason.SkipOnce(msg) =>
                 log.info(s"SKIP today validation failure for the task: $outputTable for date: ${task.infoDate}. Reason: $msg")
-                Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))
+                Left(TaskResult(task.job, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil))
             }
           case Failure(ex) =>
-            Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, Nil, status.dependencyWarnings, Nil))
+            Left(TaskResult(task.job, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil))
         }
     }
   }
@@ -255,6 +257,7 @@ abstract class TaskRunnerBase(conf: Config,
     */
   private[core] def run(task: Task, started: Instant, validationResult: JobPreRunResult): TaskResult = {
     val isTransient = task.job.outputTable.format.isTransient
+    val isRawFileBased = task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
     val lock = lockFactory.getLock(getTokenName(task))
 
     val attempt = try {
@@ -336,6 +339,7 @@ abstract class TaskRunnerBase(conf: Config,
           Some(RunInfo(task.infoDate, started, finished)),
           applicationId,
           isTransient,
+          isRawFileBased,
           schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
           validationResult.dependencyWarnings,
           Seq.empty)
@@ -352,8 +356,8 @@ abstract class TaskRunnerBase(conf: Config,
       case Success(result) =>
         result
       case Failure(ex) =>
-        TaskResult(task.job, RunStatus.Failed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient,
-          Nil,validationResult.dependencyWarnings, Nil)
+        TaskResult(task.job, RunStatus.Failed(ex), getRunInfo(task.infoDate, started), applicationId,
+          isTransient, isRawFileBased, Nil,validationResult.dependencyWarnings, Nil)
     }
   }
 

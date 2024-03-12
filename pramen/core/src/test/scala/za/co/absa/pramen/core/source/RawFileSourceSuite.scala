@@ -150,7 +150,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
       val count = source.getRecordCount(Query.Path(filesPath.toString), null, null)
 
-      assert(count == 3)
+      assert(count == 9)
     }
 
     "return the number of files in the directory for a path pattern" in {
@@ -158,7 +158,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
       val count = source.getRecordCount(Query.Path(filesPattern.toString), infoDate, infoDate)
 
-      assert(count == 2)
+      assert(count == 6)
     }
 
     "return the number of files in the directory for a path pattern and range query" in {
@@ -166,17 +166,20 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
       val count = source.getRecordCount(Query.Path(filesPattern.toString), infoDate, infoDate.plusDays(1))
 
-      assert(count == 3)
+      assert(count == 9)
     }
 
     "return the number of files in the directory for a list of files" in {
       val source = new RawFileSource(emptyConfig, null)(spark)
 
-      val options = Map("file.1" -> "f1.dat", "file.2" -> "f2.dat")
+      val options = Map(
+        "file.1" -> new Path(filesPath, "1.dat").toString,
+        "file.2" -> new Path(filesPath, "2.dat").toString
+      )
 
       val count = source.getRecordCount(Query.Custom(options), null, null)
 
-      assert(count == 2)
+      assert(count == 7)
     }
 
     "thrown an exception when parent path does not exist" in {
@@ -271,18 +274,21 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     "return the list of files for a list of files" in {
       val source = new RawFileSource(emptyConfig, null)(spark)
 
-      val options = Map("file.1" -> "f1.dat", "file.2" -> "f2.dat")
+      val options = Map(
+        "file.1" -> new Path(filesPath, "1.dat").toString,
+        "file.2" -> new Path(filesPath, "2.dat").toString
+      )
 
       val result = source.getData(Query.Custom(options), null, null, null)
 
       val filesInDf = result.data.collect().map(_.toString())
       val filesRead = result.filesRead
 
-      assert(filesInDf.exists(_.contains("f1.dat")))
-      assert(filesInDf.exists(_.contains("f2.dat")))
+      assert(filesInDf.exists(_.contains("1.dat")))
+      assert(filesInDf.exists(_.contains("2.dat")))
 
-      assert(filesRead.exists(_.contains("f1.dat")))
-      assert(filesRead.exists(_.contains("f2.dat")))
+      assert(filesRead.exists(_.contains("1.dat")))
+      assert(filesRead.exists(_.contains("2.dat")))
     }
   }
 
@@ -291,7 +297,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
       val source = new RawFileSource(emptyConfig, null)(spark)
 
       val files = source.getPaths(Query.Path(filesPath.toString), infoDate, infoDate)
-        .map(path => new Path(path).getName)
+        .map(_.getPath.getName)
 
       assert(files.length == 3)
 
@@ -303,9 +309,13 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     "work for a list of files" in {
       val source = new RawFileSource(emptyConfig, null)(spark)
 
-      val options = Map("file.1" -> "1.dat", "file.2" -> "_3.dat")
+      val options = Map(
+        "file.1" -> new Path(filesPath, "1.dat").toString,
+        "file.2" -> new Path(filesPath, "_3.dat").toString
+      )
+
       val files = source.getPaths(Query.Custom(options), infoDate, infoDate)
-        .map(path => new Path(path).getName)
+        .map(_.getPath.getName)
 
       assert(files.length == 2)
 
@@ -327,7 +337,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
       val source = new RawFileSource(emptyConfig, null)(spark)
 
       val files = source.getPatternBasedFilesForRange(filesPatternPath.toString, infoDate, infoDate.plusDays(1))
-        .map(path => new Path(path).getName)
+        .map(_.getPath.getName)
 
       assert(files.length == 5)
 
@@ -352,7 +362,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
     "return the list of files for the pattern" in {
       val files = RawFileSource.getListOfFiles(specificPattern.toString, caseSensitive = true)
-        .map(path => new Path(path).getName)
+        .map(_.getPath.getName)
 
       assert(files.length == 2)
 
@@ -363,7 +373,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     "return the list of files for the case insensitive pattern" in {
       val caseInsensitivePattern = new Path(filesPatternPath, "FILE_test_2022-02-18*.Dat")
       val files = RawFileSource.getListOfFiles(caseInsensitivePattern.toString, caseSensitive = false)
-        .map(path => new Path(path).getName)
+        .map(_.getPath.getName)
 
       assert(files.length == 3)
 

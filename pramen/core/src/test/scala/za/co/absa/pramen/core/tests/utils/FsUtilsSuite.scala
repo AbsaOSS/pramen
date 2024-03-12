@@ -908,7 +908,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val files = fsUtils.getHadoopFiles(innerPath)
 
         assert(files.length == 1)
-        assert(files.head.endsWith("data1.bin"))
+        assert(files.head.getPath.toString.endsWith("data1.bin"))
       }
     }
 
@@ -944,7 +944,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
 
         assert(filesByPath.isEmpty)
         assert(filesWithMask.length == 1)
-        assert(filesWithMask.head.endsWith("data1.bin"))
+        assert(filesWithMask.head.getPath.toString.endsWith("data1.bin"))
       }
     }
 
@@ -960,7 +960,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val files = fsUtils.getHadoopFiles(innerPath)
 
         assert(files.length == 1)
-        assert(files.head.endsWith("data1.bin"))
+        assert(files.head.getPath.toString.endsWith("data1.bin"))
       }
     }
 
@@ -977,7 +977,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val files = fsUtils.getHadoopFiles(innerFile)
 
         assert(files.length == 1)
-        assert(files.head.endsWith("data1.bin"))
+        assert(files.head.getPath.toString.endsWith("data1.bin"))
       }
     }
   }
@@ -1006,6 +1006,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         createBinFile(innerPath.toString, "_data3.BiN", 100)
 
         val files = fsUtils.getHadoopFilesCaseInsensitive(filePattern, includeHiddenFiles = true)
+          .map(_.getPath.toString)
 
         assert(files.length == 3)
         assert(files.exists(_.endsWith("Adata1.BIN")))
@@ -1029,7 +1030,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val files = fsUtils.getHadoopFilesCaseInsensitive(filePattern)
 
         assert(files.length == 1)
-        assert(files.head.endsWith("Adata1.BiN"))
+        assert(files.head.getPath.toString.endsWith("Adata1.BiN"))
       }
     }
 
@@ -1045,7 +1046,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val files = fsUtils.getHadoopFilesCaseInsensitive(innerPath)
 
         assert(files.length == 1)
-        assert(files.head.endsWith("data1.bin"))
+        assert(files.head.getPath.toString.endsWith("data1.bin"))
       }
     }
 
@@ -1062,7 +1063,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
         val files = fsUtils.getHadoopFilesCaseInsensitive(innerFile)
 
         assert(files.length == 1)
-        assert(files.head.endsWith("data1.bin"))
+        assert(files.head.getPath.toString.endsWith("data1.bin"))
       }
     }
   }

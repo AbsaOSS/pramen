@@ -25,6 +25,7 @@ case class TaskResult(
                        runInfo: Option[RunInfo],
                        applicationId: String,
                        isTransient: Boolean,
+                       isRawFilesJob: Boolean,
                        schemaChanges: Seq[SchemaDifference],
                        dependencyWarnings: Seq[DependencyWarning],
                        notificationTargetErrors: Seq[NotificationFailure]

@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.source
 
 import com.typesafe.config.Config
-import org.apache.hadoop.fs.Path
+import org.apache.hadoop.fs.{FileStatus, FileSystem, Path}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
@@ -98,19 +98,21 @@ class RawFileSource(val sourceConfig: Config,
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    getPaths(query, infoDateBegin, infoDateEnd).length
+    getPaths(query, infoDateBegin, infoDateEnd)
+      .map(_.getLen)
+      .sum
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
     val files = getPaths(query, infoDateBegin, infoDateEnd)
-    val df = files.toDF(PATH_FIELD)
-    val fileNames = files.map(fullPath => new Path(fullPath).getName)
+    val df = files.map(_.getPath.toString).toDF(PATH_FIELD)
+    val fileNames = files.map(_.getPath.getName).sorted
 
     SourceResult(df, fileNames)
   }
 
   @throws[FileNotFoundException]
-  private[source] def getPaths(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[String] = {
+  private[source] def getPaths(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[FileStatus] = {
     query match {
       case Query.Path(pathPattern) => getPatternBasedFilesForRange(pathPattern, infoDateBegin, infoDateEnd)
       case Query.Custom(options) => getMultiList(options)
@@ -119,14 +121,14 @@ class RawFileSource(val sourceConfig: Config,
   }
 
   @throws[FileNotFoundException]
-  private[source] def getPatternBasedFilesForRange(pathPattern: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[String] = {
+  private[source] def getPatternBasedFilesForRange(pathPattern: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[FileStatus] = {
     if (!pathPattern.contains("{{") || infoDateBegin.isEqual(infoDateEnd)) {
       getListOfFilesForPathPattern(pathPattern, infoDateBegin, caseSensitivePattern)
     } else {
       if (infoDateBegin.isAfter(infoDateEnd)) {
         throw new IllegalArgumentException(s"Begin date is more recent than the end date: $infoDateBegin > $infoDateEnd.")
       }
-      val files = new ListBuffer[String]
+      val files = new ListBuffer[FileStatus]
       var date = infoDateBegin
       while (date.isBefore(infoDateEnd) || date.isEqual(infoDateEnd)) {
         files ++= getListOfFilesForPathPattern(pathPattern, date, caseSensitivePattern)
@@ -152,14 +154,19 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
     new RawFileSource(conf, options)(spark)
   }
 
-  private[core] def getMultiList(options: Map[String, String]): Seq[String] = {
+  private[core] def getMultiList(options: Map[String, String])(implicit spark: SparkSession): Seq[FileStatus] = {
     var i = 1
-    val files = new ListBuffer[String]
+    val files = new ListBuffer[FileStatus]
+    var fs: FileSystem = null
 
     while (options.contains(s"$FILE_PREFIX.$i")) {
-      val filePath = options(s"$FILE_PREFIX.$i")
+      val filePath = new Path(options(s"$FILE_PREFIX.$i"))
 
-      files += filePath
+      if (fs == null) {
+        fs = filePath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+      }
+
+      files += fs.getFileStatus(filePath)
 
       i += 1
     }
@@ -170,7 +177,7 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
   private[core] def getListOfFilesForPathPattern(pathPattern: String,
                                                  infoDate: LocalDate,
                                                  caseSensitive: Boolean)
-                                                (implicit spark: SparkSession): Seq[String] = {
+                                                (implicit spark: SparkSession): Seq[FileStatus] = {
     val globPattern = getGlobPattern(pathPattern, infoDate)
     log.info(s"Using the following pattern for '$infoDate': $globPattern")
 
@@ -179,7 +186,7 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
 
 
   @throws[FileNotFoundException]
-  private[core] def getListOfFiles(pathPattern: String, caseSensitive: Boolean)(implicit spark: SparkSession): Seq[String] = {
+  private[core] def getListOfFiles(pathPattern: String, caseSensitive: Boolean)(implicit spark: SparkSession): Seq[FileStatus] = {
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, pathPattern)
     val hadoopPath = new Path(pathPattern)
 
@@ -192,13 +199,13 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
     try {
       if (caseSensitive) {
         log.info(s"Using case-sensitive Hadoop file search.")
-        fsUtils.getHadoopFiles(hadoopPath, includeHiddenFiles = true).sorted
+        fsUtils.getHadoopFiles(hadoopPath, includeHiddenFiles = true)
       } else {
         log.info(s"Using case-insensitive Hadoop file search.")
-        fsUtils.getHadoopFilesCaseInsensitive(hadoopPath, includeHiddenFiles = true).sorted
+        fsUtils.getHadoopFilesCaseInsensitive(hadoopPath, includeHiddenFiles = true)
       }
     } catch {
-      case ex: IllegalArgumentException if ex.getMessage.contains("Input path does not exist") => Seq.empty[String]
+      case ex: IllegalArgumentException if ex.getMessage.contains("Input path does not exist") => Seq.empty[FileStatus]
     }
   }
 

@@ -57,7 +57,7 @@ class SparkSource(val format: Option[String],
       case _: Query.Sql     => Array.empty[String]
       case Query.Path(path) =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-        fsUtils.getHadoopFiles(new Path(path))
+        fsUtils.getHadoopFiles(new Path(path)).map(_.getPath.toString).sorted
       case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
 
