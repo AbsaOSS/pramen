@@ -22,15 +22,18 @@ import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
-import za.co.absa.pramen.core.mocks.{SchemaDifferenceFactory, TaskResultFactory, TestPrototypes}
+import za.co.absa.pramen.core.mocks.{RunStatusFactory, SchemaDifferenceFactory, TaskResultFactory, TestPrototypes}
 import za.co.absa.pramen.core.notify.message.{MessageBuilderHtml, ParagraphBuilder}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
+import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus}
 import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.{Instant, LocalDate}
 
 class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
+  private val megabyte = 1024L * 1024L
+
   "constructor" should {
     "be able to initialize the builder with the default timezone" in {
       implicit val conf: Config = ConfigFactory.parseString(
@@ -85,8 +88,8 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       val builder = getBuilder
 
       builder.addAppName("MyNewApp")
-      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult( runStatus = TestPrototypes.runStatusWarning))
-      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult( runStatus = TestPrototypes.runStatusFailure))
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusWarning))
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusFailure))
 
       assert(builder.renderSubject().startsWith("Notification of PARTIAL SUCCESS for MyNewApp at"))
     }
@@ -241,14 +244,14 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
         .renderBody
 
       assert(actual.contains(
-      """<pre>Command line failed
-        |Last <b>stdout</b> lines:
-        |stdout line 1
-        |stdout line 2
-        |
-        |Last <b>stderr</b> lines:
-        |stderr line 1
-        |</pre>""".stripMargin.replaceAll("\\r\\n", "\\n")
+        """<pre>Command line failed
+          |Last <b>stdout</b> lines:
+          |stdout line 1
+          |stdout line 2
+          |
+          |Last <b>stderr</b> lines:
+          |stderr line 1
+          |</pre>""".stripMargin.replaceAll("\\r\\n", "\\n")
       ))
     }
   }
@@ -323,7 +326,216 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Failed(new RuntimeException("dummy"))))
 
-      assert(actual ==TextElement("Failed", Style.Exception))
+      assert(actual == TextElement("Failed", Style.Exception))
+    }
+  }
+
+  "getThroughputRps" should {
+    "work for a failed tasks" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummyFailure()
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getThroughputRps(task)
+
+      assert(actual.text.isEmpty)
+    }
+
+    "work for a task without a run info" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, 1000000, reason = TaskRunReason.New)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, runInfo = None)
+
+      val actual = builder.getThroughputRps(task)
+
+      assert(actual.text.isEmpty)
+    }
+
+    "work for a normal successful task" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, 1000000, reason = TaskRunReason.New)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getThroughputRps(task)
+
+      assert(actual.text == "225 r/s")
+    }
+
+    "work for a raw file task" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, 1000 * megabyte, reason = TaskRunReason.New)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
+
+      val actual = builder.getThroughputRps(task)
+
+      assert(actual.text == "230 KiB/s")
+    }
+  }
+
+  "getBytesPerSecondsText" should {
+    "return an empty string for files smaller than the minimum size" in {
+      val builder = getBuilder
+
+      val actual = builder.getBytesPerSecondsText(1000, 10)
+
+      assert(actual.text.isEmpty)
+    }
+
+    "return the throughput for usual inputs" in {
+      val builder = getBuilder
+
+      val actual = builder.getBytesPerSecondsText(100L * 1024L * 1024L, 10)
+
+      assert(actual.text == "10 MiB/s")
+    }
+  }
+
+  "getRecordCountText" should {
+    "work for a failure" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummyFailure()
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual.isEmpty)
+    }
+
+    "work for success file based job" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 100, reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "-")
+    }
+
+    "work for success new" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, 100, reason = TaskRunReason.New)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "100")
+    }
+
+    "work for success unchanged" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 100, reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "100")
+    }
+
+    "work for success increased" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 110, reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "110 (+10)")
+    }
+
+    "work for success decreased" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 90, reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "90 (-10)")
+    }
+
+    "work for insufficient data" in {
+      val builder = getBuilder
+
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.InsufficientData(90, 96, Some(100)))
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "90 (-10)")
+    }
+  }
+
+  "getSizeText" should {
+    "work for a failure" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummyFailure()
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getSizeText(task)
+
+      assert(actual.isEmpty)
+    }
+
+    "work for success new" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, 100 * megabyte, reason = TaskRunReason.New)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
+
+      val actual = builder.getSizeText(task)
+
+      assert(actual == "100 MiB")
+    }
+
+    "work for success unchanged" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 100 * megabyte, reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
+
+      val actual = builder.getSizeText(task)
+
+      assert(actual == "100 MiB")
+    }
+
+    "work for success increased" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 110 * megabyte, reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
+
+      val actual = builder.getSizeText(task)
+
+      assert(actual == "110 MiB (+10 MiB)")
+    }
+
+    "work for success decreased" in {
+      val builder = getBuilder
+
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 90 * megabyte, reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
+
+      val actual = builder.getSizeText(task)
+
+      assert(actual == "90 MiB (-10 MiB)")
+    }
+
+    "work for insufficient data" in {
+      val builder = getBuilder
+
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.InsufficientData(90 * megabyte, 96 * megabyte, Some(100 * megabyte)), isRawFilesJob = true)
+
+      val actual = builder.getSizeText(task)
+
+      assert(actual == "90 MiB (-10 MiB)")
     }
   }
 
