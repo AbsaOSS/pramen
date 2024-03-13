@@ -322,10 +322,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case _            => false
     })
 
-    val outputSizeKnown = tasks.exists(t => t.runStatus match {
-      case s: Succeeded => s.sizeBytes.isDefined
-      case _            => false
-    })
+    val outputSizeKnown = tasks.exists { t =>
+      val hasExplicitSize = t.runStatus match {
+        case s: Succeeded => s.sizeBytes.isDefined
+        case _            => false
+      }
+      t.isRawFilesJob || hasExplicitSize
+    }
 
     val haveReasonColumn = tasks.exists(t => t.runStatus.getReason().nonEmpty || t.dependencyWarnings.nonEmpty)
     val haveHiveColumn = tasks.exists(t => t.runStatus.isInstanceOf[Succeeded] && t.runStatus.asInstanceOf[Succeeded].hiveTablesUpdated.nonEmpty)
@@ -376,11 +379,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
       row.append(TextElement(getElapsedTime(task)))
 
-      if (task.isRawFilesJob) {
-        row.append(TextElement(getSizeText(task)))
-      } else {
-        if (outputSizeKnown)
+      if (outputSizeKnown) {
+        if (task.isRawFilesJob) {
+          row.append(TextElement(getSizeText(task)))
+        } else {
           row.append(TextElement(getOutputSize(task)))
+        }
       }
 
       row.append(getThroughputRps(task))
@@ -500,7 +504,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           if (diff > 0)
             s"$numRecords (+$diff)"
           else if (diff < 0)
-            s"$numRecords (-$diff)"
+            s"$numRecords ($diff)"
           else {
             numRecords.toString
           }
