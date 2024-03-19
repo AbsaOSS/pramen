@@ -494,6 +494,10 @@ is determined by the pipeline configuration.
 
       # (Optional) The timeout for connecting to the JDBC host.
       connection.timeout = 60
+
+      # (Optional) For built-in JDBC connector the default behavior is sanitize timestemp fields
+      # by bounding to the range of 0001-01-01 ... 9999-12-31. This behavior can be switched off like this
+      sanitize.timestamps = false
       
       # Any option passed as 'option.' will be passed to the JDBC driver. Example:
       #option.database = "test_db"

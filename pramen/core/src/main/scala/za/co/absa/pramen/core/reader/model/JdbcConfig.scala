@@ -30,6 +30,7 @@ case class JdbcConfig(
                        password: Option[String] = None,
                        retries: Option[Int] = None,
                        connectionTimeoutSeconds: Option[Int] = None,
+                       sanitizeTimestamps: Boolean = true,
                        extraOptions: Map[String, String] = Map.empty[String, String]
                      )
 
@@ -44,6 +45,7 @@ object JdbcConfig {
   val JDBC_PASSWORD = "jdbc.password"
   val JDBC_RETRIES = "jdbc.retries"
   val JDBC_CONNECTION_TIMEOUT = "jdbc.connection.timeout"
+  val JDBC_SANITIZE_TIMESTAMPS = "jdbc.sanitize.timestamps"
   val JDBC_EXTRA_OPTIONS_PREFIX = "jdbc.option"
 
   def load(conf: Config, parent: String = ""): JdbcConfig = {
@@ -72,6 +74,7 @@ object JdbcConfig {
       password = ConfigUtils.getOptionString(conf, JDBC_PASSWORD),
       retries = ConfigUtils.getOptionInt(conf, JDBC_RETRIES),
       connectionTimeoutSeconds = ConfigUtils.getOptionInt(conf, JDBC_CONNECTION_TIMEOUT),
+      sanitizeTimestamps = ConfigUtils.getOptionBoolean(conf, JDBC_SANITIZE_TIMESTAMPS).getOrElse(true),
       extraOptions = ConfigUtils.getExtraOptions(conf, JDBC_EXTRA_OPTIONS_PREFIX)
     )
   }
