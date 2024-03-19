@@ -205,9 +205,8 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     when(resultSetMetaData.getColumnCount).thenReturn(1)
     when(resultSet.getMetaData).thenReturn(resultSetMetaData)
 
-    val iterator = new ResultSetToRowIterator(resultSet)
-
     "convert PostgreSql positive infinity value" in {
+      val iterator = new ResultSetToRowIterator(resultSet, true)
       val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_POSITIVE_INFINITY))
 
       val fixedTs = iterator.sanitizeTimestamp(timestamp)
@@ -220,6 +219,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "convert PostgreSql negative infinity value" in {
+      val iterator = new ResultSetToRowIterator(resultSet, true)
       val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_NEGATIVE_INFINITY))
 
       val fixedTs = iterator.sanitizeTimestamp(timestamp)
@@ -232,6 +232,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "convert overflowed value to null" in {
+      val iterator = new ResultSetToRowIterator(resultSet, true)
       val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
 
       val actual = iterator.sanitizeTimestamp(timestamp)
@@ -241,6 +242,19 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       val year = calendar.get(Calendar.YEAR)
 
       assert(year == 9999)
+    }
+
+    "do nothing if the feature is turned off" in {
+      val iterator = new ResultSetToRowIterator(resultSet, false)
+      val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
+
+      val actual = iterator.sanitizeTimestamp(timestamp)
+
+      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+      calendar.setTime(actual)
+      val year = calendar.get(Calendar.YEAR)
+
+      assert(year == 33658)
     }
   }
 

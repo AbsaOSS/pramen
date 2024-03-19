@@ -24,7 +24,7 @@ import java.sql.Types._
 import java.sql.{ResultSet, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
 
-class ResultSetToRowIterator(rs: ResultSet) extends Iterator[Row] {
+class ResultSetToRowIterator(rs: ResultSet, sanitizeTimestamps: Boolean) extends Iterator[Row] {
   import ResultSetToRowIterator._
 
   private var didHasNext = false
@@ -121,13 +121,17 @@ class ResultSetToRowIterator(rs: ResultSet) extends Iterator[Row] {
   }
 
   private[core] def sanitizeTimestamp(timestamp: Timestamp): Timestamp = {
-    val timeMilli = timestamp.getTime
-    if (timeMilli > MAX_SAFE_TIMESTAMP_MILLI)
-      MAX_SAFE_TIMESTAMP
-    else if (timeMilli < MIN_SAFE_TIMESTAMP_MILLI)
-      MIN_SAFE_TIMESTAMP
-    else
-    timestamp
+    if (sanitizeTimestamps) {
+      val timeMilli = timestamp.getTime
+      if (timeMilli > MAX_SAFE_TIMESTAMP_MILLI)
+        MAX_SAFE_TIMESTAMP
+      else if (timeMilli < MIN_SAFE_TIMESTAMP_MILLI)
+        MIN_SAFE_TIMESTAMP
+      else
+        timestamp
+    } else {
+      timestamp
+    }
   }
 }
 

@@ -55,6 +55,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |  }
        |
        |  has.information.date.column = true
+       |  jdbc.sanitize.timestamps = false
        |
        |  information.date.column = "FOUNDED"
        |  information.date.type = "date"
@@ -98,11 +99,13 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     "work with legacy config" in {
       val reader = TableReaderJdbcNative(conf.getConfig("reader_legacy"), "reader_legacy")
       assert(reader.infoDateFormatPattern == "yyyy-MM-DD")
+      assert(!reader.getJdbcConfig.sanitizeTimestamps)
     }
 
     "work with minimal config" in {
       val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), "reader_minimal")
       assert(reader.infoDateFormatPattern == "yyyy-MM-dd")
+      assert(reader.getJdbcConfig.sanitizeTimestamps)
     }
 
     "throw an exception if config is missing" in {
