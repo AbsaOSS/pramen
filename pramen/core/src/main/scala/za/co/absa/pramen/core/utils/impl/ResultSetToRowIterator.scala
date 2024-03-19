@@ -20,10 +20,13 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.types._
 
-import java.sql.ResultSet
 import java.sql.Types._
+import java.sql.{ResultSet, Timestamp}
+import java.time.{LocalDateTime, ZoneOffset}
 
 class ResultSetToRowIterator(rs: ResultSet) extends Iterator[Row] {
+  import ResultSetToRowIterator._
+
   private var didHasNext = false
   private var item: Option[Row] = None
   private val columnCount = rs.getMetaData.getColumnCount
@@ -62,7 +65,7 @@ class ResultSetToRowIterator(rs: ResultSet) extends Iterator[Row] {
     rs.close()
   }
 
-  private def fetchNext(): Unit = {
+  private[core] def fetchNext(): Unit = {
     didHasNext = true
     if (rs.next()) {
       val data = new Array[Any](columnCount)
@@ -78,7 +81,7 @@ class ResultSetToRowIterator(rs: ResultSet) extends Iterator[Row] {
     }
   }
 
-  private def getStructField(columnIndex: Int): StructField = {
+  private[core] def getStructField(columnIndex: Int): StructField = {
     val columnName = rs.getMetaData.getColumnName(columnIndex)
     val dataType = rs.getMetaData.getColumnType(columnIndex)
 
@@ -98,7 +101,7 @@ class ResultSetToRowIterator(rs: ResultSet) extends Iterator[Row] {
     }
   }
 
-  private def getCell(columnIndex: Int): Any = {
+  private[core] def getCell(columnIndex: Int): Any = {
     val dataType = rs.getMetaData.getColumnType(columnIndex)
 
     dataType match {
@@ -112,9 +115,26 @@ class ResultSetToRowIterator(rs: ResultSet) extends Iterator[Row] {
       case REAL          => rs.getBigDecimal(columnIndex)
       case NUMERIC       => rs.getBigDecimal(columnIndex)
       case DATE          => rs.getDate(columnIndex)
-      case TIMESTAMP     => rs.getTimestamp(columnIndex)
+      case TIMESTAMP     => sanitizeTimestamp(rs.getTimestamp(columnIndex))
       case _             => rs.getString(columnIndex)
     }
   }
 
+  private[core] def sanitizeTimestamp(timestamp: Timestamp): Timestamp = {
+    val timeMilli = timestamp.getTime
+    if (timeMilli > MAX_SAFE_TIMESTAMP_MILLI)
+      MAX_SAFE_TIMESTAMP
+    else if (timeMilli < MIN_SAFE_TIMESTAMP_MILLI)
+      MIN_SAFE_TIMESTAMP
+    else
+    timestamp
+  }
+}
+
+object ResultSetToRowIterator {
+  val MAX_SAFE_TIMESTAMP_MILLI: Long = LocalDateTime.of(9999, 12, 31, 23, 59, 59).toEpochSecond(ZoneOffset.UTC) * 1000
+  val MAX_SAFE_TIMESTAMP = new Timestamp(MAX_SAFE_TIMESTAMP_MILLI)
+
+  val MIN_SAFE_TIMESTAMP_MILLI: Long = LocalDateTime.of(1, 1, 1, 0, 0, 0).toEpochSecond(ZoneOffset.UTC) * 1000
+  val MIN_SAFE_TIMESTAMP = new Timestamp(MIN_SAFE_TIMESTAMP_MILLI)
 }

@@ -17,14 +17,18 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.apache.spark.sql.types.IntegerType
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
+import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, SparkUtils}
 
-import java.sql.{DriverManager, ResultSet, SQLSyntaxErrorException}
+import java.sql._
+import java.time.{Instant, ZoneId}
+import java.util.{Calendar, GregorianCalendar, TimeZone}
 
 class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with SparkTestBase with TextComparisonFixture {
   private val tableName = RdbExampleTable.Company.tableName
@@ -186,6 +190,57 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       intercept[SQLSyntaxErrorException] {
         JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT id FROM no_such_table")
       }
+    }
+  }
+
+  "sanitizeTimestamp" should {
+    // Variable names come from PostgreSQL "constant field docs":
+    // https://jdbc.postgresql.org/documentation/publicapi/index.html?constant-values.html
+    val POSTGRESQL_DATE_NEGATIVE_INFINITY: Long = -9223372036832400000L
+    val POSTGRESQL_DATE_POSITIVE_INFINITY: Long = 9223372036825200000L
+
+    val resultSet = mock(classOf[ResultSet])
+    val resultSetMetaData = mock(classOf[ResultSetMetaData])
+
+    when(resultSetMetaData.getColumnCount).thenReturn(1)
+    when(resultSet.getMetaData).thenReturn(resultSetMetaData)
+
+    val iterator = new ResultSetToRowIterator(resultSet)
+
+    "convert PostgreSql positive infinity value" in {
+      val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_POSITIVE_INFINITY))
+
+      val fixedTs = iterator.sanitizeTimestamp(timestamp)
+
+      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+      calendar.setTime(fixedTs)
+      val year = calendar.get(Calendar.YEAR)
+
+      assert(year == 9999)
+    }
+
+    "convert PostgreSql negative infinity value" in {
+      val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_NEGATIVE_INFINITY))
+
+      val fixedTs = iterator.sanitizeTimestamp(timestamp)
+
+      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+      calendar.setTime(fixedTs)
+      val year = calendar.get(Calendar.YEAR)
+
+      assert(year == 1)
+    }
+
+    "convert overflowed value to null" in {
+      val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
+
+      val actual = iterator.sanitizeTimestamp(timestamp)
+
+      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+      calendar.setTime(actual)
+      val year = calendar.get(Calendar.YEAR)
+
+      assert(year == 9999)
     }
   }
 
