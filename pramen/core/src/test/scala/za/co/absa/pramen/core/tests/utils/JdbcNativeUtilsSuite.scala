@@ -196,7 +196,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
   "sanitizeTimestamp" should {
     // From Spark:
     // https://github.com/apache/spark/blob/ad8ac17dbdfa763236ab3303eac6a3115ba710cc/connector/docker-integration-tests/src/test/scala/org/apache/spark/sql/jdbc/PostgresIntegrationSuite.scala#L457
-    val minTimeStamp = -62135596800000L
+    val minTimestamp = -62135596800000L
     val maxTimestamp = 253402300799999L
 
     // Variable names come from PostgreSQL "constant field docs":
@@ -225,10 +225,10 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
 
       val fixedTs = iterator.sanitizeTimestamp(timestamp)
 
-      assert(fixedTs.getTime == minTimeStamp)
+      assert(fixedTs.getTime == minTimestamp)
     }
 
-    "convert overflowed value to null" in {
+    "convert overflowed value to the maximum value supported" in {
       val iterator = new ResultSetToRowIterator(resultSet, true)
       val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
 
