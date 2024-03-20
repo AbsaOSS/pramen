@@ -194,6 +194,11 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
   }
 
   "sanitizeTimestamp" should {
+    // From Spark:
+    // https://github.com/apache/spark/blob/ad8ac17dbdfa763236ab3303eac6a3115ba710cc/connector/docker-integration-tests/src/test/scala/org/apache/spark/sql/jdbc/PostgresIntegrationSuite.scala#L457
+    val minTimeStamp = -62135596800000L
+    val maxTimestamp = 253402300799999L
+
     // Variable names come from PostgreSQL "constant field docs":
     // https://jdbc.postgresql.org/documentation/publicapi/index.html?constant-values.html
     val POSTGRESQL_DATE_NEGATIVE_INFINITY: Long = -9223372036832400000L
@@ -211,11 +216,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
 
       val fixedTs = iterator.sanitizeTimestamp(timestamp)
 
-      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
-      calendar.setTime(fixedTs)
-      val year = calendar.get(Calendar.YEAR)
-
-      assert(year == 9999)
+      assert(fixedTs.getTime == maxTimestamp)
     }
 
     "convert PostgreSql negative infinity value" in {
@@ -224,11 +225,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
 
       val fixedTs = iterator.sanitizeTimestamp(timestamp)
 
-      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
-      calendar.setTime(fixedTs)
-      val year = calendar.get(Calendar.YEAR)
-
-      assert(year == 1)
+      assert(fixedTs.getTime == minTimeStamp)
     }
 
     "convert overflowed value to null" in {
@@ -242,6 +239,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       val year = calendar.get(Calendar.YEAR)
 
       assert(year == 9999)
+      assert(actual.getTime == maxTimestamp)
     }
 
     "do nothing if the feature is turned off" in {
