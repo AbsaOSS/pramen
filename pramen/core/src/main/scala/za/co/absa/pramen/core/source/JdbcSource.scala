@@ -35,23 +35,26 @@ class JdbcSource(sourceConfig: Config,
   override def hasInfoDateColumn(query: Query): Boolean = jdbcReaderConfig.hasInfoDate
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    val reader = getReader(query)
+    val reader = getReader(query, isCountQuery = true)
 
     reader.getRecordCount(query, infoDateBegin, infoDateEnd)
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
-    val reader = getReader(query)
+    val reader = getReader(query, isCountQuery = false)
 
     val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
 
     SourceResult(df)
   }
 
-  private[core] def getReader(query: Query): TableReader = {
+  private[core] def getReader(query: Query, isCountQuery: Boolean): TableReader = {
     val urlSelector = JdbcUrlSelector(jdbcReaderConfig.jdbcConfig)
 
     query match {
+      case Query.Table(dbTable) if jdbcReaderConfig.useJdbcNative && !isCountQuery =>
+        log.info(s"Using TableReaderJdbcNative to read the table: $dbTable")
+        new TableReaderJdbcNative(jdbcReaderConfig, urlSelector, sourceConfig)
       case Query.Table(dbTable) =>
         log.info(s"Using TableReaderJdbc to read the table: $dbTable")
         new TableReaderJdbc(jdbcReaderConfig, urlSelector, sourceConfig)
@@ -60,7 +63,7 @@ class JdbcSource(sourceConfig: Config,
         new TableReaderJdbc(jdbcReaderConfig, urlSelector, sourceConfig)
       case Query.Sql(sql)  =>
         log.info(s"Using TableReaderJdbcNative to read the query: $sql")
-        new TableReaderJdbcNative(jdbcReaderConfig.jdbcConfig, urlSelector, jdbcReaderConfig.infoDateFormat)
+        new TableReaderJdbcNative(jdbcReaderConfig, urlSelector, sourceConfig)
       case q =>
         throw new IllegalArgumentException(s"Unexpected '${q.name}' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: $sourceConfigParentPath")
     }
