@@ -228,18 +228,23 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
   }
 
   "getReader" should {
-    "return JDBC table reader when a table is specified" in {
+    "return proper JDBC table reader when a table is specified" in {
+      val infoDate = LocalDate.parse("2022-02-18")
       val srcConfig = conf.getConfigList("pramen.sources")
       val src1Config = srcConfig.get(0)
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Table("company")
 
-      val reader = src.getReader(query)
+      val reader1 = src.getReader(query, isCountQuery = true)
+      val reader2 = src.getReader(query, isCountQuery = false)
 
-      val df = reader.getData(query, infoDateBegin = LocalDate.now(), infoDateEnd = LocalDate.now(), Nil)
+      val df = reader2.getData(query, infoDateBegin = infoDate, infoDateEnd = infoDate, Nil)
+      val count = reader1.getRecordCount(query, infoDateBegin = infoDate, infoDateEnd = infoDate)
 
-      assert(reader.isInstanceOf[TableReaderJdbc])
+      assert(reader1.isInstanceOf[TableReaderJdbc])
+      assert(reader2.isInstanceOf[TableReaderJdbcNative])
       assert(df.schema.fields(1).metadata.getLong("maxLength") == 50L)
+      assert(count == 3)
     }
 
     "return JDBC Native table reader when a SQL query is specified" in {
@@ -248,7 +253,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Sql("SELECT * FROM company")
 
-      val reader = src.getReader(query)
+      val reader = src.getReader(query, isCountQuery = false)
       val df = reader.getData(query, infoDateBegin = LocalDate.now(), infoDateEnd = LocalDate.now(), Nil)
 
       assert(reader.isInstanceOf[TableReaderJdbcNative])
@@ -261,7 +266,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Sql("SELECT * FROM company")
 
-      val reader = src.getReader(query)
+      val reader = src.getReader(query, isCountQuery = false)
       val df = reader.getData(query, infoDateBegin = LocalDate.now(), infoDateEnd = LocalDate.now(), Nil)
 
       assert(reader.isInstanceOf[TableReaderJdbc])
@@ -274,7 +279,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
       val query = Query.Sql("EXECUTE SELECT * FROM company")
 
-      val reader = src.getReader(query)
+      val reader = src.getReader(query, isCountQuery = true)
 
       assert(reader.isInstanceOf[TableReaderJdbcNative])
     }
@@ -285,7 +290,7 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       val src = ExternalChannelFactoryReflect.fromConfig[Source](src1Config, conf, "pramen.sources.0", "source").asInstanceOf[JdbcSource]
 
       val ex =  intercept[IllegalArgumentException] {
-        src.getReader(Query.Path("/dummy"))
+        src.getReader(Query.Path("/dummy"), isCountQuery = false)
       }
 
       assert(ex.getMessage.contains("Unexpected 'path' spec for the JDBC reader. Only 'table' or 'sql' are supported. Config path: pramen.sources.0"))

@@ -70,7 +70,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |    password = "$password"
        |  }
        |
-       |  has.information.date.column = true
+       |  has.information.date.column = false
        |
        |  information.date.column = "FOUNDED"
        |  information.date.type = "date"
@@ -93,19 +93,19 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     "construct a reader object" in {
       val reader = getReader
       assert(reader != null)
-      assert(reader.infoDateFormatPattern == "YYYY-MM-dd")
+      assert(reader.getJdbcReaderConfig.infoDateFormat == "YYYY-MM-dd")
     }
 
     "work with legacy config" in {
       val reader = TableReaderJdbcNative(conf.getConfig("reader_legacy"), "reader_legacy")
-      assert(reader.infoDateFormatPattern == "yyyy-MM-DD")
-      assert(!reader.getJdbcConfig.sanitizeTimestamps)
+      assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-DD")
+      assert(!reader.getJdbcReaderConfig.jdbcConfig.sanitizeTimestamps)
     }
 
     "work with minimal config" in {
       val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), "reader_minimal")
-      assert(reader.infoDateFormatPattern == "yyyy-MM-dd")
-      assert(reader.getJdbcConfig.sanitizeTimestamps)
+      assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-dd")
+      assert(reader.getJdbcReaderConfig.jdbcConfig.sanitizeTimestamps)
     }
 
     "throw an exception if config is missing" in {
@@ -119,7 +119,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     "return the proper config" in {
       val reader = getReader
 
-      val jdbcConfig = reader.getJdbcConfig
+      val jdbcConfig = reader.getJdbcReaderConfig.jdbcConfig
 
       assert(jdbcConfig.driver == driver)
       assert(jdbcConfig.primaryUrl.get == url)
@@ -263,6 +263,27 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       assertThrows[IllegalArgumentException] {
         reader.getSqlExpression(Query.Table("table1"))
       }
+    }
+  }
+
+  "getSqlDataQuery" should {
+    val infoDateBegin = LocalDate.parse("2022-02-18")
+    val infoDateEnd = LocalDate.parse("2022-02-19")
+
+    "return a query with info date if it is enabled" in {
+      val reader = getReader
+
+      val actual = reader.getSqlDataQuery("table1", infoDateBegin, infoDateEnd, Nil)
+
+      assert(actual.startsWith("SELECT * FROM table1 WHERE FOUNDED >="))
+    }
+
+    "return a query without info date if it is disabled" in {
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), "reader_minimal")
+
+      val actual = reader.getSqlDataQuery("table1", infoDateBegin, infoDateEnd, Nil)
+
+      assert(actual == "SELECT * FROM table1")
     }
   }
 }

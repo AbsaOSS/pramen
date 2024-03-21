@@ -19,12 +19,9 @@ package za.co.absa.pramen.core.reader
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig}
-import za.co.absa.pramen.api.{Query, TableReader}
+import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.sql.SqlGeneratorLoader
-import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcSparkUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
@@ -35,26 +32,12 @@ import scala.util.{Failure, Success, Try}
 class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
                       jdbcUrlSelector: JdbcUrlSelector,
                       conf: Config
-                     )(implicit spark: SparkSession) extends TableReader {
+                     )(implicit spark: SparkSession) extends TableReaderJdbcBase(jdbcReaderConfig, jdbcUrlSelector, conf) {
   private val log = LoggerFactory.getLogger(this.getClass)
-
-  private val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
-
-  private val jdbcRetries = jdbcReaderConfig.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
 
   private val infoDateFormatter = DateTimeFormatter.ofPattern(jdbcReaderConfig.infoDateFormat)
 
   logConfiguration()
-
-  private[core] lazy val sqlGen = {
-    val gen = SqlGeneratorLoader.getSqlGenerator(jdbcReaderConfig.jdbcConfig.driver, getSqlConfig)
-
-    if (gen.requiresConnection) {
-      val (connection, url) = jdbcUrlSelector.getWorkingConnection(jdbcRetries)
-      gen.setConnection(connection)
-    }
-    gen
-  }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val start = Instant.now
@@ -208,46 +191,12 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  private[core] def getSqlConfig: SqlConfig = {
-    val dateFieldType = SqlColumnType.fromString(jdbcReaderConfig.infoDateType)
-    dateFieldType match {
-      case Some(infoDateType) =>
-        SqlConfig(jdbcReaderConfig.infoDateColumn,
-          infoDateType,
-          jdbcReaderConfig.infoDateFormat,
-          jdbcReaderConfig.identifierQuotingPolicy,
-          jdbcReaderConfig.sqlGeneratorClass,
-          ConfigUtils.getExtraConfig(conf, "sql"))
-      case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
-        s"It should be one of: date, string, number")
-    }
-  }
-
   private[core] def filterDfColumns(df: DataFrame, columns: Seq[String]): DataFrame = {
     if (columns.nonEmpty) {
       df.select(columns.head, columns.tail: _*)
     } else {
       df
     }
-  }
-
-  private[core] def logConfiguration(): Unit = {
-    jdbcUrlSelector.logConnectionSettings()
-
-    log.info(s"JDBC Reader Configuration:")
-    log.info(s"Has information date column:  ${jdbcReaderConfig.hasInfoDate}")
-    if (jdbcReaderConfig.hasInfoDate) {
-      log.info(s"Info date column name:      ${jdbcReaderConfig.infoDateColumn}")
-      log.info(s"Info date column data type: ${jdbcReaderConfig.infoDateType}")
-      log.info(s"Info date format:           ${jdbcReaderConfig.infoDateFormat}")
-    }
-    log.info(s"Save timestamp as dates:      ${jdbcReaderConfig.saveTimestampsAsDates}")
-    log.info(s"Correct decimals in schemas:  ${jdbcReaderConfig.correctDecimalsInSchema}")
-    log.info(s"Identifier quoting policy:    ${jdbcReaderConfig.identifierQuotingPolicy.name}")
-    jdbcReaderConfig.limitRecords.foreach(n => log.info(s"Limit records:                $n"))
-
-    log.info("Extra JDBC reader Spark options:")
-    ConfigUtils.renderExtraOptions(extraOptions, JDBC_WORDS_TO_REDACT)(s => log.info(s))
   }
 }
 

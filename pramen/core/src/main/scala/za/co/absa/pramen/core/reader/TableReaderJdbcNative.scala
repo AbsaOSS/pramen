@@ -19,29 +19,29 @@ package za.co.absa.pramen.core.reader
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{Query, TableReader}
-import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.getInfoDateFormat
+import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
-class TableReaderJdbcNative(jdbcConfig: JdbcConfig,
+class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
                             jdbcUrlSelector: JdbcUrlSelector,
-                            val infoDateFormatPattern: String)
-                           (implicit spark: SparkSession) extends TableReader {
+                            conf: Config)
+                           (implicit spark: SparkSession) extends TableReaderJdbcBase(jdbcReaderConfig, jdbcUrlSelector, conf) {
   import TableReaderJdbcNative._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
-
+  private val jdbcConfig = jdbcReaderConfig.jdbcConfig
+  private val infoDateFormatPattern = jdbcReaderConfig.infoDateFormat
   private val infoDateFormatter = DateTimeFormatter.ofPattern(infoDateFormatPattern)
+  private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 
   logConfiguration()
 
-  private[core] def getJdbcConfig: JdbcConfig = jdbcConfig
+  private[core] def getJdbcReaderConfig: TableReaderJdbcConfig = jdbcReaderConfig
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val start = Instant.now()
@@ -55,13 +55,26 @@ class TableReaderJdbcNative(jdbcConfig: JdbcConfig,
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
-    getDataFrame(getFilteredSql(getSqlExpression(query), infoDateBegin, infoDateEnd, infoDateFormatter))
+    log.info(s"JDBC Native data of: $query")
+    query match {
+      case Query.Sql(sql)     => getDataFrame(getFilteredSql(sql, infoDateBegin, infoDateEnd, infoDateFormatter))
+      case Query.Table(table) => getDataFrame(getSqlDataQuery(table, infoDateBegin, infoDateEnd, columns))
+      case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
+    }
   }
 
   private[core] def getSqlExpression(query: Query): String = {
     query match {
       case Query.Sql(sql) => sql
       case other          => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' instead.")
+    }
+  }
+
+  private[core] def getSqlDataQuery(table: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): String = {
+    if (jdbcReaderConfig.hasInfoDate) {
+      sqlGen.getDataQuery(table, infoDateBegin, infoDateEnd, columns, None)
+    } else {
+      sqlGen.getDataQuery(table, columns, None)
     }
   }
 
@@ -76,22 +89,16 @@ class TableReaderJdbcNative(jdbcConfig: JdbcConfig,
 
     df
   }
-
-  private def logConfiguration(): Unit = {
-    jdbcUrlSelector.logConnectionSettings()
-  }
 }
 
 object TableReaderJdbcNative {
   def apply(conf: Config,
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
-    val jdbcConfig = JdbcConfig.load(conf, parent)
-    val urlSelector = JdbcUrlSelector(jdbcConfig)
+    val tableReaderJdbc = TableReaderJdbcConfig.load(conf, parent)
+    val urlSelector = JdbcUrlSelector(tableReaderJdbc.jdbcConfig)
 
-    val infoDateFormat = getInfoDateFormat(conf)
-
-    new TableReaderJdbcNative(jdbcConfig, urlSelector, infoDateFormat)
+    new TableReaderJdbcNative(tableReaderJdbc, urlSelector, conf)
   }
 
   def getFilteredSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, formatter: DateTimeFormatter): String = {
