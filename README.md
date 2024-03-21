@@ -55,7 +55,7 @@ There are many other data pipeline management tools. Why you would want to use P
 * Extendable
   - If your data source or sink is not supported by Pramen yet? You can implement your own very easy.
 * Built-in support of various relational database sources
-  - Pramen already supports getting data from the following RDMS: PostgreSQL, Oracle Data Warehouse, Microsoft SQL Server,
+  - Pramen already supports getting data from the following RDMS: PostgreSQL, MySql, Oracle Data Warehouse, Microsoft SQL Server,
     Denodo Virtualized and other standard JDBC compliant data sources 
     
 # Typical Use Case and Benefits
