@@ -72,9 +72,9 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private[core] def getSqlDataQuery(table: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): String = {
     if (jdbcReaderConfig.hasInfoDate) {
-      sqlGen.getDataQuery(table, infoDateBegin, infoDateEnd, columns, None)
+      sqlGen.getDataQuery(table, infoDateBegin, infoDateEnd, columns, jdbcReaderConfig.limitRecords)
     } else {
-      sqlGen.getDataQuery(table, columns, None)
+      sqlGen.getDataQuery(table, columns, jdbcReaderConfig.limitRecords)
     }
   }
 

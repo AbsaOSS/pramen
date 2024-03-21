@@ -71,9 +71,17 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |  }
        |
        |  has.information.date.column = false
+       |}
+       |reader_limit {
+       |  jdbc {
+       |    driver = "$driver"
+       |    connection.string = "$url"
+       |    user = "$user"
+       |    password = "$password"
+       |  }
        |
-       |  information.date.column = "FOUNDED"
-       |  information.date.type = "date"
+       |  has.information.date.column = false
+       |  limit.records = 100
        |}""".stripMargin)
 
   override protected def beforeAll(): Unit = {
@@ -284,6 +292,14 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       val actual = reader.getSqlDataQuery("table1", infoDateBegin, infoDateEnd, Nil)
 
       assert(actual == "SELECT * FROM table1")
+    }
+
+    "return a query without with limits" in {
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_limit"), "reader_limit")
+
+      val actual = reader.getSqlDataQuery("table1", infoDateBegin, infoDateEnd, Nil)
+
+      assert(actual == "SELECT * FROM table1 LIMIT 100")
     }
   }
 }
