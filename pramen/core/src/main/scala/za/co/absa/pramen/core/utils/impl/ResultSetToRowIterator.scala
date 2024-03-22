@@ -104,6 +104,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeTimestamps: Boolean) extends
   private[core] def getCell(columnIndex: Int): Any = {
     val dataType = rs.getMetaData.getColumnType(columnIndex)
 
+    // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
     dataType match {
       case BIT | BOOLEAN => rs.getBoolean(columnIndex)
       case TINYINT       => rs.getByte(columnIndex)
@@ -121,7 +122,8 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeTimestamps: Boolean) extends
   }
 
   private[core] def sanitizeTimestamp(timestamp: Timestamp): Timestamp = {
-    if (sanitizeTimestamps) {
+    // This check against null is important since timestamp=null is a valid value.
+    if (sanitizeTimestamps && timestamp != null) {
       val timeMilli = timestamp.getTime
       if (timeMilli > MAX_SAFE_TIMESTAMP_MILLI)
         MAX_SAFE_TIMESTAMP

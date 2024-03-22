@@ -210,6 +210,14 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     when(resultSetMetaData.getColumnCount).thenReturn(1)
     when(resultSet.getMetaData).thenReturn(resultSetMetaData)
 
+    "ignore null values" in {
+      val iterator = new ResultSetToRowIterator(resultSet, true)
+
+      val fixedTs = iterator.sanitizeTimestamp(null)
+
+      assert(fixedTs == null)
+    }
+
     "convert PostgreSql positive infinity value" in {
       val iterator = new ResultSetToRowIterator(resultSet, true)
       val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_POSITIVE_INFINITY))
