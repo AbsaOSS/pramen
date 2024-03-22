@@ -109,10 +109,12 @@ jobs:
         with:
           ref: main
 
-      - name: Setup Scala
-        uses: olafurpg/setup-scala@v14
+      - name: Setup JDK and sbt
+        uses: actions/setup-java@v4.2.1
         with:
-          java-version: "adopt@1.8"
+          distribution: temurin
+          java-version: 8
+          cache: sbt
 
       - name: Import GPG Key
         run: |
