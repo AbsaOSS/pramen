@@ -18,16 +18,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scala: [2.11.12, 2.12.18, 2.13.12]
-        spark: [2.4.8, 3.2.4, 3.3.3, 3.4.1]
+        scala: [2.11.12, 2.12.19, 2.13.13]
+        spark: [2.4.8, 3.3.4, 3.4.2, 3.5.1]
         exclude:
           - scala: 2.11.12
-            spark: 3.2.4
+            spark: 3.3.4
           - scala: 2.11.12
-            spark: 3.3.3
+            spark: 3.4.2
           - scala: 2.11.12
-            spark: 3.4.1
-          - scala: 2.13.12
+            spark: 3.5.1
+          - scala: 2.12.19
+            spark: 2.4.8
+          - scala: 2.13.13
             spark: 2.4.8
     name: Test Spark ${{matrix.spark}} on Scala ${{matrix.scala}}
     steps:
@@ -35,7 +37,7 @@ jobs:
         uses: actions/checkout@v2
       - uses: coursier/cache-action@v5
       - name: Setup Scala
-        uses: olafurpg/setup-scala@v10
+        uses: olafurpg/setup-scala@v14
         with:
           java-version: "adopt@1.8"
       - name: Build and run unit tests

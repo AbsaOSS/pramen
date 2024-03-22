@@ -50,7 +50,7 @@ object Dependencies {
     "org.apache.httpcomponents" %  "httpclient"                 % httpClientVersion,
     "org.scalatest"             %% "scalatest"                  % scalatestVersion           % Test
   ) ++ Seq(
-    getAbrisDependency(scalaVersion),
+    getAbrisDependency(sparkVersion(scalaVersion)),
     getDeltaDependency(sparkVersion(scalaVersion), isCompile = false, isTest = true)
   )
 

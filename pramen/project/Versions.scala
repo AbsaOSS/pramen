@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+
 import sbt.*
 
 object Versions {
   val defaultSparkVersionForScala211 = "2.4.8"
-  val defaultSparkVersionForScala212 = "3.3.3"
-  val defaultSparkVersionForScala213 = "3.4.1"
+  val defaultSparkVersionForScala212 = "3.3.4"
+  val defaultSparkVersionForScala213 = "3.4.2"
 
   val typesafeConfigVersion = "1.4.0"
   val postgreSqlDriverVersion = "42.3.8"
@@ -93,13 +94,15 @@ object Versions {
     }
   }
 
-  def getAbrisDependency(scalaVersion: String): ModuleID = {
-    // According to this: https://docs.delta.io/latest/releases.html
-    val abrisVersion = scalaVersion match {
-      case version if version.startsWith("2.11.") => "5.1.1"
-      case version if version.startsWith("2.12.") => "5.1.1"
-      case version if version.startsWith("2.13.") => "6.0.0"
-      case _                                      => throw new IllegalArgumentException(s"Scala $scalaVersion not supported for Abris dependency.")
+  def getAbrisDependency(sparkVersion: String): ModuleID = {
+    // According to this: https://github.com/AbsaOSS/ABRiS?tab=readme-ov-file#supported-versions
+    val abrisVersion = sparkVersion match {
+      case version if version.startsWith("2.4.") => "5.1.1"
+      case version if version.startsWith("3.0.") => "5.1.1"
+      case version if version.startsWith("3.1.") => "5.1.1"
+      case version if version.startsWith("3.2.") => "6.1.1"
+      case version if version.startsWith("3.")   => "6.4.0"
+      case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported for Abris dependency.")
     }
 
     println(s"Using Abris version $abrisVersion")
