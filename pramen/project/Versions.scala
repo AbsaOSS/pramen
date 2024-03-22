@@ -99,7 +99,7 @@ object Versions {
       case version if version.startsWith("2.4.") => "5.1.1"
       case version if version.startsWith("3.0.") => "5.1.1"
       case version if version.startsWith("3.1.") => "5.1.1"
-      case version if version.startsWith("3.2.") => "6.1.1"
+      case version if version         == "3.2.0" => "6.1.1"
       case version if version.startsWith("3.")   => "6.4.0"
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported for Abris dependency.")
     }
