@@ -34,10 +34,10 @@ jobs:
     name: Test Spark ${{matrix.spark}} on Scala ${{matrix.scala}}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - uses: coursier/cache-action@v5
       - name: Setup JDK and sbt
-        uses: actions/setup-java@v4.2.1
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 8
