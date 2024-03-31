@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.state
 
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
+import sun.misc.{Signal, SignalHandler}
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
@@ -31,6 +32,7 @@ import java.time.Instant
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
+import scala.collection.JavaConverters._
 
 class PipelineStateImpl(implicit conf: Config, notificationBuilder: NotificationBuilder) extends PipelineState {
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
@@ -43,12 +45,22 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   // State
   private val startedInstant = Instant.now
-  private var exitCode = 0
+  @volatile private var exitCode = 0
   private val taskResults = new ListBuffer[TaskResult]
-  private var failureException: Option[Throwable] = None
-  private var exitedNormally = false
-  private var isFinished = false
-  private var customShutdownHookCanRun = false
+  @volatile private var failureException: Option[Throwable] = None
+  @volatile private var exitedNormally = false
+  @volatile private var isFinished = false
+  @volatile private var customShutdownHookCanRun = false
+
+  init()
+
+  private def init(): Unit = {
+    Runtime.getRuntime.addShutdownHook(shutdownHook)
+    Signal.handle(new Signal("INT"), getSignalHandler("SIGINT (Ctrl + C)"))
+    Signal.handle(new Signal("TERM"), getSignalHandler("SIGTERM (kill)"))
+    Signal.handle(new Signal("HUP"), getSignalHandler("SIGHUP (network connection to the terminal has been lost)"))
+    Signal.handle(new Signal("PIPE"), getSignalHandler("SIGPIPE (attempt to write to a pipe that is no longer available)"))
+  }
 
   override def getState(): PipelineStateSnapshot = synchronized {
     PipelineStateSnapshot(
@@ -122,8 +134,6 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     }
   }
 
-  Runtime.getRuntime.addShutdownHook(shutdownHook)
-
   private[state] def runCustomShutdownHook(): Unit = {
     if (customShutdownHookCanRun) {
       try {
@@ -178,4 +188,21 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   override def close(): Unit = Runtime.getRuntime.removeShutdownHook(shutdownHook)
+
+  private def getSignalHandler(signalName: String): SignalHandler = new SignalHandler {
+    override def handle(sig: Signal): Unit = {
+      val stackTrace = Thread.getAllStackTraces.asScala
+      stackTrace.foreach { case (t: Thread, s: Array[StackTraceElement]) =>
+        if (t.getName.equalsIgnoreCase("main")) {
+          val ex = new RuntimeException(s"The process was interrupted by $signalName.")
+          ex.setStackTrace(s)
+          if (failureException.isEmpty) {
+            failureException = Some(ex)
+          }
+        }
+      }
+      exitCode = 3
+      System.exit(3)
+    }
+  }
 }
