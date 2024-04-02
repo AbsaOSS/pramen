@@ -218,9 +218,9 @@ class StringUtilsSuite extends AnyWordSpec {
 
 
       val ex = OsSignalException("SIGTEST", nonDaemonStackTraces)
-      val actual = renderMultiStack(ex)
+      val actual = renderThreadDumps(ex.threadStackTraces)
 
-      assert(actual.startsWith("The process was interrupted by SIGTEST."))
+      assert(actual.startsWith("Stack trace of threads at the moment of the interruption:"))
       assert(actual.contains("  Thread 0"))
       assert(actual.contains("(ScalaTest-dispatcher)"))
       assert(actual.contains("    java.lang.Thread.dumpThreads(Native Method)"))

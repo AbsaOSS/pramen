@@ -91,17 +91,13 @@ class PipelineStateSuite extends AnyWordSpec {
     }
   }
 
-  "protectAgainstDoubleFinish" should {
-    "throw an exception when called twice" in {
+  "alreadyFinished" should {
+    "return true is the application is already in process of finishing" in {
       val stateManager = getMockPipelineState()
 
       stateManager.setSuccess()
 
-      val ex = intercept[IllegalStateException] {
-        stateManager.protectAgainstDoubleFinish()
-      }
-
-      assert(ex.getMessage.contains("Attempt to run post finish tasks multiple times"))
+      assert(stateManager.alreadyFinished())
     }
 
   }

@@ -81,21 +81,23 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   override def setSuccess(): Unit = synchronized {
-    protectAgainstDoubleFinish()
-    exitedNormally = true
-    runCustomShutdownHook()
-    sendNotificationEmail()
+    if (!alreadyFinished()) {
+      exitedNormally = true
+      runCustomShutdownHook()
+      sendNotificationEmail()
+    }
   }
 
   override def setFailure(stage: String, exception: Throwable): Unit = synchronized {
-    protectAgainstDoubleFinish()
-    if (failureException.isEmpty) {
-      failureException = Some(exception)
+    if (!alreadyFinished()) {
+      if (failureException.isEmpty) {
+        failureException = Some(exception)
+      }
+      exitCode |= EXIT_CODE_APP_FAILED
+      exitedNormally = false
+      runCustomShutdownHook()
+      sendNotificationEmail()
     }
-    exitCode |= EXIT_CODE_APP_FAILED
-    exitedNormally = false
-    runCustomShutdownHook()
-    sendNotificationEmail()
   }
 
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
@@ -109,12 +111,14 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     exitCode
   }
 
-  private[state] def protectAgainstDoubleFinish(): Unit = {
-    if (isFinished) {
-      throw new IllegalStateException(s"Attempt to run post finish tasks multiple times")
+  private[state] def alreadyFinished(): Boolean = {
+    if (!isFinished) {
+      isFinished = true
+      close()
+      false
+    } else {
+      true
     }
-    isFinished = true
-    close()
   }
 
   private lazy val shutdownHook = new Thread() {
@@ -190,7 +194,12 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     }
   }
 
-  override def close(): Unit = Runtime.getRuntime.removeShutdownHook(shutdownHook)
+  override def close(): Unit = {
+    Try {
+      // Ignore runtime exceptions, including "java.lang.IllegalStateException: Shutdown in progress"
+      Runtime.getRuntime.removeShutdownHook(shutdownHook)
+    }
+  }
 
   private def getSignalHandler(signalName: String): SignalHandler = new SignalHandler {
     override def handle(sig: Signal): Unit = {
