@@ -17,10 +17,12 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.exceptions.{OsSignalException, ThreadStackTrace}
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.utils.StringUtils
 
 import java.time.LocalDate
+import scala.collection.JavaConverters._
 
 class StringUtilsSuite extends AnyWordSpec {
   import StringUtils._
@@ -199,6 +201,29 @@ class StringUtilsSuite extends AnyWordSpec {
       assert(s.contains("java.lang.RuntimeException: test"))
       assert(s.contains("  Caused by java.lang.RuntimeException: cause"))
       assert(s.contains("    Caused by java.lang.RuntimeException: nested"))
+    }
+  }
+
+  "renderMultiStack" should {
+    "render an exception having multiple stacks" in {
+      val stacks = Thread.getAllStackTraces.asScala
+
+      val nonDaemonStackTraces = stacks.flatMap{ case (t: Thread, s: Array[StackTraceElement]) =>
+        if (t.isDaemon) {
+          None
+        } else {
+          Option(ThreadStackTrace(t.getName, s))
+        }
+      }.toSeq
+
+
+      val ex = OsSignalException("SIGTEST", nonDaemonStackTraces)
+      val actual = renderMultiStack(ex)
+
+      assert(actual.startsWith("The process was interrupted by SIGTEST."))
+      assert(actual.contains("  Thread 0"))
+      assert(actual.contains("(ScalaTest-dispatcher)"))
+      assert(actual.contains("    java.lang.Thread.dumpThreads(Native Method)"))
     }
   }
 
