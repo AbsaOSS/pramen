@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.utils
 
+import za.co.absa.pramen.core.exceptions.OsSignalException
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 
 import java.util.{Base64, StringTokenizer}
@@ -174,6 +175,22 @@ object StringUtils {
       case _                    => ""
     }
     base + cause
+  }
+
+  def renderMultiStack(signalException: OsSignalException): String = {
+    val threadTitlePadding = "  "
+    val stackTracePadding = "    "
+    val base = s"""The process was interrupted by ${signalException.signalName}.\n"""
+
+    val details = signalException.threadStackTraces.zipWithIndex.map {
+      case (threadStackTrace, index) =>
+        val threadTitle = s"${threadTitlePadding}Thread $index (${threadStackTrace.threadName}): \n"
+        val stackTrace = threadStackTrace.stackTrace
+        val stackTraceStr = s"""${stackTrace.map(s => s"$stackTracePadding$s").mkString("", EOL, EOL)}""".stripMargin
+        threadTitle + stackTraceStr
+    }.mkString("\n")
+
+    base + details
   }
 
 }

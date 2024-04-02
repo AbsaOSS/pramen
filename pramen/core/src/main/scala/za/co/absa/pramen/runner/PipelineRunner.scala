@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import za.co.absa.pramen.core.RunnerCommons._
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.runner.AppRunner
+import za.co.absa.pramen.core.state.PipelineStateImpl
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.collection.mutable.ListBuffer
@@ -34,7 +35,7 @@ object PipelineRunner {
   def main(args: Array[String]): Unit = {
     val configs: Seq[Config] = getMainContext(args)
     val isExitCodeEnabled = configs.head.getBoolean(Keys.EXIT_CODE_ENABLED)
-    var overallExitCode = 0
+    var overallExitCode = PipelineStateImpl.EXIT_CODE_SUCCESS
 
     configs.foreach { conf =>
       ConfigUtils.logEffectiveConfigProps(conf, Keys.CONFIG_KEYS_TO_REDACT, Keys.KEYS_TO_REDACT)
@@ -43,7 +44,7 @@ object PipelineRunner {
       overallExitCode |= exitCode
     }
 
-    if (isExitCodeEnabled && overallExitCode != 0) {
+    if (isExitCodeEnabled && overallExitCode != PipelineStateImpl.EXIT_CODE_SUCCESS) {
       System.exit(overallExitCode)
     }
   }

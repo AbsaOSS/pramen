@@ -20,14 +20,14 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
-import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
+import za.co.absa.pramen.core.exceptions.{CmdFailedException, OsSignalException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_MEGABYTES, MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
 import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus, TaskResult}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
-import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
+import za.co.absa.pramen.core.utils.StringUtils.{renderMultiStack, renderThrowable}
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
 
 import java.time._
@@ -286,6 +286,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         val stdoutMsg = if (stdout.isEmpty) "" else s"""Last <b>stdout</b> lines:\n${stdout.mkString("", EOL, EOL)}"""
         val stderrMsg = if (stderr.isEmpty) "" else s"""Last <b>stderr</b> lines:\n${stderr.mkString("", EOL, EOL)}"""
         s"$msg\n$stdoutMsg\n$stderrMsg"
+      case signalException: OsSignalException =>
+        renderMultiStack(signalException)
       case ex: Throwable                     =>
         renderThrowable(ex)
     }

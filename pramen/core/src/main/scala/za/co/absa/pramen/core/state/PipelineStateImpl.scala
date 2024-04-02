@@ -22,6 +22,7 @@ import sun.misc.{Signal, SignalHandler}
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
+import za.co.absa.pramen.core.exceptions.{OsSignalException, ThreadStackTrace}
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
@@ -35,6 +36,8 @@ import scala.util.{Failure, Success, Try}
 import scala.collection.JavaConverters._
 
 class PipelineStateImpl(implicit conf: Config, notificationBuilder: NotificationBuilder) extends PipelineState {
+  import PipelineStateImpl._
+
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   // Config
@@ -45,7 +48,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   // State
   private val startedInstant = Instant.now
-  @volatile private var exitCode = 0
+  @volatile private var exitCode = EXIT_CODE_SUCCESS
   private val taskResults = new ListBuffer[TaskResult]
   @volatile private var failureException: Option[Throwable] = None
   @volatile private var exitedNormally = false
@@ -89,7 +92,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     if (failureException.isEmpty) {
       failureException = Some(exception)
     }
-    exitCode = 1
+    exitCode |= EXIT_CODE_APP_FAILED
     exitedNormally = false
     runCustomShutdownHook()
     sendNotificationEmail()
@@ -98,7 +101,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
     taskResults ++= statuses.filter(_.runStatus != NotRan)
     if (statuses.exists(_.runStatus.isFailure)) {
-      exitCode = 2
+      exitCode |= EXIT_CODE_JOB_FAILED
     }
   }
 
@@ -114,7 +117,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     close()
   }
 
-  private val shutdownHook = new Thread() {
+  private lazy val shutdownHook = new Thread() {
     override def run(): Unit = {
       if (!exitedNormally && !isFinished) {
         if (failureException.isEmpty) {
@@ -191,18 +194,30 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   private def getSignalHandler(signalName: String): SignalHandler = new SignalHandler {
     override def handle(sig: Signal): Unit = {
-      val stackTrace = Thread.getAllStackTraces.asScala
-      stackTrace.foreach { case (t: Thread, s: Array[StackTraceElement]) =>
-        if (t.getName.equalsIgnoreCase("main")) {
-          val ex = new RuntimeException(s"The process was interrupted by $signalName.")
-          ex.setStackTrace(s)
-          if (failureException.isEmpty) {
-            failureException = Some(ex)
-          }
+      val stackTraces = Thread.getAllStackTraces.asScala
+
+      val nonDaemonStackTraces = stackTraces.flatMap{ case (t: Thread, s: Array[StackTraceElement]) =>
+        if (t.isDaemon) {
+          None
+        } else {
+          Option(ThreadStackTrace(t.getName, s))
         }
+      }.toSeq
+
+      val ex = OsSignalException(signalName, nonDaemonStackTraces)
+      if (failureException.isEmpty) {
+        failureException = Some(ex)
       }
-      exitCode = 3
-      System.exit(3)
+
+      exitCode |= EXIT_CODE_SIGNAL_RECEIVED
+      System.exit(exitCode)
     }
   }
+}
+
+object PipelineStateImpl {
+  val EXIT_CODE_SUCCESS = 0
+  val EXIT_CODE_APP_FAILED = 1
+  val EXIT_CODE_JOB_FAILED = 2
+  val EXIT_CODE_SIGNAL_RECEIVED = 4
 }
