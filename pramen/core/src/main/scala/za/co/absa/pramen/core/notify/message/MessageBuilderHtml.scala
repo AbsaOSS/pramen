@@ -18,8 +18,9 @@ package za.co.absa.pramen.core.notify.message
 
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification.{Style, TableHeader, TextElement}
+import za.co.absa.pramen.core.exceptions.OsSignalException
 import za.co.absa.pramen.core.utils.ResourceUtils
-import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
+import za.co.absa.pramen.core.utils.StringUtils.{renderThreadDumps, renderThrowable}
 
 import scala.collection.mutable.ListBuffer
 import scala.compat.Platform.EOL
@@ -64,9 +65,17 @@ class MessageBuilderHtml extends MessageBuilder {
   }
 
   override def withException(description: String, ex: Throwable): MessageBuilderHtml = {
-    val rendered = renderThrowable(ex)
+    val rendered = ex match {
+      case signalException: OsSignalException =>
+        withParagraph(Seq(TextElement(s"The application was interrupted by a signal: ", Style.Exception),
+          TextElement(signalException.signalName, Style.Error),
+          TextElement(".", Style.Exception)))
+        renderThreadDumps(signalException.threadStackTraces)
+      case other =>
+        withParagraph(Seq(TextElement(description, Style.Exception)))
+        renderThrowable(other)
+    }
 
-    withParagraph(Seq(TextElement(description, Style.Exception)))
     withUnformattedText(rendered)
     this
   }
