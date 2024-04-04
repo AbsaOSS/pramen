@@ -26,6 +26,8 @@ trait PipelineNotificationBuilder {
 
   def addAppName(appName: String): Unit
 
+  def addSparkAppId(sparkAppId: String): Unit
+
   def addEnvironmentName(env: String): Unit
 
   def addAppDuration(appStarted: Instant, appFinished: Instant): Unit

@@ -54,6 +54,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   @volatile private var exitedNormally = false
   @volatile private var isFinished = false
   @volatile private var customShutdownHookCanRun = false
+  @volatile private var sparkAppId: Option[String] = None
 
   init()
 
@@ -98,6 +99,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       runCustomShutdownHook()
       sendNotificationEmail()
     }
+  }
+
+  override def setSparkAppId(sparkAppId: String): Unit = synchronized {
+    this.sparkAppId = Option(sparkAppId)
   }
 
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
@@ -178,6 +183,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       val notification = PipelineNotification(failureException,
         pipelineName,
         environmentName,
+        sparkAppId,
         startedInstant,
         finishedInstant,
         realTaskResults.toList,

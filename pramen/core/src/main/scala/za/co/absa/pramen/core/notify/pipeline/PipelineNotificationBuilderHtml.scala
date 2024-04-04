@@ -54,6 +54,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   var appException: Option[Throwable] = None
   var appName: String = "Unspecified Job"
+  var sparkAppId: Option[String] = None
   var envName: String = "Unspecified Environment"
   var appStarted: Instant = Instant.now()
   var appFinished: Instant = Instant.now()
@@ -70,6 +71,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   override def addAppName(appName: String): Unit = {
     this.appName = appName
+  }
+
+  override def addSparkAppId(sparkAppId: String): Unit = {
+    this.sparkAppId = Option(sparkAppId)
   }
 
   override def addEnvironmentName(envName: String): Unit = {
@@ -191,7 +196,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     introParagraph.withText(".")
 
-    val applicationIds = completedTasks.map(_.applicationId.trim).filter(_.nonEmpty).distinct
+    val applicationIds = getSparkApplicationIds
 
     // This handles the case when all tasks are run under the same Spark Session.
     // When Pramen support runners that run tasks in different Spark Sessions (via Yarn, Glue etc APIs), this will need
@@ -225,6 +230,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     appException.foreach(ex => builder.withException("The job has failed with the following exception:", ex))
 
     builder
+  }
+
+  private[core] def getSparkApplicationIds: Seq[String] = {
+    sparkAppId match {
+      case Some(appId) => (appId +: completedTasks.map(_.applicationId.trim).filter(_.nonEmpty)).distinct
+      case None => completedTasks.map(_.applicationId.trim).filter(_.nonEmpty).distinct
+    }
   }
 
   private[core] def getSuccessFlags: (Boolean, Boolean) = {

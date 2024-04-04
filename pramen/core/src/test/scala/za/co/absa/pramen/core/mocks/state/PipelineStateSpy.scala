@@ -29,6 +29,7 @@ class PipelineStateSpy extends PipelineState {
   val failures = new ListBuffer[(String, Throwable)]
   val completedStatuses = new ListBuffer[TaskResult]
   var closeCalled = 0
+  var sparkAppId: Option[String] = None
 
   override def getState(): PipelineStateSnapshot = {
     PipelineStateSnapshot(
@@ -51,6 +52,10 @@ class PipelineStateSpy extends PipelineState {
 
   override def setFailure(stage: String, ex: Throwable): Unit = synchronized {
     failures.append((stage, ex))
+  }
+
+  override def setSparkAppId(sparkAppId: String): Unit = synchronized {
+    this.sparkAppId = Option(sparkAppId)
   }
 
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
