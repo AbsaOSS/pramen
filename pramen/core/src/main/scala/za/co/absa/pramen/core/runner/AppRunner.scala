@@ -55,6 +55,7 @@ object AppRunner {
 
     val exitCodeTry = for {
       spark      <- getSparkSession(conf, state)
+      _          <- Try { state.setSparkAppId(spark.sparkContext.applicationId) }
       _          <- logBanner(spark)
       _          <- logExecutorNodes(conf, state, spark)
       appContext <- createAppContext(conf, state, spark)

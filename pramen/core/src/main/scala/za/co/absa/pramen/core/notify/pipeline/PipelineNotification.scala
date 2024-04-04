@@ -25,6 +25,7 @@ case class PipelineNotification(
                                  exception: Option[Throwable],
                                  pipelineName: String,
                                  environmentName: String,
+                                 sparkAppId: Option[String],
                                  started: Instant,
                                  finished: Instant,
                                  tasksCompleted: List[TaskResult],

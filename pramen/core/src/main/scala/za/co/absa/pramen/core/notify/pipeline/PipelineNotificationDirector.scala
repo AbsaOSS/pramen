@@ -36,6 +36,7 @@ object PipelineNotificationDirector {
 
     notificationBuilder.addAppName(notification.pipelineName)
     notificationBuilder.addEnvironmentName(notification.environmentName)
+    notification.sparkAppId.foreach(id => notificationBuilder.addSparkAppId(id))
     notificationBuilder.addAppDuration(notification.started, notification.finished)
     notificationBuilder.addDryRun(dryRun)
     notificationBuilder.addUndercover(undercover)

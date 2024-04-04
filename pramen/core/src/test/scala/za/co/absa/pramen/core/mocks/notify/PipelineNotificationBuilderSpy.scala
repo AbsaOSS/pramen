@@ -25,6 +25,7 @@ import java.time.Instant
 class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   var failureException: Option[Throwable] = None
   var appName = ""
+  var sparkId = ""
   var environmentName = ""
   var appStarted: Instant = Instant.MIN
   var appFinished: Instant = Instant.MIN
@@ -40,6 +41,8 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   override def addFailureException(ex: Throwable): Unit = failureException = Option(ex)
 
   override def addAppName(name: String): Unit = appName = name
+
+  override def addSparkAppId(sparkAppId: String): Unit = sparkId = sparkAppId
 
   override def addEnvironmentName(env: String): Unit = environmentName = env
 
