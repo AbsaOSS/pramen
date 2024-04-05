@@ -234,8 +234,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private[core] def getSparkApplicationIds: Seq[String] = {
     sparkAppId match {
-      case Some(appId) => (appId +: completedTasks.map(_.applicationId.trim).filter(_.nonEmpty)).distinct
-      case None => completedTasks.map(_.applicationId.trim).filter(_.nonEmpty).distinct
+      case Some(appId) => (appId +: completedTasks.map(_.applicationId.trim).filter(_.nonEmpty)).distinct.toSeq
+      case None => completedTasks.map(_.applicationId.trim).filter(_.nonEmpty).distinct.toSeq
     }
   }
 
