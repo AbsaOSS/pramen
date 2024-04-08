@@ -21,10 +21,10 @@ import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.types._
 
 import java.sql.Types._
-import java.sql.{ResultSet, Timestamp}
+import java.sql.{Date, ResultSet, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
 
-class ResultSetToRowIterator(rs: ResultSet, sanitizeTimestamps: Boolean) extends Iterator[Row] {
+class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean) extends Iterator[Row] {
   import ResultSetToRowIterator._
 
   private var didHasNext = false
@@ -115,15 +115,30 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeTimestamps: Boolean) extends
       case DOUBLE        => rs.getDouble(columnIndex)
       case REAL          => rs.getBigDecimal(columnIndex)
       case NUMERIC       => rs.getBigDecimal(columnIndex)
-      case DATE          => rs.getDate(columnIndex)
+      case DATE          => sanitizeDate(rs.getDate(columnIndex))
       case TIMESTAMP     => sanitizeTimestamp(rs.getTimestamp(columnIndex))
       case _             => rs.getString(columnIndex)
     }
   }
 
+  private[core] def sanitizeDate(date: Date): Date = {
+    // This check against null is important since date=null is a valid value.
+    if (sanitizeDateTime && date != null) {
+      val timeMilli = date.getTime
+      if (timeMilli > MAX_SAFE_DATE_MILLI)
+        MAX_SAFE_DATE
+      else if (timeMilli < MIN_SAFE_DATE_MILLI)
+        MIN_SAFE_DATE
+      else
+        date
+    } else {
+      date
+    }
+  }
+
   private[core] def sanitizeTimestamp(timestamp: Timestamp): Timestamp = {
     // This check against null is important since timestamp=null is a valid value.
-    if (sanitizeTimestamps && timestamp != null) {
+    if (sanitizeDateTime && timestamp != null) {
       val timeMilli = timestamp.getTime
       if (timeMilli > MAX_SAFE_TIMESTAMP_MILLI)
         MAX_SAFE_TIMESTAMP
@@ -138,8 +153,15 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeTimestamps: Boolean) extends
 }
 
 object ResultSetToRowIterator {
+  // Constants are aligned with Spark implementation
+  val MAX_SAFE_DATE_MILLI: Long = LocalDateTime.of(9999, 12, 31, 0, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli
+  val MAX_SAFE_DATE = new Date(MAX_SAFE_DATE_MILLI)
+
   val MAX_SAFE_TIMESTAMP_MILLI: Long = LocalDateTime.of(9999, 12, 31, 23, 59, 59, 999999999).toInstant(ZoneOffset.UTC).toEpochMilli
   val MAX_SAFE_TIMESTAMP = new Timestamp(MAX_SAFE_TIMESTAMP_MILLI)
+
+  val MIN_SAFE_DATE_MILLI: Long = LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli
+  val MIN_SAFE_DATE = new Date(MIN_SAFE_DATE_MILLI)
 
   val MIN_SAFE_TIMESTAMP_MILLI: Long = LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli
   val MIN_SAFE_TIMESTAMP = new Timestamp(MIN_SAFE_TIMESTAMP_MILLI)
