@@ -193,12 +193,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
   }
 
-  "sanitizeTimestamp" should {
-    // From Spark:
-    // https://github.com/apache/spark/blob/ad8ac17dbdfa763236ab3303eac6a3115ba710cc/connector/docker-integration-tests/src/test/scala/org/apache/spark/sql/jdbc/PostgresIntegrationSuite.scala#L457
-    val minTimestamp = -62135596800000L
-    val maxTimestamp = 253402300799999L
-
+  "sanitizeDateTime" when {
     // Variable names come from PostgreSQL "constant field docs":
     // https://jdbc.postgresql.org/documentation/publicapi/index.html?constant-values.html
     val POSTGRESQL_DATE_NEGATIVE_INFINITY: Long = -9223372036832400000L
@@ -210,58 +205,124 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     when(resultSetMetaData.getColumnCount).thenReturn(1)
     when(resultSet.getMetaData).thenReturn(resultSetMetaData)
 
-    "ignore null values" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true)
+    "sanitizeTimestamp" should {
+      // From Spark:
+      // https://github.com/apache/spark/blob/070461cc673c3fc910e66d1cbf628632b558b48c/sql/core/src/main/scala/org/apache/spark/sql/jdbc/PostgresDialect.scala#L323
+      val minTimestamp = -62135596800000L
+      val maxTimestamp = 253402300799999L
 
-      val fixedTs = iterator.sanitizeTimestamp(null)
+      "ignore null values" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
 
-      assert(fixedTs == null)
+        val fixedTs = iterator.sanitizeTimestamp(null)
+
+        assert(fixedTs == null)
+      }
+
+      "convert PostgreSql positive infinity value" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
+        val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_POSITIVE_INFINITY))
+
+        val fixedTs = iterator.sanitizeTimestamp(timestamp)
+
+        assert(fixedTs.getTime == maxTimestamp)
+      }
+
+      "convert PostgreSql negative infinity value" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
+        val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_NEGATIVE_INFINITY))
+
+        val fixedTs = iterator.sanitizeTimestamp(timestamp)
+
+        assert(fixedTs.getTime == minTimestamp)
+      }
+
+      "convert overflowed value to the maximum value supported" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
+        val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
+
+        val actual = iterator.sanitizeTimestamp(timestamp)
+
+        val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+        calendar.setTime(actual)
+        val year = calendar.get(Calendar.YEAR)
+
+        assert(year == 9999)
+        assert(actual.getTime == maxTimestamp)
+      }
+
+      "do nothing if the feature is turned off" in {
+        val iterator = new ResultSetToRowIterator(resultSet, false)
+        val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
+
+        val actual = iterator.sanitizeTimestamp(timestamp)
+
+        val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+        calendar.setTime(actual)
+        val year = calendar.get(Calendar.YEAR)
+
+        assert(year == 33658)
+      }
     }
 
-    "convert PostgreSql positive infinity value" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true)
-      val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_POSITIVE_INFINITY))
+    "sanitizeDate" should {
+      // From Spark:
+      // https://github.com/apache/spark/blob/070461cc673c3fc910e66d1cbf628632b558b48c/sql/core/src/main/scala/org/apache/spark/sql/jdbc/PostgresDialect.scala#L339
+      val minDate = -62135596800000L
+      val maxDate = 253402214400000L
 
-      val fixedTs = iterator.sanitizeTimestamp(timestamp)
+      "ignore null values" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
 
-      assert(fixedTs.getTime == maxTimestamp)
-    }
+        val fixedDate = iterator.sanitizeDate(null)
 
-    "convert PostgreSql negative infinity value" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true)
-      val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_NEGATIVE_INFINITY))
+        assert(fixedDate == null)
+      }
 
-      val fixedTs = iterator.sanitizeTimestamp(timestamp)
+      "convert PostgreSql positive infinity value" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
+        val date = new Date(POSTGRESQL_DATE_POSITIVE_INFINITY)
 
-      assert(fixedTs.getTime == minTimestamp)
-    }
+        val fixedDate = iterator.sanitizeDate(date)
 
-    "convert overflowed value to the maximum value supported" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true)
-      val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
+        assert(fixedDate.getTime == maxDate)
+      }
 
-      val actual = iterator.sanitizeTimestamp(timestamp)
+      "convert PostgreSql negative infinity value" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
+        val date = new Date(POSTGRESQL_DATE_NEGATIVE_INFINITY)
 
-      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
-      calendar.setTime(actual)
-      val year = calendar.get(Calendar.YEAR)
+        val fixedDate = iterator.sanitizeDate(date)
 
-      assert(year == 9999)
-      assert(actual.getTime == maxTimestamp)
-    }
+        assert(fixedDate.getTime == minDate)
+      }
 
-    "do nothing if the feature is turned off" in {
-      val iterator = new ResultSetToRowIterator(resultSet, false)
-      val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
+      "convert overflowed value to the maximum value supported" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true)
+        val date = new Date(1000000000000000L)
 
-      val actual = iterator.sanitizeTimestamp(timestamp)
+        val actual = iterator.sanitizeDate(date)
 
-      val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
-      calendar.setTime(actual)
-      val year = calendar.get(Calendar.YEAR)
+        val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+        calendar.setTime(actual)
+        val year = calendar.get(Calendar.YEAR)
 
-      assert(year == 33658)
+        assert(year == 9999)
+        assert(actual.getTime == maxDate)
+      }
+
+      "do nothing if the feature is turned off" in {
+        val iterator = new ResultSetToRowIterator(resultSet, false)
+        val date = new Date(1000000000000000L)
+
+        val actual = iterator.sanitizeDate(date)
+
+        val calendar = new GregorianCalendar(TimeZone.getTimeZone(ZoneId.of("UTC")))
+        calendar.setTime(actual)
+        val year = calendar.get(Calendar.YEAR)
+
+        assert(year == 33658)
+      }
     }
   }
-
 }
