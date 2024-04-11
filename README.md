@@ -991,7 +991,15 @@ The pipeline operation for this sink could look like this:
   tables = [
     {
       input.metastore.table = metastore_table
-      output.cmd.line = "/my_apps/cmd_line_tool --path @dataPath --date @infoDate"
+      # Supported substitutions:
+      # - @dataPath - the path to generated data or to the original metastore table
+      # - @partitionPath - the path to the partition corresponding to the information date being processed
+      # - @bucket - the bucket of the table location if the output is on S3
+      # - @prefix - the prefix on the bucket for tables located on S3
+      # - @partitionPrefix - the prefix to the data for the information date currently being processed
+      # - @infoDate - the information date in yyyy-MM-dd format
+      # - @infoMonth - the information month in yyyy-MM format
+      output.cmd.line = "/my_apps/cmd_line_tool --path @dataPath --partition-path @partitionPath --date @infoDate"
       
       ## All following settings are OPTIONAL
       

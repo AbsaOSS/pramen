@@ -20,11 +20,11 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.api.{DataFormat, ExternalChannelFactory, MetaTableDef, MetastoreReader, Query, Sink, SinkResult}
 import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.process.{ProcessRunner, ProcessRunnerImpl}
 import za.co.absa.pramen.core.sink.CmdLineSink.{CMD_LINE_KEY, CmdLineDataParams}
-import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils, SparkUtils}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -51,7 +51,7 @@ import scala.util.control.NonFatal
   *
   * Otherwise, the data can be accessed by the command line tool directly from the metastore.
   *
-  * Example sink definition:
+  * ==Example sink definition:==
   * {{{
   *  {
   *    name = "cmd_line"
@@ -73,6 +73,7 @@ import scala.util.control.NonFatal
   * Here is an example of a sink definition in a pipeline. As for any other operation you can specify
   * dependencies, transformations, filters and columns to select.
   *
+  * ==Example operation:==
   * {{{
   *  {
   *    name = "Command Line sink"
@@ -154,7 +155,7 @@ class CmdLineSink(sinkConfig: Config,
 
           log.info(s"$count records saved to $tempPath.")
 
-          val cmdLine = getCmdLine(cmdLineTemplate, Option(tempPath), infoDate)
+          val cmdLine = getCmdLine(cmdLineTemplate, Option(tempPath), Option(tempPath), infoDate)
 
           runCmd(cmdLine)
 
@@ -162,7 +163,10 @@ class CmdLineSink(sinkConfig: Config,
         }
         SinkResult(count)
       case None    =>
-        val cmdLine = getCmdLine(cmdLineTemplate, None, infoDate)
+        val metaTable = metastore.getTableDef(tableName)
+        val (dataPath, partitionPath) = getPaths(metaTable, infoDate)
+
+        val cmdLine = getCmdLine(cmdLineTemplate, dataPath, partitionPath, infoDate)
 
         runCmd(cmdLine)
 
@@ -173,20 +177,79 @@ class CmdLineSink(sinkConfig: Config,
     }
   }
 
+  private[core] def getPaths(metaTable: MetaTableDef, infoDate: LocalDate): (Option[Path], Option[Path]) = {
+    val basePathOpt = metaTable.format match {
+      case DataFormat.Parquet(path, _) =>
+        Option(path)
+      case DataFormat.Delta(query, _) =>
+        query match {
+          case Query.Path(path) =>
+            Option(path)
+          case _ => None
+        }
+      case _ =>
+        None
+    }
+
+    basePathOpt match {
+      case Some(basePath) =>
+        (Option(new Path(basePath)), Option(SparkUtils.getPartitionPath(infoDate, metaTable.infoDateColumn, metaTable.infoDateFormat, basePath)))
+      case None =>
+        (None, None)
+    }
+  }
+
   private[core] def getCmdLine(cmdLineTemplate: String,
                                dataPath: Option[Path],
+                               partitionPath: Option[Path],
                                infoDate: LocalDate): String = {
     log.info(s"CmdLine template: $cmdLineTemplate")
 
     val cmdWithDates = cmdLineTemplate.replace("@infoDate", infoDate.toString)
       .replace("@infoMonth", infoDate.format(DateTimeFormatter.ofPattern("yyyy-MM")))
 
-    dataPath match {
+    val cmdWithDataPath = dataPath match {
       case Some(path) =>
-        cmdWithDates.replace("@dataPath", path.toString)
-          .replace("@dataUri", path.toUri.toString)
+        if (Option(path.toUri.getAuthority).isDefined) {
+          val bucket = path.toUri.getAuthority
+          val prefixOrg = path.toUri.getPath
+          val prefix = if (prefixOrg.startsWith("/", 0))
+            prefixOrg.substring(1)
+          else
+            prefixOrg
+
+          cmdWithDates
+            .replace("@bucket", bucket)
+            .replace("@prefix", prefix)
+            .replace("@dataPath", path.toString)
+            .replace("@dataUri", path.toUri.toString)
+        } else {
+          cmdWithDates.replace("@dataPath", path.toString)
+            .replace("@dataUri", path.toUri.toString)
+        }
       case None       =>
         cmdWithDates
+    }
+
+    partitionPath match {
+      case Some(path) =>
+        if (Option(path.toUri.getAuthority).isDefined) {
+          val bucket = path.toUri.getAuthority
+          val prefixOrg = path.toUri.getPath
+          val prefix = if (prefixOrg.startsWith("/", 0))
+            prefixOrg.substring(1)
+          else
+            prefixOrg
+
+          cmdWithDataPath
+            .replace("@bucket", bucket)
+            .replace("@partitionPrefix", prefix)
+            .replace("@partitionPath", path.toString)
+        } else {
+          cmdWithDataPath.replace("@partitionPath", path.toString)
+        }
+      case None       =>
+        cmdWithDataPath
     }
   }
 

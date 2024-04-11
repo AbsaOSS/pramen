@@ -19,7 +19,10 @@ package za.co.absa.pramen.core.mocks.sink
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.{DataFormat, MetastoreReader}
+import za.co.absa.pramen.core.MetaTableDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.exceptions.CmdFailedException
 import za.co.absa.pramen.core.fixtures.TempDirFixture
@@ -93,22 +96,43 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
     }
 
     "work without a temporary path" in {
-      val (sink, _) = getUseCase(null, recordCountToReturn = Some(5))
+      withTempDirectory("cmd_sink") { tempDir =>
+        val metastoreReader = mock(classOf[MetastoreReader])
+        val metatable = MetaTableDefFactory.getDummyMetaTableDef(name = "table1",
+          format = DataFormat.Parquet(tempDir, None)
+        )
+        when(metastoreReader.getTableDef("table1")).thenReturn(metatable)
 
-      val sinkResult = sink.send(exampleDf, "table1", null, infoDate, Map[String, String]("cmd.line" -> "dummy @infoDate"))
+        val (sink, _) = getUseCase(null, recordCountToReturn = Some(5))
 
-      assert(sinkResult.recordsSent == 5)
+        val sinkResult = sink.send(exampleDf, "table1", metastoreReader, infoDate, Map[String, String]("cmd.line" -> "dummy @infoDate @partitionPath"))
+
+        assert(sinkResult.recordsSent == 5)
+      }
     }
   }
 
   "getCmdLine()" should {
     "replace variables with actual values" in {
       val (sink, _) = getUseCase()
+      val dataPath = Some(new Path("/dummy/path"))
+      val partitionPath = Some(new Path(s"/dummy/path/date=$infoDate"))
 
-      val cmdTemplate = "--data-path @dataPath --data-uri @dataUri --info-date @infoDate --infoMonth @infoMonth"
+      val cmdTemplate = "--data-path @dataPath --data-uri @dataUri --partition-path @partitionPath --info-date @infoDate --infoMonth @infoMonth"
 
-      assert(sink.getCmdLine(cmdTemplate, Some(new Path("/dummy/path")), infoDate) ==
-        "--data-path /dummy/path --data-uri /dummy/path --info-date 2021-12-28 --infoMonth 2021-12")
+      assert(sink.getCmdLine(cmdTemplate, dataPath, partitionPath, infoDate) ==
+        "--data-path /dummy/path --data-uri /dummy/path --partition-path /dummy/path/date=2021-12-28 --info-date 2021-12-28 --infoMonth 2021-12")
+    }
+
+    "replace s3 variables with actual values" in {
+      val (sink, _) = getUseCase()
+      val dataPath = Some(new Path("s3a://my_bucket1/dummy/path"))
+      val partitionPath = Some(new Path("s3a://my_bucket2/dummy/path/enceladus_info_date=2023-12-30"))
+
+      val cmdTemplate = "--bucket @bucket --prefix @prefix --partition-prefix @partitionPrefix"
+
+      assert(sink.getCmdLine(cmdTemplate, dataPath, partitionPath, infoDate) ==
+        "--bucket my_bucket1 --prefix dummy/path --partition-prefix dummy/path/enceladus_info_date=2023-12-30")
     }
   }
 
