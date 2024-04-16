@@ -45,7 +45,7 @@ object JdbcNativeUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   final val DEFAULT_CONNECTION_TIMEOUT_SECONDS = 60
-  final val JDBC_WORDS_TO_REDACT = Set("password", "secret", "pwd", "token")
+  final val JDBC_WORDS_TO_REDACT = Set("password", "secret", "pwd", "token", "key", "api_key")
 
   /** Returns a JDBC URL and connection by a config. */
   def getConnection(jdbcConfig: JdbcConfig): (String, Connection) = {

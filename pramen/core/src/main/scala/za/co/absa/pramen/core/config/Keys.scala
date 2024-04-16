@@ -46,7 +46,7 @@ object Keys {
 
   val LOG_EXECUTOR_NODES = "pramen.log.executor.nodes"
 
-  final val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "session.token", "access_key", "session_token", "auth.user.info")
+  final val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "api.key", "api_key", "session.token", "access_key", "session_token", "auth.user.info")
 
   final val CONFIG_KEYS_TO_REDACT = Set(
     "java.class.path",
