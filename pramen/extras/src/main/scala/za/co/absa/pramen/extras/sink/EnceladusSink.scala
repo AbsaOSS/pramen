@@ -337,7 +337,7 @@ class EnceladusSink(sinkConfig: Config,
       )
       if (options.contains(HIVE_TABLE_KEY)) {
         Try {
-          updateTable(options(HIVE_TABLE_KEY), publishBase)
+          updateTable(options(HIVE_TABLE_KEY), publishBase, infoDate, infoVersion)
         } match {
           case Success(_)  =>
             log.info(s"Hive table '${options(HIVE_TABLE_KEY)}' was repaired successfully.")
@@ -487,12 +487,18 @@ class EnceladusSink(sinkConfig: Config,
     }
   }
 
-  private[extras] def updateTable(hiveTable: String, publishBase: String)(implicit spark: SparkSession): Unit = {
+  private[extras] def updateTable(hiveTable: String, publishBase: String, infoDate: LocalDate, infoVersion: Int)(implicit spark: SparkSession): Unit = {
     if (hiveHelper.doesTableExist(enceladusConfig.hiveDatabase, hiveTable)) {
-      log.info(s"Table ${getHiveTableFullName(hiveTable)} exists. Repairing partitions...")
-      hiveHelper.repairHiveTable(enceladusConfig.hiveDatabase, hiveTable, HiveFormat.Parquet)
+      if (enceladusConfig.useAddPartition) {
+        val location = s"$publishBase/enceladus_info_date=$infoDate/enceladus_info_version=$infoVersion"
+        log.info(s"Table '${getHiveTableFullName(hiveTable)}' exists. Adding new partition: '$location'...")
+        hiveHelper.addPartition(enceladusConfig.hiveDatabase, hiveTable, Seq("enceladus_info_date", "enceladus_info_version"), Seq(infoDate.toString, infoVersion.toString), location)
+      } else {
+        log.info(s"Table '${getHiveTableFullName(hiveTable)}' exists. Repairing partitions...")
+        hiveHelper.repairHiveTable(enceladusConfig.hiveDatabase, hiveTable, HiveFormat.Parquet)
+      }
     } else {
-      log.info(s"Table ${getHiveTableFullName(hiveTable)} does not exist. Creating...")
+      log.info(s"Table '${getHiveTableFullName(hiveTable)}' does not exist. Creating...")
       val df = spark.read.option("mergeSchema", "true").parquet(publishBase)
 
       val schema = df.schema

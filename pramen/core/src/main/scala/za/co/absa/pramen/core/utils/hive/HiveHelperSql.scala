@@ -49,6 +49,21 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
+  def addPartition(databaseName: Option[String],
+                   tableName: String,
+                   partitionBy: Seq[String],
+                   partitionValues: Seq[String],
+                   location: String): Unit = {
+    if (partitionBy.length != partitionValues.length) {
+      throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
+    }
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+    val partitionClause = partitionBy.zip(partitionValues).map { case (col, value) => s"$col='$value'" }.mkString(", ")
+    val sql = applyPartitionTemplate(hiveConfig.addPartitionTemplate, fullTableName, location, partitionClause)
+    queryExecutor.execute(sql)
+  }
+
+
   override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = queryExecutor.doesTableExist(databaseName, tableName)
 
   override def dropTable(databaseName: Option[String],
@@ -132,5 +147,15 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
       .replace("@format", format.name)
       .replace("@schema", schemaDDL)
       .replace("@partitionedBy", partitionDDL)
+  }
+
+  private def applyPartitionTemplate(template: String,
+                                     fullTableName: String,
+                                     partitionPath: String = "",
+                                     partitionClause: String = ""
+                                    ): String = {
+    template.replace("@fullTableName", fullTableName)
+      .replace("@partitionPath", partitionPath)
+      .replace("@partitionClause", partitionClause)
   }
 }
