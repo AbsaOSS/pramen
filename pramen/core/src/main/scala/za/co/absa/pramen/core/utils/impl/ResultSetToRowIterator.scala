@@ -24,7 +24,7 @@ import java.sql.Types._
 import java.sql.{Date, ResultSet, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
 
-class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean) extends Iterator[Row] {
+class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrectDecimalsAsString: Boolean) extends Iterator[Row] {
   import ResultSetToRowIterator._
 
   private var didHasNext = false
@@ -93,8 +93,8 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean) extends I
       case BIGINT        => StructField(columnName, LongType)
       case FLOAT         => StructField(columnName, FloatType)
       case DOUBLE        => StructField(columnName, DoubleType)
-      case REAL          => StructField(columnName, DecimalType(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
-      case NUMERIC       => StructField(columnName, DecimalType(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
+      case REAL          => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
+      case NUMERIC       => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
       case DATE          => StructField(columnName, DateType)
       case TIMESTAMP     => StructField(columnName, TimestampType)
       case _             => StructField(columnName, StringType)
@@ -113,13 +113,41 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean) extends I
       case BIGINT        => rs.getLong(columnIndex)
       case FLOAT         => rs.getFloat(columnIndex)
       case DOUBLE        => rs.getDouble(columnIndex)
-      case REAL          => rs.getBigDecimal(columnIndex)
-      case NUMERIC       => rs.getBigDecimal(columnIndex)
+      case REAL          => getDecimalData(columnIndex)
+      case NUMERIC       => getDecimalData(columnIndex)
       case DATE          => sanitizeDate(rs.getDate(columnIndex))
       case TIMESTAMP     => sanitizeTimestamp(rs.getTimestamp(columnIndex))
       case _             => rs.getString(columnIndex)
     }
   }
+
+  private[core] def getDecimalSparkSchema(precision: Int, scale: Int): DataType = {
+    if (scale >= precision || precision <= 0 || scale < 0 || precision > 38 || (precision + scale) > 38) {
+      if (incorrectDecimalsAsString) {
+        StringType
+      } else {
+        DecimalType(38, 18)
+      }
+    } else {
+      DecimalType(precision, scale)
+    }
+  }
+
+  private[core] def getDecimalData(columnIndex: Int): Any = {
+    if (incorrectDecimalsAsString) {
+      val precision = rs.getMetaData.getPrecision(columnIndex)
+      val scale = rs.getMetaData.getScale(columnIndex)
+
+      if (scale >= precision || precision <= 0 || scale < 0 || precision > 38 || (precision + scale) > 38) {
+        rs.getString(columnIndex)
+      } else {
+        rs.getBigDecimal(columnIndex)
+      }
+    } else {
+      rs.getBigDecimal(columnIndex)
+    }
+  }
+
 
   private[core] def sanitizeDate(date: Date): Date = {
     // This check against null is important since date=null is a valid value.

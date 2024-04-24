@@ -89,13 +89,13 @@ object JdbcNativeUtils {
 
     // Executing the query
     val rs = getResultSet(jdbcConfig, url, query)
-    val driverIterator = new ResultSetToRowIterator(rs, jdbcConfig.sanitizeDateTime)
+    val driverIterator = new ResultSetToRowIterator(rs, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString)
     val schema = JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
 
     driverIterator.close()
 
     val rdd = spark.sparkContext.parallelize(Seq(query)).flatMap(q => {
-      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q), jdbcConfig.sanitizeDateTime)
+      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q), jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString)
     })
 
     spark.createDataFrame(rdd, schema)
