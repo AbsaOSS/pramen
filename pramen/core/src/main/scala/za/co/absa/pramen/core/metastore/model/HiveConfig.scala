@@ -81,6 +81,7 @@ object HiveConfig {
     val defaultTemplates = defaults.templates.getOrElse(format.name, HiveQueryTemplates(
       DEFAULT_CREATE_TABLE_TEMPLATE,
       DEFAULT_REPAIR_TABLE_TEMPLATE,
+      DEFAULT_ADD_PARTITION_TEMPLATE,
       DEFAULT_DROP_TABLE_TEMPLATE
     ))
 
@@ -104,13 +105,16 @@ object HiveConfig {
     val repairTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPAIR_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.repairTableTemplate)
 
+    val addPartitionTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$ADD_PARTITION_TEMPLATE_KEY")
+      .getOrElse(defaultTemplates.addPartitionTemplate)
+
     val dropTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$DROP_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.dropTableTemplate)
 
     HiveConfig(
       hiveApi = hiveApi,
       database = database,
-      templates = HiveQueryTemplates(createTableTemplate, repairTableTemplate, dropTableTemplate),
+      templates = HiveQueryTemplates(createTableTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
       jdbcConfig = jdbcConfig,
       ignoreFailures
     )
@@ -127,6 +131,7 @@ object HiveConfig {
     val templates = defaults.templates.getOrElse(format.name, HiveQueryTemplates(
       DEFAULT_CREATE_TABLE_TEMPLATE,
       DEFAULT_REPAIR_TABLE_TEMPLATE,
+      DEFAULT_ADD_PARTITION_TEMPLATE,
       DEFAULT_DROP_TABLE_TEMPLATE
     ))
 
@@ -136,7 +141,7 @@ object HiveConfig {
   def getNullConfig: HiveConfig = HiveConfig(
     HiveApi.Sql,
     None,
-    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
+    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
     None,
     ignoreFailures = false)
 }

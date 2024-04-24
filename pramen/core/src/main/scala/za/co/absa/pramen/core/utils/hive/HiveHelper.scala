@@ -34,6 +34,12 @@ abstract class HiveHelper {
                       tableName: String,
                       format: HiveFormat): Unit
 
+  def addPartition(databaseName: Option[String],
+                   tableName: String,
+                   partitionBy: Seq[String],
+                   partitionValues: Seq[String],
+                   location: String): Unit
+
   def doesTableExist(databaseName: Option[String],
                      tableName: String): Boolean
 

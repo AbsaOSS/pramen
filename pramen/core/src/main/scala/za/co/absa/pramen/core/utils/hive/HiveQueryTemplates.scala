@@ -22,6 +22,7 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 case class HiveQueryTemplates(
                                createTableTemplate: String,
                                repairTableTemplate: String,
+                               addPartitionTemplate: String,
                                dropTableTemplate: String
                              )
 
@@ -30,6 +31,7 @@ object HiveQueryTemplates {
 
   val CREATE_TABLE_TEMPLATE_KEY = "create.table.template"
   val REPAIR_TABLE_TEMPLATE_KEY = "repair.table.template"
+  val ADD_PARTITION_TEMPLATE_KEY = "add.partition.template"
   val DROP_TABLE_TEMPLATE_KEY = "drop.table.template"
 
   val DEFAULT_CREATE_TABLE_TEMPLATE: String =
@@ -43,6 +45,9 @@ object HiveQueryTemplates {
 
   val DEFAULT_REPAIR_TABLE_TEMPLATE: String = "MSCK REPAIR TABLE @fullTableName"
 
+  val DEFAULT_ADD_PARTITION_TEMPLATE: String =
+    """ALTER TABLE @fullTableName ADD IF NOT EXISTS PARTITION (@partitionClause) LOCATION '@partitionPath';""".stripMargin
+
   val DEFAULT_DROP_TABLE_TEMPLATE: String = "DROP TABLE IF EXISTS @fullTableName"
 
   def fromConfig(conf: Config): HiveQueryTemplates = {
@@ -52,12 +57,16 @@ object HiveQueryTemplates {
     val repairTableTemplate = ConfigUtils.getOptionString(conf, REPAIR_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_REPAIR_TABLE_TEMPLATE)
 
+    val addPartitionTemplate = ConfigUtils.getOptionString(conf, ADD_PARTITION_TEMPLATE_KEY)
+      .getOrElse(DEFAULT_ADD_PARTITION_TEMPLATE)
+
     val dropTableTemplate = ConfigUtils.getOptionString(conf, DROP_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_DROP_TABLE_TEMPLATE)
 
     HiveQueryTemplates(
       createTableTemplate = createTableTemplate,
       repairTableTemplate = repairTableTemplate,
+      addPartitionTemplate = addPartitionTemplate,
       dropTableTemplate = dropTableTemplate
     )
   }
@@ -66,6 +75,7 @@ object HiveQueryTemplates {
     HiveQueryTemplates(
       createTableTemplate = DEFAULT_CREATE_TABLE_TEMPLATE,
       repairTableTemplate = DEFAULT_REPAIR_TABLE_TEMPLATE,
+      addPartitionTemplate = DEFAULT_ADD_PARTITION_TEMPLATE,
       dropTableTemplate = DEFAULT_DROP_TABLE_TEMPLATE
     )
   }

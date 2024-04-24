@@ -29,7 +29,7 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.SparkCatalog,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = true)
 
@@ -41,6 +41,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.ignoreFailures)
       assert(hiveConfig.templates.createTableTemplate.contains("create1"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair1"))
+      assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop1"))
     }
 
@@ -61,6 +62,7 @@ class HiveConfigSuite extends AnyWordSpec {
           |conf {
           |   create.table.template = "create2"
           |   repair.table.template = "repair2"
+          |   add.partition.template = "add_partition2"
           |   drop.table.template = "drop2"
           |}
           |""".stripMargin)
@@ -68,7 +70,7 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = false)
 
@@ -81,6 +83,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.ignoreFailures)
       assert(hiveConfig.templates.createTableTemplate.contains("create2"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair2"))
+      assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition2"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop2"))
     }
   }
@@ -90,7 +93,7 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "repair", "drop")),
+        Map("parquet" -> HiveQueryTemplates("create", "repair", "add_partition1", "drop")),
         None,
         ignoreFailures = true)
 
@@ -102,6 +105,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.ignoreFailures)
       assert(hiveConfig.templates.createTableTemplate.contains("create"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair"))
+      assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop"))
     }
   }

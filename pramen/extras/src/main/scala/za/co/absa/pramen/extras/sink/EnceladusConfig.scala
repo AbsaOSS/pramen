@@ -34,6 +34,7 @@ case class EnceladusConfig(
                             recordsPerPartition: Option[Int],
                             saveEmpty: Boolean,
                             generateInfoFile: Boolean,
+                            useAddPartition: Boolean,
                             enceladusMainClass: String,
                             enceladusCmdLineTemplate: String,
                             hiveDatabase: Option[String],
@@ -48,6 +49,7 @@ object EnceladusConfig {
   val RECORDS_PER_PARTITION = "records.per.partition"
   val SAVE_EMPTY_KEY = "save.empty"
   val GENERATE_INFO_FILE_KEY = "info.file.generate"
+  val USE_ADD_PARTITION_KEY = "use.add.partition"
   val TIMEZONE_ID_KEY = "timezone"
 
   val ENCELADUS_RUN_MAIN_CLASS_KEY = "enceladus.run.main.class"
@@ -84,6 +86,7 @@ object EnceladusConfig {
       ConfigUtils.getOptionInt(conf, RECORDS_PER_PARTITION),
       ConfigUtils.getOptionBoolean(conf, SAVE_EMPTY_KEY).getOrElse(true),
       ConfigUtils.getOptionBoolean(conf, GENERATE_INFO_FILE_KEY).getOrElse(true),
+      ConfigUtils.getOptionBoolean(conf, USE_ADD_PARTITION_KEY).getOrElse(false),
       ConfigUtils.getOptionString(conf, ENCELADUS_RUN_MAIN_CLASS_KEY).getOrElse(DEFAULT_ENCELADUS_RUN_MAIN_CLASS),
       ConfigUtils.getOptionString(conf, ENCELADUS_COMMAND_LINE_TEMPLATE_KEY).getOrElse(DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE),
       ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY),

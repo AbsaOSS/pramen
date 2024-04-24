@@ -59,6 +59,21 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     }
   }
 
+  def addPartition(databaseName: Option[String],
+                   tableName: String,
+                   partitionBy: Seq[String],
+                   partitionValues: Seq[String],
+                   location: String): Unit = {
+    if (partitionBy.length != partitionValues.length) {
+      throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
+    }
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+    val partitionClause = partitionBy.zip(partitionValues).map { case (col, value) => s"$col='$value'" }.mkString(", ")
+    val sql = s"ALTER TABLE $fullTableName ADD IF NOT EXISTS PARTITION ($partitionClause) LOCATION '$location'"
+    log.info(s"Executing: $sql")
+    spark.sql(sql).collect()
+  }
+
   private def dropCatalogTable(fullTableName: String): Unit = {
     spark.sql(s"DROP TABLE $fullTableName").collect()
   }
