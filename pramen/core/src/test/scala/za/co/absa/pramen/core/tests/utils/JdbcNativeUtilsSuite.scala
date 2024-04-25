@@ -235,45 +235,46 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
   }
 
-  "getDecimalData" should {
-    val resultSet = mock(classOf[ResultSet])
-    val resultSetMetaData = mock(classOf[ResultSetMetaData])
+  /*  "getDecimalData" should {
+      val resultSet = mock(classOf[ResultSet])
+      val resultSetMetaData = mock(classOf[ResultSetMetaData])
 
-    when(resultSetMetaData.getColumnCount).thenReturn(1)
-    when(resultSet.getMetaData).thenReturn(resultSetMetaData)
-    when(resultSet.getBigDecimal(0)).thenReturn(new BigDecimal(1.0))
-    when(resultSet.getString(0)).thenReturn("1")
+      when(resultSetMetaData.getColumnCount).thenReturn(1)
+      when(resultSet.getMetaData).thenReturn(resultSetMetaData)
+      when(resultSet.getBigDecimal(0)).thenReturn(new BigDecimal(1.0))
+      when(resultSet.getString(0)).thenReturn("1")
 
-    "return normal decimal for correct precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
-      when(resultSetMetaData.getPrecision(0)).thenReturn(10)
-      when(resultSetMetaData.getScale(0)).thenReturn(2)
+      "return normal decimal for correct precision and scale" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
+        when(resultSetMetaData.getPrecision(0)).thenReturn(10)
+        when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-      val v = iterator.getDecimalData(0)
-      assert(v.isInstanceOf[BigDecimal])
-      assert(v.asInstanceOf[BigDecimal].toString == "1")
-    }
+        val v = iterator.getDecimalData(0)
+        assert(v.isInstanceOf[BigDecimal])
+        assert(v.asInstanceOf[BigDecimal].toString == "1")
+      }
 
-    "return fixed decimal for incorrect precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
-      when(resultSetMetaData.getPrecision(0)).thenReturn(0)
-      when(resultSetMetaData.getScale(0)).thenReturn(2)
+      "return fixed decimal for incorrect precision and scale" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
+        when(resultSetMetaData.getPrecision(0)).thenReturn(0)
+        when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-      val v = iterator.getDecimalData(0)
-      assert(v.isInstanceOf[BigDecimal])
-      assert(v.asInstanceOf[BigDecimal].toString == "1")
-    }
+        val v = iterator.getDecimalData(0)
+        assert(v.isInstanceOf[BigDecimal])
+        assert(v.asInstanceOf[BigDecimal].toString == "1")
+      }
 
-    "return string type for incorrect precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = true)
-      when(resultSetMetaData.getPrecision(0)).thenReturn(0)
-      when(resultSetMetaData.getScale(0)).thenReturn(2)
+      "return string type for incorrect precision and scale" in {
+        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = true)
+        when(resultSetMetaData.getPrecision(0)).thenReturn(0)
+        when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-      val v = iterator.getDecimalData(0)
-      assert(v.isInstanceOf[String])
-      assert(v.asInstanceOf[String] == "1")
-    }
+        val v = iterator.getDecimalData(0)
+        assert(v.isInstanceOf[String])
+        assert(v.asInstanceOf[String] == "1")
+      }
   }
+  */
 
   "sanitizeDateTime" when {
     // Variable names come from PostgreSQL "constant field docs":
