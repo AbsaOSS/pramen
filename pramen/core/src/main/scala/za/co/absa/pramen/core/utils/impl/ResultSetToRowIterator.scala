@@ -23,6 +23,7 @@ import org.apache.spark.sql.types._
 import java.sql.Types._
 import java.sql.{Date, ResultSet, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
+import scala.collection.mutable
 
 class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrectDecimalsAsString: Boolean) extends Iterator[Row] {
   import ResultSetToRowIterator._
@@ -30,6 +31,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
   private var didHasNext = false
   private var item: Option[Row] = None
   private val columnCount = rs.getMetaData.getColumnCount
+  private val columnIndexToTypeMap = new mutable.HashMap[Int, Int]()
 
   override def hasNext: Boolean = {
     if (didHasNext) {
@@ -102,7 +104,11 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
   }
 
   private[core] def getCell(columnIndex: Int): Any = {
-    val dataType = rs.getMetaData.getColumnType(columnIndex)
+    if (columnIndexToTypeMap.isEmpty) {
+      setupColumnTypes()
+    }
+
+    val dataType = columnIndexToTypeMap(columnIndex)
 
     // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
     dataType match {
@@ -113,8 +119,8 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       case BIGINT        => rs.getLong(columnIndex)
       case FLOAT         => rs.getFloat(columnIndex)
       case DOUBLE        => rs.getDouble(columnIndex)
-      case REAL          => getDecimalData(columnIndex)
-      case NUMERIC       => getDecimalData(columnIndex)
+      case REAL          => rs.getBigDecimal(columnIndex)
+      case NUMERIC       => rs.getBigDecimal(columnIndex)
       case DATE          => sanitizeDate(rs.getDate(columnIndex))
       case TIMESTAMP     => sanitizeTimestamp(rs.getTimestamp(columnIndex))
       case _             => rs.getString(columnIndex)
@@ -133,21 +139,44 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
     }
   }
 
-  private[core] def getDecimalData(columnIndex: Int): Any = {
+  private[core] def setupColumnTypes(): Unit = {
+    for (i <- 1 to columnCount) {
+      val dataType = rs.getMetaData.getColumnType(i)
+
+      // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
+      val actualDataType = dataType match {
+        case BIT | BOOLEAN => BOOLEAN
+        case TINYINT       => TINYINT
+        case SMALLINT      => SMALLINT
+        case INTEGER       => INTEGER
+        case BIGINT        => BIGINT
+        case FLOAT         => FLOAT
+        case DOUBLE        => DOUBLE
+        case REAL          => getDecimalDataType(i)
+        case NUMERIC       => getDecimalDataType(i)
+        case DATE          => DATE
+        case TIMESTAMP     => TIMESTAMP
+        case _             => VARCHAR
+      }
+
+      columnIndexToTypeMap += i -> actualDataType
+    }
+  }
+
+  private[core] def getDecimalDataType(columnIndex: Int): Int = {
     if (incorrectDecimalsAsString) {
       val precision = rs.getMetaData.getPrecision(columnIndex)
       val scale = rs.getMetaData.getScale(columnIndex)
 
       if (scale >= precision || precision <= 0 || scale < 0 || precision > 38 || (precision + scale) > 38) {
-        rs.getString(columnIndex)
+        VARCHAR
       } else {
-        rs.getBigDecimal(columnIndex)
+        NUMERIC
       }
     } else {
-      rs.getBigDecimal(columnIndex)
+      NUMERIC
     }
   }
-
 
   private[core] def sanitizeDate(date: Date): Date = {
     // This check against null is important since date=null is a valid value.
