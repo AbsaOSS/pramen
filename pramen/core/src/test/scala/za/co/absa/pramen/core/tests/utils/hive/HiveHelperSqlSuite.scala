@@ -141,6 +141,19 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
 
       compareText(actual, expected)
     }
+
+    "add partition for a table in a database" in {
+      val expected = "ALTER TABLE `db`.`tbl` ADD IF NOT EXISTS PARTITION (info_date='2024-04-24') LOCATION 's3://bucket/table/info_date=2024-04-24';"
+
+      val qe = new QueryExecutorMock(tableExists = true)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+
+      hiveHelper.addPartition(Some("db"), "tbl", Seq("info_date"), Seq("2024-04-24"), "s3://bucket/table/info_date=2024-04-24")
+
+      val actual = qe.queries.mkString("\n")
+
+      compareText(actual, expected)
+    }
   }
 
   private def getParquetPath(tempBaseDir: String, partitionBy: Seq[String] = Nil): String = {

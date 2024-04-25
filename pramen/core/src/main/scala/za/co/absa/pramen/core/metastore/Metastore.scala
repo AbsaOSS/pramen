@@ -43,7 +43,11 @@ trait Metastore {
 
   def getHiveHelper(tableName: String): HiveHelper
 
-  def repairOrCreateHiveTable(tableName: String, infoDate: LocalDate, schema: Option[StructType], hiveHelper: HiveHelper, recreate: Boolean): Unit
+  def repairOrCreateHiveTable(tableName: String,
+                              infoDate: LocalDate,
+                              schema: Option[StructType],
+                              hiveHelper: HiveHelper,
+                              recreate: Boolean): Unit
 
   def getStats(tableName: String, infoDate: LocalDate): MetaTableStats
 

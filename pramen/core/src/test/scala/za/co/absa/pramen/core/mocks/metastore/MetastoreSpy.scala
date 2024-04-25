@@ -81,7 +81,11 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     new HiveHelperSql(new QueryExecutorMock(isTableAvailable), defaultQueryTemplates)
   }
 
-  override def repairOrCreateHiveTable(tableName: String, infoDate: LocalDate, schema: Option[StructType], hiveHelper: HiveHelper, recreate: Boolean): Unit = {
+  override def repairOrCreateHiveTable(tableName: String,
+                                       infoDate: LocalDate,
+                                       schema: Option[StructType],
+                                       hiveHelper: HiveHelper,
+                                       recreate: Boolean): Unit = {
     hiveCreationInvocations.append((tableName, infoDate, schema, recreate))
   }
 

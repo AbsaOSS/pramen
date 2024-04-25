@@ -37,6 +37,7 @@ import scala.util.{Failure, Success, Try}
   * @param hiveConfig             The effective Hive configuration to use for Hive operations.
   * @param hiveTable              The name of the Hive table.
   * @param hivePath               The path of the Hive table (if it differs from the path in the underlying format).
+  * @param hivePreferAddPartition If true, prefer ADD PARTITION to MSCK REPAIR when possible for Hive updates.
   * @param infoDateExpression     The expression to use to calculate the information date.
   * @param infoDateStart          The start date of the information date.
   * @param trackDays              The number of days to look back for retrospective changes if this table is used as a dependency.
@@ -53,6 +54,7 @@ case class MetaTable(
                       hiveConfig: HiveConfig,
                       hiveTable: Option[String],
                       hivePath: Option[String],
+                      hivePreferAddPartition: Boolean,
                       infoDateExpression: Option[String],
                       infoDateStart: LocalDate,
                       trackDays: Int,
@@ -68,6 +70,7 @@ object MetaTable {
   val NAME_DESCRIPTION = "description"
   val HIVE_TABLE_KEY = "hive.table"
   val HIVE_PATH_KEY = "hive.path"
+  val HIVE_PREFER_ADD_PARTITION_KEY = "hive.prefer.add.partition"
   val TRACK_DAYS_KEY = "track.days"
   val READ_OPTION_KEY = "read.option"
   val WRITE_OPTION_KEY = "write.option"
@@ -80,6 +83,7 @@ object MetaTable {
     val defaultStartDate = infoDateConfig.startDate
     val defaultTrackDays = infoDateConfig.defaultTrackDays
     val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
+    val defaultPreferAddPartition = conf.getBoolean(s"pramen.$HIVE_PREFER_ADD_PARTITION_KEY")
 
     val tableConfigs = ConfigUtils.getOptionConfigList(conf, key)
 
@@ -88,7 +92,7 @@ object MetaTable {
     }
 
     val metatables = tableConfigs
-      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays, defaultHiveConfig))
+      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition))
       .toSeq
 
     val duplicates = AlgorithmicUtils.findDuplicates(metatables.map(_.name))
@@ -104,7 +108,8 @@ object MetaTable {
                              defaultInfoDateFormat: String,
                              defaultStartDate: LocalDate,
                              defaultTrackDays: Int,
-                             defaultHiveConfig: HiveDefaultConfig): MetaTable = {
+                             defaultHiveConfig: HiveDefaultConfig,
+                             defaultPreferAddPartition: Boolean): MetaTable = {
     val name = ConfigUtils.getOptionString(conf, NAME_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $NAME_KEY"))
     val description = ConfigUtils.getOptionString(conf, NAME_DESCRIPTION).getOrElse("")
     val infoDateOverride = InfoDateOverride.fromConfig(conf)
@@ -124,6 +129,7 @@ object MetaTable {
 
     val hiveTable = ConfigUtils.getOptionString(conf, HIVE_TABLE_KEY)
     val hivePath = ConfigUtils.getOptionString(conf, HIVE_PATH_KEY)
+    val hivePreferAddPartition = ConfigUtils.getOptionBoolean(conf, HIVE_PREFER_ADD_PARTITION_KEY).getOrElse(defaultPreferAddPartition)
 
     val hiveConfig = if (hiveTable.isEmpty) {
       HiveConfig.fromDefaults(defaultHiveConfig, format)
@@ -142,6 +148,7 @@ object MetaTable {
       hiveConfig,
       hiveTable,
       hivePath,
+      hivePreferAddPartition,
       infoDateExpressionOpt,
       startDate,
       trackDays,
