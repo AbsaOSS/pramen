@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, SparkUtils}
 
-import java.math.BigDecimal
+import java.sql.Types.{NUMERIC, VARCHAR}
 import java.sql._
 import java.time.{Instant, ZoneId}
 import java.util.{Calendar, GregorianCalendar, TimeZone}
@@ -235,23 +235,19 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
   }
 
-  /*  "getDecimalData" should {
+  "getDecimalDataType" should {
       val resultSet = mock(classOf[ResultSet])
       val resultSetMetaData = mock(classOf[ResultSetMetaData])
 
       when(resultSetMetaData.getColumnCount).thenReturn(1)
       when(resultSet.getMetaData).thenReturn(resultSetMetaData)
-      when(resultSet.getBigDecimal(0)).thenReturn(new BigDecimal(1.0))
-      when(resultSet.getString(0)).thenReturn("1")
 
       "return normal decimal for correct precision and scale" in {
         val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
         when(resultSetMetaData.getPrecision(0)).thenReturn(10)
         when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-        val v = iterator.getDecimalData(0)
-        assert(v.isInstanceOf[BigDecimal])
-        assert(v.asInstanceOf[BigDecimal].toString == "1")
+        assert(iterator.getDecimalDataType(0) == NUMERIC)
       }
 
       "return fixed decimal for incorrect precision and scale" in {
@@ -259,9 +255,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
         when(resultSetMetaData.getPrecision(0)).thenReturn(0)
         when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-        val v = iterator.getDecimalData(0)
-        assert(v.isInstanceOf[BigDecimal])
-        assert(v.asInstanceOf[BigDecimal].toString == "1")
+        assert(iterator.getDecimalDataType(0) == NUMERIC)
       }
 
       "return string type for incorrect precision and scale" in {
@@ -269,12 +263,9 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
         when(resultSetMetaData.getPrecision(0)).thenReturn(0)
         when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-        val v = iterator.getDecimalData(0)
-        assert(v.isInstanceOf[String])
-        assert(v.asInstanceOf[String] == "1")
+        assert(iterator.getDecimalDataType(0) == VARCHAR)
       }
   }
-  */
 
   "sanitizeDateTime" when {
     // Variable names come from PostgreSQL "constant field docs":

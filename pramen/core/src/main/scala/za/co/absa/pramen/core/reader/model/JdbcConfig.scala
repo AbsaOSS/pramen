@@ -77,7 +77,7 @@ object JdbcConfig {
       retries = ConfigUtils.getOptionInt(conf, JDBC_RETRIES),
       connectionTimeoutSeconds = ConfigUtils.getOptionInt(conf, JDBC_CONNECTION_TIMEOUT),
       sanitizeDateTime = ConfigUtils.getOptionBoolean(conf, JDBC_SANITIZE_DATETIME).getOrElse(true),
-      incorrectDecimalsAsString = ConfigUtils.getOptionBoolean(conf, JDBC_INCORRECT_PRECISION_AS_STRING).getOrElse(true),
+      incorrectDecimalsAsString = ConfigUtils.getOptionBoolean(conf, JDBC_INCORRECT_PRECISION_AS_STRING).getOrElse(false),
       extraOptions = ConfigUtils.getExtraOptions(conf, JDBC_EXTRA_OPTIONS_PREFIX)
     )
   }
