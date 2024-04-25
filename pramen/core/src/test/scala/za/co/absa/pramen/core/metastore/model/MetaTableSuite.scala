@@ -34,6 +34,7 @@ class MetaTableSuite extends AnyWordSpec {
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 2
           |pramen.hive.api = sql
+          |pramen.hive.prefer.add.partition = false
           |
           |pramen.metastore.tables = [
           |  {
@@ -42,6 +43,7 @@ class MetaTableSuite extends AnyWordSpec {
           |    path = /a/b/c
           |    information.date.column = INFO_DATE
           |    information.date.format = dd-MM-yyyy
+          |    hive.prefer.add.partition = true
           |  },
           |  {
           |    name = table2
@@ -71,11 +73,13 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTables.head.infoDateFormat == "dd-MM-yyyy")
       assert(metaTables.head.trackDays == 2)
       assert(metaTables.head.infoDateStart == LocalDate.of(2020, 1, 31))
+      assert(metaTables.head.hivePreferAddPartition)
       assert(metaTables(1).name == "table2")
       assert(metaTables(1).format.name == "delta")
       assert(metaTables(1).infoDateColumn == "INFORMATION_DATE")
       assert(metaTables(1).infoDateFormat == "yyyy-MM-dd")
       assert(metaTables(1).hiveConfig.hiveApi == HiveApi.Sql)
+      assert(!metaTables(1).hivePreferAddPartition)
       assert(metaTables(2).name == "table3")
       assert(metaTables(2).format.name == "delta")
       assert(metaTables(2).infoDateColumn == "INFORMATION_DATE")
@@ -91,6 +95,7 @@ class MetaTableSuite extends AnyWordSpec {
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 2
           |pramen.hive.api = sql
+          |pramen.hive.prefer.add.partition = true
           |""".stripMargin)
 
       val infoDateConfig = InfoDateConfig.fromConfig(conf.withFallback(ConfigFactory.load()))
@@ -107,6 +112,7 @@ class MetaTableSuite extends AnyWordSpec {
           |pramen.information.date.start = "2020-01-31"
           |pramen.track.days = 1
           |pramen.hive.api = sql
+          |pramen.hive.prefer.add.partition = true
           |
           |pramen.metastore.tables = [
           |  {
@@ -148,7 +154,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
 
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "delta")
@@ -158,6 +164,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.database.isEmpty)
       assert(metaTable.hiveConfig.jdbcConfig.isEmpty)
       assert(!metaTable.hiveConfig.ignoreFailures)
+      assert(metaTable.hivePreferAddPartition)
       assert(metaTable.trackDays == 0)
       assert(metaTable.infoDateColumn == "INFO_DATE")
       assert(metaTable.infoDateFormat == "dd-MM-yyyy")
@@ -174,6 +181,7 @@ class MetaTableSuite extends AnyWordSpec {
           |hive.path = /d/e/f
           |information.date.column = INFORMATION_DATE
           |information.date.format = yyyy-MM-dd
+          |hive.prefer.add.partition = false
           |read.option {
           |  some.option.a = test1
           |  some.option.b = 12
@@ -194,7 +202,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true)
 
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.hiveApi == HiveApi.Sql)
@@ -209,6 +217,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
       assert(metaTable.hiveTable.contains("my_hive_table"))
       assert(metaTable.hivePath.contains("/d/e/f"))
+      assert(!metaTable.hivePreferAddPartition)
       assert(metaTable.trackDays == 1)
       assert(metaTable.infoDateColumn == "INFORMATION_DATE")
       assert(metaTable.infoDateFormat == "yyyy-MM-dd")
@@ -257,7 +266,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true)
 
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.hiveApi == HiveApi.SparkCatalog)
@@ -283,7 +292,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
       }
 
       assert(ex.getMessage.contains("Mandatory option missing: name"))
@@ -301,7 +310,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
       }
 
       assert(ex.getMessage.contains("Unable to read data format from config for the metastore table: table1"))

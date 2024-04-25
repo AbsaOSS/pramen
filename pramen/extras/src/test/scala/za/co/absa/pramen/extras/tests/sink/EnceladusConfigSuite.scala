@@ -55,7 +55,7 @@ class EnceladusConfigSuite extends AnyWordSpec with SparkTestBase {
       assert(enceladusConfig.formatOptions("my.option2") == "2")
       assert(!enceladusConfig.saveEmpty)
       assert(!enceladusConfig.generateInfoFile)
-      assert(!enceladusConfig.useAddPartition)
+      assert(!enceladusConfig.preferAddPartition)
       assert(enceladusConfig.enceladusMainClass == EnceladusConfig.DEFAULT_ENCELADUS_RUN_MAIN_CLASS)
       assert(enceladusConfig.enceladusCmdLineTemplate == EnceladusConfig.DEFAULT_ENCELADUS_COMMAND_LINE_TEMPLATE)
       assert(enceladusConfig.publishPartitionPattern == "enceladus_info_date={year}-{month}-{day}/enceladus_info_version={version}")
@@ -68,7 +68,7 @@ class EnceladusConfigSuite extends AnyWordSpec with SparkTestBase {
            |format = "json"
            |mode = "append"
            |save.empty = false
-           |use.add.partition = true
+           |prefer.add.partition = true
            |
            |enceladus.run.main.class = "A"
            |enceladus.command.line.template = "B"
@@ -99,7 +99,7 @@ class EnceladusConfigSuite extends AnyWordSpec with SparkTestBase {
       assert(enceladusConfig.formatOptions("my.option2") == "2")
       assert(!enceladusConfig.saveEmpty)
       assert(!enceladusConfig.generateInfoFile)
-      assert(enceladusConfig.useAddPartition)
+      assert(enceladusConfig.preferAddPartition)
       assert(enceladusConfig.enceladusMainClass == "A")
       assert(enceladusConfig.enceladusCmdLineTemplate == "B")
       assert(enceladusConfig.publishPartitionPattern == "aaa")

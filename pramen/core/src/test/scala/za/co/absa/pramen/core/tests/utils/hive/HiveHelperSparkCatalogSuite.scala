@@ -93,6 +93,29 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         assert(!hiveHelper.doesTableExist(Some("default"), "tbl4"))
       }
     }
+
+    "add partition for a table in a database" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir, Seq("b"))
+
+        val hiveHelper = new HiveHelperSparkCatalog(spark)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl5")
+        assert(hiveHelper.doesTableExist(Some("default"),"tbl5"))
+
+        val df = List(("D", 40)).toDF("a", "c")
+        df.write.parquet(s"$path/b=4")
+
+        assert(spark.table("default.tbl5").count() == 3)
+
+        hiveHelper.addPartition(Some("default"),"tbl5", Seq("b"), Seq("4"), s"$path/b=4")
+
+        assert(spark.table("default.tbl5").count() == 4)
+
+        hiveHelper.dropTable(Some("default"),"tbl5")
+      }
+    }
   }
 
   private def getParquetPath(tempBaseDir: String, partitionBy: Seq[String] = Nil): String = {

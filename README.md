@@ -2746,7 +2746,14 @@ pramen {
     # The API to use to query Hive. Valid values are: "sql" (default), "spark_catalog"
     hive.api = "sql"
 
+    # [Optional] Default database
     database = "my_db"
+
+    # [Optiona] When possible prefer ADD PARTITION to MSCK REPAIR when updating metastore tables in Hive.
+    # It is not always possible. When a table is initially created, MSCK REPAIR is always used to pick up all partitions.
+    # Also ADD PARTTITION is only for Parquet format.
+    # This option can be overridden per metatable.
+    hive.prefer.add.partition = true
 
     # Optional, use only if you want to use JDBC rather than Spark metastore to query Hive
     hive.jdbc {
@@ -2784,8 +2791,9 @@ pramen.metastore {
         # The API to use to query Hive. Valid values are: "sql", "spark_catalog"
         hive.api = "sql"
         hive.database = my_hive_db
-       
-        # [Optional] Hive table to create/repair after writes to this metastore table
+        hive.prefer.add.partition = false
+
+       # [Optional] Hive table to create/repair after writes to this metastore table
         hive.table = my_hive_table
 
         # [Optional] Hive table location for create/repair if different from the metastore table location

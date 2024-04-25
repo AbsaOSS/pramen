@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.Config
+import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
@@ -149,8 +150,14 @@ class MetastoreImpl(appConfig: Config,
       hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
-        log.info(s"The table '$fullTableName' exists. Repairing it.")
-        hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
+        if (mt.hivePreferAddPartition && mt.format.isInstanceOf[DataFormat.Parquet]) {
+          val location = new Path(effectivePath, s"${mt.infoDateColumn}=${infoDate}")
+          log.info(s"The table '$fullTableName' exists. Adding partition '$location'...")
+          hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
+        } else {
+          log.info(s"The table '$fullTableName' exists. Repairing it.")
+          hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
+        }
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
         hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)

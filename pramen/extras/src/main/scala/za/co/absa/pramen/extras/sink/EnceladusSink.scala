@@ -489,7 +489,7 @@ class EnceladusSink(sinkConfig: Config,
 
   private[extras] def updateTable(hiveTable: String, publishBase: String, infoDate: LocalDate, infoVersion: Int)(implicit spark: SparkSession): Unit = {
     if (hiveHelper.doesTableExist(enceladusConfig.hiveDatabase, hiveTable)) {
-      if (enceladusConfig.useAddPartition) {
+      if (enceladusConfig.preferAddPartition) {
         val location = s"$publishBase/enceladus_info_date=$infoDate/enceladus_info_version=$infoVersion"
         log.info(s"Table '${getHiveTableFullName(hiveTable)}' exists. Adding new partition: '$location'...")
         hiveHelper.addPartition(enceladusConfig.hiveDatabase, hiveTable, Seq("enceladus_info_date", "enceladus_info_version"), Seq(infoDate.toString, infoVersion.toString), location)
