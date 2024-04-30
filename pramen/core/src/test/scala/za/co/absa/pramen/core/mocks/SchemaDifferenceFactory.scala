@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.core.notify.pipeline.{FieldChange, SchemaDifference}
+import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
 
 import java.time.LocalDate
 

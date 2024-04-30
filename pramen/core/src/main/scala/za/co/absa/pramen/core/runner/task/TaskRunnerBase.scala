@@ -20,7 +20,8 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, Reason, TaskNotification}
+import za.co.absa.pramen.api
+import za.co.absa.pramen.api.{DataFormat, Reason, SchemaDifference, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
@@ -30,7 +31,6 @@ import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.notify.NotificationTargetManager
-import za.co.absa.pramen.core.notify.pipeline.SchemaDifference
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
@@ -399,6 +399,10 @@ abstract class TaskRunnerBase(conf: Config,
           result.runInfo.get.finished,
           taskStatus,
           result.applicationId,
+          result.isTransient,
+          result.isRawFilesJob,
+          result.schemaChanges,
+          result.dependencyWarnings.map(_.table),
           notificationTarget.options
         )
 
@@ -437,7 +441,7 @@ abstract class TaskRunnerBase(conf: Config,
         if (diff.nonEmpty) {
           log.warn(s"$WARNING SCHEMA CHANGE for $table from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
           bookkeeper.saveSchema(table.name, infoDate, df.schema)
-          SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil
+          api.SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil
         } else {
           Nil
         }

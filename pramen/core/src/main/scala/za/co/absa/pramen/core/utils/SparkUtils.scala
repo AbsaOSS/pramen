@@ -24,7 +24,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.notify.pipeline.FieldChange
+import za.co.absa.pramen.api.FieldChange
 import za.co.absa.pramen.core.pipeline.TransformExpression
 
 import java.io.ByteArrayOutputStream

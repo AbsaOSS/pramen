@@ -25,5 +25,9 @@ case class TaskNotification(
                              finished: Instant,
                              status: TaskStatus,
                              applicationId: String,
+                             isTransient: Boolean,
+                             isRawFilesJob: Boolean,
+                             schemaChanges: Seq[SchemaDifference],
+                             dependencyWarningTables: Seq[String],
                              options: Map[String, String]
                            )

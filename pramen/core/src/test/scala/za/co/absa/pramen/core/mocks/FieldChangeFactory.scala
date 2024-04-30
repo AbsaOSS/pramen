@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.core.notify.pipeline.FieldChange
+import za.co.absa.pramen.api.FieldChange
 
 object FieldChangeFactory {
   def getDummyNewField(columnName: String = "dummy_new_column", dataType: String = "int"): FieldChange = {
