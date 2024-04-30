@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core
 
-import za.co.absa.pramen.api.{TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.{SchemaDifference, TaskNotification, TaskStatus}
 
 import java.time.{Instant, LocalDate}
 
@@ -27,8 +27,12 @@ object TaskNotificationFactory {
                                finished: Instant = Instant.ofEpochMilli(1672759508000L),
                                status: TaskStatus = TaskStatus.Succeeded(100, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
                                applicationId: String = "app_12345",
+                               isTransient: Boolean = false,
+                               isRawFilesJob: Boolean = false,
+                               schemaChanges: Seq[SchemaDifference] = Seq.empty,
+                               dependencyWarningTables: Seq[String] = Seq.empty,
                                options: Map[String, String] = Map.empty[String, String]): TaskNotification = {
-    TaskNotification(tableName, infoDate, started, finished, status, applicationId, options)
+    TaskNotification(tableName, infoDate, started, finished, status, applicationId, isTransient, isRawFilesJob, schemaChanges, dependencyWarningTables, options)
   }
 
 }

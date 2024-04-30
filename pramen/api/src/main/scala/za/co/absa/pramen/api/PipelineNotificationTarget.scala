@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify.pipeline
+package za.co.absa.pramen.api
 
-import java.time.LocalDate
+import java.time.Instant
 
-case class SchemaDifference(
-                          tableName: String,
-                          infoDateOld: LocalDate,
-                          infoDateNew: LocalDate,
-                          changes: List[FieldChange]
-                        )
+trait PipelineNotificationTarget extends ExternalChannel {
+  /** Sends a notification after completion of the pipeline. */
+  def sendNotification(pipelineStarted: Instant,
+                       appException: Option[Throwable],
+                       tasksCompleted: Seq[TaskNotification]): Unit
+}

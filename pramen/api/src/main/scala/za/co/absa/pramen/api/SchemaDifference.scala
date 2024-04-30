@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify.pipeline
+package za.co.absa.pramen.api
 
-sealed trait FieldChange
+import java.time.LocalDate
 
-object FieldChange {
-  case class NewField(columnName: String, dataType: String) extends FieldChange
-
-  case class DeletedField(columnName: String, dataType: String) extends FieldChange
-
-  case class ChangedType(columnName: String, oldType: String, newType: String) extends FieldChange
-}
+case class SchemaDifference(
+                          tableName: String,
+                          infoDateOld: LocalDate,
+                          infoDateNew: LocalDate,
+                          changes: List[FieldChange]
+                        )

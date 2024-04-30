@@ -23,7 +23,7 @@ import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.notify.pipeline.FieldChange._
+import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.core.pipeline.TransformExpression
 import za.co.absa.pramen.core.samples.SampleCaseClass2
 import za.co.absa.pramen.core.utils.SparkUtils

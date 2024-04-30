@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
