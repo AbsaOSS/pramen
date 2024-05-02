@@ -2624,7 +2624,28 @@ pramen.operations = [
 ```
 </details>
 
-## Notifications
+## Pipeline Notifications
+Custom pipeline notification targets allow execution arbitrary actions after the pipeline is finished. Usually, it is 
+used to send custom notifications to external systems. A pipeline notification target can be created by implementing
+`PipelineNotificationTarget` interface:
+```scala
+package com.example
+
+import za.co.absa.pramen.api.PipelineNotificationTarget
+
+class MyPipelineNotificationTarget extends PipelineNotificationTarget {
+  def sendNotification(pipelineStarted: Instant,
+                       appException: Option[Throwable],
+                       tasksCompleted: Seq[TaskNotification]): Unit = ???
+}
+```
+
+Pipeline notification targets can be registered in the workflow configuration:
+```hocon
+pramen.pipeline.notification.targets = [ "com.example.MyPipelineNotificationTarget" ]
+```
+
+## Job Notifications
 If you need to react on a completion event of any job, you can do it using notification targets. A notification target 
 is a component that you can implement and register for any operation or table. The notification target will be called 
 when the operation or job completes. Usually it is used to send an event to trigger actions outside the Pramen pipeline.
