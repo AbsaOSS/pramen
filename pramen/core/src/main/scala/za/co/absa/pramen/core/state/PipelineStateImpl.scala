@@ -19,11 +19,12 @@ package za.co.absa.pramen.core.state
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.{Signal, SignalHandler}
-import za.co.absa.pramen.api.NotificationBuilder
+import za.co.absa.pramen.api.{NotificationBuilder, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
 import za.co.absa.pramen.core.exceptions.{OsSignalException, ThreadStackTrace}
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
+import za.co.absa.pramen.core.notify.{NotificationTargetManager, PipelineNotificationTargetFactory}
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
 import za.co.absa.pramen.core.runner.task.RunStatus.NotRan
@@ -45,6 +46,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val environmentName = conf.getString(ENVIRONMENT_NAME)
   private val sendEmailIfNoNewData: Boolean = conf.getBoolean(EMAIL_IF_NO_CHANGES)
   private val hookConfig = HookConfig.fromConfig(conf)
+  private val pipelineNotificationTargets = PipelineNotificationTargetFactory.fromConfig(conf)
 
   // State
   private val startedInstant = Instant.now
@@ -84,6 +86,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   override def setSuccess(): Unit = synchronized {
     if (!alreadyFinished()) {
       exitedNormally = true
+      sendCustomNotifications()
       runCustomShutdownHook()
       sendNotificationEmail()
     }
@@ -96,6 +99,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       }
       exitCode |= EXIT_CODE_APP_FAILED
       exitedNormally = false
+      sendCustomNotifications()
       runCustomShutdownHook()
       sendNotificationEmail()
     }
@@ -133,6 +137,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
           failureException = Some(new IllegalStateException("The application exited unexpectedly."))
         }
 
+        sendCustomNotifications()
         runCustomShutdownHook()
         sendNotificationEmail()
         Try {
@@ -163,6 +168,44 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
             setFailure("running the shutdown hook", ex)
           }
       }
+    }
+  }
+
+  private[state] def sendCustomNotifications(): Unit = {
+    val taskNotifications = taskResults.flatMap { task =>
+      NotificationTargetManager.runStatusToTaskStatus(task.runStatus).map(taskStatus =>
+        TaskNotification(
+          task.job.outputTable.name,
+          task.runInfo.get.infoDate,
+          task.runInfo.get.started,
+          task.runInfo.get.finished,
+          taskStatus,
+          task.applicationId,
+          task.isTransient,
+          task.isRawFilesJob,
+          task.schemaChanges,
+          task.dependencyWarnings.map(_.table),
+          Map.empty
+        )
+      )
+    }.toSeq
+
+    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, taskNotifications))
+  }
+
+  private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, taskNotifications: Seq[TaskNotification]): Unit = {
+    try {
+      pipelineNotificationTarget.sendNotification(
+        startedInstant,
+        failureException,
+        taskNotifications
+      )
+    } catch {
+      case ex: Throwable =>
+        log.error(s"Unable to send a notification to the custom notification target: ${pipelineNotificationTarget.getClass.getName}", ex)
+        if (failureException.isEmpty) {
+          setFailure("running the shutdown hook", ex)
+        }
     }
   }
 
