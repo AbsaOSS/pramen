@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.notify.pipeline
 
 import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
-import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 import java.time.Instant
 
@@ -39,6 +39,8 @@ trait PipelineNotificationBuilder {
   def addRpsMetrics(minRps: Int, goodRps: Int): Unit
 
   def addCompletedTask(completedTask: TaskResult): Unit
+
+  def addPipelineNotificationFailure(failure: PipelineNotificationFailure): Unit
 
   def addCustomEntries(entries: Seq[NotificationEntry]): Unit
 
