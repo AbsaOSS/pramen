@@ -2631,12 +2631,15 @@ used to send custom notifications to external systems. A pipeline notification t
 ```scala
 package com.example
 
+import com.typesafe.config.Config
 import za.co.absa.pramen.api.PipelineNotificationTarget
 
-class MyPipelineNotificationTarget extends PipelineNotificationTarget {
-  def sendNotification(pipelineStarted: Instant,
+class MyPipelineNotificationTarget(conf: Config) extends PipelineNotificationTarget {
+  override def sendNotification(pipelineStarted: Instant,
                        appException: Option[Throwable],
                        tasksCompleted: Seq[TaskNotification]): Unit = ???
+
+  override def config: Config = conf
 }
 ```
 
