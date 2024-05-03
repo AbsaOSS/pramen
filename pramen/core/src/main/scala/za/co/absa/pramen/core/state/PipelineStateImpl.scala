@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.notify.{NotificationTargetManager, PipelineNotific
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
 import za.co.absa.pramen.core.runner.task.RunStatus.NotRan
-import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer
@@ -52,6 +52,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val startedInstant = Instant.now
   @volatile private var exitCode = EXIT_CODE_SUCCESS
   private val taskResults = new ListBuffer[TaskResult]
+  private val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
   @volatile private var failureException: Option[Throwable] = None
   @volatile private var exitedNormally = false
   @volatile private var isFinished = false
@@ -203,9 +204,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     } catch {
       case ex: Throwable =>
         log.error(s"Unable to send a notification to the custom notification target: ${pipelineNotificationTarget.getClass.getName}", ex)
-        if (failureException.isEmpty) {
-          setFailure("running the shutdown hook", ex)
-        }
+        pipelineNotificationFailures += PipelineNotificationFailure(pipelineNotificationTarget.getClass.getName, ex)
     }
   }
 
@@ -230,6 +229,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         startedInstant,
         finishedInstant,
         realTaskResults.toList,
+        pipelineNotificationFailures.toList,
         customEntries.toList,
         customSignature.toList)
       if (realTaskResults.nonEmpty || sendEmailIfNoNewData || failureException.nonEmpty) {

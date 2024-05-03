@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_MEGABYTES, MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
 import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.task.RunStatus._
-import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus, TaskResult}
+import za.co.absa.pramen.core.runner.task.{NotificationFailure, PipelineNotificationFailure, RunStatus, TaskResult}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
@@ -64,6 +64,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   var customSignature = Seq.empty[TextElement]
 
   val completedTasks = new ListBuffer[TaskResult]
+  val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
   val customEntries = new ListBuffer[NotificationEntry]
 
   override def addFailureException(ex: Throwable): Unit = {
@@ -102,6 +103,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   override def addCompletedTask(completedTask: TaskResult): Unit = {
     completedTasks += completedTask
+  }
+
+  override def addPipelineNotificationFailure(failure: PipelineNotificationFailure): Unit = {
+    pipelineNotificationFailures += failure
   }
 
   override def addCustomEntries(entries: Seq[NotificationEntry]): Unit = customEntries ++= entries
@@ -145,6 +150,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           case _                    => // Do nothing
         }
       })
+
+    renderPipelineNotificationFailures(builder)
 
     val notificationTargetErrors = completedTasks.flatMap(_.notificationTargetErrors)
 
@@ -254,8 +261,9 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       val hasTaskWarnings = task.runStatus.isInstanceOf[RunStatus.Succeeded] && task.runStatus.asInstanceOf[RunStatus.Succeeded].warnings.nonEmpty
       val hasSkippedWithWarnings = task.runStatus.isInstanceOf[RunStatus.Skipped] && task.runStatus.asInstanceOf[RunStatus.Skipped].isWarning
       val hasSchemaChanges = task.schemaChanges.nonEmpty
+      val hasPipelineNotificationFailures = pipelineNotificationFailures.nonEmpty
 
-      hasDependencyWarnings || hasNotificationErrors || hasTaskWarnings || hasSkippedWithWarnings || hasSchemaChanges
+      hasDependencyWarnings || hasNotificationErrors || hasTaskWarnings || hasSkippedWithWarnings || hasSchemaChanges || hasPipelineNotificationFailures
     }
   }
 
@@ -411,6 +419,16 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     })
 
     builder.withTable(tableBuilder)
+  }
+
+  private[core] def renderPipelineNotificationFailures(builder: MessageBuilderHtml): MessageBuilder = {
+    pipelineNotificationFailures.foreach { failure =>
+      val notificationErrorsParagraph = ParagraphBuilder()
+        .withText(s"Failed to send pipeline notification via '${failure.notificationTarget}': ", Style.Exception)
+      builder.withParagraph(notificationErrorsParagraph)
+      renderException(builder, failure.ex)
+    }
+    builder
   }
 
   private[core] def renderNotificationTargetErrors(builder: MessageBuilderHtml, notificationTargetErrors: ListBuffer[NotificationFailure]): MessageBuilder = {

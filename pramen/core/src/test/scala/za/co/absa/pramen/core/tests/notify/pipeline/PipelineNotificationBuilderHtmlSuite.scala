@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.mocks.{RunStatusFactory, SchemaDifferenceFactory, 
 import za.co.absa.pramen.core.notify.message.{MessageBuilderHtml, ParagraphBuilder}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
 import za.co.absa.pramen.core.pipeline.TaskRunReason
-import za.co.absa.pramen.core.runner.task.{NotificationFailure, RunStatus}
+import za.co.absa.pramen.core.runner.task.{NotificationFailure, PipelineNotificationFailure, RunStatus}
 import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.{Instant, LocalDate}
@@ -252,6 +252,27 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
           |Last <b>stderr</b> lines:
           |stderr line 1
           |</pre>""".stripMargin.replaceAll("\\r\\n", "\\n")
+      ))
+    }
+  }
+
+  "renderPipelineNotificationFailures" should {
+    "render pipeline failure as an exception" in {
+      val notificationBuilder = getBuilder
+      val messageBuilder = new MessageBuilderHtml
+
+      val ex = new RuntimeException("Test exception")
+      notificationBuilder.addPipelineNotificationFailure(PipelineNotificationFailure("com.example.MyNotification", ex))
+
+      val actual = notificationBuilder.renderPipelineNotificationFailures(messageBuilder)
+        .renderBody
+
+      assert(actual.contains(
+        """<body><p><span class="tdred">Failed to send pipeline notification via 'com.example.MyNotification': </span></p>""".stripMargin.replaceAll("\\r\\n", "\\n")
+      ))
+
+      assert(actual.contains(
+        """<pre>java.lang.RuntimeException: Test exception""".stripMargin.replaceAll("\\r\\n", "\\n")
       ))
     }
   }

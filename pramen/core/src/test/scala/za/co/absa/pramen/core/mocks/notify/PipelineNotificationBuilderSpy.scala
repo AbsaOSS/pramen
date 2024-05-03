@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.mocks.notify
 
 import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilder
-import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 import java.time.Instant
 
@@ -36,6 +36,7 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   var customSignature = Seq.empty[TextElement]
 
   var addCompletedTaskCalled = 0
+  var addPipelineNotificationFailure = 0
   var addCustomEntriesCalled = 0
 
   override def addFailureException(ex: Throwable): Unit = failureException = Option(ex)
@@ -61,6 +62,8 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   }
 
   override def addCompletedTask(completedTask: TaskResult): Unit = addCompletedTaskCalled += 1
+
+  override def addPipelineNotificationFailure(failure: PipelineNotificationFailure): Unit = addPipelineNotificationFailure += 1
 
   override def addCustomEntries(entries: Seq[NotificationEntry]): Unit = addCustomEntriesCalled += 1
 
