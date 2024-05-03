@@ -2636,8 +2636,9 @@ import za.co.absa.pramen.api.PipelineNotificationTarget
 
 class MyPipelineNotificationTarget(conf: Config) extends PipelineNotificationTarget {
   override def sendNotification(pipelineStarted: Instant,
-                       appException: Option[Throwable],
-                       tasksCompleted: Seq[TaskNotification]): Unit = ???
+                                applicationId: Option[String],
+                                appException: Option[Throwable],
+                                tasksCompleted: Seq[TaskNotification]): Unit = ???
 
   override def config: Config = conf
 }

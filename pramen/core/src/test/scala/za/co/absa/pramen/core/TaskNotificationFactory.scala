@@ -22,9 +22,9 @@ import java.time.{Instant, LocalDate}
 
 object TaskNotificationFactory {
   def getDummyTaskNotification(tableName: String = "dummy_table",
-                               infoDate: LocalDate = LocalDate.of(2022, 2, 18),
-                               started: Instant = Instant.ofEpochMilli(1613600000000L),
-                               finished: Instant = Instant.ofEpochMilli(1672759508000L),
+                               infoDate: Option[LocalDate] = Some(LocalDate.of(2022, 2, 18)),
+                               started: Option[Instant] = Some(Instant.ofEpochMilli(1613600000000L)),
+                               finished: Option[Instant] = Some(Instant.ofEpochMilli(1672759508000L)),
                                status: TaskStatus = TaskStatus.Succeeded(100, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
                                applicationId: String = "app_12345",
                                isTransient: Boolean = false,

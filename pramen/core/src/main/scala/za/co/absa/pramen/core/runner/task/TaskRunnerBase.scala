@@ -20,7 +20,6 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api
 import za.co.absa.pramen.api.{DataFormat, Reason, SchemaDifference, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -394,9 +393,9 @@ abstract class TaskRunnerBase(conf: Config,
       NotificationTargetManager.runStatusToTaskStatus(result.runStatus).foreach { taskStatus =>
         val notification = TaskNotification(
           task.job.outputTable.name,
-          task.infoDate,
-          result.runInfo.get.started,
-          result.runInfo.get.finished,
+          Option(task.infoDate),
+          result.runInfo.map(_.started),
+          result.runInfo.map(_.finished),
           taskStatus,
           result.applicationId,
           result.isTransient,
@@ -441,7 +440,7 @@ abstract class TaskRunnerBase(conf: Config,
         if (diff.nonEmpty) {
           log.warn(s"$WARNING SCHEMA CHANGE for $table from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
           bookkeeper.saveSchema(table.name, infoDate, df.schema)
-          api.SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil
+          SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil
         } else {
           Nil
         }

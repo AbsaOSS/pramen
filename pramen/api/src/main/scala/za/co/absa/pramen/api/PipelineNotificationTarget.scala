@@ -21,6 +21,7 @@ import java.time.Instant
 trait PipelineNotificationTarget extends ExternalChannel {
   /** Sends a notification after completion of the pipeline. */
   def sendNotification(pipelineStarted: Instant,
+                       applicationId: Option[String],
                        appException: Option[Throwable],
                        tasksCompleted: Seq[TaskNotification]): Unit
 }
