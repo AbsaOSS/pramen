@@ -20,9 +20,9 @@ import java.time.{Instant, LocalDate}
 
 case class TaskNotification(
                              tableName: String,
-                             infoDate: LocalDate,
-                             started: Instant,
-                             finished: Instant,
+                             infoDate: Option[LocalDate],
+                             started: Option[Instant],
+                             finished: Option[Instant],
                              status: TaskStatus,
                              applicationId: String,
                              isTransient: Boolean,
