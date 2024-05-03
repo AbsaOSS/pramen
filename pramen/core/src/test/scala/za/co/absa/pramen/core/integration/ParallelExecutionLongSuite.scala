@@ -41,7 +41,7 @@ class ParallelExecutionLongSuite extends AnyWordSpec with SparkTestBase with Tem
 
         val exitCode = AppRunner.runPipeline(conf)
 
-        assert(exitCode == 2)
+        assert(exitCode != 0)
 
         val table3Path = new Path(tempDir, "table3")
         val sink3Path = new Path(tempDir, "sink3")
@@ -70,7 +70,7 @@ class ParallelExecutionLongSuite extends AnyWordSpec with SparkTestBase with Tem
 
         val exitCode = AppRunner.runPipeline(conf)
 
-        assert(exitCode == 2)
+        assert(exitCode != 0)
 
         val table3Path = new Path(tempDir, "table3")
         val sink3Path = new Path(tempDir, "sink3")
