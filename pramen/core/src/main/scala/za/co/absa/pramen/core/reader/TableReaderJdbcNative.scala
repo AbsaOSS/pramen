@@ -102,11 +102,11 @@ object TableReaderJdbcNative {
   }
 
   def getFilteredSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
-    val f1 = StringUtils.replaceFormattedDate(sqlExpression, "@dateFrom", infoDateBegin)
-    val f2 = StringUtils.replaceFormattedDate(f1, "@dateTo", infoDateEnd)
-    val f3 = StringUtils.replaceFormattedDate(f2, "@date", infoDateEnd)
-    val f4 = StringUtils.replaceFormattedDate(f3, "@infoDateBegin", infoDateBegin)
-    val f5 = StringUtils.replaceFormattedDate(f4, "@infoDateEnd", infoDateEnd)
-    StringUtils.replaceFormattedDate(f5, "@infoDate", infoDateEnd)
+    val f1 = StringUtils.replaceFormattedDateExpression(sqlExpression, "dateFrom", infoDateBegin)
+    val f2 = StringUtils.replaceFormattedDateExpression(f1, "dateTo", infoDateEnd)
+    val f3 = StringUtils.replaceFormattedDateExpression(f2, "date", infoDateEnd)
+    val f4 = StringUtils.replaceFormattedDateExpression(f3, "infoDateBegin", infoDateBegin)
+    val f5 = StringUtils.replaceFormattedDateExpression(f4, "infoDateEnd", infoDateEnd)
+    StringUtils.replaceFormattedDateExpression(f5, "infoDate", infoDateEnd)
   }
 }

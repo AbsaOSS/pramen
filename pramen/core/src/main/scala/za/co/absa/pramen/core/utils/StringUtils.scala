@@ -195,9 +195,37 @@ object StringUtils {
     base + details
   }
 
-  def replaceFormattedDate(template: String, dateVar: String, date: LocalDate): String = {
+  /**
+    * Replaces a template with date substitution.
+    *
+    * For example, given
+    * {{{
+    *   SELECT * FROM my_table_@date%yyyyMMdd% WHERE a = b
+    * }}}
+    * and date is '2022-02-18' the result is:
+    * {{{
+    *   SELECT * FROM my_table_20220218 WHERE a = b
+    * }}}
+    *
+    * and with date substitution:
+    * {{{
+    *   SELECT * FROM my_table_@{plusMonths(@date, 1)}%yyyyMMdd% WHERE a = b
+    * }}}
+    * the result is
+    * {{{
+    *   SELECT * FROM my_table_20220318 WHERE a = b
+    * }}}
+    *
+    *
+    * @param template A template to replace variablesin.
+    * @param dateVar A variable name for the date (does not include '@') - case sensitive.
+    * @param date The date to replace the the variable with.
+    * @return The processed template.
+    */
+  def replaceFormattedDateExpression(template: String, dateVar: String, date: LocalDate): String = {
     val output = new StringBuilder()
     val outputPartial = new StringBuilder()
+    val outputExpression = new StringBuilder()
     var state = 0
     var i = 0
     var j = 0
@@ -206,16 +234,26 @@ object StringUtils {
     val CATCH_VARIABLE = 1
     val END_OF_VARIABLE = 2
     val END_OF_FORMAT = 3
+    val DATE_EXPRESSION = 4
+
+    val expr = new DateExprEvaluator
+    expr.setValue(dateVar, date)
 
     while (i < template.length) {
       val c = template(i)
       state match {
         case STATE_TEMPLATE_AS_IS =>
-          if (c == dateVar(0)) {
-            state = CATCH_VARIABLE
-            j = 1
+          if (c == '@') {
+            outputExpression.clear()
             outputPartial.clear()
-            outputPartial.append(s"$c")
+            if (i < template.length - 2 && template(i + 1) == '{') {
+              i += 1
+              state = DATE_EXPRESSION
+            } else {
+              state = CATCH_VARIABLE
+              j = 0
+              outputPartial.append(s"$c")
+            }
           } else {
             output.append(s"$c")
           }
@@ -239,22 +277,49 @@ object StringUtils {
             state = END_OF_FORMAT
             outputPartial.clear()
           } else {
-            output.append(s"$date$c")
+            if (outputExpression.nonEmpty) {
+              val calculatedDate = expr.evalDate(outputExpression.toString())
+              output.append(s"$calculatedDate$c")
+            } else {
+              output.append(s"$date$c")
+            }
             state = STATE_TEMPLATE_AS_IS
           }
         case END_OF_FORMAT =>
           if (c == '%') {
             state = STATE_TEMPLATE_AS_IS
-            val formatter = DateTimeFormatter.ofPattern(outputPartial.toString())
-            output.append(s"${formatter.format(date)}")
+            if (outputExpression.nonEmpty) {
+              val calculatedDate = expr.evalDate(outputExpression.toString())
+              val formatter = DateTimeFormatter.ofPattern(outputPartial.toString())
+              output.append(s"${formatter.format(calculatedDate)}")
+            } else {
+              val formatter = DateTimeFormatter.ofPattern(outputPartial.toString())
+              output.append(s"${formatter.format(date)}")
+            }
           } else {
             outputPartial.append(s"$c")
           }
+        case DATE_EXPRESSION =>
+          if (c == '}') {
+            state = END_OF_VARIABLE
+            if (i == template.length - 1) {
+              val calculatedDate = expr.evalDate(outputExpression.toString())
+              output.append(s"$calculatedDate")
+            }
+          } else {
+            outputExpression.append(s"$c")
+          }
+
       }
       i += 1
     }
+    if (state == DATE_EXPRESSION) {
+      throw new IllegalArgumentException(s"No matching '{' in the date expression: $template")
+    }
+    if (state == END_OF_FORMAT) {
+      throw new IllegalArgumentException(s"No matching '%' in the formatted date expression: $template")
+    }
     output.toString()
   }
-
 
 }

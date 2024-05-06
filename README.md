@@ -1929,6 +1929,41 @@ Here is an example configuration for a JDBC source:
 }
 ```
 
+You can use date expressions and formatted dates in sql expressions. You can wrap date expressions in `@{}` and use
+variables like `@infoDate` and date functions referenced below inside curly braces. And you can apply formatting to variables
+using `%format%` (like `%yyyy-MM-dd%`) after variables or expressions.
+Examples:
+
+For
+```hocon
+sql = "SELECT * FROM my_table_@infoDate%yyyyMMdd% WHERE a = b"
+```
+the result would look like:
+```sql
+SELECT * FROM my_table_20220218 WHERE a = b
+```
+
+For
+```hocon
+sql = "SELECT * FROM my_table WHERE snapshot_date = date'@{beginOfMonth(minusMonths(@infoDate, 1))}'"
+```
+the result would look like:
+```sql
+-- the beginning of the previous month
+SELECT * FROM my_table WHERE snapshot_date = date'2022-01-01'
+```
+
+For
+```hocon
+sql = "SELECT * FROM my_table_@{plusMonths(@infoDate, 1)}%yyyyMMdd% WHERE a = b"
+```
+the result would look like:
+```sql
+SELECT * FROM my_table_20220318 WHERE a = b
+--                          ^the month is 3 (next month)
+```
+
+
 The above example also shows how you can add a pre-ingestion validation on the number of records in the table
 using `minimum.records` parameter.
 
