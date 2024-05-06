@@ -21,7 +21,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.utils.{JdbcNativeUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{JdbcNativeUtils, StringUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
@@ -45,7 +45,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val start = Instant.now()
-    val sql = getFilteredSql(getSqlExpression(query), infoDateBegin, infoDateEnd, infoDateFormatter)
+    val sql = getFilteredSql(getSqlExpression(query), infoDateBegin, infoDateEnd)
     log.info(s"JDBC Native count of: $sql")
     val count = JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
     val finish = Instant.now()
@@ -57,7 +57,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     log.info(s"JDBC Native data of: $query")
     query match {
-      case Query.Sql(sql)     => getDataFrame(getFilteredSql(sql, infoDateBegin, infoDateEnd, infoDateFormatter))
+      case Query.Sql(sql)     => getDataFrame(getFilteredSql(sql, infoDateBegin, infoDateEnd))
       case Query.Table(table) => getDataFrame(getSqlDataQuery(table, infoDateBegin, infoDateEnd, columns))
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
     }
@@ -101,13 +101,12 @@ object TableReaderJdbcNative {
     new TableReaderJdbcNative(tableReaderJdbc, urlSelector, conf)
   }
 
-  def getFilteredSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, formatter: DateTimeFormatter): String = {
-    sqlExpression
-      .replaceAll("@dateFrom", formatter.format(infoDateBegin))
-      .replaceAll("@dateTo", formatter.format(infoDateEnd))
-      .replaceAll("@date", formatter.format(infoDateEnd))
-      .replaceAll("@infoDateBegin", formatter.format(infoDateBegin))
-      .replaceAll("@infoDateEnd", formatter.format(infoDateEnd))
-      .replaceAll("@infoDate", formatter.format(infoDateEnd))
+  def getFilteredSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
+    val f1 = StringUtils.replaceFormattedDate(sqlExpression, "@dateFrom", infoDateBegin)
+    val f2 = StringUtils.replaceFormattedDate(f1, "@dateTo", infoDateEnd)
+    val f3 = StringUtils.replaceFormattedDate(f2, "@date", infoDateEnd)
+    val f4 = StringUtils.replaceFormattedDate(f3, "@infoDateBegin", infoDateBegin)
+    val f5 = StringUtils.replaceFormattedDate(f4, "@infoDateEnd", infoDateEnd)
+    StringUtils.replaceFormattedDate(f5, "@infoDate", infoDateEnd)
   }
 }

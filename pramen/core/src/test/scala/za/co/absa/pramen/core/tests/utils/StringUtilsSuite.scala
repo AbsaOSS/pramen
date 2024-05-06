@@ -227,4 +227,72 @@ class StringUtilsSuite extends AnyWordSpec {
     }
   }
 
+  "replaceFormattedDate" should {
+    val infoDate = LocalDate.of(2022, 2, 18)
+
+    "work with normal variables" in {
+      val template = "SELECT @dat FROM my_table_@date + 1"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "SELECT @dat FROM my_table_2022-02-18 + 1")
+    }
+
+    "work with variables at the end" in {
+      val template = "SELECT @dat FROM my_table_@date"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "SELECT @dat FROM my_table_2022-02-18")
+    }
+
+    "work with just variables" in {
+      val template = "@date"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "2022-02-18")
+    }
+
+    "work with 2 variables" in {
+      val template = "@date @date"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "2022-02-18 2022-02-18")
+    }
+
+    "work with formatted variables" in {
+      val template = "SELECT * FROM my_table_@date%yyyyMMdd% WHERE a = b"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "SELECT * FROM my_table_20220218 WHERE a = b")
+    }
+
+    "work with just formatted variables" in {
+      val template = "@date%yyyyMMdd%"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "20220218")
+    }
+
+    "work with 2 formatted variables" in {
+      val template = "@date%yyyyMMdd%@date%ddMMyyy%"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "2022021818022022")
+    }
+
+    "work with partial formatter" in {
+      val template = "@date%yyyyMM%"
+
+      val replaced = replaceFormattedDate(template, "@date", infoDate)
+
+      assert(replaced == "202202")
+    }
+  }
+
 }

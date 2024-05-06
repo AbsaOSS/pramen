@@ -16,9 +16,11 @@
 
 package za.co.absa.pramen.core.utils
 
-import za.co.absa.pramen.core.exceptions.{OsSignalException, ThreadStackTrace}
+import za.co.absa.pramen.core.exceptions.ThreadStackTrace
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import java.util.{Base64, StringTokenizer}
 import scala.compat.Platform.EOL
 import scala.util.control.NonFatal
@@ -192,5 +194,67 @@ object StringUtils {
 
     base + details
   }
+
+  def replaceFormattedDate(template: String, dateVar: String, date: LocalDate): String = {
+    val output = new StringBuilder()
+    val outputPartial = new StringBuilder()
+    var state = 0
+    var i = 0
+    var j = 0
+
+    val STATE_TEMPLATE_AS_IS = 0
+    val CATCH_VARIABLE = 1
+    val END_OF_VARIABLE = 2
+    val END_OF_FORMAT = 3
+
+    while (i < template.length) {
+      val c = template(i)
+      state match {
+        case STATE_TEMPLATE_AS_IS =>
+          if (c == dateVar(0)) {
+            state = CATCH_VARIABLE
+            j = 1
+            outputPartial.clear()
+            outputPartial.append(s"$c")
+          } else {
+            output.append(s"$c")
+          }
+        case CATCH_VARIABLE =>
+          outputPartial.append(s"$c")
+          if (c == dateVar(j)) {
+            j += 1
+            if (j == dateVar.length) {
+              state = END_OF_VARIABLE
+              if (i == template.length - 1) {
+                output.append(s"$date")
+              }
+            }
+          } else {
+            output.append(s"${outputPartial.toString()}")
+            outputPartial.clear()
+            state = STATE_TEMPLATE_AS_IS
+          }
+        case END_OF_VARIABLE =>
+          if (c == '%') {
+            state = END_OF_FORMAT
+            outputPartial.clear()
+          } else {
+            output.append(s"$date$c")
+            state = STATE_TEMPLATE_AS_IS
+          }
+        case END_OF_FORMAT =>
+          if (c == '%') {
+            state = STATE_TEMPLATE_AS_IS
+            val formatter = DateTimeFormatter.ofPattern(outputPartial.toString())
+            output.append(s"${formatter.format(date)}")
+          } else {
+            outputPartial.append(s"$c")
+          }
+      }
+      i += 1
+    }
+    output.toString()
+  }
+
 
 }

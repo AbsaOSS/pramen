@@ -194,11 +194,11 @@ object SparkUtils {
 
   def applyFilters(df: DataFrame, filters: Seq[String], infoDate: LocalDate, dateFrom: LocalDate, dateTo: LocalDate): DataFrame = {
     filters.foldLeft(df)((df, filter) => {
-      val actualFilter = filter
-        .replaceAll("@dateFrom", s"${dateFrom.toString}")
-        .replaceAll("@dateTo", s"${dateTo.toString}")
-        .replaceAll("@date", s"${infoDate.toString}")
-        .replaceAll("@infoDate", s"date'${infoDate.toString}'")
+      val f1 = StringUtils.replaceFormattedDate(filter, "@dateFrom", dateFrom)
+      val f2 = StringUtils.replaceFormattedDate(f1, "@dateTo", dateTo)
+      val f3 = StringUtils.replaceFormattedDate(f2, "@date", infoDate)
+      val actualFilter = f3.replaceAll("@infoDate", s"date'${infoDate.toString}'")
+
       log.info(s"Applying filter: $actualFilter")
       df.filter(expr(actualFilter))
     })
