@@ -103,6 +103,7 @@ object AppRunner {
                                      state: PipelineState,
                                      spark: SparkSession): Try[AppContext] = {
     handleFailure(Try {
+      PramenImpl.instance.asInstanceOf[PramenImpl].setPipelineState(state)
       AppContextImpl(conf)
     }, state, "initialization of the pipeline")
   }
