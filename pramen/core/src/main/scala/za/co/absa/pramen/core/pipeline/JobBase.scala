@@ -95,7 +95,7 @@ abstract class JobBase(operationDef: OperationDef,
       case Failure(ex) =>
         if (outputTableDef.hiveConfig.ignoreFailures) {
           val cause = if (ex.getCause != null) s" ${ex.getCause.getMessage}" else ""
-          val msg = s"Failed to create or repair Hive table '${outputTableDef.hiveTable.get}': ${ex.getMessage}$cause"
+          val msg = s"Failed to create or update Hive table '${outputTableDef.hiveTable.get}': ${ex.getMessage}$cause"
           log.error(s"$FAILURE $msg")
           Seq(msg)
         } else {

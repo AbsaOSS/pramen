@@ -230,10 +230,10 @@ object StringUtils {
     var i = 0
     var j = 0
 
-    val STATE_TEMPLATE_AS_IS = 0
-    val CATCH_VARIABLE = 1
+    val COPY_FROM_TEMPLATE = 0
+    val POSSIBLE_VARIABLE = 1
     val END_OF_VARIABLE = 2
-    val END_OF_FORMAT = 3
+    val FORMAT_EXPRESSION = 3
     val DATE_EXPRESSION = 4
 
     val expr = new DateExprEvaluator
@@ -242,7 +242,7 @@ object StringUtils {
     while (i < template.length) {
       val c = template(i)
       state match {
-        case STATE_TEMPLATE_AS_IS =>
+        case COPY_FROM_TEMPLATE =>
           if (c == '@') {
             outputExpression.clear()
             outputPartial.clear()
@@ -250,14 +250,14 @@ object StringUtils {
               i += 1
               state = DATE_EXPRESSION
             } else {
-              state = CATCH_VARIABLE
+              state = POSSIBLE_VARIABLE
               j = 0
               outputPartial.append(s"$c")
             }
           } else {
             output.append(s"$c")
           }
-        case CATCH_VARIABLE =>
+        case POSSIBLE_VARIABLE =>
           outputPartial.append(s"$c")
           if (c == dateVar(j)) {
             j += 1
@@ -270,11 +270,11 @@ object StringUtils {
           } else {
             output.append(s"${outputPartial.toString()}")
             outputPartial.clear()
-            state = STATE_TEMPLATE_AS_IS
+            state = COPY_FROM_TEMPLATE
           }
         case END_OF_VARIABLE =>
           if (c == '%') {
-            state = END_OF_FORMAT
+            state = FORMAT_EXPRESSION
             outputPartial.clear()
           } else {
             if (outputExpression.nonEmpty) {
@@ -283,11 +283,11 @@ object StringUtils {
             } else {
               output.append(s"$date$c")
             }
-            state = STATE_TEMPLATE_AS_IS
+            state = COPY_FROM_TEMPLATE
           }
-        case END_OF_FORMAT =>
+        case FORMAT_EXPRESSION =>
           if (c == '%') {
-            state = STATE_TEMPLATE_AS_IS
+            state = COPY_FROM_TEMPLATE
             if (outputExpression.nonEmpty) {
               val calculatedDate = expr.evalDate(outputExpression.toString())
               val formatter = DateTimeFormatter.ofPattern(outputPartial.toString())
@@ -316,7 +316,7 @@ object StringUtils {
     if (state == DATE_EXPRESSION) {
       throw new IllegalArgumentException(s"No matching '{' in the date expression: $template")
     }
-    if (state == END_OF_FORMAT) {
+    if (state == FORMAT_EXPRESSION) {
       throw new IllegalArgumentException(s"No matching '%' in the formatted date expression: $template")
     }
     output.toString()

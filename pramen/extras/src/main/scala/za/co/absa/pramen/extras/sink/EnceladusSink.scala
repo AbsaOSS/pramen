@@ -340,9 +340,9 @@ class EnceladusSink(sinkConfig: Config,
           updateTable(options(HIVE_TABLE_KEY), publishBase, infoDate, infoVersion)
         } match {
           case Success(_)  =>
-            log.info(s"Hive table '${options(HIVE_TABLE_KEY)}' was repaired successfully.")
+            log.info(s"Hive table '${options(HIVE_TABLE_KEY)}' was updated successfully.")
           case Failure(ex) =>
-            throw new IllegalStateException(s"Failed to create or repair Hive table '${options(HIVE_TABLE_KEY)}'.", ex)
+            throw new IllegalStateException(s"Failed to create or update Hive table '${options(HIVE_TABLE_KEY)}'.", ex)
         }
       }
     } else {
