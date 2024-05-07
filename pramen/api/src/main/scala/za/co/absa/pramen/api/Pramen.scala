@@ -45,6 +45,11 @@ trait Pramen {
     * {{{metastore.metadataManager}}}
     */
   def metadataManager: MetadataManager
+
+  /**
+    * Returns the list of tasks completed at the current moment of time.
+    */
+  def getCompletedTasks: Seq[TaskNotification]
 }
 
 object Pramen {

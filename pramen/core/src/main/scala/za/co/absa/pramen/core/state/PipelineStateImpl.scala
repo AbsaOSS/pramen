@@ -173,23 +173,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   private[state] def sendPipelineNotifications(): Unit = {
-    val taskNotifications = taskResults.flatMap { task =>
-      NotificationTargetManager.runStatusToTaskStatus(task.runStatus).map(taskStatus =>
-        TaskNotification(
-          task.job.outputTable.name,
-          task.runInfo.map(_.infoDate),
-          task.runInfo.map(_.started),
-          task.runInfo.map(_.finished),
-          taskStatus,
-          task.applicationId,
-          task.isTransient,
-          task.isRawFilesJob,
-          task.schemaChanges,
-          task.dependencyWarnings.map(_.table),
-          Map.empty
-        )
-      )
-    }.toSeq
+    val taskNotifications = taskResults.flatMap(taskResultToTaskNotification).toSeq
 
     pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, taskNotifications))
   }
@@ -279,4 +263,22 @@ object PipelineStateImpl {
   val EXIT_CODE_APP_FAILED = 1
   val EXIT_CODE_JOB_FAILED = 2
   val EXIT_CODE_SIGNAL_RECEIVED = 4
+
+  private[core] def taskResultToTaskNotification(taskResult: TaskResult): Option[TaskNotification] = {
+    NotificationTargetManager.runStatusToTaskStatus(taskResult.runStatus).map(taskStatus =>
+      TaskNotification(
+        taskResult.job.outputTable.name,
+        taskResult.runInfo.map(_.infoDate),
+        taskResult.runInfo.map(_.started),
+        taskResult.runInfo.map(_.finished),
+        taskStatus,
+        taskResult.applicationId,
+        taskResult.isTransient,
+        taskResult.isRawFilesJob,
+        taskResult.schemaChanges,
+        taskResult.dependencyWarnings.map(_.table),
+        Map.empty
+      )
+    )
+  }
 }

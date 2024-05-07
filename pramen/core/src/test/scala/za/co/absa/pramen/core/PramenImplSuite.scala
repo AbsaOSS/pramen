@@ -17,10 +17,16 @@
 package za.co.absa.pramen.core
 
 import com.typesafe.config.ConfigFactory
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
+import za.co.absa.pramen.core.mocks.{PipelineStateSnapshotFactory, TaskResultFactory}
+import za.co.absa.pramen.core.runner.task.RunStatus
+import za.co.absa.pramen.core.state.PipelineState
+
+import java.time.LocalDate
 
 class PramenImplSuite extends AnyWordSpec {
   "instance()" should {
@@ -98,6 +104,41 @@ class PramenImplSuite extends AnyWordSpec {
 
       assertThrows[IllegalStateException] {
         PramenImpl.instance.metadataManager
+      }
+    }
+  }
+
+  "getCompletedTasks()" should {
+    "return the metadata manager if it is available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      val taskResults = Seq(
+        TaskResultFactory.getDummyTaskResult(),
+        TaskResultFactory.getDummyTaskResult(runInfo = None),
+        TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.NotRan)
+      )
+
+      val pipelineState = mock(classOf[PipelineState])
+      when(pipelineState.getState()).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
+
+      pramen.setPipelineState(pipelineState)
+
+      val tasks = PramenImpl.instance.getCompletedTasks
+
+      assert(tasks.length == 2)
+      assert(tasks.head.infoDate.contains(LocalDate.of(2022, 2, 18)))
+      assert(tasks(1).infoDate.isEmpty)
+
+      pramen.setPipelineState(null)
+    }
+
+    "throw an exception if the state is not available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      pramen.setPipelineState(null)
+
+      assertThrows[IllegalStateException] {
+        PramenImpl.instance.getCompletedTasks
       }
     }
   }

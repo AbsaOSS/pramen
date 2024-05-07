@@ -17,8 +17,8 @@
 package za.co.absa.pramen.api.mocks
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, Pramen}
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
+import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, Pramen, TaskNotification}
 
 class DummyPramen extends Pramen {
   override def buildProperties: BuildPropertiesRetriever = null
@@ -28,4 +28,6 @@ class DummyPramen extends Pramen {
   override def notificationBuilder: NotificationBuilder = null
 
   override def metadataManager: MetadataManager = null
+
+  override def getCompletedTasks: Seq[TaskNotification] = null
 }
