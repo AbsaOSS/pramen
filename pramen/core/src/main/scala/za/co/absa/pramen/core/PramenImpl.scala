@@ -19,8 +19,8 @@ package za.co.absa.pramen.core
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
-import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, Pramen}
-import za.co.absa.pramen.core.state.NotificationBuilderImpl
+import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, Pramen, TaskNotification}
+import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState, PipelineStateImpl}
 import za.co.absa.pramen.core.utils.BuildPropertyUtils
 
 class PramenImpl extends Pramen {
@@ -29,6 +29,8 @@ class PramenImpl extends Pramen {
   private var _workflowConfig: Option[Config] = None
 
   private var _metadataManager: Option[MetadataManager] = None
+
+  private var _pipelineState: Option[PipelineState] = None
 
   override def buildProperties: BuildPropertiesRetriever = BuildPropertyUtils.instance
 
@@ -42,12 +44,27 @@ class PramenImpl extends Pramen {
     throw new IllegalStateException("Metadata manager is not available at the context.")
   )
 
+  override def getCompletedTasks: Seq[TaskNotification] = {
+    val pipelineState = _pipelineState.getOrElse(
+      throw new IllegalStateException("Pipeline state is not available at the context.")
+    )
+
+    val state = pipelineState.getState()
+
+    state.taskResults.flatMap(PipelineStateImpl.taskResultToTaskNotification)
+  }
+
+
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
     _workflowConfig = Option(config)
   }
 
   private[core] def setMetadataManager(m: MetadataManager): Unit = synchronized {
     _metadataManager = Option(m)
+  }
+
+  private[core] def setPipelineState(s: PipelineState): Unit = synchronized {
+    _pipelineState = Option(s)
   }
 
   private[core] def reset(): Unit = synchronized {
