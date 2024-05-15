@@ -67,7 +67,6 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     setSignalHandler(new Signal("INT"), "SIGINT (Ctrl + C)")
     setSignalHandler(new Signal("TERM"), "SIGTERM (kill)")
     setSignalHandler(new Signal("HUP"), "SIGHUP (network connection to the terminal has been lost)")
-    setSignalHandler(new Signal("PIPE"), "SIGPIPE (attempt to write to a pipe that is no longer available)")
   }
 
   override def getState(): PipelineStateSnapshot = synchronized {
@@ -87,8 +86,6 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   override def setSuccess(): Unit = synchronized {
     if (!alreadyFinished()) {
-      failureException = None
-      exitCode = EXIT_CODE_SUCCESS
       exitedNormally = true
       onAppFinish()
     }
