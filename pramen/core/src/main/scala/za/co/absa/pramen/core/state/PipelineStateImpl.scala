@@ -18,11 +18,10 @@ package za.co.absa.pramen.core.state
 
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
-import sun.misc.{Signal, SignalHandler}
+import sun.misc.Signal
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
-import za.co.absa.pramen.core.exceptions.{OsSignalException, ThreadStackTrace}
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.notify.{NotificationTargetManager, PipelineNotificationTargetFactory}
@@ -31,7 +30,6 @@ import za.co.absa.pramen.core.runner.task.RunStatus.NotRan
 import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 import java.time.Instant
-import scala.collection.JavaConverters._
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -53,7 +51,9 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   @volatile private var exitCode = EXIT_CODE_SUCCESS
   private val taskResults = new ListBuffer[TaskResult]
   private val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
+  private val signalHandlers = new ListBuffer[PramenSignalHandler]
   @volatile private var failureException: Option[Throwable] = None
+  @volatile private var signalException: Option[Throwable] = None
   @volatile private var exitedNormally = false
   @volatile private var isFinished = false
   @volatile private var customShutdownHookCanRun = false
@@ -63,10 +63,11 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   private def init(): Unit = {
     Runtime.getRuntime.addShutdownHook(shutdownHook)
-    Signal.handle(new Signal("INT"), getSignalHandler("SIGINT (Ctrl + C)"))
-    Signal.handle(new Signal("TERM"), getSignalHandler("SIGTERM (kill)"))
-    Signal.handle(new Signal("HUP"), getSignalHandler("SIGHUP (network connection to the terminal has been lost)"))
-    Signal.handle(new Signal("PIPE"), getSignalHandler("SIGPIPE (attempt to write to a pipe that is no longer available)"))
+
+    setSignalHandler(new Signal("INT"), "SIGINT (Ctrl + C)")
+    setSignalHandler(new Signal("TERM"), "SIGTERM (kill)")
+    setSignalHandler(new Signal("HUP"), "SIGHUP (network connection to the terminal has been lost)")
+    setSignalHandler(new Signal("PIPE"), "SIGPIPE (attempt to write to a pipe that is no longer available)")
   }
 
   override def getState(): PipelineStateSnapshot = synchronized {
@@ -86,23 +87,19 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   override def setSuccess(): Unit = synchronized {
     if (!alreadyFinished()) {
+      failureException = None
+      exitCode = EXIT_CODE_SUCCESS
       exitedNormally = true
-      sendPipelineNotifications()
-      runCustomShutdownHook()
-      sendNotificationEmail()
+      onAppFinish()
     }
   }
 
   override def setFailure(stage: String, exception: Throwable): Unit = synchronized {
     if (!alreadyFinished()) {
-      if (failureException.isEmpty) {
-        failureException = Some(exception)
-      }
+      setFailureException(exception)
       exitCode |= EXIT_CODE_APP_FAILED
       exitedNormally = false
-      sendPipelineNotifications()
-      runCustomShutdownHook()
-      sendNotificationEmail()
+      onAppFinish()
     }
   }
 
@@ -131,16 +128,27 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     }
   }
 
+  private[state] def onAppFinish(): Unit = {
+    if (!exitedNormally && failureException.isEmpty && signalException.isDefined) {
+      failureException = signalException
+      exitCode |= EXIT_CODE_SIGNAL_RECEIVED
+    }
+
+    sendPipelineNotifications()
+    runCustomShutdownHook()
+    removeSignalHandlers()
+    sendNotificationEmail()
+  }
+
   private lazy val shutdownHook = new Thread() {
     override def run(): Unit = {
       if (!exitedNormally && !isFinished) {
-        if (failureException.isEmpty) {
-          failureException = Some(new IllegalStateException("The application exited unexpectedly."))
-        }
+        if (failureException.isEmpty && signalException.isEmpty)
+          setFailureException(new IllegalStateException("The application exited unexpectedly."))
 
-        sendPipelineNotifications()
-        runCustomShutdownHook()
-        sendNotificationEmail()
+        isFinished = true
+
+        onAppFinish()
         Try {
           // Clean up transient metastore state if any
           TransientTableManager.reset()
@@ -228,6 +236,11 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     }
   }
 
+  private def removeSignalHandlers(): Unit = {
+    signalHandlers.foreach(handler => handler.unhandle())
+    signalHandlers.clear()
+  }
+
   override def close(): Unit = {
     Try {
       // Ignore runtime exceptions, including "java.lang.IllegalStateException: Shutdown in progress"
@@ -235,25 +248,22 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     }
   }
 
-  private def getSignalHandler(signalName: String): SignalHandler = new SignalHandler {
-    override def handle(sig: Signal): Unit = {
-      val stackTraces = Thread.getAllStackTraces.asScala
+  private def setSignalHandler(signal: Signal, signalName: String): Unit = {
+    val newHandler = new PramenSignalHandler(signal, signalName, this)
+    val oldHandler = Signal.handle(signal, newHandler)
+    newHandler.setOldSignalHandler(oldHandler)
+    signalHandlers.append(newHandler)
+  }
 
-      val nonDaemonStackTraces = stackTraces.flatMap{ case (t: Thread, s: Array[StackTraceElement]) =>
-        if (t.isDaemon) {
-          None
-        } else {
-          Option(ThreadStackTrace(t.getName, s))
-        }
-      }.toSeq
+  private[state] def setFailureException(ex: Throwable): Unit = {
+    if (failureException.isEmpty) {
+      failureException = Option(ex)
+    }
+  }
 
-      val ex = OsSignalException(signalName, nonDaemonStackTraces)
-      if (failureException.isEmpty) {
-        failureException = Some(ex)
-      }
-
-      exitCode |= EXIT_CODE_SIGNAL_RECEIVED
-      System.exit(exitCode)
+  private[state] def setSignalException(ex: Throwable): Unit = {
+    if (signalException.isEmpty) {
+      signalException = Option(ex)
     }
   }
 }
