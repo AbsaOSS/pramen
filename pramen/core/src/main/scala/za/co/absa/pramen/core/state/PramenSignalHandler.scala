@@ -31,7 +31,7 @@ class PramenSignalHandler(signal: Signal, signalName: String, pipelineState: Pip
   override def handle(sig: Signal): Unit = {
     val stackTraces = Thread.getAllStackTraces.asScala
 
-    val nonDaemonStackTraces = stackTraces.flatMap{ case (t: Thread, s: Array[StackTraceElement]) =>
+    val nonDaemonStackTraces = stackTraces.flatMap { case (t: Thread, s: Array[StackTraceElement]) =>
       if (t.isDaemon) {
         None
       } else {
@@ -54,11 +54,9 @@ class PramenSignalHandler(signal: Signal, signalName: String, pipelineState: Pip
     }
   }
 
-  def setOldSignalHandler(signalHandler: SignalHandler): Unit = {
-    oldHandler = Option(signalHandler)
-  }
+  def setOldSignalHandler(signalHandler: SignalHandler): Unit = oldHandler = Option(signalHandler)
 
-  def unhandle(): Unit = {
-    oldHandler.foreach(handler => Signal.handle(signal, handler))
-  }
+  def getOldSignalHandler: Option[SignalHandler] = oldHandler
+
+  def unhandle(): Unit = oldHandler.foreach(handler => Signal.handle(signal, handler))
 }

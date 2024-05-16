@@ -258,11 +258,15 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     }
   }
 
+  private[state] def getFailureException: Option[Throwable] = failureException
+
   private[state] def setSignalException(ex: Throwable): Unit = {
     if (signalException.isEmpty) {
       signalException = Option(ex)
     }
   }
+
+  private[state] def getSignalException: Option[Throwable] = signalException
 }
 
 object PipelineStateImpl {
