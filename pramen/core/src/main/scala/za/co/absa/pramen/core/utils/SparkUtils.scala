@@ -380,6 +380,63 @@ object SparkUtils {
     headers +: rows
   }
 
+  /**
+    * Escapes all columns in Spark DDL. Used to make sure column names are not reserved words.
+    *
+    * Example:
+    * {{{
+    *   Id INT NOT NULL,Name STRING,`System Date` ARRAY<STRING>
+    * }}}
+    * becomes
+    * {{{
+    *   `Id` INT NOT NULL,`Name` STRING,`System Date` ARRAY<STRING>
+    * }}}
+    * @param sparkDdlExpr An expression as a Spark DDL (df.schema.toDDL)
+    * @return The same DDL with all column names escaped.
+    */
+  def escapeColumnsSparkDDL(sparkDdlExpr: String): String = {
+    val output = new StringBuilder()
+    val token = new StringBuilder()
+
+    var state = 0
+    var i = 0
+    val len = sparkDdlExpr.length
+
+    while (i < len) {
+      val c = sparkDdlExpr(i)
+      if (state == 0) {
+        if (c == ' ' || c == ':') {
+          state = 1
+          val tokenStr = token.toString()
+          if (tokenStr.nonEmpty && tokenStr.head == '`') {
+            output.append(s"$token$c")
+          } else {
+            output.append(s"`$token`$c")
+          }
+          token.clear()
+        } else if (c == ',' || c == '<') {
+          output.append(s"$token$c")
+          token.clear()
+        } else {
+          token.append(c)
+        }
+      } else if (state == 1) {
+        if (c == ',' || c == '<') {
+          state = 0
+          output.append(s"$token$c")
+          token.clear()
+        } else {
+          token.append(c)
+        }
+      }
+      i += 1
+    }
+    if (token.nonEmpty) {
+      output.append(token.toString())
+    }
+    output.toString()
+  }
+
   private def getActualProcessingTimeUdf: UserDefinedFunction = {
     udf((_: Long) => Instant.now().getEpochSecond)
   }

@@ -21,7 +21,8 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.SparkUtils
 
 class HiveHelperSql(val queryExecutor: QueryExecutor,
-                    hiveConfig: HiveQueryTemplates) extends HiveHelper {
+                    hiveConfig: HiveQueryTemplates,
+                    alwaysEscapeColumnNames: Boolean) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def createOrUpdateHiveTable(path: String,
@@ -120,7 +121,11 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
       .filter(field => !partitionColsLower.contains(field.name.toLowerCase()))
       .filter(field => field.name.trim.nonEmpty)
 
-    StructType(nonPartitionFields).toDDL
+    if (alwaysEscapeColumnNames) {
+      SparkUtils.escapeColumnsSparkDDL(StructType(nonPartitionFields).toDDL)
+    } else {
+      StructType(nonPartitionFields).toDDL
+    }
   }
 
   private def getPartitionDDL(schema: StructType, partitionBy: Seq[String]): String = {
@@ -131,7 +136,11 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
       val cols = SparkUtils.transformSchemaForCatalog(
         StructType(schema.filter(field => partitionColsLower.contains(field.name.toLowerCase())))
       )
-      val ddl = cols.toDDL
+      val ddl = if (alwaysEscapeColumnNames) {
+        SparkUtils.escapeColumnsSparkDDL(cols.toDDL)
+      } else {
+        cols.toDDL
+      }
       s"PARTITIONED BY ($ddl)"
     }
   }

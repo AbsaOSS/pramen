@@ -21,9 +21,9 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.core.pipeline.TransformExpression
 import za.co.absa.pramen.core.samples.SampleCaseClass2
 import za.co.absa.pramen.core.utils.SparkUtils
@@ -622,4 +622,25 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(table.length == 4) // headers + 3 rows
     }
   }
+
+  "escapeColumnsSparkDDL" should {
+    "work for a simple schema" in {
+      val inputDDL = "Id INT NOT NULL,Name STRING,`System Date` ARRAY<STRING>"
+      val expectedDDL = "`Id` INT NOT NULL,`Name` STRING,`System Date` ARRAY<STRING>"
+
+      val actual = escapeColumnsSparkDDL(inputDDL)
+
+      assert(actual == expectedDDL)
+    }
+
+    "work for a complex schema" in {
+      val inputDDL = "Id INT,Name STRING,errCol array<struct<and:string,timestamp:string,where:array<string>,mappings:array<struct<mappingTableColumn:string,mappedDatasetColumn:string>>>>"
+      val expectedDDL = "`Id` INT,`Name` STRING,`errCol` array<struct<`and`:string,`timestamp`:string,`where`:array<string>,`mappings`:array<struct<`mappingTableColumn`:string,`mappedDatasetColumn`:string>>>>"
+
+      val actual = escapeColumnsSparkDDL(inputDDL)
+
+      assert(actual == expectedDDL)
+    }
+  }
+
 }

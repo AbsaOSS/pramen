@@ -410,6 +410,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
   val DATASET_NAME_KEY = "dataset.name"
   val DATASET_VERSION_KEY = "dataset.version"
   val HIVE_TABLE_KEY = "hive.table"
+  val HIVE_ALWAYS_ESCAPE_COLUMN_NAMES = "hive.escape.column.names"
   val HIVE_PATH_KEY = "hive.path"
   val HIVE_API_SINK_KEY = "hive.api"
 
@@ -419,6 +420,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
   override def apply(conf: Config, parentPath: String, spark: SparkSession): StandardizationSink = {
     val standardizationConfig = StandardizationConfig.fromConfig(conf)
     val hiveConfig = HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, TEMPLATES_DEFAULT_PREFIX))
+    val alwaysEscapeColumnNames = ConfigUtils.getOptionBoolean(conf, HIVE_ALWAYS_ESCAPE_COLUMN_NAMES).getOrElse(true)
 
     val hiveApi = if (conf.hasPath(HIVE_API_SINK_KEY))
       HiveApi.fromString(conf.getString(HIVE_API_SINK_KEY))
@@ -435,7 +437,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via Spark.")
             QueryExecutorSpark(spark)
         }
-        new HiveHelperSql(queryExecutor, hiveConfig)
+        new HiveHelperSql(queryExecutor, hiveConfig, alwaysEscapeColumnNames)
       case HiveApi.SparkCatalog =>
         log.info(s"Using Hive via Spark Catalog API and configuration.")
         new HiveHelperSparkCatalog(spark)
