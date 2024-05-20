@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.model.QueryBuilder
-import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
 import scala.collection.JavaConverters._
@@ -117,7 +117,7 @@ object TransferTable {
       .zipWithIndex
       .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]", sinkName, defaultStartDate, defaultTrackDays) }
 
-    val duplicates = AlgorithmicUtils.findDuplicates(transferTables.map(_.jobMetaTableName).toSeq)
+    val duplicates = AlgorithmUtils.findDuplicates(transferTables.map(_.jobMetaTableName).toSeq)
     if (duplicates.nonEmpty) {
       throw new IllegalArgumentException(s"Duplicate table definitions for the transfer job: ${duplicates.mkString(", ")}")
     }

@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.model.QueryBuilder
-import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import scala.collection.JavaConverters._
 
@@ -77,7 +77,7 @@ object SourceTable {
       .zipWithIndex
       .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]") }
 
-    val duplicates = AlgorithmicUtils.findDuplicates(sourceTables.map(_.metaTableName).toSeq)
+    val duplicates = AlgorithmUtils.findDuplicates(sourceTables.map(_.metaTableName).toSeq)
     if (duplicates.nonEmpty) {
       throw new IllegalArgumentException(s"Duplicate source table definitions for the sourcing job: ${duplicates.mkString(", ")}")
     }

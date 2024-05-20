@@ -14,25 +14,21 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.utils
+package za.co.absa.pramen.core.sink
 
-import scala.collection.mutable
+import org.apache.hadoop.fs.Path
 
-object AlgorithmicUtils {
+sealed trait SparkSinkFormat
 
-  /** Finds which strings are encountered multiple times (case insensitive). */
-  def findDuplicates(seq: Seq[String]): Seq[String] = {
-    val existingElements: mutable.Set[String] = new mutable.HashSet[String]()
-
-    seq.filter(str => {
-      val lcaseStr = str.toLowerCase()
-      if (existingElements.contains(lcaseStr)) {
-        true
-      } else {
-        existingElements += lcaseStr
-        false
-      }
-    }).distinct
+object SparkSinkFormat {
+  case class PathFormat(path: Path) extends SparkSinkFormat {
+    override def toString = s"path: $path"
+  }
+  case class TableFormat(table: String) extends SparkSinkFormat {
+    override def toString = s"table: $table"
   }
 
+  case object ConnectionFormat extends SparkSinkFormat {
+    override def toString = "the connection"
+  }
 }
