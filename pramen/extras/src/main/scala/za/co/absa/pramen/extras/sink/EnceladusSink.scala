@@ -546,6 +546,7 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
   val DATASET_NAME_KEY = "dataset.name"
   val DATASET_VERSION_KEY = "dataset.version"
   val HIVE_TABLE_KEY = "hive.table"
+  val HIVE_ALWAYS_ESCAPE_COLUMN_NAMES = "hive.escape.column.names"
   val PUBLISH_BASE_PATH_KEY = "publish.base.path"
   val CLEANUP_API_URL_KEY = "cleanup.api.url"
   val CLEANUP_API_KEY_KEY = "cleanup.api.key"
@@ -555,11 +556,12 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
     val enceladusConfig = EnceladusConfig.fromConfig(conf)
+    val alwaysEscapeColumnNames = ConfigUtils.getOptionBoolean(conf, HIVE_ALWAYS_ESCAPE_COLUMN_NAMES).getOrElse(true)
 
-    val hiveConfig = HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, TEMPLATES_DEFAULT_PREFIX))
+    val hiveTemplates = HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, TEMPLATES_DEFAULT_PREFIX))
     val queryExecutor = QueryExecutorSpark(spark)
 
-    val hiveHelper = new HiveHelperSql(queryExecutor, hiveConfig)
+    val hiveHelper = new HiveHelperSql(queryExecutor, hiveTemplates, alwaysEscapeColumnNames)
 
     new EnceladusSink(conf, enceladusConfig, hiveHelper)
   }

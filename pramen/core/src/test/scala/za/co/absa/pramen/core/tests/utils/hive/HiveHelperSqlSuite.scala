@@ -51,7 +51,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
 
 
         val qe = new QueryExecutorMock(tableExists = false)
-        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, false)
         val schema = spark.read.parquet(path).schema
 
         hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl")
@@ -70,25 +70,25 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val path = getParquetPath(tempDir)
 
         val expected =
-          s"""DROP TABLE IF EXISTS db.tbl
+          s"""DROP TABLE IF EXISTS `db`.`tbl`
              |CREATE EXTERNAL TABLE IF NOT EXISTS
-             |db.tbl ( c INT )
-             |PARTITIONED BY (a STRING,b INT)
+             |`db`.`tbl` ( `c` INT )
+             |PARTITIONED BY (`a` STRING,`b` INT)
              |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
              |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
              |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
              |LOCATION '$path';
-             |MSCK REPAIR TABLE db.tbl
+             |MSCK REPAIR TABLE `db`.`tbl`
              |""".stripMargin
 
 
         val qe = new QueryExecutorMock(tableExists = false)
-        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
         hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 
-        val actual = qe.queries.mkString("\n").replaceAll("`", "")
+        val actual = qe.queries.mkString("\n")
 
         compareText(actual, expected)
       }
@@ -98,7 +98,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       val expected = "MSCK REPAIR TABLE `db`.`tbl`"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, false)
 
       hiveHelper.repairHiveTable(Some("db"), "tbl", HiveFormat.Parquet)
 
@@ -111,7 +111,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       val expected = "MSCK REPAIR TABLE tbl"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
 
       hiveHelper.repairHiveTable(None, "tbl", HiveFormat.Parquet)
 
@@ -122,7 +122,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
 
     "not repair table for Delta" in {
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
 
       hiveHelper.repairHiveTable(Some("db"), "tbl", HiveFormat.Delta)
 
@@ -133,7 +133,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       val expected = "DROP TABLE IF EXISTS tbl"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
 
       hiveHelper.dropTable(None, "tbl")
 
@@ -146,7 +146,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       val expected = "ALTER TABLE `db`.`tbl` ADD IF NOT EXISTS PARTITION (info_date='2024-04-24') LOCATION 's3://bucket/table/info_date=2024-04-24';"
 
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
 
       hiveHelper.addPartition(Some("db"), "tbl", Seq("info_date"), Seq("2024-04-24"), "s3://bucket/table/info_date=2024-04-24")
 

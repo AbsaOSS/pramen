@@ -62,7 +62,7 @@ object HiveHelper {
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via Spark.")
             new QueryExecutorSpark()
         }
-        new HiveHelperSql(queryExecutor, hiveConfig.templates)
+        new HiveHelperSql(queryExecutor, hiveConfig.templates, hiveConfig.alwaysEscapeColumnNames)
       case HiveApi.SparkCatalog =>
         log.info(s"Using Hive via Spark Catalog API and configuration.")
         new HiveHelperSparkCatalog(spark)
@@ -74,7 +74,7 @@ object HiveHelper {
                         queryExecutor: QueryExecutor)
                        (implicit spark: SparkSession): HiveHelper = {
     api match {
-      case HiveApi.Sql => new HiveHelperSql(queryExecutor, templates)
+      case HiveApi.Sql => new HiveHelperSql(queryExecutor, templates, true)
       case _ => new HiveHelperSparkCatalog(spark)
     }
   }

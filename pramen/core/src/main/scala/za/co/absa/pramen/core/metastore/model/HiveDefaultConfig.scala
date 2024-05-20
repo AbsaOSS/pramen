@@ -35,6 +35,9 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
   *   hive {
   *     database = "my_db"
   *
+  *     escape.column.names = true
+  *     ignore.failures = false
+  *
   *     # Optional, use only if you want to use JDBC rather than Spark metastore to query Hive
   *     hive.jdbc {
   *       driver = "com.cloudera.hive.jdbc41.HS2Driver"
@@ -92,7 +95,8 @@ case class HiveDefaultConfig(
                               database: Option[String],
                               templates: Map[String, HiveQueryTemplates],
                               jdbcConfig: Option[JdbcConfig],
-                              ignoreFailures: Boolean
+                              ignoreFailures: Boolean,
+                              alwaysEscapeColumnNames: Boolean
                             )
 
 object HiveDefaultConfig {
@@ -101,6 +105,7 @@ object HiveDefaultConfig {
 
   val HIVE_API_KEY = "api"
   val HIVE_IGNORE_FAILURES_KEY = "ignore.failures"
+  val HIVE_ALWAYS_ESCAPE_COLUMN_NAMES = "escape.column.names"
   val HIVE_DATABASE_KEY = "database"
 
   /**
@@ -116,6 +121,7 @@ object HiveDefaultConfig {
     val hiveApi = if (conf.hasPath(HIVE_DATABASE_KEY)) HiveApi.fromString(conf.getString(HIVE_API_KEY)) else HiveApi.Sql
     val database = if (conf.hasPath(HIVE_DATABASE_KEY)) Some(conf.getString(HIVE_DATABASE_KEY)) else None
     val ignoreFailures = ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false)
+    val alwaysEscapeColumnNames = ConfigUtils.getOptionBoolean(conf, HIVE_ALWAYS_ESCAPE_COLUMN_NAMES).getOrElse(true)
 
     val jdbcConfig = if (conf.hasPath(HIVE_CONFIG_JDBC_PREFIX))
       Option(JdbcConfig.load(conf, parent))
@@ -130,8 +136,8 @@ object HiveDefaultConfig {
       (format, HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, prefix)))
     }).toMap
 
-    HiveDefaultConfig(hiveApi, database, templates, jdbcConfig, ignoreFailures)
+    HiveDefaultConfig(hiveApi, database, templates, jdbcConfig, ignoreFailures, alwaysEscapeColumnNames)
   }
 
-  def getNullConfig: HiveDefaultConfig = HiveDefaultConfig(HiveApi.Sql, None, Map(), None, ignoreFailures = false)
+  def getNullConfig: HiveDefaultConfig = HiveDefaultConfig(HiveApi.Sql, None, Map(), None, ignoreFailures = false, alwaysEscapeColumnNames = true)
 }

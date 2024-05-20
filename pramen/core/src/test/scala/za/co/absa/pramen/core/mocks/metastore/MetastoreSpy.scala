@@ -78,7 +78,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   def getHiveHelper(tableName: String): HiveHelper = {
     val defaultQueryTemplates = HiveQueryTemplates.getDefaultQueryTemplates
 
-    new HiveHelperSql(new QueryExecutorMock(isTableAvailable), defaultQueryTemplates)
+    new HiveHelperSql(new QueryExecutorMock(isTableAvailable), defaultQueryTemplates, true)
   }
 
   override def repairOrCreateHiveTable(tableName: String,

@@ -52,18 +52,20 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates._
   * }
   * }}}
   *
-  * @param hiveApi        The Hive API to use (SQL or Spark Catalog).
-  * @param database       T he database database to use. If omitted, you can use full table names for each table.
-  * @param templates      Query templates for generating Hive queries.
-  * @param jdbcConfig     Hive JDBC configuration to use instead of Spark metastore if needed
-  * @param ignoreFailures Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
+  * @param hiveApi                 The Hive API to use (SQL or Spark Catalog).
+  * @param database                T he database database to use. If omitted, you can use full table names for each table.
+  * @param templates               Query templates for generating Hive queries.
+  * @param jdbcConfig              Hive JDBC configuration to use instead of Spark metastore if needed
+  * @param ignoreFailures          Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
+  * @param alwaysEscapeColumnNames If true, column names are always escaped when executing SQL against Hive.
   */
 case class HiveConfig(
                        hiveApi: HiveApi,
                        database: Option[String],
                        templates: HiveQueryTemplates,
                        jdbcConfig: Option[JdbcConfig],
-                       ignoreFailures: Boolean
+                       ignoreFailures: Boolean,
+                       alwaysEscapeColumnNames: Boolean
                      )
 
 object HiveConfig {
@@ -92,6 +94,7 @@ object HiveConfig {
 
     val database = ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY).orElse(defaults.database)
     val ignoreFailures = ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(defaults.ignoreFailures)
+    val alwaysEscapeColumnNames = ConfigUtils.getOptionBoolean(conf, HIVE_ALWAYS_ESCAPE_COLUMN_NAMES).getOrElse(defaults.alwaysEscapeColumnNames)
 
     val jdbcConfig = if (conf.hasPath(HIVE_CONFIG_JDBC_PREFIX))
       Option(JdbcConfig.load(conf, parent))
@@ -116,7 +119,8 @@ object HiveConfig {
       database = database,
       templates = HiveQueryTemplates(createTableTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
       jdbcConfig = jdbcConfig,
-      ignoreFailures
+      ignoreFailures,
+      alwaysEscapeColumnNames
     )
   }
 
@@ -135,7 +139,7 @@ object HiveConfig {
       DEFAULT_DROP_TABLE_TEMPLATE
     ))
 
-    HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures)
+    HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures, alwaysEscapeColumnNames = true)
   }
 
   def getNullConfig: HiveConfig = HiveConfig(
@@ -143,5 +147,6 @@ object HiveConfig {
     None,
     HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
     None,
-    ignoreFailures = false)
+    ignoreFailures = false,
+    alwaysEscapeColumnNames = true)
 }

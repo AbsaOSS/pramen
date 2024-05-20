@@ -248,7 +248,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       val stdConfig = StandardizationConfig.fromConfig(conf)
       val hiveConfig = HiveQueryTemplates.fromConfig(conf)
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperSql(qe, hiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, hiveConfig, false)
       val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
 
       withTempDirectory("std_sink") { tempDir =>
@@ -277,7 +277,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       val stdConfig = StandardizationConfig.fromConfig(conf)
       val hiveConfig = HiveQueryTemplates.fromConfig(conf)
       val qe = new QueryExecutorMock(tableExists = true)
-      val hiveHelper = new HiveHelperSql(qe, hiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, hiveConfig, false)
       val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
 
       withTempDirectory("std_sink") { tempDir =>
@@ -308,7 +308,7 @@ class StandardizationSinkSuite extends AnyWordSpec with SparkTestBase with TextC
       val stdConfig = StandardizationConfig.fromConfig(updatedConf)
       val hiveConfig = HiveQueryTemplates.fromConfig(conf)
       val qe = new QueryExecutorMock(tableExists = true, () => throw new RuntimeException("Hive exception"))
-      val hiveHelper = new HiveHelperSql(qe, hiveConfig)
+      val hiveHelper = new HiveHelperSql(qe, hiveConfig, false)
       val sink = new StandardizationSink(conf, stdConfig, hiveHelper)
 
       withTempDirectory("std_sink") { tempDir =>
