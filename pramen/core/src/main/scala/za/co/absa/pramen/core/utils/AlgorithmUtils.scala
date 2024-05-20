@@ -16,7 +16,27 @@
 
 package za.co.absa.pramen.core.utils
 
+import org.slf4j.Logger
+
+import scala.annotation.tailrec
+import scala.collection.mutable
+
 object AlgorithmUtils {
+  /** Finds which strings are encountered multiple times (case insensitive). */
+  def findDuplicates(seq: Seq[String]): Seq[String] = {
+    val existingElements: mutable.Set[String] = new mutable.HashSet[String]()
+
+    seq.filter(str => {
+      val lcaseStr = str.toLowerCase()
+      if (existingElements.contains(lcaseStr)) {
+        true
+      } else {
+        existingElements += lcaseStr
+        false
+      }
+    }).distinct
+  }
+
   /**
     * Finds a cycle in a sequence of dependencies.
     *
@@ -46,5 +66,30 @@ object AlgorithmUtils {
       })
       .find(_.nonEmpty)
       .getOrElse(List[String]())
+  }
+
+  @tailrec
+  final def actionWithRetry(attempts: Int, log: Logger)(action: => Unit): Unit = {
+    def getErrorMessage(ex: Throwable): String = {
+      if (ex.getCause == null) {
+        ex.getMessage
+      } else {
+        s"${ex.getMessage}(${ex.getCause.getMessage})"
+      }
+    }
+
+    try {
+      action
+    } catch {
+      case ex: Throwable =>
+        val attemptsLeft = attempts - 1
+
+        if (attemptsLeft < 1) {
+          throw ex
+        } else {
+          log.warn(s"Attempt failed: ${getErrorMessage(ex)}. Attempts left: $attemptsLeft. Retrying...")
+          actionWithRetry(attemptsLeft, log)(action)
+        }
+    }
   }
 }

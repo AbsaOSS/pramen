@@ -22,7 +22,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.sink.SparkSinkFormat.{ConnectionFormat, PathFormat, TableFormat}
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
 
@@ -129,8 +130,6 @@ class SparkSink(format: String,
 
   import za.co.absa.pramen.core.sink.SparkSink._
 
-  private val log = LoggerFactory.getLogger(this.getClass)
-
   override val config: Config = sinkConfig
 
   override def connect(): Unit = {}
@@ -143,31 +142,42 @@ class SparkSink(format: String,
                     infoDate: LocalDate,
                     options: Map[String, String])
                    (implicit spark: SparkSession): SinkResult = {
-    val outputPath = getOutputPath(tableName, options)
+    val outputFormat = getOutputFormat(tableName, options)
     val recordCount = df.count()
 
     if (recordCount > 0 || saveEmpty) {
-      log.info(s"Saving $recordCount records to folder: ${outputPath.toUri.toString}")
+      log.info(s"Saving $recordCount records to ${outputFormat.toString}...")
+      log.info(s"Mode: $mode")
       log.info(s"Options passed for '$format':")
       ConfigUtils.renderExtraOptions(formatOptions, KEYS_TO_REDACT)(log.info)
 
       val dfToWrite = applyRepartitioning(df, recordCount, tableName)
-      writeData(dfToWrite, outputPath)
+      writeData(dfToWrite, outputFormat)
     } else {
-      log.info(s"Nothing to save to folder: ${outputPath.toUri.toString}")
+      log.info(s"Nothing to save to ${outputFormat.toString}")
     }
 
     SinkResult(recordCount)
   }
 
-  private[core] def writeData(df: DataFrame, outputPath: Path): Unit = {
-    df
+  private[core] def writeData(df: DataFrame, outputFormat: SparkSinkFormat): Unit = {
+    val saver = df
       .write
       .partitionBy(partitionBy: _*)
       .format(format)
       .mode(mode)
       .options(formatOptions)
-      .save(outputPath.toUri.toString)
+
+    AlgorithmUtils.actionWithRetry(5, log) {
+      outputFormat match {
+        case PathFormat(path) =>
+          saver.save(path.toUri.toString)
+        case TableFormat(table) =>
+          saver.saveAsTable(table)
+        case ConnectionFormat =>
+          saver.save()
+      }
+    }
   }
 
   private[core] def applyRepartitioning(df: DataFrame, recordCount: Long, tableName: String): DataFrame = {
@@ -188,18 +198,26 @@ class SparkSink(format: String,
     }
   }
 
-  private[core] def getOutputPath(tableName: String, options: Map[String, String]): Path = {
-    if (!options.contains(OUTPUT_PATH_KEY)) {
+  private[core] def getOutputFormat(tableName: String, options: Map[String, String]): SparkSinkFormat = {
+    if (FILE_FORMATS.contains(format.toLowerCase) && !options.contains(OUTPUT_PATH_KEY)) {
       throw new IllegalArgumentException(s"$OUTPUT_PATH_KEY is not specified for Spark sink, table: $tableName")
     }
 
-    new Path(options(OUTPUT_PATH_KEY))
+    if (options.contains(OUTPUT_PATH_KEY)) {
+      PathFormat(new Path(options(OUTPUT_PATH_KEY)))
+    } else if (options.contains(OUTPUT_TABLE_KEY)) {
+      TableFormat(options(OUTPUT_TABLE_KEY))
+    } else {
+      ConnectionFormat
+    }
   }
-
 }
 
 object SparkSink extends ExternalChannelFactory[SparkSink] {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val OUTPUT_PATH_KEY = "path"
+  val OUTPUT_TABLE_KEY = "table"
 
   val FORMAT_KEY = "format"
   val MODE_KEY = "mode"
@@ -211,6 +229,8 @@ object SparkSink extends ExternalChannelFactory[SparkSink] {
   val DEFAULT_FORMAT = "parquet"
   val DEFAULT_MODE = "errorifexists"
   val DEFAULT_SAVE_EMPTY = true
+
+  val FILE_FORMATS: Seq[String] = Seq("csv", "json", "parquet", "avro", "orc", "xml")
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): SparkSink = {
     new SparkSink(

@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import scala.collection.JavaConverters._
 
@@ -78,7 +78,7 @@ object SinkTable {
       .zipWithIndex
       .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]") }
 
-    val duplicates = AlgorithmicUtils.findDuplicates(sinkTables.map(_.metaTableName).toSeq)
+    val duplicates = AlgorithmUtils.findDuplicates(sinkTables.map(_.metaTableName).toSeq)
     if (duplicates.nonEmpty) {
       throw new IllegalArgumentException(s"Duplicate sink table definitions for the sink job: ${duplicates.mkString(", ")}")
     }

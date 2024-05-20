@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
-import za.co.absa.pramen.core.utils.{AlgorithmicUtils, ConfigUtils}
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
 import scala.util.{Failure, Success, Try}
@@ -95,7 +95,7 @@ object MetaTable {
       .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition))
       .toSeq
 
-    val duplicates = AlgorithmicUtils.findDuplicates(metatables.map(_.name))
+    val duplicates = AlgorithmUtils.findDuplicates(metatables.map(_.name))
     if (duplicates.nonEmpty) {
       throw new IllegalArgumentException(s"Duplicate table definitions in the metastore: ${duplicates.mkString(", ")}")
     }
