@@ -1258,6 +1258,7 @@ Here is an example configuration of a sink:
     api = "sql"
     database = "my_hive_db"
     ignore.failures = false
+    escape.column.names = true
   }
 }
 ```
@@ -2814,6 +2815,14 @@ pramen {
     # Also ADD PARTTITION is only for Parquet format.
     # This option can be overridden per metatable.
     hive.prefer.add.partition = true
+
+    # If true, failing to update Hive table won't be considered a failure (false by default)
+    ignore.failures = false
+    
+    # If true, all column names will be escaped when creating a Hive table via an SQL query (true by default).
+    # Usually, the default behavior what is needed since it protects against Hive SQL syntax errors in case
+    # a column name is one of SQL reverved words.
+    escape.column.names = true
 
     # Optional, use only if you want to use JDBC rather than Spark metastore to query Hive
     hive.jdbc {
