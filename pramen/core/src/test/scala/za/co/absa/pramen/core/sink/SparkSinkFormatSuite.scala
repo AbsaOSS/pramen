@@ -17,18 +17,27 @@
 package za.co.absa.pramen.core.sink
 
 import org.apache.hadoop.fs.Path
+import org.scalatest.wordspec.AnyWordSpec
 
-sealed trait SparkSinkFormat
+class SparkSinkFormatSuite extends AnyWordSpec {
+  "toString" should {
+    "work for a path format" in {
+      val format = SparkSinkFormat.PathFormat(new Path("/a/b/c"))
 
-object SparkSinkFormat {
-  case class PathFormat(path: Path) extends SparkSinkFormat {
-    override def toString = s"path: $path"
-  }
-  case class TableFormat(table: String) extends SparkSinkFormat {
-    override def toString = s"table: $table"
+      assert(format.toString == "path: /a/b/c")
+    }
+
+    "work for a table format" in {
+      val format = SparkSinkFormat.TableFormat("my_table1")
+
+      assert(format.toString == "table: my_table1")
+    }
+
+    "work for a connection format" in {
+      val format = SparkSinkFormat.ConnectionFormat("JDBC")
+
+      assert(format.toString == "the JDBC connection")
+    }
   }
 
-  case class ConnectionFormat(connectionType: String) extends SparkSinkFormat {
-    override def toString = s"the $connectionType connection"
-  }
 }

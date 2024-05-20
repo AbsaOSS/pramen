@@ -17,9 +17,38 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.wordspec.AnyWordSpec
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.AlgorithmUtils._
 
-class AlgorithmUtilsSuite extends AnyWordSpec{
+class AlgorithmUtilsSuite extends AnyWordSpec {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
+  "findDuplicates" should {
+    "work for an empty list" in {
+      assert(findDuplicates(Seq.empty).isEmpty)
+    }
+
+    "work for a single element list" in {
+      val actual = findDuplicates(Seq("a"))
+
+      assert(actual.isEmpty)
+    }
+
+    "work for 2 element list" in {
+      val actual = findDuplicates(Seq("a", "a"))
+
+      assert(actual.length == 1)
+      assert(actual.head == "a")
+    }
+
+    "retain the original order" in {
+      val actual = findDuplicates(Seq("b", "a", "c", "b", "a", "d", "A", "B"))
+
+      assert(actual.length == 4)
+      assert(actual == Seq("b", "a", "A", "B"))
+    }
+  }
+
   "AlgorithmUtils.findCycle" should {
     "return an empty list if the input is empty" in {
       val m = Seq.empty[(String, String)]
@@ -57,6 +86,56 @@ class AlgorithmUtilsSuite extends AnyWordSpec{
       assert(cycle.contains("C"))
       assert(cycle.contains("D"))
       assert(cycle.head == cycle.last)
+    }
+  }
+
+  "actionWithRetry" should {
+    "work when it works on the first attempt" in {
+      var attempts = 0
+      actionWithRetry(3, log) {
+        attempts += 1
+      }
+
+      assert(attempts == 1)
+    }
+
+    "work when it works on the second attempt" in {
+      var attempt = 0
+      actionWithRetry(3, log) {
+        attempt += 1
+        if (attempt == 1) {
+          throw new RuntimeException("test")
+        }
+      }
+
+      assert(attempt == 2)
+    }
+
+    "fail when out of attempts" in {
+      var attempt = 0
+      val ex = intercept[RuntimeException] {
+        actionWithRetry(2, log) {
+          attempt += 1
+          throw new RuntimeException("test")
+        }
+      }
+
+      assert(attempt == 2)
+      assert(ex.getMessage == "test")
+    }
+
+    "fail when out of attempts with an exception with a cause" in {
+      var attempt = 0
+      val ex = intercept[RuntimeException] {
+        actionWithRetry(2, log) {
+          attempt += 1
+          throw new RuntimeException("test", new RuntimeException("test1"))
+        }
+      }
+
+      assert(attempt == 2)
+      assert(ex.getMessage == "test")
+      assert(ex.getCause.getMessage == "test1")
     }
   }
 

@@ -174,7 +174,7 @@ class SparkSink(format: String,
           saver.save(path.toUri.toString)
         case TableFormat(table) =>
           saver.saveAsTable(table)
-        case ConnectionFormat =>
+        case _: ConnectionFormat =>
           saver.save()
       }
     }
@@ -208,7 +208,7 @@ class SparkSink(format: String,
     } else if (options.contains(OUTPUT_TABLE_KEY)) {
       TableFormat(options(OUTPUT_TABLE_KEY))
     } else {
-      ConnectionFormat
+      ConnectionFormat(format)
     }
   }
 }
