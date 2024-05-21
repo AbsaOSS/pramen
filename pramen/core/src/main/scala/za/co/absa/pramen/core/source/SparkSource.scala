@@ -77,8 +77,12 @@ class SparkSource(val format: Option[String],
         new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
-    log.info(s"Options passed for '$format':")
-    ConfigUtils.renderExtraOptions(options, KEYS_TO_REDACT)(s => log.info(s))
+
+    if (options.nonEmpty) {
+      log.info(s"Options passed for '$format':")
+      ConfigUtils.renderExtraOptions(options, KEYS_TO_REDACT)(s => log.info(s))
+    }
+
     schema.foreach(s => log.info(s"Using schema: $s"))
     tableReader
   }
