@@ -228,6 +228,19 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
       assert(customFields.contains("value decimal(38, 18)"))
     }
 
+    "correct invalid precision with small scale" in {
+      val schema = StructType(Array(StructField("value", DecimalType(30, 16))))
+
+      val dfOrig: DataFrame = Seq("1234567890").toDF("value")
+        .withColumn("value", $"value".cast("decimal(38, 18)"))
+
+      val df = spark.createDataFrame(dfOrig.rdd, schema)
+
+      val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
+
+      assert(customFields.contains("value decimal(38, 16)"))
+    }
+
     "do nothing if the field is okay" in {
       val df: DataFrame = Seq("12345").toDF("value")
         .withColumn("value", $"value".cast("int"))
