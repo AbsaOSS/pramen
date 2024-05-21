@@ -213,6 +213,7 @@ class SparkSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixture 
       numberOfPartitions,
       recordsPerPartition,
       saveEmpty,
+      1,
       conf
     )
   }

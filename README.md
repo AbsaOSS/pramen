@@ -1125,7 +1125,10 @@ Here is an example of a Spark sink definition:
     
     # If true (default), the data will be saved even if it does not contain any records. If false, the saving will be skipped
     save.empty = true
-    
+
+    # The number of attempts to make against the target
+    retries = 5
+  
     # If non-empty, the data will be partitioned by the specified columns at the output path. Default: []
     partition.by = [ pramen_info_date ]
     

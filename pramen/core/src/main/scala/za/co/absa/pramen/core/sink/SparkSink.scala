@@ -51,6 +51,9 @@ import java.time.LocalDate
   *    # Optionally repartition te dataframe according to the number of records per partition
   *    records.per.partition = 1000000
   *
+  *    # The number of attempts to make against the target
+  *    retries = 5
+  *
   *    # If true (default), the data will be saved even if it does not contain any records. If false, the saving will be skipped
   *    save.empty = true
   *
@@ -126,6 +129,7 @@ class SparkSink(format: String,
                 numberOfPartitions: Option[Int],
                 recordsPerPartition: Option[Long],
                 saveEmpty: Boolean,
+                retries: Int,
                 sinkConfig: Config) extends Sink {
 
   import za.co.absa.pramen.core.sink.SparkSink._
@@ -148,8 +152,11 @@ class SparkSink(format: String,
     if (recordCount > 0 || saveEmpty) {
       log.info(s"Saving $recordCount records to ${outputFormat.toString}...")
       log.info(s"Mode: $mode")
-      log.info(s"Options passed for '$format':")
-      ConfigUtils.renderExtraOptions(formatOptions, KEYS_TO_REDACT)(log.info)
+
+      if (formatOptions.nonEmpty) {
+        log.info(s"Options passed for '$format':")
+        ConfigUtils.renderExtraOptions(formatOptions, KEYS_TO_REDACT)(log.info)
+      }
 
       val dfToWrite = applyRepartitioning(df, recordCount, tableName)
       writeData(dfToWrite, outputFormat)
@@ -168,7 +175,7 @@ class SparkSink(format: String,
       .mode(mode)
       .options(formatOptions)
 
-    AlgorithmUtils.actionWithRetry(5, log) {
+    AlgorithmUtils.actionWithRetry(retries, log) {
       outputFormat match {
         case PathFormat(path) =>
           saver.save(path.toUri.toString)
@@ -225,6 +232,7 @@ object SparkSink extends ExternalChannelFactory[SparkSink] {
   val NUMBER_OF_PARTITIONS_KEY = "number.of.partitions"
   val RECORDS_PER_PARTITION_KEY = "records.per.partition"
   val SAVE_EMPTY_KEY = "save.empty"
+  val RETRIES_KEY = "retries"
 
   val DEFAULT_FORMAT = "parquet"
   val DEFAULT_MODE = "errorifexists"
@@ -241,6 +249,7 @@ object SparkSink extends ExternalChannelFactory[SparkSink] {
       ConfigUtils.getOptionInt(conf, NUMBER_OF_PARTITIONS_KEY),
       ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY),
       ConfigUtils.getOptionBoolean(conf, SAVE_EMPTY_KEY).getOrElse(DEFAULT_SAVE_EMPTY),
+      ConfigUtils.getOptionInt(conf, RETRIES_KEY).getOrElse(1),
       conf
     )
   }
