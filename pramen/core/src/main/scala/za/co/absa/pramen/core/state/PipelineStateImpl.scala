@@ -22,6 +22,7 @@ import sun.misc.Signal
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
+import za.co.absa.pramen.core.metastore.MetastoreImpl
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.notify.{NotificationTargetManager, PipelineNotificationTargetFactory}
@@ -279,6 +280,7 @@ object PipelineStateImpl {
     NotificationTargetManager.runStatusToTaskStatus(taskResult.runStatus).map(taskStatus =>
       TaskNotification(
         taskResult.job.outputTable.name,
+        MetastoreImpl.getMetaTableDef(taskResult.job.outputTable),
         taskResult.runInfo.map(_.infoDate),
         taskResult.runInfo.map(_.started),
         taskResult.runInfo.map(_.finished),

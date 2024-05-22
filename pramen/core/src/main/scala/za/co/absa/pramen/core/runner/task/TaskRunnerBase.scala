@@ -27,8 +27,8 @@ import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.lock.TokenLockFactory
-import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.{MetaTableStats, MetastoreImpl}
 import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline._
@@ -393,6 +393,7 @@ abstract class TaskRunnerBase(conf: Config,
       NotificationTargetManager.runStatusToTaskStatus(result.runStatus).foreach { taskStatus =>
         val notification = TaskNotification(
           task.job.outputTable.name,
+          MetastoreImpl.getMetaTableDef(task.job.outputTable),
           Option(task.infoDate),
           result.runInfo.map(_.started),
           result.runInfo.map(_.finished),
