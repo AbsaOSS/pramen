@@ -20,6 +20,7 @@ import java.time.{Instant, LocalDate}
 
 case class TaskNotification(
                              tableName: String,
+                             tableDef: MetaTableDef,
                              infoDate: Option[LocalDate],
                              started: Option[Instant],
                              finished: Option[Instant],

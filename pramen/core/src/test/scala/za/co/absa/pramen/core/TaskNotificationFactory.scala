@@ -16,12 +16,13 @@
 
 package za.co.absa.pramen.core
 
-import za.co.absa.pramen.api.{SchemaDifference, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference, TaskNotification, TaskStatus}
 
 import java.time.{Instant, LocalDate}
 
 object TaskNotificationFactory {
   def getDummyTaskNotification(tableName: String = "dummy_table",
+                               tableDef: MetaTableDef = MetaTableDefFactory.getDummyMetaTableDef(name = "dummy_table"),
                                infoDate: Option[LocalDate] = Some(LocalDate.of(2022, 2, 18)),
                                started: Option[Instant] = Some(Instant.ofEpochMilli(1613600000000L)),
                                finished: Option[Instant] = Some(Instant.ofEpochMilli(1672759508000L)),
@@ -32,7 +33,7 @@ object TaskNotificationFactory {
                                schemaChanges: Seq[SchemaDifference] = Seq.empty,
                                dependencyWarningTables: Seq[String] = Seq.empty,
                                options: Map[String, String] = Map.empty[String, String]): TaskNotification = {
-    TaskNotification(tableName, infoDate, started, finished, status, applicationId, isTransient, isRawFilesJob, schemaChanges, dependencyWarningTables, options)
+    TaskNotification(tableName, tableDef, infoDate, started, finished, status, applicationId, isTransient, isRawFilesJob, schemaChanges, dependencyWarningTables, options)
   }
 
 }
