@@ -18,6 +18,7 @@ package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.Config
 import org.apache.http.HttpStatus
+import org.apache.http.client.HttpClient
 import org.apache.http.config.RegistryBuilder
 import org.apache.http.conn.socket.{ConnectionSocketFactory, PlainConnectionSocketFactory}
 import org.apache.http.conn.ssl.{NoopHostnameVerifier, SSLConnectionSocketFactory}
@@ -50,16 +51,10 @@ object EcsNotificationTarget {
   def cleanUpS3VersionsForPath(partitionPath: String,
                                apiUrl: String,
                                apiKey: String,
-                               trustAllSslCerts: Boolean): Unit = {
-
+                               httpClient: HttpClient): Unit = {
     val body = s"""{"ecs_path":"$partitionPath"}"""
     log.info(s"Sending: $body")
 
-    // Using Apache HTTP Client.
-    // Tried using com.lihaoyi:requests:0.8.0,
-    // but for some strange reason the EnceladusSink class can't be found/loaded
-    // when this library is used.
-    val httpClient = getHttpClient(trustAllSslCerts)
     val httpDelete = new HttpDeleteWithBody(apiUrl)
 
     httpDelete.addHeader("x-api-key", apiKey)
@@ -75,7 +70,6 @@ object EcsNotificationTarget {
       } else {
         log.info(s"${Emoji.SUCCESS} S3 versions cleanup for $partitionPath was successful. Response: $responseBody")
       }
-      httpClient.close()
     } catch {
       case ex: Throwable =>
         log.error(s"${Emoji.FAILURE} Unable to call the cleanup API via URL: $apiUrl.", ex)
@@ -83,6 +77,11 @@ object EcsNotificationTarget {
   }
 
   private[extras] def getHttpClient(trustAllSslCerts: Boolean): CloseableHttpClient = {
+    // Using Apache HTTP Client.
+    // Tried using com.lihaoyi:requests:0.8.0,
+    // but for some strange reason the EnceladusSink class can't be found/loaded
+    // when this library is used.
+
     if (trustAllSslCerts) {
       log.warn("Trusting all SSL certificates for the cleanup API.")
       val trustStrategy = new TrustStrategy {
