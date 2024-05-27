@@ -410,9 +410,14 @@ class EnceladusSink(sinkConfig: Config,
     val publishPartitionPath = getPublishPartitionPath(publishBase, infoDate, infoVersion)
 
     val trustAllSslCerts = sinkConfig.hasPath(CLEANUP_API_TRUST_SSL_KEY) && sinkConfig.getBoolean(CLEANUP_API_TRUST_SSL_KEY)
+    val httpClient = EcsNotificationTarget.getHttpClient(trustAllSslCerts)
 
-    EcsNotificationTarget.cleanUpS3VersionsForPath(removeAuthority(rawPartitionPath), apiUrl, apiKey, trustAllSslCerts)
-    EcsNotificationTarget.cleanUpS3VersionsForPath(removeAuthority(publishPartitionPath), apiUrl, apiKey, trustAllSslCerts)
+    try {
+      EcsNotificationTarget.cleanUpS3VersionsForPath(removeAuthority(rawPartitionPath), apiUrl, apiKey, httpClient)
+      EcsNotificationTarget.cleanUpS3VersionsForPath(removeAuthority(publishPartitionPath), apiUrl, apiKey, httpClient)
+    } finally {
+      httpClient.close()
+    }
   }
 
   private[extras] def removeAuthority(path: Path): String = {
