@@ -27,6 +27,7 @@ import java.io.FileNotFoundException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
+import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 /**
@@ -189,10 +190,17 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
   private[core] def getListOfFiles(pathPattern: String, caseSensitive: Boolean)(implicit spark: SparkSession): Seq[FileStatus] = {
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, pathPattern)
     val hadoopPath = new Path(pathPattern)
-
     val parentPath = new Path(pathPattern).getParent
 
-    if (!parentPath.isRoot && !fsUtils.exists(parentPath)) {
+    val pathExists = {
+      try {
+        parentPath.isRoot || fsUtils.exists(parentPath)
+      } catch {
+        case NonFatal(ex) => throw new IllegalArgumentException(s"Unable to access path: $parentPath", ex)
+      }
+    }
+
+    if (!pathExists) {
       throw new FileNotFoundException(s"Input path does not exist: $parentPath")
     }
 
@@ -205,7 +213,10 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
         fsUtils.getHadoopFilesCaseInsensitive(hadoopPath, includeHiddenFiles = true)
       }
     } catch {
-      case ex: IllegalArgumentException if ex.getMessage.contains("Input path does not exist") => Seq.empty[FileStatus]
+      case ex: IllegalArgumentException if ex.getMessage.contains("Input path does not exist") =>
+        Seq.empty[FileStatus]
+      case NonFatal(ex) =>
+        throw new IllegalArgumentException(s"Unable to access path: $hadoopPath", ex)
     }
   }
 
