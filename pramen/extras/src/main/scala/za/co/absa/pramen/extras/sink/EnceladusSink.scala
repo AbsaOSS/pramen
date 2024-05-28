@@ -413,15 +413,11 @@ class EnceladusSink(sinkConfig: Config,
     val httpClient = EcsNotificationTarget.getHttpClient(trustAllSslCerts)
 
     try {
-      EcsNotificationTarget.cleanUpS3VersionsForPath(removeAuthority(rawPartitionPath), apiUrl, apiKey, httpClient)
-      EcsNotificationTarget.cleanUpS3VersionsForPath(removeAuthority(publishPartitionPath), apiUrl, apiKey, httpClient)
+      EcsNotificationTarget.cleanUpS3VersionsForPath(rawPartitionPath, apiUrl, apiKey, httpClient)
+      EcsNotificationTarget.cleanUpS3VersionsForPath(publishPartitionPath, apiUrl, apiKey, httpClient)
     } finally {
       httpClient.close()
     }
-  }
-
-  private[extras] def removeAuthority(path: Path): String = {
-    s"${path.toUri.getHost}${path.toUri.getPath}"
   }
 
   private[extras] def updateTable(hiveTable: String, publishBase: String, infoDate: LocalDate, infoVersion: Int)(implicit spark: SparkSession): Unit = {
