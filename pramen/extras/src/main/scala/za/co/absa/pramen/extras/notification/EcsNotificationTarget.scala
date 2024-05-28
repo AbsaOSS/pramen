@@ -17,6 +17,7 @@
 package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.Config
+import org.apache.hadoop.fs.Path
 import org.apache.http.HttpStatus
 import org.apache.http.client.HttpClient
 import org.apache.http.config.RegistryBuilder
@@ -28,37 +29,95 @@ import org.apache.http.impl.conn.BasicHttpClientConnectionManager
 import org.apache.http.ssl.{SSLContexts, TrustStrategy}
 import org.apache.http.util.EntityUtils
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{NotificationTarget, TaskNotification}
+import za.co.absa.pramen.api.{DataFormat, NotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.utils.Emoji
+import za.co.absa.pramen.extras.notification.EcsNotificationTarget.{ECS_API_KEY_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
 import za.co.absa.pramen.extras.sink.HttpDeleteWithBody
+import za.co.absa.pramen.extras.utils.ConfigUtils
 
 import java.security.cert.X509Certificate
+import java.time.format.DateTimeFormatter
 
 /**
   * Runs the ECS cleanup API against the target partition after the job jas completed.
   */
 class EcsNotificationTarget(conf: Config) extends NotificationTarget {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   override def config: Config = conf
 
   override def sendNotification(notification: TaskNotification): Unit = {
-    // ToDo implementation
+    if (notification.infoDate.isEmpty) {
+      log.warn(s"Information date not provided - skipping ECS cleanup.")
+      return
+    }
+
+    val (ecsApiUrl, ecsApiKey, trustAllSslCerts) = getEcsDetails
+    val tableDef = notification.tableDef
+
+    log.info(s"ECS API URL: $ecsApiUrl")
+    log.info(s"ECS API Key: [redacted]")
+    log.info(s"Trust all SSL certificates: $trustAllSslCerts")
+    log.info(s"Metatable: ${tableDef.name} (${tableDef.format.name})")
+    log.info(s"Info date column: ${tableDef.infoDateColumn}")
+    log.info(s"Info date format: ${tableDef.infoDateFormat}")
+
+    val formatter = DateTimeFormatter.ofPattern(tableDef.infoDateFormat)
+    val infoDateStr = formatter.format(notification.infoDate.get)
+    log.info(s"Info date: $infoDateStr")
+
+    tableDef.format match {
+      case DataFormat.Parquet(basePath, _) =>
+        log.info(s"Base path: $basePath")
+        if (!basePath.toLowerCase.startsWith("s3://") && !basePath.toLowerCase.startsWith("s3a://")) {
+          log.warn(s"The base bath ($basePath) is not on S3. S3 versions cleanup won't be done.")
+          return
+        }
+
+        val partitionPath = new Path(basePath, s"${tableDef.infoDateColumn}=$infoDateStr")
+        log.info(s"Partition path: $partitionPath")
+
+        val httpClient = getHttpClient(trustAllSslCerts)
+        EcsNotificationTarget.cleanUpS3VersionsForPath(partitionPath, ecsApiUrl, ecsApiKey, httpClient)
+      case format =>
+        log.warn(s"Format ${format.name} is not supported. Skipping cleanup.")
+    }
+  }
+
+  protected def getHttpClient(trustAllSslCerts: Boolean): CloseableHttpClient = {
+    EcsNotificationTarget.getHttpClient(trustAllSslCerts)
+  }
+
+  private[extras] def getEcsDetails: (String, String, Boolean) = {
+    require(conf.hasPath(ECS_API_URL_KEY), s"The key is not defined: '$ECS_API_URL_KEY'")
+    require(conf.hasPath(ECS_API_KEY_KEY), s"The key is not defined: '$ECS_API_KEY_KEY'")
+
+    val ecsApiUrl = conf.getString(ECS_API_URL_KEY)
+    val ecsApiKey = conf.getString(ECS_API_KEY_KEY)
+    val trustAllSslCerts = ConfigUtils.getOptionBoolean(conf, ECS_API_TRUST_SSL_KEY).getOrElse(false)
+
+    (ecsApiUrl, ecsApiKey, trustAllSslCerts)
   }
 }
 
 object EcsNotificationTarget {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def cleanUpS3VersionsForPath(partitionPath: String,
+  val ECS_API_URL_KEY = "ecs.api.url"
+  val ECS_API_KEY_KEY = "ecs.api.key"
+  val ECS_API_TRUST_SSL_KEY = "ecs.api.trust.all.ssl.certificates"
+
+  /**
+    * Cleans up ECS buckets via a special REST API call.
+    */
+  def cleanUpS3VersionsForPath(partitionPath: Path,
                                apiUrl: String,
                                apiKey: String,
                                httpClient: HttpClient): Unit = {
-    val body = s"""{"ecs_path":"$partitionPath"}"""
+    val body = getCleanUpS3VersionsRequestBody(partitionPath)
     log.info(s"Sending: $body")
 
-    val httpDelete = new HttpDeleteWithBody(apiUrl)
-
-    httpDelete.addHeader("x-api-key", apiKey)
-    httpDelete.setEntity(new StringEntity(body))
+    val httpDelete = getCleanUpS3VersionsRequest(body, apiUrl, apiKey)
 
     try {
       val response = httpClient.execute(httpDelete)
@@ -76,7 +135,15 @@ object EcsNotificationTarget {
     }
   }
 
-  private[extras] def getHttpClient(trustAllSslCerts: Boolean): CloseableHttpClient = {
+  /**
+    * Returns an instance of Apache HTTP client.
+    *
+    * Do not forget to close the client after use.
+    *
+    * @param trustAllSslCerts if true, the client will trust any SSL certificate.
+    * @return an Http Client
+    */
+  def getHttpClient(trustAllSslCerts: Boolean): CloseableHttpClient = {
     // Using Apache HTTP Client.
     // Tried using com.lihaoyi:requests:0.8.0,
     // but for some strange reason the EnceladusSink class can't be found/loaded
@@ -105,6 +172,29 @@ object EcsNotificationTarget {
         .build()
     } else {
       HttpClients.createDefault()
+    }
+  }
+
+  private[extras] def getCleanUpS3VersionsRequestBody(partitionPath: Path): String = {
+    val partitionPathWithoutAuthority = removeAuthority(partitionPath)
+    s"""{"ecs_path":"$partitionPathWithoutAuthority"}"""
+  }
+
+  private[extras] def getCleanUpS3VersionsRequest(requestBody: String, apiUrl: String, apiKey: String): HttpDeleteWithBody = {
+    val httpDelete = new HttpDeleteWithBody(apiUrl)
+
+    httpDelete.addHeader("x-api-key", apiKey)
+    httpDelete.setEntity(new StringEntity(requestBody))
+
+    httpDelete
+  }
+
+  private[extras] def removeAuthority(path: Path): String = {
+    val uri = path.toUri
+    if (uri.getHost != null) {
+      s"${uri.getHost}${uri.getPath}"
+    } else {
+      s"${uri.getPath}"
     }
   }
 }

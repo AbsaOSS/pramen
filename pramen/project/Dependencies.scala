@@ -48,7 +48,8 @@ object Dependencies {
     "org.apache.spark"          %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "net.sourceforge.jtds"      %  "jtds"                       % msSqlDriverVersion,
     "org.apache.httpcomponents" %  "httpclient"                 % httpClientVersion,
-    "org.scalatest"             %% "scalatest"                  % scalatestVersion           % Test
+    "org.scalatest"             %% "scalatest"                  % scalatestVersion           % Test,
+    "org.mockito"               %  "mockito-core"               % mockitoVersion             % Test,
   ) ++ Seq(
     getAbrisDependency(sparkVersion(scalaVersion)),
     getDeltaDependency(sparkVersion(scalaVersion), isCompile = false, isTest = true)
