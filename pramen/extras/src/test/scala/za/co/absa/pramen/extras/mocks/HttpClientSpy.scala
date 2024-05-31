@@ -26,7 +26,7 @@ import org.apache.http.params.HttpParams
 import org.apache.http.protocol.HttpContext
 import org.apache.http.{HttpHost, HttpRequest, HttpStatus, HttpVersion}
 
-class HttpClientSpy(response: CloseableHttpResponse =HttpClientSpy.getDummyResponse()) extends CloseableHttpClient {
+class HttpClientSpy(response: CloseableHttpResponse = HttpClientSpy.getDummyResponse()) extends CloseableHttpClient {
   var doExecuteCalled = 0
   var closeCalled = 0
   var lastTarget: HttpHost = _

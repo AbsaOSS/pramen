@@ -21,7 +21,7 @@ import za.co.absa.pramen.extras.utils.httpclient.{SimpleHttpClient, SimpleHttpRe
 
 import scala.util.control.NonFatal
 
-class RetryableHttpClient(httpClient: SimpleHttpClient, numberOfRetries: Int, backoffMs: Int) extends SimpleHttpClient {
+class RetryableHttpClient(val baseHttpClient: SimpleHttpClient, val numberOfRetries: Int, val backoffMs: Int) extends SimpleHttpClient {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def execute(request: SimpleHttpRequest): SimpleHttpResponse = {
@@ -29,7 +29,7 @@ class RetryableHttpClient(httpClient: SimpleHttpClient, numberOfRetries: Int, ba
     var response: SimpleHttpResponse = null
     while (response == null && retries < numberOfRetries)
       try
-        response = httpClient.execute(request)
+        response = baseHttpClient.execute(request)
       catch {
         case NonFatal(ex) =>
           retries += 1
@@ -45,7 +45,7 @@ class RetryableHttpClient(httpClient: SimpleHttpClient, numberOfRetries: Int, ba
     response
   }
 
-  override def close(): Unit = httpClient.close()
+  override def close(): Unit = baseHttpClient.close()
 }
 
 object RetryableHttpClient {

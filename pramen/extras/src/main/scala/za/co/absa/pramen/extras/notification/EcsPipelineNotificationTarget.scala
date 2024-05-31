@@ -17,10 +17,10 @@
 package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.Config
-import org.apache.http.impl.client.CloseableHttpClient
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{PipelineNotificationTarget, TaskNotification, TaskStatus}
 import za.co.absa.pramen.extras.utils.ConfigUtils
+import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
 
 import java.time.Instant
 
@@ -68,7 +68,7 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
     }
   }
 
-  protected def getHttpClient(trustAllSslCerts: Boolean): CloseableHttpClient = {
+  protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = {
     EcsNotificationTarget.getHttpClient(trustAllSslCerts)
   }
 }
