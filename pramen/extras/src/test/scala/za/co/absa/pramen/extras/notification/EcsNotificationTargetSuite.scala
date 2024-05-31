@@ -44,7 +44,7 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
           |""".stripMargin
       )
 
-      val (url, key, trust) = new EcsNotificationTarget(conf).getEcsDetails
+      val (url, key, trust) = EcsNotificationTarget.getEcsDetails(conf)
 
       assert(url == "https://dummyurl.local")
       assert(key == "abcd")
