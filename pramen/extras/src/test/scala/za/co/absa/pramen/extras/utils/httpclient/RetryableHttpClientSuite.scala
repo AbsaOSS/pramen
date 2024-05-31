@@ -27,7 +27,7 @@ class RetryableHttpClientSuite extends AnyWordSpec {
   "execute" should {
     "return the response if the first attempt succeeds" in {
       val spy = new SimpleHttpClientSpy()
-      val client = new RetryableHttpClient(spy, 3, 1000)
+      val client: SimpleHttpClient = new RetryableHttpClient(spy, 3, 1000)
 
       val response = client.execute(request)
 
@@ -38,7 +38,7 @@ class RetryableHttpClientSuite extends AnyWordSpec {
 
     "return the response if the first attempt fails, but next one succeeds" in {
       val spy = new SimpleHttpClientSpy(failNTimes = 1)
-      val client = new RetryableHttpClient(spy, 3, 1000)
+      val client: SimpleHttpClient = new RetryableHttpClient(spy, 3, 1000)
 
       val response = client.execute(request)
 
@@ -49,7 +49,7 @@ class RetryableHttpClientSuite extends AnyWordSpec {
 
     "throw an exception if out of attempts" in {
       val spy = new SimpleHttpClientSpy(failNTimes = 3)
-      val client = new RetryableHttpClient(spy, 3, 1000)
+      val client: SimpleHttpClient = new RetryableHttpClient(spy, 3, 1000)
 
       val ex = intercept[RuntimeException] {
         client.execute(request)
@@ -64,7 +64,7 @@ class RetryableHttpClientSuite extends AnyWordSpec {
   "close" should {
     "call super.close" in {
       val spy = new SimpleHttpClientSpy()
-      val client = new RetryableHttpClient(spy, 3, 1000)
+      val client: SimpleHttpClient = new RetryableHttpClient(spy, 3, 1000)
 
       client.close()
 
