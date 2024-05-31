@@ -14,22 +14,26 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.utils
+package za.co.absa.pramen.extras.utils.httpclient
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.extras.utils.JsonUtils
 
-class JsonUtilsSuite extends AnyWordSpec {
+class HttpMethodSuite extends AnyWordSpec {
+  "name" should {
+    "return the name for a GET method" in {
+      assert(HttpMethod.GET.name == "GET")
+    }
 
-  "prettyJSON" should {
-    "prettify a JSON" in {
-      val json = """{"a":1,"b":2}"""
-      val expected = """{
-                       |  "a" : 1,
-                       |  "b" : 2
-                       |}""".stripMargin
-      assert(JsonUtils.prettyJSON(json) == expected)
+    "return the name for a POST method" in {
+      assert(HttpMethod.POST.name == "POST")
+    }
+
+    "return the name for a PUT method" in {
+      assert(HttpMethod.PUT.name == "PUT")
+    }
+
+    "return the name for a DELETE method" in {
+      assert(HttpMethod.DELETE.name == "DELETE")
     }
   }
-
 }

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.utils
+package za.co.absa.pramen.extras.utils
 
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.extras.utils.ConfigUtils
 
 import java.util
 import scala.collection.JavaConverters._

@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.utils
+package za.co.absa.pramen.extras.utils
 
 import org.apache.hadoop.fs.Path
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.TempDirFixture
-import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.Paths
 

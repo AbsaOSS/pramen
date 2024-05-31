@@ -193,6 +193,7 @@ lazy val assemblySettingsCommon = Seq(
 )
 
 lazy val assemblySettingsExtras = assemblySettingsCommon ++ Seq(assembly / assemblyShadeRules:= Seq(
+  ShadeRule.rename(shade("org.apache.http")).inAll,
   ShadeRule.zap("com.101tec.**").inAll,
   ShadeRule.zap("buildinfo.**").inAll,
   ShadeRule.zap("com.databricks.**").inAll,
