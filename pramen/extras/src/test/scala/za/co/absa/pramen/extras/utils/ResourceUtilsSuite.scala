@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.utils
+package za.co.absa.pramen.extras.utils
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.extras.utils.ResourceUtils
 
 class ResourceUtilsSuite extends AnyWordSpec {
   "getResourceString" should {
