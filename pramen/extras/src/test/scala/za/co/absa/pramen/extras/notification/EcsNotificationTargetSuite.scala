@@ -18,32 +18,44 @@ package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
-import org.apache.http.client.HttpClient
-import org.apache.http.impl.client.CloseableHttpClient
-import org.apache.http.{HttpEntity, HttpResponse, HttpStatus, StatusLine}
-import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{mock, when => whenMock}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.{DataFormat, TaskNotification}
+import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
 import za.co.absa.pramen.extras.notification.EcsNotificationTarget.{ECS_API_KEY_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
-import za.co.absa.pramen.extras.sink.HttpDeleteWithBody
+import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
+import za.co.absa.pramen.extras.utils.httpclient.impl.{BasicHttpClient, RetryableHttpClient}
 
 class EcsNotificationTargetSuite extends AnyWordSpec {
+  private val conf = ConfigFactory.parseString(
+    s"""
+       |$ECS_API_URL_KEY = "https://dummyurl.local"
+       |$ECS_API_KEY_KEY = "abcd"
+       |$ECS_API_TRUST_SSL_KEY = true
+       |""".stripMargin
+  )
+
+  private val dataFormat = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path", None)
+  private val metaTableDef = TestPrototypes.metaTableDef.copy(format = dataFormat)
+
   "sendNotification" should {
     "send the expected request according to config" in {
+      val httpClient = new SimpleHttpClientSpy()
 
+      val notificationTarget = new EcsNotificationTarget(conf) {
+        override protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = httpClient
+      }
+
+      notificationTarget.sendNotification(TestPrototypes.taskNotification.copy(tableDef = metaTableDef))
+
+      assert(httpClient.executeCalled == 1)
+      assert(httpClient.requests.head.url == "https://dummyurl.local")
+      assert(httpClient.requests.head.body.contains("""{"ecs_path":"/dummy/path/pramen_info_date=2022-02-18"}"""))
+      assert(httpClient.requests.head.headers("x-api-key") == "abcd")
     }
   }
 
   "getEcsDetails" should {
     "get parameters from config" in {
-      val conf = ConfigFactory.parseString(
-        s"""
-          |$ECS_API_URL_KEY = "https://dummyurl.local"
-          |$ECS_API_KEY_KEY = "abcd"
-          |$ECS_API_TRUST_SSL_KEY = true
-          |""".stripMargin
-      )
-
       val (url, key, trust) = EcsNotificationTarget.getEcsDetails(conf)
 
       assert(url == "https://dummyurl.local")
@@ -54,17 +66,11 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
 
   "cleanUpS3VersionsForPath" should {
     "send the expected request according to config" in {
-      val httpClient = mock(classOf[HttpClient])
-      val httpResponse = mock(classOf[HttpResponse])
-      val statusLine = mock(classOf[StatusLine])
-      val httpEntity = mock(classOf[HttpEntity])
-
-      whenMock(statusLine.getStatusCode).thenReturn(HttpStatus.SC_OK)
-      whenMock(httpResponse.getStatusLine).thenReturn(statusLine)
-      whenMock(httpResponse.getEntity).thenReturn(httpEntity)
-      whenMock(httpClient.execute(any[HttpDeleteWithBody])).thenReturn(httpResponse)
+      val httpClient = new SimpleHttpClientSpy()
 
       EcsNotificationTarget.cleanUpS3VersionsForPath(new Path("bucket/path/date=2024-02-18"), "https://dummyurl.local", "abcd", httpClient)
+
+      assert(httpClient.executeCalled == 1)
     }
   }
 
@@ -72,13 +78,17 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
     "return a standard HTTP client when not trusting all SSL certificates blindly" in {
       val httpClient = EcsNotificationTarget.getHttpClient(false)
 
-      assert(httpClient.isInstanceOf[CloseableHttpClient])
+      assert(httpClient.isInstanceOf[RetryableHttpClient])
+      assert(httpClient.asInstanceOf[RetryableHttpClient].baseHttpClient.isInstanceOf[BasicHttpClient])
+      assert(!httpClient.asInstanceOf[RetryableHttpClient].baseHttpClient.asInstanceOf[BasicHttpClient].trustAllSslCerts)
     }
 
     "return a custom HTTP client when trusting all SSL certificates" in {
       val httpClient = EcsNotificationTarget.getHttpClient(true)
 
-      assert(httpClient.isInstanceOf[CloseableHttpClient])
+      assert(httpClient.isInstanceOf[RetryableHttpClient])
+      assert(httpClient.asInstanceOf[RetryableHttpClient].baseHttpClient.isInstanceOf[BasicHttpClient])
+      assert(httpClient.asInstanceOf[RetryableHttpClient].baseHttpClient.asInstanceOf[BasicHttpClient].trustAllSslCerts)
     }
   }
 
@@ -92,10 +102,12 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
 
   "getCleanUpS3VersionsRequest" should {
     "return the proper request" in {
-      val request = EcsNotificationTarget.getCleanUpS3VersionsRequest("{\"ecs_path\":\"bucket/path/date=2024-02-18\"}", "https://dummyurl.local", "abcd")
+      val body = "{\"ecs_path\":\"bucket/path/date=2024-02-18\"}"
+      val request = EcsNotificationTarget.getCleanUpS3VersionsRequest(body, "https://dummyurl.local", "abcd")
 
-      assert(request.isInstanceOf[HttpDeleteWithBody])
-      assert(request.getHeaders("x-api-key").head.getValue == "abcd")
+      assert(request.url == "https://dummyurl.local")
+      assert(request.headers("x-api-key") == "abcd")
+      assert(request.body.contains(body))
     }
   }
 

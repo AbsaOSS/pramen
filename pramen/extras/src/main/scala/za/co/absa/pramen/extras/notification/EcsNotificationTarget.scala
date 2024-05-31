@@ -19,22 +19,12 @@ package za.co.absa.pramen.extras.notification
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.http.HttpStatus
-import org.apache.http.client.HttpClient
-import org.apache.http.config.RegistryBuilder
-import org.apache.http.conn.socket.{ConnectionSocketFactory, PlainConnectionSocketFactory}
-import org.apache.http.conn.ssl.{NoopHostnameVerifier, SSLConnectionSocketFactory}
-import org.apache.http.entity.StringEntity
-import org.apache.http.impl.client.{CloseableHttpClient, HttpClients}
-import org.apache.http.impl.conn.BasicHttpClientConnectionManager
-import org.apache.http.ssl.{SSLContexts, TrustStrategy}
-import org.apache.http.util.EntityUtils
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, MetaTableDef, NotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.utils.Emoji
-import za.co.absa.pramen.extras.sink.HttpDeleteWithBody
 import za.co.absa.pramen.extras.utils.ConfigUtils
+import za.co.absa.pramen.extras.utils.httpclient.{HttpMethod, SimpleHttpClient, SimpleHttpRequest}
 
-import java.security.cert.X509Certificate
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -63,7 +53,7 @@ class EcsNotificationTarget(conf: Config) extends NotificationTarget {
     }
   }
 
-  protected def getHttpClient(trustAllSslCerts: Boolean): CloseableHttpClient = {
+  protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = {
     EcsNotificationTarget.getHttpClient(trustAllSslCerts)
   }
 }
@@ -82,7 +72,7 @@ object EcsNotificationTarget {
                                 infoDate: LocalDate,
                                 apiUrl: String,
                                 apiKey: String,
-                                httpClient: HttpClient): Unit = {
+                                httpClient: SimpleHttpClient): Unit = {
     log.info(s"ECS API URL: $apiUrl")
     log.info(s"ECS API Key: [redacted]")
     log.info(s"Metatable: ${tableDef.name} (${tableDef.format.name})")
@@ -116,7 +106,7 @@ object EcsNotificationTarget {
   def cleanUpS3VersionsForPath(partitionPath: Path,
                                apiUrl: String,
                                apiKey: String,
-                               httpClient: HttpClient): Unit = {
+                               httpClient: SimpleHttpClient): Unit = {
     val body = getCleanUpS3VersionsRequestBody(partitionPath)
     log.info(s"Sending: $body")
 
@@ -124,8 +114,8 @@ object EcsNotificationTarget {
 
     try {
       val response = httpClient.execute(httpDelete)
-      val statusCode = response.getStatusLine.getStatusCode
-      val responseBody = EntityUtils.toString(response.getEntity)
+      val statusCode = response.statusCode
+      val responseBody = response.body.getOrElse("")
 
       if (statusCode != HttpStatus.SC_OK) {
         log.error(s"${Emoji.FAILURE} Failed to clean up S3 versions for $partitionPath. Response: $statusCode $responseBody")
@@ -139,45 +129,16 @@ object EcsNotificationTarget {
   }
 
   /**
-    * Returns an instance of Apache HTTP client.
+    * Returns an instance of an HTTP client.
     *
     * Do not forget to close the client after use.
     *
     * @param trustAllSslCerts if true, the client will trust any SSL certificate.
     * @return an Http Client
     */
-  def getHttpClient(trustAllSslCerts: Boolean): CloseableHttpClient = {
-    // Using Apache HTTP Client.
-    // Tried using com.lihaoyi:requests:0.8.0,
-    // but for some strange reason the EnceladusSink class can't be found/loaded
-    // when this library is used.
-
+  def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = {
     log.info(s"Trust all SSL certificates: $trustAllSslCerts")
-
-    if (trustAllSslCerts) {
-      log.warn("Trusting all SSL certificates for the cleanup API.")
-      val trustStrategy = new TrustStrategy {
-        override def isTrusted(x509Certificates: Array[X509Certificate], s: String): Boolean = true
-      }
-
-      val sslContext = SSLContexts.custom.loadTrustMaterial(null, trustStrategy).build
-      val sslsf = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE)
-
-      val socketFactoryRegistry =
-        RegistryBuilder.create[ConnectionSocketFactory]()
-          .register("https", sslsf)
-          .register("http", new PlainConnectionSocketFactory())
-          .build()
-
-      val connectionManager = new BasicHttpClientConnectionManager(socketFactoryRegistry)
-
-      HttpClients.custom()
-        .setSSLSocketFactory(sslsf)
-        .setConnectionManager(connectionManager)
-        .build()
-    } else {
-      HttpClients.createDefault()
-    }
+    SimpleHttpClient(trustAllSslCerts)
   }
 
   private[extras] def getEcsDetails(conf: Config): (String, String, Boolean) = {
@@ -196,13 +157,13 @@ object EcsNotificationTarget {
     s"""{"ecs_path":"$partitionPathWithoutAuthority"}"""
   }
 
-  private[extras] def getCleanUpS3VersionsRequest(requestBody: String, apiUrl: String, apiKey: String): HttpDeleteWithBody = {
-    val httpDelete = new HttpDeleteWithBody(apiUrl)
+  private[extras] def getCleanUpS3VersionsRequest(requestBody: String, apiUrl: String, apiKey: String): SimpleHttpRequest = {
+    val httpDelete = HttpMethod.DELETE
+    val headers = Map(
+      "x-api-key" -> apiKey
+    )
 
-    httpDelete.addHeader("x-api-key", apiKey)
-    httpDelete.setEntity(new StringEntity(requestBody))
-
-    httpDelete
+    SimpleHttpRequest(apiUrl, httpDelete, headers, Option(requestBody))
   }
 
   private[extras] def removeAuthority(path: Path): String = {

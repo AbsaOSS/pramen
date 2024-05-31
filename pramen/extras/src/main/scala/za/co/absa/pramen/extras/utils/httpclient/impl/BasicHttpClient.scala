@@ -31,7 +31,7 @@ import za.co.absa.pramen.extras.utils.httpclient.{SimpleHttpClient, SimpleHttpRe
 
 import java.security.cert.X509Certificate
 
-class BasicHttpClient(trustAllSslCerts: Boolean) extends SimpleHttpClient {
+class BasicHttpClient(val trustAllSslCerts: Boolean) extends SimpleHttpClient {
   import BasicHttpClient._
 
   private val log = LoggerFactory.getLogger(this.getClass)

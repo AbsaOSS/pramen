@@ -19,15 +19,19 @@ package za.co.absa.pramen.extras.mocks
 import org.apache.http.HttpStatus
 import za.co.absa.pramen.extras.utils.httpclient.{SimpleHttpClient, SimpleHttpRequest, SimpleHttpResponse}
 
+import scala.collection.mutable.ListBuffer
+
 class SimpleHttpClientSpy(response: SimpleHttpResponse = SimpleHttpResponse(HttpStatus.SC_OK, Some("body"), Seq.empty),
                           failNTimes: Int = 0)
   extends SimpleHttpClient {
   var executeCalled = 0
   var closeCalled = 0
   var failuresLeft: Int = failNTimes
+  val requests = new ListBuffer[SimpleHttpRequest]
 
   override def execute(request: SimpleHttpRequest): SimpleHttpResponse = {
     executeCalled += 1
+    requests += request
 
     if (failuresLeft > 0) {
       failuresLeft -= 1
