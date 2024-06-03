@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{PipelineNotificationTarget, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.{DataFormat, PipelineNotificationTarget, TaskNotification, TaskStatus}
 import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
 
@@ -31,7 +31,7 @@ import java.time.Instant
   * {{{
   *   pramen.ecs.api {
   *      url = "https://dummy.local"
-  *      key = "aabbcc"
+  *      secret = "aabbcc"
   *      trust.all.ssl.certificates = false
   *   }
   *
@@ -48,6 +48,7 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
                                 applicationId: Option[String],
                                 appException: Option[Throwable],
                                 tasksCompleted: Seq[TaskNotification]): Unit = {
+    log.info(s"Running the ECS cleanup pipeline notification target...")
     val (ecsApiUrl, ecsApiKey, trustAllSslCerts) = EcsPipelineNotificationTarget.getEcsDetails(conf)
 
     val httpClient = getHttpClient(trustAllSslCerts)
@@ -56,7 +57,13 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
       tasksCompleted.foreach { task =>
         (task.infoDate, task.status) match {
           case (Some(infoDate), _: TaskStatus.Succeeded) =>
-            EcsNotificationTarget.cleanUpS3VersionsForTable(task.tableDef, infoDate, ecsApiUrl, ecsApiKey, httpClient)
+            if (!task.tableDef.format.isTransient &&
+              !task.tableDef.format.isInstanceOf[DataFormat.Null] &&
+              !task.tableDef.format.isInstanceOf[DataFormat.Raw]) {
+              EcsNotificationTarget.cleanUpS3VersionsForTable(task.tableDef, infoDate, ecsApiUrl, ecsApiKey, httpClient)
+            } else {
+              log.info(s"The task outputting to '${task.tableName}' for '$infoDate' outputs to ${task.tableDef.format.name} format - skipping ECS cleanup...")
+            }
           case (Some(infoDate), _) =>
             log.info(s"The task outputting to '${task.tableName}' for '$infoDate' status is not a success - skipping ECS cleanup...")
           case (None, status) =>
@@ -75,15 +82,15 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
 
 object EcsPipelineNotificationTarget {
   val ECS_API_URL_KEY = "pramen.ecs.api.url"
-  val ECS_API_KEY_KEY = "pramen.ecs.api.key"
+  val ECS_API_SECRET_KEY = "pramen.ecs.api.secret"
   val ECS_API_TRUST_SSL_KEY = "pramen.ecs.api.trust.all.ssl.certificates"
 
   private[extras] def getEcsDetails(conf: Config): (String, String, Boolean) = {
     require(conf.hasPath(ECS_API_URL_KEY), s"The key is not defined: '$ECS_API_URL_KEY'")
-    require(conf.hasPath(ECS_API_KEY_KEY), s"The key is not defined: '$ECS_API_KEY_KEY'")
+    require(conf.hasPath(ECS_API_SECRET_KEY), s"The key is not defined: '$ECS_API_SECRET_KEY'")
 
     val ecsApiUrl = conf.getString(ECS_API_URL_KEY)
-    val ecsApiKey = conf.getString(ECS_API_KEY_KEY)
+    val ecsApiKey = conf.getString(ECS_API_SECRET_KEY)
     val trustAllSslCerts = ConfigUtils.getOptionBoolean(conf, ECS_API_TRUST_SSL_KEY).getOrElse(false)
 
     (ecsApiUrl, ecsApiKey, trustAllSslCerts)

@@ -62,8 +62,10 @@ object EcsNotificationTarget {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   val ECS_API_URL_KEY = "ecs.api.url"
-  val ECS_API_KEY_KEY = "ecs.api.key"
+  val ECS_API_SECRET_KEY = "ecs.api.key"
   val ECS_API_TRUST_SSL_KEY = "ecs.api.trust.all.ssl.certificates"
+
+  val ECS_PREFIXES: Seq[String] = Seq("s3a://")
 
   /**
     * Cleans up a Pramen metatable via a special REST API call.
@@ -73,21 +75,18 @@ object EcsNotificationTarget {
                                 apiUrl: String,
                                 apiKey: String,
                                 httpClient: SimpleHttpClient): Unit = {
-    log.info(s"ECS API URL: $apiUrl")
-    log.info(s"ECS API Key: [redacted]")
-    log.info(s"Metatable: ${tableDef.name} (${tableDef.format.name})")
-    log.info(s"Info date column: ${tableDef.infoDateColumn}")
-    log.info(s"Info date format: ${tableDef.infoDateFormat}")
+    log.info(s"Running the ECS cleanup notification target: $apiUrl, metatable=${tableDef.name}, format=${tableDef.format.name}, " +
+      s"Info date column=${tableDef.infoDateColumn}, Info date format=${tableDef.infoDateFormat}, Info date=$infoDate")
 
     val formatter = DateTimeFormatter.ofPattern(tableDef.infoDateFormat)
     val infoDateStr = formatter.format(infoDate)
-    log.info(s"Info date: $infoDateStr")
 
     tableDef.format match {
       case DataFormat.Parquet(basePath, _) =>
         log.info(s"Base path: $basePath")
-        if (!basePath.toLowerCase.startsWith("s3://") && !basePath.toLowerCase.startsWith("s3a://")) {
-          log.warn(s"The base bath ($basePath) is not on S3. S3 versions cleanup won't be done.")
+        val basePathLowerCase = basePath.toLowerCase
+        if (!ECS_PREFIXES.exists(prefix => basePathLowerCase.startsWith(prefix))) {
+          log.info(s"The base bath ($basePath) is not on S3. S3 versions cleanup won't be done.")
           return
         }
 
@@ -143,10 +142,10 @@ object EcsNotificationTarget {
 
   private[extras] def getEcsDetails(conf: Config): (String, String, Boolean) = {
     require(conf.hasPath(ECS_API_URL_KEY), s"The key is not defined: '$ECS_API_URL_KEY'")
-    require(conf.hasPath(ECS_API_KEY_KEY), s"The key is not defined: '$ECS_API_KEY_KEY'")
+    require(conf.hasPath(ECS_API_SECRET_KEY), s"The key is not defined: '$ECS_API_SECRET_KEY'")
 
     val ecsApiUrl = conf.getString(ECS_API_URL_KEY)
-    val ecsApiKey = conf.getString(ECS_API_KEY_KEY)
+    val ecsApiKey = conf.getString(ECS_API_SECRET_KEY)
     val trustAllSslCerts = ConfigUtils.getOptionBoolean(conf, ECS_API_TRUST_SSL_KEY).getOrElse(false)
 
     (ecsApiUrl, ecsApiKey, trustAllSslCerts)
@@ -158,12 +157,18 @@ object EcsNotificationTarget {
   }
 
   private[extras] def getCleanUpS3VersionsRequest(requestBody: String, apiUrl: String, apiKey: String): SimpleHttpRequest = {
-    val httpDelete = HttpMethod.DELETE
-    val headers = Map(
-      "x-api-key" -> apiKey
-    )
+    val effectiveUrl = if (apiUrl.endsWith("/kk")) {
+      apiUrl
+    } else {
+      s"$apiUrl/kk"
+    }
 
-    SimpleHttpRequest(apiUrl, httpDelete, headers, Option(requestBody))
+    SimpleHttpRequest(
+      effectiveUrl,
+      HttpMethod.DELETE,
+      Map("x-api-key" -> apiKey),
+      Some(requestBody)
+    )
   }
 
   private[extras] def removeAuthority(path: Path): String = {

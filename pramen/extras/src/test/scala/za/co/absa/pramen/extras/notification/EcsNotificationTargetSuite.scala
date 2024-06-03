@@ -19,9 +19,9 @@ package za.co.absa.pramen.extras.notification
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.{DataFormat, TaskNotification}
+import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
-import za.co.absa.pramen.extras.notification.EcsNotificationTarget.{ECS_API_KEY_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
+import za.co.absa.pramen.extras.notification.EcsNotificationTarget.{ECS_API_SECRET_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
 import za.co.absa.pramen.extras.utils.httpclient.impl.{BasicHttpClient, RetryableHttpClient}
 
@@ -29,7 +29,7 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
   private val conf = ConfigFactory.parseString(
     s"""
        |$ECS_API_URL_KEY = "https://dummyurl.local"
-       |$ECS_API_KEY_KEY = "abcd"
+       |$ECS_API_SECRET_KEY = "abcd"
        |$ECS_API_TRUST_SSL_KEY = true
        |""".stripMargin
   )
@@ -48,7 +48,7 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
       notificationTarget.sendNotification(TestPrototypes.taskNotification.copy(tableDef = metaTableDef))
 
       assert(httpClient.executeCalled == 1)
-      assert(httpClient.requests.head.url == "https://dummyurl.local")
+      assert(httpClient.requests.head.url == "https://dummyurl.local/kk")
       assert(httpClient.requests.head.body.contains("""{"ecs_path":"/dummy/path/pramen_info_date=2022-02-18"}"""))
       assert(httpClient.requests.head.headers("x-api-key") == "abcd")
     }
@@ -103,9 +103,9 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
   "getCleanUpS3VersionsRequest" should {
     "return the proper request" in {
       val body = "{\"ecs_path\":\"bucket/path/date=2024-02-18\"}"
-      val request = EcsNotificationTarget.getCleanUpS3VersionsRequest(body, "https://dummyurl.local", "abcd")
+      val request = EcsNotificationTarget.getCleanUpS3VersionsRequest(body, "https://dummyurl.local/kk", "abcd")
 
-      assert(request.url == "https://dummyurl.local")
+      assert(request.url == "https://dummyurl.local/kk")
       assert(request.headers("x-api-key") == "abcd")
       assert(request.body.contains(body))
     }
