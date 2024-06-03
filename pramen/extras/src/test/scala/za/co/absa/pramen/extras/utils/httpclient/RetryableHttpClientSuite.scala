@@ -47,6 +47,18 @@ class RetryableHttpClientSuite extends AnyWordSpec {
       assert(spy.executeCalled == 2)
     }
 
+    "return the response if the first attempt returns an error status code, but next one succeeds" in {
+      val failResp = SimpleHttpResponse(HttpStatus.SC_BAD_REQUEST, Some("body"), Seq.empty)
+      val spy = new SimpleHttpClientSpy(failResponse = Option(failResp), failNTimes = 1)
+      val client: SimpleHttpClient = new RetryableHttpClient(spy, 3, 1000)
+
+      val response = client.execute(request)
+
+      assert(response.statusCode == HttpStatus.SC_OK)
+      assert(response.body.contains("body"))
+      assert(spy.executeCalled == 2)
+    }
+
     "throw an exception if out of attempts" in {
       val spy = new SimpleHttpClientSpy(failNTimes = 3)
       val client: SimpleHttpClient = new RetryableHttpClient(spy, 3, 1000)

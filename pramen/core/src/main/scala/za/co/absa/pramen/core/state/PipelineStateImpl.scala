@@ -45,7 +45,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val environmentName = conf.getString(ENVIRONMENT_NAME)
   private val sendEmailIfNoNewData: Boolean = conf.getBoolean(EMAIL_IF_NO_CHANGES)
   private val hookConfig = HookConfig.fromConfig(conf)
-  private val pipelineNotificationTargets = PipelineNotificationTargetFactory.fromConfig(conf)
+  private var pipelineNotificationTargets: Seq[PipelineNotificationTarget] = PipelineNotificationTargetFactory.fromConfig(conf)
 
   // State
   private val startedInstant = Instant.now
@@ -68,6 +68,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     setSignalHandler(new Signal("INT"), "SIGINT (Ctrl + C)")
     setSignalHandler(new Signal("TERM"), "SIGTERM (kill)")
     setSignalHandler(new Signal("HUP"), "SIGHUP (network connection to the terminal has been lost)")
+    pipelineNotificationTargets = PipelineNotificationTargetFactory.fromConfig(conf)
   }
 
   override def getState(): PipelineStateSnapshot = synchronized {

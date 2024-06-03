@@ -22,6 +22,7 @@ import za.co.absa.pramen.extras.utils.httpclient.{SimpleHttpClient, SimpleHttpRe
 import scala.collection.mutable.ListBuffer
 
 class SimpleHttpClientSpy(response: SimpleHttpResponse = SimpleHttpResponse(HttpStatus.SC_OK, Some("body"), Seq.empty),
+                          failResponse: Option[SimpleHttpResponse] = None,
                           failNTimes: Int = 0)
   extends SimpleHttpClient {
   var executeCalled = 0
@@ -35,10 +36,15 @@ class SimpleHttpClientSpy(response: SimpleHttpResponse = SimpleHttpResponse(Http
 
     if (failuresLeft > 0) {
       failuresLeft -= 1
-      throw new RuntimeException("Test Exception")
+      failResponse match {
+        case Some(resp) =>
+          resp
+        case None =>
+          throw new RuntimeException("Test Exception")
+      }
+    } else {
+      response
     }
-
-    response
   }
 
   override def close(): Unit = closeCalled += 1

@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{DataFormat, Query}
 import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
-import za.co.absa.pramen.extras.notification.EcsPipelineNotificationTarget.{ECS_API_KEY_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
+import za.co.absa.pramen.extras.notification.EcsPipelineNotificationTarget.{ECS_API_SECRET_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
 
 import java.time.Instant
@@ -29,7 +29,7 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
   private val conf = ConfigFactory.parseString(
     s"""
        |$ECS_API_URL_KEY = "https://dummyurl.local"
-       |$ECS_API_KEY_KEY = "abcd"
+       |$ECS_API_SECRET_KEY = "abcd"
        |$ECS_API_TRUST_SSL_KEY = true
        |""".stripMargin
   )
@@ -56,10 +56,10 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
       notificationTarget.sendNotification(Instant.now, None, None, Seq(task1, task2, task3))
 
       assert(httpClient.executeCalled == 2)
-      assert(httpClient.requests.head.url == "https://dummyurl.local")
+      assert(httpClient.requests.head.url == "https://dummyurl.local/kk")
       assert(httpClient.requests.head.body.contains("""{"ecs_path":"/dummy/path/pramen_info_date=2022-02-18"}"""))
       assert(httpClient.requests.head.headers("x-api-key") == "abcd")
-      assert(httpClient.requests(1).url == "https://dummyurl.local")
+      assert(httpClient.requests(1).url == "https://dummyurl.local/kk")
       assert(httpClient.requests(1).body.contains("""{"ecs_path":"/dummy/path2/pramen_info_date=2022-02-18"}"""))
       assert(httpClient.requests(1).headers("x-api-key") == "abcd")
     }

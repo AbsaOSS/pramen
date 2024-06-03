@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.extras.utils.httpclient.impl
 
+import org.apache.http.HttpStatus
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.extras.utils.httpclient.{SimpleHttpClient, SimpleHttpRequest, SimpleHttpResponse}
 
@@ -28,19 +29,31 @@ class RetryableHttpClient(val baseHttpClient: SimpleHttpClient, val numberOfRetr
     var retries = 0
     var response: SimpleHttpResponse = null
     while (response == null && retries < numberOfRetries)
-      try
+      try {
         response = baseHttpClient.execute(request)
-      catch {
+        if (response.statusCode >= HttpStatus.SC_BAD_REQUEST) {
+          retries += 1
+          if (retries < numberOfRetries) {
+            Thread.sleep(backoffMs)
+            val responseStr = response.body match {
+              case Some(body) =>
+                s"${response.statusCode} - $body"
+              case None =>
+                response.statusCode.toString
+            }
+            log.error(s"${request.method.name} Request to ${request.url} returned ($responseStr). Retrying... (attempt $retries/$numberOfRetries)")
+            response = null
+          }
+        }
+
+      } catch {
         case NonFatal(ex) =>
           retries += 1
           if (retries >= numberOfRetries) {
             throw ex
           }
           Thread.sleep(backoffMs)
-          log.error(
-            s"${request.method.name} Request to ${request.url} failed. Retrying... (attempt $retries/$numberOfRetries)",
-            ex
-          )
+          log.error(s"${request.method.name} Request to ${request.url} failed. Retrying... (attempt $retries/$numberOfRetries)", ex)
       }
     response
   }
