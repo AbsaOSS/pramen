@@ -65,6 +65,7 @@ object AppRunner {
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
       _          <- runStartupHook(state, appContext.appConfig.hookConfig)
       _          <- validateShutdownHook(state, appContext.appConfig.hookConfig)
+      _          <- initPipelineNotificationTargets(state)
       _          <- validatePipeline(jobs, state, appContext, spark)
       _          <- runPipeline(conf, jobs, state, appContext, taskRunner, spark)
       _          <- shutdownTaskRunner(taskRunner, state)
@@ -115,6 +116,12 @@ object AppRunner {
     handleFailure(Try {
       new TaskRunnerMultithreaded(conf, appContext.bookkeeper, appContext.journal, appContext.tokenLockFactory, state, appContext.appConfig.runtimeConfig, applicationId)
     }, state, "initialization of the task runner")
+  }
+
+  private[core] def initPipelineNotificationTargets(implicit state: PipelineState): Try[Unit] = {
+    handleFailure(Try {
+      state.asInstanceOf[PipelineStateImpl].initNotificationTargets()
+    }, state, "Initialization of piepline notification targets")
   }
 
   private[core] def getSparkSession(implicit conf: Config,
