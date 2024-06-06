@@ -208,6 +208,7 @@ object SparkUtils {
     * Transforms the schema to the format compatible with Hive-like catalogs.
     * - Removes non-nullable flag since it is not compatible with catalogs
     * - Switches from string to varchar(n) when the maximum field length is known
+    *
     * @param schema The input schema.
     * @return The transformed schema.
     */
@@ -391,43 +392,111 @@ object SparkUtils {
     * {{{
     *   `Id` INT NOT NULL,`Name` STRING,`System Date` ARRAY<STRING>
     * }}}
+    *
     * @param sparkDdlExpr An expression as a Spark DDL (df.schema.toDDL)
     * @return The same DDL with all column names escaped.
     */
   def escapeColumnsSparkDDL(sparkDdlExpr: String): String = {
+    val STATE_WHITESPACE_OR_ID = 0
+    val STATE_POSSIBLE_ID = 1
+    val STATE_DATA_TYPE = 2
+    val STATE_PARENTHESIS = 3
+    val STATE_QUOTES = 4
+    val STATE_ESCAPE = 5
+
     val output = new StringBuilder()
     val token = new StringBuilder()
 
     var state = 0
+    var depth = 0
     var i = 0
     val len = sparkDdlExpr.length
 
     while (i < len) {
       val c = sparkDdlExpr(i)
-      if (state == 0) {
-        if (c == ' ' || c == ':') {
-          state = 1
-          val tokenStr = token.toString()
-          if (tokenStr.nonEmpty && tokenStr.head == '`') {
-            output.append(s"$token$c")
+      if (state == STATE_WHITESPACE_OR_ID) {
+        if (c == '<' || c == ':') {
+          output.append(s"$token")
+          token.clear()
+          state = STATE_DATA_TYPE
+        } else if (c == ' ') {
+          token.append(c)
+        } else {
+          output.append(s"$token")
+          token.clear()
+          state = STATE_POSSIBLE_ID
+        }
+      }
+
+      if (state == 1) {
+        if (c == '(') {
+          depth = 1
+          state = STATE_PARENTHESIS
+          token.append(c)
+        } else if (c == '\'') {
+          state = STATE_QUOTES
+          token.append(c)
+        } else if (c == '\\') {
+          state = STATE_ESCAPE
+          token.append(c)
+        } else if (c == ' ' || c == ':') {
+          state = STATE_DATA_TYPE
+          val tokenStr = token.toString().trim
+          if (tokenStr.isEmpty) {
+            output.append(s"$tokenStr$c")
+          } else if (tokenStr.head == '`') {
+            output.append(s"$tokenStr$c")
           } else {
-            output.append(s"`$token`$c")
+            output.append(s"`$tokenStr`$c")
           }
           token.clear()
         } else if (c == ',' || c == '<') {
           output.append(s"$token$c")
           token.clear()
+          state = STATE_WHITESPACE_OR_ID
+        } else if (c == '>') {
+          output.append(s"$token$c")
+          token.clear()
+          state = STATE_DATA_TYPE
         } else {
           token.append(c)
         }
-      } else if (state == 1) {
-        if (c == ',' || c == '<') {
-          state = 0
+      } else if (state == STATE_DATA_TYPE) {
+        if (c == '(') {
+          depth = 1
+          state = STATE_PARENTHESIS
+        } else if (c == '\'') {
+          state = STATE_QUOTES
+        } else if (c == '\\') {
+          state = STATE_ESCAPE
+        }
+        if (c == ',') {
+          state = STATE_WHITESPACE_OR_ID
+          output.append(s"$token$c")
+          token.clear()
+        } else if (c == '<') {
+          state = STATE_WHITESPACE_OR_ID
           output.append(s"$token$c")
           token.clear()
         } else {
           token.append(c)
         }
+      } else if (state == STATE_PARENTHESIS) {
+        if (c == ')') {
+          depth -= 1
+          if (depth == 0)
+            state = STATE_DATA_TYPE
+        } else if (c == '(')
+          depth += 1
+        token.append(c)
+      } else if (state == STATE_QUOTES) {
+        if (c == '\'') {
+          state = STATE_DATA_TYPE
+        }
+        token.append(c)
+      } else if (state == STATE_ESCAPE) {
+        state = STATE_DATA_TYPE
+        token.append(c)
       }
       i += 1
     }

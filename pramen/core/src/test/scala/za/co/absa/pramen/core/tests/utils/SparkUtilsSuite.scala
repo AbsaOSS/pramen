@@ -641,6 +641,36 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
 
       assert(actual == expectedDDL)
     }
+
+    "work with decimals and nested arrays of struct" in {
+      val expectedDDL = "`id` BIGINT COMMENT 'This is my table',`legs` ARRAY<STRUCT<`conditions`: ARRAY<STRUCT<`amount`: DECIMAL(18,4), `checks`: ARRAY<STRUCT<`checkNums`: ARRAY<STRING> COMMENT 'decimal(10, 12)'>>>>, `legid`: BIGINT COMMENT 'This is a \\'test\\': long'>>"
+
+      val comment1 = new MetadataBuilder().putString("comment", "This is my table").build()
+      val comment2 = new MetadataBuilder().putString("comment", "decimal(10, 12)").build()
+      val comment3 = new MetadataBuilder().putString("comment", "This is a 'test': long").build()
+      val schema = StructType(Array(
+        StructField("id", LongType, nullable = true, metadata = comment1),
+        StructField("legs", ArrayType(StructType(List(
+          StructField("conditions", ArrayType(StructType(List(
+            StructField("amount", DecimalType(18, 4), nullable = true),
+            StructField("checks", ArrayType(StructType(List(
+              StructField("checkNums", ArrayType(StringType, containsNull = true), nullable = true, metadata = comment2)
+            )), containsNull = true), nullable = true))), containsNull = true), nullable = true),
+          StructField("legid", LongType, nullable = true, metadata = comment3))), containsNull = true), nullable = true)))
+
+      val actualDDL = escapeColumnsSparkDDL(schema.toDDL)
+
+      assert(actualDDL == expectedDDL)
+    }
+
+    "work with decimals and nested arrays of struct when the input is not escaped" in {
+      val inputDDL = "id BIGINT COMMENT 'This is my table',legs ARRAY<STRUCT<conditions: ARRAY<STRUCT<amount: DECIMAL(18,4), checks: ARRAY<STRUCT<checkNums: ARRAY<STRING> COMMENT 'decimal(10, 12)'>>>>, legid: BIGINT COMMENT 'This is a \\'test\\': long'>>"
+      val expectedDDL = "`id` BIGINT COMMENT 'This is my table',`legs` ARRAY<STRUCT<`conditions`: ARRAY<STRUCT<`amount`: DECIMAL(18,4), `checks`: ARRAY<STRUCT<`checkNums`: ARRAY<STRING> COMMENT 'decimal(10, 12)'>>>>, `legid`: BIGINT COMMENT 'This is a \\'test\\': long'>>"
+
+      val actualDDL = escapeColumnsSparkDDL(inputDDL)
+
+      assert(actualDDL == expectedDDL)
+    }
   }
 
 }
