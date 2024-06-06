@@ -22,6 +22,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.FieldChange._
+import za.co.absa.pramen.core.NestedDataFrameFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.pipeline.TransformExpression
@@ -643,7 +644,8 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "work with decimals and nested arrays of struct" in {
-      val expectedDDL = "`id` BIGINT COMMENT 'This is my table',`legs` ARRAY<STRUCT<`conditions`: ARRAY<STRUCT<`amount`: DECIMAL(18,4), `checks`: ARRAY<STRUCT<`checkNums`: ARRAY<STRING> COMMENT 'decimal(10, 12)'>>>>, `legid`: BIGINT COMMENT 'This is a \\'test\\': long'>>"
+      val expectedDDLWithNestedComments = "`id` BIGINT COMMENT 'This is my table',`legs` ARRAY<STRUCT<`conditions`: ARRAY<STRUCT<`amount`: DECIMAL(18,4), `checks`: ARRAY<STRUCT<`checkNums`: ARRAY<STRING> COMMENT 'decimal(10, 12)'>>>>, `legid`: BIGINT COMMENT 'This is a \\'test\\': long'>>"
+      val expectedDDLWithoutNestedComments = "`id` BIGINT COMMENT 'This is my table',`legs` ARRAY<STRUCT<`conditions`: ARRAY<STRUCT<`amount`: DECIMAL(18,4), `checks`: ARRAY<STRUCT<`checkNums`: ARRAY<STRING>>>>>, `legid`: BIGINT>>"
 
       val comment1 = new MetadataBuilder().putString("comment", "This is my table").build()
       val comment2 = new MetadataBuilder().putString("comment", "decimal(10, 12)").build()
@@ -660,12 +662,34 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
 
       val actualDDL = escapeColumnsSparkDDL(schema.toDDL)
 
-      assert(actualDDL == expectedDDL)
+      // Depends on the version of Spark
+      if (actualDDL.contains("ARRAY<STRING> COMMENT")) {
+        assert(actualDDL == expectedDDLWithNestedComments)
+      } else {
+        assert(actualDDL == expectedDDLWithoutNestedComments)
+      }
     }
 
     "work with decimals and nested arrays of struct when the input is not escaped" in {
       val inputDDL = "id BIGINT COMMENT 'This is my table',legs ARRAY<STRUCT<conditions: ARRAY<STRUCT<amount: DECIMAL(18,4), checks: ARRAY<STRUCT<checkNums: ARRAY<STRING> COMMENT 'decimal(10, 12)'>>>>, legid: BIGINT COMMENT 'This is a \\'test\\': long'>>"
       val expectedDDL = "`id` BIGINT COMMENT 'This is my table',`legs` ARRAY<STRUCT<`conditions`: ARRAY<STRUCT<`amount`: DECIMAL(18,4), `checks`: ARRAY<STRUCT<`checkNums`: ARRAY<STRING> COMMENT 'decimal(10, 12)'>>>>, `legid`: BIGINT COMMENT 'This is a \\'test\\': long'>>"
+
+      val actualDDL = escapeColumnsSparkDDL(inputDDL)
+
+      assert(actualDDL == expectedDDL)
+    }
+
+    "work with another complex example" in {
+      val expectedDDL = "`id` BIGINT,`key1` BIGINT,`key2` BIGINT,`struct1` STRUCT<`key3`: INT, `key4`: INT>,`struct2` STRUCT<`inner1`: STRUCT<`key5`: BIGINT, `key6`: BIGINT, `skey1`: STRING>>,`struct3` STRUCT<`inner3`: STRUCT<`array3`: ARRAY<STRUCT<`a1`: BIGINT, `a2`: BIGINT, `a3`: STRING>>>>,`array1` ARRAY<STRUCT<`key7`: BIGINT, `key8`: BIGINT, `skey2`: STRING>>,`array2` ARRAY<STRUCT<`key2`: BIGINT, `inner2`: ARRAY<STRUCT<`key9`: BIGINT, `key10`: BIGINT, `struct3`: STRUCT<`k1`: INT, `k2`: INT>>>>>"
+
+      val actualDDL = escapeColumnsSparkDDL(NestedDataFrameFactory.testCaseSchema.toDDL)
+
+      assert(actualDDL == expectedDDL)
+    }
+
+    "work with another complex example (unescaped)" in {
+      val inputDDL = "id BIGINT, key1 BIGINT, key2 BIGINT, struct1 STRUCT<key3: INT, key4: INT>, struct2 STRUCT< inner1: STRUCT<key5: BIGINT, key6: BIGINT, skey1: STRING>>, struct3 STRUCT<inner3: STRUCT<array3: ARRAY<STRUCT<a1: BIGINT, a2: BIGINT, a3: STRING>>>>,array1 ARRAY<STRUCT<key7: BIGINT, key8: BIGINT, skey2: STRING>>,array2 ARRAY<STRUCT<key2: BIGINT, inner2: ARRAY<STRUCT<key9: BIGINT, `key10`: BIGINT, struct3: STRUCT<k1: INT, k2: INT>>>>>"
+      val expectedDDL = "`id` BIGINT, `key1` BIGINT, `key2` BIGINT, `struct1` STRUCT<`key3`: INT, `key4`: INT>, `struct2` STRUCT< `inner1`: STRUCT<`key5`: BIGINT, `key6`: BIGINT, `skey1`: STRING>>, `struct3` STRUCT<`inner3`: STRUCT<`array3`: ARRAY<STRUCT<`a1`: BIGINT, `a2`: BIGINT, `a3`: STRING>>>>,`array1` ARRAY<STRUCT<`key7`: BIGINT, `key8`: BIGINT, `skey2`: STRING>>,`array2` ARRAY<STRUCT<`key2`: BIGINT, `inner2`: ARRAY<STRUCT<`key9`: BIGINT, `key10`: BIGINT, `struct3`: STRUCT<`k1`: INT, `k2`: INT>>>>>"
 
       val actualDDL = escapeColumnsSparkDDL(inputDDL)
 

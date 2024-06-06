@@ -20,7 +20,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 
 object NestedDataFrameFactory {
-  private val testCaseSchema = StructType(
+  val testCaseSchema: StructType = StructType(
     Array(
       StructField("id", LongType),
       StructField("key1", LongType),

@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.tests.avro
 
 import org.apache.spark.sql.functions.struct
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.NestedDataFrameFactory
+import za.co.absa.pramen.extras.NestedDataFrameFactory
 import za.co.absa.pramen.extras.utils.ResourceUtils.getResourceString
 import za.co.absa.pramen.extras.utils.JsonUtils
 import za.co.absa.pramen.extras.avro.AvroUtils
