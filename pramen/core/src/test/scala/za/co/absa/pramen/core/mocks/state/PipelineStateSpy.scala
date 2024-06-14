@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.mocks.state
 
+import za.co.absa.pramen.core.mocks.PipelineStateSnapshotFactory
 import za.co.absa.pramen.core.runner.task.TaskResult
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateSnapshot}
 
@@ -32,13 +33,10 @@ class PipelineStateSpy extends PipelineState {
   var sparkAppId: Option[String] = None
 
   override def getState(): PipelineStateSnapshot = {
-    PipelineStateSnapshot(
-      isFinished = false,
-      exitedNormally = false,
-      0,
-      setShutdownHookCanRunCount > 0,
-      None,
-      completedStatuses.toList
+    PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(
+      sparkAppId = sparkAppId,
+      customShutdownHookCanRun = setShutdownHookCanRunCount > 0,
+      taskResults = completedStatuses.toList
     )
   }
 
