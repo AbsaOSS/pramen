@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, Pramen, TaskNotification}
-import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState, PipelineStateImpl}
+import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState, PipelineStateImpl, PipelineStateSnapshot}
 import za.co.absa.pramen.core.utils.BuildPropertyUtils
 
 class PramenImpl extends Pramen {
@@ -52,6 +52,19 @@ class PramenImpl extends Pramen {
     val state = pipelineState.getState()
 
     state.taskResults.flatMap(PipelineStateImpl.taskResultToTaskNotification)
+  }
+
+  /**
+    * This returns the inner pipeline state.
+    *
+    * @return The current state of the pipeline.
+    */
+  def getPipelineStateSnapshot: PipelineStateSnapshot = {
+    val pipelineState = _pipelineState.getOrElse(
+      throw new IllegalStateException("Pipeline state is not available at the context.")
+    )
+
+    pipelineState.getState()
   }
 
 

@@ -16,13 +16,17 @@
 
 package za.co.absa.pramen.core.state
 
-import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 case class PipelineStateSnapshot(
+                                  pipelineName: String,
+                                  environmentName: String,
+                                  sparkAppId: Option[String],
                                   isFinished: Boolean,
                                   exitedNormally: Boolean,
                                   exitCode: Int,
                                   customShutdownHookCanRun: Boolean,
                                   failureException: Option[Throwable] = None,
-                                  taskResults: Seq[TaskResult]
+                                  taskResults: Seq[TaskResult],
+                                  pipelineNotificationFailures: Seq[PipelineNotificationFailure]
                                 )

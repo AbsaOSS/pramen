@@ -75,13 +75,22 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   override def getState(): PipelineStateSnapshot = synchronized {
+    val appException =  if (!exitedNormally && failureException.isEmpty && signalException.isDefined) {
+      signalException
+    } else
+      failureException
+
     PipelineStateSnapshot(
+      pipelineName,
+      environmentName,
+      sparkAppId,
       isFinished,
       exitedNormally,
       exitCode,
       customShutdownHookCanRun,
-      failureException,
-      taskResults.toList
+      appException,
+      taskResults.toList,
+      pipelineNotificationFailures.toList
     )
   }
 

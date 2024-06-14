@@ -142,4 +142,37 @@ class PramenImplSuite extends AnyWordSpec {
       }
     }
   }
+
+  "getPipelineStateSnapshot" should {
+    "return the current pipeline state if it is available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      val taskResults = Seq(
+        TaskResultFactory.getDummyTaskResult(),
+        TaskResultFactory.getDummyTaskResult(runInfo = None),
+        TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.NotRan)
+      )
+
+      val pipelineState = mock(classOf[PipelineState])
+      when(pipelineState.getState()).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
+
+      pramen.setPipelineState(pipelineState)
+
+      val state = PramenImpl.instance.asInstanceOf[PramenImpl].getPipelineStateSnapshot
+
+      assert(state.taskResults.length == 3)
+
+      pramen.setPipelineState(null)
+    }
+
+    "throw an exception if the pipeline state is not available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      pramen.setPipelineState(null)
+
+      assertThrows[IllegalStateException] {
+        PramenImpl.instance.asInstanceOf[PramenImpl].getPipelineStateSnapshot
+      }
+    }
+  }
 }
