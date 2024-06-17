@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.runner.task
+package za.co.absa.pramen.api.status
 
 import java.time.LocalDate
 

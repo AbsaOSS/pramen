@@ -18,16 +18,17 @@ package za.co.absa.pramen.core.mocks.notify
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo, TaskNotification}
+import za.co.absa.pramen.api.status.TaskResult
+import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo}
 
 import scala.collection.mutable.ListBuffer
 
-class NotificationTargetSpy(conf: Config, action: TaskNotification => Unit) extends NotificationTarget {
-  val notificationsSent: ListBuffer[TaskNotification] = new ListBuffer[TaskNotification]()
+class NotificationTargetSpy(conf: Config, action: TaskResult => Unit) extends NotificationTarget {
+  val notificationsSent: ListBuffer[TaskResult] = new ListBuffer[TaskResult]()
 
   override def config: Config = conf
 
-  override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskNotification): Unit = {
+  override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskResult): Unit = {
     notificationsSent += notification
     action(notification)
   }

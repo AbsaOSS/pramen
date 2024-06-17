@@ -18,17 +18,18 @@ package za.co.absa.pramen.core.mocks.notify
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo, TaskNotification}
+import za.co.absa.pramen.api.status.TaskResult
+import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo}
 import za.co.absa.pramen.core.mocks.notify.NotificationTargetMock.TEST_NOTIFICATION_FAIL_KEY
 
 import scala.collection.mutable.ListBuffer
 
 class NotificationTargetMock(conf: Config) extends NotificationTarget {
-  val notificationsSent: ListBuffer[TaskNotification] = new ListBuffer[TaskNotification]()
+  val notificationsSent: ListBuffer[TaskResult] = new ListBuffer[TaskResult]()
 
   override def config: Config = conf
 
-  override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskNotification): Unit = {
+  override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskResult): Unit = {
     if (conf.hasPath(TEST_NOTIFICATION_FAIL_KEY) && conf.getBoolean(TEST_NOTIFICATION_FAIL_KEY)) {
       System.setProperty("pramen.test.notification.target.failure", "true")
       throw new RuntimeException("Notification target test exception")
