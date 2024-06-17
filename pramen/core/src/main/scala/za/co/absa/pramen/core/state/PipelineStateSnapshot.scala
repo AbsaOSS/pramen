@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.state
 
 import za.co.absa.pramen.api.PipelineInfo
+import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 case class PipelineStateSnapshot(
@@ -26,5 +27,6 @@ case class PipelineStateSnapshot(
                                   exitCode: Int,
                                   customShutdownHookCanRun: Boolean,
                                   taskResults: Seq[TaskResult],
-                                  pipelineNotificationFailures: Seq[PipelineNotificationFailure]
+                                  pipelineNotificationFailures: Seq[PipelineNotificationFailure],
+                                  customNotificationEntries: Seq[NotificationEntry]
                                 )

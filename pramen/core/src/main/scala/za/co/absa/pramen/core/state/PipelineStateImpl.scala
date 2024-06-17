@@ -25,8 +25,8 @@ import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
 import za.co.absa.pramen.core.metastore.MetastoreImpl
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
+import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
-import za.co.absa.pramen.core.notify.{NotificationTargetManager, PipelineNotificationTargetFactory}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
 import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
@@ -93,7 +93,8 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       exitCode,
       customShutdownHookCanRun,
       taskResults.toList,
-      pipelineNotificationFailures.toList
+      pipelineNotificationFailures.toList,
+      notificationBuilder.asInstanceOf[NotificationBuilderImpl].entries
     )
   }
 
@@ -196,16 +197,16 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   private[state] def sendPipelineNotifications(): Unit = {
     val taskNotifications = taskResults.map(taskResultToTaskNotification).toSeq
-    val pipelineInfo = getState().pipelineInfo
 
-    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, pipelineInfo, taskNotifications))
+    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, getState(), taskNotifications))
   }
 
-  private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, pipelineInfo: PipelineInfo, taskNotifications: Seq[TaskNotification]): Unit = {
+  private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, pipelineStateSnapshot: PipelineStateSnapshot, taskNotifications: Seq[TaskNotification]): Unit = {
     try {
       pipelineNotificationTarget.sendNotification(
-        pipelineInfo,
-        taskNotifications
+        pipelineStateSnapshot.pipelineInfo,
+        taskNotifications,
+        pipelineStateSnapshot.customNotificationEntries
       )
     } catch {
       case ex: Throwable =>
