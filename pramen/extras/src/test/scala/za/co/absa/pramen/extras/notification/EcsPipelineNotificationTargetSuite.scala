@@ -18,6 +18,7 @@ package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.status.{CustomNotification, RuntimeInfo}
 import za.co.absa.pramen.api.{DataFormat, PipelineInfo, Query}
 import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
 import za.co.absa.pramen.extras.notification.EcsPipelineNotificationTarget.{ECS_API_SECRET_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
@@ -53,7 +54,11 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
       val metaTableDef3 = TestPrototypes.metaTableDef.copy(name = "table3", format = dataFormat3)
       val task3 = TestPrototypes.taskNotification.copy(tableName = "table3", tableDef = metaTableDef3)
 
-      notificationTarget.sendNotification(PipelineInfo("Dummy", "DEV", Instant.now, None, None), Seq(task1, task2, task3), Seq.empty)
+      notificationTarget.sendNotification(
+        PipelineInfo("Dummy", "DEV", RuntimeInfo(), Instant.now, None, None, None),
+        Seq(task1, task2, task3),
+        CustomNotification(Seq.empty, Seq.empty)
+      )
 
       assert(httpClient.executeCalled == 2)
       assert(httpClient.requests.head.url == "https://dummyurl.local/kk")

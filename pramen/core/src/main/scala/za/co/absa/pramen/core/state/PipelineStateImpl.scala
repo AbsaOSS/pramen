@@ -20,15 +20,18 @@ import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
 import za.co.absa.pramen.api.status.RunStatus.NotRan
+import za.co.absa.pramen.api.status.{CustomNotification, RuntimeInfo}
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.app.config.HookConfig
-import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
+import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
+import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
 import za.co.absa.pramen.core.metastore.MetastoreImpl
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
 import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer
@@ -49,6 +52,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   // State
   private val startedInstant = Instant.now
+  private var finishedInstant: Option[Instant] = None
   @volatile private var exitCode = EXIT_CODE_SUCCESS
   private val taskResults = new ListBuffer[TaskResult]
   private val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
@@ -80,11 +84,29 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     } else
       failureException
 
+    val notificationBuilderImpl = notificationBuilder.asInstanceOf[NotificationBuilderImpl]
+    val customNotification = CustomNotification (
+      notificationBuilderImpl.entries,
+      notificationBuilderImpl.signature
+    )
+
+    val minRps = ConfigUtils.getOptionInt(conf, WARN_THROUGHPUT_RPS).getOrElse(0)
+    val goodRps = ConfigUtils.getOptionInt(conf, GOOD_THROUGHPUT_RPS).getOrElse(0)
+    val dryRun = ConfigUtils.getOptionBoolean(conf, DRY_RUN).getOrElse(false)
+    val undercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
+
     PipelineStateSnapshot(
       PipelineInfo(
         pipelineName,
         environmentName,
+        RuntimeInfo(
+          dryRun,
+          undercover,
+          minRps,
+          goodRps
+        ),
         startedInstant,
+        finishedInstant,
         sparkAppId,
         appException
       ),
@@ -94,7 +116,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       customShutdownHookCanRun,
       taskResults.toList,
       pipelineNotificationFailures.toList,
-      notificationBuilder.asInstanceOf[NotificationBuilderImpl].entries
+      customNotification
     )
   }
 
@@ -149,6 +171,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       exitCode |= EXIT_CODE_SIGNAL_RECEIVED
     }
 
+    finishedInstant = Option(Instant.now())
     sendPipelineNotifications()
     runCustomShutdownHook()
     removeSignalHandlers()
@@ -206,7 +229,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       pipelineNotificationTarget.sendNotification(
         pipelineStateSnapshot.pipelineInfo,
         taskNotifications,
-        pipelineStateSnapshot.customNotificationEntries
+        pipelineStateSnapshot.customNotification
       )
     } catch {
       case ex: Throwable =>
@@ -224,7 +247,6 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       } else {
         taskResults.filterNot(_.isTransient)
       }
-      val finishedInstant = Instant.now
       val notificationBuilderImpl = notificationBuilder.asInstanceOf[NotificationBuilderImpl]
       val customEntries = notificationBuilderImpl.entries
       val customSignature = notificationBuilderImpl.signature
@@ -234,7 +256,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         environmentName,
         sparkAppId,
         startedInstant,
-        finishedInstant,
+        finishedInstant.getOrElse(Instant.now()),
         realTaskResults.toList,
         pipelineNotificationFailures.toList,
         customEntries.toList,
