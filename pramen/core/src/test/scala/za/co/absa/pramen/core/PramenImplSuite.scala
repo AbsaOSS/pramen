@@ -108,6 +108,40 @@ class PramenImplSuite extends AnyWordSpec {
     }
   }
 
+  "pipelineInfo" should {
+    "return pipeline info when it is available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      val taskResults = Seq(
+        TaskResultFactory.getDummyTaskResult(),
+        TaskResultFactory.getDummyTaskResult(runInfo = None),
+        TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.NotRan)
+      )
+
+      val pipelineState = mock(classOf[PipelineState])
+      when(pipelineState.getState()).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
+
+      pramen.setPipelineState(pipelineState)
+
+      val pipelineInfo = PramenImpl.instance.pipelineInfo
+
+      assert(pipelineInfo.pipelineName == "Dummy Pipeline")
+      assert(pipelineInfo.environment == "DEV")
+
+      pramen.setPipelineState(null)
+    }
+
+    "throw an exception if pipeline state is not available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      pramen.setPipelineState(null)
+
+      assertThrows[IllegalStateException] {
+        PramenImpl.instance.pipelineInfo
+      }
+    }
+  }
+
   "getCompletedTasks()" should {
     "return the metadata manager if it is available" in {
       val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]

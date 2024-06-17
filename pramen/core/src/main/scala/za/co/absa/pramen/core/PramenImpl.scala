@@ -19,7 +19,7 @@ package za.co.absa.pramen.core
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
-import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, Pramen, TaskNotification}
+import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen, TaskNotification}
 import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState, PipelineStateImpl, PipelineStateSnapshot}
 import za.co.absa.pramen.core.utils.BuildPropertyUtils
 
@@ -37,6 +37,14 @@ class PramenImpl extends Pramen {
   def workflowConfig: Config = _workflowConfig.getOrElse(
     throw new IllegalStateException("Workflow configuration is not available at the context.")
   )
+
+  override def pipelineInfo: PipelineInfo = {
+    val pipelineState = _pipelineState.getOrElse(
+      throw new IllegalStateException("Pipeline state is not available at the context.")
+    )
+
+    pipelineState.getState().pipelineInfo
+  }
 
   override def notificationBuilder: NotificationBuilder = notificationBuilderImpl
 
