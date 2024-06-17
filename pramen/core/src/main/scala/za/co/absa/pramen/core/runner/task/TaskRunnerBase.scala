@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, Reason, SchemaDifference, TaskNotification}
+import za.co.absa.pramen.api.{DataFormat, PipelineInfo, Reason, SchemaDifference, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
@@ -32,7 +32,7 @@ import za.co.absa.pramen.core.metastore.{MetaTableStats, MetastoreImpl}
 import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline._
-import za.co.absa.pramen.core.state.PipelineState
+import za.co.absa.pramen.core.state.{PipelineState, PipelineStateSnapshot}
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.hive.HiveHelper
@@ -383,10 +383,11 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   private def sendNotifications(task: Task, result: TaskResult): Seq[NotificationFailure] = {
-    task.job.notificationTargets.flatMap(notificationTarget => sendNotifications(task, result, notificationTarget))
+    val pipelineInfo = pipelineState.getState().pipelineInfo
+    task.job.notificationTargets.flatMap(notificationTarget => sendNotifications(task, result, notificationTarget, pipelineInfo))
   }
 
-  private def sendNotifications(task: Task, result: TaskResult, notificationTarget: JobNotificationTarget): Option[NotificationFailure] = {
+  private def sendNotifications(task: Task, result: TaskResult, notificationTarget: JobNotificationTarget, pipelineInfo: PipelineInfo): Option[NotificationFailure] = {
     Try {
       val target = notificationTarget.target
 
@@ -408,7 +409,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         target.connect()
         try {
-          target.sendNotification(notification)
+          target.sendNotification(pipelineInfo, notification)
         } finally {
           target.close()
         }

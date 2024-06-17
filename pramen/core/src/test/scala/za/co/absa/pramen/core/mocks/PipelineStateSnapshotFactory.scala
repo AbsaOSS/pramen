@@ -16,28 +16,23 @@
 
 package za.co.absa.pramen.core.mocks
 
+import za.co.absa.pramen.api.PipelineInfo
 import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 import za.co.absa.pramen.core.state.PipelineStateSnapshot
 
 object PipelineStateSnapshotFactory {
-  def getDummyPipelineStateSnapshot(pipelineName: String = "TestApp",
-                                    environmentName: String = "DEV",
-                                    sparkAppId: Option[String] = Some("testid-12345"),
+  def getDummyPipelineStateSnapshot(pipelineInfo: PipelineInfo = PipelineInfoFactory.getDummyPipelineInfo(),
                                     isFinished: Boolean = false,
                                     exitedNormally: Boolean = false,
                                     exitCode: Int = 0,
                                     customShutdownHookCanRun: Boolean = false,
-                                    failureException: Option[Throwable] = None,
                                     taskResults: Seq[TaskResult] = Seq.empty,
                                     pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty): PipelineStateSnapshot = {
-    PipelineStateSnapshot(pipelineName,
-      environmentName,
-      sparkAppId,
+    PipelineStateSnapshot(pipelineInfo,
       isFinished,
       exitedNormally,
       exitCode,
       customShutdownHookCanRun,
-      failureException,
       taskResults,
       pipelineNotificationFailures
     )

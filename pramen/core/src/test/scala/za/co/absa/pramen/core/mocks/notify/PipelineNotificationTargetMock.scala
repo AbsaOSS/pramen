@@ -17,14 +17,14 @@
 package za.co.absa.pramen.core.mocks.notify
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{PipelineNotificationTarget, TaskNotification}
+import za.co.absa.pramen.api.{PipelineInfo, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.mocks.notify.NotificationTargetMock.TEST_NOTIFICATION_FAIL_KEY
 
 import java.time.Instant
 
 class PipelineNotificationTargetMock(conf: Config) extends PipelineNotificationTarget {
 
-  override def sendNotification(pipelineStarted: Instant, applicationId: Option[String], appException: Option[Throwable], tasksCompleted: Seq[TaskNotification]): Unit = {
+  override def sendNotification(pipelineInfo: PipelineInfo, tasksCompleted: Seq[TaskNotification]): Unit = {
     if (conf.hasPath(TEST_NOTIFICATION_FAIL_KEY) && conf.getBoolean(TEST_NOTIFICATION_FAIL_KEY)) {
       System.setProperty("pramen.test.notification.pipeline.failure", "true")
       throw new RuntimeException("Pipeline notification target test exception")

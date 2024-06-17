@@ -45,7 +45,7 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
         override protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = httpClient
       }
 
-      notificationTarget.sendNotification(TestPrototypes.taskNotification.copy(tableDef = metaTableDef))
+      notificationTarget.sendNotification(null, TestPrototypes.taskNotification.copy(tableDef = metaTableDef))
 
       assert(httpClient.executeCalled == 1)
       assert(httpClient.requests.head.url == "https://dummyurl.local/kk")

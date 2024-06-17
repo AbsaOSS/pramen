@@ -16,8 +16,12 @@
 
 package za.co.absa.pramen.api
 
-trait PipelineNotificationTarget extends ExternalChannel {
-  /** Sends a notification after completion of the pipeline. */
-  def sendNotification(pipelineInfo: PipelineInfo,
-                       tasksCompleted: Seq[TaskNotification]): Unit
-}
+import java.time.Instant
+
+case class PipelineInfo(
+                         pipelineName: String,
+                         environment: String,
+                         startedAt: Instant,
+                         sparkApplicationId: Option[String],
+                         failureException: Option[Throwable]
+                       )
