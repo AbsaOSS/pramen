@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.notify
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo, TaskNotification, TaskStatus}
 import za.co.absa.pramen.core.notify.mq.{SingleMessageProducer, SingleMessageProducerKafka}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji._
@@ -38,7 +38,7 @@ class HyperdriveNotificationTarget(conf: Config,
     // conditions are met to send a notification.
   }
 
-  override def sendNotification(notification: TaskNotification): Unit = {
+  override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskNotification): Unit = {
     if (notification.options.contains(TOKEN_KEY)) {
       val token = notification.options(TOKEN_KEY)
 

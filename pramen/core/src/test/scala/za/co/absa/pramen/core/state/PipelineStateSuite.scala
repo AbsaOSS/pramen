@@ -57,7 +57,7 @@ class PipelineStateSuite extends AnyWordSpec {
 
       assert(stateManager.getState().isFinished)
       assert(stateManager.getState().exitedNormally)
-      assert(stateManager.getState().failureException.isEmpty)
+      assert(stateManager.getState().pipelineInfo.failureException.isEmpty)
     }
   }
 
@@ -72,7 +72,7 @@ class PipelineStateSuite extends AnyWordSpec {
 
       assert(stateManager.getState().isFinished)
       assert(!stateManager.getState().exitedNormally)
-      assert(stateManager.getState().failureException.exists(_.isInstanceOf[RuntimeException]))
+      assert(stateManager.getState().pipelineInfo.failureException.exists(_.isInstanceOf[RuntimeException]))
     }
   }
 
@@ -127,7 +127,7 @@ class PipelineStateSuite extends AnyWordSpec {
       stateManager.runCustomShutdownHook()
 
       assert(ShutdownHookFailureMock.ranTimes > 0)
-      assert(stateManager.getState().failureException.exists(_.isInstanceOf[LinkageError]))
+      assert(stateManager.getState().pipelineInfo.failureException.exists(_.isInstanceOf[LinkageError]))
     }
 
     "handle class does not exists errors" in {
@@ -137,8 +137,8 @@ class PipelineStateSuite extends AnyWordSpec {
       stateManager.runCustomShutdownHook()
 
       assert(ShutdownHookFailureMock.ranTimes > 0)
-      assert(stateManager.getState().failureException.isDefined)
-      assert(stateManager.getState().failureException.exists(_.isInstanceOf[ClassNotFoundException]))
+      assert(stateManager.getState().pipelineInfo.failureException.isDefined)
+      assert(stateManager.getState().pipelineInfo.failureException.exists(_.isInstanceOf[ClassNotFoundException]))
 
     }
   }

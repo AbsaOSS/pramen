@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, PipelineNotificationTarget, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.{DataFormat, PipelineInfo, PipelineNotificationTarget, TaskNotification, TaskStatus}
 import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
 
@@ -44,9 +44,7 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
   override def config: Config = conf
 
   /** Sends a notification after completion of the pipeline. */
-  override def sendNotification(pipelineStarted: Instant,
-                                applicationId: Option[String],
-                                appException: Option[Throwable],
+  override def sendNotification(pipelineInfo: PipelineInfo,
                                 tasksCompleted: Seq[TaskNotification]): Unit = {
     log.info(s"Running the ECS cleanup pipeline notification target...")
     val (ecsApiUrl, ecsApiKey, trustAllSslCerts) = EcsPipelineNotificationTarget.getEcsDetails(conf)

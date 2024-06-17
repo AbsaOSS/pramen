@@ -68,7 +68,7 @@ class HyperdriveNotificationTargetSuite extends AnyWordSpec with SparkTestBase {
 
       val taskNotification = TaskNotificationFactory.getDummyTaskNotification(options = options)
 
-      notificationTarget.sendNotification(taskNotification)
+      notificationTarget.sendNotification(null, taskNotification)
 
       assert(producer.connectInvoked == 1)
       assert(producer.sendInvoked == 1)
@@ -83,7 +83,7 @@ class HyperdriveNotificationTargetSuite extends AnyWordSpec with SparkTestBase {
 
       val taskNotification = TaskNotificationFactory.getDummyTaskNotification(status = TaskStatus.Skipped("dummy"),  options = options)
 
-      notificationTarget.sendNotification(taskNotification)
+      notificationTarget.sendNotification(null, taskNotification)
 
       assert(producer.connectInvoked == 0)
       assert(producer.sendInvoked == 0)
@@ -94,7 +94,7 @@ class HyperdriveNotificationTargetSuite extends AnyWordSpec with SparkTestBase {
 
       val taskNotification = TaskNotificationFactory.getDummyTaskNotification()
 
-      notificationTarget.sendNotification(taskNotification)
+      notificationTarget.sendNotification(null, taskNotification)
 
       assert(producer.connectInvoked == 0)
       assert(producer.sendInvoked == 0)
@@ -108,7 +108,7 @@ class HyperdriveNotificationTargetSuite extends AnyWordSpec with SparkTestBase {
 
       val taskNotification = TaskNotificationFactory.getDummyTaskNotification(options = options)
 
-      notificationTarget.sendNotification(taskNotification)
+      notificationTarget.sendNotification(null, taskNotification)
       notificationTarget.close()
 
       assert(producer.connectInvoked == 1)

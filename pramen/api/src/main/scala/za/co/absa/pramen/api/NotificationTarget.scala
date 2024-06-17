@@ -18,5 +18,5 @@ package za.co.absa.pramen.api
 
 trait NotificationTarget extends ExternalChannel {
   /** Sends a notification after completion of a task. */
-  def sendNotification(notification: TaskNotification): Unit
+  def sendNotification(pipelineInfo: PipelineInfo, notification: TaskNotification): Unit
 }

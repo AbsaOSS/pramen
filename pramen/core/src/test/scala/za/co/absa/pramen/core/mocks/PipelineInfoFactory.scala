@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.state
+package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.PipelineInfo
-import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
-case class PipelineStateSnapshot(
-                                  pipelineInfo: PipelineInfo,
-                                  isFinished: Boolean,
-                                  exitedNormally: Boolean,
-                                  exitCode: Int,
-                                  customShutdownHookCanRun: Boolean,
-                                  taskResults: Seq[TaskResult],
-                                  pipelineNotificationFailures: Seq[PipelineNotificationFailure]
-                                )
+import java.time.Instant
+
+object PipelineInfoFactory {
+  def getDummyPipelineInfo(pipelineName: String = "Dummy Pipeline",
+                           environment: String = "DEV",
+                           startedAt: Instant = Instant.ofEpochSecond(1718609409),
+                           sparkApplicationId: Option[String] = Some("testid-12345"),
+                           failureException: Option[Throwable] = None): PipelineInfo = {
+    PipelineInfo(pipelineName, environment, startedAt, sparkApplicationId, failureException)
+  }
+}

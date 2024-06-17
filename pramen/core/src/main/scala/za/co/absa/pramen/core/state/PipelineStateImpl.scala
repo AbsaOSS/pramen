@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.state
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
-import za.co.absa.pramen.api.{NotificationBuilder, PipelineNotificationTarget, TaskNotification}
+import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
 import za.co.absa.pramen.core.metastore.MetastoreImpl
@@ -81,14 +81,17 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       failureException
 
     PipelineStateSnapshot(
-      pipelineName,
-      environmentName,
-      sparkAppId,
+      PipelineInfo(
+        pipelineName,
+        environmentName,
+        startedInstant,
+        sparkAppId,
+        appException
+      ),
       isFinished,
       exitedNormally,
       exitCode,
       customShutdownHookCanRun,
-      appException,
       taskResults.toList,
       pipelineNotificationFailures.toList
     )
@@ -193,16 +196,15 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   private[state] def sendPipelineNotifications(): Unit = {
     val taskNotifications = taskResults.flatMap(taskResultToTaskNotification).toSeq
+    val pipelineInfo = getState().pipelineInfo
 
-    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, taskNotifications))
+    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, pipelineInfo, taskNotifications))
   }
 
-  private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, taskNotifications: Seq[TaskNotification]): Unit = {
+  private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, pipelineInfo: PipelineInfo, taskNotifications: Seq[TaskNotification]): Unit = {
     try {
       pipelineNotificationTarget.sendNotification(
-        startedInstant,
-        sparkAppId,
-        failureException,
+        pipelineInfo,
         taskNotifications
       )
     } catch {
