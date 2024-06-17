@@ -19,6 +19,7 @@ package za.co.absa.pramen.api
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
+import za.co.absa.pramen.api.status.TaskResult
 
 /**
   * Pramen provides additional features via a client that you can access like this:
@@ -52,7 +53,7 @@ trait Pramen {
   /**
     * Returns the list of tasks completed at the current moment of time.
     */
-  def getCompletedTasks: Seq[TaskNotification]
+  def getCompletedTasks: Seq[TaskResult]
 }
 
 object Pramen {

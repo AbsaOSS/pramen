@@ -17,10 +17,10 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.SchemaDifference
-import za.co.absa.pramen.api.status.{DependencyWarning, RunInfo, RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.pipeline.Job
-import za.co.absa.pramen.core.runner.task.{NotificationFailure, TaskResult}
+import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.{Instant, LocalDate}
 

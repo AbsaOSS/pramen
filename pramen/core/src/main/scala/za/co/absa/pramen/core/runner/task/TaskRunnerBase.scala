@@ -20,8 +20,8 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskRunReason}
-import za.co.absa.pramen.api.{DataFormat, PipelineInfo, Reason, SchemaDifference, TaskNotification}
+import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.status.{NotificationFailure, RunInfo, RunStatus, TaskRunReason}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
@@ -30,7 +30,6 @@ import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.{MetaTableStats, MetastoreImpl}
-import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
@@ -392,7 +391,7 @@ abstract class TaskRunnerBase(conf: Config,
     Try {
       val target = notificationTarget.target
 
-      val notification = TaskNotification(
+      val notification = status.TaskResult(
         task.job.outputTable.name,
         MetastoreImpl.getMetaTableDef(task.job.outputTable),
         result.runInfo,
@@ -402,6 +401,7 @@ abstract class TaskRunnerBase(conf: Config,
         result.isRawFilesJob,
         result.schemaChanges,
         result.dependencyWarnings,
+        Seq.empty,
         notificationTarget.options
       )
 

@@ -19,7 +19,8 @@ package za.co.absa.pramen.core
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
-import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen, TaskNotification}
+import za.co.absa.pramen.api.status.TaskResult
+import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen}
 import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState, PipelineStateImpl, PipelineStateSnapshot}
 import za.co.absa.pramen.core.utils.BuildPropertyUtils
 
@@ -52,7 +53,7 @@ class PramenImpl extends Pramen {
     throw new IllegalStateException("Metadata manager is not available at the context.")
   )
 
-  override def getCompletedTasks: Seq[TaskNotification] = {
+  override def getCompletedTasks: Seq[TaskResult] = {
     val pipelineState = _pipelineState.getOrElse(
       throw new IllegalStateException("Pipeline state is not available at the context.")
     )

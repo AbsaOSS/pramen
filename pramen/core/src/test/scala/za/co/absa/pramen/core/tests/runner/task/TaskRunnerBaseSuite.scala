@@ -21,8 +21,8 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.status.RunStatus.{Failed, NotRan, Skipped, Succeeded}
-import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, MetastoreDependency, RunStatus, TaskRunReason, TaskStatus}
-import za.co.absa.pramen.api.{DataFormat, Reason, TaskNotification, status}
+import za.co.absa.pramen.api.status._
+import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -56,7 +56,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
   "runJobTasks" should {
     "run multiple successful jobs parallel execution" in {
       val now = Instant.now()
-      val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskNotification) => ())
+      val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskResult) => ())
       val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
       val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), jobNotificationTargets = Seq(jobNotificationTarget))
 
@@ -147,7 +147,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     "run a single lazy job" in {
       val now = Instant.now()
-      val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskNotification) => ())
+      val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskResult) => ())
       val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
       val (runner, _, journal, state, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), jobNotificationTargets = Seq(jobNotificationTarget))
 
@@ -173,7 +173,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
   "run multiple failure jobs sequential execution" in {
     val now = Instant.now()
-    val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskNotification) => ())
+    val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskResult) => ())
     val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
     val (runner, _, journal, state, tasks) = getUseCase(allowParallel = false, runFunction = () => throw new IllegalStateException("Test exception"), jobNotificationTargets = Seq(jobNotificationTarget))
 

@@ -20,13 +20,13 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification._
-import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status.{NotificationFailure, RunStatus, TaskRunReason}
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.mocks.{RunStatusFactory, SchemaDifferenceFactory, TaskResultFactory, TestPrototypes}
 import za.co.absa.pramen.core.notify.message.{MessageBuilderHtml, ParagraphBuilder}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
-import za.co.absa.pramen.core.runner.task.{NotificationFailure, PipelineNotificationFailure}
+import za.co.absa.pramen.core.runner.task.PipelineNotificationFailure
 import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.{Instant, LocalDate}

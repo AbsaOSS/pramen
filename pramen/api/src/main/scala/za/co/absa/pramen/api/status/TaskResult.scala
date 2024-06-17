@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.runner.task
+package za.co.absa.pramen.api.status
 
-import za.co.absa.pramen.api.SchemaDifference
-import za.co.absa.pramen.api.status.{DependencyWarning, NotificationFailure, RunInfo, RunStatus}
-import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference}
 
 case class TaskResult(
-                       job: Job,
-                       runStatus: RunStatus,
+                       tableName: String,
+                       tableDef: MetaTableDef,
                        runInfo: Option[RunInfo],
+                       status: RunStatus,
                        applicationId: String,
                        isTransient: Boolean,
                        isRawFilesJob: Boolean,
                        schemaChanges: Seq[SchemaDifference],
                        dependencyWarnings: Seq[DependencyWarning],
-                       notificationTargetErrors: Seq[NotificationFailure]
+                       notificationTargetErrors: Seq[NotificationFailure],
+                       options: Map[String, String]
                      )

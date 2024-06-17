@@ -16,8 +16,9 @@
 
 package za.co.absa.pramen.core
 
-import za.co.absa.pramen.api.status.{DependencyWarning, RunInfo, RunStatus, TaskRunReason, TaskStatus}
-import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference, TaskNotification}
+import za.co.absa.pramen.api
+import za.co.absa.pramen.api.status._
+import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference}
 
 import java.time.{Instant, LocalDate}
 
@@ -35,7 +36,8 @@ object TaskNotificationFactory {
                                isRawFilesJob: Boolean = false,
                                schemaChanges: Seq[SchemaDifference] = Seq.empty,
                                dependencyWarnings: Seq[DependencyWarning] = Seq.empty,
-                               options: Map[String, String] = Map.empty[String, String]): TaskNotification = {
-    TaskNotification(tableName, tableDef, runInfo, status, applicationId, isTransient, isRawFilesJob, schemaChanges, dependencyWarnings, options)
+                               notificationTargetErrors: Seq[NotificationFailure] = Seq.empty,
+                               options: Map[String, String] = Map.empty[String, String]): TaskResult = {
+    api.status.TaskResult(tableName, tableDef, runInfo, status, applicationId, isTransient, isRawFilesJob, schemaChanges, dependencyWarnings, notificationTargetErrors, options)
   }
 }

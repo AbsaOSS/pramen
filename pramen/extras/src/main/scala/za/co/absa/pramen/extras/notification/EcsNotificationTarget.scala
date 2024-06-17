@@ -20,7 +20,8 @@ import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.http.HttpStatus
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, NotificationTarget, PipelineInfo, TaskNotification}
+import za.co.absa.pramen.api.status.TaskResult
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, NotificationTarget, PipelineInfo}
 import za.co.absa.pramen.core.utils.Emoji
 import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.utils.httpclient.{HttpMethod, SimpleHttpClient, SimpleHttpRequest}
@@ -36,7 +37,7 @@ class EcsNotificationTarget(conf: Config) extends NotificationTarget {
 
   override def config: Config = conf
 
-  override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskNotification): Unit = {
+  override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskResult): Unit = {
     if (notification.runInfo.isEmpty) {
       log.warn(s"Information date not provided - skipping ECS cleanup.")
       return
