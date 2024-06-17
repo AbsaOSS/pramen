@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.runner.task
-
-import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
-import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
+package za.co.absa.pramen.api.status
 
 sealed trait RunStatus {
   val isFailure: Boolean
 
-  def getReason(): Option[String]
+  def getReason: Option[String]
 }
 
 object RunStatus {
@@ -105,5 +102,18 @@ object RunStatus {
     override def toString: String = "Skipped"
 
     override def getReason(): Option[String] = if (msg.isEmpty) None else Option(msg)
+  }
+
+  def getShortExceptionDescription(ex: Throwable): String = {
+    if (ex.getCause == null) {
+      ex.getMessage
+    } else {
+      val cause = ex.getCause
+      if (cause.getCause == null) {
+        s"${ex.getMessage} (${ex.getCause.getMessage})"
+      } else {
+        s"${ex.getMessage} (${cause.getMessage} caused by ${cause.getCause.getMessage})"
+      }
+    }
   }
 }

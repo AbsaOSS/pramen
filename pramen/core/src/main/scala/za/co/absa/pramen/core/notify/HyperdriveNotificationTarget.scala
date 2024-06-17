@@ -19,7 +19,8 @@ package za.co.absa.pramen.core.notify
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.status.{RunStatus, TaskStatus}
+import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo, TaskNotification}
 import za.co.absa.pramen.core.notify.mq.{SingleMessageProducer, SingleMessageProducerKafka}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji._
@@ -42,7 +43,7 @@ class HyperdriveNotificationTarget(conf: Config,
     if (notification.options.contains(TOKEN_KEY)) {
       val token = notification.options(TOKEN_KEY)
 
-      if (notification.status.isInstanceOf[TaskStatus.Succeeded]) {
+      if (notification.status.isInstanceOf[RunStatus.Succeeded]) {
         log.info(s"Sending '$token' to the Hyperdrive Kafka topic: '$topic'...")
         producer.connect()
         producer.send(topic, token)

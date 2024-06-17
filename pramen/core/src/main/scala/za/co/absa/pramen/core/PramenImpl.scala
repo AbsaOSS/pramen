@@ -59,7 +59,7 @@ class PramenImpl extends Pramen {
 
     val state = pipelineState.getState()
 
-    state.taskResults.flatMap(PipelineStateImpl.taskResultToTaskNotification)
+    state.taskResults.map(PipelineStateImpl.taskResultToTaskNotification)
   }
 
   /**

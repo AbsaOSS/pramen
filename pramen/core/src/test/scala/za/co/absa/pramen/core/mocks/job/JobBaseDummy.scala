@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.mocks.job
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.status.DependencyWarning
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable

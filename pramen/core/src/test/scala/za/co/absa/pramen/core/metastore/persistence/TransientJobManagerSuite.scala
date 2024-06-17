@@ -20,14 +20,15 @@ import org.apache.spark.sql.DataFrame
 import org.mockito.Mockito.{mock, when => whenMock}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
 import za.co.absa.pramen.api.{CachePolicy, DataFormat}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.metastore.peristence.TransientJobManager.{MAXIMUM_UNIONS, WARN_UNIONS}
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
-import za.co.absa.pramen.core.pipeline.{Job, TaskRunReason}
-import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunner}
+import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.runner.task.TaskRunner
 
 import java.time.LocalDate
 import scala.concurrent.ExecutionContext.Implicits.global

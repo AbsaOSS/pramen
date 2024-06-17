@@ -21,12 +21,13 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
-import za.co.absa.pramen.core.runner.task.{RunStatus, TaskResult}
+import za.co.absa.pramen.core.runner.task.TaskResult
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 

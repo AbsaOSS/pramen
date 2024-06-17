@@ -18,15 +18,16 @@ package za.co.absa.pramen.core.tests.runner.task
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status.RunStatus.Failed
 import za.co.absa.pramen.core.RuntimeConfigFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.journal.JournalMock
 import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
-import za.co.absa.pramen.core.pipeline.{Task, TaskRunReason}
-import za.co.absa.pramen.core.runner.task.RunStatus.Failed
-import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerMultithreaded}
+import za.co.absa.pramen.core.pipeline.Task
+import za.co.absa.pramen.core.runner.task.TaskRunnerMultithreaded
 
 import java.time.LocalDate
 import java.util.concurrent.TimeUnit

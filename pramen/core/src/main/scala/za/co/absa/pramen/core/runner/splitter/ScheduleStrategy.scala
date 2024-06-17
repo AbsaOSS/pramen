@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.runner.splitter
 
+import za.co.absa.pramen.api.status.MetastoreDependency
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.pipeline.TaskPreDef
 import za.co.absa.pramen.core.schedule.Schedule
 

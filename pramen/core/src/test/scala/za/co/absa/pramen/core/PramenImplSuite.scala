@@ -21,9 +21,9 @@ import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
+import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.mocks.{PipelineStateSnapshotFactory, TaskResultFactory}
-import za.co.absa.pramen.core.runner.task.RunStatus
 import za.co.absa.pramen.core.state.PipelineState
 
 import java.time.LocalDate
@@ -159,9 +159,9 @@ class PramenImplSuite extends AnyWordSpec {
 
       val tasks = PramenImpl.instance.getCompletedTasks
 
-      assert(tasks.length == 2)
-      assert(tasks.head.infoDate.contains(LocalDate.of(2022, 2, 18)))
-      assert(tasks(1).infoDate.isEmpty)
+      assert(tasks.length == 3)
+      assert(tasks.head.runInfo.get.infoDate == LocalDate.of(2022, 2, 18))
+      assert(tasks(1).runInfo.isEmpty)
 
       pramen.setPipelineState(null)
     }

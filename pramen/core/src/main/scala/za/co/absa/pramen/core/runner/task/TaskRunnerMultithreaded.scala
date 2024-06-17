@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.runner.task
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper

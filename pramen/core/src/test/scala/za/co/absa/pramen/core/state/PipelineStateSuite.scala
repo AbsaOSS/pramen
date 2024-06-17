@@ -19,11 +19,11 @@ package za.co.absa.pramen.core.state
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import org.slf4j.{Logger, LoggerFactory}
+import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.HookConfig.SHUTDOWN_HOOK_CLASS_KEY
 import za.co.absa.pramen.core.mocks.TaskResultFactory
 import za.co.absa.pramen.core.mocks.state.{ShutdownHookFailureMock, ShutdownHookSuccessMock}
-import za.co.absa.pramen.core.runner.task.RunStatus
 
 class PipelineStateSuite extends AnyWordSpec {
   private implicit val conf: Config = ConfigFactory.parseString(

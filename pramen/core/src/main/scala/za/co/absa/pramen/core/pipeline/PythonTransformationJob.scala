@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
+import za.co.absa.pramen.api.status.DependencyWarning
 import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper

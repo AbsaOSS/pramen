@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.runner.jobrunner
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
@@ -26,7 +27,7 @@ import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.core.runner.splitter.ScheduleParams
-import za.co.absa.pramen.core.runner.task.{RunStatus, TaskResult, TaskRunner}
+import za.co.absa.pramen.core.runner.task.{TaskResult, TaskRunner}
 import za.co.absa.pramen.core.utils.Emoji
 
 import java.util.concurrent.ExecutorService

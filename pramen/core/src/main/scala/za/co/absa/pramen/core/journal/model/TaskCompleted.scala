@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.journal.model
 
+import za.co.absa.pramen.api.status.RunStatus.Succeeded
 import za.co.absa.pramen.core.pipeline.Task
-import za.co.absa.pramen.core.runner.task.RunStatus._
 import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.{Instant, LocalDate}
@@ -49,7 +49,7 @@ object TaskCompleted {
     val taskStarted = taskResult.runInfo.map(_.started.getEpochSecond).getOrElse(now)
     val taskFinished = taskResult.runInfo.map(_.finished.getEpochSecond).getOrElse(now)
     val status = taskResult.runStatus.toString
-    val failureReason = taskResult.runStatus.getReason()
+    val failureReason = taskResult.runStatus.getReason
 
     val (recordCountOld, inputRecordCount, outputRecordCount, sizeBytes) = taskResult.runStatus match {
       case s: Succeeded => (s.recordCountOld, s.recordCount, Some(s.recordCount), s.sizeBytes)

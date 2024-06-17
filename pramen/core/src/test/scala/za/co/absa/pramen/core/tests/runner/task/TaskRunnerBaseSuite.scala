@@ -20,7 +20,9 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.{DataFormat, Reason, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.status.RunStatus.{Failed, NotRan, Skipped, Succeeded}
+import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, MetastoreDependency, RunStatus, TaskRunReason, TaskStatus}
+import za.co.absa.pramen.api.{DataFormat, Reason, TaskNotification, status}
 import za.co.absa.pramen.core
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -28,7 +30,6 @@ import za.co.absa.pramen.core.exceptions.ReasonException
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.metastore.MetaTableStats
-import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
@@ -37,8 +38,7 @@ import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock
 import za.co.absa.pramen.core.mocks.notify.NotificationTargetSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.pipeline._
-import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, NotRan, Skipped, Succeeded}
-import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerBase, TaskRunnerMultithreaded}
+import za.co.absa.pramen.core.runner.task.{TaskRunnerBase, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 
@@ -79,7 +79,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.head.runStatus.isInstanceOf[Succeeded])
       assert(result(1).runStatus.isInstanceOf[Succeeded])
       assert(notificationTarget.notificationsSent.length == 2)
-      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[TaskStatus.Succeeded])
+      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[RunStatus.Succeeded])
 
       val journalEntries = journal.getEntries(now, now.plusSeconds(30))
 
@@ -162,7 +162,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(job.createHiveTableCount == 0)
       assert(result.isInstanceOf[Succeeded])
       assert(notificationTarget.notificationsSent.length == 1)
-      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[TaskStatus.Succeeded])
+      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[RunStatus.Succeeded])
 
       val journalEntries = journal.getEntries(now, now.plusSeconds(30))
 
@@ -201,7 +201,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     assert(journalEntries.length == 2)
     assert(journalEntries.head.status == "Failed")
     assert(notificationTarget.notificationsSent.length == 2)
-    assert(notificationTarget.notificationsSent.head.status.isInstanceOf[TaskStatus.Failed])
+    assert(notificationTarget.notificationsSent.head.status.isInstanceOf[RunStatus.Failed])
   }
 
   "preRunCheck" when {

@@ -20,6 +20,7 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.status.RunStatus.{Failed, Succeeded}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -30,7 +31,6 @@ import za.co.absa.pramen.core.mocks.lock.TokenLockFactoryMock
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.pipeline.{Job, RunResult}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
-import za.co.absa.pramen.core.runner.task.RunStatus.{Failed, Succeeded}
 import za.co.absa.pramen.core.runner.task.TaskRunnerMultithreaded
 import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 

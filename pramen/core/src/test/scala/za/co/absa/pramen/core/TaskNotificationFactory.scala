@@ -16,24 +16,26 @@
 
 package za.co.absa.pramen.core
 
-import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.status.{DependencyWarning, RunInfo, RunStatus, TaskRunReason, TaskStatus}
+import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference, TaskNotification}
 
 import java.time.{Instant, LocalDate}
 
 object TaskNotificationFactory {
   def getDummyTaskNotification(tableName: String = "dummy_table",
                                tableDef: MetaTableDef = MetaTableDefFactory.getDummyMetaTableDef(name = "dummy_table"),
-                               infoDate: Option[LocalDate] = Some(LocalDate.of(2022, 2, 18)),
-                               started: Option[Instant] = Some(Instant.ofEpochMilli(1613600000000L)),
-                               finished: Option[Instant] = Some(Instant.ofEpochMilli(1672759508000L)),
-                               status: TaskStatus = TaskStatus.Succeeded(100, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
+                               runInfo: Option[RunInfo] = Some(RunInfo(
+                                 LocalDate.of(2022, 2, 18),
+                                 Instant.ofEpochMilli(1613600000000L),
+                                 Instant.ofEpochMilli(1672759508000L)
+                               )),
+                               status: RunStatus = RunStatus.Succeeded(None, 100, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
                                applicationId: String = "app_12345",
                                isTransient: Boolean = false,
                                isRawFilesJob: Boolean = false,
                                schemaChanges: Seq[SchemaDifference] = Seq.empty,
-                               dependencyWarningTables: Seq[String] = Seq.empty,
+                               dependencyWarnings: Seq[DependencyWarning] = Seq.empty,
                                options: Map[String, String] = Map.empty[String, String]): TaskNotification = {
-    TaskNotification(tableName, tableDef, infoDate, started, finished, status, applicationId, isTransient, isRawFilesJob, schemaChanges, dependencyWarningTables, options)
+    TaskNotification(tableName, tableDef, runInfo, status, applicationId, isTransient, isRawFilesJob, schemaChanges, dependencyWarnings, options)
   }
-
 }

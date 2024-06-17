@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.runner.task
 
+import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.pipeline.{Job, TaskPreDef}
 
 import java.time.LocalDate

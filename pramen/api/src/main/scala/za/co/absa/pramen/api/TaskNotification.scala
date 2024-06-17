@@ -16,19 +16,17 @@
 
 package za.co.absa.pramen.api
 
-import java.time.{Instant, LocalDate}
+import za.co.absa.pramen.api.status.{DependencyWarning, RunInfo, RunStatus}
 
 case class TaskNotification(
                              tableName: String,
                              tableDef: MetaTableDef,
-                             infoDate: Option[LocalDate],
-                             started: Option[Instant],
-                             finished: Option[Instant],
-                             status: TaskStatus,
+                             runInfo: Option[RunInfo],
+                             status: RunStatus,
                              applicationId: String,
                              isTransient: Boolean,
                              isRawFilesJob: Boolean,
                              schemaChanges: Seq[SchemaDifference],
-                             dependencyWarningTables: Seq[String],
+                             dependencyWarnings: Seq[DependencyWarning],
                              options: Map[String, String]
                            )

@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.state
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
+import za.co.absa.pramen.api.status.RunStatus.NotRan
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.EMAIL_IF_NO_CHANGES
@@ -27,7 +28,6 @@ import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, Transie
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.notify.{NotificationTargetManager, PipelineNotificationTargetFactory}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
-import za.co.absa.pramen.core.runner.task.RunStatus.NotRan
 import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 import java.time.Instant
@@ -195,7 +195,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   private[state] def sendPipelineNotifications(): Unit = {
-    val taskNotifications = taskResults.flatMap(taskResultToTaskNotification).toSeq
+    val taskNotifications = taskResults.map(taskResultToTaskNotification).toSeq
     val pipelineInfo = getState().pipelineInfo
 
     pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, pipelineInfo, taskNotifications))
@@ -291,22 +291,18 @@ object PipelineStateImpl {
   val EXIT_CODE_JOB_FAILED = 2
   val EXIT_CODE_SIGNAL_RECEIVED = 4
 
-  private[core] def taskResultToTaskNotification(taskResult: TaskResult): Option[TaskNotification] = {
-    NotificationTargetManager.runStatusToTaskStatus(taskResult.runStatus).map(taskStatus =>
-      TaskNotification(
-        taskResult.job.outputTable.name,
-        MetastoreImpl.getMetaTableDef(taskResult.job.outputTable),
-        taskResult.runInfo.map(_.infoDate),
-        taskResult.runInfo.map(_.started),
-        taskResult.runInfo.map(_.finished),
-        taskStatus,
-        taskResult.applicationId,
-        taskResult.isTransient,
-        taskResult.isRawFilesJob,
-        taskResult.schemaChanges,
-        taskResult.dependencyWarnings.map(_.table),
-        Map.empty
-      )
+  private[core] def taskResultToTaskNotification(taskResult: TaskResult): TaskNotification = {
+    TaskNotification(
+      taskResult.job.outputTable.name,
+      MetastoreImpl.getMetaTableDef(taskResult.job.outputTable),
+      taskResult.runInfo,
+      taskResult.runStatus,
+      taskResult.applicationId,
+      taskResult.isTransient,
+      taskResult.isRawFilesJob,
+      taskResult.schemaChanges,
+      taskResult.dependencyWarnings,
+      Map.empty
     )
   }
 }

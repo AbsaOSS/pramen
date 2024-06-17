@@ -16,8 +16,7 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.core.pipeline.TaskRunReason
-import za.co.absa.pramen.core.runner.task.RunStatus
+import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
 
 object RunStatusFactory {
   def getDummySuccess(recordCountOld: Option[Long] = None,
