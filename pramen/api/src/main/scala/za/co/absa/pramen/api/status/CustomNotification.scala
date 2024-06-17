@@ -14,18 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api
+package za.co.absa.pramen.api.status
 
-import za.co.absa.pramen.api.status.RuntimeInfo
+import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 
-import java.time.Instant
-
-case class PipelineInfo(
-                         pipelineName: String,
-                         environment: String,
-                         runtimeInfo: RuntimeInfo,
-                         startedAt: Instant,
-                         finishedAt: Option[Instant],
-                         sparkApplicationId: Option[String],
-                         failureException: Option[Throwable]
-                       )
+case class CustomNotification(
+                               customEntries: Seq[NotificationEntry],
+                               customSignature: Seq[TextElement]
+                             )

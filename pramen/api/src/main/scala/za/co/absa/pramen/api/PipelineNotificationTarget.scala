@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.api
 
-import za.co.absa.pramen.api.notification.NotificationEntry
+import za.co.absa.pramen.api.status.CustomNotification
 
 trait PipelineNotificationTarget extends ExternalChannel {
   /** Sends a notification after completion of the pipeline. */
   def sendNotification(pipelineInfo: PipelineInfo,
                        tasksCompleted: Seq[TaskNotification],
-                       customNotificationEntries: Seq[NotificationEntry]): Unit
+                       customNotification: CustomNotification): Unit
 }

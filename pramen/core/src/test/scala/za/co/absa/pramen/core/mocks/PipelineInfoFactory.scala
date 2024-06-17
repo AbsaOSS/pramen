@@ -17,15 +17,18 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.PipelineInfo
+import za.co.absa.pramen.api.status.RuntimeInfo
 
 import java.time.Instant
 
 object PipelineInfoFactory {
   def getDummyPipelineInfo(pipelineName: String = "Dummy Pipeline",
                            environment: String = "DEV",
+                           runtimeInfo: RuntimeInfo = RuntimeInfo(),
                            startedAt: Instant = Instant.ofEpochSecond(1718609409),
+                           finishedAt: Option[Instant] = None,
                            sparkApplicationId: Option[String] = Some("testid-12345"),
                            failureException: Option[Throwable] = None): PipelineInfo = {
-    PipelineInfo(pipelineName, environment, startedAt, sparkApplicationId, failureException)
+    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, sparkApplicationId, failureException)
   }
 }
