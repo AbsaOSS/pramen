@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.fixtures.TempDirFixture
@@ -32,7 +33,7 @@ import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.mocks.{MetaTableFactory, SourceTableFactory}
 import za.co.absa.pramen.core.pipeline.{IngestionJob, Job, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunnerImpl
-import za.co.absa.pramen.core.runner.task.{RunStatus, TaskRunnerMultithreaded}
+import za.co.absa.pramen.core.runner.task.TaskRunnerMultithreaded
 import za.co.absa.pramen.core.utils.LocalFsUtils
 import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 

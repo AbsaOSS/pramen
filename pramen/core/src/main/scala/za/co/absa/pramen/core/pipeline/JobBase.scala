@@ -19,10 +19,11 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.types.StructType
 import org.slf4j.{Logger, LoggerFactory}
+import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, MetastoreDependency}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
-import za.co.absa.pramen.core.metastore.model.{MetaTable, MetastoreDependency}
+import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.utils.Emoji._
 
@@ -161,7 +162,7 @@ abstract class JobBase(operationDef: OperationDef,
     if (failedTables.isEmpty && emptyTables.isEmpty) {
       None
     } else {
-      Some(pipeline.DependencyFailure(dep, emptyTables, failedTables, failedDateRanges))
+      Some(DependencyFailure(dep, emptyTables, failedTables, failedDateRanges))
     }
   }
 

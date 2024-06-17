@@ -17,21 +17,13 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.status.MetastoreDependency
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.collection.JavaConverters._
 import scala.util.Try
 
-case class MetastoreDependency(
-                                tables: Seq[String],
-                                dateFromExpr: String,
-                                dateUntilExpr: Option[String],
-                                triggerUpdates: Boolean,
-                                isOptional: Boolean,
-                                isPassive: Boolean
-                              )
-
-object MetastoreDependency {
+object MetastoreDependencyFactory {
   val TABLES_KEY = "tables"
   val DATE_FROM_EXPR_KEY = "date.from"
   val DATE_UNTIL_EXPR_KEY = "date.to"

@@ -14,8 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.pipeline
+package za.co.absa.pramen.api.status
 
-case class DependencyWarning(
-                              table: String
-                            )
+case class MetastoreDependency(
+                                tables: Seq[String],
+                                dateFromExpr: String,
+                                dateUntilExpr: Option[String],
+                                triggerUpdates: Boolean,
+                                isOptional: Boolean,
+                                isPassive: Boolean
+                              )

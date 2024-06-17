@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.extras.mocks
 
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskRunReason, TaskStatus}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, TaskNotification}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpResponse
 
 import java.time.{Instant, LocalDate}
@@ -38,14 +39,12 @@ object TestPrototypes {
     Map.empty,
     Map.empty)
 
-  val taskStatus: TaskStatus = TaskStatus.Succeeded(100, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
+  val taskStatus: RunStatus = RunStatus.Succeeded(None, 100, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   val taskNotification: TaskNotification = TaskNotification(
     "table1",
     metaTableDef,
-    Option(infoDate),
-    Option(Instant.ofEpochSecond(1645274606)),
-    Option(Instant.ofEpochSecond(1645278206)),
+    Option(RunInfo(infoDate, Instant.ofEpochSecond(1645274606), Instant.ofEpochSecond(1645278206))),
     taskStatus,
     "test-1234",
     isTransient = false,

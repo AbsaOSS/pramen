@@ -37,7 +37,7 @@ class EcsNotificationTarget(conf: Config) extends NotificationTarget {
   override def config: Config = conf
 
   override def sendNotification(pipelineInfo: PipelineInfo, notification: TaskNotification): Unit = {
-    if (notification.infoDate.isEmpty) {
+    if (notification.runInfo.isEmpty) {
       log.warn(s"Information date not provided - skipping ECS cleanup.")
       return
     }
@@ -47,7 +47,7 @@ class EcsNotificationTarget(conf: Config) extends NotificationTarget {
     val httpClient = getHttpClient(trustAllSslCerts)
 
     try {
-      EcsNotificationTarget.cleanUpS3VersionsForTable(tableDef, notification.infoDate.get, ecsApiUrl, ecsApiKey, httpClient)
+      EcsNotificationTarget.cleanUpS3VersionsForTable(tableDef, notification.runInfo.get.infoDate, ecsApiUrl, ecsApiKey, httpClient)
     } finally {
       httpClient.close()
     }

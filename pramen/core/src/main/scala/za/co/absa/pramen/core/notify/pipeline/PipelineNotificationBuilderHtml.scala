@@ -20,13 +20,13 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.api.notification._
+import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status.RunStatus.{Failed, FailedDependencies, InsufficientData, MissingDependencies, NoData, NotRan, Skipped, Succeeded, ValidationFailed}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_MEGABYTES, MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
-import za.co.absa.pramen.core.pipeline.TaskRunReason
-import za.co.absa.pramen.core.runner.task.RunStatus._
-import za.co.absa.pramen.core.runner.task.{NotificationFailure, PipelineNotificationFailure, RunStatus, TaskResult}
+import za.co.absa.pramen.core.runner.task.{NotificationFailure, PipelineNotificationFailure, TaskResult}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
@@ -351,7 +351,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       t.isRawFilesJob || hasExplicitSize
     }
 
-    val haveReasonColumn = tasks.exists(t => t.runStatus.getReason().nonEmpty || t.dependencyWarnings.nonEmpty)
+    val haveReasonColumn = tasks.exists(t => t.runStatus.getReason.nonEmpty || t.dependencyWarnings.nonEmpty)
     val haveHiveColumn = tasks.exists(t => t.runStatus.isInstanceOf[Succeeded] && t.runStatus.asInstanceOf[Succeeded].hiveTablesUpdated.nonEmpty)
 
     val tableBuilder = new TableBuilderHtml
@@ -596,7 +596,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   private[core] def getFailureReason(task: TaskResult): String = {
-    task.runStatus.getReason() match {
+    task.runStatus.getReason match {
       case Some(reason) => reason
       case None         =>
         if (task.dependencyWarnings.isEmpty) {

@@ -19,11 +19,10 @@ package za.co.absa.pramen.core.tests.runner.splitter
 import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.mocks.DataChunkFactory.getDummyDataChunk
 import za.co.absa.pramen.core.pipeline
-import za.co.absa.pramen.core.pipeline.TaskRunReason
 import za.co.absa.pramen.core.runner.splitter.{RunMode, ScheduleParams, ScheduleStrategySourcing, ScheduleStrategyTransformation}
 import za.co.absa.pramen.core.schedule.Schedule
 

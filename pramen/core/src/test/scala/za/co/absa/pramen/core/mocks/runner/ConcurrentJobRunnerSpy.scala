@@ -17,10 +17,11 @@
 package za.co.absa.pramen.core.mocks.runner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
-import za.co.absa.pramen.core.pipeline.{Job, TaskRunReason}
+import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskRunReason}
+import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
-import za.co.absa.pramen.core.runner.task.{RunInfo, RunStatus, TaskResult}
+import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.{Instant, LocalDate}
 import java.util.concurrent.ExecutorService

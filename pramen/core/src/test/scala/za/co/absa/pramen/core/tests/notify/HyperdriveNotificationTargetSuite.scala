@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.tests.notify
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.TaskStatus
+import za.co.absa.pramen.api.status.{RunStatus, TaskStatus}
 import za.co.absa.pramen.core.TaskNotificationFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.mocks.notify.SingleMessageProducerSpy
@@ -81,7 +81,7 @@ class HyperdriveNotificationTargetSuite extends AnyWordSpec with SparkTestBase {
       val (notificationTarget, producer) = getUseCase
       val options = Map("hyperdrive.token" -> "ABC")
 
-      val taskNotification = TaskNotificationFactory.getDummyTaskNotification(status = TaskStatus.Skipped("dummy"),  options = options)
+      val taskNotification = TaskNotificationFactory.getDummyTaskNotification(status = RunStatus.Skipped("dummy"),  options = options)
 
       notificationTarget.sendNotification(null, taskNotification)
 

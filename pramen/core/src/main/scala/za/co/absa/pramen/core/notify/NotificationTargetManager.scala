@@ -18,9 +18,9 @@ package za.co.absa.pramen.core.notify
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import za.co.absa.pramen.api.{NotificationTarget, TaskStatus}
+import za.co.absa.pramen.api.NotificationTarget
+import za.co.absa.pramen.api.status.TaskStatus
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
-import za.co.absa.pramen.core.runner.task.RunStatus
 
 object NotificationTargetManager {
   val NOTIFICATION_TARGETS_KEY = "pramen.notification.targets"
@@ -58,28 +58,5 @@ object NotificationTargetManager {
                 overrideConf: Option[Config])
                (implicit spark: SparkSession): NotificationTarget = {
     ExternalChannelFactoryReflect.fromConfigByName[NotificationTarget](conf, overrideConf, NOTIFICATION_TARGETS_KEY, name, "notification target")
-  }
-
-  /**
-    * Converts an internal run status to the API trait TaskStatus.
-    *
-    * Converts only statuses which corresponds to jobs actually attempted to run.
-    * Returns None otherwise.
-    *
-    * @param status The internal run status.
-    * @return The corresponding task status if applicable.
-    */
-  def runStatusToTaskStatus(status: RunStatus): Option[TaskStatus] = {
-    status match {
-      case s: RunStatus.Succeeded => Some(TaskStatus.Succeeded(s.recordCount, s.filesRead, s.filesWritten, s.hiveTablesUpdated, s.warnings))
-      case s: RunStatus.Failed => Some(TaskStatus.Failed(s.ex))
-      case s: RunStatus.ValidationFailed => Some(TaskStatus.ValidationFailed(s.ex))
-      case s: RunStatus.MissingDependencies => Some(TaskStatus.MissingDependencies(s.tables))
-      case s: RunStatus.FailedDependencies => Some(TaskStatus.FailedDependencies(s.failures.flatMap(d => d.failedTables ++ d.emptyTables).distinct.sorted))
-      case _: RunStatus.NoData => Some(TaskStatus.NoData)
-      case s: RunStatus.InsufficientData => Some(TaskStatus.InsufficientData(s.actual, s.expected))
-      case s: RunStatus.Skipped => Some(TaskStatus.Skipped(s.msg))
-      case _ => None
-    }
   }
 }

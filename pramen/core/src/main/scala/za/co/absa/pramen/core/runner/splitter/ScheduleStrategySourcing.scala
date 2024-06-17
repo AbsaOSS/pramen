@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.runner.splitter
 
+import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.model.MetastoreDependency
 import za.co.absa.pramen.core.pipeline
-import za.co.absa.pramen.core.pipeline.{TaskPreDef, TaskRunReason}
+import za.co.absa.pramen.core.pipeline.TaskPreDef
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 import za.co.absa.pramen.core.schedule.Schedule
 

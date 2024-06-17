@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.pipeline
 
+import za.co.absa.pramen.api.status.TaskRunReason
+
 import java.time.LocalDate
 
 case class TaskPreDef(

@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.pipeline
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.status.TaskRunReason
 
 class TaskRunReasonSuite extends AnyWordSpec {
   "TaskRunReason" should {

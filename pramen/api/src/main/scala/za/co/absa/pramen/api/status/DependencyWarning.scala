@@ -14,12 +14,8 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.runner.task
+package za.co.absa.pramen.api.status
 
-import java.time.{Instant, LocalDate}
-
-case class RunInfo(
-                    infoDate: LocalDate,
-                    started: Instant,
-                    finished: Instant
-                  )
+case class DependencyWarning(
+                              table: String
+                            )

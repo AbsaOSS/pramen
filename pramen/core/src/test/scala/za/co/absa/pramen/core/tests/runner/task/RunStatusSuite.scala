@@ -17,9 +17,7 @@
 package za.co.absa.pramen.core.tests.runner.task
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.metastore.model.MetastoreDependency
-import za.co.absa.pramen.core.pipeline.{DependencyFailure, TaskRunReason}
-import za.co.absa.pramen.core.runner.task.RunStatus
+import za.co.absa.pramen.api.status.{DependencyFailure, MetastoreDependency, RunStatus, TaskRunReason}
 
 class RunStatusSuite extends AnyWordSpec {
   "toString" should {

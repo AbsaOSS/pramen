@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, PipelineInfo, Reason, SchemaDifference, TaskNotification}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -32,7 +33,7 @@ import za.co.absa.pramen.core.metastore.{MetaTableStats, MetastoreImpl}
 import za.co.absa.pramen.core.notify.NotificationTargetManager
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline._
-import za.co.absa.pramen.core.state.{PipelineState, PipelineStateSnapshot}
+import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.hive.HiveHelper
@@ -391,28 +392,24 @@ abstract class TaskRunnerBase(conf: Config,
     Try {
       val target = notificationTarget.target
 
-      NotificationTargetManager.runStatusToTaskStatus(result.runStatus).foreach { taskStatus =>
-        val notification = TaskNotification(
-          task.job.outputTable.name,
-          MetastoreImpl.getMetaTableDef(task.job.outputTable),
-          Option(task.infoDate),
-          result.runInfo.map(_.started),
-          result.runInfo.map(_.finished),
-          taskStatus,
-          result.applicationId,
-          result.isTransient,
-          result.isRawFilesJob,
-          result.schemaChanges,
-          result.dependencyWarnings.map(_.table),
-          notificationTarget.options
-        )
+      val notification = TaskNotification(
+        task.job.outputTable.name,
+        MetastoreImpl.getMetaTableDef(task.job.outputTable),
+        result.runInfo,
+        result.runStatus,
+        result.applicationId,
+        result.isTransient,
+        result.isRawFilesJob,
+        result.schemaChanges,
+        result.dependencyWarnings,
+        notificationTarget.options
+      )
 
-        target.connect()
-        try {
-          target.sendNotification(pipelineInfo, notification)
-        } finally {
-          target.close()
-        }
+      target.connect()
+      try {
+        target.sendNotification(pipelineInfo, notification)
+      } finally {
+        target.close()
       }
     } match {
       case Success(_) =>

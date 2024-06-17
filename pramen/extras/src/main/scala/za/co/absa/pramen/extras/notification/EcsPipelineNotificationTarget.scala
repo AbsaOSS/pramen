@@ -18,7 +18,8 @@ package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, PipelineInfo, PipelineNotificationTarget, TaskNotification, TaskStatus}
+import za.co.absa.pramen.api.status.{RunStatus, TaskStatus}
+import za.co.absa.pramen.api.{DataFormat, PipelineInfo, PipelineNotificationTarget, TaskNotification}
 import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
 
@@ -53,18 +54,18 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
 
     try {
       tasksCompleted.foreach { task =>
-        (task.infoDate, task.status) match {
-          case (Some(infoDate), _: TaskStatus.Succeeded) =>
+        task.runInfo match {
+          case Some(runInfo) if task.status.isInstanceOf[RunStatus.Succeeded] =>
             if (!task.tableDef.format.isTransient &&
               !task.tableDef.format.isInstanceOf[DataFormat.Null] &&
               !task.tableDef.format.isInstanceOf[DataFormat.Raw]) {
-              EcsNotificationTarget.cleanUpS3VersionsForTable(task.tableDef, infoDate, ecsApiUrl, ecsApiKey, httpClient)
+              EcsNotificationTarget.cleanUpS3VersionsForTable(task.tableDef, runInfo.infoDate, ecsApiUrl, ecsApiKey, httpClient)
             } else {
-              log.info(s"The task outputting to '${task.tableName}' for '$infoDate' outputs to ${task.tableDef.format.name} format - skipping ECS cleanup...")
+              log.info(s"The task outputting to '${task.tableName}' for '${runInfo.infoDate}' outputs to ${task.tableDef.format.name} format - skipping ECS cleanup...")
             }
-          case (Some(infoDate), _) =>
-            log.info(s"The task outputting to '${task.tableName}' for '$infoDate' status is not a success - skipping ECS cleanup...")
-          case (None, status) =>
+          case Some(runInfo) =>
+            log.info(s"The task outputting to '${task.tableName}' for '${runInfo.infoDate}' status is not a success - skipping ECS cleanup...")
+          case None =>
             log.info(s"The task outputting to '${task.tableName}' status is not a success - skipping ECS cleanup...")
         }
       }

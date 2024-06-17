@@ -14,18 +14,12 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.mocks
+package za.co.absa.pramen.api.status
 
-import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
+import java.time.{Instant, LocalDate}
 
-object TestPrototypes {
-
-  val runStatusSuccess: RunStatus = RunStatus.Succeeded(Some(100), 200, Some(1000), TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
-
-  val runStatusWarning: RunStatus = RunStatus.Succeeded(
-    Some(10000), 20000, Some(100000), TaskRunReason.New, Seq("file1.txt", "file1.ctl"),
-    Seq("file1.csv", "file2.csv"), Seq("`db`.`table1`"), Seq("Test warning")
-  )
-
-  val runStatusFailure: RunStatus = RunStatus.Failed(new RuntimeException("Test exception"))
-}
+case class RunInfo(
+                    infoDate: LocalDate,
+                    started: Instant,
+                    finished: Instant
+                  )

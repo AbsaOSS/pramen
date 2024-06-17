@@ -17,7 +17,8 @@
 package za.co.absa.pramen.core.runner.task
 
 import za.co.absa.pramen.api.SchemaDifference
-import za.co.absa.pramen.core.pipeline.{DependencyWarning, Job}
+import za.co.absa.pramen.api.status.{DependencyWarning, RunInfo, RunStatus}
+import za.co.absa.pramen.core.pipeline.Job
 
 case class TaskResult(
                        job: Job,

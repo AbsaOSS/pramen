@@ -16,9 +16,9 @@
 
 package za.co.absa.pramen.core.mocks
 
+import za.co.absa.pramen.api.status.TaskStatus
 import za.co.absa.pramen.core.journal.model
 import za.co.absa.pramen.core.journal.model.TaskCompleted
-import za.co.absa.pramen.core.model.TaskStatus
 
 import java.time.LocalDate
 
