@@ -36,6 +36,9 @@ trait Pramen {
   /** This gives access to the current workflow configuration. */
   def workflowConfig: Config
 
+  /** General information about the running pipeline. */
+  def pipelineInfo: PipelineInfo
+
   /** Gets the notification builder that you can use to add custom information to email notifications. */
   def notificationBuilder: NotificationBuilder
 
