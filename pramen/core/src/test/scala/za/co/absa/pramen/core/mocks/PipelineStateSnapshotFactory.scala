@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.PipelineInfo
+import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 import za.co.absa.pramen.core.state.PipelineStateSnapshot
 
@@ -27,14 +28,16 @@ object PipelineStateSnapshotFactory {
                                     exitCode: Int = 0,
                                     customShutdownHookCanRun: Boolean = false,
                                     taskResults: Seq[TaskResult] = Seq.empty,
-                                    pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty): PipelineStateSnapshot = {
+                                    pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty,
+                                    customNotificationEntries: Seq[NotificationEntry] = Seq.empty): PipelineStateSnapshot = {
     PipelineStateSnapshot(pipelineInfo,
       isFinished,
       exitedNormally,
       exitCode,
       customShutdownHookCanRun,
       taskResults,
-      pipelineNotificationFailures
+      pipelineNotificationFailures,
+      customNotificationEntries
     )
   }
 }

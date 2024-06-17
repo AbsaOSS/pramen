@@ -53,7 +53,7 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
       val metaTableDef3 = TestPrototypes.metaTableDef.copy(name = "table3", format = dataFormat3)
       val task3 = TestPrototypes.taskNotification.copy(tableName = "table3", tableDef = metaTableDef3)
 
-      notificationTarget.sendNotification(PipelineInfo("Dummy", "DEV", Instant.now, None, None), Seq(task1, task2, task3))
+      notificationTarget.sendNotification(PipelineInfo("Dummy", "DEV", Instant.now, None, None), Seq(task1, task2, task3), Seq.empty)
 
       assert(httpClient.executeCalled == 2)
       assert(httpClient.requests.head.url == "https://dummyurl.local/kk")
