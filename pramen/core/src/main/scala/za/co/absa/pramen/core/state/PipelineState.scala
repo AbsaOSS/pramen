@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.state
 
-import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 
 trait PipelineState extends AutoCloseable {
   def getState(): PipelineStateSnapshot

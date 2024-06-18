@@ -19,10 +19,10 @@ package za.co.absa.pramen.api.status
 import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference}
 
 case class TaskResult(
-                       tableName: String,
-                       tableDef: MetaTableDef,
+                       jobName: String,
+                       outputTable: MetaTableDef,
+                       runStatus: RunStatus,
                        runInfo: Option[RunInfo],
-                       status: RunStatus,
                        applicationId: String,
                        isTransient: Boolean,
                        isRawFilesJob: Boolean,

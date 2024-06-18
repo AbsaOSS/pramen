@@ -54,18 +54,18 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
     try {
       tasksCompleted.foreach { task =>
         task.runInfo match {
-          case Some(runInfo) if task.status.isInstanceOf[RunStatus.Succeeded] =>
-            if (!task.tableDef.format.isTransient &&
-              !task.tableDef.format.isInstanceOf[DataFormat.Null] &&
-              !task.tableDef.format.isInstanceOf[DataFormat.Raw]) {
-              EcsNotificationTarget.cleanUpS3VersionsForTable(task.tableDef, runInfo.infoDate, ecsApiUrl, ecsApiKey, httpClient)
+          case Some(runInfo) if task.runStatus.isInstanceOf[RunStatus.Succeeded] =>
+            if (!task.outputTable.format.isTransient &&
+              !task.outputTable.format.isInstanceOf[DataFormat.Null] &&
+              !task.outputTable.format.isInstanceOf[DataFormat.Raw]) {
+              EcsNotificationTarget.cleanUpS3VersionsForTable(task.outputTable, runInfo.infoDate, ecsApiUrl, ecsApiKey, httpClient)
             } else {
-              log.info(s"The task outputting to '${task.tableName}' for '${runInfo.infoDate}' outputs to ${task.tableDef.format.name} format - skipping ECS cleanup...")
+              log.info(s"The task outputting to '${task.outputTable.name}' for '${runInfo.infoDate}' outputs to ${task.outputTable.format.name} format - skipping ECS cleanup...")
             }
           case Some(runInfo) =>
-            log.info(s"The task outputting to '${task.tableName}' for '${runInfo.infoDate}' status is not a success - skipping ECS cleanup...")
+            log.info(s"The task outputting to '${task.outputTable.name}' for '${runInfo.infoDate}' status is not a success - skipping ECS cleanup...")
           case None =>
-            log.info(s"The task outputting to '${task.tableName}' status is not a success - skipping ECS cleanup...")
+            log.info(s"The task outputting to '${task.outputTable.name}' status is not a success - skipping ECS cleanup...")
         }
       }
     } finally {

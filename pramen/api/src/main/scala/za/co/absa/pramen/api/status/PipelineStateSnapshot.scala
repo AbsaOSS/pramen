@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.state
+package za.co.absa.pramen.api.status
 
 import za.co.absa.pramen.api.PipelineInfo
-import za.co.absa.pramen.api.status.CustomNotification
-import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 case class PipelineStateSnapshot(
                                   pipelineInfo: PipelineInfo,

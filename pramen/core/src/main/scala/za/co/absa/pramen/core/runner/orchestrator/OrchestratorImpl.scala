@@ -21,13 +21,13 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
-import za.co.absa.pramen.api.status.RunStatus
+import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
+import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
-import za.co.absa.pramen.core.runner.task.TaskResult
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 
@@ -126,8 +126,19 @@ class OrchestratorImpl extends Orchestrator {
       val isTransient = job.outputTable.format.isTransient
       val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
 
-      val taskResult = TaskResult(job, RunStatus.MissingDependencies(isFailure, missingTables), None, applicationId,
-        isTransient, job.outputTable.format.isInstanceOf[DataFormat.Raw], Nil, Nil, Nil)
+      val taskResult = TaskResult(
+        job.name,
+        MetaTable.getMetaTableDef(job.outputTable),
+        RunStatus.MissingDependencies(isFailure, missingTables),
+        None,
+        applicationId,
+        isTransient,
+        job.outputTable.format.isInstanceOf[DataFormat.Raw],
+        Nil,
+        Nil,
+        Nil,
+        job.operation.extraOptions
+      )
 
       state.addTaskCompletion(taskResult :: Nil)
     })

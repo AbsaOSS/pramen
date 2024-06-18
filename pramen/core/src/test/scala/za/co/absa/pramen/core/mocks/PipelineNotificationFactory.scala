@@ -17,9 +17,9 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
+import za.co.absa.pramen.api.status.{PipelineNotificationFailure, TaskResult}
 import za.co.absa.pramen.core.notify.pipeline
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotification
-import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 
 import java.time.Instant
 

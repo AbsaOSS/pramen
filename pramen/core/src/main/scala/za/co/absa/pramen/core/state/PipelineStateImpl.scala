@@ -20,17 +20,15 @@ import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
 import za.co.absa.pramen.api.status.RunStatus.NotRan
-import za.co.absa.pramen.api.status.{CustomNotification, RuntimeInfo, TaskResult}
+import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget}
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
 import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
-import za.co.absa.pramen.core.metastore.MetastoreImpl
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
-import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult => TaskResultCore}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.Instant
@@ -54,7 +52,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val startedInstant = Instant.now
   private var finishedInstant: Option[Instant] = None
   @volatile private var exitCode = EXIT_CODE_SUCCESS
-  private val taskResults = new ListBuffer[TaskResultCore]
+  private val taskResults = new ListBuffer[TaskResult]
   private val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
   private val signalHandlers = new ListBuffer[PramenSignalHandler]
   @volatile private var failureException: Option[Throwable] = None
@@ -144,7 +142,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     this.sparkAppId = Option(sparkAppId)
   }
 
-  override def addTaskCompletion(statuses: Seq[TaskResultCore]): Unit = synchronized {
+  override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
     taskResults ++= statuses.filter(_.runStatus != NotRan)
     if (statuses.exists(_.runStatus.isFailure)) {
       exitCode |= EXIT_CODE_JOB_FAILED
@@ -219,16 +217,14 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   private[state] def sendPipelineNotifications(): Unit = {
-    val taskNotifications = taskResults.map(taskResultToTaskNotification).toSeq
-
-    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, getState(), taskNotifications))
+    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, getState(), taskResults.toSeq))
   }
 
-  private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, pipelineStateSnapshot: PipelineStateSnapshot, taskNotifications: Seq[TaskResult]): Unit = {
+  private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, pipelineStateSnapshot: PipelineStateSnapshot, taskResults: Seq[TaskResult]): Unit = {
     try {
       pipelineNotificationTarget.sendNotification(
         pipelineStateSnapshot.pipelineInfo,
-        taskNotifications,
+        taskResults.toSeq,
         pipelineStateSnapshot.customNotification
       )
     } catch {
@@ -313,20 +309,4 @@ object PipelineStateImpl {
   val EXIT_CODE_APP_FAILED = 1
   val EXIT_CODE_JOB_FAILED = 2
   val EXIT_CODE_SIGNAL_RECEIVED = 4
-
-  private[core] def taskResultToTaskNotification(taskResult: TaskResultCore): TaskResult = {
-    TaskResult(
-      taskResult.job.outputTable.name,
-      MetastoreImpl.getMetaTableDef(taskResult.job.outputTable),
-      taskResult.runInfo,
-      taskResult.runStatus,
-      taskResult.applicationId,
-      taskResult.isTransient,
-      taskResult.isRawFilesJob,
-      taskResult.schemaChanges,
-      taskResult.dependencyWarnings,
-      taskResult.notificationTargetErrors,
-      Map.empty
-    )
-  }
 }

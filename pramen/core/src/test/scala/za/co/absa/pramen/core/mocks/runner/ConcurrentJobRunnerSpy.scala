@@ -17,11 +17,11 @@
 package za.co.absa.pramen.core.mocks.runner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
-import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskResult, TaskRunReason}
+import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
-import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.{Instant, LocalDate}
 import java.util.concurrent.ExecutorService
@@ -75,7 +75,18 @@ class ConcurrentJobRunnerSpy(includeFails: Boolean = false,
         RunStatus.NoData(isNoDataFailure)
       }
 
-      val taskResult = TaskResult(job, status, Some(RunInfo(infoDate, started, finished)), "app_123", isTransient = false, isRawFilesJob = false, Nil, Nil, Nil)
+      val taskResult = TaskResult(
+        job.name,
+        MetaTable.getMetaTableDef(job.outputTable),
+        status,
+        Some(RunInfo(infoDate, started, finished)),
+        "app_123",
+        isTransient = false,
+        isRawFilesJob = false,
+        Nil,
+        Nil,
+        Nil,
+        Map.empty)
 
       completedJobsChannel.send((job, taskResult :: Nil, taskResult.runStatus.isInstanceOf[RunStatus.Succeeded] || taskResult.runStatus == RunStatus.NotRan))
 

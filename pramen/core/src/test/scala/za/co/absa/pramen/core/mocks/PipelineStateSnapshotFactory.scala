@@ -17,9 +17,7 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.PipelineInfo
-import za.co.absa.pramen.api.status.CustomNotification
-import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
-import za.co.absa.pramen.core.state.PipelineStateSnapshot
+import za.co.absa.pramen.api.status.{CustomNotification, PipelineNotificationFailure, PipelineStateSnapshot, TaskResult}
 
 object PipelineStateSnapshotFactory {
   def getDummyPipelineStateSnapshot(pipelineInfo: PipelineInfo = PipelineInfoFactory.getDummyPipelineInfo(),

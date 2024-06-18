@@ -17,11 +17,11 @@
 package za.co.absa.pramen.core.tests.journal
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskResult, TaskRunReason}
 import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.pipeline.Task
-import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.{Instant, LocalDate}
 
@@ -35,7 +35,8 @@ class TaskCompletedSuite extends AnyWordSpec {
       val runReason = TaskRunReason.Update
       val task = Task(job, infoDate, runReason)
       val taskResult = TaskResult(
-        job,
+        job.name,
+        MetaTable.getMetaTableDef(job.outputTable),
         RunStatus.Succeeded(Some(1000), 2000, Some(3000), runReason, Nil, Nil, Nil, Nil),
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
         "app_123",
@@ -43,7 +44,8 @@ class TaskCompletedSuite extends AnyWordSpec {
         isRawFilesJob = false,
         Nil,
         Nil,
-        Nil)
+        Nil,
+        Map.empty)
 
       val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult)
 
@@ -69,7 +71,8 @@ class TaskCompletedSuite extends AnyWordSpec {
       val runReason = TaskRunReason.Update
       val task = Task(job, infoDate, runReason)
       val taskResult = TaskResult(
-        job,
+        job.name,
+        MetaTable.getMetaTableDef(job.outputTable),
         RunStatus.Failed(new IllegalStateException("Dummy Exception")),
         None,
         "app_123",
@@ -77,7 +80,8 @@ class TaskCompletedSuite extends AnyWordSpec {
         isRawFilesJob = false,
         Nil,
         Nil,
-        Nil)
+        Nil,
+        Map.empty)
 
       val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult)
 

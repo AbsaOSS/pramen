@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
@@ -157,4 +157,18 @@ object MetaTable {
       writeOptions)
   }
 
+  def getMetaTableDef(table: MetaTable): MetaTableDef = {
+    MetaTableDef(
+      table.name,
+      table.description,
+      table.format,
+      table.infoDateColumn,
+      table.infoDateFormat,
+      table.hiveTable,
+      table.hivePath,
+      table.infoDateStart,
+      table.readOptions,
+      table.writeOptions
+    )
+  }
 }

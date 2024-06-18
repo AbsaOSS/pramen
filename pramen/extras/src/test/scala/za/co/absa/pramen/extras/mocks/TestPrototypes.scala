@@ -42,10 +42,10 @@ object TestPrototypes {
   val taskStatus: RunStatus = RunStatus.Succeeded(None, 100, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   val taskNotification: TaskResult = status.TaskResult(
-    "table1",
+    "Dummy Job",
     metaTableDef,
-    Option(RunInfo(infoDate, Instant.ofEpochSecond(1645274606), Instant.ofEpochSecond(1645278206))),
     taskStatus,
+    Option(RunInfo(infoDate, Instant.ofEpochSecond(1645274606), Instant.ofEpochSecond(1645278206))),
     "test-1234",
     isTransient = false,
     isRawFilesJob = false,

@@ -18,7 +18,7 @@ package za.co.absa.pramen.api.mocks
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
-import za.co.absa.pramen.api.status.TaskResult
+import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen}
 
 class DummyPramen extends Pramen {
@@ -27,6 +27,8 @@ class DummyPramen extends Pramen {
   override def workflowConfig: Config = null
 
   override def pipelineInfo: PipelineInfo = null
+
+  override def pipelineState: PipelineStateSnapshot = null
 
   override def notificationBuilder: NotificationBuilder = null
 

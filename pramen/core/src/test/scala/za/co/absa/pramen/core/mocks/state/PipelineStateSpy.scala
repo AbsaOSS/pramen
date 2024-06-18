@@ -16,9 +16,9 @@
 
 package za.co.absa.pramen.core.mocks.state
 
+import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 import za.co.absa.pramen.core.mocks.{PipelineInfoFactory, PipelineStateSnapshotFactory}
-import za.co.absa.pramen.core.runner.task.TaskResult
-import za.co.absa.pramen.core.state.{PipelineState, PipelineStateSnapshot}
+import za.co.absa.pramen.core.state.PipelineState
 
 import scala.collection.mutable.ListBuffer
 

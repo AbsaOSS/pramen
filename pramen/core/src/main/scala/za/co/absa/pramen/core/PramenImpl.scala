@@ -19,9 +19,9 @@ package za.co.absa.pramen.core
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
-import za.co.absa.pramen.api.status.TaskResult
+import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen}
-import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState, PipelineStateImpl, PipelineStateSnapshot}
+import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState}
 import za.co.absa.pramen.core.utils.BuildPropertyUtils
 
 class PramenImpl extends Pramen {
@@ -47,6 +47,14 @@ class PramenImpl extends Pramen {
     pipelineState.getState().pipelineInfo
   }
 
+  override def pipelineState: PipelineStateSnapshot = {
+    val pipelineState = _pipelineState.getOrElse(
+      throw new IllegalStateException("Pipeline state is not available at the context.")
+    )
+
+    pipelineState.getState()
+  }
+
   override def notificationBuilder: NotificationBuilder = notificationBuilderImpl
 
   override def metadataManager: MetadataManager = _metadataManager.getOrElse(
@@ -60,22 +68,8 @@ class PramenImpl extends Pramen {
 
     val state = pipelineState.getState()
 
-    state.taskResults.map(PipelineStateImpl.taskResultToTaskNotification)
+    state.taskResults
   }
-
-  /**
-    * This returns the inner pipeline state.
-    *
-    * @return The current state of the pipeline.
-    */
-  def getPipelineStateSnapshot: PipelineStateSnapshot = {
-    val pipelineState = _pipelineState.getOrElse(
-      throw new IllegalStateException("Pipeline state is not available at the context.")
-    )
-
-    pipelineState.getState()
-  }
-
 
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
     _workflowConfig = Option(config)

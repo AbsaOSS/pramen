@@ -17,8 +17,8 @@
 package za.co.absa.pramen.core.journal.model
 
 import za.co.absa.pramen.api.status.RunStatus.Succeeded
+import za.co.absa.pramen.api.status.TaskResult
 import za.co.absa.pramen.core.pipeline.Task
-import za.co.absa.pramen.core.runner.task.TaskResult
 
 import java.time.{Instant, LocalDate}
 

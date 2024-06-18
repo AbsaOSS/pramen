@@ -19,15 +19,16 @@ package za.co.absa.pramen.core.runner.jobrunner
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.DataFormat
-import za.co.absa.pramen.api.status.RunStatus
+import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
+import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
 import za.co.absa.pramen.core.runner.splitter.ScheduleParams
-import za.co.absa.pramen.core.runner.task.{TaskResult, TaskRunner}
+import za.co.absa.pramen.core.runner.task.TaskRunner
 import za.co.absa.pramen.core.utils.Emoji
 
 import java.util.concurrent.ExecutorService
@@ -105,8 +106,19 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def sendFailure(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
-    completedJobsChannel.send((job, TaskResult(job, RunStatus.Failed(ex), None, applicationId, isTransient,
-      job.outputTable.format.isInstanceOf[DataFormat.Raw], Nil, Nil, Nil) :: Nil, false))
+    completedJobsChannel.send((job,
+      TaskResult(job.name,
+        MetaTable.getMetaTableDef(job.outputTable),
+        RunStatus.Failed(ex),
+        None,
+        applicationId,
+        isTransient,
+        job.outputTable.format.isInstanceOf[DataFormat.Raw],
+        Nil,
+        Nil,
+        Nil,
+        job.operation.extraOptions
+      ) :: Nil, false))
   }
 
   private[core] def runJob(job: Job): Boolean = {

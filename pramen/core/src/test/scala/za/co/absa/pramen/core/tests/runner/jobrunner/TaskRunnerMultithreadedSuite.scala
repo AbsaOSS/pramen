@@ -53,7 +53,8 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
       assert(results.size == 1)
       assert(results.head.runStatus.isInstanceOf[Succeeded])
-      assert(results.head.job == job)
+      assert(results.head.jobName == job.name)
+      assert(results.head.outputTable.name == job.outputTable.name)
       assert(results.head.runInfo.nonEmpty)
       assert(results.head.runInfo.get.infoDate == runDate)
       assert(results.head.schemaChanges.isEmpty)

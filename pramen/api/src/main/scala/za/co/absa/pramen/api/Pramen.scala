@@ -19,7 +19,7 @@ package za.co.absa.pramen.api
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
-import za.co.absa.pramen.api.status.TaskResult
+import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 
 /**
   * Pramen provides additional features via a client that you can access like this:
@@ -39,6 +39,9 @@ trait Pramen {
 
   /** General information about the running pipeline. */
   def pipelineInfo: PipelineInfo
+
+  /** The current pipeline state. */
+  def pipelineState: PipelineStateSnapshot
 
   /** Gets the notification builder that you can use to add custom information to email notifications. */
   def notificationBuilder: NotificationBuilder

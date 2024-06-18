@@ -177,7 +177,7 @@ class PramenImplSuite extends AnyWordSpec {
     }
   }
 
-  "getPipelineStateSnapshot" should {
+  "pipelineState" should {
     "return the current pipeline state if it is available" in {
       val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
 
@@ -192,7 +192,7 @@ class PramenImplSuite extends AnyWordSpec {
 
       pramen.setPipelineState(pipelineState)
 
-      val state = PramenImpl.instance.asInstanceOf[PramenImpl].getPipelineStateSnapshot
+      val state = PramenImpl.instance.pipelineState
 
       assert(state.taskResults.length == 3)
 
@@ -205,7 +205,7 @@ class PramenImplSuite extends AnyWordSpec {
       pramen.setPipelineState(null)
 
       assertThrows[IllegalStateException] {
-        PramenImpl.instance.asInstanceOf[PramenImpl].getPipelineStateSnapshot
+        PramenImpl.instance.pipelineState
       }
     }
   }

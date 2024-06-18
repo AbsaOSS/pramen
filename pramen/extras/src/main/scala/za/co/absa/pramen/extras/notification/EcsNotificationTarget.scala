@@ -44,7 +44,7 @@ class EcsNotificationTarget(conf: Config) extends NotificationTarget {
     }
 
     val (ecsApiUrl, ecsApiKey, trustAllSslCerts) = EcsNotificationTarget.getEcsDetails(conf)
-    val tableDef = notification.tableDef
+    val tableDef = notification.outputTable
     val httpClient = getHttpClient(trustAllSslCerts)
 
     try {

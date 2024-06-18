@@ -20,13 +20,12 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.api.status.RunStatus._
-import za.co.absa.pramen.api.status.{NotificationFailure, RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_MEGABYTES, MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
-import za.co.absa.pramen.core.runner.task.{PipelineNotificationFailure, TaskResult}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
@@ -115,7 +114,6 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   def renderSubject(): String = {
     val timeCreatedStr = ZonedDateTime.now(zoneId).format(timestampFmt)
-    val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
 
     val dryRunStr = if (isDryRun) "(DRY RUN) " else ""
 
@@ -277,9 +275,9 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
     val paragraphBuilder = ParagraphBuilder()
       .withText("Job ", Style.Exception)
-      .withText(taskResult.job.name, Style.Error)
+      .withText(taskResult.jobName, Style.Error)
       .withText(" outputting to ", Style.Exception)
-      .withText(taskResult.job.outputTable.name, Style.Error)
+      .withText(taskResult.outputTable.name, Style.Error)
 
     taskResult.runInfo.foreach(info =>
       paragraphBuilder
@@ -379,8 +377,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     tasks.foreach(task => {
       val row = new ListBuffer[TextElement]
 
-      row.append(TextElement(task.job.name, getTransientTextStyle(task)))
-      row.append(TextElement(task.job.outputTable.name, getTransientTextStyle(task)))
+      row.append(TextElement(task.jobName, getTransientTextStyle(task)))
+      row.append(TextElement(task.outputTable.name, getTransientTextStyle(task)))
 
       if (haveHiveColumn) {
         val hiveTable = task.runStatus match {
@@ -465,7 +463,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     val tableHeaders = new ListBuffer[TableHeader]
 
-    val taskName = s"Files sourced - ${task.job.outputTable.name} - ${task.runInfo.map(_.infoDate.toString).getOrElse(" ")}"
+    val taskName = s"Files sourced - ${task.outputTable.name} - ${task.runInfo.map(_.infoDate.toString).getOrElse(" ")}"
 
     tableHeaders.append(TableHeader(TextElement(taskName), Align.Left))
     tableBuilder.withHeaders(tableHeaders.toSeq)
