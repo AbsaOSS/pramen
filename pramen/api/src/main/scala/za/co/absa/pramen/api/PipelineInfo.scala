@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.api
 
-import za.co.absa.pramen.api.status.RuntimeInfo
+import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RuntimeInfo}
 
 import java.time.Instant
 
@@ -27,5 +27,6 @@ case class PipelineInfo(
                          startedAt: Instant,
                          finishedAt: Option[Instant],
                          sparkApplicationId: Option[String],
-                         failureException: Option[Throwable]
+                         failureException: Option[Throwable],
+                         pipelineNotificationFailures: Seq[PipelineNotificationFailure]
                        )

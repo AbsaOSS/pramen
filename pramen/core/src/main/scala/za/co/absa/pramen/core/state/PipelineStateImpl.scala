@@ -106,7 +106,8 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         startedInstant,
         finishedInstant,
         sparkAppId,
-        appException
+        appException,
+        pipelineNotificationFailures.toSeq
       ),
       isFinished,
       exitedNormally,
