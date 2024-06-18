@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.PipelineInfo
-import za.co.absa.pramen.api.status.RuntimeInfo
+import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RuntimeInfo}
 
 import java.time.Instant
 
@@ -28,7 +28,8 @@ object PipelineInfoFactory {
                            startedAt: Instant = Instant.ofEpochSecond(1718609409),
                            finishedAt: Option[Instant] = None,
                            sparkApplicationId: Option[String] = Some("testid-12345"),
-                           failureException: Option[Throwable] = None): PipelineInfo = {
-    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, sparkApplicationId, failureException)
+                           failureException: Option[Throwable] = None,
+                           pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty): PipelineInfo = {
+    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, sparkApplicationId, failureException, pipelineNotificationFailures)
   }
 }
