@@ -79,7 +79,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(result.head.runStatus.isInstanceOf[Succeeded])
       assert(result(1).runStatus.isInstanceOf[Succeeded])
       assert(notificationTarget.notificationsSent.length == 2)
-      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[RunStatus.Succeeded])
+      assert(notificationTarget.notificationsSent.head.runStatus.isInstanceOf[RunStatus.Succeeded])
 
       val journalEntries = journal.getEntries(now, now.plusSeconds(30))
 
@@ -162,7 +162,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(job.createHiveTableCount == 0)
       assert(result.isInstanceOf[Succeeded])
       assert(notificationTarget.notificationsSent.length == 1)
-      assert(notificationTarget.notificationsSent.head.status.isInstanceOf[RunStatus.Succeeded])
+      assert(notificationTarget.notificationsSent.head.runStatus.isInstanceOf[RunStatus.Succeeded])
 
       val journalEntries = journal.getEntries(now, now.plusSeconds(30))
 
@@ -201,7 +201,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     assert(journalEntries.length == 2)
     assert(journalEntries.head.status == "Failed")
     assert(notificationTarget.notificationsSent.length == 2)
-    assert(notificationTarget.notificationsSent.head.status.isInstanceOf[RunStatus.Failed])
+    assert(notificationTarget.notificationsSent.head.runStatus.isInstanceOf[RunStatus.Failed])
   }
 
   "preRunCheck" when {

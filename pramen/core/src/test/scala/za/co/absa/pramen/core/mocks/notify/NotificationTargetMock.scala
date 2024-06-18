@@ -34,7 +34,7 @@ class NotificationTargetMock(conf: Config) extends NotificationTarget {
       System.setProperty("pramen.test.notification.target.failure", "true")
       throw new RuntimeException("Notification target test exception")
     }
-    System.setProperty("pramen.test.notification.table", notification.tableName)
+    System.setProperty("pramen.test.notification.table", notification.outputTable.name)
   }
 }
 

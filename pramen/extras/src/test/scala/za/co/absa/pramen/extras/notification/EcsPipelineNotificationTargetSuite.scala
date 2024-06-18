@@ -46,13 +46,13 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
         override protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = httpClient
       }
 
-      val task1 = TestPrototypes.taskNotification.copy(tableDef = metaTableDef)
+      val task1 = TestPrototypes.taskNotification.copy(outputTable = metaTableDef)
       val dataFormat2 = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path2", None)
       val metaTableDef2 = TestPrototypes.metaTableDef.copy(name = "table2", format = dataFormat2)
-      val task2 = TestPrototypes.taskNotification.copy(tableName = "table3", tableDef = metaTableDef2)
+      val task2 = TestPrototypes.taskNotification.copy(jobName = "Job 3", outputTable = metaTableDef2)
       val dataFormat3 = DataFormat.Delta(Query.Table("table2"), None)
       val metaTableDef3 = TestPrototypes.metaTableDef.copy(name = "table3", format = dataFormat3)
-      val task3 = TestPrototypes.taskNotification.copy(tableName = "table3", tableDef = metaTableDef3)
+      val task3 = TestPrototypes.taskNotification.copy(jobName = "Job 3", outputTable = metaTableDef3)
 
       notificationTarget.sendNotification(
         PipelineInfo("Dummy", "DEV", RuntimeInfo(), Instant.now, None, None, None),

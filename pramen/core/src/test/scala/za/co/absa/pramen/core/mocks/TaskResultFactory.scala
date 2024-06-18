@@ -16,16 +16,15 @@
 
 package za.co.absa.pramen.core.mocks
 
-import za.co.absa.pramen.api.SchemaDifference
 import za.co.absa.pramen.api.status._
-import za.co.absa.pramen.core.mocks.job.JobSpy
-import za.co.absa.pramen.core.pipeline.Job
-import za.co.absa.pramen.core.runner.task.TaskResult
+import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference}
+import za.co.absa.pramen.core.metastore.model.MetaTable
 
 import java.time.{Instant, LocalDate}
 
 object TaskResultFactory {
-  def getDummyTaskResult(job: Job = new JobSpy(),
+  def getDummyTaskResult(jobName: String = "DummyJob",
+                         outputTable: MetaTableDef = MetaTable.getMetaTableDef(MetaTableFactory.getDummyMetaTable(name = "table_out")),
                          runStatus: RunStatus = RunStatus.Succeeded(Some(100), 200, Some(1000), TaskRunReason.New, Nil, Nil, Nil, Nil),
                          runInfo: Option[RunInfo] = Some(RunInfo(LocalDate.of(2022, 2, 18), Instant.ofEpochSecond(1234), Instant.ofEpochSecond(5678))),
                          applicationId: String = "app_123",
@@ -33,8 +32,10 @@ object TaskResultFactory {
                          isRawFilesJob: Boolean = false,
                          schemaDifferences: Seq[SchemaDifference] = Nil,
                          dependencyWarnings: Seq[DependencyWarning] = Nil,
-                         notificationTargetErrors: Seq[NotificationFailure] = Nil): TaskResult = {
-    TaskResult(job,
+                         notificationTargetErrors: Seq[NotificationFailure] = Nil,
+                         options: Map[String, String] = Map.empty): TaskResult = {
+    TaskResult(jobName,
+      outputTable,
       runStatus,
       runInfo,
       applicationId,
@@ -42,7 +43,8 @@ object TaskResultFactory {
       isRawFilesJob,
       schemaDifferences,
       dependencyWarnings,
-      notificationTargetErrors)
+      notificationTargetErrors,
+      options)
   }
 
 }

@@ -26,7 +26,6 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.MetastoreImpl.getMetaTableDef
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -205,7 +204,7 @@ class MetastoreImpl(appConfig: Config,
       override def getTableDef(tableName: String): MetaTableDef = {
         validateTable(tableName)
 
-        getMetaTableDef(metastore.getTableDef(tableName))
+        MetaTable.getMetaTableDef(metastore.getTableDef(tableName))
       }
 
       override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = {
@@ -249,21 +248,6 @@ object MetastoreImpl {
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
     new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, isUndercover)
-  }
-
-  private[core] def getMetaTableDef(table: MetaTable): MetaTableDef = {
-    MetaTableDef(
-      table.name,
-      table.description,
-      table.format,
-      table.infoDateColumn,
-      table.infoDateFormat,
-      table.hiveTable,
-      table.hivePath,
-      table.infoDateStart,
-      table.readOptions,
-      table.writeOptions
-    )
   }
 }
 
