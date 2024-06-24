@@ -25,11 +25,12 @@ object SinkTableFactory {
                         conf: Config = ConfigFactory.empty(),
                         sinkFromExpr: Option[String] = None,
                         sinkToExpr: Option[String] = None,
+                        warnMaxExecutionTimeSeconds: Option[Int] = None,
                         transformations: Seq[TransformExpression] = Nil,
                         filters: Seq[String] = Nil,
                         columns: Seq[String] = Nil,
                         options: Map[String, String] = Map.empty[String, String],
                         overrideConf: Option[Config] = None): SinkTable = {
-    SinkTable(metaTableName, outputTableName, conf, sinkFromExpr, sinkToExpr, transformations, filters, columns, options, overrideConf)
+    SinkTable(metaTableName, outputTableName, conf, sinkFromExpr, sinkToExpr, warnMaxExecutionTimeSeconds, transformations, filters, columns, options, overrideConf)
   }
 }

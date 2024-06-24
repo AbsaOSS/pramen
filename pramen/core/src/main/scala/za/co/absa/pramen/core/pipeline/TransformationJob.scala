@@ -75,6 +75,9 @@ class TransformationJob(operationDef: OperationDef,
       case _: AbstractMethodError => log.warn(s"Transformers were built using old version of Pramen that does not support post processing. Ignoring...")
     }
 
-    saveResults
+    val jobFinished = Instant.now
+    val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, None)
+
+    saveResults.copy(warnings = saveResults.warnings ++ tooLongWarnings)
   }
 }

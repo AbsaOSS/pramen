@@ -26,10 +26,11 @@ object SourceTableFactory {
                           conf: Config = ConfigFactory.empty(),
                           rangeFromExpr: Option[String] = None,
                           rangeToExpr: Option[String] = None,
+                          warnMaxExecutionTimeSeconds: Option[Int] = None,
                           transformations: Seq[TransformExpression] = Nil,
                           filters: Seq[String] = Nil,
                           columns: Seq[String] = Nil,
                           overrideConf: Option[Config] = None): SourceTable = {
-    SourceTable(metaTableName, query, conf, rangeFromExpr, rangeToExpr, transformations, filters, columns, overrideConf)
+    SourceTable(metaTableName, query, conf, rangeFromExpr, rangeToExpr, warnMaxExecutionTimeSeconds, transformations, filters, columns, overrideConf)
   }
 }
