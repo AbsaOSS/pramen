@@ -41,6 +41,7 @@ case class OperationDef(
                          outputInfoDateExpression: String,
                          initialSourcingDateExpression: String,
                          processingTimestampColumn: Option[String],
+                         warnMaxExecutionTimeSeconds: Option[Int],
                          schemaTransformations: Seq[TransformExpression],
                          filters: Seq[String],
                          notificationTargets: Seq[String],
@@ -63,6 +64,7 @@ object OperationDef {
   val OUTPUT_INFO_DATE_EXPRESSION_KEY = "info.date.expr"
   val INITIAL_SOURCING_DATE_EXPR = "initial.sourcing.date.expr"
   val PROCESSING_TIMESTAMP_COLUMN_KEY = "processing.timestamp.column"
+  val WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY = "warn.maximum.execution.time.seconds"
   val SCHEMA_TRANSFORMATIONS_KEY = "transformations"
   val FILTERS_KEY = "filters"
   val NOTIFICATION_TARGETS_KEY = "notification.targets"
@@ -92,6 +94,7 @@ object OperationDef {
     val outputInfoDateExpressionOpt = ConfigUtils.getOptionString(conf, OUTPUT_INFO_DATE_EXPRESSION_KEY)
     val initialSourcingDateExpressionOpt = ConfigUtils.getOptionString(conf, INITIAL_SOURCING_DATE_EXPR)
     val processingTimestampColumn = ConfigUtils.getOptionString(conf, PROCESSING_TIMESTAMP_COLUMN_KEY)
+    val maximumExecutionTimeSeconds = ConfigUtils.getOptionInt(conf, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY)
     val schemaTransformations = TransformExpression.fromConfig(conf, SCHEMA_TRANSFORMATIONS_KEY, parent)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
     val notificationTargets = ConfigUtils.getOptListStrings(conf, NOTIFICATION_TARGETS_KEY)
@@ -130,6 +133,7 @@ object OperationDef {
       outputInfoDateExpression,
       initialSourcingDateExpression,
       processingTimestampColumn,
+      maximumExecutionTimeSeconds,
       schemaTransformations,
       filters,
       notificationTargets,

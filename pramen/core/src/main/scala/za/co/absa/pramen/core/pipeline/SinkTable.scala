@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.pipeline.OperationDef.WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import scala.collection.JavaConverters._
@@ -28,6 +29,7 @@ case class SinkTable(
                       conf: Config,
                       rangeFromExpr: Option[String],
                       rangeToExpr: Option[String],
+                      warnMaxExecutionTimeSeconds: Option[Int],
                       transformations: Seq[TransformExpression],
                       filters: Seq[String],
                       columns: Seq[String],
@@ -56,6 +58,7 @@ object SinkTable {
     val outputTableName = ConfigUtils.getOptionString(conf, JOB_METASTORE_OUTPUT_TABLE_KEY)
     val dateFromExpr = ConfigUtils.getOptionString(conf, DATE_FROM_KEY)
     val dateToExpr = ConfigUtils.getOptionString(conf, DATE_TO_KEY)
+    val maximumExecutionTimeSeconds = ConfigUtils.getOptionInt(conf, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY)
     val transformations = TransformExpression.fromConfig(conf, TRANSFORMATIONS_KEY, parentPath)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
     val columns = ConfigUtils.getOptListStrings(conf, COLUMNS_KEY)
@@ -68,7 +71,7 @@ object SinkTable {
       None
     }
 
-    SinkTable(metaTableName, outputTableName, conf, dateFromExpr, dateToExpr, transformations, filters, columns, options, overrideConf)
+    SinkTable(metaTableName, outputTableName, conf, dateFromExpr, dateToExpr, maximumExecutionTimeSeconds, transformations, filters, columns, options, overrideConf)
   }
 
   def fromConfig(conf: Config, arrayPath: String): Seq[SinkTable] = {

@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.model.QueryBuilder
+import za.co.absa.pramen.core.pipeline.OperationDef.WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import scala.collection.JavaConverters._
@@ -30,6 +31,7 @@ case class SourceTable(
                         conf: Config,
                         rangeFromExpr: Option[String],
                         rangeToExpr: Option[String],
+                        warnMaxExecutionTimeSeconds: Option[Int],
                         transformations: Seq[TransformExpression],
                         filters: Seq[String],
                         columns: Seq[String],
@@ -56,6 +58,7 @@ object SourceTable {
     val query = QueryBuilder.fromConfig(conf, "input", parentPath)
     val dateFromExpr = ConfigUtils.getOptionString(conf, DATE_FROM_KEY)
     val dateToExpr = ConfigUtils.getOptionString(conf, DATE_TO_KEY)
+    val maximumExecutionTimeSeconds = ConfigUtils.getOptionInt(conf, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY)
     val columns = ConfigUtils.getOptListStrings(conf, COLUMNS_KEY)
     val transformations = TransformExpression.fromConfig(conf, TRANSFORMATIONS_KEY, parentPath)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
@@ -67,7 +70,7 @@ object SourceTable {
       None
     }
 
-    SourceTable(metaTableName, query, conf, dateFromExpr, dateToExpr, transformations, filters, columns, overrideConf)
+    SourceTable(metaTableName, query, conf, dateFromExpr, dateToExpr, maximumExecutionTimeSeconds, transformations, filters, columns, overrideConf)
   }
 
   def fromConfig(conf: Config, arrayPath: String): Seq[SourceTable] = {

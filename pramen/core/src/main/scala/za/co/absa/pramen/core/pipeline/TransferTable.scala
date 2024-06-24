@@ -23,6 +23,7 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.model.QueryBuilder
+import za.co.absa.pramen.core.pipeline.OperationDef.WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
@@ -37,6 +38,7 @@ case class TransferTable(
                           infoDateStart: LocalDate,
                           trackDays: Int,
                           trackDaysExplicitlySet: Boolean,
+                          warnMaxExecutionTimeSeconds: Option[Int],
                           transformations: Seq[TransformExpression],
                           filters: Seq[String],
                           columns: Seq[String],
@@ -46,11 +48,11 @@ case class TransferTable(
                           sinkOverrideConf: Option[Config]
                         ) {
   def getSourceTable: SourceTable = {
-    SourceTable(jobMetaTableName, query, conf, rangeFromExpr, rangeToExpr, transformations, filters, columns, sourceOverrideConf)
+    SourceTable(jobMetaTableName, query, conf, rangeFromExpr, rangeToExpr, warnMaxExecutionTimeSeconds, transformations, filters, columns, sourceOverrideConf)
   }
 
   def getSinkTable: SinkTable = {
-    SinkTable(jobMetaTableName, Option(jobMetaTableName), conf, rangeFromExpr, rangeToExpr, transformations, filters, columns, writeOptions, sinkOverrideConf)
+    SinkTable(jobMetaTableName, Option(jobMetaTableName), conf, rangeFromExpr, rangeToExpr, warnMaxExecutionTimeSeconds, transformations, filters, columns, writeOptions, sinkOverrideConf)
   }
 
   def getMetaTable: MetaTable = {
@@ -76,6 +78,7 @@ object TransferTable {
     val jobMetaTableOpt = ConfigUtils.getOptionString(conf, JOB_METASTORE_OUTPUT_TABLE_KEY)
     val dateFromExpr = ConfigUtils.getOptionString(conf, DATE_FROM_KEY)
     val dateToExpr = ConfigUtils.getOptionString(conf, DATE_TO_KEY)
+    val maximumExecutionTimeSeconds = ConfigUtils.getOptionInt(conf, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
     val columns = ConfigUtils.getOptListStrings(conf, COLUMNS_KEY)
@@ -104,7 +107,7 @@ object TransferTable {
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val jobMetaTable = getOutputTableName(jobMetaTableOpt, query, sinkName)
 
-    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, trackDaysExplicitlySet, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
+    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, trackDaysExplicitlySet, maximumExecutionTimeSeconds, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
   }
 
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, arrayPath: String, sinkName: String): Seq[TransferTable] = {

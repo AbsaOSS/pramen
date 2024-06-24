@@ -24,10 +24,10 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.utils.Emoji._
+import za.co.absa.pramen.core.utils.TimeUtils
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 import scala.util.{Failure, Success, Try}
 
 abstract class JobBase(operationDef: OperationDef,
@@ -197,6 +197,27 @@ abstract class JobBase(operationDef: OperationDef,
     log.info(s"Input date range for ${outputTable.name}: from $effectiveFrom to $effectiveTo")
 
     (effectiveFrom, effectiveTo)
+  }
+
+  private[core] def getTookTooLongWarnings(jobStarted: Instant, jobFinished: Instant, maxTimeSecondsOpt: Option[Int]): Seq[String] = {
+    val effectiveMaxTimeOpt = maxTimeSecondsOpt match {
+      case Some(maxTimeTable) =>
+        operationDef.warnMaxExecutionTimeSeconds match {
+          case Some(maxTimeOp) => Option(Math.min(maxTimeTable, maxTimeOp))
+          case None => maxTimeSecondsOpt
+        }
+      case None => operationDef.warnMaxExecutionTimeSeconds
+    }
+    effectiveMaxTimeOpt.flatMap { maxTimeSeconds =>
+      val actualTime = jobFinished.getEpochSecond - jobStarted.getEpochSecond
+      if (actualTime > maxTimeSeconds) {
+        val prettyActualTime = TimeUtils.prettyPrintElapsedTimeShort(actualTime * 1000)
+        val prettyMaxTime = TimeUtils.prettyPrintElapsedTimeShort(maxTimeSeconds * 1000)
+        Some(s"The job took longer ($prettyActualTime) than expected ($prettyMaxTime).")
+      } else {
+        None
+      }
+    }.toSeq
   }
 }
 
