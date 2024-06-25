@@ -30,7 +30,7 @@ import za.co.absa.pramen.core.mocks.job.JobBaseDummy
 import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus.FailedDependencies
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
 
@@ -176,13 +176,50 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     }
   }
 
+  "getTookTooLongWarnings" should {
+    "return empty seq if maximum time is not defined" in {
+      val job = getUseCase()
+
+      val warnings = job.getTookTooLongWarnings(Instant.ofEpochSecond(1000), Instant.ofEpochSecond(1010), None)
+
+      assert(warnings.isEmpty)
+    }
+
+    "return empty seq if actual time is less than operation maximum time" in {
+      val job = getUseCase(warnMaxExecutionTimeSeconds = Some(100))
+
+      val warnings = job.getTookTooLongWarnings(Instant.ofEpochSecond(1000), Instant.ofEpochSecond(1010), None)
+
+      assert(warnings.isEmpty)
+    }
+
+    "return empty seq if actual time is less than table maximum time" in {
+      val job = getUseCase()
+
+      val warnings = job.getTookTooLongWarnings(Instant.ofEpochSecond(1000), Instant.ofEpochSecond(1010), Some(100))
+
+      assert(warnings.isEmpty)
+    }
+
+    "return a warning actual time is bigger than minimum of operation and table times" in {
+      val job = getUseCase(warnMaxExecutionTimeSeconds = Some(100))
+
+      val warnings = job.getTookTooLongWarnings(Instant.ofEpochSecond(1000), Instant.ofEpochSecond(1300), Some(200))
+
+      assert(warnings.nonEmpty)
+      assert(warnings.head == "The job took longer (00:05:00) than expected (00:01:40).")
+    }
+  }
+
   def getUseCase(tableDf: DataFrame = null,
                  dependencies: Seq[MetastoreDependency] = Nil,
                  isTableAvailable: Boolean = true,
                  isTableEmpty: Boolean = false,
-                 allowParallel: Boolean = true): JobBase = {
+                 allowParallel: Boolean = true,
+                 warnMaxExecutionTimeSeconds: Option[Int] = None): JobBase = {
     val operation = OperationDefFactory.getDummyOperationDef(dependencies = dependencies,
       allowParallel = allowParallel,
+      warnMaxExecutionTimeSeconds = warnMaxExecutionTimeSeconds,
       extraOptions = Map[String, String]("value" -> "7"))
 
     val bk = new SyncBookkeeperMock

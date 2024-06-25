@@ -1919,7 +1919,11 @@ Here is an example configuration for a JDBC source:
       # You can define range queries to the input table by providing date expressions like this:
       date.from = "@infoDate - 1"
       date.to = "@infoDate"
-      
+
+      # [Optional] You can specify the maximum about the job should take. If the execution time is bigger than
+      # specified, a warning will be added to notifications.
+      warn.maximum.execution.time.seconds = 3600
+
       # You can override any of source settings here 
       source {
         minimum.records = 1000 
@@ -2048,6 +2052,10 @@ Here is a example:
     key2 = "value2"
     key3 = ${MY_ENV_VARIABLE}
   }
+
+  # [Optional] You can specify the maximum about the job should take. If the execution time is bigger than
+  # specified, a warning will be added to notifications.
+  warn.maximum.execution.time.seconds = 3600
   
   # Optional schema transformations 
   transformations = [
@@ -2175,6 +2183,10 @@ sink operation definition.
         from = "lastMonday(@infoDate) - 7"
         to = "lastSunday(@infoDate)"
       }
+
+      # [Optional] You can specify the maximum about the job should take. If the execution time is bigger than
+      # specified, a warning will be added to notifications.
+      warn.maximum.execution.time.seconds = 3600
     }
   ]
 }

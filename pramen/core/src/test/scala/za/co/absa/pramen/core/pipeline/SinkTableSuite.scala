@@ -39,6 +39,7 @@ class SinkTableSuite extends AnyWordSpec {
           | },
           | {
           |  input.metastore.table = table44
+          |  warn.maximum.execution.time.seconds = 50
           |  transformations = [
           |    { col="a", expr="2+2" },
           |    { col="b", expr="cast(a) as string" },
@@ -80,8 +81,10 @@ class SinkTableSuite extends AnyWordSpec {
       assert(tbl3.outputTableName.contains("output_table"))
       assert(tbl3.rangeFromExpr.isEmpty)
       assert(tbl3.rangeToExpr.isEmpty)
+      assert(tbl3.warnMaxExecutionTimeSeconds.isEmpty)
 
       assert(tbl4.metaTableName == "table44")
+      assert(tbl4.warnMaxExecutionTimeSeconds.contains(50))
       assert(tbl4.transformations.length == 2)
       assert(tbl4.transformations.head.column == "a")
       assert(tbl4.transformations.head.expression.contains("2+2"))
