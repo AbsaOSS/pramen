@@ -50,6 +50,7 @@ class TransferTableSuite extends AnyWordSpec {
           |      path = /datalake/path
           |      write.legacy = "true"
           |    }
+          |    warn.maximum.execution.time.seconds = 50
           |    transformations = [
           |      { col="a", expr="2+2" },
           |      { col="b", expr="cast(a) as string" },
@@ -115,6 +116,7 @@ class TransferTableSuite extends AnyWordSpec {
       assert(tbl3.filters.isEmpty)
       assert(tbl3.rangeFromExpr.isEmpty)
       assert(tbl3.rangeToExpr.isEmpty)
+      assert(tbl3.warnMaxExecutionTimeSeconds.isEmpty)
 
       assert(tbl4.query.isInstanceOf[Query.Table])
       assert(tbl4.query.asInstanceOf[Query.Table].dbTable == "db1.table2")
@@ -127,6 +129,7 @@ class TransferTableSuite extends AnyWordSpec {
       assert(tbl4.readOptions("mergeSchema") == "true")
       assert(tbl4.trackDays == 10)
       assert(tbl4.infoDateStart == LocalDate.of(2022, 1, 19))
+      assert(tbl4.warnMaxExecutionTimeSeconds.contains(50))
 
       assert(tbl4.transformations.length == 2)
       assert(tbl4.transformations.head.column == "a")

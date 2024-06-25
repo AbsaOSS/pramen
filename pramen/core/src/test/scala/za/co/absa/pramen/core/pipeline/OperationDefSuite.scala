@@ -108,6 +108,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |class = "myclass"
            |output.table = "dummy_table"
            |always.attempt = "true"
+           |warn.maximum.execution.time.seconds = 50
            |
            |dependencies = [
            |  {
@@ -148,6 +149,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.dependencies.head.triggerUpdates)
       assert(op.dependencies(1).tables.contains("table2"))
       assert(!op.dependencies(1).triggerUpdates)
+      assert(op.warnMaxExecutionTimeSeconds.contains(50))
       assert(op.schemaTransformations.length == 4)
       assert(op.schemaTransformations.head.column == "A")
       assert(op.schemaTransformations.head.expression.contains("cast(A as decimal(15,5))"))

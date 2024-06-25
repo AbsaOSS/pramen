@@ -42,6 +42,7 @@ class SourceTableSuite extends AnyWordSpec {
           | {
           |  output.metastore.table = table44
           |  input.db.table = table14
+          |  warn.maximum.execution.time.seconds = 50
           |  transformations = [
           |    { col="a", expr="2+2" },
           |    { col="b", expr="cast(a) as string" },
@@ -85,10 +86,12 @@ class SourceTableSuite extends AnyWordSpec {
       assert(tbl3.filters.isEmpty)
       assert(tbl3.rangeFromExpr.isEmpty)
       assert(tbl3.rangeToExpr.isEmpty)
+      assert(tbl3.warnMaxExecutionTimeSeconds.isEmpty)
 
       assert(tbl4.metaTableName == "table44")
       assert(tbl4.query.isInstanceOf[Query.Table])
       assert(tbl4.query.asInstanceOf[Query.Table].dbTable == "table14")
+      assert(tbl4.warnMaxExecutionTimeSeconds.contains(50))
       assert(tbl4.transformations.length == 2)
       assert(tbl4.transformations.head.column == "a")
       assert(tbl4.transformations.head.expression.contains("2+2"))
