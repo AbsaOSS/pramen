@@ -206,6 +206,14 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
       assert(genDate.getDataQuery("A", Nil, Some(100)) == "SELECT TOP 100 * FROM A WITH (NOLOCK)")
     }
 
+    "generate data queries with limit clause date ranges when table is quoted" in {
+      assert(genDate.getDataQuery("\"A\"", Nil, Some(100)) == "SELECT TOP 100 * FROM \"A\" WITH (NOLOCK)")
+    }
+
+    "generate data queries with limit clause date ranges when table is escaped in brackets" in {
+      assert(genDate.getDataQuery("[A]", Nil, Some(100)) == "SELECT TOP 100 * FROM [A] WITH (NOLOCK)")
+    }
+
     "generate ranged count queries" when {
       "date is in DATE format" in {
         assert(genDate.getCountQuery("A", date1, date1) ==
@@ -324,50 +332,86 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
     "splitComplexIdentifier" should {
       "throw on an empty identifier" in {
         assertThrows[IllegalArgumentException] {
-          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier(" ")
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier(" ")
         }
       }
 
       "keep original column name as is" in {
-        val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User")
+        val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System User")
 
         assert(actual == Seq("System User"))
       }
 
-      "split a complex column" in {
-        val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.[Table Name]")
+      "split a complex column with brackets" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System User.[Table Name]")
 
         assert(actual == Seq("System User", "[Table Name]"))
       }
 
-      "handle escaped dots" in {
-        val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("[System User.Table Name]")
+      "split a complex column with quotes" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("[System User].\"Table Name\"")
+
+        assert(actual == Seq("[System User]", "\"Table Name\""))
+      }
+
+      "handle escaped dots with brackets" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("[System User.Table Name]")
 
         assert(actual == Seq("[System User.Table Name]"))
       }
 
+      "handle escaped dots with quotes" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("\"System User.Table Name\"")
+
+        assert(actual == Seq("\"System User.Table Name\""))
+      }
+
       "throw an exception if brackets are found inside the identifier" in {
         val ex = intercept[IllegalArgumentException] {
-          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System Use[r.T]able Name")
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System Use[r.T]able Name")
         }
 
         assert(ex.getMessage.contains("Invalid character '[' in the identifier 'System Use[r.T]able Name', position 10."))
       }
 
+      "throw an exception if quotes are found inside the identifier" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System Use\"r.T\"able Name")
+        }
+
+        assert(ex.getMessage.contains("Invalid character '\"' in the identifier 'System Use\"r.T\"able Name', position 10."))
+      }
+
       "throw on unmatched open bracket" in {
         val ex = intercept[IllegalArgumentException] {
-          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.[Table Name")
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System User.[Table Name")
         }
 
         assert(ex.getMessage.contains("Found not matching '[' in the identifier 'System User.[Table Name'"))
       }
 
+      "throw on unmatched open double quote" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System User.\"Table Name")
+        }
+
+        assert(ex.getMessage.contains("Found not matching '\"' in the identifier 'System User.\"Table Name'"))
+      }
+
       "throw on unmatched closing bracket" in {
         val ex = intercept[IllegalArgumentException] {
-          genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.Table Name]")
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System User.Table Name]")
         }
 
         assert(ex.getMessage.contains("Found not matching ']' in the identifier 'System User.Table Name]'"))
+      }
+
+      "throw on unmatched double quote at the and" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("System User.Table Name\"")
+        }
+
+        assert(ex.getMessage.contains("Found not matching '\"' in the identifier 'System User.Table Name\"'"))
       }
     }
   }
