@@ -69,7 +69,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     if (columns.isEmpty) {
       "*"
     } else {
-      columns.map(col => escape(col)) .mkString(", ")
+      columns.map(col => escape(col)).mkString(", ")
     }
   }
 

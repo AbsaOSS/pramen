@@ -16,19 +16,22 @@
 
 package za.co.absa.pramen.core.sql
 
-import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
+import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdentifier}
+import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import scala.collection.mutable.ListBuffer
 
-class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
+class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
   private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
 
   // 23 is "yyyy-MM-dd", see https://www.mssqltips.com/sqlservertip/1145/date-and-time-conversions-using-sql-server/
   private val isoFormatMsSqlRef = 23
 
-  override val beginEndEscapeChars: (Char, Char) = ('[', ']')
+  val beginEndEscapeChars: (Char, Char) = ('[', ']')
+  val escapeChar2 = '\"'
 
   override def getDtable(sql: String): String = {
     if (sql.exists(_ == ' ')) {
@@ -97,7 +100,119 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlCo
     }
   }
 
+  override def getAliasExpression(expression: String, alias: String): String = {
+    s"$expression AS ${escape(alias)}"
+  }
+
+  override def quote(identifier: String): String = {
+    validateIdentifier(identifier)
+    splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
+  }
+
+  override def escape(identifier: String): String = {
+    if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
+      quote(identifier)
+    } else {
+      identifier
+    }
+  }
+
   private def getLimit(limit: Option[Int]): String = {
     limit.map(n => s"TOP $n ").getOrElse("")
+  }
+
+  private def columnExpr(columns: Seq[String]): String = {
+    if (columns.isEmpty) {
+      "*"
+    } else {
+      columns.map(col => escape(col)).mkString(", ")
+    }
+  }
+
+  private def infoDateColumn: String = {
+    escape(sqlConfig.infoDateColumn)
+  }
+
+  private def quoteSingleIdentifier(identifier: String): String = {
+    val (escapeBegin, escapeEnd) = beginEndEscapeChars
+
+    if (
+      (identifier.startsWith(s"$escapeBegin") && identifier.endsWith(s"$escapeEnd")) ||
+        (identifier.startsWith(s"$escapeChar2") && identifier.endsWith(s"$escapeChar2"))
+    ) {
+      identifier
+    } else {
+      s"$escapeBegin$identifier$escapeEnd"
+    }
+  }
+
+  private[core] def splitComplexIdentifier(identifier: String): Seq[String] = {
+    val trimmedIdentifier = identifier.trim
+
+    if (trimmedIdentifier.isEmpty) {
+      throw new IllegalArgumentException(f"Found an empty table name or column name ('$identifier').")
+    }
+
+    val (escapeBegin1, escapeEnd1) = beginEndEscapeChars
+
+    val output = new ListBuffer[String]
+    val curColumn = new StringBuffer()
+    val len = trimmedIdentifier.length
+    var nestingChar = new ListBuffer[Char]
+    var i = 0
+
+    while (i < len) {
+      val c = trimmedIdentifier(i)
+      val nextChar = if (i == len - 1) ' ' else trimmedIdentifier(i + 1)
+
+      if (nestingChar.isEmpty && c == '.') {
+        output += curColumn.toString
+        curColumn.setLength(0)
+      } else {
+        curColumn.append(c)
+      }
+
+      if (c == escapeChar2) {
+        if (nestingChar.isEmpty) {
+          nestingChar.prepend(escapeChar2)
+          if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
+            throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
+        } else {
+          if (nestingChar.head != escapeChar2) {
+            throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
+          } else {
+            nestingChar = nestingChar.tail
+          }
+        }
+      } else if (c == escapeBegin1) {
+        if (nestingChar.nonEmpty && nestingChar.head == escapeChar2) {
+          throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
+        }
+        if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
+          throw new IllegalArgumentException(f"Invalid character '$escapeBegin1' in the identifier '$identifier', position $i.")
+        nestingChar.prepend(escapeBegin1)
+      } else if (c == escapeEnd1) {
+        if (nestingChar.nonEmpty && nestingChar.head == escapeChar2)
+          throw new IllegalArgumentException(f"Found not matching '$escapeChar2' in the identifier '$identifier'.")
+        else {
+          if (nestingChar.isEmpty) {
+            throw new IllegalArgumentException(f"Found not matching '$c' in the identifier '$identifier'.")
+          } else {
+            nestingChar = nestingChar.tail
+          }
+        }
+      }
+      i += 1
+    }
+
+    if (nestingChar.nonEmpty) {
+      val c = nestingChar.head
+      throw new IllegalArgumentException(f"Found not matching '$c' in the identifier '$identifier'.")
+    }
+
+    if (curColumn.toString.nonEmpty)
+      output += curColumn.toString
+
+    output.toSeq
   }
 }
