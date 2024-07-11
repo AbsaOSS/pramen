@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.sql
 
 import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdentifier}
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGenerator}
+import za.co.absa.pramen.core.utils.MutableStack
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -158,7 +159,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
     val output = new ListBuffer[String]
     val curColumn = new StringBuffer()
     val len = trimmedIdentifier.length
-    var nestingChar = new ListBuffer[Char]
+    val nestingChar = new MutableStack[Char]
     var i = 0
 
     while (i < len) {
@@ -175,39 +176,34 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
       if (c == escapeChar2) {
         if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
           throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
-        if (nestingChar.isEmpty) {
-          nestingChar.prepend(escapeChar2)
-        } else {
-          if (nestingChar.head != escapeChar2) {
-            throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
-          } else {
-            nestingChar = nestingChar.tail
-          }
+        nestingChar.pop() match {
+          case Some(ch) =>
+            if (ch != escapeChar2)
+              throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
+          case None =>
+            nestingChar.push(escapeChar2)
         }
       } else if (c == escapeBegin1) {
-        if (nestingChar.nonEmpty && nestingChar.head == escapeChar2) {
+        if (nestingChar.nonEmpty && nestingChar.peek() == escapeChar2) {
           throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
         }
         if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
           throw new IllegalArgumentException(f"Invalid character '$escapeBegin1' in the identifier '$identifier', position $i.")
-        nestingChar.prepend(escapeBegin1)
+        nestingChar.push(escapeBegin1)
       } else if (c == escapeEnd1) {
-        if (nestingChar.nonEmpty && nestingChar.head == escapeChar2)
-          throw new IllegalArgumentException(f"Found not matching '$escapeChar2' in the identifier '$identifier'.")
-        else {
-          if (nestingChar.isEmpty) {
-            throw new IllegalArgumentException(f"Found not matching '$c' in the identifier '$identifier'.")
-          } else {
-            nestingChar = nestingChar.tail
-          }
+        nestingChar.pop() match {
+          case Some(ch) =>
+            if (ch == escapeChar2)
+              throw new IllegalArgumentException(f"Found not matching '$escapeChar2' in the identifier '$identifier'.")
+          case None =>
+            throw new IllegalArgumentException(f"Found not matching '$escapeEnd1' in the identifier '$identifier'.")
         }
       }
       i += 1
     }
 
-    if (nestingChar.nonEmpty) {
-      val c = nestingChar.head
-      throw new IllegalArgumentException(f"Found not matching '$c' in the identifier '$identifier'.")
+    nestingChar.pop().foreach{ch =>
+      throw new IllegalArgumentException(f"Found not matching '$ch' in the identifier '$identifier'.")
     }
 
     if (curColumn.toString.nonEmpty)
