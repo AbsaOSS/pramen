@@ -348,7 +348,13 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         assert(actual == Seq("System User", "[Table Name]"))
       }
 
-      "split a complex column with quotes" in {
+      "split a complex column with quotes 1" in {
+        val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("\"System User\".Table Name")
+
+        assert(actual == Seq("\"System User\"", "Table Name"))
+      }
+
+      "split a complex column with quotes 2" in {
         val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("[System User].\"Table Name\"")
 
         assert(actual == Seq("[System User]", "\"Table Name\""))
@@ -412,6 +418,22 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         }
 
         assert(ex.getMessage.contains("Found not matching '\"' in the identifier 'System User.Table Name\"'"))
+      }
+
+      "throw on invalid open double-quote" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("\"System User.\"Table Name")
+        }
+
+        assert(ex.getMessage.contains("Invalid character '\"' in the identifier '\"System User.\"Table Name'"))
+      }
+
+      "throw on invalid close double-quote" in {
+        val ex = intercept[IllegalArgumentException] {
+          genDate.asInstanceOf[SqlGeneratorMicrosoft].splitComplexIdentifier("\"System Use\"r.Table Name")
+        }
+
+        assert(ex.getMessage.contains("Invalid character '\"' in the identifier '\"System Use\"r.Table Name'"))
       }
     }
   }

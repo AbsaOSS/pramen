@@ -173,10 +173,10 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
       }
 
       if (c == escapeChar2) {
+        if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
+          throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
         if (nestingChar.isEmpty) {
           nestingChar.prepend(escapeChar2)
-          if (curColumn.length() > 1 && i < len - 1 && nextChar != '.')
-            throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
         } else {
           if (nestingChar.head != escapeChar2) {
             throw new IllegalArgumentException(f"Invalid character '$escapeChar2' in the identifier '$identifier', position $i.")
