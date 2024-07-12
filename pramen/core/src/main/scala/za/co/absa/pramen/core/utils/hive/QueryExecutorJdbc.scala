@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-import java.sql.{Connection, ResultSet, SQLSyntaxErrorException}
+import java.sql.{Connection, ResultSet, SQLException, SQLSyntaxErrorException}
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -63,6 +63,8 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
     try {
       action(currentConnection)
     } catch {
+      case ex: SQLException =>
+        throw ex
       case NonFatal(ex) =>
         log.warn(s"Got an error on existing connection. Retrying...", ex)
         action(getConnection(forceReconnect = true))
