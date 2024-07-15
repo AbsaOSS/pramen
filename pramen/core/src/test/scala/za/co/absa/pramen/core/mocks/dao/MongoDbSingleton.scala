@@ -26,7 +26,7 @@ import org.slf4j.LoggerFactory
 object MongoDbSingleton {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  lazy val embeddedMongoDb: (MongodExecutable, Int) = startEmbeddedMongoDb()
+  lazy val embeddedMongoDb: (Option[MongodExecutable], Int) = startEmbeddedMongoDb()
 
   /**
     * Create and run a MongoDb instance.
@@ -35,7 +35,7 @@ object MongoDbSingleton {
     *
     * @return A pair: a MongoDb executable object to be used to stop it and the port number the embedded MongoDB listens to.
     */
-  private def startEmbeddedMongoDb(): (MongodExecutable, Int) = {
+  private def startEmbeddedMongoDb(): (Option[MongodExecutable], Int) = {
     val mongoPort: Int = Network.getFreeServerPort()
 
     // Do not print Embedded MongoDB logs
@@ -51,8 +51,14 @@ object MongoDbSingleton {
       .net(new Net("localhost", mongoPort, Network.localhostIsIPv6()))
       .build()
 
-    val executable = starter.prepare(mongodConfig)
-    executable.start()
+    val executable = try {
+      val exec = starter.prepare(mongodConfig)
+      exec.start()
+      Some(exec)
+    } catch {
+      case _: Throwable => None
+    }
+
     (executable, mongoPort)
   }
 

@@ -46,11 +46,13 @@ class BookkeeperSuite extends AnyWordSpec
     pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
     pramenDb.setupDatabase()
 
-    if (db.doesCollectionExists(collectionName)) {
-      db.dropCollection(collectionName)
-    }
-    if (db.doesCollectionExists(schemaCollectionName)) {
-      db.dropCollection(schemaCollectionName)
+    if (db != null) {
+      if (db.doesCollectionExists(collectionName)) {
+        db.dropCollection(collectionName)
+      }
+      if (db.doesCollectionExists(schemaCollectionName)) {
+        db.dropCollection(schemaCollectionName)
+      }
     }
   }
 
@@ -79,23 +81,29 @@ class BookkeeperSuite extends AnyWordSpec
       closable.close()
     }
 
-    "build bookkeeper, token lock, journal, and closable object for MongoDB" in {
-      val bookkeepingConfig = BookkeeperConfig(
-        bookkeepingEnabled = true,
-        None,
-        HadoopFormat.Text,
-        Some(connectionString),
-        Some(dbName),
-        None
-      )
+    if (db != null) {
+      "build bookkeeper, token lock, journal, and closable object for MongoDB" in {
+        val bookkeepingConfig = BookkeeperConfig(
+          bookkeepingEnabled = true,
+          None,
+          HadoopFormat.Text,
+          Some(connectionString),
+          Some(dbName),
+          None
+        )
 
-      val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
 
-      assert(bk.isInstanceOf[BookkeeperMongoDb])
-      assert(tf.isInstanceOf[TokenLockFactoryMongoDb])
-      assert(journal.isInstanceOf[JournalMongoDb])
-      assert(metadataManager.isInstanceOf[MetadataManagerNull])
-      closable.close()
+        assert(bk.isInstanceOf[BookkeeperMongoDb])
+        assert(tf.isInstanceOf[TokenLockFactoryMongoDb])
+        assert(journal.isInstanceOf[JournalMongoDb])
+        assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        closable.close()
+      }
+    } else {
+      "build bookkeeper, token lock, journal, and closable object for MongoDB" ignore {
+        // Skip on incompatible platform
+      }
     }
 
     "build bookkeeper, token lock, journal, and closable object for Hadoop" in {

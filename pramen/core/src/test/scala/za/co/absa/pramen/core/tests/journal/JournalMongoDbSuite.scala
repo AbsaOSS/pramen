@@ -29,38 +29,46 @@ class JournalMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAnd
   var journal: Journal = _
 
   before {
-    if (db.doesCollectionExists(collectionName)) {
-      db.dropCollection(collectionName)
+    if (db != null) {
+      if (db.doesCollectionExists(collectionName)) {
+        db.dropCollection(collectionName)
+      }
+      journal = new JournalMongoDb(connection)
     }
-    journal = new JournalMongoDb(connection)
   }
 
-  "Journal" should {
-    "Initialize an empty database" in {
-      db.doesCollectionExists("collectionName")
+  if (db != null) {
+    "Journal" should {
+      "Initialize an empty database" in {
+        db.doesCollectionExists("collectionName")
 
-      assert(db.doesCollectionExists(collectionName))
+        assert(db.doesCollectionExists(collectionName))
 
-      val indexes = dbRaw.getCollection(collectionName).listIndexes().execute()
-      assert(indexes.size == 3)
+        val indexes = dbRaw.getCollection(collectionName).listIndexes().execute()
+        assert(indexes.size == 3)
+      }
+
+      "addEntry()" should {
+        "return Nil if there are no entries" in {
+          assert(journal.getEntries(instant1, instant3).isEmpty)
+        }
+
+        "return entries if there are entries" in {
+          journal.addEntry(task1)
+          journal.addEntry(task2)
+          journal.addEntry(task3)
+
+
+          val entries = journal.getEntries(instant2, instant3).sortBy(_.informationDate.toString)
+
+          assert(entries.nonEmpty)
+          assert(entries == task2 :: task3 :: Nil)
+        }
+      }
     }
-
-    "addEntry()" should {
-      "return Nil if there are no entries" in {
-        assert(journal.getEntries(instant1, instant3).isEmpty)
-      }
-
-      "return entries if there are entries" in {
-        journal.addEntry(task1)
-        journal.addEntry(task2)
-        journal.addEntry(task3)
-
-
-        val entries = journal.getEntries(instant2, instant3).sortBy(_.informationDate.toString)
-
-        assert(entries.nonEmpty)
-        assert(entries == task2 :: task3 :: Nil)
-      }
+  } else {
+    "Journal" ignore {
+      // Ignored on an incompatible platform
     }
   }
 
