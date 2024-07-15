@@ -49,6 +49,10 @@ object PipelineNotificationDirector {
       .tasksCompleted
       .foreach(notificationBuilder.addCompletedTask)
 
+    notification.pipelineNotificationFailures.foreach(pipelineNotificationFailure =>
+      notificationBuilder.addPipelineNotificationFailure(pipelineNotificationFailure)
+    )
+
     notificationBuilder.addCustomEntries(notification.customEntries)
     notificationBuilder.addSignature(notification.customSignature: _*)
 
