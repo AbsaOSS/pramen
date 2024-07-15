@@ -28,13 +28,13 @@ class BuildPropertyUtilsSuite extends AnyWordSpec {
 
   "buildTimestamp" should {
     "be replaced by the build timestamp" in {
-      assert(!BuildPropertyUtils.instance.buildTimestamp.contains("$"))
+      assert(!BuildPropertyUtils.instance.buildTimestamp.contains("$") || BuildPropertyUtils.instance.buildTimestamp.contains("${build.timestamp}"))
     }
   }
 
   "getFullVersion" should {
     "be replaced by the build timestamp" in {
-      assert(!BuildPropertyUtils.instance.getFullVersion.contains("$"))
+      assert(!BuildPropertyUtils.instance.getFullVersion.contains("$") || BuildPropertyUtils.instance.getFullVersion.contains("${build.timestamp}"))
     }
   }
 

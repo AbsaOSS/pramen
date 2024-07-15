@@ -41,25 +41,30 @@ trait MongoDbFixture extends BeforeAndAfterAll {
   private var mongoClient: MongoClient = _
 
   override protected def beforeAll(): Unit = {
-    mongoClient = MongoClient(connectionString)
+    if (mongoDbExecutable.nonEmpty) {
+      mongoClient = MongoClient(connectionString)
 
-    connection = MongoDbConnection.getConnection(mongoClient, connectionString, dbName)
+      connection = MongoDbConnection.getConnection(mongoClient, connectionString, dbName)
 
-    val dbs = mongoClient.listDatabaseNames().execute()
-    if (dbs.contains(dbName)) {
-      throw new IllegalStateException(s"MongoDB migration db tools integration test database " +
-        s"'$dbName' already exists at '$dbName'.")
+      val dbs = mongoClient.listDatabaseNames().execute()
+      if (dbs.contains(dbName)) {
+        throw new IllegalStateException(s"MongoDB migration db tools integration test database " +
+          s"'$dbName' already exists at '$dbName'.")
+      }
+
+      dbRaw = mongoClient.getDatabase(dbName)
+      db = new MongoDb(dbRaw)
     }
-
-    dbRaw = mongoClient.getDatabase(dbName)
-    db = new MongoDb(dbRaw)
 
     super.beforeAll()
   }
 
   override protected def afterAll(): Unit = {
     try super.afterAll()
-    finally mongoClient.getDatabase(dbName).drop().execute()
+    finally {
+      if (mongoClient != null)
+        mongoClient.getDatabase(dbName).drop().execute()
+    }
   }
 }
 

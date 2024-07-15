@@ -26,11 +26,13 @@ class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixtu
   import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
   before {
-    if (db.doesCollectionExists(collectionName)) {
-      db.dropCollection(collectionName)
-    }
-    if (db.doesCollectionExists(schemaCollectionName)) {
-      db.dropCollection(schemaCollectionName)
+    if (db != null) {
+      if (db.doesCollectionExists(collectionName)) {
+        db.dropCollection(collectionName)
+      }
+      if (db.doesCollectionExists(schemaCollectionName)) {
+        db.dropCollection(schemaCollectionName)
+      }
     }
   }
 
@@ -38,18 +40,25 @@ class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixtu
     new BookkeeperMongoDb(connection)
   }
 
-  "BookkeeperMongoDb" when {
-    "initialized" should {
-      "Initialize an empty database" in {
-        getBookkeeper
+  if (db != null) {
+    "BookkeeperMongoDb" when {
+      "initialized" should {
+        "Initialize an empty database" in {
+          getBookkeeper
 
-        assert(db.doesCollectionExists(collectionName))
+          assert(db.doesCollectionExists(collectionName))
 
-        val indexes = dbRaw.getCollection(collectionName).listIndexes().execute()
-        assert(indexes.size == 2)
+          val indexes = dbRaw.getCollection(collectionName).listIndexes().execute()
+          assert(indexes.size == 2)
+        }
       }
-    }
 
-    testBookKeeper(() => getBookkeeper)
+      testBookKeeper(() => getBookkeeper)
+    }
+  }
+  else {
+    "BookkeeperMongoDb" ignore {
+      // Ignored on an incompatible platform
+    }
   }
 }
