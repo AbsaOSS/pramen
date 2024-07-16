@@ -21,7 +21,7 @@ import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.sql.{Connection, ResultSet, SQLException, SQLSyntaxErrorException}
-import scala.util.Try
+import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
 class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor {
@@ -32,13 +32,29 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
     jdbcUrlSelector.jdbcConfig.retries.getOrElse(defaultRetries)
 
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
-    val fullTableName = HiveHelper.getFullTable(dbName, tableName)
+    if (jdbcUrlSelector.jdbcConfig.optimizedExistQuery) {
+      val query = dbName match {
+        case Some(db) => s"SHOW TABLES IN $db LIKE '${unEscape(tableName)}'"
+        case None => s"SHOW TABLES LIKE '${unEscape(tableName)}'"
+      }
 
-    val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
+      Try {
+        executeNonEmpty(query)
+      } match {
+        case scala.util.Success(res) => res
+        case Failure(ex: Throwable) =>
+          log.warn(s"Got an error while checking if table exists", ex)
+          false
+      }
+    } else {
+      val fullTableName = HiveHelper.getFullTable(dbName, tableName)
 
-    Try {
-      execute(query)
-    }.isSuccess
+      val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
+
+      Try {
+        execute(query)
+      }.isSuccess
+    }
   }
 
   @throws[SQLSyntaxErrorException]
@@ -56,9 +72,26 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
     }
   }
 
+  def executeNonEmpty(query: String): Boolean = {
+    log.info(s"Executing SQL: $query")
+
+    executeActionOnConnection { conn =>
+      val statement = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      val rs = statement.executeQuery(query)
+
+      try {
+        // If the result set is non-empty this will return true, otherwise it will return false.
+        rs.next()
+      } finally {
+        rs.close()
+        statement.close()
+      }
+    }
+  }
+
   override def close(): Unit = if (connection != null) connection.close()
 
-  private[core] def executeActionOnConnection(action: Connection => Unit): Unit = {
+  private[core] def executeActionOnConnection(action: Connection => Boolean): Boolean = {
     val currentConnection = getConnection(forceReconnect = false)
     try {
       action(currentConnection)
@@ -82,6 +115,18 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
       connection = newConnection
     }
     connection
+  }
+
+  private def unEscape(s: String): String = {
+    if (s.length > 1) {
+      if (s.head == '`' && s.last == '`') {
+        s.substring(1, s.length - 1)
+      } else {
+        s
+      }
+    } else {
+      s
+    }
   }
 }
 
