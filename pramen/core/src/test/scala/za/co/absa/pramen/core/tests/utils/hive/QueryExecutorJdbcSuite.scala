@@ -103,6 +103,26 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       qe.close()
     }
 
+    "return false if the table is not found in an optimized query" in {
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig.copy(optimizedExistQuery = true)))
+
+      val exist = qe.doesTableExist(Option(database), "does_not_exist")
+
+      assert(!exist)
+
+      qe.close()
+    }
+
+    "return false if the table is not found in an optimized query without a database" in {
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig.copy(optimizedExistQuery = true)))
+
+      val exist = qe.doesTableExist(None, "does_not_exist")
+
+      assert(!exist)
+
+      qe.close()
+    }
+
     "handle retries" in {
       val baseSelector = JdbcUrlSelector(jdbcConfig)
       val (conn, _) = baseSelector.getWorkingConnection(1)
@@ -123,6 +143,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
         }
         actionExecuted = true
         assert(conn != null)
+        true
       }
 
       qe.close()
@@ -154,6 +175,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
           }
           actionExecuted = true
           assert(conn != null)
+          true
         }
       }
 
@@ -185,6 +207,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
           execution += 1
           actionExecuted = true
           assert(conn != null)
+          true
         }
       }
 
