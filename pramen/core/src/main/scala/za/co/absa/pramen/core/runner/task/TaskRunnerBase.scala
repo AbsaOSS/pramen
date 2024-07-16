@@ -35,6 +35,7 @@ import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
+import za.co.absa.pramen.core.utils.TimeUtils
 import za.co.absa.pramen.core.utils.hive.HiveHelper
 
 import java.sql.Date
@@ -495,13 +496,20 @@ abstract class TaskRunnerBase(conf: Config,
 
     val emoji = if (result.runStatus.isFailure) s"$FAILURE" else s"$WARNING"
 
+    val elapsedTimeStr = result.runInfo match {
+      case Some(runInfo) =>
+        val elapsedTimeMs = runInfo.finished.toEpochMilli - runInfo.started.toEpochMilli
+        s" Elapsed time: ${TimeUtils.prettyPrintElapsedTime(elapsedTimeMs)} seconds."
+      case None => ""
+    }
+
     result.runStatus match {
       case _: RunStatus.Succeeded =>
-        log.info(s"$SUCCESS $taskStr '${result.jobName}'$infoDateMsg has SUCCEEDED.")
+        log.info(s"$SUCCESS $taskStr '${result.jobName}'$infoDateMsg has SUCCEEDED.$elapsedTimeStr")
       case RunStatus.ValidationFailed(ex) =>
-        log.error(s"$FAILURE $taskStr '${result.jobName}'$infoDateMsg has FAILED VALIDATION", ex)
+        log.error(s"$FAILURE $taskStr '${result.jobName}'$infoDateMsg has FAILED VALIDATION.$elapsedTimeStr", ex)
       case RunStatus.Failed(ex) =>
-        log.error(s"$FAILURE $taskStr '${result.jobName}'$infoDateMsg has FAILED", ex)
+        log.error(s"$FAILURE $taskStr '${result.jobName}'$infoDateMsg has FAILED.$elapsedTimeStr", ex)
       case RunStatus.MissingDependencies(_, tables) =>
         log.error(s"$emoji $taskStr '${result.jobName}'$infoDateMsg has MISSING TABLES: ${tables.mkString(", ")}")
       case RunStatus.FailedDependencies(_, deps) =>
