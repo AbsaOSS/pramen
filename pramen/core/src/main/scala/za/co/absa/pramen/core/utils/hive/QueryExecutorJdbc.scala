@@ -32,29 +32,17 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
     jdbcUrlSelector.jdbcConfig.retries.getOrElse(defaultRetries)
 
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
-    if (jdbcUrlSelector.jdbcConfig.optimizedExistQuery) {
-      val query = dbName match {
-        case Some(db) => s"SHOW TABLES IN $db LIKE '${unEscape(tableName)}'"
-        case None => s"SHOW TABLES LIKE '${unEscape(tableName)}'"
-      }
+    val fullTableName = HiveHelper.getFullTable(dbName, tableName)
 
-      Try {
-        executeNonEmpty(query)
-      } match {
-        case scala.util.Success(res) => res
-        case Failure(ex: Throwable) =>
-          log.warn(s"Got an error while checking if table exists", ex)
-          false
-      }
+    val query = if (jdbcUrlSelector.jdbcConfig.optimizedExistQuery) {
+      s"DESCRIBE $fullTableName"
     } else {
-      val fullTableName = HiveHelper.getFullTable(dbName, tableName)
-
-      val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
-
-      Try {
-        execute(query)
-      }.isSuccess
+      s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
     }
+
+    Try {
+      execute(query)
+    }.isSuccess
   }
 
   @throws[SQLSyntaxErrorException]
@@ -67,23 +55,6 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
       try {
         statement.execute(query)
       } finally {
-        statement.close()
-      }
-    }
-  }
-
-  def executeNonEmpty(query: String): Boolean = {
-    log.info(s"Executing SQL: $query")
-
-    executeActionOnConnection { conn =>
-      val statement = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
-      val rs = statement.executeQuery(query)
-
-      try {
-        // If the result set is non-empty this will return true, otherwise it will return false.
-        rs.next()
-      } finally {
-        rs.close()
         statement.close()
       }
     }
@@ -115,18 +86,6 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
       connection = newConnection
     }
     connection
-  }
-
-  private def unEscape(s: String): String = {
-    if (s.length > 1) {
-      if (s.head == '`' && s.last == '`') {
-        s.substring(1, s.length - 1)
-      } else {
-        s
-      }
-    } else {
-      s
-    }
   }
 }
 
