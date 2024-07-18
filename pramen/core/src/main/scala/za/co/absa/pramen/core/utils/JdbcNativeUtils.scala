@@ -127,7 +127,16 @@ object JdbcNativeUtils {
     val connection = getJdbcConnection(jdbcConfig, url)
 
     val statement = try {
-      connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
+      connection.setAutoCommit(jdbcConfig.autoCommit)
+
+      if (jdbcConfig.driver == "org.postgresql.Driver")
+        // Special handling of PostgreSQL driver that loads.
+        // PostgreSQL loads full query results info memory ignoring fetch sizes and other driver options by default.
+        // This is the only cursor that makes it respect fetch sizes.
+        // If we encounter more exceptions, we can improve this 'patch' into a properly handling method.
+        connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      else
+        connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
     } catch {
       case _: java.sql.SQLException =>
         // Fallback with more permissible result type.
@@ -136,6 +145,10 @@ object JdbcNativeUtils {
       case NonFatal(ex)             =>
         throw ex
     }
+
+    jdbcConfig.fetchSize.foreach(n =>
+      statement.setFetchSize(n)
+    )
 
     statement.executeQuery(query)
   }
