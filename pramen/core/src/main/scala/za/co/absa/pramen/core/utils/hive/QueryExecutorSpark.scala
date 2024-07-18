@@ -25,7 +25,7 @@ class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
     val (database, table) = splitTableDatabase(dbName, tableName)
 
-    database match {
+    val exists = database match {
       case Some(db) =>
         if (spark.catalog.databaseExists(db)) {
           spark.catalog.tableExists(db, table)
@@ -35,6 +35,18 @@ class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
       case None     =>
         spark.catalog.tableExists(tableName)
     }
+
+    val dbStr = database match {
+      case Some(db) => s"$db."
+      case None => ""
+    }
+
+    if (exists)
+      log.info(s"Table $dbStr$table exists.")
+    else
+      log.info(s"Table $dbStr$table does not exist.")
+
+    exists
   }
 
   @throws[AnalysisException]
