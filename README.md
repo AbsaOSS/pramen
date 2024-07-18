@@ -501,6 +501,9 @@ is determined by the pipeline configuration.
       
       # Any option passed as 'option.' will be passed to the JDBC driver. Example:
       #option.database = "test_db"
+      
+      # (Optional) Autocommit, false by default. Used only when 'use.jdbc.native = true'
+      #autocommit = false
     }
 
     # Any option passed as '.option' here will be passed to the Spark reader as options. For example,
