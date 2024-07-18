@@ -2839,6 +2839,14 @@ pramen {
     # a column name is one of SQL reverved words.
     escape.column.names = true
 
+    # If 
+    #  - true, uses this query for checking Hive table existence:
+    #    DESCRIBE my_db.my_table
+    #    (this is faster since it never touhces data, but may depend on Hive dialect)
+    #  - false (default), uses this query for checking Hive table existence:
+    #    SELECT 1 FROM my_db.my_table WHERE 0 = 1  
+    optimize.exist.query = true
+
     # Optional, use only if you want to use JDBC rather than Spark metastore to query Hive
     hive.jdbc {
       driver = "com.cloudera.hive.jdbc41.HS2Driver"
