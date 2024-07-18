@@ -42,7 +42,14 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
 
     Try {
       execute(query)
-    }.isSuccess
+    } match {
+      case Failure(ex) =>
+        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist" + ex.getMessage)
+        false
+      case _ =>
+        log.info(s"Table $fullTableName exists.")
+        true
+    }
   }
 
   @throws[SQLSyntaxErrorException]
