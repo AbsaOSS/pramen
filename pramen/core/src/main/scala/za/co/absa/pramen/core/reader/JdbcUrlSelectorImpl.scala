@@ -54,19 +54,24 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
 
   def logConnectionSettings(): Unit = {
     log.info(s"JDBC Configuration:")
-    log.info(s"Driver:            ${jdbcConfig.driver}")
-    log.info(s"URL:               $currentUrl")
-    jdbcConfig.database.foreach(d => log.info(s"Database:          $d"))
-    jdbcConfig.user.foreach(user => log.info(s"User:              $user"))
-    jdbcConfig.password.foreach(_ =>log.info(s"Password:          [redacted]"))
+    log.info(s"Driver:             ${jdbcConfig.driver}")
+    log.info(s"URL:                $currentUrl")
 
-    jdbcConfig.retries.foreach(n => log.info(s"Retry attempts:    $n"))
-    jdbcConfig.connectionTimeoutSeconds.foreach(n => log.info(s"Timeout:           $n seconds"))
+    jdbcConfig.database.foreach(d  => log.info(s"Database:           $d"))
+    jdbcConfig.user.foreach(user   => log.info(s"User:               $user"))
+    jdbcConfig.password.foreach(_  => log.info(s"Password:           [redacted]"))
+    jdbcConfig.fetchSize.foreach(n => log.info(s"Fetch size:         $n"))
+
+    log.info(s"Auto commit:        ${jdbcConfig.autoCommit}")
+    log.info(s"Sanitize date/time: ${jdbcConfig.sanitizeDateTime}")
+
+    jdbcConfig.retries.foreach(n =>   log.info(s"Retry attempts:     $n"))
+    jdbcConfig.connectionTimeoutSeconds.foreach(n => log.info(s"Timeout:            $n seconds"))
 
     if (numberOfUrls > 1) {
       log.info("URL redundancy configuration:")
-      jdbcConfig.primaryUrl.foreach(s => log.info(s"Primary URL:       $s"))
-      jdbcConfig.fallbackUrls.zipWithIndex.foreach { case (s, i) => log.info(s"Pool URL ${i + 1}:        $s") }
+      jdbcConfig.primaryUrl.foreach(s => log.info(s"Primary URL:        $s"))
+      jdbcConfig.fallbackUrls.zipWithIndex.foreach { case (s, i) => log.info(s"Pool URL ${i + 1}:         $s") }
     }
     if (jdbcConfig.extraOptions.nonEmpty) {
       log.info("JDBC extra properties:")

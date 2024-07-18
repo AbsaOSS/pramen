@@ -34,10 +34,9 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val jdbcConfig = getJdbcConfig
+  private val jdbcConfig = jdbcReaderConfig.jdbcConfig
 
   private val infoDateFormatPattern = jdbcReaderConfig.infoDateFormat
-  private val infoDateFormatter = DateTimeFormatter.ofPattern(infoDateFormatPattern)
   private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 
   logConfiguration()
@@ -92,15 +91,6 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
     df
   }
-
-  private[core] def getJdbcConfig: JdbcConfig = {
-    val originConfig = jdbcReaderConfig.jdbcConfig
-    if (conf.hasPath(FETCH_SIZE_KEY)) {
-      originConfig.copy(fetchSize = Option(conf.getInt(FETCH_SIZE_KEY)))
-    } else {
-      originConfig
-    }
-  }
 }
 
 object TableReaderJdbcNative {
@@ -109,10 +99,21 @@ object TableReaderJdbcNative {
   def apply(conf: Config,
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
-    val tableReaderJdbc = TableReaderJdbcConfig.load(conf, parent)
+    val tableReaderJdbcOrig = TableReaderJdbcConfig.load(conf, parent)
+    val jdbcConfig = getJdbcConfig(tableReaderJdbcOrig, conf)
+    val tableReaderJdbc = tableReaderJdbcOrig.copy(jdbcConfig = jdbcConfig)
     val urlSelector = JdbcUrlSelector(tableReaderJdbc.jdbcConfig)
 
     new TableReaderJdbcNative(tableReaderJdbc, urlSelector, conf)
+  }
+
+  private[core] def getJdbcConfig(tableReaderJdbcConfig: TableReaderJdbcConfig, conf: Config): JdbcConfig = {
+    val originConfig = tableReaderJdbcConfig.jdbcConfig
+    if (conf.hasPath(FETCH_SIZE_KEY)) {
+      originConfig.copy(fetchSize = Option(conf.getInt(FETCH_SIZE_KEY)))
+    } else {
+      originConfig
+    }
   }
 
   def getFilteredSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
