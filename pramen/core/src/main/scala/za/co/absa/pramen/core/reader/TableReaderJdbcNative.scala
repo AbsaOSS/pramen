@@ -36,7 +36,6 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private val jdbcConfig = jdbcReaderConfig.jdbcConfig
 
-  private val infoDateFormatPattern = jdbcReaderConfig.infoDateFormat
   private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 
   logConfiguration()
