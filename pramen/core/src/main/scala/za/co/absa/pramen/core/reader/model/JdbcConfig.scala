@@ -29,6 +29,8 @@ case class JdbcConfig(
                        user: Option[String] = None,
                        password: Option[String] = None,
                        retries: Option[Int] = None,
+                       fetchSize: Option[Int] = None,
+                       autoCommit: Boolean = false,
                        connectionTimeoutSeconds: Option[Int] = None,
                        sanitizeDateTime: Boolean = true,
                        incorrectDecimalsAsString: Boolean = false,
@@ -46,6 +48,8 @@ object JdbcConfig {
   val JDBC_USER = "jdbc.user"
   val JDBC_PASSWORD = "jdbc.password"
   val JDBC_RETRIES = "jdbc.retries"
+  val JDBC_FETCH_SIZE = "jdbc.fetchsize"
+  val JDBC_AUTOCOMMIT = "jdbc.autocommit"
   val JDBC_CONNECTION_TIMEOUT = "jdbc.connection.timeout"
   val JDBC_SANITIZE_DATETIME = "jdbc.sanitize.datetime"
   val JDBC_INCORRECT_PRECISION_AS_STRING = "jdbc.incorrect.precision.as.string"
@@ -77,6 +81,8 @@ object JdbcConfig {
       user = ConfigUtils.getOptionString(conf, JDBC_USER),
       password = ConfigUtils.getOptionString(conf, JDBC_PASSWORD),
       retries = ConfigUtils.getOptionInt(conf, JDBC_RETRIES),
+      fetchSize = ConfigUtils.getOptionInt(conf, JDBC_FETCH_SIZE),
+      autoCommit = ConfigUtils.getOptionBoolean(conf, JDBC_AUTOCOMMIT).getOrElse(false),
       connectionTimeoutSeconds = ConfigUtils.getOptionInt(conf, JDBC_CONNECTION_TIMEOUT),
       sanitizeDateTime = ConfigUtils.getOptionBoolean(conf, JDBC_SANITIZE_DATETIME).getOrElse(true),
       incorrectDecimalsAsString = ConfigUtils.getOptionBoolean(conf, JDBC_INCORRECT_PRECISION_AS_STRING).getOrElse(false),

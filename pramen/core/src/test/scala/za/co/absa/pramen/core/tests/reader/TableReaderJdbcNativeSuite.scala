@@ -37,6 +37,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |    connection.string = "$url"
        |    user = "$user"
        |    password = "$password"
+       |    autocommit = true
        |  }
        |
        |  has.information.date.column = true
@@ -44,6 +45,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |  information.date.column = "FOUNDED"
        |  information.date.type = "date"
        |  information.date.format = "YYYY-MM-dd"
+       |  option.fetchsize = 1000
        |
        |}
        |reader_legacy {
@@ -102,6 +104,8 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       val reader = getReader
       assert(reader != null)
       assert(reader.getJdbcReaderConfig.infoDateFormat == "YYYY-MM-dd")
+      assert(reader.getJdbcReaderConfig.jdbcConfig.autoCommit)
+      assert(reader.getJdbcReaderConfig.jdbcConfig.fetchSize.get == 1000)
     }
 
     "work with legacy config" in {
@@ -114,6 +118,8 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), "reader_minimal")
       assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-dd")
       assert(reader.getJdbcReaderConfig.jdbcConfig.sanitizeDateTime)
+      assert(!reader.getJdbcReaderConfig.jdbcConfig.autoCommit)
+      assert(reader.getJdbcReaderConfig.jdbcConfig.fetchSize.isEmpty)
     }
 
     "throw an exception if config is missing" in {

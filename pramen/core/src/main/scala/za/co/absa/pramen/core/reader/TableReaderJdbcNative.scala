@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
+import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, StringUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
@@ -34,14 +34,17 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val jdbcConfig = jdbcReaderConfig.jdbcConfig
+  private val jdbcConfig = getJdbcConfig
+
   private val infoDateFormatPattern = jdbcReaderConfig.infoDateFormat
   private val infoDateFormatter = DateTimeFormatter.ofPattern(infoDateFormatPattern)
   private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 
   logConfiguration()
 
-  private[core] def getJdbcReaderConfig: TableReaderJdbcConfig = jdbcReaderConfig
+  private[core] def getJdbcReaderConfig: TableReaderJdbcConfig = {
+    jdbcReaderConfig.copy(jdbcConfig = jdbcConfig)
+  }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val start = Instant.now()
@@ -89,9 +92,20 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
     df
   }
+
+  private[core] def getJdbcConfig: JdbcConfig = {
+    val originConfig = jdbcReaderConfig.jdbcConfig
+    if (conf.hasPath(FETCH_SIZE_KEY)) {
+      originConfig.copy(fetchSize = Option(conf.getInt(FETCH_SIZE_KEY)))
+    } else {
+      originConfig
+    }
+  }
 }
 
 object TableReaderJdbcNative {
+  val FETCH_SIZE_KEY = "option.fetchsize"
+
   def apply(conf: Config,
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
