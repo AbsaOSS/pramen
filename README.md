@@ -2843,10 +2843,10 @@ pramen {
     escape.column.names = true
 
     # If 
-    #  - true, uses this query for checking Hive table existence:
+    #  - true (default), uses this query for checking Hive table existence:
     #    DESCRIBE my_db.my_table
     #    (this is faster since it never touhces data, but may depend on Hive dialect)
-    #  - false (default), uses this query for checking Hive table existence:
+    #  - false uses this query for checking Hive table existence:
     #    SELECT 1 FROM my_db.my_table WHERE 0 = 1  
     optimize.exist.query = true
 

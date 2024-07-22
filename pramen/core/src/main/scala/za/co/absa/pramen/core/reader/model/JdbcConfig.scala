@@ -34,7 +34,6 @@ case class JdbcConfig(
                        connectionTimeoutSeconds: Option[Int] = None,
                        sanitizeDateTime: Boolean = true,
                        incorrectDecimalsAsString: Boolean = false,
-                       optimizedExistQuery: Boolean = false,
                        extraOptions: Map[String, String] = Map.empty[String, String]
                      )
 
@@ -53,7 +52,6 @@ object JdbcConfig {
   val JDBC_CONNECTION_TIMEOUT = "jdbc.connection.timeout"
   val JDBC_SANITIZE_DATETIME = "jdbc.sanitize.datetime"
   val JDBC_INCORRECT_PRECISION_AS_STRING = "jdbc.incorrect.precision.as.string"
-  val JDBC_OPTIMIZED_EXIST_QUERY = "jdbc.optimize.exist.query"
   val JDBC_EXTRA_OPTIONS_PREFIX = "jdbc.option"
 
   def load(conf: Config, parent: String = ""): JdbcConfig = {
@@ -86,7 +84,6 @@ object JdbcConfig {
       connectionTimeoutSeconds = ConfigUtils.getOptionInt(conf, JDBC_CONNECTION_TIMEOUT),
       sanitizeDateTime = ConfigUtils.getOptionBoolean(conf, JDBC_SANITIZE_DATETIME).getOrElse(true),
       incorrectDecimalsAsString = ConfigUtils.getOptionBoolean(conf, JDBC_INCORRECT_PRECISION_AS_STRING).getOrElse(false),
-      optimizedExistQuery = ConfigUtils.getOptionBoolean(conf, JDBC_OPTIMIZED_EXIST_QUERY).getOrElse(false),
       extraOptions = ConfigUtils.getExtraOptions(conf, JDBC_EXTRA_OPTIONS_PREFIX)
     )
   }

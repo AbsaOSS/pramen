@@ -199,7 +199,7 @@ object ConfigUtils {
           case list: ConfigList =>
             val lst = list.unwrapped()
 
-            if (!lst.isEmpty && lst.get(0).isInstanceOf[java.util.Map[String, AnyRef]]) {
+            if (!lst.isEmpty && lst.get(0).isInstanceOf[java.util.Map[_, _]]) {
               k -> v.render(renderOptions)
             } else  {
               k -> v.unwrapped()

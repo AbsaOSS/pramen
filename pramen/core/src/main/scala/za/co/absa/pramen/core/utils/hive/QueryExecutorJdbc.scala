@@ -24,7 +24,7 @@ import java.sql.{Connection, ResultSet, SQLException, SQLSyntaxErrorException}
 import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
 
-class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor {
+class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: Boolean) extends QueryExecutor {
   private val log = LoggerFactory.getLogger(this.getClass)
   private var connection: Connection = _
   private val defaultRetries = jdbcUrlSelector.getNumberOfUrls
@@ -34,7 +34,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
     val fullTableName = HiveHelper.getFullTable(dbName, tableName)
 
-    val query = if (jdbcUrlSelector.jdbcConfig.optimizedExistQuery) {
+    val query = if (optimizedExistQuery) {
       s"DESCRIBE $fullTableName"
     } else {
       s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
@@ -97,9 +97,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector) extends QueryExecutor 
 }
 
 object QueryExecutorJdbc {
-  def fromJdbcConfig(jdbcConfig: JdbcConfig): QueryExecutorJdbc = {
+  def fromJdbcConfig(jdbcConfig: JdbcConfig, optimizedExistQuery: Boolean): QueryExecutorJdbc = {
     val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
-    new QueryExecutorJdbc(jdbcUrlSelector)
+    new QueryExecutorJdbc(jdbcUrlSelector, optimizedExistQuery)
   }
 }
