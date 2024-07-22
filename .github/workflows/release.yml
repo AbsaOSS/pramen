@@ -84,10 +84,10 @@ jobs:
           PY_VERSION=$(grep -m 1 ^version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
           if [[ "$PY_VERSION" != "$VERSION" ]]; then
             sed -i "s/version = \"$PY_VERSION\"/version = \"$VERSION\"/g" pyproject.toml
-            git add pyproject.toml
-            git commit -m "Update version number to $VERSION"
-            git push
-            cat pyproject.toml 
+            # Temporary disable Python publish
+            #git add pyproject.toml
+            #git commit -m "Update version number to $VERSION"
+            #git push
           fi
           
       - name: install project dependencies
@@ -107,13 +107,14 @@ jobs:
       - name: Install dependencies
         working-directory: "./pramen-py"
         run: poetry install --no-interaction --no-root
-        
-      - name: build and publish the wheel to jfrog
-        working-directory: "./pramen-py"
-        env:
-          ENV: pypi
-          PRAMENPY_PYPI_TOKEN: ${{ secrets.PRAMENPY_PYPI_TOKEN }}
-        run: make --silent publish
+          
+      # Temporary disable Python publish
+      #- name: build and publish the wheel to jfrog
+      #  working-directory: "./pramen-py"
+      #  env:
+      #    ENV: pypi
+      #    PRAMENPY_PYPI_TOKEN: ${{ secrets.PRAMENPY_PYPI_TOKEN }}
+      #  run: make --silent publish
           
   release-sbt:
     needs: [ "release-python" ]
