@@ -37,6 +37,7 @@ case class StandardizationConfig(
                                   hiveJdbcConfig: Option[JdbcConfig],
                                   hiveDatabase: Option[String],
                                   hiveIgnoreFailures: Boolean,
+                                  hiveOptimizeExistQuery: Boolean,
                                   infoDateColumn: String,
                                   infoDateStringColumn: String,
                                   infoVersionColumn: String
@@ -55,6 +56,7 @@ object StandardizationConfig {
   val HIVE_JDBC_PREFIX = "hive"
   val HIVE_DATABASE_KEY = "hive.database"
   val HIVE_IGNORE_FAILURES_KEY = "hive.ignore.failures"
+  val HIVE_OPTIMIZE_EXIST_QUERY_KEY = "hive.optimize.exist.query"
 
   val INFO_DATE_COLUMN_KEY = "info.date.column"
   val INFO_DATE_STRING_COLUMN_KEY = "info.date.str.column"
@@ -99,6 +101,7 @@ object StandardizationConfig {
       hiveJdbcConfig,
       ConfigUtils.getOptionString(conf, HIVE_DATABASE_KEY),
       ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false),
+      hiveOptimizeExistQuery = ConfigUtils.getOptionBoolean(conf, HIVE_OPTIMIZE_EXIST_QUERY_KEY).getOrElse(true),
       infoDateColumn,
       infoDateStringColumn,
       infoVersionColumn

@@ -432,7 +432,7 @@ object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
         val queryExecutor = standardizationConfig.hiveJdbcConfig match {
           case Some(hiveJdbcConfig) =>
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via JDBC.")
-            QueryExecutorJdbc.fromJdbcConfig(hiveJdbcConfig)
+            QueryExecutorJdbc.fromJdbcConfig(hiveJdbcConfig, standardizationConfig.hiveOptimizeExistQuery)
           case None                 =>
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via Spark.")
             QueryExecutorSpark(spark)

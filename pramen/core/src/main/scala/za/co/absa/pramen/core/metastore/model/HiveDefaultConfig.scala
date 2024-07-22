@@ -84,11 +84,12 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
   * }
   * }}}
   *
-  * @param hiveApi        The Hive API to use (SQL or Spark Catalog).
-  * @param database       T he database database to use. If omitted, you can use full table names for each table.
-  * @param templates      Query templates for each output format
-  * @param jdbcConfig     Hive JDBC configuration to use instead of Spark metastore if needed
-  * @param ignoreFailures Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
+  * @param hiveApi             The Hive API to use (SQL or Spark Catalog).
+  * @param database            The database database to use. If omitted, you can use full table names for each table.
+  * @param templates           Query templates for each output format
+  * @param jdbcConfig          Hive JDBC configuration to use instead of Spark metastore if needed
+  * @param ignoreFailures      Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
+  * @param optimizeExistQuery  If true, Pramen uses Hive-specific SQL dialect to check table existence to ensure data won't be touched.
   */
 case class HiveDefaultConfig(
                               hiveApi: HiveApi,
@@ -96,7 +97,8 @@ case class HiveDefaultConfig(
                               templates: Map[String, HiveQueryTemplates],
                               jdbcConfig: Option[JdbcConfig],
                               ignoreFailures: Boolean,
-                              alwaysEscapeColumnNames: Boolean
+                              alwaysEscapeColumnNames: Boolean,
+                              optimizeExistQuery: Boolean
                             )
 
 object HiveDefaultConfig {
@@ -107,6 +109,7 @@ object HiveDefaultConfig {
   val HIVE_IGNORE_FAILURES_KEY = "ignore.failures"
   val HIVE_ALWAYS_ESCAPE_COLUMN_NAMES = "escape.column.names"
   val HIVE_DATABASE_KEY = "database"
+  val HIVE_OPTIMIZE_EXIST_QUERY_KEY = "optimize.exist.query"
 
   /**
     * Gets global Hive configuration and query templates for all supported formats.
@@ -122,6 +125,7 @@ object HiveDefaultConfig {
     val database = if (conf.hasPath(HIVE_DATABASE_KEY)) Some(conf.getString(HIVE_DATABASE_KEY)) else None
     val ignoreFailures = ConfigUtils.getOptionBoolean(conf, HIVE_IGNORE_FAILURES_KEY).getOrElse(false)
     val alwaysEscapeColumnNames = ConfigUtils.getOptionBoolean(conf, HIVE_ALWAYS_ESCAPE_COLUMN_NAMES).getOrElse(true)
+    val hiveOptimizeExistQuery = ConfigUtils.getOptionBoolean(conf, HIVE_OPTIMIZE_EXIST_QUERY_KEY).getOrElse(true)
 
     val jdbcConfig = if (conf.hasPath(HIVE_CONFIG_JDBC_PREFIX))
       Option(JdbcConfig.load(conf, parent))
@@ -136,8 +140,16 @@ object HiveDefaultConfig {
       (format, HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, prefix)))
     }).toMap
 
-    HiveDefaultConfig(hiveApi, database, templates, jdbcConfig, ignoreFailures, alwaysEscapeColumnNames)
+    HiveDefaultConfig(hiveApi, database, templates, jdbcConfig, ignoreFailures, alwaysEscapeColumnNames, hiveOptimizeExistQuery)
   }
 
-  def getNullConfig: HiveDefaultConfig = HiveDefaultConfig(HiveApi.Sql, None, Map(), None, ignoreFailures = false, alwaysEscapeColumnNames = true)
+  def getNullConfig: HiveDefaultConfig = HiveDefaultConfig(
+    HiveApi.Sql,
+    None,
+    Map(),
+    None,
+    ignoreFailures = false,
+    alwaysEscapeColumnNames = true,
+    optimizeExistQuery = true
+  )
 }

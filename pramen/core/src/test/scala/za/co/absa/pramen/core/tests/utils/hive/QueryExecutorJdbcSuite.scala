@@ -48,21 +48,21 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
   "QueryExecutorJdbc" should {
     "be constructed from JdbcConfig" in {
-      val qe = QueryExecutorJdbc.fromJdbcConfig(jdbcConfig)
+      val qe = QueryExecutorJdbc.fromJdbcConfig(jdbcConfig, optimizedExistQuery = false)
 
       qe.execute("UPDATE company SET id = 200 WHERE id = 100")
       qe.close()
     }
 
     "execute JDBC queries" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
 
       qe.execute("SELECT * FROM company")
       qe.close()
     }
 
     "execute CREATE TABLE queries" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
 
       qe.execute("CREATE TABLE my_table (id INT)")
 
@@ -74,7 +74,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "throw an exception on errors" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
 
       val ex = intercept[SQLSyntaxErrorException] {
         qe.execute("SELECT * FROM does_not_exist")
@@ -84,7 +84,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return true if the table is found" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
 
       val exist = qe.doesTableExist(None, "company")
 
@@ -94,7 +94,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return false if the table is not found" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
 
       val exist = qe.doesTableExist(Option(database), "does_not_exist")
 
@@ -104,7 +104,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return false if the table is not found in an optimized query" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig.copy(optimizedExistQuery = true)))
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
 
       val exist = qe.doesTableExist(Option(database), "does_not_exist")
 
@@ -114,7 +114,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return false if the table is not found in an optimized query without a database" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig.copy(optimizedExistQuery = true)))
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
 
       val exist = qe.doesTableExist(None, "does_not_exist")
 
@@ -131,7 +131,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
       whenMock(sel.getWorkingConnection(anyInt())).thenReturn((conn, "dummyurl"))
 
-      val qe = new QueryExecutorJdbc(sel)
+      val qe = new QueryExecutorJdbc(sel, true)
       qe.execute("SELECT * FROM company")
 
       var execution = 0
@@ -162,7 +162,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
         .thenReturn((conn, "dummyurl"))
         .thenThrow(new RuntimeException("fail the second time"))
 
-      val qe = new QueryExecutorJdbc(sel)
+      val qe = new QueryExecutorJdbc(sel, true)
 
       var execution = 0
       var actionExecuted = false
@@ -197,7 +197,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
         .thenThrow(new RuntimeException("fail the second time"))
         .thenReturn((conn, "dummyurl"))
 
-      val qe = new QueryExecutorJdbc(sel)
+      val qe = new QueryExecutorJdbc(sel, true)
 
       var execution = 0
       var actionExecuted = false

@@ -57,7 +57,7 @@ object HiveHelper {
         val queryExecutor = hiveConfig.jdbcConfig match {
           case Some(jdbcConfig) =>
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via JDBC.")
-            new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig))
+            new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), hiveConfig.optimizeExistQuery)
           case None             =>
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via Spark.")
             new QueryExecutorSpark()

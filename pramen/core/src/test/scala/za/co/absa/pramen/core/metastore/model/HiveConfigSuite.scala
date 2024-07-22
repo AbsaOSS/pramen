@@ -32,7 +32,8 @@ class HiveConfigSuite extends AnyWordSpec {
         Map("parquet" -> HiveQueryTemplates("create1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = true,
-        alwaysEscapeColumnNames = false)
+        alwaysEscapeColumnNames = false,
+        optimizeExistQuery = true)
 
       val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy", None))
 
@@ -41,6 +42,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.jdbcConfig.isEmpty)
       assert(hiveConfig.ignoreFailures)
       assert(!hiveConfig.alwaysEscapeColumnNames)
+      assert(hiveConfig.optimizeExistQuery)
       assert(hiveConfig.templates.createTableTemplate.contains("create1"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair1"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
@@ -67,6 +69,7 @@ class HiveConfigSuite extends AnyWordSpec {
           |   repair.table.template = "repair2"
           |   add.partition.template = "add_partition2"
           |   drop.table.template = "drop2"
+          |   optimize.exist.query = false
           |}
           |""".stripMargin)
 
@@ -76,7 +79,8 @@ class HiveConfigSuite extends AnyWordSpec {
         Map("parquet" -> HiveQueryTemplates("create1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = false,
-        alwaysEscapeColumnNames = false)
+        alwaysEscapeColumnNames = false,
+        optimizeExistQuery = true)
 
       val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy", None))
 
@@ -86,6 +90,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.jdbcConfig.map(_.driver).contains("driver2"))
       assert(hiveConfig.ignoreFailures)
       assert(hiveConfig.alwaysEscapeColumnNames)
+      assert(!hiveConfig.optimizeExistQuery)
       assert(hiveConfig.templates.createTableTemplate.contains("create2"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair2"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition2"))
@@ -101,7 +106,8 @@ class HiveConfigSuite extends AnyWordSpec {
         Map("parquet" -> HiveQueryTemplates("create", "repair", "add_partition1", "drop")),
         None,
         ignoreFailures = true,
-        alwaysEscapeColumnNames = true)
+        alwaysEscapeColumnNames = true,
+        optimizeExistQuery = true)
 
       val hiveConfig = HiveConfig.fromDefaults(defaultConfig, DataFormat.Parquet("dummy", None))
 
@@ -110,6 +116,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.jdbcConfig.isEmpty)
       assert(hiveConfig.ignoreFailures)
       assert(hiveConfig.alwaysEscapeColumnNames)
+      assert(hiveConfig.optimizeExistQuery)
       assert(hiveConfig.templates.createTableTemplate.contains("create"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))

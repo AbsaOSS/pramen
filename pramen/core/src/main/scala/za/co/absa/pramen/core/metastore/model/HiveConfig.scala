@@ -58,6 +58,7 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates._
   * @param jdbcConfig              Hive JDBC configuration to use instead of Spark metastore if needed
   * @param ignoreFailures          Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
   * @param alwaysEscapeColumnNames If true, column names are always escaped when executing SQL against Hive.
+  * @param optimizeExistQuery      If true, Pramen uses Hive-specific SQL dialect to check table existence to ensure data won't be touched.
   */
 case class HiveConfig(
                        hiveApi: HiveApi,
@@ -65,7 +66,8 @@ case class HiveConfig(
                        templates: HiveQueryTemplates,
                        jdbcConfig: Option[JdbcConfig],
                        ignoreFailures: Boolean,
-                       alwaysEscapeColumnNames: Boolean
+                       alwaysEscapeColumnNames: Boolean,
+                       optimizeExistQuery: Boolean
                      )
 
 object HiveConfig {
@@ -114,13 +116,17 @@ object HiveConfig {
     val dropTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$DROP_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.dropTableTemplate)
 
+    val hiveOptimizeExistQuery = ConfigUtils.getOptionBoolean(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$HIVE_OPTIMIZE_EXIST_QUERY_KEY")
+      .getOrElse(defaults.optimizeExistQuery)
+
     HiveConfig(
       hiveApi = hiveApi,
       database = database,
       templates = HiveQueryTemplates(createTableTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
       jdbcConfig = jdbcConfig,
       ignoreFailures,
-      alwaysEscapeColumnNames
+      alwaysEscapeColumnNames,
+      hiveOptimizeExistQuery
     )
   }
 
@@ -139,7 +145,7 @@ object HiveConfig {
       DEFAULT_DROP_TABLE_TEMPLATE
     ))
 
-    HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures, alwaysEscapeColumnNames = true)
+    HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures, alwaysEscapeColumnNames = true, optimizeExistQuery = true)
   }
 
   def getNullConfig: HiveConfig = HiveConfig(
@@ -148,5 +154,6 @@ object HiveConfig {
     HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
     None,
     ignoreFailures = false,
-    alwaysEscapeColumnNames = true)
+    alwaysEscapeColumnNames = true,
+    optimizeExistQuery = true)
 }
