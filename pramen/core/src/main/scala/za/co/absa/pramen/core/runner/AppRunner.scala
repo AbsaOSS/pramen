@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
 import za.co.absa.pramen.core.exceptions.ValidationException
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
-import za.co.absa.pramen.core.pipeline.{Job, OperationSplitter, PipelineDef}
+import za.co.absa.pramen.core.pipeline.{Job, OperationDef, OperationSplitter, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
@@ -182,10 +182,27 @@ object AppRunner {
                               appContext: AppContext,
                               spark: SparkSession): Try[Seq[Job]] = {
     handleFailure(Try {
+      val isHistoricalRun = appContext.appConfig.runtimeConfig.runDateTo.nonEmpty
       val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper)
 
-      pipelineDef.operations.flatMap(op => splitter.createJobs(op))
+      if (isHistoricalRun)
+        log.info("This is a historical run. Making all dependencies 'passive' for all jobs...")
+
+      pipelineDef.operations.flatMap { opOrig =>
+        val op = if (isHistoricalRun) {
+          preProcessOperationForHistoricalRun(opOrig)
+        } else {
+          opOrig
+        }
+
+        splitter.createJobs(op)
+      }
     }, state, "splitting of the pipeline into jobs")
+  }
+
+  private[core] def preProcessOperationForHistoricalRun(ops: OperationDef): OperationDef = {
+    val newDep = ops.dependencies.map(dep => dep.copy(isPassive = true))
+    ops.copy(dependencies = newDep)
   }
 
   private[core] def filterJobs(state: PipelineState,

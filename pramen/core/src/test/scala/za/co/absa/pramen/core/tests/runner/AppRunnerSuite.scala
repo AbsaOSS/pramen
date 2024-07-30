@@ -23,6 +23,7 @@ import za.co.absa.pramen.core._
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.app.config.HookConfig
 import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.metastore.model.MetastoreDependencyFactory
 import za.co.absa.pramen.core.mocks.RunnableSpy
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
@@ -52,6 +53,25 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
       val state = AppRunner.createPipelineState(conf)
 
       assert(state != null)
+    }
+  }
+
+  "preProcessOperationForHistoricalRun" should {
+    "make all dependencies passive" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |tables = [ "table1", "table2", "table3",]
+          |date.from = "2020-01-01"
+          |""".stripMargin
+      )
+      val dep1 = MetastoreDependencyFactory.fromConfig(conf, "")
+      val dep2 = dep1.copy(isOptional = true)
+      val dep3 = dep1.copy(isPassive = true)
+      val op = OperationDefFactory.getDummyOperationDef(dependencies = Seq(dep1, dep2, dep3))
+
+      val newOp = AppRunner.preProcessOperationForHistoricalRun(op)
+
+      assert(newOp.dependencies.forall(_.isPassive))
     }
   }
 
