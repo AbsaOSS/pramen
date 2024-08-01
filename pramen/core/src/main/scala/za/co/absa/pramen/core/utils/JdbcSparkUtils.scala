@@ -32,6 +32,7 @@ object JdbcSparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   val MAXIMUM_VARCHAR_LENGTH = 8192
+  val MAXIMUM_UUID_LENGTH = 50
 
   /**
     * Adds metadata to Spark fields based on JDBC metadata.
@@ -61,7 +62,10 @@ object JdbcSparkUtils {
           field.dataType match {
             case StringType if fieldToMetadataMap.contains(fieldNameLowerCase) =>
               val jdbcMetadata = fieldToMetadataMap(fieldNameLowerCase)
-              val maxLength = Math.max(jdbcMetadata.displaySize, jdbcMetadata.precision)
+              val maxLength = jdbcMetadata.sqlTypeName.toLowerCase() match {
+                case "uuid" => MAXIMUM_UUID_LENGTH
+                case _      => Math.max(jdbcMetadata.displaySize, jdbcMetadata.precision)
+              }
               if (maxLength > 0 && maxLength < MAXIMUM_VARCHAR_LENGTH) {
                 val metadata = new MetadataBuilder
                 metadata.withMetadata(field.metadata)
@@ -180,10 +184,12 @@ object JdbcSparkUtils {
                       (action: (Connection, ResultSetMetaData) => Unit): Unit = {
     val (url, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
 
+    connection.setAutoCommit(false)
+
     log.info(s"Successfully connected to JDBC URL: $url")
 
     try {
-      withResultSet(connection, nativeQuery) { rs =>
+      withMetadataResultSet(connection, nativeQuery) { rs =>
         action(connection, rs.getMetaData)
       }
     } finally {
@@ -195,23 +201,16 @@ object JdbcSparkUtils {
     * Executes a query against a JDBC connection and allows running an action on the result set.
     * Handles the closure of created objects.
     *
+    * This method is opinionated on the cursor type and is used exclusively for metadata extraction.
+    *
     * @param connection  a JDBC connection.
     * @param query       a SQL query in the dialect native to the database.
     * @param action      the action to execute on the result set.
     */
-  def withResultSet(connection: Connection,
-                    query: String)
-                   (action: ResultSet => Unit): Unit = {
-    val statement = try {
-      connection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY)
-    } catch {
-      case _: java.sql.SQLException =>
-        // Fallback with more permissible result type.
-        // JDBC sources should automatically downgrade result type, but Denodo driver doesn't do that.
-        connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
-      case NonFatal(ex) =>
-        throw ex
-    }
+  private[core] def withMetadataResultSet(connection: Connection,
+                                          query: String)
+                                         (action: ResultSet => Unit): Unit = {
+    val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
     try {
       val resultSet = statement.executeQuery(query)
