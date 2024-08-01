@@ -37,6 +37,7 @@ object TransferTableFactory {
                             columns: Seq[String] = Nil,
                             readOptions: Map[String, String] = Map.empty[String, String],
                             writeOptions: Map[String, String] = Map.empty[String, String],
+                            sparkConfig: Map[String, String] = Map.empty[String, String],
                             sourceOverrideConf: Option[Config] = None,
                             sinkOverrideConf: Option[Config] = None): TransferTable = {
     TransferTable(query,
@@ -53,6 +54,7 @@ object TransferTableFactory {
       columns,
       readOptions,
       writeOptions,
+      sparkConfig,
       sourceOverrideConf,
       sinkOverrideConf
     )

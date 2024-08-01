@@ -328,6 +328,13 @@ pramen.metastore {
       # Alternatively, you can set the time window in days that from the current system
       # date that the table could be written to. This is helpful is the table is archived.
       #information.date.max.days.behind = 180
+
+      # Optional Spark configuration that will be used when writing to the table
+      # Useful to use Spark Committers (partitioned, directory, magic) only for some of tables. 
+      spark.config {
+        spark.sql.sources.commitProtocolClass = "org.apache.spark.internal.io.cloud.PathOutputCommitProtocol"
+        spark.sql.parquet.output.committer.class = "org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter"
+      }
     }
   ]
 }

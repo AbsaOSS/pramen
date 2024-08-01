@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, MetaTableDef}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
+import za.co.absa.pramen.core.pipeline.OperationDef.SPARK_CONFIG_PREFIX
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
@@ -44,6 +45,7 @@ import scala.util.{Failure, Success, Try}
   * @param trackDaysExplicitlySet if true, trackDays was set explicitly. If false, trackDays is taken from workflow defaults.
   * @param readOptions            The read options for the table.
   * @param writeOptions           The write options for the table.
+  * @param sparkConfig            Special Spark configuration to use when writing to the table.
   */
 case class MetaTable(
                       name: String,
@@ -60,7 +62,8 @@ case class MetaTable(
                       trackDays: Int,
                       trackDaysExplicitlySet: Boolean,
                       readOptions: Map[String, String],
-                      writeOptions: Map[String, String]
+                      writeOptions: Map[String, String],
+                      sparkConfig: Map[String, String]
                     )
 
 object MetaTable {
@@ -139,6 +142,7 @@ object MetaTable {
 
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
+    val sparkConfig = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
 
     MetaTable(name,
       description,
@@ -154,7 +158,8 @@ object MetaTable {
       trackDays,
       trackDaysExplicitlySet,
       readOptions,
-      writeOptions)
+      writeOptions,
+      sparkConfig)
   }
 
   def getMetaTableDef(table: MetaTable): MetaTableDef = {

@@ -36,7 +36,8 @@ object MetaTableFactory {
                         trackDays: Int = 0,
                         trackDaysExplicitlySet: Boolean = false,
                         readOptions: Map[String, String] = Map.empty[String, String],
-                        writeOptions: Map[String, String] = Map.empty[String, String]
+                        writeOptions: Map[String, String] = Map.empty[String, String],
+                        sparkConfig: Map[String, String] = Map.empty[String, String]
                        ): MetaTable = {
     MetaTable(name,
       description,
@@ -52,6 +53,7 @@ object MetaTableFactory {
       trackDays,
       trackDaysExplicitlySet,
       readOptions,
-      writeOptions)
+      writeOptions,
+      sparkConfig)
   }
 }

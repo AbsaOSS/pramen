@@ -216,6 +216,9 @@ class TransferTableSuite extends AnyWordSpec {
         |    read.option {
         |      mergeSchema = "true"
         |    }
+        |    spark.config = {
+        |      key1 = value1
+        |    }
         |    track.days = 10
         |    information.date.start = "2022-01-19"
         |    source {
@@ -236,6 +239,7 @@ class TransferTableSuite extends AnyWordSpec {
 
         val sourceTable = tables.head.getSourceTable
 
+        assert(tables.head.sparkConfig("key1") == "value1")
         assert(sourceTable.metaTableName == "table1->mysink")
         assert(sourceTable.query.isInstanceOf[Query.Table])
         assert(sourceTable.query.asInstanceOf[Query.Table].dbTable == "table1")
