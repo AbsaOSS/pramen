@@ -143,9 +143,9 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
     }
   }
 
-  "withResultSet" should {
+  "withMetadataResultSet" should {
     "provide the resultset object for the query" in {
-      JdbcSparkUtils.withResultSet(getConnection, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { rs =>
+      JdbcSparkUtils.withMetadataResultSet(getConnection, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { rs =>
         assert(rs.getMetaData.getColumnName(2) == "NAME")
       }
     }
