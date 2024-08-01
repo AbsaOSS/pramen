@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.model.QueryBuilder
-import za.co.absa.pramen.core.pipeline.OperationDef.WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY
+import za.co.absa.pramen.core.pipeline.OperationDef.{SPARK_CONFIG_PREFIX, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY}
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
@@ -44,6 +44,7 @@ case class TransferTable(
                           columns: Seq[String],
                           readOptions: Map[String, String],
                           writeOptions: Map[String, String],
+                          sparkConfig: Map[String, String],
                           sourceOverrideConf: Option[Config],
                           sinkOverrideConf: Option[Config]
                         ) {
@@ -56,7 +57,7 @@ case class TransferTable(
   }
 
   def getMetaTable: MetaTable = {
-    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", HiveConfig.getNullConfig, None, None, hivePreferAddPartition = true, None, infoDateStart, trackDays, trackDaysExplicitlySet = trackDaysExplicitlySet, readOptions, writeOptions)
+    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", HiveConfig.getNullConfig, None, None, hivePreferAddPartition = true, None, infoDateStart, trackDays, trackDaysExplicitlySet = trackDaysExplicitlySet, readOptions, writeOptions, sparkConfig)
   }
 }
 
@@ -86,6 +87,7 @@ object TransferTable {
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
     val readOptions = ConfigUtils.getExtraOptions(conf, "read.option")
     val writeOptions = ConfigUtils.getExtraOptions(conf, "output")
+    val sparkConfig = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
 
     val outputMetaTableName = jobMetaTableOpt.getOrElse(s"$query -> $sinkName")
 
@@ -107,7 +109,7 @@ object TransferTable {
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val jobMetaTable = getOutputTableName(jobMetaTableOpt, query, sinkName)
 
-    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, trackDaysExplicitlySet, maximumExecutionTimeSeconds, transformations, filters, columns, readOptions, writeOptions, sourceOverrideConf, sinkOverrideConf)
+    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, trackDaysExplicitlySet, maximumExecutionTimeSeconds, transformations, filters, columns, readOptions, writeOptions, sparkConfig, sourceOverrideConf, sinkOverrideConf)
   }
 
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, arrayPath: String, sinkName: String): Seq[TransferTable] = {

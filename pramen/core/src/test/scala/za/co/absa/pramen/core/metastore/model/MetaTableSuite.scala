@@ -150,6 +150,9 @@ class MetaTableSuite extends AnyWordSpec {
           |format = delta
           |path = /a/b/c
           |records.per.partition = 100
+          |spark.config = {
+          |  key1 = value1
+          |}
           |""".stripMargin)
 
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
@@ -169,6 +172,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.infoDateColumn == "INFO_DATE")
       assert(metaTable.infoDateFormat == "dd-MM-yyyy")
       assert(metaTable.infoDateStart.toString == "2020-01-31")
+      assert(metaTable.sparkConfig("key1") == "value1")
     }
 
     "load a metatable definition with hive table defined" in {
