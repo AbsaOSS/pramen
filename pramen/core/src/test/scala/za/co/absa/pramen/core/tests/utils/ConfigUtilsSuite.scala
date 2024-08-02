@@ -329,6 +329,17 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
     }
   }
 
+  "renderRedactedKeyValue()" should {
+    "redact keys containing the list of tokens" in {
+      val tokens = Set("secret", "password", "session.token")
+
+      assert(ConfigUtils.renderRedactedKeyValue("mytest.password", "pwd", tokens) == "mytest.password = [redacted]")
+      assert(ConfigUtils.renderRedactedKeyValue("mytest.secret", "pwd", tokens) == "mytest.secret = [redacted]")
+      assert(ConfigUtils.renderRedactedKeyValue("mytest.session.token", "pwd", tokens) == "mytest.session.token = [redacted]")
+      assert(ConfigUtils.renderRedactedKeyValue("mytest.session.name", "name", tokens) == "mytest.session.name = \"name\"")
+    }
+  }
+
   "convertToMap()" should {
     "convert a simple config" in {
       val conf = ConfigFactory.parseString(

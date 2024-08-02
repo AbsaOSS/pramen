@@ -59,7 +59,7 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
 
     jdbcConfig.database.foreach(d  => log.info(s"Database:           $d"))
     jdbcConfig.user.foreach(user   => log.info(s"User:               $user"))
-    jdbcConfig.password.foreach(_  => log.info(s"Password:           [redacted]"))
+    jdbcConfig.password.filter(_.nonEmpty).foreach(_  => log.info(s"Password:           [redacted]"))
     jdbcConfig.fetchSize.foreach(n => log.info(s"Fetch size:         $n"))
 
     log.info(s"Auto commit:        ${jdbcConfig.autoCommit}")

@@ -27,7 +27,7 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
   * It works like this. The pipeline can define a global Hive configuration and query templates like this:
   * {{{
   * pramen {
-  *   spark.conf.option = {
+  *   spark.conf = {
   *     hive.metastore.uris = "thrift://host1:9083,thrift://host2:9083"
   *     spark.sql.warehouse.dir = "/hive/warehouse"
   *   }

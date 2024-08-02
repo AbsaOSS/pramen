@@ -50,11 +50,13 @@ object PipelineSparkSessionBuilder {
     val isHiveEnabled = conf.getBoolean(ENABLE_HIVE_SUPPORT)
     log.info(s"Hive support enabled = $isHiveEnabled")
 
-    val extraOptions = if (conf.hasPath(EXTRA_OPTIONS_PREFIX)) {
+    val extraOptionsLegacy = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
+    val extraOptions = extraOptionsLegacy ++ ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX_V2).filterKeys(!_.startsWith("option."))
+
+    if (extraOptionsLegacy.nonEmpty) {
       log.warn(s"Using legacy '$EXTRA_OPTIONS_PREFIX' option. Please, use the new option: '$EXTRA_OPTIONS_PREFIX_V2'")
-      ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
-    } else
-      ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX_V2)
+      ConfigUtils.renderExtraOptions(extraOptionsLegacy, KEYS_TO_REDACT)(s => log.info(s))
+    }
 
     log.info("Extra Spark Config:")
     ConfigUtils.renderExtraOptions(extraOptions, KEYS_TO_REDACT)(s => log.info(s))
@@ -96,7 +98,7 @@ object PipelineSparkSessionBuilder {
       val hadoopOptions = ConfigUtils.getExtraOptions(conf, HADOOP_OPTION_PREFIX) ++ ConfigUtils.getExtraOptions(conf, HADOOP_OPTION_PREFIX_V2)
 
       hadoopOptions.foreach { case (key, value) =>
-        val redactedValue = ConfigUtils.getRedactedValue(key, value, redactTokens).toString
+        val redactedValue = ConfigUtils.renderRedactedKeyValue(key, value, redactTokens).toString
         log.info(s"Hadoop config: $key = $redactedValue")
 
         sc.hadoopConfiguration.set(key, value)

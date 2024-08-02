@@ -249,15 +249,22 @@ object ConfigUtils {
                          redactedWords: Set[String] = Set.empty[String])
                         (action: String => Unit): Unit = {
     if (extraOptions.nonEmpty) {
-      val p = "\""
+
       extraOptions.foreach { case (key, value) =>
-        val lowerCaseKey = key.toLowerCase()
-        if (redactedWords.exists(word => lowerCaseKey.contains(word))) {
-          action(s"$key = [redacted]")
-        } else {
-          action(s"$key = $p$value$p")
-        }
+        val v = renderRedactedKeyValue(key, value, redactedWords)
+
+        action(v)
       }
+    }
+  }
+
+  def renderRedactedKeyValue(key: String, value: String, redactedWords: Set[String]): String = {
+    val p = "\""
+    val lowerCaseKey = key.toLowerCase()
+    if (redactedWords.exists(word => lowerCaseKey.contains(word))) {
+      s"$key = [redacted]"
+    } else {
+      s"$key = $p$value$p"
     }
   }
 
