@@ -51,11 +51,13 @@ object PipelineSparkSessionBuilder {
     log.info(s"Hive support enabled = $isHiveEnabled")
 
     val extraOptionsLegacy = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
-    val extraOptions = extraOptionsLegacy ++ ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX_V2).filterKeys(!_.startsWith("option."))
+    val extraOptionsNew = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX_V2)
 
-    if (extraOptionsLegacy.nonEmpty) {
+    val extraOptions = if (extraOptionsLegacy.nonEmpty) {
       log.warn(s"Using legacy '$EXTRA_OPTIONS_PREFIX' option. Please, use the new option: '$EXTRA_OPTIONS_PREFIX_V2'")
-      ConfigUtils.renderExtraOptions(extraOptionsLegacy, KEYS_TO_REDACT)(s => log.info(s))
+      extraOptionsLegacy
+    } else {
+      extraOptionsNew
     }
 
     log.info("Extra Spark Config:")
