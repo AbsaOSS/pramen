@@ -471,6 +471,37 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     }
   }
 
+  "withSparkConfig()" should {
+    "set the config at runtime, and restore the original config afterwards" in {
+      val sparkConfig = Map(
+        "spark.sql.sources.commitProtocolClass" -> "org.apache.spark.internal.io.cloud.PathOutputCommitProtocol",
+        "spark.sql.parquet.output.committer.class" -> "org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter",
+        "spark.pramen.test" -> "test"
+      )
+
+      var inner1: String = null
+      var inner2: String = null
+      var inner3: String = null
+
+      MetastoreImpl.withSparkConfig(sparkConfig) {
+        inner1 = spark.conf.get("spark.sql.sources.commitProtocolClass")
+        inner2 = spark.conf.get("spark.sql.parquet.output.committer.class")
+        inner3 = spark.conf.get("spark.pramen.test")
+      }
+
+      val outer1 = spark.conf.get("spark.sql.sources.commitProtocolClass")
+      val outer2 = spark.conf.get("spark.sql.parquet.output.committer.class")
+      val outer3 = spark.conf.getOption("spark.pramen.test")
+
+      assert(inner1 == "org.apache.spark.internal.io.cloud.PathOutputCommitProtocol")
+      assert(inner2 == "org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter")
+      assert(inner3 == "test")
+      assert(outer1 != "org.apache.spark.internal.io.cloud.PathOutputCommitProtocol")
+      assert(outer2 != "org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter")
+      assert(outer3.isEmpty)
+    }
+  }
+
   def getDf: DataFrame = {
     import spark.implicits._
 

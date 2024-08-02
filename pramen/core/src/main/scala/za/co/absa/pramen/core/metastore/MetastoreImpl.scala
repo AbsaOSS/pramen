@@ -38,6 +38,8 @@ class MetastoreImpl(appConfig: Config,
                     bookkeeper: Bookkeeper,
                     metadata: MetadataManager,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
+  import MetastoreImpl._
+
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
@@ -92,7 +94,13 @@ class MetastoreImpl(appConfig: Config,
     val mt = getTableDef(tableName)
     val isTransient = mt.format.isTransient
     val start = Instant.now.getEpochSecond
-    val stats = MetastorePersistence.fromMetaTable(mt, appConfig).saveTable(infoDate, df, inputRecordCount)
+
+    var stats = MetaTableStats(0, None)
+
+    withSparkConfig(mt.sparkConfig) {
+      stats = MetastorePersistence.fromMetaTable(mt, appConfig).saveTable(infoDate, df, inputRecordCount)
+    }
+
     val finish = Instant.now.getEpochSecond
 
     if (!skipBookKeepingUpdates) {
@@ -236,6 +244,8 @@ class MetastoreImpl(appConfig: Config,
 }
 
 object MetastoreImpl {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val METASTORE_KEY = "pramen.metastore.tables"
   val DEFAULT_RECORDS_PER_PARTITION = 500000
 
@@ -248,6 +258,35 @@ object MetastoreImpl {
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
     new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, isUndercover)
+  }
+
+  private[core] def withSparkConfig(sparkConfig: Map[String, String])
+                                   (action: => Unit)
+                                   (implicit spark: SparkSession): Unit = {
+    val savedConfig = sparkConfig.map {
+      case (k, _) => (k, spark.conf.getOption(k))
+    }
+
+    sparkConfig.foreach {
+      case (k, v) =>
+        log.info(s"Setting '$k' = '$v'...")
+        spark.conf.set(k, v)
+    }
+
+    try {
+      action
+    } finally {
+      savedConfig.foreach {
+        case (k, opt) => opt match {
+          case Some(v) =>
+            log.info(s"Restoring '$k' = '$v'...")
+            spark.conf.set(k, v)
+          case None =>
+            log.info(s"unsetting '$k'...")
+            spark.conf.unset(k)
+        }
+      }
+    }
   }
 }
 

@@ -31,8 +31,10 @@ object Keys {
 
   val HADOOP_REDACT_TOKENS = "hadoop.redacted.tokens"
   val HADOOP_OPTION_PREFIX = "hadoop.option"
+  val HADOOP_OPTION_PREFIX_V2 = "hadoop.conf"
 
   val EXTRA_OPTIONS_PREFIX = "pramen.spark.conf.option"
+  val EXTRA_OPTIONS_PREFIX_V2 = "pramen.spark.conf"
 
   val ENABLE_HIVE_SUPPORT = "pramen.enable.hive"
 

@@ -21,7 +21,6 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, MetaTableDef}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
-import za.co.absa.pramen.core.pipeline.OperationDef.SPARK_CONFIG_PREFIX
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
@@ -79,6 +78,7 @@ object MetaTable {
   val WRITE_OPTION_KEY = "write.option"
   val TABLE_HIVE_CONFIG_PREFIX = "hive"
   val DEFAULT_HIVE_CONFIG_PREFIX = "pramen.hive"
+  val SPARK_CONFIG_PREFIX = "spark.conf"
 
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = infoDateConfig.columnName

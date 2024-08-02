@@ -34,7 +34,7 @@ object PipelineSparkSessionBuilder {
     *
     * Extra options can be passed as
     * {{{
-    *   pramen.spark.conf.option {
+    *   pramen.spark.conf {
     *     spark.config.option = "value"
     *   }
     * }}}
@@ -50,7 +50,12 @@ object PipelineSparkSessionBuilder {
     val isHiveEnabled = conf.getBoolean(ENABLE_HIVE_SUPPORT)
     log.info(s"Hive support enabled = $isHiveEnabled")
 
-    val extraOptions = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
+    val extraOptions = if (conf.hasPath(EXTRA_OPTIONS_PREFIX)) {
+      log.warn(s"Using legacy '$EXTRA_OPTIONS_PREFIX' option. Please, use the new option: '$EXTRA_OPTIONS_PREFIX_V2'")
+      ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
+    } else
+      ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX_V2)
+
     log.info("Extra Spark Config:")
     ConfigUtils.renderExtraOptions(extraOptions, KEYS_TO_REDACT)(s => log.info(s))
 
@@ -83,9 +88,12 @@ object PipelineSparkSessionBuilder {
   def applyHadoopConfig(spark: SparkSession, conf: Config): SparkSession = {
     val redactTokens = ConfigUtils.getOptListStrings(conf, HADOOP_REDACT_TOKENS).toSet
 
-    if (conf.hasPath(HADOOP_OPTION_PREFIX)) {
+    if (conf.hasPath(HADOOP_OPTION_PREFIX) || conf.hasPath(HADOOP_OPTION_PREFIX_V2)) {
+      if (conf.hasPath(HADOOP_OPTION_PREFIX)) {
+        log.warn(s"Using legacy '$HADOOP_OPTION_PREFIX' option. Please, use the new option: '$HADOOP_OPTION_PREFIX_V2'")
+      }
       val sc = spark.sparkContext
-      val hadoopOptions = ConfigUtils.getExtraOptions(conf, HADOOP_OPTION_PREFIX)
+      val hadoopOptions = ConfigUtils.getExtraOptions(conf, HADOOP_OPTION_PREFIX) ++ ConfigUtils.getExtraOptions(conf, HADOOP_OPTION_PREFIX_V2)
 
       hadoopOptions.foreach { case (key, value) =>
         val redactedValue = ConfigUtils.getRedactedValue(key, value, redactTokens).toString
