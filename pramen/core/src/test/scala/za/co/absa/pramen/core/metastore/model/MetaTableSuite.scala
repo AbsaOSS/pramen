@@ -150,7 +150,7 @@ class MetaTableSuite extends AnyWordSpec {
           |format = delta
           |path = /a/b/c
           |records.per.partition = 100
-          |spark.config = {
+          |spark.conf = {
           |  key1 = value1
           |}
           |""".stripMargin)
