@@ -125,7 +125,7 @@ object AppRunner {
   }
 
   private[core] def getSparkSession(implicit conf: Config,
-                                         state: PipelineState): Try[SparkSession] = {
+                                    state: PipelineState): Try[SparkSession] = {
     handleFailure(Try {
       PipelineSparkSessionBuilder.buildSparkSession(conf)
     }, state, "Spark Session creation")

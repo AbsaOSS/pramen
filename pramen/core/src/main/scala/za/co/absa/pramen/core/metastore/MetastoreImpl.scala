@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -269,7 +270,8 @@ object MetastoreImpl {
 
     sparkConfig.foreach {
       case (k, v) =>
-        log.info(s"Setting '$k' = '$v'...")
+        val redactedValue = ConfigUtils.renderRedactedKeyValue(k, v, Keys.KEYS_TO_REDACT)
+        log.info(s"Setting $redactedValue...")
         spark.conf.set(k, v)
     }
 
@@ -279,10 +281,11 @@ object MetastoreImpl {
       savedConfig.foreach {
         case (k, opt) => opt match {
           case Some(v) =>
-            log.info(s"Restoring '$k' = '$v'...")
+            val redactedValue = ConfigUtils.renderRedactedKeyValue(k, v, Keys.KEYS_TO_REDACT)
+            log.info(s"Restoring $redactedValue...")
             spark.conf.set(k, v)
           case None =>
-            log.info(s"unsetting '$k'...")
+            log.info(s"Unsetting '$k'...")
             spark.conf.unset(k)
         }
       }

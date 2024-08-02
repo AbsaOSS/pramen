@@ -44,7 +44,7 @@ object RunnerCommons {
     * Such options are:
     * - pramen.exit.code.enabled
     * - JVM security options: javax.*, java.* (see JavaXConfig.setJavaXProperties)
-    * - Spark Session config: pramen.spark.conf.option.*
+    * - Spark Session config: pramen.spark.conf.*
     *   This is because restarting Spark is not supported by most of runtimes.
     *
     * On the other hand, Hadoop options (hadoop.option.*), will be applied for each workflow.

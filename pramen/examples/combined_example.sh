@@ -67,7 +67,7 @@ mail {
 }
 
 # This is to run properly in local mode
-spark.conf.option {
+spark.conf {
     spark.ui.enabled = "false"
     spark.driver.bindAddress = "127.0.0.1"
     spark.driver.host = "127.0.0.1"
