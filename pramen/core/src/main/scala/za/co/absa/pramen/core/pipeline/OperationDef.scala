@@ -69,6 +69,7 @@ object OperationDef {
   val FILTERS_KEY = "filters"
   val NOTIFICATION_TARGETS_KEY = "notification.targets"
   val SPARK_CONFIG_PREFIX = "spark.config"
+  val SPARK_CONFIG_PREFIX_V2 = "spark.conf"
   val EXTRA_OPTIONS_PREFIX = "option"
 
   val DEFAULT_CONSUME_THREADS = 1
@@ -98,8 +99,12 @@ object OperationDef {
     val schemaTransformations = TransformExpression.fromConfig(conf, SCHEMA_TRANSFORMATIONS_KEY, parent)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
     val notificationTargets = ConfigUtils.getOptListStrings(conf, NOTIFICATION_TARGETS_KEY)
-    val sparkConfigOptions = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
+    val sparkConfigOptions = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX) ++ ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX_V2)
     val extraOptions = ConfigUtils.getExtraOptions(conf, EXTRA_OPTIONS_PREFIX)
+
+    if (conf.hasPath(SPARK_CONFIG_PREFIX)) {
+      log.warn(s"Using legacy '$SPARK_CONFIG_PREFIX' option. Please, use the new option: '$SPARK_CONFIG_PREFIX_V2'")
+    }
 
     val outputInfoDateExpression = outputInfoDateExpressionOpt match {
       case Some(expr) => expr

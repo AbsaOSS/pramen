@@ -331,7 +331,7 @@ pramen.metastore {
 
       # Optional Spark configuration that will be used when writing to the table
       # Useful to use Spark Committers (partitioned, directory, magic) only for some of tables. 
-      spark.config {
+      spark.conf {
         spark.sql.sources.commitProtocolClass = "org.apache.spark.internal.io.cloud.PathOutputCommitProtocol"
         spark.sql.parquet.output.committer.class = "org.apache.spark.internal.io.cloud.BindingParquetOutputCommitter"
       }
@@ -2115,7 +2115,7 @@ and 'python.class' to refer to the transformer.
   
   # Arbitrary Spark configuration
   # You can use any configuration option from the official documentation: https://spark.apache.org/docs/latest/configuration.html
-  spark.config {
+  spark.conf {
     spark.executor.instances = 4
     spark.executor.cores = 1
     spark.executor.memory = "4g"
@@ -2823,9 +2823,14 @@ Hive configuration and query templates can be defined globally:
 ```hocon
 pramen {
   # Hive configuration for the Spark metastore
-  spark.conf.option = {
+  spark.conf = {
     hive.metastore.uris = "thrift://host1:9083,thrift://host2:9083"
     spark.sql.warehouse.dir = "/hive/warehouse"
+  }
+  
+  hadoop.conf = {
+    # Any Hadoop custom options go here
+    fs.s3a.path.style.access = true
   }
   
   hive {

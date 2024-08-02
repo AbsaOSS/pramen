@@ -194,6 +194,9 @@ class MetaTableSuite extends AnyWordSpec {
           |  x = test2
           |  y = 101
           |}
+          |spark.conf = {
+          |  key1 = value1
+          |}
           |""".stripMargin)
 
       val defaultHiveConfig = HiveDefaultConfig(HiveApi.Sql,
@@ -229,6 +232,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.readOptions("some.option.b") == "12")
       assert(metaTable.writeOptions("x") == "test2")
       assert(metaTable.writeOptions("y") == "101")
+      assert(metaTable.sparkConfig("key1") == "value1")
     }
 
     "load a metatable definition with hive overrides" in {

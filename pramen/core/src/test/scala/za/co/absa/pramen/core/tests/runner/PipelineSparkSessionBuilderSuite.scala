@@ -74,6 +74,44 @@ class PipelineSparkSessionBuilderSuite extends AnyWordSpec {
       assert(key1Set)
       assert(key2Set)
     }
+
+    "apply the given config to the spark session version 2" in {
+      val conf = ConfigFactory.parseString(
+        s"""$HADOOP_REDACT_TOKENS = [ secret ]
+           |$HADOOP_OPTION_PREFIX_V2 {
+           |  fs.s3a.aws.credentials.provider = "com.amazonaws.auth.DefaultAWSCredentialsProviderChain"
+           |  fs.s3a.secret.key = "acs123"
+           |}
+           |""".stripMargin
+      )
+
+      val sparkMock = mock(classOf[SparkSession])
+      val scMock = mock(classOf[SparkContext])
+      val hcMock = mock(classOf[Configuration])
+
+      whenMock(sparkMock.sparkContext).thenReturn(scMock)
+      whenMock(scMock.hadoopConfiguration).thenReturn(hcMock)
+
+      var key1Set = false
+      var key2Set = false
+
+      doAnswer(new Answer[Unit] {
+        override def answer(invocationOnMock: InvocationOnMock): Unit = {
+          key1Set = true
+        }
+      }).when(hcMock).set("fs.s3a.aws.credentials.provider", "com.amazonaws.auth.DefaultAWSCredentialsProviderChain")
+
+      doAnswer(new Answer[Unit] {
+        override def answer(invocationOnMock: InvocationOnMock): Unit = {
+          key2Set = true
+        }
+      }).when(hcMock).set("fs.s3a.secret.key", "acs123")
+
+      PipelineSparkSessionBuilder.applyHadoopConfig(sparkMock, conf)
+
+      assert(key1Set)
+      assert(key2Set)
+    }
   }
 
   "getSparkAppName" should {
