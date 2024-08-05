@@ -20,11 +20,12 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.utils.Emoji.SUCCESS
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
-import za.co.absa.pramen.core.utils.{FsUtils, SparkUtils, StringUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils, SparkUtils, StringUtils}
 
 import java.sql.Date
 import java.time.LocalDate
@@ -117,6 +118,11 @@ class MetastorePersistenceParquet(path: String,
 
     log.info(s"Partition column exists, reading from $partitionPath.")
 
+    if (readOptions.nonEmpty) {
+      log.info("Custom read options:")
+      ConfigUtils.renderExtraOptions(readOptions, Keys.KEYS_TO_REDACT)(log.info)
+    }
+
     val dfIn = spark.read
       .format("parquet")
       .options(readOptions)
@@ -132,6 +138,11 @@ class MetastorePersistenceParquet(path: String,
   }
 
   def loadTableFromRootFolder(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
+    if (readOptions.nonEmpty) {
+      log.info("Custom read options:")
+      ConfigUtils.renderExtraOptions(readOptions, Keys.KEYS_TO_REDACT)(log.info)
+    }
+
     spark.read
       .format("parquet")
       .options(readOptions)
@@ -160,6 +171,11 @@ class MetastorePersistenceParquet(path: String,
   private[core] def writeAndCleanOnFailure(df: DataFrame,
                                            outputDirStr: String,
                                            fsUtils: FsUtils): Unit = {
+    if (writeOptions.nonEmpty) {
+      log.info("Custom write options:")
+      ConfigUtils.renderExtraOptions(writeOptions, Keys.KEYS_TO_REDACT)(log.info)
+    }
+
     try {
       df.write
         .mode(SaveMode.Overwrite)
