@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.mocks
 
+import org.apache.spark.sql.SaveMode
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 
@@ -35,6 +36,7 @@ object MetaTableFactory {
                         infoDateStart: LocalDate = LocalDate.of(2020, 1, 31),
                         trackDays: Int = 0,
                         trackDaysExplicitlySet: Boolean = false,
+                        saveMode: Option[SaveMode] = None,
                         readOptions: Map[String, String] = Map.empty[String, String],
                         writeOptions: Map[String, String] = Map.empty[String, String],
                         sparkConfig: Map[String, String] = Map.empty[String, String]
@@ -52,6 +54,7 @@ object MetaTableFactory {
       infoDateStart,
       trackDays,
       trackDaysExplicitlySet,
+      saveMode,
       readOptions,
       writeOptions,
       sparkConfig)

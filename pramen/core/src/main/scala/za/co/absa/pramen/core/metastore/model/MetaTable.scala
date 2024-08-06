@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
+import org.apache.spark.sql.SaveMode
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, MetaTableDef}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
@@ -60,6 +61,7 @@ case class MetaTable(
                       infoDateStart: LocalDate,
                       trackDays: Int,
                       trackDaysExplicitlySet: Boolean,
+                      saveMode: Option[SaveMode],
                       readOptions: Map[String, String],
                       writeOptions: Map[String, String],
                       sparkConfig: Map[String, String]
@@ -74,6 +76,7 @@ object MetaTable {
   val HIVE_PATH_KEY = "hive.path"
   val HIVE_PREFER_ADD_PARTITION_KEY = "hive.prefer.add.partition"
   val TRACK_DAYS_KEY = "track.days"
+  val SAVE_MODE_OPTION_KEY = "save.mode"
   val READ_OPTION_KEY = "read.option"
   val WRITE_OPTION_KEY = "write.option"
   val TABLE_HIVE_CONFIG_PREFIX = "hive"
@@ -140,6 +143,7 @@ object MetaTable {
       HiveConfig.fromConfigWithDefaults(ConfigUtils.getOptionConfig(conf, TABLE_HIVE_CONFIG_PREFIX), defaultHiveConfig, format)
     }
 
+    val saveMode = ConfigUtils.getOptionString(conf, SAVE_MODE_OPTION_KEY).map(getSaveMode(_, name))
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
     val sparkConfig = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
@@ -157,6 +161,7 @@ object MetaTable {
       startDate,
       trackDays,
       trackDaysExplicitlySet,
+      saveMode,
       readOptions,
       writeOptions,
       sparkConfig)
@@ -175,5 +180,13 @@ object MetaTable {
       table.readOptions,
       table.writeOptions
     )
+  }
+
+  private[core] def getSaveMode(saveModeStr: String, table: String): SaveMode = {
+    saveModeStr.toLowerCase.trim match {
+      case "append" => SaveMode.Append
+      case "overwrite" => SaveMode.Overwrite
+      case _ => throw new IllegalArgumentException(s"Invalid or unsupported save mode: '$saveModeStr' for table '$table'.")
+    }
   }
 }
