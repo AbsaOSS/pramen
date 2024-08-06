@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
+import org.apache.spark.sql.SaveMode
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat.Parquet
 import za.co.absa.pramen.core.app.config.InfoDateConfig
@@ -153,6 +154,7 @@ class MetaTableSuite extends AnyWordSpec {
           |spark.conf = {
           |  key1 = value1
           |}
+          |save.mode = append
           |""".stripMargin)
 
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
@@ -173,6 +175,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.infoDateFormat == "dd-MM-yyyy")
       assert(metaTable.infoDateStart.toString == "2020-01-31")
       assert(metaTable.sparkConfig("key1") == "value1")
+      assert(metaTable.saveMode.contains(SaveMode.Append))
     }
 
     "load a metatable definition with hive table defined" in {
@@ -233,6 +236,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.writeOptions("x") == "test2")
       assert(metaTable.writeOptions("y") == "101")
       assert(metaTable.sparkConfig("key1") == "value1")
+      assert(metaTable.saveMode.isEmpty)
     }
 
     "load a metatable definition with hive overrides" in {
@@ -323,6 +327,34 @@ class MetaTableSuite extends AnyWordSpec {
 
       assert(ex.getMessage.contains("Unable to read data format from config for the metastore table: table1"))
     }
+  }
+
+  "getSaveMode()" should {
+    "return SaveMode.Append" in {
+      assert(MetaTable.getSaveMode("append", "table1") == SaveMode.Append)
+    }
+
+    "return SaveMode.Overwrite" in {
+      assert(MetaTable.getSaveMode("overwrite", "table1") == SaveMode.Overwrite)
+    }
+
+    "throw an exception when the save mode is not supported" in {
+      val ex = intercept[IllegalArgumentException] {
+        MetaTable.getSaveMode("error_if_exists", "table1")
+      }
+
+      assert(ex.getMessage.contains("Invalid or unsupported save mode: 'error_if_exists' for table 'table1'"))
+    }
+
+
+    "throw an exception when the save mode is invalid" in {
+      val ex = intercept[IllegalArgumentException] {
+        MetaTable.getSaveMode("invalid", "table1")
+      }
+
+      assert(ex.getMessage.contains("Invalid or unsupported save mode: 'invalid' for table 'table1'"))
+    }
+
   }
 
 }
