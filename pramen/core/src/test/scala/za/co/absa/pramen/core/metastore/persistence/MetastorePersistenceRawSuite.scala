@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore.persistence
 
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.SaveMode
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -47,7 +48,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.fs.create(new Path(dataPath, "1.dat")).close()
         fsUtils.fs.create(new Path(dataPath, "2.dat")).close()
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         val actual = persistence.loadTable(Some(infoDate), Some(infoDate)).orderBy("path").collect().map(_.getString(0))
 
@@ -68,7 +69,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.fs.create(new Path(dataPath1, "1.dat")).close()
         fsUtils.fs.create(new Path(dataPath2, "2.dat")).close()
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         val actual = persistence.loadTable(Some(infoDate), Some(infoDateTo)).orderBy("path").collect().map(_.getString(0))
 
@@ -87,7 +88,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.fs.create(new Path(dataPath, "1.dat")).close()
         fsUtils.fs.create(new Path(dataPath, "2.dat")).close()
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         val actual = persistence.loadTable(Some(infoDate.plusDays(1)), Some(infoDate)).orderBy("path").collect().map(_.getString(0))
 
@@ -102,7 +103,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         fsUtils.createDirectoryRecursive(dataPath)
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         assertThrows[IllegalArgumentException] {
           persistence.loadTable(None, None)
@@ -114,7 +115,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
   "saveTable()" should {
     "do nothing on an empty dataset" in {
       withTempDirectory("metastore_raw") { tempDir =>
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         persistence.saveTable(infoDate, Seq.empty[String].toDF("path"), None)
 
@@ -135,7 +136,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         val files = Seq(file1, file2).map(_.toUri.toString).toDF("path")
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, Some(SaveMode.Overwrite))
 
         persistence.saveTable(infoDate, files, None)
 
@@ -160,7 +161,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         fsUtils.fs.create(new Path(partitionPath, "3.dat"))
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         persistence.saveTable(infoDate, files, None)
 
@@ -177,7 +178,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
     "throw an exception if the dataframe does not contain the required column" in {
       withTempDirectory("metastore_raw") { tempDir =>
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         assertThrows[IllegalArgumentException] {
           persistence.saveTable(infoDate, spark.emptyDataFrame, None)
@@ -197,7 +198,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.writeFile(file1, "123")
         fsUtils.writeFile(file2, "4567")
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, None)
 
         val stats = persistence.getStats(infoDate)
 
@@ -209,7 +210,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
   "createOrUpdateHiveTable" should {
     "throw the unsupported exception" in {
-      val persistence = new MetastorePersistenceRaw("", "", "")
+      val persistence = new MetastorePersistenceRaw("", "", "", None)
       assertThrows[UnsupportedOperationException] {
         persistence.createOrUpdateHiveTable(infoDate, "table", null, null)
       }
@@ -218,7 +219,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
   "repairHiveTable" should {
     "throw the unsupported exception" in {
-      val persistence = new MetastorePersistenceRaw("", "", "")
+      val persistence = new MetastorePersistenceRaw("", "", "", None)
       assertThrows[UnsupportedOperationException] {
         persistence.repairHiveTable("table", null, null)
       }
