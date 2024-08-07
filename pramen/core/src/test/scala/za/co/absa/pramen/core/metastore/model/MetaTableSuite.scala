@@ -175,7 +175,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.infoDateFormat == "dd-MM-yyyy")
       assert(metaTable.infoDateStart.toString == "2020-01-31")
       assert(metaTable.sparkConfig("key1") == "value1")
-      assert(metaTable.saveMode.contains(SaveMode.Append))
+      assert(metaTable.saveModeOpt.contains(SaveMode.Append))
     }
 
     "load a metatable definition with hive table defined" in {
@@ -236,7 +236,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.writeOptions("x") == "test2")
       assert(metaTable.writeOptions("y") == "101")
       assert(metaTable.sparkConfig("key1") == "value1")
-      assert(metaTable.saveMode.isEmpty)
+      assert(metaTable.saveModeOpt.isEmpty)
     }
 
     "load a metatable definition with hive overrides" in {

@@ -47,14 +47,14 @@ object MetastorePersistence {
     metaTable.format match {
       case DataFormat.Parquet(path, recordsPerPartition) =>
         new MetastorePersistenceParquet(
-          path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
+          path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Delta(query, recordsPerPartition)  =>
         new MetastorePersistenceDelta(
-          query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.readOptions, metaTable.writeOptions
+          query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Raw(path)                          =>
-        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat)
+        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.saveModeOpt)
       case DataFormat.TransientEager(cachePolicy)             =>
         new MetastorePersistenceTransientEager(TransientTableManager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Transient(cachePolicy) =>

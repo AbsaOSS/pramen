@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.{FileStatus, Path}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
@@ -29,7 +29,8 @@ import scala.collection.mutable
 
 class MetastorePersistenceRaw(path: String,
                               infoDateColumn: String,
-                              infoDateFormat: String
+                              infoDateFormat: String,
+                              saveModeOpt: Option[SaveMode]
                              )(implicit spark: SparkSession) extends MetastorePersistence {
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -59,7 +60,12 @@ class MetastorePersistenceRaw(path: String,
     val fsUtilsTrg = new FsUtils(spark.sparkContext.hadoopConfiguration, outputDir.toString)
 
     if (fsUtilsTrg.exists(outputDir)) {
-      fsUtilsTrg.deleteDirectoryRecursively(outputDir)
+      if (saveModeOpt.contains(SaveMode.Append)) {
+        log.info(s"Appending to partition: $outputDir...")
+      } else {
+        log.info(s"Cleaning up the partition: $outputDir...")
+        fsUtilsTrg.deleteDirectoryRecursively(outputDir)
+      }
     }
 
     fsUtilsTrg.createDirectoryRecursive(outputDir)

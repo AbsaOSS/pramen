@@ -37,6 +37,7 @@ class MetastorePersistenceParquet(path: String,
                                   infoDateColumn: String,
                                   infoDateFormat: String,
                                   recordsPerPartition: Option[Long],
+                                  saveModeOpt: Option[SaveMode],
                                   readOptions: Map[String, String],
                                   writeOptions: Map[String, String]
                                  )(implicit spark: SparkSession) extends MetastorePersistence {
@@ -69,7 +70,12 @@ class MetastorePersistenceParquet(path: String,
       df
     }
 
-    log.info(s"Writing to '$outputDirStr'...")
+    val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
+
+    saveMode match {
+      case SaveMode.Append => log.info(s"Appending to '$outputDirStr'...")
+      case _               => log.info(s"Writing to '$outputDirStr'...")
+    }
 
     val recordCount = numberOfRecordsEstimate match {
       case Some(count) => count
@@ -78,7 +84,7 @@ class MetastorePersistenceParquet(path: String,
 
     val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
 
-    writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils)
+    writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils, saveMode)
 
     val stats = getStats(infoDate)
 
@@ -170,7 +176,8 @@ class MetastorePersistenceParquet(path: String,
 
   private[core] def writeAndCleanOnFailure(df: DataFrame,
                                            outputDirStr: String,
-                                           fsUtils: FsUtils): Unit = {
+                                           fsUtils: FsUtils,
+                                           saveMode: SaveMode): Unit = {
     if (writeOptions.nonEmpty) {
       log.info("Custom write options:")
       ConfigUtils.renderExtraOptions(writeOptions, Keys.KEYS_TO_REDACT)(log.info)
@@ -178,7 +185,7 @@ class MetastorePersistenceParquet(path: String,
 
     try {
       df.write
-        .mode(SaveMode.Overwrite)
+        .mode(saveMode)
         .format("parquet")
         .options(writeOptions)
         .save(outputDirStr)
@@ -188,7 +195,7 @@ class MetastorePersistenceParquet(path: String,
         // We need to delete it to avoid the an attempt to read it in the future.
         Try {
           val partitionPath = new Path(outputDirStr)
-          if (fsUtils.exists(partitionPath)) {
+          if (fsUtils.exists(partitionPath) && saveMode == SaveMode.Overwrite) {
             log.warn(s"The write failed. Deleting the empty directory: $partitionPath")
             fsUtils.deleteDirectoryRecursively(partitionPath)
           }

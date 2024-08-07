@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.metastore.persistence
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -39,9 +39,9 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
       withTempDirectory("metastore_parquet") { tempDir =>
         val outputPath = new Path(tempDir, "partition=10")
 
-        val persistence = new MetastorePersistenceParquet(tempDir, "ignore", "yyyy-MM-dd", None, Map.empty, Map.empty)
+        val persistence = new MetastorePersistenceParquet(tempDir, "ignore", "yyyy-MM-dd", None, None, Map.empty, Map.empty)
 
-        persistence.writeAndCleanOnFailure(exampleDf, outputPath.toString, fsUtils)
+        persistence.writeAndCleanOnFailure(exampleDf, outputPath.toString, fsUtils, SaveMode.Overwrite)
 
         assert(fsUtils.exists(outputPath))
         assert(fsUtils.getFilesRecursive(outputPath, "*.parquet").nonEmpty)
@@ -53,10 +53,10 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
 
       when(df.write).thenThrow(new RuntimeException("test exception"))
 
-      val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", None, Map.empty, Map.empty)
+      val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", None, None, Map.empty, Map.empty)
 
       assertThrows[RuntimeException] {
-        persistence.writeAndCleanOnFailure(df, "dummy", fsUtils)
+        persistence.writeAndCleanOnFailure(df, "dummy", fsUtils, SaveMode.Overwrite)
       }
     }
 
@@ -70,10 +70,10 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
 
         fsUtils.createDirectoryRecursive(outputPath)
 
-        val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", None, Map.empty, Map.empty)
+        val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", None, None, Map.empty, Map.empty)
 
         val ex = intercept[RuntimeException] {
-          persistence.writeAndCleanOnFailure(df, outputPath.toString, fsUtils)
+          persistence.writeAndCleanOnFailure(df, outputPath.toString, fsUtils, SaveMode.Overwrite)
         }
 
         assert(ex.getMessage.contains("test exception"))

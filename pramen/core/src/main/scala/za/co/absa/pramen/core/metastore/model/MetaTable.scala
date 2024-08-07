@@ -61,7 +61,7 @@ case class MetaTable(
                       infoDateStart: LocalDate,
                       trackDays: Int,
                       trackDaysExplicitlySet: Boolean,
-                      saveMode: Option[SaveMode],
+                      saveModeOpt: Option[SaveMode],
                       readOptions: Map[String, String],
                       writeOptions: Map[String, String],
                       sparkConfig: Map[String, String]
@@ -143,7 +143,7 @@ object MetaTable {
       HiveConfig.fromConfigWithDefaults(ConfigUtils.getOptionConfig(conf, TABLE_HIVE_CONFIG_PREFIX), defaultHiveConfig, format)
     }
 
-    val saveMode = ConfigUtils.getOptionString(conf, SAVE_MODE_OPTION_KEY).map(getSaveMode(_, name))
+    val saveModeOpt = ConfigUtils.getOptionString(conf, SAVE_MODE_OPTION_KEY).map(getSaveMode(_, name))
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
     val sparkConfig = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
@@ -161,7 +161,7 @@ object MetaTable {
       startDate,
       trackDays,
       trackDaysExplicitlySet,
-      saveMode,
+      saveModeOpt,
       readOptions,
       writeOptions,
       sparkConfig)

@@ -36,6 +36,7 @@ class MetastorePersistenceDelta(query: Query,
                                 infoDateColumn: String,
                                 infoDateFormat: String,
                                 recordsPerPartition: Option[Long],
+                                saveModeOpt: Option[SaveMode],
                                 readOptions: Map[String, String],
                                 writeOptions: Map[String, String]
                                  )(implicit spark: SparkSession) extends MetastorePersistence {
@@ -72,14 +73,23 @@ class MetastorePersistenceDelta(query: Query,
 
     val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
 
-    log.debug(s"Schema: ${dfIn.schema.treeString}")
-    log.debug(s"Info date column: $infoDateColumn")
-    log.debug(s"Info date: $infoDateStr")
+    val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
+
+    val operationStr = saveMode match {
+      case SaveMode.Append => "Appending to"
+      case _               => "Writing to"
+    }
+
+    if (log.isDebugEnabled) {
+      log.debug(s"Schema: ${dfIn.schema.treeString}")
+      log.debug(s"Info date column: $infoDateColumn")
+      log.debug(s"Info date: $infoDateStr")
+    }
 
     val writer = dfRepartitioned
       .write
       .format("delta")
-      .mode(SaveMode.Overwrite)
+      .mode(saveMode)
       .partitionBy(infoDateColumn)
       .option("mergeSchema", "true")
       .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
@@ -89,11 +99,11 @@ class MetastorePersistenceDelta(query: Query,
       case Query.Path(path)   =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
         fsUtils.createDirectoryRecursive(new Path(path))
-        log.info(s"Writing to path '$path' WHERE $whereCondition...")
+        log.info(s"$operationStr to path '$path' WHERE $whereCondition...")
         writer.save(path)
       case Query.Table(table) =>
         writer.saveAsTable(table)
-        log.info(s"Writing to table '$table' WHERE $whereCondition...")
+        log.info(s"$operationStr to table '$table' WHERE $whereCondition...")
       case q =>
         throw new IllegalStateException(s"The '${q.name}' option is not supported as a write target for Delta.")
     }
