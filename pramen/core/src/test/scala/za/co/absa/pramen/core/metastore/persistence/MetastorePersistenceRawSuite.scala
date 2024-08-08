@@ -175,6 +175,36 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
       }
     }
 
+    "append existing partition directory if it exists for save mode append" in {
+      withTempDirectory("metastore_raw") { tempDir =>
+        val file1 = new Path(tempDir, "1.dat")
+        val file2 = new Path(tempDir, "2.dat")
+
+        fsUtils.fs.create(file1).close()
+        fsUtils.fs.create(file2).close()
+
+        val files = Seq(file1, file2).map(_.toUri.toString).toDF("path")
+
+        val partitionPath = new Path(tempDir, s"$infoDateColumn=$infoDate")
+
+        fsUtils.fs.create(new Path(partitionPath, "3.dat"))
+
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, Some(SaveMode.Append))
+
+        persistence.saveTable(infoDate, files, None)
+
+        assert(fsUtils.exists(new Path(partitionPath, "1.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "2.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "3.dat")))
+
+        persistence.saveTable(infoDate, Seq.empty[String].toDF("path"), None)
+
+        assert(fsUtils.exists(new Path(partitionPath, "1.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "2.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "3.dat")))
+      }
+    }
+
     "throw an exception if the dataframe does not contain the required column" in {
       withTempDirectory("metastore_raw") { tempDir =>
 

@@ -155,13 +155,13 @@ class DataFormatSuite extends AnyWordSpec {
     }
 
     "throw an exception on unknown format" in {
-      val conf = ConfigFactory.parseString("format = isberg")
+      val conf = ConfigFactory.parseString("format = iceberg")
 
       val ex = intercept[IllegalArgumentException] {
         DataFormatParser.fromConfig(conf, conf)
       }
 
-      assert(ex.getMessage.contains("Unknown format: isberg"))
+      assert(ex.getMessage.contains("Unknown format: iceberg"))
     }
 
     "throw an exception on mandatory options missing" in {

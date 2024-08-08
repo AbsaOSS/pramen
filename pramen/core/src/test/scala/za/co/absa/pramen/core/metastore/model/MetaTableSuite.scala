@@ -314,7 +314,7 @@ class MetaTableSuite extends AnyWordSpec {
       val conf = ConfigFactory.parseString(
         """
           |name = table1
-          |format = isberg
+          |format = iceberg
           |path = /a/b/c
           |hive.table = my_hive_table
           |""".stripMargin)
@@ -326,6 +326,42 @@ class MetaTableSuite extends AnyWordSpec {
       }
 
       assert(ex.getMessage.contains("Unable to read data format from config for the metastore table: table1"))
+    }
+
+    "throw an exception when the save mode is not supported" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |name = table1
+          |format = parquet
+          |path = /a/b/c
+          |save.mode = "ignore"
+          |""".stripMargin)
+
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
+
+      val ex = intercept[IllegalArgumentException] {
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
+      }
+
+      assert(ex.getMessage.contains("Invalid or unsupported save mode: 'ignore' for table 'table1'."))
+    }
+
+    "throw an exception when the save mode is invalid" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |name = table1
+          |format = parquet
+          |path = /a/b/c
+          |save.mode = "test"
+          |""".stripMargin)
+
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
+
+      val ex = intercept[IllegalArgumentException] {
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
+      }
+
+      assert(ex.getMessage.contains("Invalid or unsupported save mode: 'test' for table 'table1'."))
     }
   }
 

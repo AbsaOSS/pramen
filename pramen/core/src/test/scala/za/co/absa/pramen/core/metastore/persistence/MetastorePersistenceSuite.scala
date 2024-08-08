@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.metastore.persistence
 
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.functions.{col, lit}
-import org.apache.spark.sql.{AnalysisException, DataFrame}
+import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode}
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{CachePolicy, DataFormat, Query}
@@ -268,6 +268,49 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
     compareText(actual, expected)
   }
 
+  def testAppendPartition(mtp: MetastorePersistence): Assertion = {
+    val expected =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12"
+        |}, {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-12"
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12"
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-12"
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12"
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-12"
+        |} ]""".stripMargin
+    mtp.saveTable(infoDate, getDf.withColumn("p", lit(1)), None)
+    mtp.saveTable(infoDate, getDf.withColumn("p", lit(2)), None)
+
+    val df = mtp.loadTable(Some(infoDate), Some(infoDate))
+
+    val actual = SparkUtils.dataFrameToJson(df.orderBy("a", "p"))
+
+    compareText(actual, expected)
+  }
+
   def testSchemaMerge(mtp: MetastorePersistence): Assertion = {
     val expected =
       """[ {
@@ -377,6 +420,12 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
         }
       }
 
+      "support partition appends" in {
+        withTempDirectory("mt_persist") { tempDir =>
+          testAppendPartition(getParquetMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append)))
+        }
+      }
+
       "support schema overwrites" in {
         withTempDirectory("mt_persist") { tempDir =>
           testSchemaMerge(getParquetMtPersistence(tempDir))
@@ -445,6 +494,12 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "support partition overwrites" in {
         withTempDirectory("mt_persist") { tempDir =>
           testOverwritePartition(getDeltaMtPersistence(tempDir))
+        }
+      }
+
+      "support partition appends" in {
+        withTempDirectory("mt_persist") { tempDir =>
+          testAppendPartition(getDeltaMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append)))
         }
       }
 
@@ -524,12 +579,14 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
 
   def getParquetMtPersistence(tempDir: String,
                               recordsPerPartition: Option[Long] = None,
-                              pathSuffix: String = "parquet"): MetastorePersistence = {
+                              pathSuffix: String = "parquet",
+                              saveModeOpt: Option[SaveMode] = None): MetastorePersistence = {
 
     val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
       format = DataFormat.Parquet(s"$tempDir/$pathSuffix", recordsPerPartition),
       infoDateColumn = infoDateColumn,
-      infoDateFormat = infoDateFormat
+      infoDateFormat = infoDateFormat,
+      saveModeOpt = saveModeOpt
     )
 
     MetastorePersistence.fromMetaTable(mt, null)
@@ -538,11 +595,13 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
   def getDeltaMtPersistence(tempDir: String,
                             recordsPerPartition: Option[Long] = None,
                             pathSuffix: String = "delta",
+                            saveModeOpt: Option[SaveMode] = None,
                             writeOptions: Map[String, String] = Map.empty[String, String]): MetastorePersistence = {
     val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
       format = DataFormat.Delta(Query.Path(s"$tempDir/$pathSuffix"), recordsPerPartition),
       infoDateColumn = infoDateColumn,
       infoDateFormat = infoDateFormat,
+      saveModeOpt = saveModeOpt,
       writeOptions = writeOptions
     )
 

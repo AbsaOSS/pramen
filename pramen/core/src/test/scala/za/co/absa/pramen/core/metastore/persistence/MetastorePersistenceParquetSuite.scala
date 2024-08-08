@@ -48,6 +48,24 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
       }
     }
 
+    "append data when save mode is append" in {
+      withTempDirectory("metastore_parquet") { tempDir =>
+        val outputPath = new Path(tempDir, "partition=10")
+
+        val persistence = new MetastorePersistenceParquet(tempDir, "ignore", "yyyy-MM-dd", None, Some(SaveMode.Append), Map.empty, Map.empty)
+
+        persistence.writeAndCleanOnFailure(exampleDf, outputPath.toString, fsUtils, SaveMode.Append)
+        persistence.writeAndCleanOnFailure(exampleDf, outputPath.toString, fsUtils, SaveMode.Append)
+
+        assert(fsUtils.exists(outputPath))
+        assert(fsUtils.getFilesRecursive(outputPath, "*.parquet").nonEmpty)
+
+        val df = spark.read.parquet(outputPath.toString)
+
+        assert(df.count() == 6)
+      }
+    }
+
     "re-throw on failure" in {
       val df = mock(classOf[DataFrame])
 
