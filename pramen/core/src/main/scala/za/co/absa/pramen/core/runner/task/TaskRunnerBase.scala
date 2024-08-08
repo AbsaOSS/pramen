@@ -460,7 +460,7 @@ abstract class TaskRunnerBase(conf: Config,
       return List.empty[SchemaDifference]
     }
 
-    val lastSchema = bookkeeper.getLatestSchema(table.name, infoDate.minusDays(1))
+    val lastSchema = bookkeeper.getLatestSchema(table.name, infoDate)
 
     lastSchema match {
       case Some((oldSchema, oldInfoDate)) =>
