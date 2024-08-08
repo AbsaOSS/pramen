@@ -36,7 +36,7 @@ object MetaTableFactory {
                         infoDateStart: LocalDate = LocalDate.of(2020, 1, 31),
                         trackDays: Int = 0,
                         trackDaysExplicitlySet: Boolean = false,
-                        saveMode: Option[SaveMode] = None,
+                        saveModeOpt: Option[SaveMode] = None,
                         readOptions: Map[String, String] = Map.empty[String, String],
                         writeOptions: Map[String, String] = Map.empty[String, String],
                         sparkConfig: Map[String, String] = Map.empty[String, String]
@@ -54,7 +54,7 @@ object MetaTableFactory {
       infoDateStart,
       trackDays,
       trackDaysExplicitlySet,
-      saveMode,
+      saveModeOpt,
       readOptions,
       writeOptions,
       sparkConfig)
