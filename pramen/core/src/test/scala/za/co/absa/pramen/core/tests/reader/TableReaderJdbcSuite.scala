@@ -349,7 +349,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
         assert(df.schema.fields.length == 7)
       }
 
-      "return selected columnd for a table snapshot-like query" in {
+      "return selected column for a table snapshot-like query" in {
         val testConfig = conf
         val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
 
