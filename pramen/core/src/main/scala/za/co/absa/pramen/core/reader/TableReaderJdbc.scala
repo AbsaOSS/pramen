@@ -109,7 +109,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd)
-    getWithRetry[Long](filteredSql, isDataQuery = false, jdbcRetries, None)(df => df.count())
+    val countSql = s"SELECT COUNT(*) AS CNT FROM ($filteredSql)"
+    getWithRetry[Long](countSql, isDataQuery = false, jdbcRetries, None)(df => BigDecimal(df.collect()(0)(0).toString).toLong)
   }
 
   private[core] def getDataForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
