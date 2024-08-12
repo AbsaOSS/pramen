@@ -21,6 +21,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.core.app.config.RuntimeConfig._
 import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.config.Keys.LOG_EFFECTIVE_CONFIG
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 class CmdLineConfigSuite extends AnyWordSpec {
@@ -294,6 +295,31 @@ class CmdLineConfigSuite extends AnyWordSpec {
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
       assert(!config.hasPath(UNDERCOVER))
+    }
+
+    "return the original config if log-config is not specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(!config.hasPath(LOG_EFFECTIVE_CONFIG))
+    }
+
+    "return the modified config if log-config = true" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--log-config", "true"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(LOG_EFFECTIVE_CONFIG))
+
+      assert(config.getBoolean(LOG_EFFECTIVE_CONFIG))
+    }
+
+    "return the modified config if log-config = false" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--log-config", "false"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(LOG_EFFECTIVE_CONFIG))
+
+      assert(!config.getBoolean(LOG_EFFECTIVE_CONFIG))
     }
 
     "return None on invalid run mode" in {

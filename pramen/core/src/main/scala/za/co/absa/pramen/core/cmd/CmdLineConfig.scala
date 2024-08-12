@@ -22,6 +22,7 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.TRACK_DAYS
 import za.co.absa.pramen.core.app.config.RuntimeConfig._
 import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.config.Keys.LOG_EFFECTIVE_CONFIG
 
 import java.time.LocalDate
 import scala.collection.JavaConverters.asJavaIterableConverter
@@ -43,7 +44,8 @@ case class CmdLineConfig(
                           mode: Option[String] = None,
                           inverseOrder: Option[Boolean] = None,
                           verbose: Option[Boolean] = None,
-                          overrideLogLevel: Option[String] = None
+                          overrideLogLevel: Option[String] = None,
+                          logEffectiveConfig: Option[Boolean] = None
                         )
 
 object CmdLineConfig {
@@ -119,6 +121,9 @@ object CmdLineConfig {
 
     for (mode <- cmd.mode)
       accumulatedConfig = accumulatedConfig.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(mode))
+
+    for (logEffectiveConfig <- cmd.logEffectiveConfig)
+      accumulatedConfig = accumulatedConfig.withValue(LOG_EFFECTIVE_CONFIG, ConfigValueFactory.fromAnyRef(logEffectiveConfig))
 
     accumulatedConfig
   }
@@ -220,6 +225,10 @@ object CmdLineConfig {
     opt[String]("override-log-level").optional().action((value, config) =>
       config.copy(overrideLogLevel = Option(value)))
       .text("Override environment configured root log level.")
+
+    opt[Boolean]("log-config").optional().action((value, config) =>
+        config.copy(logEffectiveConfig = Option(value)))
+      .text("When true (default), Pramen logs the effective configuration.")
 
     help("help").text("prints this usage text")
   }
