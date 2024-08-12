@@ -291,6 +291,15 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
         assert(count == 4)
       }
 
+      "return count for a sql snapshot-like query" in {
+        val testConfig = conf
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+
+        val count = reader.getRecordCount(Query.Sql("SELECT * FROM company"), null, null)
+
+        assert(count == 4)
+      }
+
       "return count for a table event-like query" in {
         val testConfig = conf.getConfig("reader")
           .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
