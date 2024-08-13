@@ -25,24 +25,27 @@ import scala.concurrent.duration.Duration
 class ThreadUtilsSuite extends AnyWordSpec {
   "runWithTimeout" should  {
     "run the action normally when the timeout is not breached" in {
-      ThreadUtils.runWithTimeout("test", Duration(10, TimeUnit.SECONDS)) {
+      ThreadUtils.runWithTimeout(Duration(10, TimeUnit.SECONDS)) {
         Thread.sleep(1)
       }
     }
 
     "throw an exception when timeout is breached" in {
       val ex = intercept[RuntimeException] {
-        ThreadUtils.runWithTimeout("test", Duration(1, TimeUnit.MILLISECONDS)) {
+        ThreadUtils.runWithTimeout(Duration(1, TimeUnit.MILLISECONDS)) {
           Thread.sleep(1000)
         }
       }
 
-      assert(ex.getMessage.contains("Timeout (instantly) expired executing: test (stack trace logged)."))
+      assert(ex.getMessage.contains("Timeout expired (instantly)."))
+      assert(ex.getCause != null)
+      assert(ex.getCause.isInstanceOf[RuntimeException])
+      assert(ex.getCause.getStackTrace.nonEmpty)
     }
 
     "pass the thrown exception to the caller" in {
       val ex = intercept[IllegalStateException] {
-        ThreadUtils.runWithTimeout("test", Duration(10, TimeUnit.SECONDS)) {
+        ThreadUtils.runWithTimeout(Duration(10, TimeUnit.SECONDS)) {
           throw new IllegalStateException("test")
         }
       }

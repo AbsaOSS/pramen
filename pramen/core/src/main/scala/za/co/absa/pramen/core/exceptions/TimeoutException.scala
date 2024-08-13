@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.utils.impl
+package za.co.absa.pramen.core.exceptions
 
-class ThreadWithException extends Thread {
-  private var threadException: Option[Throwable] = None
-
-  def setException(ex: Throwable): Unit = synchronized { threadException = Option(ex) }
-
-  def getException: Option[Throwable] = synchronized {
-    val ex = threadException
-    ex
-  }
-}
+class TimeoutException(val msg: String, val cause: Throwable = null) extends RuntimeException(msg, cause)
