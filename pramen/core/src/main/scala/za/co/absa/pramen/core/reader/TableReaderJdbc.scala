@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcSparkUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
@@ -109,8 +109,18 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd)
-    val countSql = s"SELECT COUNT(*) AS CNT FROM ($filteredSql)"
-    getWithRetry[Long](countSql, isDataQuery = false, jdbcRetries, None)(df => BigDecimal(df.collect()(0)(0).toString).toLong)
+    val countSql = s"SELECT COUNT(*) FROM ($filteredSql)"
+    var count = 0L
+
+    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql, jdbcRetries) { rs =>
+      if (!rs.next())
+        throw new IllegalStateException(s"No rows returned by the count query: $countSql")
+      else {
+        count = rs.getLong(1)
+      }
+    }
+
+    count
   }
 
   private[core] def getDataForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
