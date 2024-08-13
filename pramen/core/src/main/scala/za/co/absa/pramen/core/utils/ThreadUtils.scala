@@ -16,42 +16,51 @@
 
 package za.co.absa.pramen.core.utils
 
-import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.exceptions.TimeoutException
 import za.co.absa.pramen.core.utils.impl.ThreadWithException
 
+import java.lang.Thread.UncaughtExceptionHandler
 import scala.concurrent.duration.Duration
 
 object ThreadUtils {
-  private val log = LoggerFactory.getLogger(this.getClass)
-
   /**
-    * Executes an action
-    * @param taskName
-    * @param timeout
-    * @param action
+    * Executes an action with a timeout. If the timeout is breached the task is killed (using Thread.interrupt())
+    *
+    * If the task times out, an exception is thrown.
+    *
+    * Any exception is passed to the caller.
+    *
+    * @param timeout  The task timeout.
+    * @param action   An action to execute.
     */
-  def runWithTimeout(taskName: String, timeout: Duration)(action: => Unit): Unit = {
-    def logStackTrace(thread: Thread): Unit = {
-      val stackTrace = thread.getStackTrace.map(_.toString).mkString("\n")
-      log.error(s"Thread ($taskName) stack trace:\n$stackTrace")
-    }
-
+  @throws[TimeoutException]
+  def runWithTimeout(timeout: Duration)(action: => Unit): Unit = {
     val thread = new ThreadWithException {
       override def run(): Unit = {
         action
       }
     }
-    thread.setUncaughtExceptionHandler((_, ex) => {
-      thread.setException(ex)
-    })
+
+    val handler = new UncaughtExceptionHandler {
+      override def uncaughtException(t: Thread, ex: Throwable): Unit = {
+        thread.asInstanceOf[ThreadWithException].setException(ex)
+      }
+    }
+
+    thread.setUncaughtExceptionHandler(handler)
+
     thread.start()
     thread.join(timeout.toMillis)
 
     if (thread.isAlive) {
-      logStackTrace(thread)
+      val stackTrace = thread.getStackTrace
       thread.interrupt()
+
       val prettyTimeout = TimeUtils.prettyPrintElapsedTimeShort(timeout.toMillis)
-      throw new RuntimeException(s"Timeout ($prettyTimeout) expired executing: $taskName (stack trace logged).")
+      val cause = new RuntimeException("The task has been interrupted by Pramen.")
+      cause.setStackTrace(stackTrace)
+
+      throw new TimeoutException(s"Timeout expired ($prettyTimeout).", cause)
     }
 
     thread.getException.foreach(ex => throw ex)

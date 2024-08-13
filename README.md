@@ -1946,6 +1946,7 @@ Here is an example configuration for a JDBC source:
 
       # [Optional] You can specify the maximum about the job should take.
       # This is the hard timeout. The job will be killed if the timeout is breached
+      # The timeouut restriction applies to the full wall time of the task: validation and running.
       kill.maximum.execution.time.seconds = 7200
 
       # You can override any of source settings here 

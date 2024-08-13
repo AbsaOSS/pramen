@@ -35,12 +35,15 @@ import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
-import za.co.absa.pramen.core.utils.TimeUtils
+import za.co.absa.pramen.core.utils.{ThreadUtils, TimeUtils}
 import za.co.absa.pramen.core.utils.hive.HiveHelper
 
 import java.sql.Date
 import java.time.{Instant, LocalDate}
+import java.util.concurrent.TimeUnit
+import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 abstract class TaskRunnerBase(conf: Config,
@@ -115,7 +118,30 @@ abstract class TaskRunnerBase(conf: Config,
   /** Runs a task in the single thread. Performs all task logging and notification sending activities. */
   protected def runTask(task: Task): RunStatus = {
     val started = Instant.now()
+    task.job.operation.killMaxExecutionTimeSeconds match {
+      case Some(timeout) =>
+        var runStatus: RunStatus = null
 
+        try {
+          ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
+            log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
+            val status = doValidateAndRunTask(task)
+            this.synchronized {
+              runStatus = status
+            }
+          }
+          runStatus
+        } catch {
+          case NonFatal(ex) =>
+            failTask(task, started, ex)
+        }
+      case None =>
+        doValidateAndRunTask(task)
+    }
+  }
+
+  protected def doValidateAndRunTask(task: Task): RunStatus = {
+    val started = Instant.now()
     task.reason match {
       case TaskRunReason.Skip(reason) =>
         // This skips tasks that were skipped based on strong date constraints (e.g. attempt to run before the minimum date)
@@ -149,6 +175,29 @@ abstract class TaskRunnerBase(conf: Config,
       task.job.operation.extraOptions)
 
     onTaskCompletion(task, taskResult, isLazy = false)
+  }
+
+  /** Fails a task. Performs all task logging and notification sending activities. */
+  protected def failTask(task: Task, started: Instant, ex: Throwable): RunStatus = {
+    val now = Instant.now()
+    val runStatus = RunStatus.Failed(ex)
+    val runInfo = RunInfo(task.infoDate, started, now)
+    val isTransient = task.job.outputTable.format.isTransient
+    val isLazy = task.job.outputTable.format.isLazy
+    val taskResult = TaskResult(
+      task.job.name,
+      MetaTable.getMetaTableDef(task.job.outputTable),
+      runStatus,
+      Option(runInfo),
+      applicationId,
+      isTransient,
+      isRawFilesJob = task.job.outputTable.format.isInstanceOf[DataFormat.Raw],
+      Nil,
+      Nil,
+      Nil,
+      task.job.operation.extraOptions)
+
+    onTaskCompletion(task, taskResult, isLazy = isLazy)
   }
 
   /**
