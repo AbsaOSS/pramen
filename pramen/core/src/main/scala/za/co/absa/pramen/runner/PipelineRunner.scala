@@ -17,6 +17,7 @@
 package za.co.absa.pramen.runner
 
 import com.typesafe.config.Config
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.RunnerCommons._
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.runner.AppRunner
@@ -26,6 +27,8 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 import scala.collection.mutable.ListBuffer
 
 object PipelineRunner {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   private val workflowExitCodes = new ListBuffer[Int]
 
   // If the main method is executed from an external component that runs Pramen jobs,
@@ -38,7 +41,13 @@ object PipelineRunner {
     var overallExitCode = PipelineStateImpl.EXIT_CODE_SUCCESS
 
     configs.foreach { conf =>
-      ConfigUtils.logEffectiveConfigProps(conf, Keys.CONFIG_KEYS_TO_REDACT, Keys.KEYS_TO_REDACT)
+      val needLogEffectiveConfig = ConfigUtils.getOptionBoolean(conf, Keys.LOG_EFFECTIVE_CONFIG).getOrElse(true)
+      if (needLogEffectiveConfig) {
+        ConfigUtils.logEffectiveConfigProps(conf, Keys.CONFIG_KEYS_TO_REDACT, Keys.KEYS_TO_REDACT)
+      } else {
+        log.info(s"Logging of the effective configuration is disabled by ${Keys.LOG_EFFECTIVE_CONFIG}=false.")
+      }
+
       val exitCode = AppRunner.runPipeline(conf)
       workflowExitCodes.append(exitCode)
       overallExitCode |= exitCode

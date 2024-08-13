@@ -319,6 +319,11 @@ pramen.metastore {
       format = "parquet"
       path = "hdfs://cluster/path/to/parquet/folder"
       records.per.partition = 1000000
+      
+      # (Experimental) Save mode to use when writing to partitions.
+      # Supported: overwrite (default), append
+      #save.mode = append
+      
       information.date.column = "INFORMATION_DATE"
       information.date.format = "yyyy-MM-dd"
 
@@ -342,16 +347,21 @@ pramen.metastore {
 
 Metastore table options:
 
-| Name                         | Description                                                                       |
-|------------------------------|-----------------------------------------------------------------------------------|
-| `name`                       | Name of the metastore table                                                       |
-| `format`                     | Storage format (`parquet` or `delta`)                                             |
-| `path`                       | Path to the data in the metastore.                                                |
-| `table`                      | Delta Lake table name (if Delta Lake tables are the underlying storage).          |
-| `records.per.partition`      | Number of records per partition (in order to avoid small files problem).          |
-| `information.date.column`    | Name of the column that contains the information date. *                          |
-| `information.date.format`    | Format of the information date used for partitioning (in Java format notation). * |
-| `information.date.start`     | The earliest date the table contains data for. *                                  |
+| Name                               | Description                                                                                                                                                              |
+|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`                             | Name of the metastore table                                                                                                                                              |
+| `format`                           | Storage format (`parquet`, `delta`, `raw` [files], `transient` [do not persist between runs])                                                                            |
+| `path`                             | Path to the data in the metastore.                                                                                                                                       |
+| `table`                            | Delta Lake table name (if Delta Lake tables are the underlying storage).                                                                                                 |
+| `cache.ploicy`                     | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.---- |
+| `records.per.partition`            | Number of records per partition (in order to avoid small files problem).                                                                                                 |
+| `information.date.column`          | Name of the column that contains the information date. *                                                                                                                 |
+| `information.date.format`          | Format of the information date used for partitioning (in Java format notation). *                                                                                        |
+| `information.date.start`           | The earliest date the table contains data for. *                                                                                                                         |
+| `information.date.max.days.behind` | The time window in days from the current system date when it is allowed to write/rerun. Useful if the underlying storage archives data automatically.                    |
+| `save.moden`                       | (experimental) Save mode to use when writing partitions. Supported: `overwrite` (default), `append`.                                                                     |
+| `read.option`                      | Arbitrary read options to pass to the Spark reader when reading the table.                                                                                               |
+| `write.option`                     | Arbitrary write options to pass to the Spark reader when reading the table.                                                                                              |
 
 `*` - It is recommended to standardize information date column used for partitioning folders in the metastore. You can
 define default values for the information date column at the top of configuration and it will be used by default if not

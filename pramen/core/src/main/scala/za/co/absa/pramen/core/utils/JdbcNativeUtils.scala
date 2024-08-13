@@ -101,6 +101,32 @@ object JdbcNativeUtils {
     spark.createDataFrame(rdd, schema)
   }
 
+  def withResultSet(jdbcUrlSelector: JdbcUrlSelector,
+                    query: String,
+                    retries: Int)
+                   (action: ResultSet => Unit): Unit = {
+    val (connection, _) = jdbcUrlSelector.getWorkingConnection(retries)
+
+    try {
+      connection.setAutoCommit(false)
+
+      val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+
+      try {
+        val resultSet = statement.executeQuery(query)
+        try {
+          action(resultSet)
+        } finally {
+          resultSet.close()
+        }
+      } finally {
+        statement.close()
+      }
+    } finally {
+      connection.close()
+    }
+  }
+
   private[core] def getResultSetCount(resultSet: ResultSet): Long = {
     val countOpt = Try {
       // The fast way of getting record count from a scrollable cursor
