@@ -92,6 +92,8 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.head.metaTableName == "table1_sync")
       assert(op.allowParallel)
       assert(!op.alwaysAttempt)
+      assert(op.warnMaxExecutionTimeSeconds.isEmpty)
+      assert(op.killMaxExecutionTimeSeconds.isEmpty)
       assert(op.notificationTargets.size == 2)
       assert(op.notificationTargets.head == "hyperdrive1")
       assert(op.notificationTargets(1) == "custom2")
@@ -109,6 +111,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |output.table = "dummy_table"
            |always.attempt = "true"
            |warn.maximum.execution.time.seconds = 50
+           |kill.maximum.execution.time.seconds = 100
            |
            |dependencies = [
            |  {
@@ -150,6 +153,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.dependencies(1).tables.contains("table2"))
       assert(!op.dependencies(1).triggerUpdates)
       assert(op.warnMaxExecutionTimeSeconds.contains(50))
+      assert(op.killMaxExecutionTimeSeconds.contains(100))
       assert(op.schemaTransformations.length == 4)
       assert(op.schemaTransformations.head.column == "A")
       assert(op.schemaTransformations.head.expression.contains("cast(A as decimal(15,5))"))

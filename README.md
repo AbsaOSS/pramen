@@ -1944,6 +1944,10 @@ Here is an example configuration for a JDBC source:
       # specified, a warning will be added to notifications.
       warn.maximum.execution.time.seconds = 3600
 
+      # [Optional] You can specify the maximum about the job should take.
+      # This is the hard timeout. The job will be killed if the timeout is breached
+      kill.maximum.execution.time.seconds = 7200
+
       # You can override any of source settings here 
       source {
         minimum.records = 1000 
