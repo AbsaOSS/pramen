@@ -120,15 +120,12 @@ abstract class TaskRunnerBase(conf: Config,
     val started = Instant.now()
     task.job.operation.killMaxExecutionTimeSeconds match {
       case Some(timeout) =>
-        var runStatus: RunStatus = null
+        @volatile var runStatus: RunStatus = null
 
         try {
           ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
             log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
-            val status = doValidateAndRunTask(task)
-            this.synchronized {
-              runStatus = status
-            }
+            runStatus = doValidateAndRunTask(task)
           }
           runStatus
         } catch {
