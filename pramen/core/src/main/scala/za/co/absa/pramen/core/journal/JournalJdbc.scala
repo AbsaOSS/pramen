@@ -49,7 +49,8 @@ class JournalJdbc(db: Database) extends Journal {
       entry.startedAt,
       entry.finishedAt,
       entry.status,
-      entry.failureReason)
+      entry.failureReason,
+      entry.sparkApplicationId)
 
     try {
       db.run(
@@ -81,7 +82,8 @@ class JournalJdbc(db: Database) extends Journal {
         startedAt = v.startedAt,
         finishedAt = v.finishedAt,
         status = v.status,
-        failureReason = v.failureReason
+        failureReason = v.failureReason,
+        sparkApplicationId = v.sparkApplicationId
       )
     }).toList
   }

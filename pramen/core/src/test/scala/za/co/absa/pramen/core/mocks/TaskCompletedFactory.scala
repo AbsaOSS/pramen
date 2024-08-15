@@ -36,7 +36,8 @@ object TaskCompletedFactory {
                        startedAt: Long = 1234567L,
                        finishedAt: Long = 1234568L,
                        status: String = TaskStatus.NEW.toString,
-                       failureReason: Option[String] = None): TaskCompleted = {
+                       failureReason: Option[String] = None,
+                       sparkApplicationId: String = "abc123"): TaskCompleted = {
     model.TaskCompleted(
       jobName,
       tableName,
@@ -51,7 +52,8 @@ object TaskCompletedFactory {
       startedAt,
       finishedAt,
       status,
-      failureReason
+      failureReason,
+      sparkApplicationId
     )
   }
 

@@ -81,7 +81,8 @@ class JournalHadoop(journalPath: String)
         startedAt = v.startedAt,
         finishedAt = v.finishedAt,
         status = v.status,
-        failureReason = v.failureReason
+        failureReason = v.failureReason,
+        sparkApplicationId = v.sparkApplicationId
       ))
   }
 
@@ -108,6 +109,7 @@ class JournalHadoop(journalPath: String)
       t.finishedAt ::
       t.status ::
       removeSeparators(t.failureReason.getOrElse("")) ::
+      t.sparkApplicationId ::
       Nil
     record.mkString("", s"$separator", "\n")
   }
