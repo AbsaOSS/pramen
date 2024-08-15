@@ -51,7 +51,7 @@ class PipelineNotificationDirectorSuite extends AnyWordSpec {
       val customEntries = List(NotificationEntry.Paragraph(TextElement("1") :: Nil), NotificationEntry.Paragraph(TextElement("1") :: Nil))
       val pipelineNotificationFailures = List(PipelineNotificationFailure("Dummy Reason", new IllegalStateException("Dummy")))
 
-      val notification = PipelineNotificationFactory.getDummyNotification(exception = Some(ex2), tasksCompleted =
+      val notification = PipelineNotificationFactory.getDummyNotification(exception = Some(ex2), warningFlag = true, tasksCompleted =
         List(taskCompleted1, taskCompleted2, taskCompleted3), customEntries = customEntries, pipelineNotificationFailures = pipelineNotificationFailures)
 
       val builderSpy = new PipelineNotificationBuilderSpy
@@ -63,6 +63,7 @@ class PipelineNotificationDirectorSuite extends AnyWordSpec {
       assert(builderSpy.appStarted == Instant.ofEpochSecond(1234567L))
       assert(builderSpy.appFinished == Instant.ofEpochSecond(1234568L))
       assert(builderSpy.failureException.contains(ex2))
+      assert(builderSpy.warningFlag)
       assert(builderSpy.isDryRun.contains(true))
       assert(builderSpy.isUndercover.contains(false))
       assert(builderSpy.minRps == 1000)

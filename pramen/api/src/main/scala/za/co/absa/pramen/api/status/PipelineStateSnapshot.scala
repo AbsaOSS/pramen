@@ -21,6 +21,7 @@ import za.co.absa.pramen.api.PipelineInfo
 case class PipelineStateSnapshot(
                                   pipelineInfo: PipelineInfo,
                                   isFinished: Boolean,
+                                  warningFlag: Boolean,
                                   exitedNormally: Boolean,
                                   exitCode: Int,
                                   customShutdownHookCanRun: Boolean,

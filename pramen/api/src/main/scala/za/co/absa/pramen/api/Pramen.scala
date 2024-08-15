@@ -57,6 +57,13 @@ trait Pramen {
     * Returns the list of tasks completed at the current moment of time.
     */
   def getCompletedTasks: Seq[TaskResult]
+
+  /**
+    * Sets the warning flag, which means that the pipeline will be reported as succeeded with warnings.
+    *
+    * This can be set from any operation, but cannot be unset.
+    */
+  def setWarningFlag(): Unit
 }
 
 object Pramen {

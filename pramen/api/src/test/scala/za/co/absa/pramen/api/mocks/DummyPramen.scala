@@ -35,4 +35,6 @@ class DummyPramen extends Pramen {
   override def metadataManager: MetadataManager = null
 
   override def getCompletedTasks: Seq[TaskResult] = null
+
+  override def setWarningFlag(): Unit = null
 }

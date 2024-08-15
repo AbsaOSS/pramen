@@ -53,6 +53,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   private var goodRps = Int.MaxValue
 
   var appException: Option[Throwable] = None
+  var warningFlag: Boolean = false
   var appName: String = "Unspecified Job"
   var sparkAppId: Option[String] = None
   var envName: String = "Unspecified Environment"
@@ -68,6 +69,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   override def addFailureException(ex: Throwable): Unit = {
     appException = Option(ex)
+  }
+
+  override def addWarningFlag(flag: Boolean): Unit = {
+    warningFlag = flag
   }
 
   override def addAppName(appName: String): Unit = {
@@ -165,7 +170,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   def pipelineStatus: PipelineStatus = {
     val isCertainFailure = appException.nonEmpty
     val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
-    val hasAtLeastOneWarning = hasWarnings
+    val hasAtLeastOneWarning = warningFlag || hasWarnings
 
     if (isCertainFailure) {
       PipelineStatus.Failure

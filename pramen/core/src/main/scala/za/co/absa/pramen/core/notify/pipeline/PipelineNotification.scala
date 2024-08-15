@@ -23,6 +23,7 @@ import java.time.Instant
 
 case class PipelineNotification(
                                  exception: Option[Throwable],
+                                 warningFlag: Boolean,
                                  pipelineName: String,
                                  environmentName: String,
                                  sparkAppId: Option[String],

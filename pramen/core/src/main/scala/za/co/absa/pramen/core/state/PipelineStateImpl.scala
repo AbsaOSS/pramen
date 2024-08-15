@@ -61,6 +61,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   @volatile private var isFinished = false
   @volatile private var customShutdownHookCanRun = false
   @volatile private var sparkAppId: Option[String] = None
+  @volatile private var warningFlag: Boolean = false
 
   init()
 
@@ -110,6 +111,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         pipelineNotificationFailures.toSeq
       ),
       isFinished,
+      warningFlag,
       exitedNormally,
       exitCode,
       customShutdownHookCanRun,
@@ -128,6 +130,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       exitedNormally = true
       onAppFinish()
     }
+  }
+
+  override def setWarningFlag(): Unit = synchronized {
+    warningFlag = true
   }
 
   override def setFailure(stage: String, exception: Throwable): Unit = synchronized {
@@ -249,6 +255,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       val customSignature = notificationBuilderImpl.signature
 
       val notification = PipelineNotification(failureException,
+        warningFlag,
         pipelineName,
         environmentName,
         sparkAppId,

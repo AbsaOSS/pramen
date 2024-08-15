@@ -25,6 +25,8 @@ trait PipelineState extends AutoCloseable {
 
   def setSuccess(): Unit
 
+  def setWarningFlag(): Unit
+
   def setFailure(stage: String, exception: Throwable): Unit
 
   def setSparkAppId(sparkAppId: String): Unit

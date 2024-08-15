@@ -24,6 +24,8 @@ import java.time.Instant
 trait PipelineNotificationBuilder {
   def addFailureException(ex: Throwable): Unit
 
+  def addWarningFlag(warningFlag: Boolean): Unit
+
   def addAppName(appName: String): Unit
 
   def addSparkAppId(sparkAppId: String): Unit
