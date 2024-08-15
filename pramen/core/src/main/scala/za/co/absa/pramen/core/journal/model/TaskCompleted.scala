@@ -36,7 +36,8 @@ case class TaskCompleted(
                           startedAt: Long,
                           finishedAt: Long,
                           status: String,
-                          failureReason: Option[String]
+                          failureReason: Option[String],
+                          sparkApplicationId: String
                         )
 
 object TaskCompleted {
@@ -50,6 +51,7 @@ object TaskCompleted {
     val taskFinished = taskResult.runInfo.map(_.finished.getEpochSecond).getOrElse(now)
     val status = taskResult.runStatus.toString
     val failureReason = taskResult.runStatus.getReason
+    val sparkApplicationId = taskResult.applicationId
 
     val (recordCountOld, inputRecordCount, outputRecordCount, sizeBytes) = taskResult.runStatus match {
       case s: Succeeded => (s.recordCountOld, s.recordCount, Some(s.recordCount), s.sizeBytes)
@@ -70,7 +72,8 @@ object TaskCompleted {
       taskStarted,
       taskFinished,
       status,
-      failureReason
+      failureReason,
+      sparkApplicationId
     )
   }
 }
