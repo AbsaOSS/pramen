@@ -25,6 +25,7 @@ import java.time.Instant
 
 object PipelineNotificationFactory {
   def getDummyNotification(exception: Option[Throwable] = None,
+                           warningFlag: Boolean = false,
                            pipelineName: String = "DummyPipeline",
                            environmentName: String = "DummyEnvironment",
                            sparkAppId: Option[String] = None,
@@ -37,6 +38,7 @@ object PipelineNotificationFactory {
                           ): PipelineNotification = {
     pipeline.PipelineNotification(
       exception,
+      warningFlag,
       pipelineName,
       environmentName,
       sparkAppId,

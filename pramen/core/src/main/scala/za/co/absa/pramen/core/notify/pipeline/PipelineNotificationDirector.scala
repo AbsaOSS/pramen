@@ -42,6 +42,7 @@ object PipelineNotificationDirector {
     notificationBuilder.addUndercover(undercover)
 
     notification.exception.foreach(notificationBuilder.addFailureException)
+    notificationBuilder.addWarningFlag(notification.warningFlag)
 
     notificationBuilder.addRpsMetrics(minRps, goodRps)
 

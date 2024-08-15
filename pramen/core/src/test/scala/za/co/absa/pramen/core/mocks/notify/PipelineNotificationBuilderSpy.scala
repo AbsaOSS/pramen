@@ -24,6 +24,7 @@ import java.time.Instant
 
 class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   var failureException: Option[Throwable] = None
+  var warningFlag: Boolean = false
   var appName = ""
   var sparkId = ""
   var environmentName = ""
@@ -40,6 +41,8 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   var addCustomEntriesCalled = 0
 
   override def addFailureException(ex: Throwable): Unit = failureException = Option(ex)
+
+  override def addWarningFlag(flag: Boolean): Unit = warningFlag = flag
 
   override def addAppName(name: String): Unit = appName = name
 

@@ -71,6 +71,14 @@ class PramenImpl extends Pramen {
     state.taskResults
   }
 
+  override def setWarningFlag(): Unit = {
+    val pipelineState = _pipelineState.getOrElse(
+      throw new IllegalStateException("Pipeline state is not available at the context.")
+    )
+
+    pipelineState.setWarningFlag()
+  }
+
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
     _workflowConfig = Option(config)
   }

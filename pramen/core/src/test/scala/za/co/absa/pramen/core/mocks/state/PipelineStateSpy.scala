@@ -25,6 +25,7 @@ import scala.collection.mutable.ListBuffer
 class PipelineStateSpy extends PipelineState {
   var setShutdownHookCanRunCount = 0
   var setSuccessCount = 0
+  var setWarningCount = 0
   var getExitCodeCalled = 0
   var jobFailureCalled = 0
   val failures = new ListBuffer[(String, Throwable)]
@@ -45,6 +46,10 @@ class PipelineStateSpy extends PipelineState {
 
   override def setSuccess(): Unit = synchronized {
     setSuccessCount += 1
+  }
+
+  override def setWarningFlag(): Unit = synchronized {
+    setWarningCount += 1
   }
 
   override def setFailure(stage: String, ex: Throwable): Unit = synchronized {
