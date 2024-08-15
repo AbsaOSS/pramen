@@ -63,6 +63,10 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (dbVersion < 3) {
       initTable(MetadataRecords.records.schema)
     }
+
+    if (dbVersion < 4) {
+      addColumn("journal", "spark_application_id", "varchar(255)")
+    }
   }
 
   def initTable(schema: H2Profile.SchemaDescription): Unit = {
@@ -77,6 +81,18 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
+  def addColumn(table: String, columnName: String, columnType: String): Unit = {
+    try {
+      db.run(
+          sqlu"ALTER TABLE ${table} ADD ${columnName} ${columnType}"
+        ).execute()
+    } catch {
+      case NonFatal(ex) =>
+        throw new RuntimeException(s"Unable to add column: '${columnName} ${columnType}' to table: '${table}'for the url: $activeUrl", ex)
+    }
+  }
+
+
   override def close(): Unit = {
     jdbcConnection.close()
     slickDb.close()
@@ -84,7 +100,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 }
 
 object PramenDb {
-  val MODEL_VERSION = 3
+  val MODEL_VERSION = 4
   val DEFAULT_RETRIES = 3
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
