@@ -31,6 +31,7 @@ object PipelineDef {
   val ENVIRONMENT_NAME = "pramen.environment.name"
   val PIPELINE_NAME_KEY = "pramen.pipeline.name"
   val OPERATIONS_KEY = "pramen.operations"
+  val TENANT_KEY = "pramen.tenant"
 
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig): PipelineDef = {
     val defaultDelayDays = conf.getInt(EXPECTED_DELAY_DAYS)

@@ -82,7 +82,11 @@ class JournalHadoop(journalPath: String)
         finishedAt = v.finishedAt,
         status = v.status,
         failureReason = v.failureReason,
-        sparkApplicationId = v.sparkApplicationId
+        sparkApplicationId = v.sparkApplicationId,
+        pipelineId = v.pipelineId,
+        pipelineName = v.pipelineName,
+        environmentName = v.environmentName,
+        tenant = v.tenant
       ))
   }
 
@@ -110,6 +114,10 @@ class JournalHadoop(journalPath: String)
       t.status ::
       removeSeparators(t.failureReason.getOrElse("")) ::
       t.sparkApplicationId.getOrElse("") ::
+      t.pipelineId.getOrElse("") ::
+      t.pipelineName.getOrElse("") ::
+      t.environmentName.getOrElse("") ::
+      t.tenant.getOrElse("") ::
       Nil
     record.mkString("", s"$separator", "\n")
   }

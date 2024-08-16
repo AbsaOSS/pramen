@@ -66,6 +66,10 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
     if (0 < dbVersion && dbVersion < 4) {
       addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "spark_application_id", "varchar(128)")
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "pipelineId", "varchar(40)")
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "pipelineName", "varchar(200)")
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "environmentName", "varchar(128)")
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "tenant", "varchar(200)")
     }
   }
 

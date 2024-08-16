@@ -55,7 +55,7 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
       val task3 = TestPrototypes.taskNotification.copy(jobName = "Job 3", outputTable = metaTableDef3)
 
       notificationTarget.sendNotification(
-        PipelineInfo("Dummy", "DEV", RuntimeInfo(), Instant.now, None, None, None, Seq.empty),
+        PipelineInfo("Dummy", "DEV", RuntimeInfo(), Instant.now, None, None, None, Seq.empty, "pid_123", None),
         Seq(task1, task2, task3),
         CustomNotification(Seq.empty, Seq.empty)
       )

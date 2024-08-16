@@ -35,9 +35,13 @@ class JournalTasks(tag: Tag) extends Table[JournalTask](tag, "journal") {
   def status = column[String]("status", O.Length(50))
   def failureReason = column[Option[String]]("failure_reason")
   def sparkApplicationId = column[Option[String]]("spark_application_id", O.Length(128))
+  def pipelineId = column[Option[String]]("pipelineId", O.Length(40))
+  def pipelineName = column[Option[String]]("pipelineName", O.Length(200))
+  def environmentName = column[Option[String]]("environmentName", O.Length(128))
+  def tenant = column[Option[String]]("tenant", O.Length(200))
   def * = (jobName, pramenTableName, periodBegin, periodEnd,
     informationDate, inputRecordCount, inputRecordCountOld, outputRecordCount,
-    outputRecordCountOld, outputSize, startedAt, finishedAt, status, failureReason, sparkApplicationId) <> (JournalTask.tupled, JournalTask.unapply)
+    outputRecordCountOld, outputSize, startedAt, finishedAt, status, failureReason, sparkApplicationId, pipelineId, pipelineName, environmentName, tenant) <> (JournalTask.tupled, JournalTask.unapply)
   def idx1 = index("idx_started_at", startedAt, unique = false)
   def idx2 = index("idx_finished_at", finishedAt, unique = false)
 }

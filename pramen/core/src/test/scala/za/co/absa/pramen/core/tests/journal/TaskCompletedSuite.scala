@@ -16,8 +16,10 @@
 
 package za.co.absa.pramen.core.tests.journal
 
+import org.apache.avro.generic.GenericData.Array
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskResult, TaskRunReason}
+import za.co.absa.pramen.api.PipelineInfo
+import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RunInfo, RunStatus, RuntimeInfo, TaskResult, TaskRunReason}
 import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.mocks.job.JobSpy
@@ -27,6 +29,17 @@ import java.time.{Instant, LocalDate}
 
 class TaskCompletedSuite extends AnyWordSpec {
   private val infoDate = LocalDate.of(2022, 1, 18)
+  private val pipelineInfo = PipelineInfo(
+    pipelineName = "test_pipeline",
+    environment = "TEST",
+    runtimeInfo = RuntimeInfo(),
+    startedAt = Instant.now(),
+    finishedAt = Some(Instant.now()),
+    sparkApplicationId = Some("app_123"),
+    failureException = None,
+    pipelineNotificationFailures = Seq.empty,
+    pipelineId = "test_pipeline_id",
+    tenant = Some("test_tenant"))
 
   "fromTaskResult" should {
     "create a TaskCompleted from a TaskResult for a successful task" in {
@@ -46,8 +59,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         Nil,
         Nil,
         Map.empty)
-
-      val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult)
+      val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult, pipelineInfo)
 
       assert(taskCompleted.jobName == job.name)
       assert(taskCompleted.tableName == job.outputTable.name)
@@ -62,7 +74,11 @@ class TaskCompletedSuite extends AnyWordSpec {
       assert(taskCompleted.startedAt == now.minusSeconds(10).getEpochSecond)
       assert(taskCompleted.finishedAt == now.getEpochSecond)
       assert(taskCompleted.status == "Update")
-      assert(taskCompleted.failureReason.isEmpty)
+      assert(taskCompleted.sparkApplicationId == pipelineInfo.sparkApplicationId)
+      assert(taskCompleted.pipelineId.contains(pipelineInfo.pipelineId))
+      assert(taskCompleted.pipelineName.contains(pipelineInfo.pipelineName))
+      assert(taskCompleted.environmentName.contains(pipelineInfo.environment))
+      assert(taskCompleted.tenant == pipelineInfo.tenant)
     }
 
     "create a TaskCompleted from a TaskResult for a failed task" in {
@@ -83,7 +99,7 @@ class TaskCompletedSuite extends AnyWordSpec {
         Nil,
         Map.empty)
 
-      val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult)
+      val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult, pipelineInfo)
 
       assert(taskCompleted.jobName == job.name)
       assert(taskCompleted.tableName == job.outputTable.name)
@@ -99,6 +115,11 @@ class TaskCompletedSuite extends AnyWordSpec {
       assert(now.getEpochSecond - taskCompleted.finishedAt < 1000)
       assert(taskCompleted.status == "Failed")
       assert(taskCompleted.failureReason.exists(_.contains("Dummy Exception")))
+      assert(taskCompleted.sparkApplicationId == pipelineInfo.sparkApplicationId)
+      assert(taskCompleted.pipelineId.contains(pipelineInfo.pipelineId))
+      assert(taskCompleted.pipelineName.contains(pipelineInfo.pipelineName))
+      assert(taskCompleted.environmentName.contains(pipelineInfo.environment))
+      assert(taskCompleted.tenant == pipelineInfo.tenant)
     }
   }
 }

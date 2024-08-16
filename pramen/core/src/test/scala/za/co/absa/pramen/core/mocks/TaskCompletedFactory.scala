@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.journal.model.TaskCompleted
 import java.time.LocalDate
 
 object TaskCompletedFactory {
-  def getTackCompleted(jobName: String = "DummyJob",
+  def getTaskCompleted(jobName: String = "DummyJob",
                        tableName: String = "DummyTable",
                        periodBegin: LocalDate = LocalDate.of(2020, 12, 9),
                        periodEnd: LocalDate = LocalDate.of(2020, 12, 9),
@@ -37,7 +37,11 @@ object TaskCompletedFactory {
                        finishedAt: Long = 1234568L,
                        status: String = TaskStatus.NEW.toString,
                        failureReason: Option[String] = None,
-                       sparkApplicationId: Option[String] = Some("abc123")): TaskCompleted = {
+                       sparkApplicationId: Option[String] = Some("abc123"),
+                       pipelineId: Option[String] = Some(java.util.UUID.randomUUID().toString),
+                       pipelineName: Option[String] = Some("test"),
+                       environmentName: Option[String] = Some("DEV"),
+                       tenant: Option[String] = Some("Dummy tenant")): TaskCompleted = {
     model.TaskCompleted(
       jobName,
       tableName,
@@ -53,7 +57,11 @@ object TaskCompletedFactory {
       finishedAt,
       status,
       failureReason,
-      sparkApplicationId
+      sparkApplicationId,
+      pipelineId,
+      pipelineName,
+      environmentName,
+      tenant
     )
   }
 

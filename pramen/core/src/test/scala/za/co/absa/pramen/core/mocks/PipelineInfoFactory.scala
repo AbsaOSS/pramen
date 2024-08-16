@@ -29,7 +29,8 @@ object PipelineInfoFactory {
                            finishedAt: Option[Instant] = None,
                            sparkApplicationId: Option[String] = Some("testid-12345"),
                            failureException: Option[Throwable] = None,
-                           pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty): PipelineInfo = {
-    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, sparkApplicationId, failureException, pipelineNotificationFailures)
+                           pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty,
+                           tenant:  Option[String] = Some("Dummy tenant")): PipelineInfo = {
+    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, sparkApplicationId, failureException, pipelineNotificationFailures, java.util.UUID.randomUUID().toString,tenant)
   }
 }

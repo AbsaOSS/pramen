@@ -42,8 +42,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   // Config
+  private val pipelineId = java.util.UUID.randomUUID.toString
   private val pipelineName = conf.getString(PIPELINE_NAME_KEY)
   private val environmentName = conf.getString(ENVIRONMENT_NAME)
+  private val tenant = if (conf.hasPath(TENANT_KEY)) Some(conf.getString(TENANT_KEY)) else None
   private val sendEmailIfNoNewData: Boolean = conf.getBoolean(EMAIL_IF_NO_CHANGES)
   private val hookConfig = HookConfig.fromConfig(conf)
   private var pipelineNotificationTargets: Seq[PipelineNotificationTarget] = Seq.empty
@@ -108,7 +110,9 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         finishedInstant,
         sparkAppId,
         appException,
-        pipelineNotificationFailures.toSeq
+        pipelineNotificationFailures.toSeq,
+        pipelineId,
+        tenant
       ),
       isFinished,
       warningFlag,
