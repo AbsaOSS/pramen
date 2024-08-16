@@ -28,5 +28,7 @@ case class PipelineInfo(
                          finishedAt: Option[Instant],
                          sparkApplicationId: Option[String],
                          failureException: Option[Throwable],
-                         pipelineNotificationFailures: Seq[PipelineNotificationFailure]
+                         pipelineNotificationFailures: Seq[PipelineNotificationFailure],
+                         pipelineId: String,
+                         tenant: Option[String]
                        )

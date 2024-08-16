@@ -50,7 +50,11 @@ class JournalJdbc(db: Database) extends Journal {
       entry.finishedAt,
       entry.status,
       entry.failureReason,
-      entry.sparkApplicationId)
+      entry.sparkApplicationId,
+      entry.pipelineId,
+      entry.pipelineName,
+      entry.environmentName,
+      entry.tenant)
 
     try {
       db.run(
@@ -83,7 +87,11 @@ class JournalJdbc(db: Database) extends Journal {
         finishedAt = v.finishedAt,
         status = v.status,
         failureReason = v.failureReason,
-        sparkApplicationId = v.sparkApplicationId
+        sparkApplicationId = v.sparkApplicationId,
+        pipelineId = v.pipelineId,
+        pipelineName = v.pipelineName,
+        environmentName = v.environmentName,
+        tenant = v.tenant
       )
     }).toList
   }

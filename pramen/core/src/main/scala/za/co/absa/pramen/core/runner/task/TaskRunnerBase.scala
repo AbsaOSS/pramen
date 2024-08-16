@@ -446,13 +446,13 @@ abstract class TaskRunnerBase(conf: Config,
 
     logTaskResult(updatedResult, isLazy)
     pipelineState.addTaskCompletion(Seq(updatedResult))
-    addJournalEntry(task, updatedResult)
+    addJournalEntry(task, updatedResult, pipelineState.getState().pipelineInfo)
 
     updatedResult.runStatus
   }
 
-  private def addJournalEntry(task: Task, taskResult: TaskResult): Unit = {
-    val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult)
+  private def addJournalEntry(task: Task, taskResult: TaskResult, pipelineInfo: PipelineInfo): Unit = {
+    val taskCompleted = TaskCompleted.fromTaskResult(task, taskResult, pipelineInfo)
 
     journal.addEntry(taskCompleted)
   }

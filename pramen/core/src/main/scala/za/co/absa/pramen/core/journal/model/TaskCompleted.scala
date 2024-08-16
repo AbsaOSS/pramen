@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.journal.model
 
+import za.co.absa.pramen.api.PipelineInfo
 import za.co.absa.pramen.api.status.RunStatus.Succeeded
 import za.co.absa.pramen.api.status.TaskResult
 import za.co.absa.pramen.core.pipeline.Task
@@ -37,7 +38,11 @@ case class TaskCompleted(
                           finishedAt: Long,
                           status: String,
                           failureReason: Option[String],
-                          sparkApplicationId: Option[String]
+                          sparkApplicationId: Option[String],
+                          pipelineId: Option[String],
+                          pipelineName: Option[String],
+                          environmentName: Option[String],
+                          tenant: Option[String]
                         )
 
 object TaskCompleted {
@@ -45,7 +50,7 @@ object TaskCompleted {
     * TaskCompleted is a legacy form of a task completion status. This is added for compatibility.
     * The journal might be eventually deprecated.
     */
-  def fromTaskResult(task: Task, taskResult: TaskResult): TaskCompleted = {
+  def fromTaskResult(task: Task, taskResult: TaskResult, pipelineInfo: PipelineInfo): TaskCompleted = {
     val now = Instant.now().getEpochSecond
     val taskStarted = taskResult.runInfo.map(_.started.getEpochSecond).getOrElse(now)
     val taskFinished = taskResult.runInfo.map(_.finished.getEpochSecond).getOrElse(now)
@@ -73,7 +78,11 @@ object TaskCompleted {
       taskFinished,
       status,
       failureReason,
-      sparkApplicationId
+      sparkApplicationId,
+      Some(pipelineInfo.pipelineId),
+      Some(pipelineInfo.pipelineName),
+      Some(pipelineInfo.environment),
+      pipelineInfo.tenant
     )
   }
 }
