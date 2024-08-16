@@ -109,7 +109,7 @@ class JournalHadoop(journalPath: String)
       t.finishedAt ::
       t.status ::
       removeSeparators(t.failureReason.getOrElse("")) ::
-      t.sparkApplicationId ::
+      t.sparkApplicationId.getOrElse("") ::
       Nil
     record.mkString("", s"$separator", "\n")
   }

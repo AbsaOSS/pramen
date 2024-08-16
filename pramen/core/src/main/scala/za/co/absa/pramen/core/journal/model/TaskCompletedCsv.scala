@@ -31,5 +31,5 @@ case class TaskCompletedCsv(
                              finishedAt: Long,
                              status: String,
                              failureReason: Option[String],
-                             sparkApplicationId: String
+                             sparkApplicationId: Option[String]
                            )

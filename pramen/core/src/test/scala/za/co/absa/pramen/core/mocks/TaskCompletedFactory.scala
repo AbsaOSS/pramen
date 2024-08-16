@@ -37,7 +37,7 @@ object TaskCompletedFactory {
                        finishedAt: Long = 1234568L,
                        status: String = TaskStatus.NEW.toString,
                        failureReason: Option[String] = None,
-                       sparkApplicationId: String = "abc123"): TaskCompleted = {
+                       sparkApplicationId: Option[String] = Some("abc123")): TaskCompleted = {
     model.TaskCompleted(
       jobName,
       tableName,
