@@ -31,5 +31,5 @@ case class JournalTask(
                           finishedAt: Long,
                           status: String,
                           failureReason: Option[String],
-                          sparkApplicationId: String
+                          sparkApplicationId: Option[String]
                         )

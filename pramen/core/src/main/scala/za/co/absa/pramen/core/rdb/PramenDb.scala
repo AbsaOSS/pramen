@@ -64,8 +64,8 @@ class PramenDb(val jdbcConfig: JdbcConfig,
       initTable(MetadataRecords.records.schema)
     }
 
-    if (dbVersion < 4) {
-      addColumn("journal", "spark_application_id", "varchar(255)")
+    if (0 < dbVersion && dbVersion < 4) {
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "spark_application_id", "varchar(128)")
     }
   }
 
@@ -83,8 +83,10 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
   def addColumn(table: String, columnName: String, columnType: String): Unit = {
     try {
+      val quotedTable = s""""$table""""
+      val quotedColumnName = s""""$columnName""""
       db.run(
-          sqlu"ALTER TABLE ${table} ADD ${columnName} ${columnType}"
+          sqlu"ALTER TABLE #$quotedTable ADD #$quotedColumnName #$columnType"
         ).execute()
     } catch {
       case NonFatal(ex) =>

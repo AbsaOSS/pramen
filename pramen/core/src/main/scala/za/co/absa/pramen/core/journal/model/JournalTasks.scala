@@ -34,7 +34,7 @@ class JournalTasks(tag: Tag) extends Table[JournalTask](tag, "journal") {
   def finishedAt = column[Long]("finished_at")
   def status = column[String]("status", O.Length(50))
   def failureReason = column[Option[String]]("failure_reason")
-  def sparkApplicationId = column[String]("spark_application_id")
+  def sparkApplicationId = column[Option[String]]("spark_application_id", O.Length(128))
   def * = (jobName, pramenTableName, periodBegin, periodEnd,
     informationDate, inputRecordCount, inputRecordCountOld, outputRecordCount,
     outputRecordCountOld, outputSize, startedAt, finishedAt, status, failureReason, sparkApplicationId) <> (JournalTask.tupled, JournalTask.unapply)
