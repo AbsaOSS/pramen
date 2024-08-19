@@ -79,9 +79,9 @@ object TaskCompleted {
       status,
       failureReason,
       sparkApplicationId,
-      Some(pipelineInfo.pipelineId),
-      Some(pipelineInfo.pipelineName),
-      Some(pipelineInfo.environment),
+      Option(pipelineInfo.pipelineId),
+      Option(pipelineInfo.pipelineName),
+      Option(pipelineInfo.environment),
       pipelineInfo.tenant
     )
   }
