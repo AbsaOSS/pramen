@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.mocks.MetaTableFactory
@@ -33,6 +34,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
 
   private val infoDate = LocalDate.of(2022, 1, 18)
   private val conf = ConfigFactory.empty()
+  private val runReason: TaskRunReason = TaskRunReason.New
 
   private def exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
@@ -40,7 +42,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
     "return Ready" in {
       val (job, _) = getUseCase(validateFunction = () => Reason.Ready)
 
-      val actual = job.preRunCheckJob(infoDate, conf, Nil)
+      val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
       assert(actual.status == JobPreRunStatus.Ready)
     }

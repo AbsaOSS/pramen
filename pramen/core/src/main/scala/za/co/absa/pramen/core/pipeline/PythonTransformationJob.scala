@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
-import za.co.absa.pramen.api.status.DependencyWarning
+import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -71,7 +71,7 @@ class PythonTransformationJob(operationDef: OperationDef,
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 
-  override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
+  override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
       case Some(result) => result
       case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])

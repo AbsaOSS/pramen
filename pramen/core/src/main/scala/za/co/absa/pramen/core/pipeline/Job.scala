@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
@@ -44,6 +45,7 @@ trait Job {
     * Checks pre-conditions for the job, such as data availability.
     */
   def preRunCheck(infoDate: LocalDate,
+                  runReason: TaskRunReason,
                   conf: Config): JobPreRunResult
 
   /**

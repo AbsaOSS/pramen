@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -37,6 +38,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
   private val infoDate = LocalDate.of(2022, 1, 18)
   private val conf = ConfigFactory.empty()
+  private val runReason: TaskRunReason = TaskRunReason.New
 
   private def exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
@@ -44,7 +46,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "return Ready when the input table is available" in {
       val (job, _) = getUseCase()
 
-      val actual = job.preRunCheckJob(infoDate, conf, Nil)
+      val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
       assert(actual == JobPreRunResult(JobPreRunStatus.Ready, Some(5), Nil, Nil))
     }
@@ -52,7 +54,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "return NoData when the input table has no data" in {
       val (job, _) = getUseCase(numberOfRecords = 0)
 
-      val actual = job.preRunCheckJob(infoDate, conf, Nil)
+      val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
       assert(actual == JobPreRunResult(JobPreRunStatus.NoData(false), None, Nil, Nil))
     }
@@ -60,7 +62,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "return NoData with a failure when the input table has no data" in {
       val (job, _) = getUseCase(numberOfRecords = 0, failOnNoData = true)
 
-      val actual = job.preRunCheckJob(infoDate, conf, Nil)
+      val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
       assert(actual == JobPreRunResult(JobPreRunStatus.NoData(true), None, Nil, Nil))
     }
@@ -71,7 +73,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       bk.setRecordCount("table1->sink", infoDate, infoDate, infoDate, 3, 3, 10000, 1001, isTableTransient = false)
 
-      val actual = job.preRunCheckJob(infoDate, conf, Nil)
+      val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
       assert(actual == JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(7), Nil, Nil))
     }
@@ -81,7 +83,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       bk.setRecordCount("table1->sink", infoDate, infoDate, infoDate, 7, 3, 10000, 1001, isTableTransient = false)
 
-      val actual = job.preRunCheckJob(infoDate, conf, Nil)
+      val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
       assert(actual == JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(7), Nil, Nil))
     }
@@ -90,7 +92,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
       val (job, _) = getUseCase(getCountException = new RuntimeException("Dummy Exception"))
 
       val ex = intercept[RuntimeException] {
-        job.preRunCheckJob(infoDate, conf, Nil)
+        job.preRunCheckJob(infoDate, runReason, conf, Nil)
       }
 
       assert(ex.getMessage == "Dummy Exception")
@@ -136,7 +138,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
       withTempDirectory("cached_transfer_data") { tempDir =>
         val (job, _) = getUseCase(tempDirectory = Option(tempDir), disableCountQuery = true)
 
-        val preRunCheck = job.preRunCheckJob(infoDate, conf, Seq.empty)
+        val preRunCheck = job.preRunCheckJob(infoDate, runReason, conf, Seq.empty)
         assert(preRunCheck.status == JobPreRunStatus.Ready)
         assert(preRunCheck.inputRecordsCount.contains(5))
         assert(TransientTableManager.hasDataForTheDate("source_cache://testsource|table1|2022-01-18", infoDate))
