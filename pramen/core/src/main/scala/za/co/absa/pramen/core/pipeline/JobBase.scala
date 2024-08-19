@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.types.StructType
 import org.slf4j.{Logger, LoggerFactory}
-import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, MetastoreDependency}
+import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
@@ -50,9 +50,10 @@ abstract class JobBase(operationDef: OperationDef,
 
   override def trackDays: Int = outputTable.trackDays
 
-  def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult
+  def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult
 
   final override def preRunCheck(infoDate: LocalDate,
+                                 runReason: TaskRunReason,
                                  conf: Config): JobPreRunResult = {
     val validationFailures = operationDef.dependencies.flatMap(dependency => {
       checkDependency(dependency, infoDate)
@@ -77,7 +78,7 @@ abstract class JobBase(operationDef: OperationDef,
         log.info(s"Job for table ${outputTableDef.name} at $infoDate has no validation failures.")
       }
 
-      preRunCheckJob(infoDate, conf, dependencyWarnings)
+      preRunCheckJob(infoDate, runReason, conf, dependencyWarnings)
     }
   }
 
@@ -224,5 +225,7 @@ abstract class JobBase(operationDef: OperationDef,
 object JobBase {
   val MINIMUM_RECORDS_KEY = "minimum.records"
   val FAIL_NO_DATA_KEY = "fail.if.no.data"
+  val FAIL_NO_LATE_DATA_KEY = "fail.if.no.late.data"
+  val FAIL_NO_NEW_DATA_KEY = "fail.if.no.new.data"
   val MINIMUM_RECORDS_DEFAULT = 1
 }

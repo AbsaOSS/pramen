@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.status.DependencyWarning
+import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -65,11 +65,19 @@ class IngestionJob(operationDef: OperationDef,
       0
   }
 
-  override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
+  override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     source.connect()
 
     val minimumRecordsOpt = ConfigUtils.getOptionInt(source.config, MINIMUM_RECORDS_KEY)
-    val failIfNoData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_DATA_KEY).getOrElse(false)
+    val failIfNoAnyData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_DATA_KEY).getOrElse(false)
+    val failIfNoNewData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_NEW_DATA_KEY).getOrElse(false)
+    val failIfNoLateData = ConfigUtils.getOptionBoolean(source.config, FAIL_NO_LATE_DATA_KEY).getOrElse(false)
+
+    val failIfNoData = if (runReason == TaskRunReason.Late) {
+      failIfNoAnyData || failIfNoLateData
+    } else {
+      failIfNoAnyData || failIfNoNewData
+    }
 
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate, infoDate)
 
@@ -85,7 +93,8 @@ class IngestionJob(operationDef: OperationDef,
         log.warn(s"Validation of '${outputTable.name}' for $from..$to returned warnings: ${warnings.mkString("\n")}.")
         warnings
       case Reason.NotReady(msg) =>
-        log.warn(s"Validation of '${outputTable.name}' for $from..$to returned 'not ready'. Reason: $msg.")
+        log.info(s"failIfNoAnyData=$failIfNoAnyData, failIfNoLateData=$failIfNoLateData, failIfNoNewData=$failIfNoNewData, failIfNoData=$failIfNoData")
+        log.warn(s"Validation of '${outputTable.name}' for $from..$to returned 'not ready'. Reason: $msg. ")
         return JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), None, dependencyWarnings, Seq(msg))
       case Reason.Skip(msg) =>
         log.warn(s"Validation of '${outputTable.name}' for $from..$to requested to skip the task. Reason: $msg.")
@@ -229,7 +238,7 @@ class IngestionJob(operationDef: OperationDef,
         log.info(s"Table '${outputTable.name}' for $infoDate has not enough records. Minimum $minimumRecords, got $recordCount. Skipping...")
         JobPreRunResult(JobPreRunStatus.InsufficientData(recordCount, minimumRecords, oldRecordCount), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
       case None                 =>
-        log.info(s"Table '${outputTable.name}' for $infoDate has no data. Skipping...")
+        log.info(s"Table '${outputTable.name}' for $infoDate has no data (failIfNoData=$failIfNoData). Skipping...")
         JobPreRunResult(JobPreRunStatus.NoData(failIfNoData), minimumRecordsOpt.map(_ => recordCount), dependencyWarnings, Seq.empty[String])
     }
   }

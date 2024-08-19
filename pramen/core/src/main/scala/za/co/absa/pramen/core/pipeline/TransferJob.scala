@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.status.DependencyWarning
+import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Sink, Source}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
@@ -47,8 +47,8 @@ class TransferJob(operationDef: OperationDef,
 
   override val scheduleStrategy: ScheduleStrategy = ingestionJob.scheduleStrategy
 
-  override def preRunCheckJob(infoDate: LocalDate, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    ingestionJob.preRunCheckJob(infoDate, jobConfig, dependencyWarnings)
+  override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
+    ingestionJob.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)
   }
 
   override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {

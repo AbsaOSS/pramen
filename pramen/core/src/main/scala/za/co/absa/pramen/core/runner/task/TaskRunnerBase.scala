@@ -216,7 +216,7 @@ abstract class TaskRunnerBase(conf: Config,
     val isRawFileBased = task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
 
     Try {
-      task.job.preRunCheck(task.infoDate, conf)
+      task.job.preRunCheck(task.infoDate, task.reason, conf)
     } match {
       case Success(validationResult) =>
         val resultToReturn = validationResult.status match {
@@ -262,8 +262,8 @@ abstract class TaskRunnerBase(conf: Config,
     * If validation is successful, in instance of JobPreRunResult is returned.
     * If validation failed an instance of TaskResult is returned.
     *
-    * @param task    a task to validate.
-    * @param started the instant when the job has started executing.
+    * @param task      a task to validate.
+    * @param started   the instant when the job has started executing.
     * @return an instance of TaskResult on validation failure or optional record count on success.
     */
   private[core] def validate(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {

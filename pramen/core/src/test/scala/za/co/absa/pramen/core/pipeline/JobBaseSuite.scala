@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.status.MetastoreDependency
+import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
@@ -35,6 +35,7 @@ import java.time.{Instant, LocalDate}
 class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
 
   private val infoDate = LocalDate.of(2022, 1, 18)
+  private val runReason: TaskRunReason = TaskRunReason.New
 
   "allowRunningTasksInParallel()" should {
     "be true for jobs that don't have dependencies" in {
@@ -129,7 +130,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false)
 
-      val actual = job.preRunCheck(infoDate, conf)
+      val actual = job.preRunCheck(infoDate, runReason, conf)
 
       assert(actual.dependencyWarnings.isEmpty)
       assert(actual.status.isInstanceOf[FailedDependencies])
@@ -143,7 +144,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = true)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false)
 
-      val actual = job.preRunCheck(infoDate, conf)
+      val actual = job.preRunCheck(infoDate, runReason, conf)
 
       assert(actual.dependencyWarnings.isEmpty)
       assert(actual.status.isInstanceOf[FailedDependencies])
@@ -157,7 +158,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val dep = MetastoreDependency(Seq("table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false, isTableEmpty = true)
 
-      val actual = job.preRunCheck(infoDate, conf)
+      val actual = job.preRunCheck(infoDate, runReason, conf)
 
       assert(actual.dependencyWarnings.isEmpty)
       assert(actual.status.isInstanceOf[FailedDependencies])
@@ -169,7 +170,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val dep = MetastoreDependency(Seq("table1"), "@infoDate", None, triggerUpdates = false, isOptional = true, isPassive = false)
       val job = getUseCase(dependencies = Seq(dep), isTableAvailable = false)
 
-      val actual = job.preRunCheck(infoDate.plusDays(1), conf)
+      val actual = job.preRunCheck(infoDate.plusDays(1), runReason, conf)
 
       assert(actual.dependencyWarnings.nonEmpty)
       assert(actual.dependencyWarnings.head.table == "table1")

@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.mocks.job
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -67,6 +68,7 @@ class JobSpy(jobName: String = "DummyJob",
   override def trackDays: Int = jobTrackDays
 
   def preRunCheck(infoDate: LocalDate,
+                  runReason: TaskRunReason,
                   conf: Config): JobPreRunResult = {
     preRunCheckCount += 1
     preRunCheckFunction()

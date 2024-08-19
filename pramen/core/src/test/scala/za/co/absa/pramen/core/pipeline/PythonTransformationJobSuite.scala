@@ -22,6 +22,7 @@ import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.exceptions.ProcessFailedException
@@ -43,6 +44,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
   private val infoDate = LocalDate.of(2022, 2, 18)
   private var tempDir: String = _
   private val exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+  private val runReason: TaskRunReason = TaskRunReason.New
 
   private def getConf(tempDir: String): Config = ConfigFactory.parseString(
     s"""
@@ -120,7 +122,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
     "always return Ready" in {
       val (job, _, _, _) = getUseCase()
 
-      val result = job.preRunCheckJob(infoDate, conf, Nil)
+      val result = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
       assert(result.status == JobPreRunStatus.Ready)
     }
