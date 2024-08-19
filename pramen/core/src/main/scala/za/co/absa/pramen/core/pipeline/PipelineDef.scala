@@ -24,7 +24,8 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 case class PipelineDef(
                         name: String,
                         environment: String,
-                        operations: Seq[OperationDef]
+                        operations: Seq[OperationDef],
+                        tenant: Option[String]
                       )
 
 object PipelineDef {
@@ -41,6 +42,7 @@ object PipelineDef {
       .zipWithIndex
       .flatMap{ case (c, i) => OperationDef.fromConfig(c, conf, infoDateConfig, s"$OPERATIONS_KEY[$i]", defaultDelayDays) }
       .toSeq
-    PipelineDef(name, environment, operations)
+    val tenant = ConfigUtils.getOptionString(conf, TENANT_KEY)
+    PipelineDef(name, environment, operations, tenant)
   }
 }
