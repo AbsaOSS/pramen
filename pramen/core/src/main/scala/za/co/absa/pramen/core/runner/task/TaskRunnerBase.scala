@@ -119,7 +119,7 @@ abstract class TaskRunnerBase(conf: Config,
   protected def runTask(task: Task): RunStatus = {
     val started = Instant.now()
     task.job.operation.killMaxExecutionTimeSeconds match {
-      case Some(timeout) =>
+      case Some(timeout) if timeout > 0 =>
         @volatile var runStatus: RunStatus = null
 
         try {
@@ -132,6 +132,9 @@ abstract class TaskRunnerBase(conf: Config,
           case NonFatal(ex) =>
             failTask(task, started, ex)
         }
+      case Some(timeout) =>
+        log.error(s"Incorrect timeout for the task: ${task.job.name}. Should be bigger than zero, got: $timeout.")
+        doValidateAndRunTask(task)
       case None =>
         doValidateAndRunTask(task)
     }
@@ -445,10 +448,40 @@ abstract class TaskRunnerBase(conf: Config,
     val updatedResult = taskResult.copy(notificationTargetErrors = notificationTargetErrors)
 
     logTaskResult(updatedResult, isLazy)
-    pipelineState.addTaskCompletion(Seq(updatedResult))
-    addJournalEntry(task, updatedResult, pipelineState.getState().pipelineInfo)
+    val wasInterrupted = isTaskInterrupted(task, taskResult)
+    if (wasInterrupted) {
+      log.warn("Skipping the interrupted exception of the killed task.")
+    } else {
+      pipelineState.addTaskCompletion(Seq(updatedResult))
+      addJournalEntry(task, updatedResult, pipelineState.getState().pipelineInfo)
+    }
 
     updatedResult.runStatus
+  }
+
+  private def isTaskInterrupted(task: Task, taskResult: TaskResult): Boolean = {
+    val hasTimeout = task.job.operation.killMaxExecutionTimeSeconds.nonEmpty
+
+    taskResult.runStatus match {
+      case _: RunStatus.Failed if hasTimeout =>
+        val failureException = taskResult.runStatus.asInstanceOf[RunStatus.Failed].ex
+
+        failureException match {
+          case _: InterruptedException =>
+            true
+          case _: FatalErrorWrapper =>
+            failureException.getCause match {
+              case _: InterruptedException =>
+                true
+              case _ =>
+                false
+            }
+          case _ =>
+            false
+        }
+      case _ =>
+        false
+    }
   }
 
   private def addJournalEntry(task: Task, taskResult: TaskResult, pipelineInfo: PipelineInfo): Unit = {

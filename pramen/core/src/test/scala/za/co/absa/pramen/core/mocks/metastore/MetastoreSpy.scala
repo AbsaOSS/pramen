@@ -38,6 +38,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    isTableAvailable: Boolean = true,
                    isTableEmpty: Boolean = false,
                    trackDays: Int = 0,
+                   failHive: Boolean = false,
                    readOptions: Map[String, String] = Map.empty[String, String],
                    writeOptions: Map[String, String] = Map.empty[String, String]) extends Metastore {
 
@@ -86,7 +87,10 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                                        schema: Option[StructType],
                                        hiveHelper: HiveHelper,
                                        recreate: Boolean): Unit = {
-    hiveCreationInvocations.append((tableName, infoDate, schema, recreate))
+    if (failHive) {
+      throw new RuntimeException("Test exception")
+    } else
+      hiveCreationInvocations.append((tableName, infoDate, schema, recreate))
   }
 
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {

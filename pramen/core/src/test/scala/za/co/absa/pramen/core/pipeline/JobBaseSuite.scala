@@ -24,6 +24,7 @@ import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
+import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobBaseDummy
@@ -212,12 +213,53 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     }
   }
 
+  "createOrRefreshHiveTable" should {
+    "do nothing if Hive table is not defined" in {
+      val job = getUseCase()
+
+      val warnings = job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+
+      assert(warnings.isEmpty)
+
+    }
+
+    "return an empty seq of warnings when the operation succeeded" in {
+      val job = getUseCase(hiveTable = Some("test_hive_table"))
+
+      val warnings = job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+
+      assert(warnings.isEmpty)
+    }
+
+    "return warnings if ignore failures enabled" in {
+      val job = getUseCase(hiveTable = Some("test_hive_table"), hiveFailure = true, ignoreHiveFailures = true)
+
+      val warnings = job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+
+      assert(warnings.nonEmpty)
+      assert(warnings.head == "Failed to create or update Hive table 'test_hive_table': Test exception")
+    }
+
+    "re-throw the exception if ignore failures disabled" in {
+      val job = getUseCase(hiveTable = Some("test_hive_table"), hiveFailure = true)
+
+      val ex = intercept[RuntimeException] {
+        job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+      }
+
+      assert(ex.getMessage == "Test exception")
+    }
+  }
+
   def getUseCase(tableDf: DataFrame = null,
                  dependencies: Seq[MetastoreDependency] = Nil,
                  isTableAvailable: Boolean = true,
                  isTableEmpty: Boolean = false,
                  allowParallel: Boolean = true,
-                 warnMaxExecutionTimeSeconds: Option[Int] = None): JobBase = {
+                 warnMaxExecutionTimeSeconds: Option[Int] = None,
+                 hiveTable: Option[String] = None,
+                 hiveFailure: Boolean = false,
+                 ignoreHiveFailures: Boolean = false): JobBase = {
     val operation = OperationDefFactory.getDummyOperationDef(dependencies = dependencies,
       allowParallel = allowParallel,
       warnMaxExecutionTimeSeconds = warnMaxExecutionTimeSeconds,
@@ -225,9 +267,12 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     val bk = new SyncBookkeeperMock
 
-    val metastore = new MetastoreSpy(tableDf = tableDf, isTableAvailable = isTableAvailable, isTableEmpty = isTableEmpty)
+    val metastore = new MetastoreSpy(tableDf = tableDf, isTableAvailable = isTableAvailable, isTableEmpty = isTableEmpty, failHive = hiveFailure)
 
-    val outputTable = MetaTableFactory.getDummyMetaTable(name = "test_output_table")
+    val outputTable = MetaTableFactory.getDummyMetaTable(name = "test_output_table",
+      hiveTable = hiveTable,
+      hiveConfig = HiveConfig.getNullConfig.copy(ignoreFailures = ignoreHiveFailures)
+    )
 
     new JobBaseDummy(operation, Nil, metastore, bk, outputTable)
   }
