@@ -465,7 +465,15 @@ pramen.sources = [
     format = "parquet"
     
     minimum.records = 0
+
+    # If true, fails the pipeline is there is no data any time when it is expected
     fail.if.no.data = false
+
+    # If true, fails the pipeline is there is no data for jobs trying to catch late data
+    fail.if.no.late.data = false
+
+    # If true, fails the pipeline is there is no data for jobs checking new data as expected
+    fail.if.no.new.data = false
   }
 ]
 ```
@@ -534,9 +542,15 @@ is determined by the pipeline configuration.
     # SQL queries that do not start with "SELECT".
     use.jdbc.native = false
     
-    # Consider the pipeline as failed if at least one table has no data at the scheduled time.
+    # Consider the pipeline as failed if at least one table has no data at the scheduled time (new or late).
     # Useful for auto-retrying ingestion pipelines.
     fail.if.no.data = false
+
+    # If true, fails the pipeline is there is no data for jobs trying to catch late data
+    fail.if.no.late.data = false
+
+    # If true, fails the pipeline is there is no data for jobs checking new data as expected
+    fail.if.no.new.data = false
 
     # One of: auto (default), always, never 
     # - When 'auto', an identifier will be quoted if it contains invalid characters. This includes any characters 
@@ -1952,7 +1966,7 @@ Here is an example configuration for a JDBC source:
       # You can override any of source settings here 
       source {
         minimum.records = 1000 
-        fail.if.no.data = true
+        fail.if.no.new.data = true
         has.information.date.column = true
         use.jdbc.native = true
         information.date.column = "info_date"
