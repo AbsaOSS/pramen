@@ -47,6 +47,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
 class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture {
+
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
@@ -142,6 +143,43 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val journalEntries = journal.getEntries(now, now.plusSeconds(30))
 
       assert(journalEntries.length == 2)
+      assert(journalEntries.head.status == "Failed")
+    }
+
+    "run a job that is failing with timeout" in {
+      val now = Instant.now()
+
+      val runFunction: () => RunResult = () => {
+        Thread.sleep(2000)
+        null
+      }
+
+      val (runner, _, journal, state, tasks) = getUseCase(runFunction = runFunction,
+        isRerun = true,
+        allowParallel = false,
+        timeoutTask = true)
+
+      val taskPreDefs = Seq(core.pipeline.TaskPreDef(infoDate, TaskRunReason.New))
+
+      val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
+
+      Await.result(fut, Duration.Inf)
+
+      val result = state.completedStatuses
+
+      val job = tasks.head.job.asInstanceOf[JobSpy]
+
+      assert(job.validateCount == 1)
+      assert(job.runCount == 1)
+      assert(job.postProcessingCount == 0)
+      assert(job.saveCount == 0)
+      assert(job.createHiveTableCount == 0)
+      assert(result.length == 1)
+      assert(result.head.runStatus.isInstanceOf[Failed])
+
+      val journalEntries = journal.getEntries(now, now.plusSeconds(30))
+
+      assert(journalEntries.length == 1)
       assert(journalEntries.head.status == "Failed")
     }
 
@@ -581,7 +619,8 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  bookkeeperIn: Bookkeeper = null,
                  allowParallel: Boolean = true,
                  hiveTable: Option[String] = None,
-                 jobNotificationTargets: Seq[JobNotificationTarget] = Nil
+                 jobNotificationTargets: Seq[JobNotificationTarget] = Nil,
+                 timeoutTask: Boolean = false
                 ): (TaskRunnerBase, Bookkeeper, Journal, PipelineStateSpy, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
@@ -590,12 +629,13 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
     val journal = new JournalMock
     val tokenLockFactory = new TokenLockFactoryMock
-
     val state = new PipelineStateSpy
+    val killTimer = if (timeoutTask) Some(1) else None
 
     val operationDef = OperationDefFactory.getDummyOperationDef(
       schemaTransformations = List(TransformExpression("c", Some("cast(b as string)"), None)),
-      filters = List("b > 1")
+      filters = List("b > 1"),
+      killMaxExecutionTimeSeconds = killTimer
     )
 
     val stats = MetaTableStats(2, Some(100))
