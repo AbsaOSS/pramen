@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.utils
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Row, types}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.core.NestedDataFrameFactory
@@ -250,6 +250,29 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(diff.head.asInstanceOf[ChangedType].columnName == "b")
       assert(diff.head.asInstanceOf[ChangedType].oldType == "integer")
       assert(diff.head.asInstanceOf[ChangedType].newType == "double")
+    }
+
+    "detect changed string data types when metadata has changed " in {
+      val schema1Orig = exampleDf.schema
+
+      val metadata1 = (new MetadataBuilder).putLong(MAX_LENGTH_METADATA_KEY, 10L).build
+      val newField1 = schema1Orig.fields.head.copy(metadata = metadata1)
+      val schema1 = schema1Orig.copy(fields = newField1 +: schema1Orig.fields.tail)
+
+      val metadata2 = (new MetadataBuilder).putLong(MAX_LENGTH_METADATA_KEY, 15L).build
+      val newField2 = schema1Orig.fields.head.copy(metadata = metadata2)
+      val schema2 = schema1Orig.copy(fields = newField2 +: schema1Orig.fields.tail)
+
+      println(schema1.prettyJson)
+      println(schema2.prettyJson)
+
+      val diff = compareSchemas(schema1, schema2)
+
+      assert(diff.length == 1)
+      assert(diff.head.isInstanceOf[ChangedType])
+      assert(diff.head.asInstanceOf[ChangedType].columnName == "a")
+      assert(diff.head.asInstanceOf[ChangedType].oldType == "varchar(10)")
+      assert(diff.head.asInstanceOf[ChangedType].newType == "varchar(15)")
     }
   }
 

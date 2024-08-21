@@ -125,10 +125,19 @@ object SparkUtils {
     * Compares 2 schemas.
     */
   def compareSchemas(schema1: StructType, schema2: StructType): List[FieldChange] = {
-    def dataTypeToString(dt: DataType): String = {
+    def dataTypeToString(dt: DataType, metadata: Metadata): String = {
+      val maxLength = if (metadata.contains(MAX_LENGTH_METADATA_KEY)) {
+        Try {
+          metadata.getLong(MAX_LENGTH_METADATA_KEY).toInt
+        }.getOrElse(0)
+      } else {
+        0
+      }
+
       dt match {
-        case _: StructType | _: ArrayType => dt.simpleString
-        case _                            => dt.typeName
+        case _: StructType | _: ArrayType    => dt.simpleString
+        case _: StringType if maxLength > 0  => s"varchar($maxLength)"
+        case _                               => dt.typeName
       }
     }
 
@@ -137,22 +146,23 @@ object SparkUtils {
 
     val newColumns: Array[FieldChange] = schema2.fields
       .filter(f => !fields1.contains(f.name))
-      .map(f => FieldChange.NewField(f.name, dataTypeToString(f.dataType)))
+      .map(f => FieldChange.NewField(f.name, dataTypeToString(f.dataType, f.metadata)))
 
     val deletedColumns: Array[FieldChange] = schema1.fields
       .filter(f => !fields2.contains(f.name))
-      .map(f => FieldChange.DeletedField(f.name, dataTypeToString(f.dataType)))
+      .map(f => FieldChange.DeletedField(f.name, dataTypeToString(f.dataType, f.metadata)))
 
     val changedType: Array[FieldChange] = schema1.fields
       .filter(f => fields2.contains(f.name))
-      .flatMap(f => {
-        val dt1 = dataTypeToString(f.dataType)
-        val dt2 = dataTypeToString(fields2(f.name).dataType)
+      .flatMap(f1 => {
+        val dt1 = dataTypeToString(f1.dataType, f1.metadata)
+        val f2 = fields2(f1.name)
+        val dt2 = dataTypeToString(f2.dataType, f2.metadata)
 
         if (dt1 == dt2) {
           Seq.empty[FieldChange]
         } else {
-          Seq(FieldChange.ChangedType(f.name, dt1, dt2))
+          Seq(FieldChange.ChangedType(f1.name, dt1, dt2))
         }
       })
 
