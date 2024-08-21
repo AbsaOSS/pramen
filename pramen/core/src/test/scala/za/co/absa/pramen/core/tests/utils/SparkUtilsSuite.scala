@@ -720,4 +720,103 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "copyMetadata" should {
+    "copy metadata from one schema to another when overwrite = false" in {
+      val df1 = List(1, 2, 3).toDF("col1")
+      val df2 = List(1, 2, 3).toDF("col1")
+
+      val metadata1 = new MetadataBuilder()
+      metadata1.putString("comment", "Test")
+
+      val metadata2 = new MetadataBuilder()
+      metadata2.putLong("maxLength", 120)
+
+      val schema1WithMetadata = StructType(Seq(df1.schema.fields.head.copy(metadata = metadata1.build())))
+      val schema2WithMetadata = StructType(Seq(df2.schema.fields.head.copy(metadata = metadata2.build())))
+
+      val df1WithMetadata = spark.createDataFrame(df2.rdd, schema1WithMetadata)
+
+      val schemaWithMetadata = SparkUtils.copyMetadata(df1WithMetadata.schema, schema2WithMetadata)
+
+      val newDf = spark.createDataFrame(df2.rdd, schemaWithMetadata)
+
+      assert(newDf.schema.fields.head.metadata.getString("comment") == "Test")
+      assert(newDf.schema.fields.head.metadata.getLong("maxLength") == 120)
+    }
+
+    "retain metadata on conflicts by default" in {
+      val df1 = List(1, 2, 3).toDF("col1")
+      val df2 = List(1, 2, 3).toDF("col1")
+
+      val metadata1 = new MetadataBuilder()
+      metadata1.putString("comment", "Test")
+      metadata1.putLong("maxLength", 100)
+
+      val metadata2 = new MetadataBuilder()
+      metadata2.putLong("maxLength", 120)
+      metadata2.putLong("newMetadata", 180)
+
+      val schema1WithMetadata = StructType(Seq(df1.schema.fields.head.copy(metadata = metadata1.build())))
+      val schema2WithMetadata = StructType(Seq(df2.schema.fields.head.copy(metadata = metadata2.build())))
+
+      val df1WithMetadata = spark.createDataFrame(df2.rdd, schema1WithMetadata)
+
+      val schemaWithMetadata = SparkUtils.copyMetadata(df1WithMetadata.schema, schema2WithMetadata)
+
+      val newDf = spark.createDataFrame(df2.rdd, schemaWithMetadata)
+
+      assert(newDf.schema.fields.head.metadata.getString("comment") == "Test")
+      assert(newDf.schema.fields.head.metadata.getLong("maxLength") == 120)
+      assert(newDf.schema.fields.head.metadata.getLong("newMetadata") == 180)
+    }
+
+    "overwrite metadata on conflicts when sourcePreferred=true" in {
+      val df1 = List(1, 2, 3).toDF("col1")
+      val df2 = List(1, 2, 3).toDF("col1")
+
+      val metadata1 = new MetadataBuilder()
+      metadata1.putString("comment", "Test")
+      metadata1.putLong("maxLength", 100)
+
+      val metadata2 = new MetadataBuilder()
+      metadata2.putLong("maxLength", 120)
+      metadata2.putLong("newMetadata", 180)
+
+      val schema1WithMetadata = StructType(Seq(df1.schema.fields.head.copy(metadata = metadata1.build())))
+      val schema2WithMetadata = StructType(Seq(df2.schema.fields.head.copy(metadata = metadata2.build())))
+
+      val df1WithMetadata = spark.createDataFrame(df2.rdd, schema1WithMetadata)
+
+      val schemaWithMetadata = SparkUtils.copyMetadata(df1WithMetadata.schema, schema2WithMetadata, sourcePreferred = true)
+
+      val newDf = spark.createDataFrame(df2.rdd, schemaWithMetadata)
+
+      assert(newDf.schema.fields.head.metadata.getString("comment") == "Test")
+      assert(newDf.schema.fields.head.metadata.getLong("maxLength") == 100)
+      assert(newDf.schema.fields.head.metadata.getLong("newMetadata") == 180)
+    }
+
+    "not retain original metadata when overwrite = true" in {
+      val df1 = List(1, 2, 3).toDF("col1")
+      val df2 = List(1, 2, 3).toDF("col1")
+
+      val metadata1 = new MetadataBuilder()
+      metadata1.putString("comment", "Test")
+
+      val metadata2 = new MetadataBuilder()
+      metadata2.putLong("maxLength", 120)
+
+      val schema1WithMetadata = StructType(Seq(df1.schema.fields.head.copy(metadata = metadata1.build())))
+      val schema2WithMetadata = StructType(Seq(df2.schema.fields.head.copy(metadata = metadata2.build())))
+
+      val df1WithMetadata = spark.createDataFrame(df2.rdd, schema1WithMetadata)
+
+      val schemaWithMetadata = SparkUtils.copyMetadata(df1WithMetadata.schema, schema2WithMetadata, overwrite = true)
+
+      val newDf = spark.createDataFrame(df2.rdd, schemaWithMetadata)
+
+      assert(newDf.schema.fields.head.metadata.getString("comment") == "Test")
+      assert(!newDf.schema.fields.head.metadata.contains("maxLength"))
+    }
+  }
 }

@@ -21,9 +21,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
-import za.co.absa.pramen.core.utils.{JdbcNativeUtils, StringUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{JdbcNativeUtils, JdbcSparkUtils, StringUtils, TimeUtils}
 
-import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 
 class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
@@ -58,8 +57,8 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     log.info(s"JDBC Native data of: $query")
     query match {
-      case Query.Sql(sql)     => getDataFrame(getFilteredSql(sql, infoDateBegin, infoDateEnd))
-      case Query.Table(table) => getDataFrame(getSqlDataQuery(table, infoDateBegin, infoDateEnd, columns))
+      case Query.Sql(sql)     => getDataFrame(getFilteredSql(sql, infoDateBegin, infoDateEnd), None)
+      case Query.Table(table) => getDataFrame(getSqlDataQuery(table, infoDateBegin, infoDateEnd, columns), Option(table))
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
     }
   }
@@ -79,13 +78,25 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  private[core] def getDataFrame(sql: String): DataFrame = {
+  private[core] def getDataFrame(sql: String, tableOpt: Option[String]): DataFrame = {
     log.info(s"JDBC Query: $sql")
 
-    val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
+    }
+
+    if (jdbcReaderConfig.enableSchemaMetadata) {
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, jdbcMetadata) =>
+        val schemaWithColumnDescriptions = tableOpt match {
+          case Some(table) =>
+            log.info(s"Reading JDBC metadata descriptions the query: $sql")
+            JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, table, connection)
+          case None => df.schema
+        }
+        df = spark.createDataFrame(df.rdd, schemaWithColumnDescriptions)
+      }
     }
 
     df
