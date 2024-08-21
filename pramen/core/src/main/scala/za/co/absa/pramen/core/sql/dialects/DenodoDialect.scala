@@ -17,9 +17,9 @@
 package za.co.absa.pramen.core.sql.dialects
 
 import org.apache.spark.sql.jdbc.JdbcDialect
-import org.apache.spark.sql.types.{DataType, MetadataBuilder, TimestampType}
+import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType, TimestampType}
 
-import java.sql.Types.TIMESTAMP_WITH_TIMEZONE
+import java.sql.Types._
 
 object DenodoDialect extends JdbcDialect {
   override def canHandle(url: String): Boolean = url.startsWith("jdbc:denodo") || url.startsWith("jdbc:vdb")
@@ -31,6 +31,7 @@ object DenodoDialect extends JdbcDialect {
                               ): Option[DataType] =
     sqlType match {
       case TIMESTAMP_WITH_TIMEZONE => Some(TimestampType)
+      case TIME                    => Some(StringType)
       case _                       => None
     }
 }
