@@ -297,9 +297,16 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         .withText(info.infoDate.toString, Style.Error)
     )
 
+    val errorMessage = ex.getMessage
+
+    val errorMessageTruncated = maxReasonLength match {
+      case Some(maxLength) if errorMessage.length > maxLength => errorMessage.substring(0, maxLength) + "..."
+      case _ => errorMessage
+    }
+
     paragraphBuilder
       .withText(" has failed with an exception: ", Style.Exception)
-      .withText(ex.getMessage, Style.Error)
+      .withText(errorMessageTruncated, Style.Error)
 
     builder.withParagraph(paragraphBuilder)
     renderException(builder, ex)
