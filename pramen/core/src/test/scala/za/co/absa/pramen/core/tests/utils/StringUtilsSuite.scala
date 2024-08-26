@@ -188,6 +188,12 @@ class StringUtilsSuite extends AnyWordSpec {
       assert(s.contains("java.lang.RuntimeException: test"))
     }
 
+    "render a throwable with a length limit" in {
+      val ex = new RuntimeException("test")
+      val s = renderThrowable(ex, maximumLength = Some(4))
+      assert(s.contains("java..."))
+    }
+
     "render a throwable with a cause" in {
       val ex = new RuntimeException("test", new RuntimeException("cause"))
       val s = renderThrowable(ex)

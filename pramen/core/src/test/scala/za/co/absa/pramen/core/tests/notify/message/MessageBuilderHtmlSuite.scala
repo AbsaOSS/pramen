@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.tests.notify.message
 
+import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification.{Style, TableHeader, TextElement}
@@ -28,7 +29,7 @@ class MessageBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
     "render an email with the requested elements" in {
       val expected = ResourceUtils.getResourceString("/test/notify/expectedMessage.dat")
 
-      val builder = new MessageBuilderHtml
+      val builder = new MessageBuilderHtml(ConfigFactory.empty())
       val tb = new TableBuilderHtml
 
       val actual = builder

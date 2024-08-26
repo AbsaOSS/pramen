@@ -169,14 +169,19 @@ object StringUtils {
   }
 
   /** Renders an exception as a string */
-  def renderThrowable(ex: Throwable, level: Int = 1): String = {
+  def renderThrowable(ex: Throwable, level: Int = 1, maximumLength: Option[Int] = None): String = {
     val prefix = " " * (level * 2)
     val base = s"""${ex.toString}\n${ex.getStackTrace.map(s => s"$prefix$s").mkString("", EOL, EOL)}"""
     val cause = Option(ex.getCause) match {
       case Some(c) if level < 6 => s"\n${prefix}Caused by " + renderThrowable(c, level + 1)
       case _                    => ""
     }
-    base + cause
+    val fullText = base + cause
+
+    maximumLength match {
+      case Some(len) if fullText.length > len => fullText.substring(0, len) + "..."
+      case _ => fullText
+    }
   }
 
   def renderThreadDumps(threadStackTraces: Seq[ThreadStackTrace]): String = {

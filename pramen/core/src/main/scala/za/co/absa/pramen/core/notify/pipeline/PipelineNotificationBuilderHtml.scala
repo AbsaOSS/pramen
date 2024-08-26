@@ -38,9 +38,13 @@ object PipelineNotificationBuilderHtml {
   val MIN_RPS_JOB_DURATION_SECONDS = 60
   val MIN_RPS_RECORDS = 1000
   val MIN_MEGABYTES = 10
+  val NOTIFICATION_REASON_MAX_LENGTH_KEY = "pramen.notifications.reason.max.length"
+  val NOTIFICATION_ERROR_MAX_LENGTH_KEY = "pramen.notifications.body.error.max.length"
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
+  import PipelineNotificationBuilderHtml._
+
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val timestampFmt: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm Z")
@@ -51,6 +55,9 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private var minRps = 0
   private var goodRps = Int.MaxValue
+
+  private val maxReasonLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_REASON_MAX_LENGTH_KEY)
+  private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_ERROR_MAX_LENGTH_KEY)
 
   var appException: Option[Throwable] = None
   var warningFlag: Boolean = false
@@ -131,7 +138,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   def renderBody(): String = {
-    val builder = new MessageBuilderHtml
+    val builder = new MessageBuilderHtml(conf)
 
     renderHeader(builder)
 
@@ -311,7 +318,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         val stderrMsg = if (stderr.isEmpty) "" else s"""Last <b>stderr</b> lines:\n${stderr.mkString("", EOL, EOL)}"""
         s"$msg\n$stdoutMsg\n$stderrMsg"
       case ex: Throwable                     =>
-        renderThrowable(ex)
+        renderThrowable(ex, maximumLength = maxExceptionLength)
     }
 
     builder.withUnformattedText(text)
@@ -599,7 +606,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   private[core] def getFailureReason(task: TaskResult): String = {
-    task.runStatus.getReason match {
+    val reason = task.runStatus.getReason match {
       case Some(reason) => reason
       case None         =>
         if (task.dependencyWarnings.isEmpty) {
@@ -608,6 +615,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           val tables = task.dependencyWarnings.map(_.table).sortBy(identity).mkString(", ")
           s"Optional dependencies failed for: $tables"
         }
+    }
+
+    maxReasonLength match {
+      case Some(maxLength) if reason.length > maxLength =>  reason.substring(0, maxLength) + "..."
+      case _ => reason
     }
   }
 

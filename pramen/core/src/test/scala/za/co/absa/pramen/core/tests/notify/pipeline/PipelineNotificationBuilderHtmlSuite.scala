@@ -32,6 +32,7 @@ import java.time.{Instant, LocalDate}
 
 class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparisonFixture {
   private val megabyte = 1024L * 1024L
+  private val emptyConfig = ConfigFactory.empty()
 
   "constructor" should {
     "be able to initialize the builder with the default timezone" in {
@@ -176,7 +177,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
   "renderJobException" should {
     "render a job exception" in {
       val notificationBuilder = getBuilder
-      val messageBuilder = new MessageBuilderHtml
+      val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val taskResult = TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusFailure)
 
@@ -192,7 +193,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
   "renderException" should {
     "render runtime exceptions" in {
       val notificationBuilder = getBuilder
-      val messageBuilder = new MessageBuilderHtml
+      val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = new RuntimeException("Text exception")
 
@@ -205,7 +206,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
     "render command line exceptions with logs" in {
       val notificationBuilder = getBuilder
-      val messageBuilder = new MessageBuilderHtml
+      val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = CmdFailedException("Command line failed", Array("Log line 1", "Log line 2"))
 
@@ -223,7 +224,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
     "render command line exceptions without logs" in {
       val notificationBuilder = getBuilder
-      val messageBuilder = new MessageBuilderHtml
+      val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = CmdFailedException("Command line failed", Array.empty)
 
@@ -235,7 +236,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
     "render process execution exceptions" in {
       val notificationBuilder = getBuilder
-      val messageBuilder = new MessageBuilderHtml
+      val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = ProcessFailedException("Command line failed", Array("stdout line 1", "stdout line 2"), Array("stderr line 1"))
 
@@ -258,7 +259,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
   "renderPipelineNotificationFailures" should {
     "render pipeline failure as an exception" in {
       val notificationBuilder = getBuilder
-      val messageBuilder = new MessageBuilderHtml
+      val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = new RuntimeException("Test exception")
       notificationBuilder.addPipelineNotificationFailure(PipelineNotificationFailure("com.example.MyNotification", ex))
