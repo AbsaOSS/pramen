@@ -16,46 +16,44 @@
 
 package za.co.absa.pramen.core.tests.journal
 
-import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.fixtures.TempDirFixture
-import za.co.absa.pramen.core.journal.{Journal, JournalHadoopDeltaPath}
+import za.co.absa.pramen.core.journal.{Journal, JournalHadoopDeltaTable}
 
-class JournalHadoopDeltaPathSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfterAll with TempDirFixture {
+import java.io.File
+
+class JournalHadoopDeltaTableSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase {
 
   import TestCases._
 
-  var tmpDir: String = _
-
   override def beforeAll(): Unit = {
     super.beforeAll()
-    tmpDir = createTempDir("journalSuite")
+    cleanUpWarehouse()
   }
 
   override def afterAll(): Unit = {
-    deleteDir(tmpDir)
+    cleanUpWarehouse()
     super.afterAll()
   }
 
   "Journal" should {
     "Make sure the journal works even with empty path" in {
-      val journal = getJournal(tmpDir)
+      val journal = getJournal("tbl1_")
 
       assert(journal.getEntries(instant1, instant3).isEmpty)
     }
 
     "addEntry()" should {
       "return Nil if there are no entries" in {
-        val journal = getJournal(tmpDir)
+        val journal = getJournal("tbl2_")
 
         assert(journal.getEntries(instant1, instant3).isEmpty)
       }
 
       "return entries if there are entries" in {
         if (spark.version.split('.').head.toInt >= 3) {
-          val journal = getJournal(tmpDir)
+          val journal = getJournal("tbl3_")
 
           journal.addEntry(task1)
           journal.addEntry(task2)
@@ -71,8 +69,20 @@ class JournalHadoopDeltaPathSuite extends AnyWordSpec with SparkTestBase with Be
     }
   }
 
-  private def getJournal(path: String): Journal = {
-    new JournalHadoopDeltaPath(new Path(path, "journal").toString)
+  private def getJournal(prefix: String): Journal = {
+    new JournalHadoopDeltaTable(None, prefix)
   }
 
+  private def cleanUpWarehouse(): Unit = {
+    val warehouseDir = new File("spark-warehouse")
+    if (warehouseDir.exists()) {
+      warehouseDir.listFiles().foreach(f => {
+        if (f.isDirectory) {
+          f.listFiles().foreach(ff => ff.delete())
+        }
+        f.delete()
+      })
+      warehouseDir.delete()
+    }
+  }
 }

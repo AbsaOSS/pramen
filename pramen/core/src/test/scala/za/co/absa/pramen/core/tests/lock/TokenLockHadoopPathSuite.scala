@@ -19,20 +19,20 @@ package za.co.absa.pramen.core.tests.lock
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
-import za.co.absa.pramen.core.lock.TokenLockHadoop
+import za.co.absa.pramen.core.lock.TokenLockHadoopPath
 
-class TokenLockHadoopSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
+class TokenLockHadoopPathSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val hdfsConfig = spark.sparkContext.hadoopConfiguration
 
   "Token lock" should {
     "be able to acquire and release locks" in {
       withTempDirectory("simpleLock") { tempDir =>
-        val lock1 = new TokenLockHadoop("token1", hdfsConfig, tempDir)
+        val lock1 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir)
 
         assert(lock1.tryAcquire())
         assert(!lock1.tryAcquire())
 
-        val lock2 = new TokenLockHadoop("token1", hdfsConfig, tempDir)
+        val lock2 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir)
         assert(!lock2.tryAcquire())
 
         lock1.release()
@@ -46,8 +46,8 @@ class TokenLockHadoopSuite extends AnyWordSpec with SparkTestBase with TempDirFi
 
     "multiple token locks should not affect each other" in {
       withTempDirectory("simpleLock") { tempDir =>
-        val lock1 = new TokenLockHadoop("token1", hdfsConfig, tempDir)
-        val lock2 = new TokenLockHadoop("token2", hdfsConfig, tempDir)
+        val lock1 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir)
+        val lock2 = new TokenLockHadoopPath("token2", hdfsConfig, tempDir)
 
         assert(lock1.tryAcquire())
         assert(lock2.tryAcquire())
@@ -67,8 +67,8 @@ class TokenLockHadoopSuite extends AnyWordSpec with SparkTestBase with TempDirFi
 
     "lock pramen should constantly update lock ticket" ignore {
       withTempDirectory("simpleLock") { tempDir =>
-        val lock1 = new TokenLockHadoop("token1", hdfsConfig, tempDir, 3L)
-        val lock2 = new TokenLockHadoop("token1", hdfsConfig, tempDir)
+        val lock1 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir, 3L)
+        val lock2 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir)
         assert(lock1.tryAcquire())
         Thread.sleep(4000)
         assert(!lock2.tryAcquire())

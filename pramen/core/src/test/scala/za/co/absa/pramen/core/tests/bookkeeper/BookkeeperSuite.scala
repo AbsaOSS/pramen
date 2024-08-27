@@ -18,13 +18,13 @@ package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
-import za.co.absa.pramen.core.RuntimeConfigFactory
+import za.co.absa.pramen.core.{BookkeepingConfigFactory, RuntimeConfigFactory}
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperJdbc, BookkeeperMongoDb, BookkeeperText}
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperDeltaPath, BookkeeperJdbc, BookkeeperMongoDb, BookkeeperText}
 import za.co.absa.pramen.core.fixtures.{MongoDbFixture, RelationalDbFixture, TempDirFixture}
-import za.co.absa.pramen.core.journal.{JournalHadoopCsv, JournalJdbc, JournalMongoDb}
-import za.co.absa.pramen.core.lock.{TokenLockFactoryHadoop, TokenLockFactoryJdbc, TokenLockFactoryMongoDb}
+import za.co.absa.pramen.core.journal.{JournalHadoopCsv, JournalHadoopDeltaPath, JournalJdbc, JournalMongoDb}
+import za.co.absa.pramen.core.lock.{TokenLockFactoryHadoopPath, TokenLockFactoryJdbc, TokenLockFactoryMongoDb}
 import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
@@ -63,13 +63,9 @@ class BookkeeperSuite extends AnyWordSpec
 
   "config factory" should {
     "build bookkeeper, token lock, journal, and closable object for JDBC" in {
-      val bookkeepingConfig = BookkeeperConfig(
+      val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
         bookkeepingEnabled = true,
-        None,
-        HadoopFormat.Text,
-        None,
-        None,
-        Some(jdbcConfig)
+        bookkeepingJdbcConfig = Some(jdbcConfig)
       )
 
       val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
@@ -83,13 +79,10 @@ class BookkeeperSuite extends AnyWordSpec
 
     if (db != null) {
       "build bookkeeper, token lock, journal, and closable object for MongoDB" in {
-        val bookkeepingConfig = BookkeeperConfig(
+        val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
           bookkeepingEnabled = true,
-          None,
-          HadoopFormat.Text,
-          Some(connectionString),
-          Some(dbName),
-          None
+          bookkeepingConnectionString = Some(connectionString),
+          bookkeepingDbName = Some(dbName)
         )
 
         val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
@@ -106,22 +99,36 @@ class BookkeeperSuite extends AnyWordSpec
       }
     }
 
-    "build bookkeeper, token lock, journal, and closable object for Hadoop" in {
+    "build bookkeeper, token lock, journal, and closable object for Hadoop CSV" in {
       withTempDirectory("bk_hadoop") { tempDir =>
-        val bookkeepingConfig = BookkeeperConfig(
+        val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
           bookkeepingEnabled = true,
-          Some(tempDir),
-          HadoopFormat.Text,
-          None,
-          None,
-          None
+          bookkeepingLocation = Some(tempDir)
         )
 
         val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
 
         assert(bk.isInstanceOf[BookkeeperText])
-        assert(tf.isInstanceOf[TokenLockFactoryHadoop])
+        assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])
         assert(journal.isInstanceOf[JournalHadoopCsv])
+        assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        closable.close()
+      }
+    }
+
+    "build bookkeeper, token lock, journal, and closable object for Hadoop Delta Path" in {
+      withTempDirectory("bk_hadoop_delta_path") { tempDir =>
+        val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
+          bookkeepingEnabled = true,
+          bookkeepingLocation = Some(tempDir),
+          bookkeepingHadoopFormat = HadoopFormat.Delta
+        )
+
+        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+
+        assert(bk.isInstanceOf[BookkeeperDeltaPath])
+        assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])
+        assert(journal.isInstanceOf[JournalHadoopDeltaPath])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
         closable.close()
       }

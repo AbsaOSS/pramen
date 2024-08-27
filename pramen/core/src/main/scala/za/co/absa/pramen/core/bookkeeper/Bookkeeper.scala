@@ -88,7 +88,7 @@ object Bookkeeper {
             new TokenLockFactoryMongoDb(connection)
           case None =>
             log.info(s"Using HadoopFS for lock management.")
-            new TokenLockFactoryHadoop(spark.sparkContext.hadoopConfiguration, bookkeepingConfig.bookkeepingLocation.get + "/locks")
+            new TokenLockFactoryHadoopPath(spark.sparkContext.hadoopConfiguration, bookkeepingConfig.bookkeepingLocation.get + "/locks")
         }
       }
     } else {
@@ -131,14 +131,22 @@ object Bookkeeper {
           log.info(s"Using MongoDB to keep journal of executed jobs.")
           new JournalMongoDb(connection)
         case None =>
-          val path = bookkeepingConfig.bookkeepingLocation.get + "/journal"
           bookkeepingConfig.bookkeepingHadoopFormat match {
             case HadoopFormat.Text =>
+              val path = bookkeepingConfig.bookkeepingLocation.get + "/journal"
               log.info(s"Using HadoopFS to keep journal of executed jobs at $path")
               new JournalHadoopCsv(path)
             case HadoopFormat.Delta =>
-              log.info(s"Using Delta Lake for bookkeeping at $path")
-              new JournalHadoopDeltaPath(path)
+              bookkeepingConfig.deltaTablePrefix match {
+                case Some(tablePrefix) =>
+                  val fullTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix)
+                  log.info(s"Using Delta Lake managed table '$fullTableName' for bookkeeping.")
+                  new JournalHadoopDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix)
+                case None =>
+                  val path = bookkeepingConfig.bookkeepingLocation.get + "/journal"
+                  log.info(s"Using Delta Lake for bookkeeping at $path")
+                  new JournalHadoopDeltaPath(path)
+              }
           }
 
       }

@@ -25,14 +25,18 @@ object BookkeepingConfigFactory {
                                 bookkeepingHadoopFormat: HadoopFormat = HadoopFormat.Text,
                                 bookkeepingConnectionString: Option[String] = None,
                                 bookkeepingDbName: Option[String] = None,
-                                bookkeepingJdbcConfig: Option[JdbcConfig] = None): BookkeeperConfig = {
+                                bookkeepingJdbcConfig: Option[JdbcConfig] = None,
+                                deltaDatabase: Option[String] = None,
+                                deltaTablePrefix: Option[String] = None): BookkeeperConfig = {
     BookkeeperConfig(
       bookkeepingEnabled,
       bookkeepingLocation,
       bookkeepingHadoopFormat,
       bookkeepingConnectionString,
       bookkeepingDbName,
-      bookkeepingJdbcConfig
+      bookkeepingJdbcConfig,
+      deltaDatabase,
+      deltaTablePrefix
     )
   }
 
