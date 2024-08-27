@@ -107,10 +107,14 @@ object Bookkeeper {
           log.info(s"Using MongoDB for bookkeeping.")
           new BookkeeperMongoDb(connection)
         case None =>
+          val path = bookkeepingConfig.bookkeepingLocation.get
           bookkeepingConfig.bookkeepingHadoopFormat match {
             case HadoopFormat.Text =>
-              log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping.")
-              new BookkeeperText(bookkeepingConfig.bookkeepingLocation.get)
+              log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping at $path")
+              new BookkeeperText(path)
+            case HadoopFormat.Delta =>
+              log.info(s"Using Delta Lake for bookkeeping at $path")
+              new BookkeeperDeltaPath(path)
           }
       }
     }
