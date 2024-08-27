@@ -20,9 +20,11 @@ trait HadoopFormat
 
 case object HadoopFormat {
   case object Text extends HadoopFormat
+  case object Delta extends HadoopFormat
 
   def apply(format: String): HadoopFormat = format.toLowerCase match {
     case "text" => Text
+    case "delta" => Delta
     case _ => throw new IllegalArgumentException(s"Unknown Hadoop format: $format")
   }
 }
