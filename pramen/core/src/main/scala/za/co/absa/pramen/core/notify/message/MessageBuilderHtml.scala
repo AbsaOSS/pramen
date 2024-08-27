@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification.{Style, TableHeader, TextElement}
 import za.co.absa.pramen.core.exceptions.OsSignalException
-import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.NOTIFICATION_ERROR_MAX_LENGTH_KEY
+import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY
 import za.co.absa.pramen.core.utils.{ConfigUtils, ResourceUtils}
 import za.co.absa.pramen.core.utils.StringUtils.{renderThreadDumps, renderThrowable}
 
@@ -29,7 +29,7 @@ import scala.compat.Platform.EOL
 
 class MessageBuilderHtml(conf: Config) extends MessageBuilder {
   private val style = ResourceUtils.getResourceString("/email_template/style.css")
-  private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_ERROR_MAX_LENGTH_KEY)
+  private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY)
   private val body = new ListBuffer[String]
 
   override def withParagraph(text: Seq[TextElement]): MessageBuilderHtml = {

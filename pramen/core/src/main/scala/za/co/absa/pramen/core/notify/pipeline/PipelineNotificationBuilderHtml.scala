@@ -39,7 +39,7 @@ object PipelineNotificationBuilderHtml {
   val MIN_RPS_RECORDS = 1000
   val MIN_MEGABYTES = 10
   val NOTIFICATION_REASON_MAX_LENGTH_KEY = "pramen.notifications.reason.max.length"
-  val NOTIFICATION_ERROR_MAX_LENGTH_KEY = "pramen.notifications.body.error.max.length"
+  val NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY = "pramen.notifications.exception.max.length"
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
@@ -57,7 +57,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   private var goodRps = Int.MaxValue
 
   private val maxReasonLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_REASON_MAX_LENGTH_KEY)
-  private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_ERROR_MAX_LENGTH_KEY)
+  private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY)
 
   var appException: Option[Throwable] = None
   var warningFlag: Boolean = false

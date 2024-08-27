@@ -20,12 +20,13 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification._
-import za.co.absa.pramen.api.status.{NotificationFailure, PipelineNotificationFailure, RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status.{DependencyWarning, NotificationFailure, PipelineNotificationFailure, RunStatus, TaskRunReason}
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.mocks.{RunStatusFactory, SchemaDifferenceFactory, TaskResultFactory, TestPrototypes}
 import za.co.absa.pramen.core.notify.message.{MessageBuilderHtml, ParagraphBuilder}
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
+import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY, NOTIFICATION_REASON_MAX_LENGTH_KEY}
 import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.{Instant, LocalDate}
@@ -50,7 +51,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "renderSubject()" should {
     "render normal subject" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       builder.addAppName("MyApp")
 
@@ -58,7 +59,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "render a dry run subject" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       builder.addAppName("MyNewApp")
       builder.addDryRun(true)
@@ -67,7 +68,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "render failure" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       builder.addAppName("MyNewApp")
       builder.addFailureException(new RuntimeException("Test exception"))
@@ -76,7 +77,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "render warning" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       builder.addAppName("MyNewApp")
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusWarning))
@@ -85,7 +86,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "render partial failure" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       builder.addAppName("MyNewApp")
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusWarning))
@@ -99,7 +100,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "render a default notification body" in {
       val expected = ResourceUtils.getResourceString("/test/notify/test_pipeline_email_body_default.txt")
 
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.renderBody()
         .split("\n")
@@ -112,7 +113,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "render a notification body with completed tasks and schema changes and custom entries" in {
       val expected = ResourceUtils.getResourceString("/test/notify/test_pipeline_email_body_complex.txt")
 
-      val builder = getBuilder
+      val builder = getBuilder()
 
       builder.addDryRun(true)
       builder.addUndercover(true)
@@ -151,7 +152,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "render a notification body with an exception" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val nestedCause1 = new RuntimeException("Cause 1")
       val nestedCause2 = new RuntimeException("Cause 2", nestedCause1)
@@ -176,7 +177,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "renderJobException" should {
     "render a job exception" in {
-      val notificationBuilder = getBuilder
+      val notificationBuilder = getBuilder()
       val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val taskResult = TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusFailure)
@@ -188,11 +189,30 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       assert(actual.contains("""</span><span class="tderr">Job Exception</span>"""))
       assert(actual.contains("""<pre>java.lang.RuntimeException: Job Exception"""))
     }
+
+    "render a job exception with a limit on size" in {
+      val conf = ConfigFactory.parseString(
+        s"""$NOTIFICATION_REASON_MAX_LENGTH_KEY = 10
+           |$NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY = 15
+           |""".stripMargin
+      )
+      val notificationBuilder = getBuilder(conf)
+      val messageBuilder = new MessageBuilderHtml(emptyConfig)
+
+      val taskResult = TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusFailure)
+
+      val actual = notificationBuilder.renderJobException(messageBuilder, taskResult, new RuntimeException("Job Exception"))
+        .renderBody
+
+      assert(actual.contains("""<span class="tderr">DummyJob</span><span class="tdred"> outputting to </span><span class="tderr">table_out</span><span class="tdred"> at </span><span class="tderr">2022-02-18</span><span class="tdred"> has failed with an exception:"""))
+      assert(actual.contains("""<span class="tderr">Job Except...</span>"""))
+      assert(actual.contains("""<pre>java.lang.Runti...</pre>"""))
+    }
   }
 
   "renderException" should {
     "render runtime exceptions" in {
-      val notificationBuilder = getBuilder
+      val notificationBuilder = getBuilder()
       val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = new RuntimeException("Text exception")
@@ -204,8 +224,24 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       assert(actual.contains("""za.co.absa.pramen.core.tests.notify.pipeline.PipelineNotificationBuilderHtmlSuite"""))
     }
 
+    "render runtime exceptions with a limit on its size" in {
+      val conf = ConfigFactory.parseString(
+        s"""$NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY = 10
+          |""".stripMargin
+      )
+      val notificationBuilder = getBuilder(conf)
+      val messageBuilder = new MessageBuilderHtml(conf)
+
+      val ex = new RuntimeException("Text exception")
+
+      val actual = notificationBuilder.renderException(messageBuilder, ex)
+        .renderBody
+
+      assert(actual.contains("""<pre>java.lang....</pre>"""))
+    }
+
     "render command line exceptions with logs" in {
-      val notificationBuilder = getBuilder
+      val notificationBuilder = getBuilder()
       val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = CmdFailedException("Command line failed", Array("Log line 1", "Log line 2"))
@@ -223,7 +259,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "render command line exceptions without logs" in {
-      val notificationBuilder = getBuilder
+      val notificationBuilder = getBuilder()
       val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = CmdFailedException("Command line failed", Array.empty)
@@ -235,7 +271,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "render process execution exceptions" in {
-      val notificationBuilder = getBuilder
+      val notificationBuilder = getBuilder()
       val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = ProcessFailedException("Command line failed", Array("stdout line 1", "stdout line 2"), Array("stderr line 1"))
@@ -258,7 +294,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "renderPipelineNotificationFailures" should {
     "render pipeline failure as an exception" in {
-      val notificationBuilder = getBuilder
+      val notificationBuilder = getBuilder()
       val messageBuilder = new MessageBuilderHtml(emptyConfig)
 
       val ex = new RuntimeException("Test exception")
@@ -279,7 +315,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "getStatus" should {
     "work for succeeded" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusSuccess))
 
@@ -287,7 +323,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for insufficient data" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.InsufficientData(100, 200, None)))
 
@@ -295,7 +331,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for no data" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.NoData(true)))
 
@@ -303,7 +339,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for skipped" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Skipped("dummy")))
 
@@ -311,7 +347,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for skipped with warnings" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Skipped("dummy", isWarning = true)))
 
@@ -319,7 +355,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for not ran" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.NotRan))
 
@@ -327,7 +363,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for validation failure" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.ValidationFailed(new RuntimeException("dummy"))))
 
@@ -335,7 +371,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for failed dependencies" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.FailedDependencies(isFailure = true, Seq.empty)))
 
@@ -343,7 +379,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for failed jobs" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getStatus(TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Failed(new RuntimeException("dummy"))))
 
@@ -353,7 +389,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "getThroughputRps" should {
     "work for a failed tasks" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummyFailure()
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -364,7 +400,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for a task without a run info" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(None, 1000000, reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, runInfo = None)
@@ -375,7 +411,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for a normal successful task" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(None, 1000000, reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -386,7 +422,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for a raw file task" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(None, 1000 * megabyte, reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
@@ -399,7 +435,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "getBytesPerSecondsText" should {
     "return an empty string for files smaller than the minimum size" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getBytesPerSecondsText(1000, 10)
 
@@ -407,7 +443,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "return the throughput for usual inputs" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val actual = builder.getBytesPerSecondsText(100L * 1024L * 1024L, 10)
 
@@ -417,7 +453,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "getRecordCountText" should {
     "work for a failure" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummyFailure()
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -428,7 +464,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success file based job" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(Some(100), 100, reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
@@ -439,7 +475,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success new" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(None, 100, reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -450,7 +486,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success unchanged" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(Some(100), 100, reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -461,7 +497,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success increased" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(Some(100), 110, reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -472,7 +508,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success decreased" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(Some(100), 90, reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -483,7 +519,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for insufficient data" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val task = TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.InsufficientData(90, 96, Some(100)))
 
@@ -495,7 +531,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
   "getSizeText" should {
     "work for a failure" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummyFailure()
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
@@ -506,7 +542,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success new" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(None, 100 * megabyte, reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
@@ -517,7 +553,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success unchanged" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 100 * megabyte, reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
@@ -528,7 +564,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success increased" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 110 * megabyte, reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
@@ -539,7 +575,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for success decreased" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 90 * megabyte, reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
@@ -550,7 +586,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
 
     "work for insufficient data" in {
-      val builder = getBuilder
+      val builder = getBuilder()
 
       val task = TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.InsufficientData(90 * megabyte, 96 * megabyte, Some(100 * megabyte)), isRawFilesJob = true)
 
@@ -560,15 +596,71 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
   }
 
-  def getBuilder: PipelineNotificationBuilderHtml = {
-    implicit val conf: Config = ConfigFactory.parseString(
-      """pramen {
-        |  application.version = 1.0.0
-        |  timezone = "Africa/Johannesburg"
-        |}
-        |""".stripMargin)
+  "getFailureReason" should {
+    "get the underlying reason" in {
+      val builder = getBuilder()
 
-    val builder = new PipelineNotificationBuilderHtml()
+      val runStatus = RunStatusFactory.getDummyFailure()
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getFailureReason(task)
+
+      assert(actual == "Dummy failure")
+    }
+
+    "get an empty reason if dependency warning list is empty" in {
+      val builder = getBuilder()
+
+      val runStatus = RunStatusFactory.getDummySuccess()
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getFailureReason(task)
+
+      assert(actual == "")
+    }
+
+    "get an non-empty reason if dependency warning list is non-empty" in {
+      val builder = getBuilder()
+
+      val runStatus = RunStatusFactory.getDummySuccess()
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus,
+        dependencyWarnings = Seq(DependencyWarning("t1"),DependencyWarning("t2")))
+
+      val actual = builder.getFailureReason(task)
+
+      assert(actual == "Optional dependencies failed for: t1, t2")
+    }
+
+    "get an non-empty reason if the limit on reason size is specified" in {
+      val conf = ConfigFactory.parseString(
+        s"""$NOTIFICATION_REASON_MAX_LENGTH_KEY = 15
+           |""".stripMargin
+      )
+
+      val builder = getBuilder(conf)
+
+      val runStatus = RunStatusFactory.getDummySuccess()
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus,
+        dependencyWarnings = Seq(DependencyWarning("t1"),DependencyWarning("t2")))
+
+      val actual = builder.getFailureReason(task)
+
+      assert(actual == "Optional depend...")
+    }
+  }
+
+  def getBuilder(conf: Config = emptyConfig): PipelineNotificationBuilderHtml  = {
+    implicit val implicitConfig: Config =
+      conf.withFallback(
+        ConfigFactory.parseString(
+          """pramen {
+            |  application.version = 1.0.0
+            |  timezone = "Africa/Johannesburg"
+            |}
+            |""".stripMargin)
+      )
+
+    val builder = new PipelineNotificationBuilderHtml
 
     builder.addAppName("MyApp")
     builder.addEnvironmentName("MyEnv")
