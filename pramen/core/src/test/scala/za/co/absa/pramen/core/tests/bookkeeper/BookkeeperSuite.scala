@@ -23,7 +23,7 @@ import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, Runtim
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperJdbc, BookkeeperMongoDb, BookkeeperText}
 import za.co.absa.pramen.core.fixtures.{MongoDbFixture, RelationalDbFixture, TempDirFixture}
-import za.co.absa.pramen.core.journal.{JournalHadoop, JournalJdbc, JournalMongoDb}
+import za.co.absa.pramen.core.journal.{JournalHadoopCsv, JournalJdbc, JournalMongoDb}
 import za.co.absa.pramen.core.lock.{TokenLockFactoryHadoop, TokenLockFactoryJdbc, TokenLockFactoryMongoDb}
 import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
 import za.co.absa.pramen.core.rdb.PramenDb
@@ -121,7 +121,7 @@ class BookkeeperSuite extends AnyWordSpec
 
         assert(bk.isInstanceOf[BookkeeperText])
         assert(tf.isInstanceOf[TokenLockFactoryHadoop])
-        assert(journal.isInstanceOf[JournalHadoop])
+        assert(journal.isInstanceOf[JournalHadoopCsv])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
         closable.close()
       }

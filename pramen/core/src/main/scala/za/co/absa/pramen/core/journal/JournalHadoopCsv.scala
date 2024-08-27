@@ -26,18 +26,18 @@ import za.co.absa.pramen.core.utils.{CsvUtils, FsUtils, SparkUtils}
 
 import java.time.{Instant, LocalDate}
 
-object JournalHadoop {
+object JournalHadoopCsv {
   val journalFileName = "journal.csv"
   val separator = '|'
 }
 
-class JournalHadoop(journalPath: String)
+class JournalHadoopCsv(journalPath: String)
                    (implicit spark: SparkSession) extends Journal {
 
-  import JournalHadoop._
+  import JournalHadoopCsv._
 
-  private val hdfsConfig: Configuration = spark.sparkContext.hadoopConfiguration
-  private val fsUtils = new FsUtils(hdfsConfig, journalPath)
+  private val hadoopConfig: Configuration = spark.sparkContext.hadoopConfiguration
+  private val fsUtils = new FsUtils(hadoopConfig, journalPath)
   private val journalFilePath = new Path(journalPath, journalFileName)
 
   private val headers = CsvUtils.getHeaders[TaskCompletedCsv](separator)

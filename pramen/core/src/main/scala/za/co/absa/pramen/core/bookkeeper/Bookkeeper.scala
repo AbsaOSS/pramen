@@ -131,8 +131,16 @@ object Bookkeeper {
           log.info(s"Using MongoDB to keep journal of executed jobs.")
           new JournalMongoDb(connection)
         case None =>
-          log.info(s"Using HadoopFS to keep journal of executed jobs.")
-          new JournalHadoop(bookkeepingConfig.bookkeepingLocation.get + "/journal")
+          val path = bookkeepingConfig.bookkeepingLocation.get + "/journal"
+          bookkeepingConfig.bookkeepingHadoopFormat match {
+            case HadoopFormat.Text =>
+              log.info(s"Using HadoopFS to keep journal of executed jobs at $path")
+              new JournalHadoopCsv(path)
+            case HadoopFormat.Delta =>
+              log.info(s"Using Delta Lake for bookkeeping at $path")
+              new JournalHadoopDeltaPath(path)
+          }
+
       }
     }
 
