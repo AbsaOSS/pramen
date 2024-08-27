@@ -21,12 +21,12 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
-import za.co.absa.pramen.core.journal.{Journal, JournalHadoop}
+import za.co.absa.pramen.core.journal.{Journal, JournalHadoopCsv}
 import za.co.absa.pramen.core.utils.FsUtils
 
-class JournalHadoopSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfterAll with TempDirFixture {
+class JournalHadoopCsvSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfterAll with TempDirFixture {
   import TestCases._
-  import za.co.absa.pramen.core.journal.JournalHadoop._
+  import za.co.absa.pramen.core.journal.JournalHadoopCsv._
 
   private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, "/tmp")
 
@@ -73,7 +73,7 @@ class JournalHadoopSuite extends AnyWordSpec with SparkTestBase with BeforeAndAf
   }
 
   private def getJournal(path: String): Journal = {
-    new JournalHadoop(path)
+    new JournalHadoopCsv(path)
   }
 
 }
