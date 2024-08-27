@@ -21,7 +21,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Column, Dataset, SparkSession}
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
-import za.co.absa.pramen.core.lock.TokenLockHadoop
+import za.co.absa.pramen.core.lock.TokenLockHadoopPath
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.utils.{CsvUtils, FsUtils, JsonUtils, SparkUtils}
 
@@ -99,7 +99,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
                                                         outputRecordCount: Long,
                                                         jobStarted: Long,
                                                         jobFinished: Long): Unit = {
-    val lock: TokenLockHadoop = getLock
+    val lock: TokenLockHadoopPath = getLock
 
     try {
       val dateStr = getDateStr(infoDate)
@@ -115,8 +115,8 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
     }
   }
 
-  private def getLock: TokenLockHadoop = {
-    val lock = new TokenLockHadoop("bookkeeping",
+  private def getLock: TokenLockHadoopPath = {
+    val lock = new TokenLockHadoopPath("bookkeeping",
       spark.sparkContext.hadoopConfiguration,
       locksPath.toUri.toString,
       30L)
@@ -193,7 +193,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
   private[pramen] override def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit = {
     val tableSchema = TableSchemaJson(table, infoDate.toString, schema.json, Instant.now().toEpochMilli)
 
-    val lock: TokenLockHadoop = getLock
+    val lock: TokenLockHadoopPath = getLock
 
     try {
       val json = JsonUtils.asJson(tableSchema)

@@ -23,10 +23,10 @@ import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
 
 import java.time.Instant
 
-class TokenLockHadoop(token: String,
-                      hadoopConf: Configuration,
-                      locksPath: String,
-                      tokenExpireTimeSeconds: Long = 10L * 60L) extends TokenLock {
+class TokenLockHadoopPath(token: String,
+                          hadoopConf: Configuration,
+                          locksPath: String,
+                          tokenExpireTimeSeconds: Long = 10L * 60L) extends TokenLock {
   // Dependencies
   private val log = LoggerFactory.getLogger(this.getClass)
   private val fsUtils = new FsUtils(hadoopConf, locksPath)
