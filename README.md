@@ -2289,7 +2289,7 @@ pramen.bookkeeping {
 }
 ```
 
-### Delta Lake
+### Delta Lake (experimental)
 This requires Delta Lake format support from the cluster you are running pipelines at.
 
 You can use wither a path:
