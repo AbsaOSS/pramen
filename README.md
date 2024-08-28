@@ -2296,8 +2296,8 @@ You can use wither a path:
 ```hocon
 pramen.bookkeeping {
   enabled = "true"
-  location = "s3://path"
   hadoop.format = "delta"
+  location = "s3://path"
 }
 ```
 
@@ -2305,6 +2305,7 @@ or a set of managed tables:
 ```hocon
 pramen.bookkeeping {
   enabled = "true"
+  hadoop.format = "delta"
   delta.database = "my_db"  # Optional. 'default' will be used if not speified
   delta.table.prefix = "bk_"
 }
