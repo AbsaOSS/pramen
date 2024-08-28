@@ -119,5 +119,6 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
         listChunks.maxBy(c => c.jobFinished)
       }
       .toArray[DataChunk]
+      .sortBy(_.infoDate)
   }
 }
