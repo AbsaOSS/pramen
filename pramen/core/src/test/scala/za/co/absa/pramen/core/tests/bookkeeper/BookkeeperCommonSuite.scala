@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.apache.spark.sql.types._
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperDeltaTable}
 import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
@@ -190,6 +190,7 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         val bk = getBookkeeper()
 
         bk.saveSchema("table", infoDate2, schema1)
+        Thread.sleep(10)
         bk.saveSchema("table", infoDate2, schema2)
 
         val actualSchema = bk.getLatestSchema("table", infoDate2)
@@ -235,8 +236,10 @@ class BookkeeperCommonSuite extends AnyWordSpec {
     "Multiple bookkeepers" should {
       "share the state" in {
         val bk = getBookkeeper()
-        val bk2 = getBookkeeper()
-        val bk3 = getBookkeeper()
+
+        // A workaround for BookkeeperDeltaTable which outputs to different tables in unit tests
+        val bk2 = if (bk.isInstanceOf[BookkeeperDeltaTable]) bk else getBookkeeper()
+        val bk3 = if (bk.isInstanceOf[BookkeeperDeltaTable]) bk else getBookkeeper()
 
         bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false)
         bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false)

@@ -2243,6 +2243,73 @@ You specify:
 
 Let's take a look at an example based on the Enceladus sink.
 
+## Bookeeping
+
+In order to support auto-recovery from failures, schema tracking and all other nice features, Pramen requires to use a database
+or a storage for keeping the state of the pipeline.
+
+### PostgreSQL database (recommended)
+This is highly recommended way of storing bookkeeping data since it is the most efficient and feature rich.
+
+Configuration:
+```hocon
+pramen {
+  bookkeeping.enabled = "true"
+  
+  bookkeeping.jdbc {
+    driver = "org.postgresql.Driver"
+    url = "jdbc:postgresql://host:5433/pramen"
+    user = "username"
+    password = "password"
+  }
+}
+```
+
+### MongoDb database
+Here is how you can use a MongoDB database for storing bookkeeping information:
+
+```hocon
+pramen {
+  bookkeeping.enabled = "true"
+
+  bookkeeping.mongodb {
+    connection.string = "mongodb://aaabbb"
+    database = "mydb"
+  }
+}
+```
+
+### Hadoop (CSV+JSON)
+This is less recommended way, and is quite slow. But the advantage is that you don't need a database.
+
+```hocon
+pramen.bookkeeping {
+  enabled = "true"
+  location = "hdfs://path"
+}
+```
+
+### Delta Lake
+This requires Delta Lake format support from the cluster you are running pipelines at.
+
+You can use wither a path:
+```hocon
+pramen.bookkeeping {
+  enabled = "true"
+  location = "s3://path"
+  hadoop.format = "delta"
+}
+```
+
+or a set of managed tables:
+```hocon
+pramen.bookkeeping {
+  enabled = "true"
+  delta.database = "my_db"  # Optional. 'default' will be used if not speified
+  delta.table.prefix = "bk_"
+}
+```
+
 #### Enceladus ingestion pipelines for the Data Lake
 Pramen can help with ingesting data for data lake pipelines of [Enceladus](https://github.com/AbsaOSS/enceladus).
 A special sink (`EnceladusSink`) is used to save data to Enceladus' raw folder.

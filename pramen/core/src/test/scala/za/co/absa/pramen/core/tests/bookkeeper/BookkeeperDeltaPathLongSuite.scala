@@ -31,7 +31,7 @@ class BookkeeperDeltaPathLongSuite extends BookkeeperCommonSuite with SparkTestB
   var tmpDir: String = _
 
   before {
-    tmpDir = createTempDir("bkHadoopSuite")
+    tmpDir = createTempDir("bkHadoopDeltaPathSuite")
   }
 
   after {
@@ -42,7 +42,7 @@ class BookkeeperDeltaPathLongSuite extends BookkeeperCommonSuite with SparkTestB
     new BookkeeperDeltaPath(tmpDir)
   }
 
-  "BookkeeperHadoopDelta" when {
+  "BookkeeperHadoopDeltaPath" when {
     "initialized" should {
       "Initialize bookkeeping directory" in {
         getBookkeeper
