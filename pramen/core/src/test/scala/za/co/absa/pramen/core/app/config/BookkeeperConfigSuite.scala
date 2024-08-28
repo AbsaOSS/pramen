@@ -84,6 +84,47 @@ class BookkeeperConfigSuite extends AnyWordSpec {
       assert(bookkeeperConfig.bookkeepingLocation.contains("hdfs://dummy_path"))
     }
 
+    "deserialize the config properly for Hadoop Delta Path" in {
+      val configStr =
+        s"""pramen {
+           |  bookkeeping.enabled = true
+           |  bookkeeping.location = "hdfs://dummy_path"
+           |  bookkeeping.hadoop.format = "delta"
+           |}
+           |""".stripMargin
+
+      val config = ConfigFactory.parseString(configStr)
+        .withFallback(ConfigFactory.load())
+        .resolve()
+
+      val bookkeeperConfig = BookkeeperConfig.fromConfig(config)
+
+      assert(bookkeeperConfig.bookkeepingEnabled)
+      assert(bookkeeperConfig.bookkeepingLocation.contains("hdfs://dummy_path"))
+      assert(bookkeeperConfig.bookkeepingHadoopFormat == HadoopFormat.Delta)
+    }
+
+    "deserialize the config properly for Hadoop Delta Table" in {
+      val configStr =
+        s"""pramen {
+           |  bookkeeping.enabled = true
+           |  bookkeeping.hadoop.format = "delta"
+           |  bookkeeping.delta.table.prefix = "tbl_"
+           |}
+           |""".stripMargin
+
+      val config = ConfigFactory.parseString(configStr)
+        .withFallback(ConfigFactory.load())
+        .resolve()
+
+      val bookkeeperConfig = BookkeeperConfig.fromConfig(config)
+
+      assert(bookkeeperConfig.bookkeepingEnabled)
+      assert(bookkeeperConfig.bookkeepingLocation.isEmpty)
+      assert(bookkeeperConfig.bookkeepingHadoopFormat == HadoopFormat.Delta)
+      assert(bookkeeperConfig.deltaTablePrefix.contains("tbl_"))
+    }
+
     "deserialize the config properly for MongoDB" in {
       val configStr =
         s"""pramen {
