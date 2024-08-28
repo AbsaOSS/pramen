@@ -87,8 +87,14 @@ object Bookkeeper {
             log.info(s"Using MongoDB for lock management.")
             new TokenLockFactoryMongoDb(connection)
           case None =>
-            log.info(s"Using HadoopFS for lock management.")
-            new TokenLockFactoryHadoopPath(spark.sparkContext.hadoopConfiguration, bookkeepingConfig.bookkeepingLocation.get + "/locks")
+            bookkeepingConfig.bookkeepingLocation match {
+              case Some(path) =>
+                log.info(s"Using HadoopFS for lock management at $path/locks")
+                new TokenLockFactoryHadoopPath(spark.sparkContext.hadoopConfiguration, path + "/locks")
+              case None =>
+                log.warn(s"Locking is DISABLED.")
+                new TokenLockFactoryAllow
+            }
         }
       }
     } else {
@@ -107,14 +113,22 @@ object Bookkeeper {
           log.info(s"Using MongoDB for bookkeeping.")
           new BookkeeperMongoDb(connection)
         case None =>
-          val path = bookkeepingConfig.bookkeepingLocation.get
           bookkeepingConfig.bookkeepingHadoopFormat match {
             case HadoopFormat.Text =>
+              val path = bookkeepingConfig.bookkeepingLocation.get
               log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping at $path")
               new BookkeeperText(path)
             case HadoopFormat.Delta =>
-              log.info(s"Using Delta Lake for bookkeeping at $path")
-              new BookkeeperDeltaPath(path)
+              bookkeepingConfig.deltaTablePrefix match {
+                case Some(tablePrefix) =>
+                  val fullTableName = BookkeeperDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix, "*")
+                  log.info(s"Using Delta Lake managed table '$fullTableName' for bookkeeping.")
+                  new BookkeeperDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix)
+                case None =>
+                  val path = bookkeepingConfig.bookkeepingLocation.get
+                  log.info(s"Using Delta Lake for bookkeeping at $path")
+                  new BookkeeperDeltaPath(path)
+              }
           }
       }
     }
@@ -140,11 +154,11 @@ object Bookkeeper {
               bookkeepingConfig.deltaTablePrefix match {
                 case Some(tablePrefix) =>
                   val fullTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix)
-                  log.info(s"Using Delta Lake managed table '$fullTableName' for bookkeeping.")
+                  log.info(s"Using Delta Lake managed table '$fullTableName' for the journal.")
                   new JournalHadoopDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix)
                 case None =>
                   val path = bookkeepingConfig.bookkeepingLocation.get + "/journal"
-                  log.info(s"Using Delta Lake for bookkeeping at $path")
+                  log.info(s"Using Delta Lake for the journal at $path")
                   new JournalHadoopDeltaPath(path)
               }
           }

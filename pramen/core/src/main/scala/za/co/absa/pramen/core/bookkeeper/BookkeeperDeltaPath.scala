@@ -18,14 +18,14 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
+import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.utils.FsUtils
 
-import java.time.LocalDate
+import java.time.Instant
 import scala.reflect.ClassTag
-import scala.reflect.runtime.universe._
+import scala.reflect.runtime.universe
 
 object BookkeeperDeltaPath {
   val bookkeepingRootPath = "bk"
@@ -34,7 +34,7 @@ object BookkeeperDeltaPath {
   val locksDirName = "locks"
 }
 
-class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession) extends BookkeeperHadoop {
+class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession) extends BookkeeperDeltaBase {
   import BookkeeperDeltaPath._
   import spark.implicits._
 
@@ -46,91 +46,54 @@ class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession)
 
   init()
 
-  override val bookkeepingEnabled: Boolean = true
-
-  override def getLatestProcessedDateFromStorage(tableName: String, until: Option[LocalDate]): Option[LocalDate] = {
-    val filter = until match {
-      case Some(endDate) =>
-        val endDateStr = getDateStr(endDate)
-        col("tableName") === tableName && col("infoDate") <= endDateStr
-      case None =>
-        col("tableName") === tableName
-    }
-
-    val chunks = getData(filter)
-
-    if (chunks.isEmpty) {
-      None
-    } else {
-      val chunk = chunks.maxBy(_.infoDateEnd)
-      Option(LocalDate.parse(chunk.infoDateEnd, DataChunk.dateFormatter))
-    }
-  }
-
-  override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, dateBegin, dateEnd).lastOption
-  }
-
-  override def getDataChunksFromStorage(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[DataChunk] = {
-    val infoDateFilter = getFilter(tableName, Option(infoDateBegin), Option(infoDateEnd))
-
-    getData(infoDateFilter)
-  }
-
-  def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
-    getDf(getFilter(table, dateBegin, dateEnd)).count()
-  }
-
-  private[pramen] override def saveRecordCountToStorage(table: String,
-                                                        infoDate: LocalDate,
-                                                        infoDateBegin: LocalDate,
-                                                        infoDateEnd: LocalDate,
-                                                        inputRecordCount: Long,
-                                                        outputRecordCount: Long,
-                                                        jobStarted: Long,
-                                                        jobFinished: Long): Unit = {
-    val dateStr = getDateStr(infoDate)
-    val dateBeginStr = getDateStr(infoDateBegin)
-    val dateEndStr = getDateStr(infoDateEnd)
-
-    val chunk = DataChunk(table, dateStr, dateBeginStr, dateEndStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
-
-    val df = Seq(chunk).toDF()
-
-    df.write
-      .mode(SaveMode.Append)
-      .format("delta")
-      .save(recordsPath.toUri.toString)
-  }
-
-  override def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)] = {
-    val filter = getFilter(table, None, Option(until))
-
+  override def getBkDf(filter: Column): Dataset[DataChunk] = {
     val df = spark
       .read
       .format("delta")
-      .load(schemasPath.toUri.toString)
+      .load(recordsPath.toUri.toString)
 
-    val tableSchemaOpt = df.filter(filter)
-      .orderBy(col("infoDate").desc)
-      .as[TableSchema]
-      .take(1)
-      .headOption
-
-    tableSchemaOpt.flatMap(tableSchema => {
-      TableSchema.toSchemaAndDate(tableSchema)
-    })
+    df.filter(filter)
+      .orderBy(col("jobFinished"))
+      .as[DataChunk]
   }
 
-  private[pramen] override def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit = {
-    val tableSchema = TableSchema(table, infoDate.toString, schema.json)
-
-    val df = Seq(tableSchema).toDF()
+  override def saveRecordCountDelta(dataChunk: DataChunk): Unit = {
+    val df = Seq(dataChunk).toDF()
 
     df.write
       .mode(SaveMode.Append)
       .format("delta")
+      .option("mergeSchema", "true")
+      .save(recordsPath.toUri.toString)
+  }
+
+  override def getSchemasDeltaDf: Dataset[TableSchemaJson] = {
+    spark
+      .read
+      .format("delta")
+      .load(schemasPath.toUri.toString)
+      .as[TableSchemaJson]
+  }
+
+  override def saveSchemaDelta(schema: TableSchema): Unit = {
+    val df = Seq(
+      TableSchemaJson(schema.tableName, schema.infoDate, schema.schemaJson, Instant.now().toEpochMilli)
+    ).toDF()
+
+    df.write
+      .mode(SaveMode.Append)
+      .format("delta")
+      .option("mergeSchema", "true")
       .save(schemasPath.toUri.toString)
+  }
+
+  override def writeEmptyDataset[T <: Product : universe.TypeTag : ClassTag](pathOrTable: String): Unit = {
+    val df = Seq.empty[T].toDS
+
+    df.write
+      .mode(SaveMode.Overwrite)
+      .format("delta")
+      .save(pathOrTable)
   }
 
   private def init(): Unit = {
@@ -148,44 +111,14 @@ class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession)
   private def initRecordsDirectory(path: Path): Unit = {
     if (!fsUtils.exists(path)) {
       fsUtils.createDirectoryRecursive(path)
-      writeEmptyDataset[DataChunk](path)
+      writeEmptyDataset[DataChunk](path.toUri.toString)
     }
   }
 
   private def initSchemasDirectory(path: Path): Unit = {
     if (!fsUtils.exists(path)) {
       fsUtils.createDirectoryRecursive(path)
-      writeEmptyDataset[TableSchema](path)
+      writeEmptyDataset[TableSchemaJson](path.toUri.toString)
     }
-  }
-
-  private def writeEmptyDataset[T <: Product : TypeTag : ClassTag](path: Path): Unit = {
-    val df = Seq.empty[T].toDS
-
-    df.write
-      .mode(SaveMode.Overwrite)
-      .format("delta")
-      .save(path.toUri.toString)
-  }
-
-  private def getDf(filter: Column): Dataset[DataChunk] = {
-    val df = spark
-      .read
-      .format("delta")
-      .load(recordsPath.toUri.toString)
-
-    df.filter(filter)
-      .orderBy(col("jobFinished"))
-      .as[DataChunk]
-  }
-
-  private def getData(filter: Column): Seq[DataChunk] = {
-    getDf(filter)
-      .collect()
-      .groupBy(v => (v.tableName, v.infoDate))
-      .map { case (_, listChunks) =>
-        listChunks.maxBy(c => c.jobFinished)
-      }
-      .toArray[DataChunk]
   }
 }
