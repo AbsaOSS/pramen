@@ -52,7 +52,7 @@ object BookkeeperConfig {
     val deltaTablePrefix = ConfigUtils.getOptionString(conf, BOOKKEEPING_DELTA_TABLE_PREFIX)
 
     if (bookkeepingEnabled && bookkeepingJdbcConfig.isEmpty && bookkeepingHadoopFormat == HadoopFormat.Delta) {
-      if (bookkeepingLocation.isEmpty || deltaTablePrefix.isEmpty) {
+      if (bookkeepingLocation.isEmpty && deltaTablePrefix.isEmpty) {
         throw new RuntimeException(s"In order to use Delta Lake for bookkeeping, either $BOOKKEEPING_LOCATION or $BOOKKEEPING_DELTA_TABLE_PREFIX must be defined. " +
         s"Preferably $BOOKKEEPING_DELTA_DB_NAME should be defined as well for managed Delta Lake tables.")
       }
