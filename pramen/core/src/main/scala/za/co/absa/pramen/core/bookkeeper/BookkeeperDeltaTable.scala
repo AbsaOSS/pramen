@@ -100,8 +100,8 @@ class BookkeeperDeltaTable(database: Option[String],
   }
 
   private def initSchemasDirectory(): Unit = {
-    if (!spark.catalog.tableExists(schemasTable)) {
-      writeEmptyDataset[TableSchemaJson](schemasTable)
+    if (!spark.catalog.tableExists(schemasFullTableName)) {
+      writeEmptyDataset[TableSchemaJson](schemasFullTableName)
     }
   }
 }
