@@ -43,6 +43,13 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
       val rndInt = Math.abs(Random.nextInt())
       getBookkeeper(s"tbl${rndInt}_")
     }
+
+    "test tables are created properly" in {
+      getBookkeeper(s"tbl0000_")
+
+      assert(spark.catalog.tableExists("tbl0000_bookkeeping"))
+      assert(spark.catalog.tableExists("tbl0000_schemas"))
+    }
   }
 
   private def cleanUpWarehouse(): Unit = {
