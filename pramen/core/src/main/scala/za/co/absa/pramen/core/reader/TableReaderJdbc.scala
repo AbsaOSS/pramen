@@ -107,10 +107,17 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     )
   }
 
-  private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+  private[core] def getCountSqlQuery(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd)
-    val countSql = s"SELECT COUNT(*) FROM ($filteredSql)"
+
+    sqlGen.getCountQueryForSql(filteredSql)
+  }
+
+  private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val countSql = getCountSqlQuery(sql, infoDateBegin, infoDateEnd)
     var count = 0L
+
+    log.info(s"Executing: $countSql")
 
     JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql, jdbcRetries) { rs =>
       if (!rs.next())

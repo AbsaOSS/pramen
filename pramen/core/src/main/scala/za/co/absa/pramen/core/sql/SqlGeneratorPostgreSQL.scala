@@ -47,6 +47,10 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)}${getLimit(limit)}"
   }
 
+  override def getCountQueryForSql(filteredSql: String): String = {
+    s"SELECT COUNT(*) FROM ($filteredSql) query"
+  }
+
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"

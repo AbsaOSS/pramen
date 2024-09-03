@@ -73,6 +73,10 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
     s"SELECT ${getColumnSql(tableName, columns)} FROM ${escape(tableName)}${getLimit(limit, hasWhere = false)}"
   }
 
+  override def getCountQueryForSql(filteredSql: String): String = {
+    s"SELECT COUNT(*) FROM ($filteredSql) AS query"
+  }
+
   def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
     s"SELECT ${getColumnSql(tableName, columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit, hasWhere = true)}"
