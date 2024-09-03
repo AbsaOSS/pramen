@@ -51,6 +51,10 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
     s"SELECT ${getAliasExpression("COUNT(*)", "CNT")} FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
+  override def getCountQueryForSql(filteredSql: String): String = {
+    s"SELECT COUNT(*) FROM ($filteredSql) AS query"
+  }
+
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
     s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escape(tableName)} WITH (NOLOCK)"
   }

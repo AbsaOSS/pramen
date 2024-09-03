@@ -338,6 +338,46 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       }
     }
 
+    "getCountSqlQuery" should {
+      "return a count query for a table snapshot-like query" in {
+        val testConfig = conf
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+
+        val sql = reader.getCountSqlQuery("SELECT * FROM COMPANY", infoDate, infoDate)
+
+        assert(sql == "SELECT COUNT(*) FROM (SELECT * FROM COMPANY)")
+      }
+
+      "return a count query for a table event-like query" in {
+        val testConfig = conf.getConfig("reader")
+          .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
+          .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
+          .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
+          .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
+
+        val reader = TableReaderJdbc(testConfig, "reader")
+
+        val sql = reader.getCountSqlQuery("SELECT * FROM COMPANY WHERE info_date BETWEEN '@dateFrom' AND '@dateTo'", infoDate, infoDate)
+
+        assert(sql == "SELECT COUNT(*) FROM (SELECT * FROM COMPANY WHERE info_date BETWEEN '2022-02-18' AND '2022-02-18')")
+      }
+
+      "return a count query for a complex event-like query" in {
+        val testConfig = conf.getConfig("reader")
+          .withValue("jdbc.driver", ConfigValueFactory.fromAnyRef("net.sourceforge.jtds.jdbc.Driver"))
+          .withValue("has.information.date.column", ConfigValueFactory.fromAnyRef(true))
+          .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
+          .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
+          .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
+
+        val reader = TableReaderJdbc(testConfig, "reader")
+
+        val sql = reader.getCountSqlQuery("SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('@infoDate' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)", infoDate, infoDate)
+
+        assert(sql == "SELECT COUNT(*) FROM (SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('2022-02-18' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)) AS query")
+      }
+    }
+
     "getData()" should {
       "return data for a table snapshot-like query" in {
         val testConfig = conf

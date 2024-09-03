@@ -57,6 +57,10 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
     s"SELECT COUNT(*) FROM ${escape(tableName)} WHERE $where"
   }
 
+  override def getCountQueryForSql(filteredSql: String): String = {
+    s"SELECT COUNT(*) FROM ($filteredSql) AS query"
+  }
+
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)}${getLimit(limit)}"
   }

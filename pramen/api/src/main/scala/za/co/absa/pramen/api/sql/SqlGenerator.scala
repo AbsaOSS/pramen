@@ -37,6 +37,11 @@ trait SqlGenerator {
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String
 
   /**
+    * Generates a query that returns the record count of an SQL query that is already formed.
+    */
+  def getCountQueryForSql(filteredSql: String): String
+
+  /**
     * Generates a query that returns data of a table that does not have the information date field.
     */
   def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String

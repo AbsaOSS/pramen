@@ -162,6 +162,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
       }
     }
 
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(gen.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) query")
+      }
+    }
+
     "getDtable" should {
       "return the original table when a table is provided" in {
         assert(gen.getDtable("A") == "A")
@@ -308,6 +314,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23)")
         assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT TOP 100 * FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17', 23) AND D <= CONVERT(DATE, '2020-08-30', 23)")
+      }
+    }
+
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
       }
     }
 
@@ -540,6 +552,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
       }
     }
 
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(gen.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
+      }
+    }
+
     "getDtable" should {
       "return the original table when a table is provided" in {
         assert(gen.getDtable("A") == "A")
@@ -740,6 +758,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
       }
     }
 
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(gen.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
+      }
+    }
+
     "getDtable" should {
       "return the original table when a table is provided" in {
         assert(gen.getDtable("A") == "A")
@@ -853,6 +877,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM A WHERE D = to_date('2020-08-17') LIMIT 100")
         assert(gen.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= to_date('2020-08-17') AND D <= to_date('2020-08-30') LIMIT 100")
+      }
+    }
+
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(gen.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
       }
     }
 
@@ -972,6 +1002,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
       }
     }
 
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) query")
+      }
+    }
+
     "getDtable" should {
       "return the original table when a table is provided" in {
         assert(genDate.getDtable("A") == "A")
@@ -1085,6 +1121,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM A WHERE D = '2020-08-17' LIMIT 100")
         assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30' LIMIT 100")
+      }
+    }
+
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) query")
       }
     }
 
@@ -1204,6 +1246,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
       }
     }
 
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
+      }
+    }
+
     "getDtable" should {
       "return the original table when a table is provided" in {
         assert(genDate.getDtable("A") == "A")
@@ -1317,6 +1365,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM A WHERE D = TO_DATE('2020-08-17', 'YYYY-MM-DD') LIMIT 100")
         assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= TO_DATE('2020-08-17', 'YYYY-MM-DD') AND D <= TO_DATE('2020-08-30', 'YYYY-MM-DD') LIMIT 100")
+      }
+    }
+
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B)")
       }
     }
 
@@ -1445,6 +1499,12 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
           "SELECT * FROM A WHERE D = date'2020-08-17' LIMIT 100")
         assert(genDate.getDataQuery("A", date1, date2, Nil, Some(100)) ==
           "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30' LIMIT 100")
+      }
+    }
+
+    "getCountQueryForSql" should {
+      "generate count queries for an SQL subquery" in {
+        assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
       }
     }
 
