@@ -44,4 +44,6 @@ class SqlGeneratorDummy(sqlConfig: SqlConfig) extends SqlGenerator {
   override def escape(identifier: String): String = null
 
   override def quote(identifier: String): String = null
+
+  override def unquote(identifier: String): String = null
 }

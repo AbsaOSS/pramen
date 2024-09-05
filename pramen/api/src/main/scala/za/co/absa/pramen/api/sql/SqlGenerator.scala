@@ -86,6 +86,13 @@ trait SqlGenerator {
   def quote(identifier: String): String
 
   /**
+    * Unquotes an identifier name with characters specific to SQL dialects.
+    * If the identifier is already not quoted, nothing will be done.
+    * It supports partially quoted identifiers. E.g. '"my_catalog".my table' will be quoted as 'my_catalog.my table'.
+    */
+  def unquote(identifier: String): String
+
+  /**
     * Returns true if the SQL generator can only work if it has an active connection.
     * This can be for database engines that does not support "SELECT * FROM table" and require explicit list of columns.
     * The connection can be used to query the list of columns first.
