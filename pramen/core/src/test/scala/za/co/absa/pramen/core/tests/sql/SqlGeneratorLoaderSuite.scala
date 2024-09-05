@@ -185,6 +185,14 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         assert(actual == "\"System User\".\"Table Name\"")
       }
     }
+
+    "unquote" should {
+      "quote each subfields separately" in {
+        val actual = gen.unquote("System User.\"Table Name\"")
+
+        assert(actual == "System User.Table Name")
+      }
+    }
   }
 
   "Microsoft SQL generator" should {
@@ -338,6 +346,20 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         val actual = genDate.quote("System User.[Table Name]")
 
         assert(actual == "[System User].[Table Name]")
+      }
+    }
+
+    "unquote" should {
+      "quote each subfields separately using quotes" in {
+        val actual = genDate.unquote("System User.\"Table Name\"")
+
+        assert(actual == "System User.Table Name")
+      }
+
+      "quote each subfields separately using brackets" in {
+        val actual = genDate.unquote("[System User].[Table Name]")
+
+        assert(actual == "System User.Table Name")
       }
     }
 
@@ -573,6 +595,14 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         val actual = gen.quote("System User.\"Table Name\"")
 
         assert(actual == "\"System User\".\"Table Name\"")
+      }
+    }
+
+    "unquote" should {
+      "quote each subfields separately" in {
+        val actual = gen.unquote("System User.\"Table Name\"")
+
+        assert(actual == "System User.Table Name")
       }
     }
 
@@ -1025,6 +1055,14 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         assert(actual == "\"System User\".\"Table Name\"")
       }
     }
+
+    "unquote" should {
+      "quote each subfields separately" in {
+        val actual = genDate.unquote("System User.\"Table Name\"")
+
+        assert(actual == "System User.Table Name")
+      }
+    }
   }
 
   "MySQL SQL generator" should {
@@ -1147,6 +1185,14 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         assert(actual == "`System User`.`Table Name`")
       }
     }
+
+    "unquote" should {
+      "quote each subfields separately" in {
+        val actual = genDate.unquote("System User.`Table Name`")
+
+        assert(actual == "System User.Table Name")
+      }
+    }
   }
 
   "DB2 SQL generator" should {
@@ -1267,6 +1313,14 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         val actual = genDate.quote("System User.\"Table Name\"")
 
         assert(actual == "\"System User\".\"Table Name\"")
+      }
+    }
+
+    "unquote" should {
+      "quote each subfields separately" in {
+        val actual = genDate.unquote("System User.\"Table Name\"")
+
+        assert(actual == "System User.Table Name")
       }
     }
   }
@@ -1558,6 +1612,14 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
         assertThrows[IllegalArgumentException] {
           genDate.quote("ABC \n DEF")
         }
+      }
+    }
+
+    "unquote" should {
+      "quote each subfields separately" in {
+        val actual = genDate.unquote("System User.\"Table Name\"")
+
+        assert(actual == "System User.Table Name")
       }
     }
   }

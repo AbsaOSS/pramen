@@ -114,6 +114,11 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
   }
 
+  override def unquote(identifier: String): String = {
+    validateIdentifier(identifier)
+    splitComplexIdentifier(identifier).map(unquoteSingleIdentifier).mkString(".")
+  }
+
   override def escape(identifier: String): String = {
     if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
       quote(identifier)
@@ -136,6 +141,18 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
 
   private def infoDateColumn: String = {
     escape(sqlConfig.infoDateColumn)
+  }
+
+  private def unquoteSingleIdentifier(identifier: String): String = {
+    val (escapeBegin, escapeEnd) = beginEndEscapeChars
+
+    if (identifier.startsWith(s"$escapeBegin") && identifier.endsWith(s"$escapeEnd") && identifier.length > 2) {
+      identifier.substring(1, identifier.length - 1)
+    } else if (identifier.startsWith(s"$escapeChar2") && identifier.endsWith(s"$escapeChar2") && identifier.length > 2) {
+      identifier.substring(1, identifier.length - 1)
+    } else {
+      identifier
+    }
   }
 
   private def quoteSingleIdentifier(identifier: String): String = {
