@@ -26,7 +26,6 @@ import za.co.absa.pramen.core.utils.impl.JdbcFieldMetadata
 
 import java.sql.{Connection, DatabaseMetaData, ResultSet, ResultSetMetaData}
 import scala.collection.mutable.ListBuffer
-import scala.util.control.NonFatal
 
 object JdbcSparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)

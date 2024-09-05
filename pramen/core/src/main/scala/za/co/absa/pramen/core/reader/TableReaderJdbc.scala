@@ -192,8 +192,11 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, jdbcMetadata) =>
         val schemaWithMetadata = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
         val schemaWithColumnDescriptions = tableOpt match {
-          case Some(table) => JdbcSparkUtils.addColumnDescriptionsFromJdbc(schemaWithMetadata, table, connection)
-          case None => schemaWithMetadata
+          case Some(table) =>
+            log.info(s"Reading JDBC metadata descriptions the table: $table")
+            JdbcSparkUtils.addColumnDescriptionsFromJdbc(schemaWithMetadata, sqlGen.unquote(table), connection)
+          case None =>
+            schemaWithMetadata
         }
         df = spark.createDataFrame(df.rdd, schemaWithColumnDescriptions)
       }
