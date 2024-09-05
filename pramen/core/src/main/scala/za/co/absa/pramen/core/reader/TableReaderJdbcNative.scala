@@ -88,12 +88,13 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     if (jdbcReaderConfig.enableSchemaMetadata) {
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, jdbcMetadata) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, _) =>
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>
-            log.info(s"Reading JDBC metadata descriptions the query: $sql")
-            JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, table, connection)
-          case None => df.schema
+            log.info(s"Reading JDBC metadata descriptions the table: $table")
+            JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, sqlGen.unquote(table), connection)
+          case None =>
+            df.schema
         }
         df = spark.createDataFrame(df.rdd, schemaWithColumnDescriptions)
       }
