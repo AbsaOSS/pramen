@@ -16,12 +16,9 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-case class OffsetRecord(
-                         pramenTableName: String,
-                         infoDate: String,              /* Use String to workaround serialization issues */
-                         dataType: String,              /* Converts to OffsetDataType */
-                         minOffset: String,
-                         maxOffset: String,
-                         createdAtMilli: Long,          /* Use epoch milli */
-                         committedAtMilli: Option[Long] /* Use epoch milli, can be empty for uncommitted offsets */
-                       )
+import java.time.LocalDate
+
+case class DataOffsetAggregated(tableName: String,
+                                maximumInfoDate: LocalDate,
+                                maximumOffset: OffsetValue
+                               )

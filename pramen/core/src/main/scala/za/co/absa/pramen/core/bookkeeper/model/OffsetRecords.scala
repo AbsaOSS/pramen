@@ -22,12 +22,12 @@ class OffsetRecords(tag: Tag) extends Table[OffsetRecord](tag, "offsets") {
   def pramenTableName = column[String]("table_name", O.Length(128))
   def infoDate = column[String]("info_date", O.Length(20))
   def dataType = column[String]("data_type", O.Length(20))
-  def minOffset = column[String]("min_offset", O.Length(128))
-  def maxOffset = column[String]("min_offset", O.Length(128))
-  def committed = column[Boolean]("committed")
-  def lastUpdated = column[Long]("last_updated")
-  def * = (pramenTableName, infoDate, dataType, minOffset, maxOffset, committed, lastUpdated) <> (OffsetRecord.tupled, OffsetRecord.unapply)
-  def idx1 = index("offset_idx_1", (pramenTableName, infoDate), unique = false)
+  def minOffset = column[String]("min_offset", O.Length(64))
+  def maxOffset = column[String]("min_offset", O.Length(64))
+  def createdAt = column[Long]("created_at")
+  def committedAt = column[Option[Long]]("committed_at")
+  def * = (pramenTableName, infoDate, dataType, minOffset, maxOffset, createdAt, committedAt) <> (OffsetRecord.tupled, OffsetRecord.unapply)
+  def idx2 = index("offset_idx_1", (pramenTableName, infoDate, createdAt), unique = true)
 }
 
 object OffsetRecords {
