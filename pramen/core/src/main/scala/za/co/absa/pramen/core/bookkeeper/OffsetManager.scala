@@ -1,0 +1,63 @@
+/*
+ * Copyright 2022 ABSA Group Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package za.co.absa.pramen.core.bookkeeper
+
+import za.co.absa.pramen.core.bookkeeper.model.{DataOffset, DataOffsetAggregated, DataOffsetRequest, OffsetValue}
+
+import java.time.LocalDate
+
+/**
+  * The offset manager allows managing offsets of incremental operations.
+  *
+  * It provides correctness guarantees only if not running in parallel with other jobs outputting to the same
+  * Pramen table.
+  *
+  * Locks are used to ensure no jobs outputting to the same incremental table is happening in parallel.
+  *
+  * The startWriteOffsets() together with commitOffsets() and rollbackOffsets() provide mechanisms to ensure consistency
+  * with data.
+  */
+trait OffsetManager {
+  /** Returns the maximum information date the bookkeeping has offsets for. */
+  def getMaximumDateAndOffset(table: String): Option[DataOffsetAggregated] = ???
+
+  /** Returns all uncommitted offsets. If there are any:
+    * - maximum offset should be derived from data,
+    * - the latest uncommitted offset should be committed to the latest offset
+    * - previous uncommitted offsets should be rolled back.
+    */
+  def getUncommittedOffsets(table: String): Seq[DataOffset] = ???
+
+  /**
+    * Starts an uncommitted offset for an incremental ingestion for a day.
+    * This can only be done for the latest information date.
+    */
+  def startWriteOffsets(table: String, infoDate: LocalDate, minOffset: OffsetValue): DataOffsetRequest = ???
+
+  /**
+    * Commits changes to the table. If maxOffset is
+    * - the same as minOffset the effect is similar to rollbackOffsets().
+    * - greater than minOffset, a new entry is created.
+    * - less than minOffset - an exception will be thrown
+    */
+  def commitOffsets(request: DataOffsetRequest, maxOffset: OffsetValue): Unit = ???
+
+  /**
+    * Rolls back an offset request
+    */
+  def rollbackOffsets(request: DataOffsetRequest): Unit = ???
+}

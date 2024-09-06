@@ -21,6 +21,7 @@ import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.MetadataManager
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
+import za.co.absa.pramen.core.bookkeeper.model.{DataOffset, DataOffsetAggregated, DataOffsetRequest, OffsetValue}
 import za.co.absa.pramen.core.journal._
 import za.co.absa.pramen.core.lock._
 import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
@@ -57,6 +58,8 @@ trait Bookkeeper {
   def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
 
   private[pramen] def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit
+
+  private[pramen] def getOffsetManager: OffsetManager = ???
 }
 
 object Bookkeeper {
