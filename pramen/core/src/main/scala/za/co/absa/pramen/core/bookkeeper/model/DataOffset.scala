@@ -25,3 +25,22 @@ case class DataOffset(tableName: String,
                       createdAt: Long,
                       committedAt: Option[Long]
                      )
+
+object DataOffset {
+  def fromOffsetRecord(r: OffsetRecord): DataOffset = {
+    val maxOffsetOpt = if (r.maxOffset.nonEmpty) {
+      Option(OffsetValue.fromString(r.dataType, r.maxOffset))
+    } else {
+      None
+    }
+
+    DataOffset(
+      r.pramenTableName,
+      LocalDate.parse(r.infoDate),
+      OffsetValue.fromString(r.dataType, r.minOffset),
+      maxOffsetOpt,
+      r.createdAtMilli,
+      r.committedAtMilli
+    )
+  }
+}

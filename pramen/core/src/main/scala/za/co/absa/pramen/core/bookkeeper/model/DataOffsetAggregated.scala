@@ -20,5 +20,6 @@ import java.time.LocalDate
 
 case class DataOffsetAggregated(tableName: String,
                                 maximumInfoDate: LocalDate,
+                                minimumOffset: OffsetValue,
                                 maximumOffset: OffsetValue
                                )
