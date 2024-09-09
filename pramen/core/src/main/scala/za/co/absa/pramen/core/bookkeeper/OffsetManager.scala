@@ -32,15 +32,23 @@ import java.time.LocalDate
   * with data.
   */
 trait OffsetManager {
-  /** Returns the maximum information date the bookkeeping has offsets for. */
-  def getMaximumDateAndOffset(table: String): Option[DataOffsetAggregated] = ???
+  /**
+    * Returns the maximum information date the bookkeeping has offsets for.
+    *
+    * If onlyForInfoDate is not empty, offset management is being processed for each info date individually, e.g.
+    * info_date + offset column is monotonic.
+    *
+    * if onlyForInfoDate is empty
+    * offset must be a monotonically increasing field.
+    */
+  def getMaximumDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = ???
 
   /** Returns all uncommitted offsets. If there are any:
     * - maximum offset should be derived from data,
     * - the latest uncommitted offset should be committed to the latest offset
     * - previous uncommitted offsets should be rolled back.
     */
-  def getUncommittedOffsets(table: String): Seq[DataOffset] = ???
+  def getUncommittedOffsets(table: String, onlyForInfoDate: Option[LocalDate]): Seq[DataOffset] = ???
 
   /**
     * Starts an uncommitted offset for an incremental ingestion for a day.
