@@ -159,7 +159,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
 
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "delta")
@@ -212,7 +212,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
 
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.hiveApi == HiveApi.Sql)
@@ -278,7 +278,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true)
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
 
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.hiveApi == HiveApi.SparkCatalog)
@@ -304,7 +304,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Mandatory option missing: name"))
@@ -322,7 +322,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Unable to read data format from config for the metastore table: table1"))
@@ -340,7 +340,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Invalid or unsupported save mode: 'ignore' for table 'table1'."))
@@ -358,7 +358,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true)
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Invalid or unsupported save mode: 'test' for table 'table1'."))

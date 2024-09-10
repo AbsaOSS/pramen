@@ -33,6 +33,7 @@ object TestPrototypes {
     DataFormat.Null(),
     "pramen_info_date",
     "yyyy-MM-dd",
+    "pramen_batchid",
     None,
     None,
     LocalDate.MIN,

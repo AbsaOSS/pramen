@@ -40,6 +40,8 @@ class PipelineStateSpy extends PipelineState {
     )
   }
 
+  override def getBatchId(): Long = 0L
+
   override def setShutdownHookCanRun(): Unit = synchronized {
     setShutdownHookCanRunCount += 1
   }

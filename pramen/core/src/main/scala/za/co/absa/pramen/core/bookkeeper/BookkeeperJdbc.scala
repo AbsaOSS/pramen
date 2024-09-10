@@ -31,10 +31,10 @@ import java.time.LocalDate
 import scala.util.control.NonFatal
 
 class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
-
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val offsetManagement = new OffsetManagerJdbc(db)
 
   override val bookkeepingEnabled: Boolean = true
 
@@ -119,6 +119,10 @@ class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to write to the bookkeeping table.", ex)
     }
+  }
+
+  private[pramen] override def getOffsetManager: OffsetManager = {
+    offsetManagement
   }
 
   private def toChunk(r: BookkeepingRecord): DataChunk = {

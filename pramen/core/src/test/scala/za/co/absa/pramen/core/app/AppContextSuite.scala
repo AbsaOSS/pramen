@@ -49,7 +49,7 @@ class AppContextSuite extends AnyWordSpec with SparkTestBase{
       .resolve()
 
     "be able to create app context from config" in {
-      val context = AppContextImpl.apply(conf)
+      val context = AppContextImpl.apply(conf, 0L)
 
       assert(context.bookkeeper.isInstanceOf[BookkeeperNull])
       assert(context.tokenLockFactory.isInstanceOf[TokenLockFactoryAllow])

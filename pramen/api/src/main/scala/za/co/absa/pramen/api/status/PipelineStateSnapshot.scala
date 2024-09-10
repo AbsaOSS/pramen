@@ -20,6 +20,7 @@ import za.co.absa.pramen.api.PipelineInfo
 
 case class PipelineStateSnapshot(
                                   pipelineInfo: PipelineInfo,
+                                  batchId: Long,
                                   isFinished: Boolean,
                                   warningFlag: Boolean,
                                   exitedNormally: Boolean,

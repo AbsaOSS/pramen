@@ -21,6 +21,8 @@ import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 trait PipelineState extends AutoCloseable {
   def getState(): PipelineStateSnapshot
 
+  def getBatchId(): Long
+
   def setShutdownHookCanRun(): Unit
 
   def setSuccess(): Unit

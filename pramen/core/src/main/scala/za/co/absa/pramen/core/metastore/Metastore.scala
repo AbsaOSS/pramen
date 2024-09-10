@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.metastore
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.sql.types.StructType
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -37,9 +37,11 @@ trait Metastore {
 
   def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame
 
+  def getCurrentBatch(tableName: String, infoDate: LocalDate): DataFrame
+
   def getLatest(tableName: String, until: Option[LocalDate]): DataFrame
 
-  def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long] = None): MetaTableStats
+  def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long] = None, saveModeOverride: Option[SaveMode] = None): MetaTableStats
 
   def getHiveHelper(tableName: String): HiveHelper
 

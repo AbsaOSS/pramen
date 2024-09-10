@@ -59,7 +59,7 @@ trait Bookkeeper {
 
   private[pramen] def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit
 
-  private[pramen] def getOffsetManager: OffsetManager = ???
+  private[pramen] def getOffsetManager: OffsetManager
 }
 
 object Bookkeeper {

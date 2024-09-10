@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
@@ -43,18 +43,20 @@ trait MetastorePersistence {
 }
 
 object MetastorePersistence {
-  def fromMetaTable(metaTable: MetaTable, conf: Config)(implicit spark: SparkSession): MetastorePersistence = {
+  def fromMetaTable(metaTable: MetaTable, conf: Config, saveModeOverride: Option[SaveMode] = None)(implicit spark: SparkSession): MetastorePersistence = {
+    val saveModeOpt = saveModeOverride.orElse(metaTable.saveModeOpt)
+
     metaTable.format match {
       case DataFormat.Parquet(path, recordsPerPartition) =>
         new MetastorePersistenceParquet(
-          path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Delta(query, recordsPerPartition)  =>
         new MetastorePersistenceDelta(
-          query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, metaTable.saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          query, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Raw(path)                          =>
-        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.saveModeOpt)
+        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, saveModeOpt)
       case DataFormat.TransientEager(cachePolicy)             =>
         new MetastorePersistenceTransientEager(TransientTableManager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Transient(cachePolicy) =>

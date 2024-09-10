@@ -581,6 +581,6 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     val infoDateConfig = InfoDateConfig.fromConfig(conf)
     val bk = new SyncBookkeeperMock
     val mm = new MetadataManagerNull(isPersistenceEnabled = false)
-    (MetastoreImpl.fromConfig(conf, infoDateConfig, bk, mm), bk)
+    (MetastoreImpl.fromConfig(conf, infoDateConfig, bk, mm, 0L), bk)
   }
 }
