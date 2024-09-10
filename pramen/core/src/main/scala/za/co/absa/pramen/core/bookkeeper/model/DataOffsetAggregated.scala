@@ -18,8 +18,10 @@ package za.co.absa.pramen.core.bookkeeper.model
 
 import java.time.LocalDate
 
-case class DataOffsetAggregated(tableName: String,
-                                maximumInfoDate: LocalDate,
-                                minimumOffset: OffsetValue,
-                                maximumOffset: OffsetValue
+case class DataOffsetAggregated(
+                                 tableName: String,
+                                 maximumInfoDate: LocalDate,
+                                 minimumOffset: OffsetValue,
+                                 maximumOffset: OffsetValue,
+                                 offsetsForTheDay: Array[DataOffset]
                                )

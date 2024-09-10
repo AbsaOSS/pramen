@@ -33,6 +33,16 @@ import java.time.LocalDate
   */
 trait OffsetManager {
   /**
+    * Returns offsets for an information date.
+    *
+    * If there are uncommitted offsets, they should be handled this way:
+    * - maximum offset should be derived from data,
+    * - the latest uncommitted offset should be committed to the latest offset
+    * - previous uncommitted offsets should be rolled back.
+    */
+  def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset]
+
+  /**
     * Returns the maximum information date the bookkeeping has offsets for.
     *
     * If onlyForInfoDate is not empty, offset management is being processed for each info date individually, e.g.
@@ -41,20 +51,13 @@ trait OffsetManager {
     * if onlyForInfoDate is empty
     * offset must be a monotonically increasing field.
     */
-  def getMaximumDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = ???
-
-  /** Returns all uncommitted offsets. If there are any:
-    * - maximum offset should be derived from data,
-    * - the latest uncommitted offset should be committed to the latest offset
-    * - previous uncommitted offsets should be rolled back.
-    */
-  def getUncommittedOffsets(table: String, onlyForInfoDate: Option[LocalDate]): Seq[DataOffset] = ???
+  def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated]
 
   /**
     * Starts an uncommitted offset for an incremental ingestion for a day.
     * This can only be done for the latest information date.
     */
-  def startWriteOffsets(table: String, infoDate: LocalDate, minOffset: OffsetValue): DataOffsetRequest = ???
+  def startWriteOffsets(table: String, infoDate: LocalDate, minOffset: OffsetValue): DataOffsetRequest
 
   /**
     * Commits changes to the table. If maxOffset is
@@ -62,10 +65,10 @@ trait OffsetManager {
     * - greater than minOffset, a new entry is created.
     * - less than minOffset - an exception will be thrown
     */
-  def commitOffsets(request: DataOffsetRequest, maxOffset: OffsetValue): Unit = ???
+  def commitOffsets(request: DataOffsetRequest, maxOffset: OffsetValue): Unit
 
   /**
     * Rolls back an offset request
     */
-  def rollbackOffsets(request: DataOffsetRequest): Unit = ???
+  def rollbackOffsets(request: DataOffsetRequest): Unit
 }
