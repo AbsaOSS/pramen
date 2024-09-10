@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks.metastore
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.sql.types.StructType
 import za.co.absa.pramen.api.{MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
@@ -69,9 +69,13 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     tableDf
   }
 
+  override def getCurrentBatch(tableName: String, infoDate: LocalDate): DataFrame = {
+    getTable(tableName, Option(infoDate), Option(infoDate))
+  }
+
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = null
 
-  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
+  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long], saveModeOverride: Option[SaveMode]): MetaTableStats = {
     saveTableInvocations.append((tableName, infoDate, df))
     MetaTableStats(df.count(), None)
   }
@@ -110,6 +114,10 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         metastore.getTable(tableName, from, to)
       }
 
+      override def getCurrentBatch(tableName: String): DataFrame = {
+        getTable(tableName, Option(infoDate), Option(infoDate))
+      }
+
       override def getLatest(tableName: String, until: Option[LocalDate] = None): DataFrame = {
         validateTable(tableName)
         val untilDate = until.orElse(Option(infoDate))
@@ -136,6 +144,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         MetaTableDef(table.name,
           table.description,
           table.format,
+          table.batchIdColumn,
           table.infoDateColumn,
           table.infoDateFormat,
           table.hiveTable,

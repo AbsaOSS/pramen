@@ -18,8 +18,9 @@ package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.app.config.InfoDateConfig
@@ -38,6 +39,7 @@ class MetastoreImpl(appConfig: Config,
                     tableDefs: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
                     metadata: MetadataManager,
+                    batchId: Long,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
   import MetastoreImpl._
 
@@ -78,6 +80,18 @@ class MetastoreImpl(appConfig: Config,
     MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(infoDateFrom, infoDateTo)
   }
 
+  override def getCurrentBatch(tableName: String, infoDate: LocalDate): DataFrame = {
+    val mt = getTableDef(tableName)
+
+    val df = MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(Option(infoDate), Option(infoDate))
+
+    if (df.schema.fields.exists(_.name.equalsIgnoreCase(mt.batchIdColumn))) {
+      df.filter(col(mt.batchIdColumn) === lit(batchId))
+    } else {
+      df
+    }
+  }
+
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
     val isLazy = mt.format.isLazy
@@ -91,7 +105,7 @@ class MetastoreImpl(appConfig: Config,
     }
   }
 
-  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
+  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long], saveModeOverride: Option[SaveMode]): MetaTableStats = {
     val mt = getTableDef(tableName)
     val isTransient = mt.format.isTransient
     val start = Instant.now.getEpochSecond
@@ -99,7 +113,7 @@ class MetastoreImpl(appConfig: Config,
     var stats = MetaTableStats(0, None)
 
     withSparkConfig(mt.sparkConfig) {
-      stats = MetastorePersistence.fromMetaTable(mt, appConfig).saveTable(infoDate, df, inputRecordCount)
+      stats = MetastorePersistence.fromMetaTable(mt, appConfig, saveModeOverride).saveTable(infoDate, df, inputRecordCount)
     }
 
     val finish = Instant.now.getEpochSecond
@@ -191,6 +205,11 @@ class MetastoreImpl(appConfig: Config,
         metastore.getTable(tableName, from, to)
       }
 
+      override def getCurrentBatch(tableName: String): DataFrame = {
+        validateTable(tableName)
+        metastore.getCurrentBatch(tableName, infoDate)
+      }
+
       override def getLatest(tableName: String, until: Option[LocalDate] = None): DataFrame = {
         validateTable(tableName)
         val untilDate = until.orElse(Option(infoDate))
@@ -253,12 +272,13 @@ object MetastoreImpl {
   def fromConfig(conf: Config,
                  infoDateConfig: InfoDateConfig,
                  bookkeeper: Bookkeeper,
-                 metadataManager: MetadataManager)(implicit spark: SparkSession): MetastoreImpl = {
+                 metadataManager: MetadataManager,
+                 batchId: Long)(implicit spark: SparkSession): MetastoreImpl = {
     val tableDefs = MetaTable.fromConfig(conf, infoDateConfig, METASTORE_KEY)
 
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
-    new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, isUndercover)
+    new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, batchId, isUndercover)
   }
 
   private[core] def withSparkConfig(sparkConfig: Map[String, String])

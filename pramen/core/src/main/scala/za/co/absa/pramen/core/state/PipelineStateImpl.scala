@@ -49,6 +49,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val sendEmailIfNoNewData: Boolean = conf.getBoolean(EMAIL_IF_NO_CHANGES)
   private val hookConfig = HookConfig.fromConfig(conf)
   private var pipelineNotificationTargets: Seq[PipelineNotificationTarget] = Seq.empty
+  private val batchId = Instant.now().toEpochMilli
 
   // State
   private val startedInstant = Instant.now
@@ -114,6 +115,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         pipelineId,
         tenant
       ),
+      batchId,
       isFinished,
       warningFlag,
       exitedNormally,
@@ -124,6 +126,8 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       customNotification
     )
   }
+
+  override def getBatchId(): Long = batchId
 
   override def setShutdownHookCanRun(): Unit = synchronized {
     customShutdownHookCanRun = true

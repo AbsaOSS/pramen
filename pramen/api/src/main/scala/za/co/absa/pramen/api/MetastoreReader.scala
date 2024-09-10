@@ -27,7 +27,7 @@ import java.time.LocalDate
 trait MetastoreReader {
 
   /**
-    * Reads a table given th range of information dates, and returns back the dataframe.
+    * Reads a table given the range of information dates, and returns back the dataframe.
     *
     * In order to read a table it is not sufficient the table to be registered in the metastore. It also
     * should be defined as input tables of the job. Otherwise, a runtime exception will be thrown.
@@ -40,6 +40,28 @@ trait MetastoreReader {
   def getTable(tableName: String,
                infoDateFrom: Option[LocalDate] = None,
                infoDateTo: Option[LocalDate] = None): DataFrame
+
+  /**
+    * Reads the 'current batch' of the table.
+    *
+    * For incremental processing this method returns the current chunk being processed.
+    *
+    * For non-incremental processing the call to this method is equivalent to:
+    * {{{
+    *   val df = getTable(tableName)
+    * }}}
+    *
+    * which returns all data for the current information date being processed.
+    *
+    * This method is the method to use for transformers that
+    *
+    * In order to read a table it is not sufficient the table to be registered in the metastore. It also
+    * should be defined as input tables of the job. Otherwise, a runtime exception will be thrown.
+    *
+    * @param tableName    The name of the table to read.
+    * @return The dataframe containing data from the table.
+    */
+  def getCurrentBatch(tableName: String): DataFrame
 
   /**
     * Reads the latest partition of a given table.
@@ -65,7 +87,6 @@ trait MetastoreReader {
     * @return The latest information date the table has data for, None otherwise.
     */
   def getLatestAvailableDate(tableName: String, until: Option[LocalDate] = None): Option[LocalDate]
-
 
   /**
     * Returns true if data for the specified table is available for the specified range.

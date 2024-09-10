@@ -31,6 +31,12 @@ object Schedule {
   val SCHEDULE_DAYS_OF_WEEK_KEY = "schedule.days.of.week"
   val SCHEDULE_DAYS_OF_MONTH_KEY = "schedule.days.of.month"
 
+  case object Incremental extends Schedule {
+    def isEnabled(day: LocalDate): Boolean = true
+
+    override def toString: String = "incremental"
+  }
+
   case class EveryDay() extends Schedule {
     def isEnabled(day: LocalDate): Boolean = true
 
@@ -58,10 +64,11 @@ object Schedule {
 
   def fromConfig(conf: Config): Schedule = {
     conf.getString(SCHEDULE_TYPE_KEY) match {
-      case "daily"   => EveryDay()
-      case "weekly"  => Weekly(getDaysOfWeek(conf))
-      case "monthly" => Monthly(getDaysOfMonth(conf))
-      case s         => throw new IllegalArgumentException(s"Unknown schedule type: $s")
+      case "incremental"   => Incremental
+      case "daily"         => EveryDay()
+      case "weekly"        => Weekly(getDaysOfWeek(conf))
+      case "monthly"       => Monthly(getDaysOfMonth(conf))
+      case s               => throw new IllegalArgumentException(s"Unknown schedule type: $s")
     }
   }
 

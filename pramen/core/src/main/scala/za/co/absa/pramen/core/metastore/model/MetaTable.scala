@@ -35,6 +35,7 @@ import scala.util.{Failure, Success, Try}
   * @param format                 The format of the table.
   * @param infoDateColumn         The name of the column that contains the information date (partitioned by).
   * @param infoDateFormat         The format of the information date.
+  * @param batchIdColumn          The name of the column that contains the batch id.
   * @param hiveConfig             The effective Hive configuration to use for Hive operations.
   * @param hiveTable              The name of the Hive table.
   * @param hivePath               The path of the Hive table (if it differs from the path in the underlying format).
@@ -53,6 +54,7 @@ case class MetaTable(
                       format: DataFormat,
                       infoDateColumn: String,
                       infoDateFormat: String,
+                      batchIdColumn: String,
                       hiveConfig: HiveConfig,
                       hiveTable: Option[String],
                       hivePath: Option[String],
@@ -82,6 +84,9 @@ object MetaTable {
   val TABLE_HIVE_CONFIG_PREFIX = "hive"
   val DEFAULT_HIVE_CONFIG_PREFIX = "pramen.hive"
   val SPARK_CONFIG_PREFIX = "spark.conf"
+  val BATCH_ID_COLUMN_KEY = "batchid.column"
+  val DEFAULT_BATCH_ID_COLUMN_KEY = "pramen.batchid.column.default"
+  val DEFAULT_BATCH_ID_COLUMN_NAME = "pramen_batchid"
 
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = infoDateConfig.columnName
@@ -90,6 +95,7 @@ object MetaTable {
     val defaultTrackDays = infoDateConfig.defaultTrackDays
     val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
     val defaultPreferAddPartition = conf.getBoolean(s"pramen.$HIVE_PREFER_ADD_PARTITION_KEY")
+    val defaultBatchIdColumnName = ConfigUtils.getOptionString(conf, DEFAULT_BATCH_ID_COLUMN_KEY).getOrElse(DEFAULT_BATCH_ID_COLUMN_NAME)
 
     val tableConfigs = ConfigUtils.getOptionConfigList(conf, key)
 
@@ -98,7 +104,7 @@ object MetaTable {
     }
 
     val metatables = tableConfigs
-      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition))
+      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition, defaultBatchIdColumnName))
       .toSeq
 
     val duplicates = AlgorithmUtils.findDuplicates(metatables.map(_.name))
@@ -115,7 +121,8 @@ object MetaTable {
                              defaultStartDate: LocalDate,
                              defaultTrackDays: Int,
                              defaultHiveConfig: HiveDefaultConfig,
-                             defaultPreferAddPartition: Boolean): MetaTable = {
+                             defaultPreferAddPartition: Boolean,
+                             defaultBatchIdColumn: String): MetaTable = {
     val name = ConfigUtils.getOptionString(conf, NAME_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $NAME_KEY"))
     val description = ConfigUtils.getOptionString(conf, NAME_DESCRIPTION).getOrElse("")
     val infoDateOverride = InfoDateOverride.fromConfig(conf)
@@ -125,6 +132,7 @@ object MetaTable {
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
+    val batchIdColumn = ConfigUtils.getOptionString(conf, BATCH_ID_COLUMN_KEY).getOrElse(defaultBatchIdColumn)
 
     val format = Try {
       DataFormatParser.fromConfig(conf, appConf)
@@ -153,6 +161,7 @@ object MetaTable {
       format,
       infoDateColumn,
       infoDateFormat,
+      batchIdColumn,
       hiveConfig,
       hiveTable,
       hivePath,
@@ -174,6 +183,7 @@ object MetaTable {
       table.format,
       table.infoDateColumn,
       table.infoDateFormat,
+      table.batchIdColumn,
       table.hiveTable,
       table.hivePath,
       table.infoDateStart,
