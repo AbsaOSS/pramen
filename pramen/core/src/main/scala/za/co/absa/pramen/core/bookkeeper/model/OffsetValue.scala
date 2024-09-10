@@ -24,6 +24,7 @@ sealed trait OffsetValue {
 
 object OffsetValue {
   val LONG_TYPE_STR = "long"
+  val STRING_TYPE_STR = "string"
 
   case class LongType(value: Long) extends OffsetValue {
     override val dataTypeString: String = LONG_TYPE_STR
@@ -31,15 +32,23 @@ object OffsetValue {
     override def valueString: String = value.toString
   }
 
+  case class StringType(s: String) extends OffsetValue {
+    override val dataTypeString: String = STRING_TYPE_STR
+
+    override def valueString: String = s
+  }
+
   def getMinimumForType(dataType: String): OffsetValue = {
     dataType match {
       case LONG_TYPE_STR => LongType(Long.MinValue)
+      case STRING_TYPE_STR => StringType("")
       case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
     }
   }
 
   def fromString(dataType: String, value: String): OffsetValue = dataType match {
     case LONG_TYPE_STR => LongType(value.toLong)
+    case STRING_TYPE_STR => StringType(value)
     case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
   }
 }

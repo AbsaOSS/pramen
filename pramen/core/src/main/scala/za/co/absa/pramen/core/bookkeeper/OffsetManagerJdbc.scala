@@ -18,81 +18,40 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
-import slick.jdbc.JdbcBackend.Database
 import za.co.absa.pramen.core.bookkeeper.model._
-import za.co.absa.pramen.core.utils.{SlickUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.SlickUtils
 
-import java.time.{Duration, Instant, LocalDate}
+import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 
-class OffsetManagerJdbc(db: Database) {
+class OffsetManagerJdbc(db: Database) extends OffsetManager {
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def getMaximumDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = {
+  override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
+    val offsets = getOffsetRecords(table, infoDate)
+
+    if (offsets.isEmpty) {
+      return Array.empty
+    }
+
+    offsets.map(DataOffset.fromOffsetRecord)
+  }
+
+  override def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = {
     val maxInfoDateOpt = onlyForInfoDate.orElse(getMaximumInfoDate(table))
 
     try {
       maxInfoDateOpt.flatMap { infoDate =>
-        val infoDateStr = infoDate.toString
-
-        val query = OffsetRecords.records
-          .filter(r => r.pramenTableName === table && r.infoDate === infoDateStr && r.committedAt.nonEmpty)
-          .groupBy { _ => true }
-          .map {
-            case (_, group) => (group.map(_.dataType).max, group.map(_.minOffset).min, group.map(_.maxOffset).max)
-          }
-
-        val action = query.result
-        val sql = action.statements.mkString("; ")
-
-        val start = Instant.now
-        val result = db.run(action).execute()
-        val finish = Instant.now
-
-        val elapsedTime = TimeUtils.prettyPrintElapsedTimeShort(finish.toEpochMilli - start.toEpochMilli)
-        if (Duration.between(start, finish).toMillis > 1000L) {
-          log.warn(s"Query execution time: $elapsedTime. SQL: $sql")
-        } else {
-          log.debug(s"Query execution time: $elapsedTime. SQL: $sql")
-        }
-
-        if (result.nonEmpty && result.head._1.nonEmpty && result.head._2.nonEmpty && result.head._3.nonEmpty) {
-          val minOffset = OffsetValue.fromString(result.head._1.get, result.head._2.get)
-          val maxOffset = OffsetValue.fromString(result.head._1.get, result.head._3.get)
-          Some(DataOffsetAggregated(
-            table, infoDate, minOffset, maxOffset
-          ))
-        } else {
-          None
-        }
+        getMinMaxOffsets(table, infoDate)
       }
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the offset table.", ex)
     }
   }
 
-  def getUncommittedOffsets(table: String, onlyForInfoDate: Option[LocalDate]): Seq[DataOffset] = {
-    val query = onlyForInfoDate match {
-      case Some(infoDate) =>
-        val dateSte = infoDate.toString
-        OffsetRecords.records
-          .filter(r => r.pramenTableName === table && r.committedAt.isEmpty && r.infoDate === dateSte)
-      case None =>
-        OffsetRecords.records
-          .filter(r => r.pramenTableName === table && r.committedAt.isEmpty)
-    }
-
-    try {
-      SlickUtils.executeQuery[OffsetRecords, OffsetRecord](db, query)
-        .map(DataOffset.fromOffsetRecord)
-    } catch {
-      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the offset table.", ex)
-    }
-  }
-
-  def startWriteOffsets(table: String, infoDate: LocalDate, minOffset: OffsetValue): DataOffsetRequest = {
+  override def startWriteOffsets(table: String, infoDate: LocalDate, minOffset: OffsetValue): DataOffsetRequest = {
     val createdAt = Instant.now().toEpochMilli
 
     val record = OffsetRecord(table, infoDate.toString, minOffset.dataTypeString, minOffset.valueString, "", createdAt, None)
@@ -104,7 +63,7 @@ class OffsetManagerJdbc(db: Database) {
     DataOffsetRequest(table, infoDate, minOffset, createdAt)
   }
 
-  def commitOffsets(request: DataOffsetRequest, maxOffset: OffsetValue): Unit = {
+  override def commitOffsets(request: DataOffsetRequest, maxOffset: OffsetValue): Unit = {
     val committedAt = Instant.now().toEpochMilli
 
     db.run(
@@ -115,7 +74,7 @@ class OffsetManagerJdbc(db: Database) {
     ).execute()
   }
 
-  def rollbackOffsets(request: DataOffsetRequest): Unit = {
+  override def rollbackOffsets(request: DataOffsetRequest): Unit = {
     db.run(
       OffsetRecords.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt)
@@ -123,8 +82,9 @@ class OffsetManagerJdbc(db: Database) {
     ).execute()
   }
 
-  def getMaximumInfoDate(table: String): Option[LocalDate] = {
+  private[core] def getMaximumInfoDate(table: String): Option[LocalDate] = {
     val query = OffsetRecords.records
+      .filter(r => r.pramenTableName === table)
       .map(_.infoDate).max
 
     try {
@@ -132,6 +92,44 @@ class OffsetManagerJdbc(db: Database) {
         .map(LocalDate.parse)
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the offset table.", ex)
+    }
+  }
+
+  private[core] def getOffsetRecords(table: String, infoDate: LocalDate): Array[OffsetRecord] = {
+    val infoDateStr = infoDate.toString
+    val query = OffsetRecords.records
+      .filter(r => r.pramenTableName === table && r.infoDate === infoDateStr)
+
+    SlickUtils.executeQuery[OffsetRecords, OffsetRecord](db, query)
+      .toArray[OffsetRecord]
+  }
+
+  private[core] def getMinMaxOffsets(table: String, infoDate: LocalDate): Option[DataOffsetAggregated] = {
+    val offsets = getOffsetRecords(table, infoDate)
+
+    if (offsets.isEmpty) {
+      return None
+    }
+
+    validateOffsets(table, infoDate, offsets)
+
+    val offsetDataType =  offsets.head.dataType
+    val minOffset = OffsetValue.fromString(offsetDataType, offsets.map(_.minOffset).min)
+    val maxOffset = OffsetValue.fromString(offsetDataType, offsets.map(_.maxOffset).max)
+
+    Some(DataOffsetAggregated(table, infoDate, minOffset, maxOffset, offsets.map(DataOffset.fromOffsetRecord)))
+  }
+
+  /**
+    * Checks offsets for inconsistencies. They include:
+    * - inconsistent offset value types
+    *
+    * @param offsets An array of offset records
+    */
+  private[core] def validateOffsets(table: String, infoDate: LocalDate, offsets: Array[OffsetRecord]): Unit = {
+    val inconsistentOffsets = offsets.groupBy(_.dataType).keys.toArray.sorted
+    if (inconsistentOffsets.length > 1) {
+      throw new RuntimeException(s"Inconsistent offset value types found for $table at $infoDate: ${inconsistentOffsets.mkString(", ")}")
     }
   }
 
