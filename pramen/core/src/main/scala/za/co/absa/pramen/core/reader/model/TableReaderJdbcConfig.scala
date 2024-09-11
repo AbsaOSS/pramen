@@ -27,6 +27,9 @@ case class TableReaderJdbcConfig(
                                   infoDateColumn: String,
                                   infoDateType: String,
                                   infoDateFormat: String = "yyyy-MM-dd",
+                                  hasOffsetColumn: Boolean,
+                                  offsetColumn: String,
+                                  offsetColumnType: String,
                                   limitRecords: Option[Int] = None,
                                   saveTimestampsAsDates: Boolean = false,
                                   correctDecimalsInSchema: Boolean = false,
@@ -45,6 +48,10 @@ object TableReaderJdbcConfig {
   val INFORMATION_DATE_TYPE = "information.date.type"
   val INFORMATION_DATE_FORMAT = "information.date.format"
   val INFORMATION_DATE_APP_FORMAT = "information.date.app.format"
+
+  val OFFSET_COLUMN_ENABLED_KEY = "offset.column.enabled"
+  val OFFSET_COLUMN_NAME_KEY = "offset.column.name"
+  val OFFSET_COLUMN_TYPE_KEY = "offset.column.type"
 
   val JDBC_SYNC_LIMIT_RECORDS = "limit.records"
   val JDBC_TIMESTAMPS_AS_DATES = "save.timestamps.as.dates"
@@ -66,6 +73,14 @@ object TableReaderJdbcConfig {
         INFORMATION_DATE_COLUMN :: INFORMATION_DATE_TYPE :: Nil)
     }
 
+    val hasOffsetColumn = ConfigUtils.getOptionBoolean(conf, OFFSET_COLUMN_ENABLED_KEY).getOrElse(false)
+
+    if (hasOffsetColumn) {
+      ConfigUtils.validatePathsExistence(conf,
+        parent,
+        OFFSET_COLUMN_NAME_KEY :: OFFSET_COLUMN_TYPE_KEY :: Nil)
+    }
+
     val saveTimestampsAsDates = ConfigUtils.getOptionBoolean(conf, JDBC_TIMESTAMPS_AS_DATES).getOrElse(false)
 
     if (saveTimestampsAsDates) {
@@ -84,6 +99,9 @@ object TableReaderJdbcConfig {
       infoDateColumn = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN).getOrElse(""),
       infoDateType = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date"),
       infoDateFormat,
+      hasOffsetColumn,
+      ConfigUtils.getOptionString(conf, OFFSET_COLUMN_NAME_KEY).getOrElse(""),
+      ConfigUtils.getOptionString(conf, OFFSET_COLUMN_TYPE_KEY).getOrElse("long"),
       limitRecords = ConfigUtils.getOptionInt(conf, JDBC_SYNC_LIMIT_RECORDS),
       saveTimestampsAsDates,
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),

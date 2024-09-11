@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.bookkeeper.model._
 import za.co.absa.pramen.core.utils.SlickUtils
 
@@ -105,7 +106,7 @@ class OffsetManagerJdbc(db: Database) extends OffsetManager {
   }
 
   private[core] def getMinMaxOffsets(table: String, infoDate: LocalDate): Option[DataOffsetAggregated] = {
-    val offsets = getOffsetRecords(table, infoDate)
+    val offsets = getOffsetRecords(table, infoDate).filter(_.committedAtMilli.nonEmpty)
 
     if (offsets.isEmpty) {
       return None

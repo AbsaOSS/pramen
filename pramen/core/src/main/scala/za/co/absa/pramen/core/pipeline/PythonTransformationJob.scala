@@ -78,7 +78,7 @@ class PythonTransformationJob(operationDef: OperationDef,
     }
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     if (outputTable.format.isTransient) {
       Reason.NotReady(s"Python transformations cannot output to transient tables. Please, change teh format of ${outputTable.name}")
     } else {
@@ -86,7 +86,7 @@ class PythonTransformationJob(operationDef: OperationDef,
     }
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
     if (pramenPyCmdConfigOpt.isDefined)
       runPythonCmdLine(pramenPyCmdConfigOpt.get, infoDate, conf)
     else if (databricksClientOpt.isDefined)
@@ -109,6 +109,7 @@ class PythonTransformationJob(operationDef: OperationDef,
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {

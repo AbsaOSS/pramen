@@ -282,7 +282,7 @@ abstract class TaskRunnerBase(conf: Config,
         Left(result)
       case Right(status) =>
         Try {
-          task.job.validate(task.infoDate, conf)
+          task.job.validate(task.infoDate, task.reason, conf)
         } match {
           case Success(validationResult) =>
             validationResult match {
@@ -335,7 +335,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
 
-        val runResult = task.job.run(task.infoDate, conf)
+        val runResult = task.job.run(task.infoDate, task.reason, conf)
 
         val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
 
@@ -371,7 +371,7 @@ abstract class TaskRunnerBase(conf: Config,
           log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
           SaveResult(MetaTableStats(dfTransformed.count(), None))
         } else {
-          task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
+          task.job.save(dfTransformed, task.infoDate, task.reason, conf, started, validationResult.inputRecordsCount)
         }
 
         val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {

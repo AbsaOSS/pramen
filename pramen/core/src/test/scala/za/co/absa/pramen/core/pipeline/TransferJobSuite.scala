@@ -103,7 +103,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "return Ready when there is some data" in {
       val (job, _) = getUseCase()
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result == Reason.Ready)
     }
@@ -111,7 +111,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "return Ready when the data frame is empty" in {
       val (job, _) = getUseCase(numberOfRecords = 0)
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result == Reason.Ready)
     }
@@ -119,7 +119,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "return Ready even when the reader throws" in {
       val (job, _) = getUseCase(getDataException = new RuntimeException("Dummy Exception"))
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result == Reason.Ready)
     }
@@ -129,7 +129,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "returns a dataframe when it is available" in {
       val (job, _) = getUseCase()
 
-      val actual = job.run(infoDate, conf).data
+      val actual = job.run(infoDate, runReason, conf).data
 
       assert(actual.count() == 5)
     }
@@ -143,7 +143,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
         assert(preRunCheck.inputRecordsCount.contains(5))
         assert(TransientTableManager.hasDataForTheDate("source_cache://testsource|table1|2022-01-18", infoDate))
 
-        val runResult = job.run(infoDate, conf)
+        val runResult = job.run(infoDate, runReason, conf)
 
         val df = runResult.data
 
@@ -158,7 +158,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
       val (job, _) = getUseCase(disableCountQuery = true)
 
       val ex = intercept[IllegalArgumentException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason, conf)
       }
 
       assert(ex.getMessage.contains("a temporary directory in Hadoop (HDFS, S3, etc) should be set at 'pramen.temporary.directory'"))
@@ -168,7 +168,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
       val (job, _) = getUseCase(getDataException = new RuntimeException("Dummy Exception"))
 
       val ex = intercept[RuntimeException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason, conf)
       }
 
       assert(ex.getMessage == "Dummy Exception")
@@ -201,7 +201,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val (job, _) = getUseCase(transferTable = transferTable)
 
-      val dfIn = job.run(infoDate, conf).data
+      val dfIn = job.run(infoDate, runReason, conf).data
 
       val dfOut = job.postProcessing(dfIn, infoDate, conf).orderBy("b1")
 
@@ -219,7 +219,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
       val (job, _) = getUseCase(transferTable = transferTable)
 
-      val dfIn = job.run(infoDate, conf).data
+      val dfIn = job.run(infoDate, runReason, conf).data
 
       assertThrows[AnalysisException] {
         job.postProcessing(dfIn, infoDate, conf)
@@ -231,7 +231,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "update the bookkeeper after the save" in {
       val (job, bk) = getUseCase()
 
-      job.save(exampleDf, infoDate, conf, Instant.now(), Some(10L))
+      job.save(exampleDf, infoDate, runReason, conf, Instant.now(), Some(10L))
 
       val outputTable = "table1->sink"
 

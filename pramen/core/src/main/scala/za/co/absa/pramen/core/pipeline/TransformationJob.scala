@@ -44,11 +44,11 @@ class TransformationJob(operationDef: OperationDef,
     preRunTransformationCheck(infoDate, dependencyWarnings)
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     transformer.validate(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions)
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
     RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions))
   }
 
@@ -60,6 +60,7 @@ class TransformationJob(operationDef: OperationDef,
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {

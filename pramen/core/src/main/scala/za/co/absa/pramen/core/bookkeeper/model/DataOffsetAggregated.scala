@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
+import za.co.absa.pramen.api.offset.OffsetValue
+
 import java.time.LocalDate
 
 case class DataOffsetAggregated(

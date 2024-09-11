@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.bookkeeper.model
+package za.co.absa.pramen.api.offset
 
 sealed trait OffsetValue {
   def dataTypeString: String

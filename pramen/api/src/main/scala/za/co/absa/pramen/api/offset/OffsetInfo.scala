@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.bookkeeper.model
+package za.co.absa.pramen.api.offset
 
-import za.co.absa.pramen.api.offset.OffsetValue
-
-import java.time.LocalDate
-
-case class DataOffsetRequest(
-                              tableName: String,
-                              infoDate: LocalDate,
-                              minOffset: OffsetValue,
-                              createdAt: Long /* Acts as a batch_id as well*/
-                            )
+case class OffsetInfo(offsetColumn: String, minimalOffset: OffsetValue)
