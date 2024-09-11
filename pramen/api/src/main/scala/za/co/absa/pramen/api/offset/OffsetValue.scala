@@ -16,10 +16,15 @@
 
 package za.co.absa.pramen.api.offset
 
+import org.apache.spark.sql.Column
+import org.apache.spark.sql.functions.lit
+
 sealed trait OffsetValue {
   def dataTypeString: String
 
   def valueString: String
+
+  def getSparkLit: Column
 }
 
 object OffsetValue {
@@ -30,12 +35,16 @@ object OffsetValue {
     override val dataTypeString: String = LONG_TYPE_STR
 
     override def valueString: String = value.toString
+
+    override def getSparkLit: Column = lit(value)
   }
 
   case class StringType(s: String) extends OffsetValue {
     override val dataTypeString: String = STRING_TYPE_STR
 
     override def valueString: String = s
+
+    override def getSparkLit: Column = lit(s)
   }
 
   def getMinimumForType(dataType: String): OffsetValue = {

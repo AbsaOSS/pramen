@@ -36,6 +36,8 @@ import scala.util.control.NonFatal
 class MetastorePersistenceParquet(path: String,
                                   infoDateColumn: String,
                                   infoDateFormat: String,
+                                  batchIdColumn: String,
+                                  batchId: Long,
                                   recordsPerPartition: Option[Long],
                                   saveModeOpt: Option[SaveMode],
                                   readOptions: Map[String, String],
@@ -72,9 +74,13 @@ class MetastorePersistenceParquet(path: String,
 
     val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
 
-    saveMode match {
-      case SaveMode.Append => log.info(s"Appending to '$outputDirStr'...")
-      case _               => log.info(s"Writing to '$outputDirStr'...")
+    val isAppend = saveMode match {
+      case SaveMode.Append =>
+        log.info(s"Appending to '$outputDirStr'...")
+        true
+      case _               =>
+        log.info(s"Writing to '$outputDirStr'...")
+        false
     }
 
     val recordCount = numberOfRecordsEstimate match {
@@ -86,19 +92,25 @@ class MetastorePersistenceParquet(path: String,
 
     writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils, saveMode)
 
-    val stats = getStats(infoDate)
+    val stats = getStats(infoDate, isAppend)
 
     log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
 
     stats
   }
 
-  override def getStats(infoDate: LocalDate): MetaTableStats = {
+  override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
     val outputDirStr = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path).toUri.toString
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
-    val actualCount = spark.read.parquet(outputDirStr).count()
+    val df = spark.read.parquet(outputDirStr)
+
+    val actualCount = if (onlyForCurrentBatchId && df.schema.exists(_.name.equalsIgnoreCase(batchIdColumn))) {
+      df.filter(col(batchIdColumn) === batchId).count()
+    } else {
+      df.count()
+    }
 
     val size = fsUtils.getDirectorySize(outputDirStr)
 

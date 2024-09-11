@@ -80,6 +80,11 @@ class MetastorePersistenceDelta(query: Query,
       case _               => "Writing to"
     }
 
+    val isAppend = saveMode match {
+      case SaveMode.Append => true
+      case _               => false
+    }
+
     if (log.isDebugEnabled) {
       log.debug(s"Schema: ${dfIn.schema.treeString}")
       log.debug(s"Info date column: $infoDateColumn")
@@ -108,7 +113,7 @@ class MetastorePersistenceDelta(query: Query,
         throw new IllegalStateException(s"The '${q.name}' option is not supported as a write target for Delta.")
     }
 
-    val stats = getStats(infoDate)
+    val stats = getStats(infoDate, isAppend)
 
     stats.dataSizeBytes match {
       case Some(size) => log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(size)}) to ${query.query}")
@@ -118,7 +123,7 @@ class MetastorePersistenceDelta(query: Query,
     stats
   }
 
-  override def getStats(infoDate: LocalDate): MetaTableStats = {
+  override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
     val df = loadTable(Option(infoDate), Option(infoDate))
     val recordCount = df.count()
 

@@ -16,10 +16,11 @@
 
 package za.co.absa.pramen.core.mocks.reader
 
-import java.time.LocalDate
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.{Query, TableReader}
 
+import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
 class ReaderSpy(numRecords: Long,
@@ -50,4 +51,8 @@ class ReaderSpy(numRecords: Long,
     val df = generatedList.toDF("v")
     df
   }
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
 }

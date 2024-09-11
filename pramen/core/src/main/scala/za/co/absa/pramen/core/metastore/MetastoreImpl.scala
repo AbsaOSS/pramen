@@ -77,13 +77,13 @@ class MetastoreImpl(appConfig: Config,
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
 
-    MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(infoDateFrom, infoDateTo)
+    MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(infoDateFrom, infoDateTo)
   }
 
   override def getCurrentBatch(tableName: String, infoDate: LocalDate): DataFrame = {
     val mt = getTableDef(tableName)
 
-    val df = MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(Option(infoDate), Option(infoDate))
+    val df = MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(Option(infoDate), Option(infoDate))
 
     if (df.schema.fields.exists(_.name.equalsIgnoreCase(mt.batchIdColumn))) {
       df.filter(col(mt.batchIdColumn) === lit(batchId))
@@ -96,7 +96,7 @@ class MetastoreImpl(appConfig: Config,
     val mt = getTableDef(tableName)
     val isLazy = mt.format.isLazy
     if (isLazy) {
-      MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(None, until)
+      MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(None, until)
     } else {
       bookkeeper.getLatestProcessedDate(tableName, until) match {
         case Some(infoDate) => getTable(tableName, Some(infoDate), Some(infoDate))
@@ -113,7 +113,7 @@ class MetastoreImpl(appConfig: Config,
     var stats = MetaTableStats(0, None)
 
     withSparkConfig(mt.sparkConfig) {
-      stats = MetastorePersistence.fromMetaTable(mt, appConfig, saveModeOverride).saveTable(infoDate, df, inputRecordCount)
+      stats = MetastorePersistence.fromMetaTable(mt, appConfig, saveModeOverride, batchId).saveTable(infoDate, df, inputRecordCount)
     }
 
     val finish = Instant.now.getEpochSecond
@@ -191,7 +191,7 @@ class MetastoreImpl(appConfig: Config,
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {
     val mt = getTableDef(tableName)
 
-    MetastorePersistence.fromMetaTable(mt, appConfig).getStats(infoDate)
+    MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).getStats(infoDate, onlyForCurrentBatchId = false)
   }
 
   override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate): MetastoreReader = {

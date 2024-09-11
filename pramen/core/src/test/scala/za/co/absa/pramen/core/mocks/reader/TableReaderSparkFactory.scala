@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.mocks.reader
 
 import org.apache.spark.sql.SparkSession
+import za.co.absa.pramen.api.offset.OffsetInfo
 import za.co.absa.pramen.core.reader.TableReaderSpark
 
 object TableReaderSparkFactory {
@@ -25,8 +26,9 @@ object TableReaderSparkFactory {
                      hasInfoDateColumn: Boolean = false,
                      infoDateColumn: String = "info_date",
                      infoDateFormat: String = "yyyy-MM-dd",
+                     offsetInfoOpt: Option[OffsetInfo] = None,
                      options: Map[String, String] = Map.empty[String, String]
                     )(implicit spark: SparkSession): TableReaderSpark = {
-    new TableReaderSpark(formatOpt, schemaOpt, hasInfoDateColumn, infoDateColumn, infoDateFormat, options)
+    new TableReaderSpark(formatOpt, schemaOpt, hasInfoDateColumn, infoDateColumn, infoDateFormat, offsetInfoOpt, options)
   }
 }

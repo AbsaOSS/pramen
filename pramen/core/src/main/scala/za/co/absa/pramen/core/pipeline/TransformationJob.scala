@@ -23,7 +23,8 @@ import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.{Instant, LocalDate}
 
@@ -38,7 +39,12 @@ class TransformationJob(operationDef: OperationDef,
 
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
+  override val scheduleStrategy: ScheduleStrategy = {
+    if (operationDef.schedule == Schedule.Incremental)
+      new ScheduleStrategyIncremental(None)
+    else
+      new ScheduleStrategySourcing
+  }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     preRunTransformationCheck(infoDate, dependencyWarnings)

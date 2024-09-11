@@ -152,7 +152,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
       val persistor = new MetastorePersistenceTransientEager(null, null, null)
 
       assertThrows[UnsupportedOperationException] {
-        persistor.getStats(null)
+        persistor.getStats(null, onlyForCurrentBatchId = false)
       }
     }
   }

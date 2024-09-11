@@ -16,12 +16,18 @@
 
 package za.co.absa.pramen.core.mocks.reader
 
-import java.time.LocalDate
 import org.apache.spark.sql.DataFrame
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.{Query, TableReader}
+
+import java.time.LocalDate
 
 class ReaderStub extends TableReader {
   override def getRecordCount(query: Query,  infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = 0
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = null
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
 }

@@ -32,7 +32,7 @@ class IdentityTransformer extends Transformer {
 
     val tableName = options.getOrElse(INPUT_TABLE_KEY, options(INPUT_TABLE_LEGACY_KEY))
 
-    val df = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
+    val df = metastore.getCurrentBatch(tableName)
 
     if (emptyAllowed || !df.isEmpty) {
       Reason.Ready
