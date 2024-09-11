@@ -80,7 +80,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     pipelineNotificationTargets = PipelineNotificationTargetFactory.fromConfig(conf)
   }
 
-  override def getState(): PipelineStateSnapshot = synchronized {
+  override def getState: PipelineStateSnapshot = synchronized {
     val appException =  if (!exitedNormally && failureException.isEmpty && signalException.isDefined) {
       signalException
     } else
@@ -127,7 +127,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     )
   }
 
-  override def getBatchId(): Long = batchId
+  override def getBatchId: Long = batchId
 
   override def setShutdownHookCanRun(): Unit = synchronized {
     customShutdownHookCanRun = true
@@ -232,7 +232,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   private[state] def sendPipelineNotifications(): Unit = {
-    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, getState(), taskResults.toSeq))
+    pipelineNotificationTargets.foreach(notificationTarget => sendCustomNotification(notificationTarget, getState, taskResults.toSeq))
   }
 
   private[state] def sendCustomNotification(pipelineNotificationTarget: PipelineNotificationTarget, pipelineStateSnapshot: PipelineStateSnapshot, taskResults: Seq[TaskResult]): Unit = {

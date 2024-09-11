@@ -44,7 +44,7 @@ class PramenImpl extends Pramen {
       throw new IllegalStateException("Pipeline state is not available at the context.")
     )
 
-    pipelineState.getState().pipelineInfo
+    pipelineState.getState.pipelineInfo
   }
 
   override def pipelineState: PipelineStateSnapshot = {
@@ -52,7 +52,7 @@ class PramenImpl extends Pramen {
       throw new IllegalStateException("Pipeline state is not available at the context.")
     )
 
-    pipelineState.getState()
+    pipelineState.getState
   }
 
   override def notificationBuilder: NotificationBuilder = notificationBuilderImpl
@@ -66,7 +66,7 @@ class PramenImpl extends Pramen {
       throw new IllegalStateException("Pipeline state is not available at the context.")
     )
 
-    val state = pipelineState.getState()
+    val state = pipelineState.getState
 
     state.taskResults
   }

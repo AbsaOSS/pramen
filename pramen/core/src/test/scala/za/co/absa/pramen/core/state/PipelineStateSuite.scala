@@ -38,11 +38,11 @@ class PipelineStateSuite extends AnyWordSpec {
     "set the flag to true" in {
       val stateManager = new PipelineStateImpl()(conf, PramenImpl.instance.notificationBuilder)
 
-      assert(!stateManager.getState().customShutdownHookCanRun)
+      assert(!stateManager.getState.customShutdownHookCanRun)
 
       stateManager.setShutdownHookCanRun()
 
-      assert(stateManager.getState().customShutdownHookCanRun)
+      assert(stateManager.getState.customShutdownHookCanRun)
     }
   }
 
@@ -50,14 +50,14 @@ class PipelineStateSuite extends AnyWordSpec {
     "set the success flag to true" in {
       val stateManager = getMockPipelineState()
 
-      assert(!stateManager.getState().isFinished)
-      assert(!stateManager.getState().exitedNormally)
+      assert(!stateManager.getState.isFinished)
+      assert(!stateManager.getState.exitedNormally)
 
       stateManager.setSuccess()
 
-      assert(stateManager.getState().isFinished)
-      assert(stateManager.getState().exitedNormally)
-      assert(stateManager.getState().pipelineInfo.failureException.isEmpty)
+      assert(stateManager.getState.isFinished)
+      assert(stateManager.getState.exitedNormally)
+      assert(stateManager.getState.pipelineInfo.failureException.isEmpty)
     }
   }
 
@@ -65,14 +65,14 @@ class PipelineStateSuite extends AnyWordSpec {
     "set the failure flag to true" in {
       val stateManager = getMockPipelineState()
 
-      assert(!stateManager.getState().isFinished)
-      assert(!stateManager.getState().exitedNormally)
+      assert(!stateManager.getState.isFinished)
+      assert(!stateManager.getState.exitedNormally)
 
       stateManager.setFailure("test", new RuntimeException("test"))
 
-      assert(stateManager.getState().isFinished)
-      assert(!stateManager.getState().exitedNormally)
-      assert(stateManager.getState().pipelineInfo.failureException.exists(_.isInstanceOf[RuntimeException]))
+      assert(stateManager.getState.isFinished)
+      assert(!stateManager.getState.exitedNormally)
+      assert(stateManager.getState.pipelineInfo.failureException.exists(_.isInstanceOf[RuntimeException]))
     }
   }
 
@@ -80,14 +80,14 @@ class PipelineStateSuite extends AnyWordSpec {
     "add the task completion statuses" in {
       val stateManager = getMockPipelineState()
 
-      assert(stateManager.getState().taskResults.isEmpty)
+      assert(stateManager.getState.taskResults.isEmpty)
 
       stateManager.addTaskCompletion(Seq(
         TaskResultFactory.getDummyTaskResult(runStatus = RunStatus.Failed(new RuntimeException("test")))
       ))
 
-      assert(stateManager.getState().taskResults.size == 1)
-      assert(stateManager.getState().exitCode == 2)
+      assert(stateManager.getState.taskResults.size == 1)
+      assert(stateManager.getState.exitCode == 2)
     }
   }
 
@@ -127,7 +127,7 @@ class PipelineStateSuite extends AnyWordSpec {
       stateManager.runCustomShutdownHook()
 
       assert(ShutdownHookFailureMock.ranTimes > 0)
-      assert(stateManager.getState().pipelineInfo.failureException.exists(_.isInstanceOf[LinkageError]))
+      assert(stateManager.getState.pipelineInfo.failureException.exists(_.isInstanceOf[LinkageError]))
     }
 
     "handle class does not exists errors" in {
@@ -137,9 +137,8 @@ class PipelineStateSuite extends AnyWordSpec {
       stateManager.runCustomShutdownHook()
 
       assert(ShutdownHookFailureMock.ranTimes > 0)
-      assert(stateManager.getState().pipelineInfo.failureException.isDefined)
-      assert(stateManager.getState().pipelineInfo.failureException.exists(_.isInstanceOf[ClassNotFoundException]))
-
+      assert(stateManager.getState.pipelineInfo.failureException.isDefined)
+      assert(stateManager.getState.pipelineInfo.failureException.exists(_.isInstanceOf[ClassNotFoundException]))
     }
   }
 

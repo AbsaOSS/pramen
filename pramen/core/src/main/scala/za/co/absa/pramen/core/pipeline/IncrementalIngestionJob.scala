@@ -17,20 +17,15 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
-import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
-import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.bookkeeper.model.DataOffsetAggregated
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.metastore.peristence.TransientTableManager
-import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
-import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.utils.Emoji.WARNING
+import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental}
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
@@ -48,9 +43,8 @@ class IncrementalIngestionJob(operationDef: OperationDef,
                               specialCharacters: String)
                              (implicit spark: SparkSession)
   extends IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, None, false) {
-  import JobBase._
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
+  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffset)
 
   override def trackDays: Int = 0
 

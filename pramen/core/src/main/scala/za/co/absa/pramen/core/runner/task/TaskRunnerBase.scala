@@ -35,8 +35,8 @@ import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
-import za.co.absa.pramen.core.utils.{ThreadUtils, TimeUtils}
 import za.co.absa.pramen.core.utils.hive.HiveHelper
+import za.co.absa.pramen.core.utils.{ThreadUtils, TimeUtils}
 
 import java.sql.Date
 import java.time.{Instant, LocalDate}
@@ -453,7 +453,7 @@ abstract class TaskRunnerBase(conf: Config,
       log.warn("Skipping the interrupted exception of the killed task.")
     } else {
       pipelineState.addTaskCompletion(Seq(updatedResult))
-      addJournalEntry(task, updatedResult, pipelineState.getState().pipelineInfo)
+      addJournalEntry(task, updatedResult, pipelineState.getState.pipelineInfo)
     }
 
     updatedResult.runStatus
@@ -491,7 +491,7 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   private def sendNotifications(task: Task, result: TaskResult): Seq[NotificationFailure] = {
-    val pipelineInfo = pipelineState.getState().pipelineInfo
+    val pipelineInfo = pipelineState.getState.pipelineInfo
     task.job.notificationTargets.flatMap(notificationTarget => sendNotifications(task, result, notificationTarget, pipelineInfo))
   }
 
