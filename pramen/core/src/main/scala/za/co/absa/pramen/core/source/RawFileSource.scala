@@ -21,6 +21,7 @@ import org.apache.hadoop.fs.{FileStatus, FileSystem, Path}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.io.FileNotFoundException
@@ -138,6 +139,10 @@ class RawFileSource(val sourceConfig: Config,
       files.toSeq
     }
   }
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
 }
 
 object RawFileSource extends ExternalChannelFactory[RawFileSource] {

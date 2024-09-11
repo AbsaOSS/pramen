@@ -21,9 +21,10 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderSpark
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.{HAS_INFO_DATE, INFORMATION_DATE_COLUMN, getInfoDateFormat}
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig._
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
@@ -33,6 +34,9 @@ class SparkSource(val format: Option[String],
                   val hasInfoDateCol: Boolean,
                   val infoDateColumn: String,
                   val infoDateFormat: String,
+                  val hasOffsetColumn: Boolean,
+                  val offsetColumn: String,
+                  val offsetColumnType: String,
                   val sourceConfig: Config,
                   val options: Map[String, String])(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -40,6 +44,14 @@ class SparkSource(val format: Option[String],
   override val config: Config = sourceConfig
 
   override def hasInfoDateColumn(query: Query): Boolean = hasInfoDateCol
+
+  override def getOffsetInfo(query: Query): Option[OffsetInfo] = {
+    if (hasOffsetColumn) {
+      Option(OffsetInfo(offsetColumn, OffsetValue.getMinimumForType(offsetColumnType)))
+    } else {
+      None
+    }
+  }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val reader = getReader(query)
@@ -86,6 +98,10 @@ class SparkSource(val format: Option[String],
     schema.foreach(s => log.info(s"Using schema: $s"))
     tableReader
   }
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
 }
 
 object SparkSource extends ExternalChannelFactory[SparkSource] {
@@ -103,8 +119,16 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
       ("", "")
     }
 
+    val hasOffsetColumn = ConfigUtils.getOptionBoolean(conf, OFFSET_COLUMN_ENABLED_KEY).getOrElse(false)
+
+    val (offsetColumn, offsetDataType) = if (hasOffsetColumn) {
+      (conf.getString(OFFSET_COLUMN_NAME_KEY), conf.getString(OFFSET_COLUMN_TYPE_KEY))
+    } else {
+      ("", "long")
+    }
+
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, conf, options)(spark)
+    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, hasOffsetColumn, offsetColumn, offsetDataType, conf, options)(spark)
   }
 }

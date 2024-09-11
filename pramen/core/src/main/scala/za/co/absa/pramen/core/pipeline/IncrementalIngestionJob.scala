@@ -17,8 +17,10 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -65,25 +67,67 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     }
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
-    Reason.Ready
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
+    if (source.getOffsetInfo(sourceTable.query).nonEmpty) {
+      Reason.Ready
+    } else {
+      Reason.NotReady(s"Offset column is not configured for source '$sourceName' of '${operationDef.name}'")
+    }
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    val result = getSourcingResult(infoDate)
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
+    val columns = if (sourceTable.transformations.isEmpty && sourceTable.filters.isEmpty) {
+      sourceTable.columns
+    } else {
+      Seq.empty[String]
+    }
+
+    val sourceResult = latestOffset match {
+      case None =>
+        source.getData(sourceTable.query, infoDate, infoDate, columns)
+      case Some(maxOffset) =>
+        if (runReason == TaskRunReason.Rerun)
+          source.getIncrementalDataRange(sourceTable.query, maxOffset.minimumOffset, maxOffset.maximumOffset, Some(infoDate))
+        else
+          source.getIncrementalData(sourceTable.query, maxOffset.maximumOffset, Some(infoDate))
+    }
+
+    val sanitizedDf = sanitizeDfColumns(sourceResult.data, specialCharacters)
+
+    val result = sourceResult.copy(data = sanitizedDf)
 
     RunResult(result.data, result.filesRead, result.warnings)
   }
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
 
     val dfToSave = df.withColumn(outputTable.batchIdColumn, lit(batchId))
 
+    val om = bookkeeper.getOffsetManager
+
+    val offsetInfo = source.getOffsetInfo(sourceTable.query).getOrElse(
+      throw new IllegalArgumentException(s"Offset type is not configured for the source '$sourceName' outputting to '${outputTable.name}''")
+    )
+
+    val minimumOffset = latestOffset.map(_.maximumOffset).getOrElse(offsetInfo.minimalOffset)
+
+    val req = om.startWriteOffsets(outputTable.name, infoDate, minimumOffset)
+
     val stats = metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
+
+    val updatedDf = metastore.getTable(outputTable.name, Option(infoDate), Option(infoDate))
+
+    if (updatedDf.isEmpty) {
+      om.rollbackOffsets(req)
+    } else {
+      val maxOffset = updatedDf.agg(max(col(offsetInfo.offsetColumn)).cast(StringType)).collect()(0)(0).asInstanceOf[String]
+      om.commitOffsets(req, OffsetValue.fromString(offsetInfo.minimalOffset.dataTypeString, maxOffset))
+    }
 
     try {
       source.postProcess(

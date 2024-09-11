@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.tests.bookkeeper
+package za.co.absa.pramen.api.offset
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.bookkeeper.model.OffsetValue
 
 class OffsetValueSuite extends AnyWordSpec {
   "OffsetValue" should {

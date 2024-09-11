@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
 
@@ -74,6 +75,10 @@ class JdbcSource(sourceConfig: Config,
   private def canUseSparkBuiltInJdbcConnector(sql: String): Boolean = {
     sql.toLowerCase.startsWith("select") && !jdbcReaderConfig.useJdbcNative
   }
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
 }
 
 object JdbcSource extends ExternalChannelFactory[JdbcSource] {

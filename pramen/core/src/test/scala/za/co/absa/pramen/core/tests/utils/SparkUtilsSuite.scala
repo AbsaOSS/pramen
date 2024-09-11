@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.utils
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, types}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.core.NestedDataFrameFactory
@@ -262,9 +262,6 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val metadata2 = (new MetadataBuilder).putLong(MAX_LENGTH_METADATA_KEY, 15L).build
       val newField2 = schema1Orig.fields.head.copy(metadata = metadata2)
       val schema2 = schema1Orig.copy(fields = newField2 +: schema1Orig.fields.tail)
-
-      println(schema1.prettyJson)
-      println(schema2.prettyJson)
 
       val diff = compareSchemas(schema1, schema2)
 

@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.api
 
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+
 import java.time.LocalDate
 
 /**
@@ -43,6 +45,13 @@ trait Source extends ExternalChannel {
   def hasInfoDateColumn(query: Query): Boolean = true
 
   /**
+    * If non-empty, the source + query is configured for incremental ingestion, returns minimum value with type
+    *
+    * If empty, the source + query can't be used for incremental ingestion.
+    */
+  def getOffsetInfo(query: Query): Option[OffsetInfo] = None
+
+  /**
     * Validates if the source is okay and the ingestion can proceed.
     */
   def validate(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Reason = Reason.Ready
@@ -56,6 +65,27 @@ trait Source extends ExternalChannel {
     * Returns the data based on the particular input period and query.
     */
   def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult
+
+  /**
+    * Returns the incremental data greater than the specified offset.
+    *
+    * If an information date is provided and available at the source, the query will be limited to that date
+    *
+    * @param minOffset This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
+    * @param infoDate  An information date to get data for.
+    */
+  def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult
+
+  /**
+    * Returns the incremental data greater than the specified offset.
+    *
+    * If an information date is provided and available at the source, the query will be limited to that date
+    *
+    * @param minOffset This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
+    * @param maxOffset This is an inclusive parameter the query will be SELECT ... WHERE offset_col <= max_offset
+    * @param infoDate  An information date to get data for.
+    */
+  def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult
 
   /**
     * This method is called after the ingestion is finished. You can query the output table form the output information

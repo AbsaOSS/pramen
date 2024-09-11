@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
-import za.co.absa.pramen.core.bookkeeper.model.OffsetValue
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.bookkeeper.{OffsetManager, OffsetManagerJdbc}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.rdb.PramenDb
@@ -142,8 +142,6 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
 
       val t3 = om.startWriteOffsets("table1", infoDate.plusDays(1), OffsetValue.LongType(200))
       om.commitOffsets(t3, OffsetValue.LongType(300))
-
-      om.getOffsets("table1", infoDate.plusDays(1)).foreach(println)
 
       val summaryMultiDay = om.getMaxInfoDateAndOffset("table1", None)
       val summarySingleDay = om.getMaxInfoDateAndOffset("table1", Some(infoDate))

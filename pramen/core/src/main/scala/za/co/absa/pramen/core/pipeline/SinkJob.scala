@@ -56,7 +56,7 @@ class SinkJob(operationDef: OperationDef,
     }
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     val minimumRecordsOpt = ConfigUtils.getOptionInt(sink.config, MINIMUM_RECORDS_KEY)
 
     minimumRecordsOpt.foreach(n => log.info(s"Minimum records to send: $n"))
@@ -81,7 +81,7 @@ class SinkJob(operationDef: OperationDef,
     }
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
     RunResult(getDataDf(infoDate))
   }
 
@@ -108,6 +108,7 @@ class SinkJob(operationDef: OperationDef,
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
