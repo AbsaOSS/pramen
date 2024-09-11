@@ -30,7 +30,7 @@ trait MetastorePersistence {
 
   def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats
 
-  def getStats(infoDate: LocalDate): MetaTableStats
+  def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats
 
   def createOrUpdateHiveTable(infoDate: LocalDate,
                               hiveTableName: String,
@@ -43,13 +43,13 @@ trait MetastorePersistence {
 }
 
 object MetastorePersistence {
-  def fromMetaTable(metaTable: MetaTable, conf: Config, saveModeOverride: Option[SaveMode] = None)(implicit spark: SparkSession): MetastorePersistence = {
+  def fromMetaTable(metaTable: MetaTable, conf: Config, saveModeOverride: Option[SaveMode] = None, batchId: Long)(implicit spark: SparkSession): MetastorePersistence = {
     val saveModeOpt = saveModeOverride.orElse(metaTable.saveModeOpt)
 
     metaTable.format match {
       case DataFormat.Parquet(path, recordsPerPartition) =>
         new MetastorePersistenceParquet(
-          path, metaTable.infoDateColumn, metaTable.infoDateFormat, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Delta(query, recordsPerPartition)  =>
         new MetastorePersistenceDelta(

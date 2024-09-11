@@ -21,6 +21,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, JdbcSparkUtils, StringUtils, TimeUtils}
 
@@ -63,6 +64,10 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
     }
   }
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
 
   private[core] def getSqlExpression(query: Query): String = {
     query match {

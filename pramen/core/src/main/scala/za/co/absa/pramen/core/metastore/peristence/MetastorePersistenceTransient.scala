@@ -49,7 +49,7 @@ class MetastorePersistenceTransient(tempPath: Option[String],
     transientPersistence.saveTable(infoDate, df, numberOfRecordsEstimate)
   }
 
-  override def getStats(infoDate: LocalDate): MetaTableStats = {
+  override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
     throw new UnsupportedOperationException("The 'transient' format does not support getting record count and size statistics.")
   }
 

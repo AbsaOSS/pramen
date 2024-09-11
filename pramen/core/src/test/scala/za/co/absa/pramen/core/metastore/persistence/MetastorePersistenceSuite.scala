@@ -215,7 +215,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
   def testStatsAvailable(mtp: MetastorePersistence): Assertion = {
     mtp.saveTable(infoDate, getDf, Some(4))
 
-    val stats = mtp.getStats(infoDate)
+    val stats = mtp.getStats(infoDate, onlyForCurrentBatchId = false)
 
     assert(stats.recordCount == 3)
     assert(stats.dataSizeBytes.exists(_ > 0))
@@ -224,7 +224,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
   def testStatsAvailableForEmptyTable(mtp: MetastorePersistence): Assertion = {
     mtp.saveTable(infoDate, getDf.filter(col("b") > 10), Some(0))
 
-    val stats = mtp.getStats(infoDate)
+    val stats = mtp.getStats(infoDate, onlyForCurrentBatchId = false)
 
     assert(stats.recordCount == 0)
     assert(stats.dataSizeBytes.contains(0L))
@@ -232,7 +232,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
 
   def testStatsNotAvailable(mtp: MetastorePersistence): Assertion = {
     val ex = intercept[AnalysisException] {
-      mtp.getStats(infoDate)
+      mtp.getStats(infoDate, onlyForCurrentBatchId = false)
     }
 
     assert(ex.getMessage.contains("Path does not exist") ||
@@ -571,7 +571,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
         infoDateFormat = infoDateFormat
       )
 
-      val persistence = MetastorePersistence.fromMetaTable(mt, conf)
+      val persistence = MetastorePersistence.fromMetaTable(mt, conf, batchId = 0)
 
       assert(persistence.isInstanceOf[MetastorePersistenceTransientEager])
     }
@@ -589,7 +589,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       saveModeOpt = saveModeOpt
     )
 
-    MetastorePersistence.fromMetaTable(mt, null)
+    MetastorePersistence.fromMetaTable(mt, null, batchId = 0)
   }
 
   def getDeltaMtPersistence(tempDir: String,
@@ -605,7 +605,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       writeOptions = writeOptions
     )
 
-    MetastorePersistence.fromMetaTable(mt, null)
+    MetastorePersistence.fromMetaTable(mt, null, batchId = 0)
   }
 
   private def getDf: DataFrame = {

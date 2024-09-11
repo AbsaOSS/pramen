@@ -101,9 +101,9 @@ class LocalSparkSource(sparkSource: SparkSource,
     tempPath.toString
   }
 
-  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
 
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
 }
 
 object LocalSparkSource extends ExternalChannelFactoryV2[LocalSparkSource] {

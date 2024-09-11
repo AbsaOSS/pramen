@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.source
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
@@ -64,29 +64,23 @@ class SparkSource(val format: Option[String],
 
     val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
 
-    val filesRead = query match {
-      case _: Query.Table   => df.inputFiles
-      case _: Query.Sql     => Array.empty[String]
-      case Query.Path(path) =>
-        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-        fsUtils.getHadoopFiles(new Path(path)).map(_.getPath.toString).sorted
-      case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
-    }
+    val filesRead = getFilesRead(query, df)
 
     SourceResult(df, filesRead)
   }
 
   def getReader(query: Query): TableReader = {
+    val offsetInfoOpt = getOffsetInfo(query)
     val tableReader = query match {
       case Query.Table(table) =>
         log.info(s"Using TableReaderSpark to read table: $table")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, offsetInfoOpt, options)
       case Query.Sql(sql)     =>
         log.info(s"Using TableReaderSpark to read SQL for: $sql")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, offsetInfoOpt, options)
       case Query.Path(path)   =>
         log.info(s"Using TableReaderSpark to read '$format' from: $path")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, offsetInfoOpt, options)
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
 
@@ -99,9 +93,28 @@ class SparkSource(val format: Option[String],
     tableReader
   }
 
-  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = {
+    val reader = getReader(query)
 
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+    val df = reader.getIncrementalData(query, minOffset, infoDate, columns)
+
+    val filesRead = getFilesRead(query, df)
+
+    SourceResult(df, filesRead)
+  }
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
+
+  private def getFilesRead(query: Query, df: DataFrame): Seq[String] = {
+    query match {
+      case _: Query.Table   => df.inputFiles
+      case _: Query.Sql     => Array.empty[String]
+      case Query.Path(path) =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+        fsUtils.getHadoopFiles(new Path(path)).map(_.getPath.toString).sorted
+      case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
+    }
+  }
 }
 
 object SparkSource extends ExternalChannelFactory[SparkSource] {

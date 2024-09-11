@@ -76,9 +76,9 @@ class JdbcSource(sourceConfig: Config,
     sql.toLowerCase.startsWith("select") && !jdbcReaderConfig.useJdbcNative
   }
 
-  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
 
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult = ???
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
 }
 
 object JdbcSource extends ExternalChannelFactory[JdbcSource] {

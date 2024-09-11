@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.reader
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.{Query, TableReader}
 
 import java.time.LocalDate
@@ -48,6 +49,10 @@ class TableReaderDelta(infoDateColumn: String,
     }
     getFilteredDataFrame(query, infoDateBegin, infoDateEnd)
   }
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
 
   private def getFilteredDataFrame(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
     val infoDateBeginStr = dateFormatter.format(infoDateBegin)

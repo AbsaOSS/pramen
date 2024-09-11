@@ -87,9 +87,9 @@ class IncrementalIngestionJob(operationDef: OperationDef,
         source.getData(sourceTable.query, infoDate, infoDate, columns)
       case Some(maxOffset) =>
         if (runReason == TaskRunReason.Rerun)
-          source.getIncrementalDataRange(sourceTable.query, maxOffset.minimumOffset, maxOffset.maximumOffset, Some(infoDate))
+          source.getIncrementalDataRange(sourceTable.query, maxOffset.minimumOffset, maxOffset.maximumOffset, Some(infoDate), columns)
         else
-          source.getIncrementalData(sourceTable.query, maxOffset.maximumOffset, Some(infoDate))
+          source.getIncrementalData(sourceTable.query, maxOffset.maximumOffset, Some(infoDate), columns)
     }
 
     val sanitizedDf = sanitizeDfColumns(sourceResult.data, specialCharacters)

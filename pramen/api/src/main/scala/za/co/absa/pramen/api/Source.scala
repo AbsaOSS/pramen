@@ -71,21 +71,23 @@ trait Source extends ExternalChannel {
     *
     * If an information date is provided and available at the source, the query will be limited to that date
     *
-    * @param minOffset This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
-    * @param infoDate  An information date to get data for.
+    * @param minOffset    This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
+    * @param infoDateOpt  An information date to get data for. Can be empty if the source table doesn't have such a column.
+    * @param columns      Select only specified columns. Selects all if an empty Seq is passed.
     */
-  def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult
+  def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): SourceResult
 
   /**
     * Returns the incremental data greater than the specified offset.
     *
     * If an information date is provided and available at the source, the query will be limited to that date
     *
-    * @param minOffset This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
-    * @param maxOffset This is an inclusive parameter the query will be SELECT ... WHERE offset_col <= max_offset
-    * @param infoDate  An information date to get data for.
+    * @param minOffset    This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
+    * @param maxOffset    This is an inclusive parameter the query will be SELECT ... WHERE offset_col <= max_offset
+    * @param infoDateOpt  An information date to get data for. Can be empty if the source table doesn't have such a column.
+    * @param columns      Select only specified columns. Selects all if an empty Seq is passed.
     */
-  def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate]): SourceResult
+  def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): SourceResult
 
   /**
     * This method is called after the ingestion is finished. You can query the output table form the output information

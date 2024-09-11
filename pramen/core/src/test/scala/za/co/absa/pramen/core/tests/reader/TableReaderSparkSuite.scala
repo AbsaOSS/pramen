@@ -327,7 +327,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
 
     val query = Query.Path(pathBase.toString)
 
-    (new TableReaderSpark(formatOpt, schemaOpt, hasInfoDate, "info_date", options = effectiveOptions), query)
+    (new TableReaderSpark(formatOpt, schemaOpt, hasInfoDate, "info_date", offsetInfoOpt = None, options = effectiveOptions), query)
   }
 
 }

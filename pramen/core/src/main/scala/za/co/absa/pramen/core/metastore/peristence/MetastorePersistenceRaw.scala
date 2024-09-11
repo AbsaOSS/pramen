@@ -93,7 +93,7 @@ class MetastorePersistenceRaw(path: String,
     )
   }
 
-  override def getStats(infoDate: LocalDate): MetaTableStats = {
+  override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
     val partitionDir = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)

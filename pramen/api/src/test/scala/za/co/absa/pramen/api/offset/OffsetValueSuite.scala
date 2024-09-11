@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.api.offset
 
+import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
 
 class OffsetValueSuite extends AnyWordSpec {
@@ -24,12 +25,14 @@ class OffsetValueSuite extends AnyWordSpec {
       val offsetValue = OffsetValue.LongType(42)
       assert(offsetValue.dataTypeString == "long")
       assert(offsetValue.valueString == "42")
+      assert(offsetValue.getSparkLit == lit(42L))
     }
 
     "be able to create a StringType instance" in {
       val offsetValue = OffsetValue.StringType("foo")
       assert(offsetValue.dataTypeString == "string")
       assert(offsetValue.valueString == "foo")
+      assert(offsetValue.getSparkLit == lit("foo"))
     }
   }
 

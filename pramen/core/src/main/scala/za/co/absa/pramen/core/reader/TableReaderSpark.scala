@@ -20,6 +20,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.{Query, TableReader}
 
 import java.time.LocalDate
@@ -30,6 +31,7 @@ class TableReaderSpark(formatOpt: Option[String],
                        hasInfoDateColumn: Boolean,
                        infoDateColumn: String,
                        infoDateFormat: String = "yyyy-MM-dd",
+                       offsetInfoOpt: Option[OffsetInfo],
                        options: Map[String, String] = Map.empty[String, String]
                       )(implicit spark: SparkSession) extends TableReader {
 
@@ -63,6 +65,20 @@ class TableReaderSpark(formatOpt: Option[String],
       getBaseDataFrame(query)
     }
   }
+
+  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = {
+    val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
+    infoDateOpt match {
+      case Some(infoDate) =>
+        getData(query, infoDate, infoDate, columns)
+          .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
+      case None =>
+        getBaseDataFrame(query)
+          .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
+    }
+  }
+
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
 
   private[core] def getDailyDataFrame(query: Query, infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)
