@@ -118,15 +118,22 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     val req = om.startWriteOffsets(outputTable.name, infoDate, minimumOffset)
 
-    val stats = metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
+    val stats = try {
+      val statsToReturn = metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
 
-    val updatedDf = metastore.getTable(outputTable.name, Option(infoDate), Option(infoDate))
+      val updatedDf = metastore.getCurrentBatch(outputTable.name, infoDate)
 
-    if (updatedDf.isEmpty) {
-      om.rollbackOffsets(req)
-    } else {
-      val maxOffset = updatedDf.agg(max(col(offsetInfo.offsetColumn)).cast(StringType)).collect()(0)(0).asInstanceOf[String]
-      om.commitOffsets(req, OffsetValue.fromString(offsetInfo.minimalOffset.dataTypeString, maxOffset))
+      if (updatedDf.isEmpty) {
+        om.rollbackOffsets(req)
+      } else {
+        val maxOffset = updatedDf.agg(max(col(offsetInfo.offsetColumn)).cast(StringType)).collect()(0)(0).asInstanceOf[String]
+        om.commitOffsets(req, OffsetValue.fromString(offsetInfo.minimalOffset.dataTypeString, maxOffset))
+      }
+      statsToReturn
+    } catch {
+      case ex: Throwable =>
+        om.rollbackOffsets(req)
+        throw ex
     }
 
     try {
