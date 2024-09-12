@@ -66,12 +66,6 @@ class MetastorePersistenceParquet(path: String,
 
     fsUtils.createDirectoryRecursive(new Path(path))
 
-    val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn))) {
-      df.drop(infoDateColumn)
-    } else {
-      df
-    }
-
     val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
 
     val isAppend = saveMode match {
@@ -83,18 +77,34 @@ class MetastorePersistenceParquet(path: String,
         false
     }
 
-    val recordCount = numberOfRecordsEstimate match {
-      case Some(count) => count
-      case None => dfIn.count()
+    val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn))) {
+      df.drop(infoDateColumn)
+    } else {
+      df
     }
 
-    val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
+    val dfRepartitioned = if (recordsPerPartition.nonEmpty) {
+      val recordCount = numberOfRecordsEstimate match {
+        case Some(count) => count
+        case None => dfIn.count()
+      }
+
+      applyRepartitioning(dfIn, recordCount)
+    } else {
+      dfIn
+    }
 
     writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils, saveMode)
 
     val stats = getStats(infoDate, isAppend)
 
-    log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+    if (isAppend) {
+      log.info(s"$SUCCESS Successfully saved ${stats.recordCountAppended.get} records (new count: ${stats.recordCount}, " +
+        s"new size: ${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+    } else {
+      log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records " +
+        s"(${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+    }
 
     stats
   }
@@ -106,15 +116,18 @@ class MetastorePersistenceParquet(path: String,
 
     val df = spark.read.parquet(outputDirStr)
 
-    val actualCount = if (onlyForCurrentBatchId && df.schema.exists(_.name.equalsIgnoreCase(batchIdColumn))) {
-      df.filter(col(batchIdColumn) === batchId).count()
-    } else {
-      df.count()
-    }
-
     val size = fsUtils.getDirectorySize(outputDirStr)
 
-    MetaTableStats(actualCount, Option(size))
+    if (onlyForCurrentBatchId) {
+      val batchCount = df.filter(col(batchIdColumn) === batchId).count()
+      val countAll = df.count()
+
+      MetaTableStats(countAll, Option(batchCount), Option(size))
+    } else {
+      val countAll = df.count()
+
+      MetaTableStats(countAll, None, Option(size))
+    }
   }
 
   override def createOrUpdateHiveTable(infoDate: LocalDate,

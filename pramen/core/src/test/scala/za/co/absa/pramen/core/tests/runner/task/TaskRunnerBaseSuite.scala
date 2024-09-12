@@ -638,7 +638,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       killMaxExecutionTimeSeconds = killTimer
     )
 
-    val stats = MetaTableStats(2, Some(100))
+    val stats = MetaTableStats(2, None, Some(100))
 
     val job = new JobSpy(preRunCheckFunction = preRunCheckFunction,
       validationFunction = validationFunction,

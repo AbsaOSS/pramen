@@ -110,7 +110,7 @@ class MetastoreImpl(appConfig: Config,
     val isTransient = mt.format.isTransient
     val start = Instant.now.getEpochSecond
 
-    var stats = MetaTableStats(0, None)
+    var stats = MetaTableStats(0, None, None)
 
     withSparkConfig(mt.sparkConfig) {
       stats = MetastorePersistence.fromMetaTable(mt, appConfig, saveModeOverride, batchId).saveTable(infoDate, df, inputRecordCount)
@@ -194,7 +194,7 @@ class MetastoreImpl(appConfig: Config,
     MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).getStats(infoDate, onlyForCurrentBatchId = false)
   }
 
-  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, isIncremental: Boolean): MetastoreReader = {
     val metastore = this
 
     new MetastoreReader {
@@ -207,7 +207,10 @@ class MetastoreImpl(appConfig: Config,
 
       override def getCurrentBatch(tableName: String): DataFrame = {
         validateTable(tableName)
-        metastore.getCurrentBatch(tableName, infoDate)
+        if (isIncremental)
+          metastore.getCurrentBatch(tableName, infoDate)
+        else
+          metastore.getTable(tableName, Option(infoDate), Option(infoDate))
       }
 
       override def getLatest(tableName: String, until: Option[LocalDate] = None): DataFrame = {

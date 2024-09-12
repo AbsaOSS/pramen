@@ -60,6 +60,7 @@ class MetastorePersistenceTransientEager(tempPathOpt: Option[String],
 
     MetaTableStats(
       recordCount,
+      None,
       sizeBytesOpt
     )
   }
