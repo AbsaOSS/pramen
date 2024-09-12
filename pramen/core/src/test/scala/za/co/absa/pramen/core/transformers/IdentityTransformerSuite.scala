@@ -36,7 +36,7 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
 
   "validate()" should {
     "pass when the mandatory option is present" in {
-      val (transformer, metastore) = getUseCase
+      val (transformer, metastore) = getUseCase()
 
       val outcome = transformer.validate(metastore, infoDateWithData, Map("input.table" -> "table1"))
 
@@ -44,7 +44,7 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
     }
 
     "pass when the legacy mandatory option is present" in {
-      val (transformer, metastore) = getUseCase
+      val (transformer, metastore) = getUseCase()
 
       val outcome = transformer.validate(metastore, infoDateWithData, Map("table" -> "table1"))
 
@@ -52,7 +52,7 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
     }
 
     "pass when empty is allowed" in {
-      val (transformer, metastore) = getUseCase
+      val (transformer, metastore) = getUseCase(true)
 
       val outcome = transformer.validate(metastore, infoDateWithEmptyDf, Map("table" -> "table1", "empty.allowed" -> "true"))
 
@@ -60,7 +60,7 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
     }
 
     "return SkipOnce when empty is not allowed" in {
-      val (transformer, metastore) = getUseCase
+      val (transformer, metastore) = getUseCase(true)
 
       val outcome = transformer.validate(metastore, infoDateWithEmptyDf, Map("table" -> "table1", "empty.allowed" -> "false"))
 
@@ -68,7 +68,7 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
     }
 
     "fail when the mandatory option is absent" in {
-      val (transformer, metastore) = getUseCase
+      val (transformer, metastore) = getUseCase()
 
       val ex = intercept[IllegalArgumentException] {
         transformer.validate(metastore, infoDateWithData, Map.empty)
@@ -89,7 +89,7 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
           ||C  |3  |
           |+---+---+
           |""".stripMargin
-      val (transformer, metastore) = getUseCase
+      val (transformer, metastore) = getUseCase()
 
       val outcome = transformer.run(metastore, infoDateWithData, Map("table" -> "table1"))
         .orderBy("a")
@@ -100,12 +100,16 @@ class IdentityTransformerSuite extends AnyWordSpec with SparkTestBase with TextC
     }
   }
 
-  def getUseCase: (IdentityTransformer, MetastoreReader) = {
+  def getUseCase(isEmptyToday: Boolean = false): (IdentityTransformer, MetastoreReader) = {
     val metastoreReadeMock = mock(classOf[MetastoreReader])
 
     whenMock(metastoreReadeMock.getTable("table1")).thenReturn(exampleDf)
     whenMock(metastoreReadeMock.getTable("table1", Some(infoDateWithData), Some(infoDateWithData))).thenReturn(exampleDf)
     whenMock(metastoreReadeMock.getTable("table1", Some(infoDateWithEmptyDf), Some(infoDateWithEmptyDf))).thenReturn(emptyDf)
+    if (isEmptyToday)
+      whenMock(metastoreReadeMock.getCurrentBatch("table1")).thenReturn(emptyDf)
+    else
+      whenMock(metastoreReadeMock.getCurrentBatch("table1")).thenReturn(exampleDf)
 
     (new IdentityTransformer(), metastoreReadeMock)
   }

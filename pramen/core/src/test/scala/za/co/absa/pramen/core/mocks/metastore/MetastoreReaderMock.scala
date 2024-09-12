@@ -17,7 +17,9 @@
 package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
+import za.co.absa.pramen.api.offset.DataOffset
+import za.co.absa.pramen.api.status.TaskRunReason
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 
 import java.time.LocalDate
@@ -52,6 +54,8 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
     tables.exists(_._1 == tableName)
   }
 
+  override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = Array.empty
+
   override def getTableDef(tableName: String): MetaTableDef = {
     tables.find(_._1 == tableName) match {
       case Some((name, _)) => MetaTableDef(name, "", DataFormat.Null(), "pramen_info_date", "yyyy-MM-dd", "pramen_batchid", None, None, null, Map.empty[String, String], Map.empty[String, String])
@@ -62,4 +66,6 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
   override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
 
   override def metadataManager: MetadataManager = metadata
+
+  override def getRunReason: TaskRunReason = TaskRunReason.New
 }

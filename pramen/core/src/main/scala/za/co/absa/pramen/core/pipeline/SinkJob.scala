@@ -121,7 +121,7 @@ class SinkJob(operationDef: OperationDef,
     try {
       val sinkResult = sink.send(df,
         sinkTable.metaTableName,
-        metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, infoDate, isIncremental),
+        metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, infoDate, runReason, isIncremental),
         infoDate,
         sinkTable.options
       )

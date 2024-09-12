@@ -98,12 +98,13 @@ class MetastorePersistenceParquet(path: String,
 
     val stats = getStats(infoDate, isAppend)
 
-    if (isAppend) {
-      log.info(s"$SUCCESS Successfully saved ${stats.recordCountAppended.get} records (new count: ${stats.recordCount}, " +
-        s"new size: ${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
-    } else {
-      log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records " +
-        s"(${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+    stats.recordCountAppended match {
+      case Some(recordsAppended) =>
+        log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount}, " +
+          s"new size: ${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+      case None =>
+        log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records " +
+          s"(${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
     }
 
     stats
@@ -118,7 +119,7 @@ class MetastorePersistenceParquet(path: String,
 
     val size = fsUtils.getDirectorySize(outputDirStr)
 
-    if (onlyForCurrentBatchId) {
+    if (onlyForCurrentBatchId && df.schema.exists(_.name.equalsIgnoreCase(batchIdColumn))) {
       val batchCount = df.filter(col(batchIdColumn) === batchId).count()
       val countAll = df.count()
 

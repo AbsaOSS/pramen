@@ -17,6 +17,8 @@
 package za.co.absa.pramen.api
 
 import org.apache.spark.sql.DataFrame
+import za.co.absa.pramen.api.offset.DataOffset
+import za.co.absa.pramen.api.status.TaskRunReason
 
 import java.time.LocalDate
 
@@ -101,6 +103,15 @@ trait MetastoreReader {
   def isDataAvailable(tableName: String, from: Option[LocalDate], until: Option[LocalDate]): Boolean
 
   /**
+    * Returns offsets for an information date (both committed and uncommitted).
+    *
+    * This info can be used by transformers and sinks to decide if actions need to be taken depending on the
+    * current micro batch. For example, adding partitions to Hive needs to happen only once per info date,
+    * so a sink that does this can check if micro-batches have been ran for the current day.
+    */
+  def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset]
+
+  /**
     * Gets definition of a metastore table. Please, use with caution and do not write to the underlying path
     * from transformers.
     *
@@ -119,6 +130,12 @@ trait MetastoreReader {
     * @return The run info of the table if available.
     */
   def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo]
+
+  /**
+    * Returns the reason of running the task. This helps transformers and sinks to determine logic based on whether
+    * thr run is a normal run or a force re-run.
+    */
+  def getRunReason: TaskRunReason
 
   /**
     * Returns an object that allows accessing metadata of metastore tables.

@@ -69,7 +69,7 @@ class IncrementalPipelineSuite extends AnyWordSpec
         |""".stripMargin
 
     "work end to end as a normal run" in {
-      withTempDirectory("integration_file_based") { tempDir =>
+      withTempDirectory("incremental1") { tempDir =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
         val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
@@ -112,13 +112,68 @@ class IncrementalPipelineSuite extends AnyWordSpec
       }
     }
 
+    "work with incremental ingestion and normal transformer" in {
+      withTempDirectory("incremental1") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+        val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+        fsUtils.writeFile(path1, "id,name\n1,John\n2,Jack\n3,Jill\n")
+
+        val conf = getConfig(tempDir, isTransformerIncremental = false)
+
+        val exitCode1 = AppRunner.runPipeline(conf)
+        assert(exitCode1 == 0)
+
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
+
+        fsUtils.deleteFile(path1)
+        fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+        val exitCode2 = AppRunner.runPipeline(conf)
+        assert(exitCode2 == 0)
+
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
+
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
+
+        assert(batchIds.length == 2)
+
+        val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2After = dfTable2After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1After, expected2)
+        compareText(actualTable2After, expected2)
+      }
+    }
+
     "work end to end as rerun" in {
+
+    }
+
+    "fail to run for a historical date range" in {
+
+    }
+
+    "deal with uncommitted changes" in {
 
     }
   }
 
   "For inputs with information date the pipeline" should {
     "work end to end as a normal run" in {
+    }
+
+    "work with incremental ingestion and normal transformer" in {
     }
 
     "work end to end as rerun" in {
@@ -138,15 +193,17 @@ class IncrementalPipelineSuite extends AnyWordSpec
     }
   }
 
-  def getConfig(basePath: String, isRerun: Boolean = false, useDataFrame: Boolean = false): Config = {
+  def getConfig(basePath: String, isRerun: Boolean = false, useDataFrame: Boolean = false, isTransformerIncremental: Boolean = true): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/incremental_pipeline.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
+    val transformerSchedule = if (isTransformerIncremental) "incremental" else "daily"
 
     val conf = ConfigFactory.parseString(
         s"""base.path = "$basePathEscaped"
            |use.dataframe = $useDataFrame
            |pramen.runtime.is.rerun = $isRerun
            |pramen.current.date = "$infoDate"
+           |transformer.schedule = "$transformerSchedule"
            |
            |pramen.bookkeeping.jdbc {
            |  driver = "$driver"

@@ -69,16 +69,25 @@ class TableReaderSpark(formatOpt: Option[String],
   override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = {
     val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
     infoDateOpt match {
-      case Some(infoDate) =>
+      case Some(infoDate) if hasInfoDateColumn =>
         getData(query, infoDate, infoDate, columns)
           .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
-      case None =>
+      case _ =>
         getBaseDataFrame(query)
           .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
     }
   }
 
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = {
+    val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
+    infoDateOpt match {
+      case Some(infoDate) if hasInfoDateColumn =>
+        getData(query, infoDate, infoDate, columns)
+      case _ =>
+        getBaseDataFrame(query)
+          .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit && col(offsetInfo.offsetColumn) <= maxOffset.getSparkLit)
+    }
+  }
 
   private[core] def getDailyDataFrame(query: Query, infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)

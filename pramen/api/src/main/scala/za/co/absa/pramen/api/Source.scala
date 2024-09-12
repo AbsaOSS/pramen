@@ -78,9 +78,12 @@ trait Source extends ExternalChannel {
   def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): SourceResult
 
   /**
-    * Returns the incremental data greater than the specified offset.
+    * Returns the incremental data between specified offsets.
     *
-    * If an information date is provided and available at the source, the query will be limited to that date
+    * If an information date is provided and available at the source, the query will be limited to that date.
+    *
+    * This method is used for re-runs for a particular information day. For sources that have information date column
+    * the returned data will be for the full information date, even outside the specified offsets.
     *
     * @param minOffset    This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
     * @param maxOffset    This is an inclusive parameter the query will be SELECT ... WHERE offset_col <= max_offset
