@@ -142,7 +142,7 @@ class MetastorePersistenceDelta(query: Query,
         None
     }
 
-    MetaTableStats(recordCount, sizeOpt)
+    MetaTableStats(recordCount, None, sizeOpt)
   }
 
   override def createOrUpdateHiveTable(infoDate: LocalDate,

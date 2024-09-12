@@ -46,7 +46,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
                              (implicit spark: SparkSession)
   extends IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, None, false) {
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffset)
+  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffset, source.hasInfoDateColumn(sourceTable.query))
 
   override def trackDays: Int = 0
 
@@ -140,7 +140,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       source.postProcess(
         sourceTable.query,
         outputTable.name,
-        metastore.getMetastoreReader(Seq(outputTable.name), infoDate),
+        metastore.getMetastoreReader(Seq(outputTable.name), infoDate, isIncremental = true),
         infoDate,
         operationDef.extraOptions
       )

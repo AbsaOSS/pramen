@@ -170,7 +170,7 @@ class IngestionJob(operationDef: OperationDef,
       source.postProcess(
         sourceTable.query,
         outputTable.name,
-        metastore.getMetastoreReader(Seq(outputTable.name), infoDate),
+        metastore.getMetastoreReader(Seq(outputTable.name), infoDate, isIncremental = false),
         infoDate,
         operationDef.extraOptions
       )

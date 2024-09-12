@@ -23,10 +23,9 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.rdb.PramenDb
-import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
-import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, ResourceUtils}
 
 import java.time.LocalDate
 
@@ -53,7 +52,7 @@ class IncrementalPipelineSuite extends AnyWordSpec
 
   private val infoDate = LocalDate.of(2021, 2, 18)
 
-  "File-based sourcing" should {
+  "For inputs without information date the pipeline" should {
     val expected1 =
       """{"id":"1","name":"John"}
         |{"id":"2","name":"Jack"}
@@ -83,10 +82,14 @@ class IncrementalPipelineSuite extends AnyWordSpec
         assert(exitCode1 == 0)
 
         val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
-        val df1 = spark.read.parquet(table1Path.toString)
-        val actual1 = df1.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
 
-        compareText(actual1, expected1)
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
 
         fsUtils.deleteFile(path1)
         fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
@@ -94,32 +97,44 @@ class IncrementalPipelineSuite extends AnyWordSpec
         val exitCode2 = AppRunner.runPipeline(conf)
         assert(exitCode2 == 0)
 
-        val df2 = spark.read.parquet(table1Path.toString)
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
 
-        val batchIds = df2.select("pramen_batchid").distinct().collect()
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
 
         assert(batchIds.length == 2)
 
-        val actual2 = df2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2After = dfTable2After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
 
-        compareText(actual2, expected2)
-
-        JdbcNativeUtils.withResultSet(new JdbcUrlSelectorImpl(jdbcConfig), "SELECT * FROM \"offsets\"", 1) { rs =>
-          val mt = rs.getMetaData
-
-          for (i <- 1 to mt.getColumnCount) {
-            print(mt.getColumnName(i) + "\t")
-          }
-          println("")
-
-          while (rs.next()) {
-            for (i <- 1 to mt.getColumnCount) {
-              print(rs.getString(i) + "\t")
-            }
-            println("")
-          }
-        }
+        compareText(actualTable1After, expected2)
+        compareText(actualTable2After, expected2)
       }
+    }
+
+    "work end to end as rerun" in {
+
+    }
+  }
+
+  "For inputs with information date the pipeline" should {
+    "work end to end as a normal run" in {
+    }
+
+    "work end to end as rerun" in {
+    }
+
+    "work for historical runs" in {
+    }
+  }
+
+  "Edge cases" should {
+    "offsets cross info days" in {
+
+    }
+
+    "recover from a failed transformer" in {
+
     }
   }
 

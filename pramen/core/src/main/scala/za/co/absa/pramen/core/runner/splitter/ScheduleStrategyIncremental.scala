@@ -19,14 +19,13 @@ package za.co.absa.pramen.core.runner.splitter
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.bookkeeper.model.DataOffsetAggregated
-import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.pipeline.TaskPreDef
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.LocalDate
 
-class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated]) extends ScheduleStrategy {
+class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated], hasInfoDateColumn: Boolean) extends ScheduleStrategy {
   private val log = org.slf4j.LoggerFactory.getLogger(this.getClass)
 
   override def getDaysToRun(
@@ -50,11 +49,13 @@ class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated]) ext
               Seq.empty
             } else {
               Seq(infoDate)
-                .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
+                .map(d => TaskPreDef(d, TaskRunReason.New))
             }
           case None =>
-            Seq(infoDate)
-              .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
+            if (hasInfoDateColumn)
+              Seq(TaskPreDef(infoDate.minusDays(1), TaskRunReason.New), TaskPreDef(infoDate, TaskRunReason.New))
+            else
+              Seq(TaskPreDef(infoDate, TaskRunReason.New))
         }
 
         log.info(s"Days to run:  ${runInfoDays.map(_.infoDate).mkString(", ")}")

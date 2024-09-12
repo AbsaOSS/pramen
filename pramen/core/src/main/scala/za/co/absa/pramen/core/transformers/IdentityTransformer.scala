@@ -46,7 +46,7 @@ class IdentityTransformer extends Transformer {
                    options: Map[String, String]): DataFrame = {
     val tableName = options.getOrElse(INPUT_TABLE_KEY, options(INPUT_TABLE_LEGACY_KEY))
 
-    metastore.getTable(tableName, Option(infoDate), Option(infoDate))
+    metastore.getCurrentBatch(tableName)
   }
 }
 
