@@ -103,7 +103,15 @@ class SparkSource(val format: Option[String],
     SourceResult(df, filesRead)
   }
 
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
+  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = {
+    val reader = getReader(query)
+
+    val df = reader.getIncrementalDataRange(query, minOffset, maxOffset, infoDate, columns)
+
+    val filesRead = getFilesRead(query, df)
+
+    SourceResult(df, filesRead)
+  }
 
   private def getFilesRead(query: Query, df: DataFrame): Seq[String] = {
     query match {

@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.api.offset.OffsetValue
+import za.co.absa.pramen.api.offset.{DataOffset, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.model._
 import za.co.absa.pramen.core.utils.SlickUtils
 
@@ -37,7 +37,7 @@ class OffsetManagerJdbc(db: Database) extends OffsetManager {
       return Array.empty
     }
 
-    offsets.map(DataOffset.fromOffsetRecord)
+    offsets.map(OffsetRecordConverter.toDataOffset)
   }
 
   override def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = {
@@ -118,7 +118,7 @@ class OffsetManagerJdbc(db: Database) extends OffsetManager {
     val minOffset = OffsetValue.fromString(offsetDataType, offsets.map(_.minOffset).min)
     val maxOffset = OffsetValue.fromString(offsetDataType, offsets.map(_.maxOffset).max)
 
-    Some(DataOffsetAggregated(table, infoDate, minOffset, maxOffset, offsets.map(DataOffset.fromOffsetRecord)))
+    Some(DataOffsetAggregated(table, infoDate, minOffset, maxOffset, offsets.map(OffsetRecordConverter.toDataOffset)))
   }
 
   /**

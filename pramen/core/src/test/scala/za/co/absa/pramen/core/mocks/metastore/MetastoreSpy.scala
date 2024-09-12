@@ -18,6 +18,8 @@ package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import za.co.absa.pramen.api.offset.DataOffset
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -103,7 +105,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     stats
   }
 
-  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, isIncremental: Boolean): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, taskRunReason: TaskRunReason, isIncremental: Boolean): MetastoreReader = {
     val metastore = this
 
     new MetastoreReader {
@@ -136,6 +138,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         metastore.isDataAvailable(tableName, fromDate, untilDate)
       }
 
+      override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = Array.empty
+
       override def getTableDef(tableName: String): MetaTableDef = {
         validateTable(tableName)
 
@@ -155,6 +159,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
       }
 
       override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
+
+      override def getRunReason: TaskRunReason = TaskRunReason.New
 
       override def metadataManager: MetadataManager = metadataManagerMock
 

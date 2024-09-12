@@ -22,7 +22,7 @@ import org.apache.spark.sql.types.StringType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
-import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
+import za.co.absa.pramen.api.{Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.bookkeeper.model.DataOffsetAggregated
 import za.co.absa.pramen.core.metastore.Metastore
@@ -51,12 +51,13 @@ class IncrementalIngestionJob(operationDef: OperationDef,
   override def trackDays: Int = 0
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    if (source.hasInfoDateColumn(sourceTable.query)) {
+    val hasInfoDateColumn = source.hasInfoDateColumn(sourceTable.query)
+    if (hasInfoDateColumn && runReason == TaskRunReason.Rerun) {
       super.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)
     } else {
       latestOffset match {
         case Some(offset) =>
-          if (offset.maximumInfoDate.isAfter(infoDate)) {
+          if (offset.maximumInfoDate.isAfter(infoDate) && !hasInfoDateColumn) {
             JobPreRunResult(JobPreRunStatus.Skip("Retrospective runs are not allowed yet"), None, dependencyWarnings, Nil)
           } else {
             JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Nil)
@@ -140,7 +141,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       source.postProcess(
         sourceTable.query,
         outputTable.name,
-        metastore.getMetastoreReader(Seq(outputTable.name), infoDate, isIncremental = true),
+        metastore.getMetastoreReader(Seq(outputTable.name), infoDate, runReason, isIncremental = true),
         infoDate,
         operationDef.extraOptions
       )
@@ -154,22 +155,5 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, sourceTable.warnMaxExecutionTimeSeconds)
 
     SaveResult(stats, warnings = tooLongWarnings)
-  }
-
-  private def getSourcingResult(infoDate: LocalDate): SourceResult = {
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
-
-    getData(source, sourceTable.query, from, to)
-  }
-
-  private def getData(source: Source, query: Query, from: LocalDate, to: LocalDate): SourceResult = {
-    val sourceResult = if (sourceTable.transformations.isEmpty && sourceTable.filters.isEmpty)
-      source.getData(query, from, to, sourceTable.columns) // push down the projection
-    else
-      source.getData(query, from, to, Seq.empty[String]) // column selection and order will be applied later
-
-    val sanitizedDf = sanitizeDfColumns(sourceResult.data, specialCharacters)
-
-    sourceResult.copy(data = sanitizedDf)
   }
 }

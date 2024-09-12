@@ -23,6 +23,8 @@ import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.DataOffset
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
@@ -194,7 +196,7 @@ class MetastoreImpl(appConfig: Config,
     MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).getStats(infoDate, onlyForCurrentBatchId = false)
   }
 
-  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, isIncremental: Boolean): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean): MetastoreReader = {
     val metastore = this
 
     new MetastoreReader {
@@ -232,6 +234,12 @@ class MetastoreImpl(appConfig: Config,
         metastore.isDataAvailable(tableName, fromDate, untilDate)
       }
 
+      override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
+        val om = bookkeeper.getOffsetManager
+
+        om.getOffsets(table, infoDate)
+      }
+
       override def getTableDef(tableName: String): MetaTableDef = {
         validateTable(tableName)
 
@@ -244,6 +252,8 @@ class MetastoreImpl(appConfig: Config,
             MetaTableRunInfo(tableName, LocalDate.parse(chunk.infoDate), chunk.inputRecordCount, chunk.outputRecordCount, Instant.ofEpochSecond(chunk.jobStarted), Instant.ofEpochSecond(chunk.jobFinished))
           )
       }
+
+      override def getRunReason: TaskRunReason = runReason
 
       override def metadataManager: MetadataManager = metadata
 
