@@ -22,6 +22,7 @@ case class OffsetRecord(
                          dataType: String,              /* Converts to OffsetDataType */
                          minOffset: String,
                          maxOffset: String,
+                         batchId: Long,
                          createdAtMilli: Long,          /* Use epoch milli */
                          committedAtMilli: Option[Long] /* Use epoch milli, can be empty for uncommitted offsets */
                        )

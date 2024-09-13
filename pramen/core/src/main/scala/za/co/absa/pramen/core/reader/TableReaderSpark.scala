@@ -70,9 +70,11 @@ class TableReaderSpark(formatOpt: Option[String],
     val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
     infoDateOpt match {
       case Some(infoDate) if hasInfoDateColumn =>
+        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} > ${minOffset.valueString}")
         getData(query, infoDate, infoDate, columns)
           .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
       case _ =>
+        log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${minOffset.valueString}")
         getBaseDataFrame(query)
           .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
     }
@@ -82,8 +84,10 @@ class TableReaderSpark(formatOpt: Option[String],
     val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
     infoDateOpt match {
       case Some(infoDate) if hasInfoDateColumn =>
+        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate'")
         getData(query, infoDate, infoDate, columns)
       case _ =>
+        log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${minOffset.valueString} AND ${offsetInfo.offsetColumn} <= ${maxOffset.valueString}")
         getBaseDataFrame(query)
           .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit && col(offsetInfo.offsetColumn) <= maxOffset.getSparkLit)
     }

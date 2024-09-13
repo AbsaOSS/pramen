@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
-import com.typesafe.config.Config
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
@@ -30,11 +29,11 @@ import za.co.absa.pramen.core.utils.SlickUtils
 import java.time.LocalDate
 import scala.util.control.NonFatal
 
-class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
+class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val offsetManagement = new OffsetManagerJdbc(db)
+  private val offsetManagement = new OffsetManagerJdbc(db, batchId)
 
   override val bookkeepingEnabled: Boolean = true
 
@@ -205,7 +204,7 @@ class BookkeeperJdbc(db: Database) extends BookkeeperBase(true) {
 }
 
 object BookkeeperJdbc {
-  def fromJdbcConfig(jdbcConfig: JdbcConfig): BookkeeperJdbc = {
+  def fromJdbcConfig(jdbcConfig: JdbcConfig, batchId: Long): BookkeeperJdbc = {
     val selector = JdbcUrlSelector(jdbcConfig)
     val url = selector.getWorkingUrl(DEFAULT_RETRIES)
     val prop = selector.getProperties
@@ -215,12 +214,7 @@ object BookkeeperJdbc {
     } else {
       Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop)
     }
-    new BookkeeperJdbc(db)
-  }
-
-  def fromConfig(conf: Config, path: String): BookkeeperJdbc = {
-    val db = Database.forConfig(path, conf)
-    new BookkeeperJdbc(db)
+    new BookkeeperJdbc(db, batchId)
   }
 
 }

@@ -106,6 +106,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
+    val isRerun = runReason == TaskRunReason.Rerun
 
     val dfToSave = df.withColumn(outputTable.batchIdColumn, lit(batchId))
 
@@ -120,15 +121,29 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     val req = om.startWriteOffsets(outputTable.name, infoDate, minimumOffset)
 
     val stats = try {
-      val statsToReturn = metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
+      val statsToReturn = if (isRerun) {
+        metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Overwrite))
+      } else {
+        metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
+      }
 
       val updatedDf = metastore.getCurrentBatch(outputTable.name, infoDate)
 
       if (updatedDf.isEmpty) {
-        om.rollbackOffsets(req)
+        if (isRerun) {
+          om.commitRerun(req, OffsetValue.getMinimumForType(offsetInfo.minimalOffset.dataTypeString))
+        } else {
+          om.rollbackOffsets(req)
+        }
       } else {
-        val maxOffset = updatedDf.agg(max(col(offsetInfo.offsetColumn)).cast(StringType)).collect()(0)(0).asInstanceOf[String]
-        om.commitOffsets(req, OffsetValue.fromString(offsetInfo.minimalOffset.dataTypeString, maxOffset))
+        val row = updatedDf.agg(max(col(offsetInfo.offsetColumn)).cast(StringType)).collect()(0)
+        val maxOffset = OffsetValue.fromString(offsetInfo.minimalOffset.dataTypeString, row(0).asInstanceOf[String])
+
+        if (isRerun) {
+          om.commitRerun(req, maxOffset)
+        } else {
+          om.commitOffsets(req, maxOffset)
+        }
       }
       statsToReturn
     } catch {
