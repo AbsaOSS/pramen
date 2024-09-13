@@ -19,7 +19,7 @@ package za.co.absa.pramen.api.offset
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions.lit
 
-sealed trait OffsetValue {
+sealed trait OffsetValue extends Comparable[OffsetValue] {
   def dataTypeString: String
 
   def valueString: String
@@ -37,6 +37,13 @@ object OffsetValue {
     override def valueString: String = value.toString
 
     override def getSparkLit: Column = lit(value)
+
+    override def compareTo(o: OffsetValue): Int = {
+      o match {
+        case LongType(otherValue) => value.compareTo(otherValue)
+        case _ => throw new IllegalArgumentException(s"Cannot compare $dataTypeString with ${o.dataTypeString}")
+      }
+    }
   }
 
   case class StringType(s: String) extends OffsetValue {
@@ -45,6 +52,13 @@ object OffsetValue {
     override def valueString: String = s
 
     override def getSparkLit: Column = lit(s)
+
+    override def compareTo(o: OffsetValue): Int = {
+      o match {
+        case StringType(otherValue) => s.compareTo(otherValue)
+        case _ => throw new IllegalArgumentException(s"Cannot compare $dataTypeString with ${o.dataTypeString}")
+      }
+    }
   }
 
   def getMinimumForType(dataType: String): OffsetValue = {

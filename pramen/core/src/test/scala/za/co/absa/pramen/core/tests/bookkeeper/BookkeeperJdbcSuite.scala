@@ -38,7 +38,7 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
   }
 
   def getBookkeeper: Bookkeeper = {
-    new BookkeeperJdbc(pramenDb.slickDb)
+    new BookkeeperJdbc(pramenDb.slickDb, 0L)
   }
 
   "BookkeeperJdbc" when {

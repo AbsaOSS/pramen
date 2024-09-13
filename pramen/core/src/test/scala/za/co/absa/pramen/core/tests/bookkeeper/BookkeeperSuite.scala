@@ -18,16 +18,16 @@ package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
-import za.co.absa.pramen.core.{BookkeepingConfigFactory, RuntimeConfigFactory}
-import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
+import za.co.absa.pramen.core.app.config.{HadoopFormat, RuntimeConfig}
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperDeltaPath, BookkeeperJdbc, BookkeeperMongoDb, BookkeeperText}
+import za.co.absa.pramen.core.bookkeeper._
 import za.co.absa.pramen.core.fixtures.{MongoDbFixture, RelationalDbFixture, TempDirFixture}
 import za.co.absa.pramen.core.journal.{JournalHadoopCsv, JournalHadoopDeltaPath, JournalJdbc, JournalMongoDb}
 import za.co.absa.pramen.core.lock.{TokenLockFactoryHadoopPath, TokenLockFactoryJdbc, TokenLockFactoryMongoDb}
 import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.{BookkeepingConfigFactory, RuntimeConfigFactory}
 
 class BookkeeperSuite extends AnyWordSpec
   with MongoDbFixture
@@ -68,7 +68,7 @@ class BookkeeperSuite extends AnyWordSpec
         bookkeepingJdbcConfig = Some(jdbcConfig)
       )
 
-      val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+      val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
       assert(bk.isInstanceOf[BookkeeperJdbc])
       assert(tf.isInstanceOf[TokenLockFactoryJdbc])
@@ -85,7 +85,7 @@ class BookkeeperSuite extends AnyWordSpec
           bookkeepingDbName = Some(dbName)
         )
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperMongoDb])
         assert(tf.isInstanceOf[TokenLockFactoryMongoDb])
@@ -106,7 +106,7 @@ class BookkeeperSuite extends AnyWordSpec
           bookkeepingLocation = Some(tempDir)
         )
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperText])
         assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])
@@ -124,7 +124,7 @@ class BookkeeperSuite extends AnyWordSpec
           bookkeepingHadoopFormat = HadoopFormat.Delta
         )
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig)
+        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperDeltaPath])
         assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])

@@ -23,9 +23,10 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
-import za.co.absa.pramen.core.utils.{FsUtils, ResourceUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils}
 
 import java.time.LocalDate
 
@@ -157,7 +158,144 @@ class IncrementalPipelineSuite extends AnyWordSpec
     }
 
     "work end to end as rerun" in {
+      withTempDirectory("incremental1") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
+        val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+        val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+        fsUtils.writeFile(path1, "id,name\n1,John\n2,Jack\n3,Jill\n")
+
+        val conf = getConfig(tempDir)
+
+        val exitCode1 = AppRunner.runPipeline(conf)
+        assert(exitCode1 == 0)
+
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
+
+        fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+        val conf2 = getConfig(tempDir, isRerun = true)
+        val exitCode2 = AppRunner.runPipeline(conf2)
+        assert(exitCode2 == 0)
+
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
+
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
+
+        assert(batchIds.length == 1)
+
+        val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2After = dfTable2After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        // Expecting original records
+        compareText(actualTable1After, expected1)
+        compareText(actualTable2After, expected1)
+      }
+    }
+
+    "work end to end as rerun with deletion of records" in {
+      withTempDirectory("incremental1") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+        val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+        fsUtils.writeFile(path1, "id,name\n1,John\n2,Jack\n3,Jill\n")
+
+        val conf = getConfig(tempDir)
+
+        val exitCode1 = AppRunner.runPipeline(conf)
+        assert(exitCode1 == 0)
+
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
+
+        fsUtils.deleteFile(path1)
+        fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+        val conf2 = getConfig(tempDir, isRerun = true)
+        val exitCode2 = AppRunner.runPipeline(conf2)
+        assert(exitCode2 == 0)
+
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
+
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
+
+        assert(batchIds.isEmpty)
+
+        // Expecting empty records
+        assert(dfTable1After.isEmpty)
+        assert(dfTable2After.isEmpty)
+      }
+    }
+
+    "work end to end as rerun with deletion of records with previous data present" in {
+      withTempDirectory("incremental1") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        val path0 = new Path(tempDir, new Path("landing", "landing_file0.csv"))
+        val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+        val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+        fsUtils.writeFile(path0, "id,name\n0,Old\n")
+
+        val conf0 = getConfig(tempDir, useInfoDate = infoDate.minusDays(1))
+
+        val exitCode0 = AppRunner.runPipeline(conf0)
+        fsUtils.deleteFile(path1)
+
+        assert(exitCode0 == 0)
+
+        fsUtils.writeFile(path1, "id,name\n1,John\n2,Jack\n3,Jill\n")
+
+        val conf1 = getConfig(tempDir)
+
+        val exitCode1 = AppRunner.runPipeline(conf1)
+        assert(exitCode1 == 0)
+
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
+
+        fsUtils.deleteFile(path1)
+        fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+        val conf2 = getConfig(tempDir, isRerun = true)
+        val exitCode2 = AppRunner.runPipeline(conf2)
+        assert(exitCode2 == 0)
+
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
+
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
+
+        assert(batchIds.isEmpty)
+
+        // Expecting empty records
+        assert(dfTable1After.isEmpty)
+        assert(dfTable2After.isEmpty)
+      }
     }
 
     "fail to run for a historical date range" in {
@@ -170,13 +308,162 @@ class IncrementalPipelineSuite extends AnyWordSpec
   }
 
   "For inputs with information date the pipeline" should {
+    val csv1Str = s"id,name,info_date\n0,Old,${infoDate.minusDays(1)}\n1,John,$infoDate\n2,Jack,$infoDate\n3,Jill,$infoDate\n99,New,${infoDate.plusDays(1)}\n"
+    val csv2Str = s"id,name,info_date\n1,John,${infoDate.minusDays(1)}\n4,Mary,$infoDate\n5,Jane,$infoDate\n6,Kate,$infoDate\n999,New2,${infoDate.plusDays(1)}\n"
+
+    val expected1 =
+      """{"id":"1","name":"John"}
+        |{"id":"2","name":"Jack"}
+        |{"id":"3","name":"Jill"}
+        |""".stripMargin
+
+    val expected2 =
+      """{"id":"4","name":"Mary"}
+        |{"id":"5","name":"Jane"}
+        |{"id":"6","name":"Kate"}
+        |""".stripMargin
+
+    val expectedAll =
+      """{"id":"1","name":"John"}
+        |{"id":"2","name":"Jack"}
+        |{"id":"3","name":"Jill"}
+        |{"id":"4","name":"Mary"}
+        |{"id":"5","name":"Jane"}
+        |{"id":"6","name":"Kate"}
+        |""".stripMargin
+
     "work end to end as a normal run" in {
+      withTempDirectory("incremental1") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+        val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+        fsUtils.writeFile(path1, csv1Str)
+
+        val conf = getConfig(tempDir, hasInfoDate = true)
+
+        val exitCode1 = AppRunner.runPipeline(conf)
+        assert(exitCode1 == 0)
+
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
+
+        fsUtils.deleteFile(path1)
+        fsUtils.writeFile(path2, csv2Str)
+
+        val exitCode2 = AppRunner.runPipeline(conf)
+        assert(exitCode2 == 0)
+
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
+
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
+
+        assert(batchIds.length == 2)
+
+        val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2After = dfTable2After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1After, expectedAll)
+        compareText(actualTable2After, expectedAll)
+      }
     }
 
     "work with incremental ingestion and normal transformer" in {
+      withTempDirectory("incremental1") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+        val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+        fsUtils.writeFile(path1, csv1Str)
+
+        val conf = getConfig(tempDir, hasInfoDate = true, isTransformerIncremental = false)
+
+        val exitCode1 = AppRunner.runPipeline(conf)
+        assert(exitCode1 == 0)
+
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
+
+        fsUtils.deleteFile(path1)
+        fsUtils.writeFile(path2, csv2Str)
+
+        val exitCode2 = AppRunner.runPipeline(conf)
+        assert(exitCode2 == 0)
+
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
+
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
+
+        assert(batchIds.length == 2)
+
+        val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2After = dfTable2After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1After, expectedAll)
+        compareText(actualTable2After, expectedAll)
+      }
     }
 
     "work end to end as rerun" in {
+      withTempDirectory("incremental1") { tempDir =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+        val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+        val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+        fsUtils.writeFile(path1, csv1Str)
+
+        val conf = getConfig(tempDir, hasInfoDate = true)
+
+        val exitCode1 = AppRunner.runPipeline(conf)
+        assert(exitCode1 == 0)
+
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val table2Path = new Path(new Path(tempDir, "table2"), s"pramen_info_date=$infoDate")
+        val dfTable1Before = spark.read.parquet(table1Path.toString)
+        val dfTable2Before = spark.read.parquet(table2Path.toString)
+        val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        compareText(actualTable1Before, expected1)
+        compareText(actualTable2Before, expected1)
+
+        fsUtils.deleteFile(path1)
+        fsUtils.writeFile(path2, csv2Str)
+
+        val conf2 = getConfig(tempDir, isRerun = true, hasInfoDate = true)
+        val exitCode2 = AppRunner.runPipeline(conf2)
+        assert(exitCode2 == 0)
+
+        val dfTable1After = spark.read.parquet(table1Path.toString)
+        val dfTable2After = spark.read.parquet(table2Path.toString)
+
+        val batchIds = dfTable1After.select("pramen_batchid").distinct().collect()
+
+        assert(batchIds.length == 1)
+
+        val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+        val actualTable2After = dfTable2After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+        // Expecting original records
+        compareText(actualTable1After, expected2)
+        compareText(actualTable2After, expected2)
+      }
     }
 
     "work for historical runs" in {
@@ -193,7 +480,12 @@ class IncrementalPipelineSuite extends AnyWordSpec
     }
   }
 
-  def getConfig(basePath: String, isRerun: Boolean = false, useDataFrame: Boolean = false, isTransformerIncremental: Boolean = true): Config = {
+  def getConfig(basePath: String,
+                isRerun: Boolean = false,
+                useDataFrame: Boolean = false,
+                isTransformerIncremental: Boolean = true,
+                hasInfoDate: Boolean = false,
+                useInfoDate: LocalDate = infoDate): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/incremental_pipeline.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
     val transformerSchedule = if (isTransformerIncremental) "incremental" else "daily"
@@ -202,8 +494,10 @@ class IncrementalPipelineSuite extends AnyWordSpec
         s"""base.path = "$basePathEscaped"
            |use.dataframe = $useDataFrame
            |pramen.runtime.is.rerun = $isRerun
-           |pramen.current.date = "$infoDate"
+           |pramen.current.date = "$useInfoDate"
            |transformer.schedule = "$transformerSchedule"
+           |
+           |has.information.date.column = $hasInfoDate
            |
            |pramen.bookkeeping.jdbc {
            |  driver = "$driver"
@@ -219,4 +513,22 @@ class IncrementalPipelineSuite extends AnyWordSpec
     conf
   }
 
+  /* This method is used to inspect offsets after operations */
+  private def debugOffsets(): Unit = {
+    JdbcNativeUtils.withResultSet(new JdbcUrlSelectorImpl(jdbcConfig), "SELECT * FROM \"offsets\"", 1) { rs =>
+      val mt = rs.getMetaData
+
+      for (i <- 1 to mt.getColumnCount) {
+        print(mt.getColumnName(i) + "\t")
+      }
+      println("")
+
+      while (rs.next()) {
+        for (i <- 1 to mt.getColumnCount) {
+          print(rs.getString(i) + "\t")
+        }
+        println("")
+      }
+    }
+  }
 }

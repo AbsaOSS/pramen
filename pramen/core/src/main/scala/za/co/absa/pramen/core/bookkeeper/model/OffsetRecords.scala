@@ -24,9 +24,10 @@ class OffsetRecords(tag: Tag) extends Table[OffsetRecord](tag, "offsets") {
   def dataType = column[String]("data_type", O.Length(20))
   def minOffset = column[String]("min_offset", O.Length(64))
   def maxOffset = column[String]("max_offset", O.Length(64))
+  def batchId = column[Long]("batch_id")
   def createdAt = column[Long]("created_at")
   def committedAt = column[Option[Long]]("committed_at")
-  def * = (pramenTableName, infoDate, dataType, minOffset, maxOffset, createdAt, committedAt) <> (OffsetRecord.tupled, OffsetRecord.unapply)
+  def * = (pramenTableName, infoDate, dataType, minOffset, maxOffset, batchId, createdAt, committedAt) <> (OffsetRecord.tupled, OffsetRecord.unapply)
   def idx1 = index("offset_idx_1", (pramenTableName, infoDate, createdAt), unique = true)
 }
 

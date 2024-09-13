@@ -64,9 +64,15 @@ trait OffsetManager {
     * Commits changes to the table. If maxOffset is
     * - the same as minOffset the effect is similar to rollbackOffsets().
     * - greater than minOffset, a new entry is created.
-    * - less than minOffset - an exception will be thrown
+    * - less than minOffset - an exception will be thrown.
     */
   def commitOffsets(request: DataOffsetRequest, maxOffset: OffsetValue): Unit
+
+  /**
+    * Commits changes to the table as the result of a re-run. This replaces all batch ids
+    * and offsets for that day with new batch id.
+    */
+  def commitRerun(request: DataOffsetRequest, maxOffset: OffsetValue): Unit
 
   /**
     * Rolls back an offset request

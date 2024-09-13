@@ -69,7 +69,7 @@ class TransformationJob(operationDef: OperationDef,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
-    val saveResults = if (isIncremental)
+    val saveResults = if (isIncremental && runReason != TaskRunReason.Rerun)
       SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None, saveModeOverride = Some(SaveMode.Append)))
     else
       SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
