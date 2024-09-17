@@ -17,7 +17,10 @@
 package za.co.absa.pramen.api.offset
 
 import org.apache.spark.sql.Column
-import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{LongType, StringType => SparkStringType}
+
+import java.time.Instant
 
 sealed trait OffsetValue extends Comparable[OffsetValue] {
   def dataTypeString: String
@@ -25,22 +28,46 @@ sealed trait OffsetValue extends Comparable[OffsetValue] {
   def valueString: String
 
   def getSparkLit: Column
+
+  def getSparkCol(col: Column): Column
 }
 
 object OffsetValue {
-  val LONG_TYPE_STR = "long"
+  val DATETIME_TYPE_STR = "datetime"
+  val INTEGRAL_TYPE_STR = "integral"
   val STRING_TYPE_STR = "string"
 
-  case class LongType(value: Long) extends OffsetValue {
-    override val dataTypeString: String = LONG_TYPE_STR
+  val MINIMUM_TIMESTAMP_EPOCH_MILLI: Long = -62135596800000L
+
+  case class DateTimeType(t: Instant) extends OffsetValue {
+    override val dataTypeString: String = DATETIME_TYPE_STR
+
+    override def valueString: String = t.toEpochMilli.toString
+
+    override def getSparkLit: Column = lit(t.toEpochMilli)
+
+    override def getSparkCol(c: Column): Column = concat(unix_timestamp(c), date_format(c, "SSS")).cast(LongType)
+
+    override def compareTo(o: OffsetValue): Int = {
+      o match {
+        case DateTimeType(otherValue) => t.compareTo(otherValue)
+        case _ => throw new IllegalArgumentException(s"Cannot compare $dataTypeString with ${o.dataTypeString}")
+      }
+    }
+  }
+
+  case class IntegralType(value: Long) extends OffsetValue {
+    override val dataTypeString: String = INTEGRAL_TYPE_STR
 
     override def valueString: String = value.toString
 
     override def getSparkLit: Column = lit(value)
 
+    override def getSparkCol(c: Column): Column = c.cast(LongType)
+
     override def compareTo(o: OffsetValue): Int = {
       o match {
-        case LongType(otherValue) => value.compareTo(otherValue)
+        case IntegralType(otherValue) => value.compareTo(otherValue)
         case _ => throw new IllegalArgumentException(s"Cannot compare $dataTypeString with ${o.dataTypeString}")
       }
     }
@@ -53,6 +80,8 @@ object OffsetValue {
 
     override def getSparkLit: Column = lit(s)
 
+    override def getSparkCol(c: Column): Column = c.cast(SparkStringType)
+
     override def compareTo(o: OffsetValue): Int = {
       o match {
         case StringType(otherValue) => s.compareTo(otherValue)
@@ -63,14 +92,16 @@ object OffsetValue {
 
   def getMinimumForType(dataType: String): OffsetValue = {
     dataType match {
-      case LONG_TYPE_STR => LongType(Long.MinValue)
+      case DATETIME_TYPE_STR => DateTimeType(Instant.ofEpochMilli(MINIMUM_TIMESTAMP_EPOCH_MILLI)) // LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli
+      case INTEGRAL_TYPE_STR => IntegralType(Long.MinValue)
       case STRING_TYPE_STR => StringType("")
       case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
     }
   }
 
   def fromString(dataType: String, value: String): OffsetValue = dataType match {
-    case LONG_TYPE_STR => LongType(value.toLong)
+    case DATETIME_TYPE_STR => DateTimeType(Instant.ofEpochMilli(value.toLong))
+    case INTEGRAL_TYPE_STR => IntegralType(value.toLong)
     case STRING_TYPE_STR => StringType(value)
     case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
   }

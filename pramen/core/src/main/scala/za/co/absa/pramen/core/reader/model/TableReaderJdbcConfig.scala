@@ -101,7 +101,7 @@ object TableReaderJdbcConfig {
       infoDateFormat,
       hasOffsetColumn,
       ConfigUtils.getOptionString(conf, OFFSET_COLUMN_NAME_KEY).getOrElse(""),
-      ConfigUtils.getOptionString(conf, OFFSET_COLUMN_TYPE_KEY).getOrElse("long"),
+      ConfigUtils.getOptionString(conf, OFFSET_COLUMN_TYPE_KEY).getOrElse("integral"),
       limitRecords = ConfigUtils.getOptionInt(conf, JDBC_SYNC_LIMIT_RECORDS),
       saveTimestampsAsDates,
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),

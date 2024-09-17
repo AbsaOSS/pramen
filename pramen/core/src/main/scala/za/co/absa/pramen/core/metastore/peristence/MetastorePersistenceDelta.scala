@@ -35,6 +35,8 @@ import scala.util.Try
 class MetastorePersistenceDelta(query: Query,
                                 infoDateColumn: String,
                                 infoDateFormat: String,
+                                batchIdColumn: String,
+                                batchId: Long,
                                 recordsPerPartition: Option[Long],
                                 saveModeOpt: Option[SaveMode],
                                 readOptions: Map[String, String],
@@ -66,23 +68,22 @@ class MetastorePersistenceDelta(query: Query,
 
     val whereCondition = s"$infoDateColumn='$infoDateStr'"
 
-    val recordCount = numberOfRecordsEstimate match {
-      case Some(count) => count
-      case None => dfIn.count()
-    }
+    val dfRepartitioned = if (recordsPerPartition.nonEmpty) {
+      val recordCount = numberOfRecordsEstimate match {
+        case Some(count) => count
+        case None => dfIn.count()
+      }
 
-    val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
+      applyRepartitioning(dfIn, recordCount)
+    } else {
+      dfIn
+    }
 
     val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
 
-    val operationStr = saveMode match {
-      case SaveMode.Append => "Appending to"
-      case _               => "Writing to"
-    }
-
-    val isAppend = saveMode match {
-      case SaveMode.Append => true
-      case _               => false
+    val (isAppend, operationStr) = saveMode match {
+      case SaveMode.Append => (true, "Appending to")
+      case _               => (false, "Writing to")
     }
 
     if (log.isDebugEnabled) {
@@ -116,8 +117,22 @@ class MetastorePersistenceDelta(query: Query,
     val stats = getStats(infoDate, isAppend)
 
     stats.dataSizeBytes match {
-      case Some(size) => log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(size)}) to ${query.query}")
-      case None => log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records to ${query.query}")
+      case Some(size) =>
+        stats.recordCountAppended match {
+          case Some(recordsAppended) =>
+            log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount}, " +
+              s"new size: ${StringUtils.prettySize(size)}) to ${query.query}")
+          case None =>
+            log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records " +
+              s"(${StringUtils.prettySize(size)}) to ${query.query}")
+        }
+      case None =>
+        stats.recordCountAppended match {
+          case Some(recordsAppended) =>
+            log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount} to ${query.query}")
+          case None =>
+            log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records  to ${query.query}")
+        }
     }
 
     stats
@@ -125,7 +140,6 @@ class MetastorePersistenceDelta(query: Query,
 
   override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
     val df = loadTable(Option(infoDate), Option(infoDate))
-    val recordCount = df.count()
 
     val sizeOpt = query match {
       case Query.Path(path)   =>
@@ -142,7 +156,16 @@ class MetastorePersistenceDelta(query: Query,
         None
     }
 
-    MetaTableStats(recordCount, None, sizeOpt)
+    if (onlyForCurrentBatchId && df.schema.exists(_.name.equalsIgnoreCase(batchIdColumn))) {
+      val batchCount = df.filter(col(batchIdColumn) === batchId).count()
+      val countAll = df.count()
+
+      MetaTableStats(countAll, Option(batchCount), sizeOpt)
+    } else {
+      val countAll = df.count()
+
+      MetaTableStats(countAll, None, sizeOpt)
+    }
   }
 
   override def createOrUpdateHiveTable(infoDate: LocalDate,
