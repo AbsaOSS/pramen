@@ -22,6 +22,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.sql.SqlColumnType
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderSpark
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig._
@@ -33,6 +34,7 @@ class SparkSource(val format: Option[String],
                   val schema: Option[String],
                   val hasInfoDateCol: Boolean,
                   val infoDateColumn: String,
+                  val infoDateType: SqlColumnType,
                   val infoDateFormat: String,
                   val hasOffsetColumn: Boolean,
                   val offsetColumn: String,
@@ -74,13 +76,13 @@ class SparkSource(val format: Option[String],
     val tableReader = query match {
       case Query.Table(table) =>
         log.info(s"Using TableReaderSpark to read table: $table")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, offsetInfoOpt, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateType, infoDateFormat, offsetInfoOpt, options)
       case Query.Sql(sql)     =>
         log.info(s"Using TableReaderSpark to read SQL for: $sql")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, offsetInfoOpt, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateType, infoDateFormat, offsetInfoOpt, options)
       case Query.Path(path)   =>
         log.info(s"Using TableReaderSpark to read '$format' from: $path")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, offsetInfoOpt, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateType, infoDateFormat, offsetInfoOpt, options)
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
 
@@ -134,10 +136,12 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
     val schema = ConfigUtils.getOptionString(conf, SCHEMA)
 
     val hasInfoDate = conf.hasPath(HAS_INFO_DATE) && conf.getBoolean(HAS_INFO_DATE)
-    val (infoDateColumn, infoDateFormat) = if (hasInfoDate) {
-      (conf.getString(INFORMATION_DATE_COLUMN), getInfoDateFormat(conf))
+    val (infoDateColumn, infoDateType, infoDateFormat) = if (hasInfoDate) {
+      val infoDateTypeStr = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date")
+      val infoDateType = SqlColumnType.fromString(infoDateTypeStr).getOrElse(throw new IllegalArgumentException(s"Unknown info date type: $infoDateTypeStr"))
+      (conf.getString(INFORMATION_DATE_COLUMN), infoDateType, getInfoDateFormat(conf))
     } else {
-      ("", "")
+      ("", SqlColumnType.DATE, "")
     }
 
     val hasOffsetColumn = ConfigUtils.getOptionBoolean(conf, OFFSET_COLUMN_ENABLED_KEY).getOrElse(false)
@@ -150,6 +154,6 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
 
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, hasOffsetColumn, offsetColumn, offsetDataType, conf, options)(spark)
+    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateType, infoDateFormat, hasOffsetColumn, offsetColumn, offsetDataType, conf, options)(spark)
   }
 }

@@ -25,7 +25,7 @@ val scala213 = "2.13.13"
 
 ThisBuild / organization := "za.co.absa.pramen"
 
-ThisBuild / scalaVersion := scala211
+ThisBuild / scalaVersion := scala212
 ThisBuild / crossScalaVersions := Seq(scala211, scala212, scala213)
 
 ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation")

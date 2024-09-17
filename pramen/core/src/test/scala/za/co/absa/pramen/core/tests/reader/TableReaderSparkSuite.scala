@@ -21,6 +21,7 @@ import org.apache.spark.sql.AnalysisException
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.{DateType, IntegerType, StringType}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.sql.SqlColumnType
 import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
@@ -327,7 +328,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
 
     val query = Query.Path(pathBase.toString)
 
-    (new TableReaderSpark(formatOpt, schemaOpt, hasInfoDate, "info_date", offsetInfoOpt = None, options = effectiveOptions), query)
+    (new TableReaderSpark(formatOpt, schemaOpt, hasInfoDate, "info_date", SqlColumnType.DATE, offsetInfoOpt = None, options = effectiveOptions), query)
   }
 
 }

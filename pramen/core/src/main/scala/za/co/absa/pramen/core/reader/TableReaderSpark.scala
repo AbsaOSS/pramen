@@ -18,11 +18,14 @@ package za.co.absa.pramen.core.reader
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, lit}
+import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.sql.SqlColumnType
 import za.co.absa.pramen.api.{Query, TableReader}
 
+import java.sql.Date
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -30,6 +33,7 @@ class TableReaderSpark(formatOpt: Option[String],
                        schemaOpt: Option[String],
                        hasInfoDateColumn: Boolean,
                        infoDateColumn: String,
+                       infoDateDataType: SqlColumnType,
                        infoDateFormat: String = "yyyy-MM-dd",
                        offsetInfoOpt: Option[OffsetInfo],
                        options: Map[String, String] = Map.empty[String, String]
@@ -68,15 +72,16 @@ class TableReaderSpark(formatOpt: Option[String],
 
   override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = {
     val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
+    val offsetCol = offsetInfo.minimalOffset.getSparkCol(col(offsetInfo.offsetColumn))
     infoDateOpt match {
       case Some(infoDate) if hasInfoDateColumn =>
         log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} > ${minOffset.valueString}")
         getData(query, infoDate, infoDate, columns)
-          .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
+          .filter(offsetCol > minOffset.getSparkLit)
       case _ =>
         log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${minOffset.valueString}")
         getBaseDataFrame(query)
-          .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit)
+          .filter(offsetCol > minOffset.getSparkLit)
     }
   }
 
@@ -87,9 +92,10 @@ class TableReaderSpark(formatOpt: Option[String],
         log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate'")
         getData(query, infoDate, infoDate, columns)
       case _ =>
+        val offsetCol = offsetInfo.minimalOffset.getSparkCol(col(offsetInfo.offsetColumn))
         log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${minOffset.valueString} AND ${offsetInfo.offsetColumn} <= ${maxOffset.valueString}")
         getBaseDataFrame(query)
-          .filter(col(offsetInfo.offsetColumn) > minOffset.getSparkLit && col(offsetInfo.offsetColumn) <= maxOffset.getSparkLit)
+          .filter(offsetCol > minOffset.getSparkLit && offsetCol <= maxOffset.getSparkLit)
     }
   }
 
@@ -128,15 +134,26 @@ class TableReaderSpark(formatOpt: Option[String],
   }
 
   private[core] def getFilteredDataFrame(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
-    val infoDateBeginStr = dateFormatter.format(infoDateBegin)
-    val infoDateEndStr = dateFormatter.format(infoDateEnd)
+    infoDateDataType match {
+      case SqlColumnType.DATETIME =>
+        if (infoDateBegin.equals(infoDateEnd)) {
+          getBaseDataFrame(query)
+            .filter(col(infoDateColumn).cast(DateType) === lit(Date.valueOf(infoDateBegin)))
+        } else {
+          getBaseDataFrame(query)
+            .filter(col(infoDateColumn).cast(DateType) >= lit(Date.valueOf(infoDateBegin)) && col(infoDateColumn).cast(DateType) <= lit(Date.valueOf(infoDateEnd)))
+        }
+      case _ =>
+        val infoDateBeginStr = dateFormatter.format(infoDateBegin)
+        val infoDateEndStr = dateFormatter.format(infoDateEnd)
 
-    if (infoDateBegin.equals(infoDateEnd)) {
-      getBaseDataFrame(query)
-        .filter(col(s"$infoDateColumn") === lit(infoDateBeginStr))
-    } else {
-      getBaseDataFrame(query)
-        .filter(col(s"$infoDateColumn") >= lit(infoDateBeginStr) && col(s"$infoDateColumn") <= lit(infoDateEndStr))
+        if (infoDateBegin.equals(infoDateEnd)) {
+          getBaseDataFrame(query)
+            .filter(col(infoDateColumn) === lit(infoDateBeginStr))
+        } else {
+          getBaseDataFrame(query)
+            .filter(col(infoDateColumn) >= lit(infoDateBeginStr) && col(infoDateColumn) <= lit(infoDateEndStr))
+        }
     }
   }
 

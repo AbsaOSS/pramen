@@ -43,19 +43,13 @@ class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated], has
         val infoDate = evaluateRunDate(runDate, infoDateExpression)
         log.info(s"Normal run strategy: runDate=$runDate, infoDate=$infoDate")
 
-        val runInfoDays = lastOffsets match {
-          case Some(offset) =>
-            if (offset.maximumInfoDate.isAfter(infoDate)) {
-              Seq.empty
-            } else {
-              Seq(infoDate)
-                .map(d => TaskPreDef(d, TaskRunReason.New))
-            }
-          case None =>
-            if (hasInfoDateColumn)
-              Seq(TaskPreDef(infoDate.minusDays(1), TaskRunReason.New), TaskPreDef(infoDate, TaskRunReason.New))
-            else
-              Seq(TaskPreDef(infoDate, TaskRunReason.New))
+        val runInfoDays = if (hasInfoDateColumn)
+          Seq(TaskPreDef(infoDate.minusDays(1), TaskRunReason.New), TaskPreDef(infoDate, TaskRunReason.New))
+        else {
+          lastOffsets match {
+            case Some(offset) if offset.maximumInfoDate.isAfter(infoDate) => Seq.empty
+            case _ => Seq(TaskPreDef(infoDate, TaskRunReason.New))
+          }
         }
 
         log.info(s"Days to run:  ${runInfoDays.map(_.infoDate).mkString(", ")}")
