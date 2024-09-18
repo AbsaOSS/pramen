@@ -23,8 +23,8 @@ addDependencyTreePlugin
 
 // sbt-jacoco - workaround related dependencies required to download
 val ow2Version = "9.5"
-val jacocoVersion = "0.8.10-absa.1"
-val sbtJacocoVersion = "3.4.1-absa.3"
+val jacocoVersion = "0.8.11-absa.1"
+val sbtJacocoVersion = "3.4.1-absa.4"
 val scalaArmVersion = "2.0"
 
 def jacocoUrl(artifactName: String): String = s"https://github.com/AbsaOSS/jacoco/releases/download/$jacocoVersion/org.jacoco.$artifactName-$jacocoVersion.jar"
