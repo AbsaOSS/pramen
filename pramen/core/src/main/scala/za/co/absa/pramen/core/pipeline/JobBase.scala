@@ -150,8 +150,6 @@ abstract class JobBase(operationDef: OperationDef,
             true
           case Some(chunk) =>
             false
-          case Some(chunk) =>
-            false
         }
       }
   }
