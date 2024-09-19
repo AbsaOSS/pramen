@@ -44,7 +44,7 @@ jobs:
           cache: sbt
       - name: Build and run unit tests
         working-directory: ./pramen
-        run: sbt ++${{matrix.scala}} test -DSPARK_VERSION=${{matrix.spark}}
+        run: sbt ++${{matrix.scala}} unit:test -DSPARK_VERSION=${{matrix.spark}}
       - name: Run integration tests
         working-directory: ./pramen
         run: sbt ++${{matrix.scala}} integration:test -DSPARK_VERSION=${{matrix.spark}}
