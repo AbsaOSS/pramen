@@ -691,7 +691,6 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
       val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
-      println(csv1WithInfoDateStr)
       fsUtils.writeFile(path1, csv1WithInfoDateStr)
 
       val conf = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema)

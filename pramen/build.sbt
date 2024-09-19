@@ -20,8 +20,8 @@ import BuildInfoTemplateSettings._
 import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
-val scala212 = "2.12.19"
-val scala213 = "2.13.13"
+val scala212 = "2.12.20"
+val scala213 = "2.13.14"
 
 ThisBuild / organization := "za.co.absa.pramen"
 
@@ -88,6 +88,10 @@ lazy val pramen = (project in file("."))
 
 lazy val api = (project in file("api"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
+  .configs( UnitTest )
+  .configs( IntegrationTest )
+  .settings( inConfig(UnitTest)(Defaults.testTasks) : _*)
+  .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-api",
     printSparkVersion := {
@@ -97,6 +101,9 @@ lazy val api = (project in file("api"))
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
     libraryDependencies ++= ApiDependencies(scalaVersion.value) :+ getScalaDependency(scalaVersion.value),
+    (Test / testOptions) := Seq(Tests.Filter(allFilter)),
+    (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
+    (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     releasePublishArtifactsAction := PgpKeys.publishSigned.value
   )
   .enablePlugins(AutomateHeaderPlugin)
@@ -132,6 +139,10 @@ lazy val core = (project in file("core"))
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val extras = (project in file("extras"))
+  .configs( UnitTest )
+  .configs( IntegrationTest )
+  .settings( inConfig(UnitTest)(Defaults.testTasks) : _*)
+  .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-extras",
     printSparkVersion := {
@@ -145,6 +156,9 @@ lazy val extras = (project in file("extras"))
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
+    (Test / testOptions) := Seq(Tests.Filter(allFilter)),
+    (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
+    (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
@@ -279,6 +293,6 @@ lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assem
 )
 
 addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bump.Bugfix; release with-defaults")
+addCommandAlias("t", "unit:test")
 addCommandAlias("utest", "unit:test")
 addCommandAlias("itTest", "integration:test")
-addCommandAlias("xcoverage", "clean;coverage;test;coverageReport")

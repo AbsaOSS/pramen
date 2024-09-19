@@ -115,6 +115,24 @@ In addition to basic error notification, typical operational warnings are genera
 
 Pramen is built using SBT.
 
+**Note** By default `sbt test` runs unit tests and integration tests. In order to run just unit tests, please use
+`sbt t` alias.
+
+- `sbt +t` - runs unit tests only, for all Scala versions
+- `sbt test` - runs all tests (unit and integration)
+- `sbt unit:test` - runs unit tests only
+- `sbt integration:test` - runs integration tests only
+
+Install locally for `sbt` projects:
+```
+sbt +publishLocal
+```
+
+Install locally for `Maven` projects:
+```
+sbt +publishM2
+```
+
 ## Project structure
 Pramen consists of a few components:
 - `pramen-api` - contains traits (interfaces) for defining custom transformations, sources and sinks. 
@@ -188,8 +206,8 @@ dependencies in an uber jar that you can build for your Scala version. You can d
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
 sbt ++2.11.12 assembly 
-sbt ++2.12.18 assembly
-sbt ++2.13.12 assembly
+sbt ++2.12.20 assembly
+sbt ++2.13.14 assembly
 ```
 
 You can collect the uber jar of Pramen either at
@@ -201,8 +219,8 @@ Spark distributions. This makes the runner independent of Spark version. But if 
 in your bundle, use one of example commands specifying your Spark version:
 ```sh
 sbt -DSPARK_VERSION="2.4.8" -Dassembly.features="includeDelta" ++2.11.12 assembly 
-sbt -DSPARK_VERSION="3.3.3" -Dassembly.features="includeDelta" ++2.12.18 assembly
-sbt -DSPARK_VERSION="3.4.1" -Dassembly.features="includeDelta" ++2.13.12 assembly
+sbt -DSPARK_VERSION="3.3.4" -Dassembly.features="includeDelta" ++2.12.20 assembly
+sbt -DSPARK_VERSION="3.5.2" -Dassembly.features="includeDelta" ++2.13.14 assembly
 ```
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
