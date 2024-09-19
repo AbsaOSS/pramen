@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.reader
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
+import za.co.absa.pramen.api.offset.OffsetInfo
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig}
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.SqlGeneratorLoader
@@ -44,18 +45,13 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   private[core] def getSqlConfig: SqlConfig = {
-    val dateFieldType = SqlColumnType.fromString(jdbcReaderConfig.infoDateType)
-    dateFieldType match {
-      case Some(infoDateType) =>
-        SqlConfig(jdbcReaderConfig.infoDateColumn,
-          infoDateType,
-          jdbcReaderConfig.infoDateFormat,
-          jdbcReaderConfig.identifierQuotingPolicy,
-          jdbcReaderConfig.sqlGeneratorClass,
-          ConfigUtils.getExtraConfig(conf, "sql"))
-      case None => throw new IllegalArgumentException(s"Unknown info date type specified (${jdbcReaderConfig.infoDateType}). " +
-        s"It should be one of: date, string, number")
-    }
+    SqlConfig(jdbcReaderConfig.infoDateColumn,
+      jdbcReaderConfig.infoDateType,
+      jdbcReaderConfig.infoDateFormat,
+      jdbcReaderConfig.offsetInfoOpt,
+      jdbcReaderConfig.identifierQuotingPolicy,
+      jdbcReaderConfig.sqlGeneratorClass,
+      ConfigUtils.getExtraConfig(conf, "sql"))
   }
 
   protected def logConfiguration(): Unit = {

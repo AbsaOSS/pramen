@@ -23,6 +23,8 @@ import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.core.reader.model.{JdbcConfig, OffsetInfoParser, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, JdbcSparkUtils, StringUtils, TimeUtils}
 
 import java.time.{Instant, LocalDate}

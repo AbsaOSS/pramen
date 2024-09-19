@@ -21,7 +21,7 @@ import org.mockito.Mockito.{mock, when => whenMock}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.api.sql.QuotingPolicy
+import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.SqlGeneratorDummy
@@ -61,6 +61,11 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |  information.date.column = "INFO_DATE"
          |  information.date.type = "number"
          |  information.date.format = "yyyy-MM-DD"
+         |
+         |  offset.column {
+         |    name = "ts"
+         |    type = "datetime"
+         |  }
          |
          |  identifier.quoting.policy = "never"
          |}
@@ -104,8 +109,11 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == "number")
+      assert(jdbc.infoDateType == SqlColumnType.NUMBER)
       assert(jdbc.infoDateFormat == "yyyy-MM-DD")
+      assert(jdbc.offsetInfoOpt.nonEmpty)
+      assert(jdbc.offsetInfoOpt.get.offsetColumn == "ts")
+      assert(jdbc.offsetInfoOpt.get.minimalOffset.dataTypeString == "datetime")
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Never)
       assert(jdbc.sqlGeneratorClass.isEmpty)
       assert(!jdbc.hasInfoDate)
@@ -123,7 +131,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateType == SqlColumnType.DATE)
       assert(jdbc.infoDateFormat == "YYYY-MM-dd")
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Auto)
       assert(jdbc.sqlGeneratorClass.contains("za.co.absa.pramen.core.mocks.SqlGeneratorDummy"))
@@ -142,8 +150,9 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateType == SqlColumnType.DATE)
       assert(jdbc.infoDateFormat == "yyyy-MM-dd")
+      assert(jdbc.offsetInfoOpt.isEmpty)
       assert(jdbc.hasInfoDate)
       assert(!jdbc.saveTimestampsAsDates)
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Auto)
@@ -213,7 +222,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
       assert(jdbc.hasInfoDate)
       assert(jdbc.infoDateColumn == "sync_date")
-      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateType == SqlColumnType.DATE)
     }
 
     "getWithRetry" should {
@@ -456,10 +465,8 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("not_exist"))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
-
         assertThrows[IllegalArgumentException] {
-          reader.getSqlConfig
+          TableReaderJdbc(testConfig, "reader")
         }
       }
     }

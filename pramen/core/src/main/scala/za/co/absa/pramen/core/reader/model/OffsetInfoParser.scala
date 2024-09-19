@@ -14,17 +14,21 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.api.sql
+package za.co.absa.pramen.core.reader.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.offset.OffsetInfo
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.core.utils.ConfigUtils
 
-case class SqlConfig(
-                      infoDateColumn: String,
-                      infoDateType: SqlColumnType,
-                      dateFormatApp: String,
-                      offsetInfo: Option[OffsetInfo],
-                      identifierQuotingPolicy: QuotingPolicy,
-                      sqlGeneratorClass: Option[String],
-                      extraConfig: Config
-                    )
+object OffsetInfoParser {
+  val OFFSET_COLUMN_NAME_KEY = "offset.column.name"
+  val OFFSET_COLUMN_TYPE_KEY = "offset.column.type"
+
+  def fromConfig(conf: Config): Option[OffsetInfo] = {
+    for {
+      columnName <- ConfigUtils.getOptionString(conf, OFFSET_COLUMN_NAME_KEY)
+      columnType <- ConfigUtils.getOptionString(conf, OFFSET_COLUMN_TYPE_KEY)
+    } yield OffsetInfo(columnName, OffsetValue.getMinimumForType(columnType))
+  }
+
+}

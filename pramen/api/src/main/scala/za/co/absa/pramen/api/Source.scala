@@ -45,11 +45,11 @@ trait Source extends ExternalChannel {
   def hasInfoDateColumn(query: Query): Boolean = true
 
   /**
-    * If non-empty, the source + query is configured for incremental ingestion, returns minimum value with type
+    * If non-empty, the source is configured for incremental ingestion, returns minimum value with type
     *
-    * If empty, the source + query can't be used for incremental ingestion.
+    * If empty, the source can't be used for incremental ingestion.
     */
-  def getOffsetInfo(query: Query): Option[OffsetInfo] = None
+  def getOffsetInfo: Option[OffsetInfo] = None
 
   /**
     * Validates if the source is okay and the ingestion can proceed.
