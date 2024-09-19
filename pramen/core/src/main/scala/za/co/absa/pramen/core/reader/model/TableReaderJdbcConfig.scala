@@ -18,18 +18,17 @@ package za.co.absa.pramen.core.reader.model
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.sql.QuotingPolicy
+import za.co.absa.pramen.api.offset.OffsetInfo
+import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class TableReaderJdbcConfig(
                                   jdbcConfig: JdbcConfig,
                                   hasInfoDate: Boolean,
                                   infoDateColumn: String,
-                                  infoDateType: String,
+                                  infoDateType: SqlColumnType,
                                   infoDateFormat: String = "yyyy-MM-dd",
-                                  hasOffsetColumn: Boolean,
-                                  offsetColumn: String,
-                                  offsetColumnType: String,
+                                  offsetInfoOpt: Option[OffsetInfo],
                                   limitRecords: Option[Int] = None,
                                   saveTimestampsAsDates: Boolean = false,
                                   correctDecimalsInSchema: Boolean = false,
@@ -48,10 +47,6 @@ object TableReaderJdbcConfig {
   val INFORMATION_DATE_TYPE = "information.date.type"
   val INFORMATION_DATE_FORMAT = "information.date.format"
   val INFORMATION_DATE_APP_FORMAT = "information.date.app.format"
-
-  val OFFSET_COLUMN_ENABLED_KEY = "offset.column.enabled"
-  val OFFSET_COLUMN_NAME_KEY = "offset.column.name"
-  val OFFSET_COLUMN_TYPE_KEY = "offset.column.type"
 
   val JDBC_SYNC_LIMIT_RECORDS = "limit.records"
   val JDBC_TIMESTAMPS_AS_DATES = "save.timestamps.as.dates"
@@ -73,13 +68,9 @@ object TableReaderJdbcConfig {
         INFORMATION_DATE_COLUMN :: INFORMATION_DATE_TYPE :: Nil)
     }
 
-    val hasOffsetColumn = ConfigUtils.getOptionBoolean(conf, OFFSET_COLUMN_ENABLED_KEY).getOrElse(false)
+    val infoDateTypeStr = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date")
 
-    if (hasOffsetColumn) {
-      ConfigUtils.validatePathsExistence(conf,
-        parent,
-        OFFSET_COLUMN_NAME_KEY :: OFFSET_COLUMN_TYPE_KEY :: Nil)
-    }
+    val infoDateType = SqlColumnType.fromStringStrict(infoDateTypeStr, parent)
 
     val saveTimestampsAsDates = ConfigUtils.getOptionBoolean(conf, JDBC_TIMESTAMPS_AS_DATES).getOrElse(false)
 
@@ -89,6 +80,8 @@ object TableReaderJdbcConfig {
 
     val infoDateFormat = getInfoDateFormat(conf)
 
+    val offsetInfoOpt = OffsetInfoParser.fromConfig(conf)
+
     val identifierQuotingPolicy = ConfigUtils.getOptionString(conf, IDENTIFIER_QUOTING_POLICY)
       .map(s => QuotingPolicy.fromString(s))
       .getOrElse(QuotingPolicy.Auto)
@@ -97,11 +90,9 @@ object TableReaderJdbcConfig {
       jdbcConfig = JdbcConfig.load(conf, parent),
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
       infoDateColumn = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN).getOrElse(""),
-      infoDateType = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date"),
+      infoDateType = infoDateType,
       infoDateFormat,
-      hasOffsetColumn,
-      ConfigUtils.getOptionString(conf, OFFSET_COLUMN_NAME_KEY).getOrElse(""),
-      ConfigUtils.getOptionString(conf, OFFSET_COLUMN_TYPE_KEY).getOrElse("integral"),
+      offsetInfoOpt,
       limitRecords = ConfigUtils.getOptionInt(conf, JDBC_SYNC_LIMIT_RECORDS),
       saveTimestampsAsDates,
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),

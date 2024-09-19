@@ -20,9 +20,9 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.api.offset.OffsetValue
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
+import za.co.absa.pramen.core.reader.model.{OffsetInfoParser, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter

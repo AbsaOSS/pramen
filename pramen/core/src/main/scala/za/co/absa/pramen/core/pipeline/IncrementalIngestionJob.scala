@@ -74,7 +74,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
   private def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, infoDate: LocalDate, uncommittedOffsets: Array[DataOffset]): Unit = {
     val minOffset = uncommittedOffsets.map(_.minOffset).min
 
-    val offsetInfo = source.getOffsetInfo(sourceTable.query).getOrElse(throw new IllegalArgumentException(s"Offset column not defined for the ingestion job '${operationDef.name}', " +
+    val offsetInfo = source.getOffsetInfo.getOrElse(throw new IllegalArgumentException(s"Offset column not defined for the ingestion job '${operationDef.name}', " +
       s"query: '${sourceTable.query.query}''"))
 
     val df = try {
@@ -126,7 +126,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
-    if (source.getOffsetInfo(sourceTable.query).nonEmpty) {
+    if (source.getOffsetInfo.nonEmpty) {
       Reason.Ready
     } else {
       Reason.NotReady(s"Offset column is not configured for source '$sourceName' of '${operationDef.name}'")
@@ -169,7 +169,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     val om = bookkeeper.getOffsetManager
 
-    val offsetInfo = source.getOffsetInfo(sourceTable.query).getOrElse(
+    val offsetInfo = source.getOffsetInfo.getOrElse(
       throw new IllegalArgumentException(s"Offset type is not configured for the source '$sourceName' outputting to '${outputTable.name}''")
     )
 
