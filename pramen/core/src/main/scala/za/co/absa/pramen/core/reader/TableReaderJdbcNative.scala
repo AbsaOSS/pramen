@@ -65,9 +65,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
-
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = ???
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): DataFrame = ???
 
   private[core] def getSqlExpression(query: Query): String = {
     query match {

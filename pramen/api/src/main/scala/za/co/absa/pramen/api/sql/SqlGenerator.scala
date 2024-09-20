@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.api.sql
 
+import za.co.absa.pramen.api.offset.OffsetValue
+
 import java.sql.Connection
 import java.time.LocalDate
 
@@ -35,6 +37,11 @@ trait SqlGenerator {
     * Generates a query that returns the record count of a table for the given period when the table does have the information date field.
     */
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String
+
+  /**
+    * Generates a query that returns the record count of a table for the given period when the table does have the information date field.
+    */
+  def getCountQuery(tableName: String, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue]): String = ""
 
   /**
     * Generates a query that returns the record count of an SQL query that is already formed.
