@@ -16,6 +16,9 @@
 
 package za.co.absa.pramen.api.sql
 
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+
+import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -54,6 +57,8 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
+  def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String
+
   override def getAliasExpression(expression: String, alias: String): String = {
     s"$expression AS ${escape(alias)}"
   }
@@ -73,6 +78,48 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
       quote(identifier)
     } else {
       identifier
+    }
+  }
+
+  override def getDataQueryIncremental(tableName: String,
+                                       onlyForInfoDate: Option[LocalDate],
+                                       offsetFromOpt: Option[OffsetValue],
+                                       offsetToOpt: Option[OffsetValue],
+                                       columns: Seq[String], limit:
+                                       Option[Int]): String = {
+    if (sqlConfig.offsetInfo.isEmpty)
+      throw new IllegalArgumentException(s"Offset information is not configured for database table: $tableName.")
+
+    val dataQuery = onlyForInfoDate match {
+      case Some(infoDate) => getDataQuery(tableName, infoDate, infoDate, columns, limit)
+      case None => getDataQuery(tableName, columns, limit)
+    }
+
+    val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)
+
+    if (offsetWhere.nonEmpty) {
+      s"$dataQuery AND $offsetWhere"
+    } else {
+      dataQuery
+    }
+  }
+
+  def getOffsetWhereClause(offsetInfo: OffsetInfo, offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue]): String = {
+    val offsetColumn = escape(offsetInfo.offsetColumn)
+
+    (offsetFromOpt, offsetToOpt) match {
+      case (Some(offsetFrom), Some(offsetTo)) =>
+        validateOffsetValue(offsetFrom)
+        validateOffsetValue(offsetTo)
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+      case (Some(offsetFrom), None) =>
+        validateOffsetValue(offsetFrom)
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
+      case (None, Some(offsetTo)) =>
+        validateOffsetValue(offsetTo)
+        s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+      case (None, None) =>
+        ""
     }
   }
 
@@ -172,6 +219,16 @@ object SqlGeneratorBase {
       case QuotingPolicy.Always => true
       case QuotingPolicy.Never => false
       case QuotingPolicy.Auto => !identifier.forall(normalCharacters.contains(_))
+    }
+  }
+
+  final def validateOffsetValue(offset: OffsetValue): Unit = {
+    offset match {
+      case OffsetValue.StringType(s) =>
+        if (s.contains('\''))
+          throw new IllegalArgumentException(s"Offset value '$s' contains a single quote character, which is not supported.")
+      case _ =>
+      // Any value is okay
     }
   }
 }

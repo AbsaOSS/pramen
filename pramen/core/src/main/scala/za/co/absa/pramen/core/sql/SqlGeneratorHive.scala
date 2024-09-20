@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.sql
 
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.HiveDialect
 
@@ -104,6 +105,17 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
+    }
+  }
+
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+    offset match {
+      case OffsetValue.DateTimeType(ts) =>
+        s"$column $condition from_unixtime(${ts.toEpochMilli} / 1000)"
+      case OffsetValue.IntegralType(value) =>
+        s"$column $condition $value"
+      case OffsetValue.StringType(value) =>
+        s"$column $condition '$value'"
     }
   }
 

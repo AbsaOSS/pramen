@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.core.sql
 
-import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdentifier}
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdentifier, validateOffsetValue}
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.MutableStack
 
@@ -127,6 +128,59 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
+  override def getDataQueryIncremental(tableName: String,
+                                       onlyForInfoDate: Option[LocalDate],
+                                       offsetFromOpt: Option[OffsetValue],
+                                       offsetToOpt: Option[OffsetValue],
+                                       columns: Seq[String], limit:
+                                       Option[Int]): String = {
+    if (sqlConfig.offsetInfo.isEmpty)
+      throw new IllegalArgumentException(s"Offset information is not configured for database table: $tableName.")
+
+    val dataQuery = onlyForInfoDate match {
+      case Some(infoDate) => getDataQuery(tableName, infoDate, infoDate, columns, limit)
+      case None => getDataQuery(tableName, columns, limit)
+    }
+
+    val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)
+
+    if (offsetWhere.nonEmpty) {
+      s"$dataQuery AND $offsetWhere"
+    } else {
+      dataQuery
+    }
+  }
+
+  private[core] def getOffsetWhereClause(offsetInfo: OffsetInfo, offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue]): String = {
+    val offsetColumn = escape(offsetInfo.offsetColumn)
+
+    (offsetFromOpt, offsetToOpt) match {
+      case (Some(offsetFrom), Some(offsetTo)) =>
+        validateOffsetValue(offsetFrom)
+        validateOffsetValue(offsetTo)
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+      case (Some(offsetFrom), None) =>
+        validateOffsetValue(offsetFrom)
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
+      case (None, Some(offsetTo)) =>
+        validateOffsetValue(offsetTo)
+        s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+      case (None, None) =>
+        ""
+    }
+  }
+
+  private[core] def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+    offset match {
+      case OffsetValue.DateTimeType(ts) =>
+        s"$column $condition DATEADD(MILLISECOND, ${ts.toEpochMilli}, '1970-01-01')"
+      case OffsetValue.IntegralType(value) =>
+        s"$column $condition $value"
+      case OffsetValue.StringType(value) =>
+        s"$column $condition '$value'"
+    }
+  }
+
   private def getLimit(limit: Option[Int]): String = {
     limit.map(n => s"TOP $n ").getOrElse("")
   }
@@ -232,4 +286,5 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
 
     output.toSeq
   }
+
 }

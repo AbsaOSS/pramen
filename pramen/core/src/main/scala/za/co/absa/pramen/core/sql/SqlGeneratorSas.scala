@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.sql
 
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.SasDialect
 
@@ -162,5 +163,16 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
 
   private def getLimit(limit: Option[Int], hasWhere: Boolean): String = {
     limit.map(n => s" LIMIT $n").getOrElse("")
+  }
+
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+    offset match {
+      case OffsetValue.DateTimeType(ts) =>
+        throw new UnsupportedOperationException("Timestamp offset queries is not supported for SAS.")
+      case OffsetValue.IntegralType(value) =>
+        s"$column $condition $value"
+      case OffsetValue.StringType(value) =>
+        s"$column $condition '$value'"
+    }
   }
 }

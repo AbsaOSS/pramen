@@ -39,11 +39,6 @@ trait SqlGenerator {
   def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String
 
   /**
-    * Generates a query that returns the record count of a table for the given period when the table does have the information date field.
-    */
-  def getCountQuery(tableName: String, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue]): String = ""
-
-  /**
     * Generates a query that returns the record count of an SQL query that is already formed.
     */
   def getCountQueryForSql(filteredSql: String): String
@@ -57,6 +52,16 @@ trait SqlGenerator {
     * Generates a query that returns the data of a table for the given period when the table does have the information date field.
     */
   def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String
+
+  /**
+    * Generates a query for incremental ingestion, the result can be restricted by an information column, if present, but also by offset range.
+    */
+  def getDataQueryIncremental(tableName: String,
+                              onlyForInfoDate: Option[LocalDate],
+                              offsetFrom: Option[OffsetValue],
+                              offsetTo: Option[OffsetValue],
+                              columns: Seq[String], limit:
+                              Option[Int]): String
 
   /**
     * Returns WHERE condition for table that has the information date field given the time period.
