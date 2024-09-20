@@ -140,9 +140,7 @@ class RawFileSource(val sourceConfig: Config,
     }
   }
 
-  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
-
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = ???
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
 }
 
 object RawFileSource extends ExternalChannelFactory[RawFileSource] {

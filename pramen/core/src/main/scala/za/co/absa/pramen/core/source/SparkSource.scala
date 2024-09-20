@@ -89,20 +89,10 @@ class SparkSource(val format: Option[String],
     tableReader
   }
 
-  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = {
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
     val reader = getReader(query)
 
-    val df = reader.getIncrementalData(query, minOffset, infoDate, columns)
-
-    val filesRead = getFilesRead(query, df)
-
-    SourceResult(df, filesRead)
-  }
-
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDate: Option[LocalDate], columns: Seq[String]): SourceResult = {
-    val reader = getReader(query)
-
-    val df = reader.getIncrementalDataRange(query, minOffset, maxOffset, infoDate, columns)
+    val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
 
     val filesRead = getFilesRead(query, df)
 

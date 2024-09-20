@@ -70,32 +70,47 @@ class TableReaderSpark(formatOpt: Option[String],
     }
   }
 
-  override def getIncrementalData(query: Query, minOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = {
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): DataFrame = {
     val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
     val offsetCol = offsetInfo.minimalOffset.getSparkCol(col(offsetInfo.offsetColumn))
-    infoDateOpt match {
-      case Some(infoDate) if hasInfoDateColumn =>
-        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} > ${minOffset.valueString}")
-        getData(query, infoDate, infoDate, columns)
-          .filter(offsetCol > minOffset.getSparkLit)
-      case _ =>
-        log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${minOffset.valueString}")
-        getBaseDataFrame(query)
-          .filter(offsetCol > minOffset.getSparkLit)
-    }
-  }
 
-  override def getIncrementalDataRange(query: Query, minOffset: OffsetValue, maxOffset: OffsetValue, infoDateOpt: Option[LocalDate], columns: Seq[String]): DataFrame = {
-    val offsetInfo = offsetInfoOpt.getOrElse(throw new IllegalArgumentException(s"Offset column and type is not defined for ${query.query}."))
-    infoDateOpt match {
+    onlyForInfoDate match {
       case Some(infoDate) if hasInfoDateColumn =>
-        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate'")
-        getData(query, infoDate, infoDate, columns)
+        (offsetFromOpt, offsetToOpt) match {
+          case (Some(offsetFrom), Some(offsetTo)) =>
+            log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} > ${offsetFrom.valueString} AND ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
+            getData(query, infoDate, infoDate, columns)
+              .filter(offsetCol > offsetFrom.getSparkLit && offsetCol <= offsetTo.getSparkLit)
+          case (Some(offsetFrom), None) =>
+            log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} > ${offsetFrom.valueString}")
+            getData(query, infoDate, infoDate, columns)
+              .filter(offsetCol > offsetFrom.getSparkLit)
+          case (None, Some(offsetTo)) =>
+            log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
+            getData(query, infoDate, infoDate, columns)
+              .filter(offsetCol <= offsetTo.getSparkLit)
+          case (None, None) =>
+            log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate'")
+            getData(query, infoDate, infoDate, columns)
+        }
       case _ =>
-        val offsetCol = offsetInfo.minimalOffset.getSparkCol(col(offsetInfo.offsetColumn))
-        log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${minOffset.valueString} AND ${offsetInfo.offsetColumn} <= ${maxOffset.valueString}")
-        getBaseDataFrame(query)
-          .filter(offsetCol > minOffset.getSparkLit && offsetCol <= maxOffset.getSparkLit)
+        (offsetFromOpt, offsetToOpt) match {
+          case (Some(offsetFrom), Some(offsetTo)) =>
+            log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${offsetFrom.valueString} AND ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
+            getBaseDataFrame(query)
+              .filter(offsetCol > offsetFrom.getSparkLit && offsetCol <= offsetTo.getSparkLit)
+          case (Some(offsetFrom), None) =>
+            log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${offsetFrom.valueString}")
+            getBaseDataFrame(query)
+              .filter(offsetCol > offsetFrom.getSparkLit)
+          case (None, Some(offsetTo)) =>
+            log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
+            getBaseDataFrame(query)
+              .filter(offsetCol <= offsetTo.getSparkLit)
+          case (None, None) =>
+            log.info(s"Reading * FROM ${query.query}")
+            getBaseDataFrame(query)
+        }
     }
   }
 
