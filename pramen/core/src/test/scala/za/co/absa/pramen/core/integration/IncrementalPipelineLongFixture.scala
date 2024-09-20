@@ -170,6 +170,70 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
     succeed
   }
 
+  def testOffsetOnlyRunningOutOfOrderOffsets(metastoreFormat: String): Assertion = {
+    withTempDirectory("incremental1") { tempDir =>
+      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+      val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+      val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+      fsUtils.writeFile(path1, "id,name\n1,John\n2,Jack\n3,Jill\n")
+
+      val conf = getConfig(tempDir, metastoreFormat)
+
+      val exitCode1 = AppRunner.runPipeline(conf)
+      assert(exitCode1 == 0)
+
+      val table1Path = new Path(tempDir, "table1")
+      val table2Path = new Path(tempDir, "table2")
+      val dfTable1Before = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2Before = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      compareText(actualTable1Before, expectedOffsetOnly1)
+      compareText(actualTable2Before, expectedOffsetOnly1)
+
+      fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+      val conf2 = getConfig(tempDir, metastoreFormat, useInfoDate = infoDate.minusDays(1))
+      val exitCode2 = AppRunner.runPipeline(conf2)
+      assert(exitCode2 == 0)
+
+      val dfTable1After0 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(2)))
+      val dfTable2After0 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(2)))
+      val dfTable1After1 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(1)))
+      val dfTable2After1 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(1)))
+      val dfTable1After2 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2After2 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1After2 = dfTable1After2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2After2 = dfTable2After2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      val batchIds = dfTable1After1.select(BATCH_ID_COLUMN).distinct().collect()
+
+      assert(batchIds.isEmpty)
+
+      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val offsets0 = om.getOffsets("table1", infoDate.minusDays(2))
+      val offsets1 = om.getOffsets("table1", infoDate.minusDays(1))
+      val offsets2 = om.getOffsets("table1", infoDate)
+
+      assert(offsets0.isEmpty)
+      assert(offsets1.isEmpty)
+      assert(offsets2.nonEmpty)
+
+      assert(offsets2.head.maxOffset.get.valueString == "3")
+
+      // Expecting empty records
+      assert(dfTable1After0.isEmpty)
+      assert(dfTable2After0.isEmpty)
+      assert(dfTable1After1.isEmpty)
+      assert(dfTable2After1.isEmpty)
+      compareText(actualTable1After2, expectedOffsetOnly1)
+      compareText(actualTable2After2, expectedOffsetOnly1)
+    }
+    succeed
+  }
+
   def testOffsetOnlyIncrementalIngestionNormalTransformer(metastoreFormat: String): Assertion = {
     withTempDirectory("incremental1") { tempDir =>
       val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
@@ -301,6 +365,55 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       // Expecting empty records
       assert(dfTable1After.isEmpty)
       assert(dfTable2After.isEmpty)
+    }
+    succeed
+  }
+
+  def testOffsetOnlySkipRerunWithoutOffsets(metastoreFormat: String): Assertion = {
+    withTempDirectory("incremental1") { tempDir =>
+      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+      val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+      val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+      fsUtils.writeFile(path1, "id,name\n1,John\n2,Jack\n3,Jill\n")
+
+      val conf = getConfig(tempDir, metastoreFormat)
+
+      val exitCode1 = AppRunner.runPipeline(conf)
+      assert(exitCode1 == 0)
+
+      val table1Path = new Path(tempDir, "table1")
+      val table2Path = new Path(tempDir, "table2")
+      val dfTable1Before = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2Before = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      compareText(actualTable1Before, expectedOffsetOnly1)
+      compareText(actualTable2Before, expectedOffsetOnly1)
+
+      fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+      val conf2 = getConfig(tempDir, metastoreFormat, isRerun = true, useInfoDate = infoDate.minusDays(1))
+      val exitCode2 = AppRunner.runPipeline(conf2)
+      assert(exitCode2 == 0)
+
+      val dfTable1After1 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(1)))
+      val dfTable2After1 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(1)))
+      val dfTable1After2 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2After2 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1After2 = dfTable1After2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2After2 = dfTable2After2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      val batchIds = dfTable1After1.select(BATCH_ID_COLUMN).distinct().collect()
+
+      assert(batchIds.isEmpty)
+
+      // Expecting empty records
+      assert(dfTable1After1.isEmpty)
+      assert(dfTable2After1.isEmpty)
+      compareText(actualTable1After2, expectedOffsetOnly1)
+      compareText(actualTable2After2, expectedOffsetOnly1)
     }
     succeed
   }

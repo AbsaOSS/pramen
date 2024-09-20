@@ -24,6 +24,10 @@ class IncrementalPipelineParquetLongSuite extends IncrementalPipelineLongFixture
       testOffsetOnlyNormalRun(format)
     }
 
+    "work for offsets out of order" in {
+      testOffsetOnlyRunningOutOfOrderOffsets(format)
+    }
+
     "work with incremental ingestion and normal transformer" in {
       testOffsetOnlyIncrementalIngestionNormalTransformer(format)
     }
@@ -38,6 +42,10 @@ class IncrementalPipelineParquetLongSuite extends IncrementalPipelineLongFixture
 
     "work end to end as rerun with deletion of records with previous data present" in {
       testOffsetOnlyRerunWithRecordsDeletionAndPreviousDataPresent(format)
+    }
+
+    "skip when rerunning for a day which does not have offsets" in {
+      testOffsetOnlySkipRerunWithoutOffsets(format)
     }
 
     "run for a historical date range with force update" in {

@@ -19,8 +19,9 @@ package za.co.absa.pramen.core.runner.splitter
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.bookkeeper.model.DataOffsetAggregated
+import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.pipeline.TaskPreDef
-import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
+import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.{log, _}
 import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.LocalDate
@@ -52,12 +53,19 @@ class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated], has
           }
         }
 
-        log.info(s"Days to run:  ${runInfoDays.map(_.infoDate).mkString(", ")}")
+        if (runInfoDays.nonEmpty) {
+          log.info(s"Days to run:  ${runInfoDays.map(_.infoDate).mkString(", ")}")
+        } else {
+          log.info(s"Days to run: no days have been selected to run by the scheduler.")
+        }
 
         runInfoDays.toList
       case ScheduleParams.Rerun(runDate) =>
         log.info(s"Rerun strategy for a single day: $runDate")
-        getRerun(outputTable, runDate, schedule, infoDateExpression, bookkeeper)
+        val infoDate = evaluateRunDate(runDate, infoDateExpression)
+
+        log.info(s"Rerunning '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
+        List(pipeline.TaskPreDef(infoDate, TaskRunReason.Rerun))
       case ScheduleParams.Historical(dateFrom, dateTo, inverseDateOrder, mode) =>
         log.info(s"Ranged strategy: from $dateFrom to $dateTo, mode = '${mode.toString}', minimumDate = $minimumDate")
         getHistorical(outputTable, dateFrom, dateTo, schedule, mode, infoDateExpression, minimumDate, inverseDateOrder, bookkeeper)
