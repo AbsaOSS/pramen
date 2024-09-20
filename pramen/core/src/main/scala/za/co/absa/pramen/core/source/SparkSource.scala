@@ -89,7 +89,7 @@ class SparkSource(val format: Option[String],
     tableReader
   }
 
-  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
     val reader = getReader(query)
 
     val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)

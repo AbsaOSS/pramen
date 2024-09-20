@@ -36,8 +36,6 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
                      )(implicit spark: SparkSession) extends TableReaderJdbcBase(jdbcReaderConfig, jdbcUrlSelector, conf) {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val infoDateFormatter = DateTimeFormatter.ofPattern(jdbcReaderConfig.infoDateFormat)
-
   logConfiguration()
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
@@ -68,7 +66,14 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): DataFrame = ???
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): DataFrame = {
+    query match {
+      case Query.Table(tableName) =>
+        getDataForTableIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
+      case other =>
+        throw new IllegalArgumentException(s"'${other.name}' incremental ingestion is not supported by the JDBC reader. Use 'table' instead.")
+    }
+  }
 
   private[core] def getJdbcConfig: TableReaderJdbcConfig = jdbcReaderConfig
 
@@ -139,6 +144,24 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     } else {
       sqlGen.getDataQuery(tableName, columns, jdbcReaderConfig.limitRecords)
     }
+
+    val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries, Option(tableName))(df => {
+      // Make sure connection to the server is made without fetching the data
+      log.debug(df.schema.treeString)
+      df
+    })
+
+    df
+  }
+
+  private[core] def getDataForTableIncremental(tableName: String,
+                                               onlyForInfoDate: Option[LocalDate],
+                                               offsetFrom: Option[OffsetValue],
+                                               offsetTo: Option[OffsetValue],
+                                               columns: Seq[String]): DataFrame = {
+    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns, jdbcReaderConfig.limitRecords)
+
+    log.info(s"JDBC Query: $sql")
 
     val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries, Option(tableName))(df => {
       // Make sure connection to the server is made without fetching the data

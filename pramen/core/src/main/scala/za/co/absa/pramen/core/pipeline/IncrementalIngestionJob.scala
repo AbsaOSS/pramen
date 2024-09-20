@@ -119,7 +119,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       } else {
         latestOffset match {
           case Some(maxOffset) =>
-            source.getIncrementalData(sourceTable.query, Option(infoDate), Option(maxOffset.maximumOffset), None, columns)
+            source.getDataIncremental(sourceTable.query, Option(infoDate), Option(maxOffset.maximumOffset), None, columns)
           case None =>
             source.getData(sourceTable.query, infoDate, infoDate, columns)
         }
@@ -130,14 +130,14 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
         om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
           case Some(offsets) =>
-            source.getIncrementalData(sourceTable.query, Option(infoDate), Option(offsets.minimumOffset), Option(offsets.maximumOffset), columns)
+            source.getDataIncremental(sourceTable.query, None, Option(offsets.minimumOffset), Option(offsets.maximumOffset), columns)
           case None =>
             throw new IllegalStateException(s"No offsets for '${outputTable.name}' for '$infoDate'. Cannot rerun.")
         }
       } else {
         latestOffset match {
           case Some(maxOffset) =>
-            source.getIncrementalData(sourceTable.query, Option(infoDate), Option(maxOffset.maximumOffset), None, columns)
+            source.getDataIncremental(sourceTable.query, None, Option(maxOffset.maximumOffset), None, columns)
           case None =>
             source.getData(sourceTable.query, infoDate, infoDate, columns)
         }

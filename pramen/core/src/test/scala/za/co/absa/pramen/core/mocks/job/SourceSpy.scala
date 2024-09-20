@@ -58,7 +58,7 @@ class SourceSpy(sourceConfig: Config = ConfigFactory.empty(),
     SourceResult(df)
   }
 
-  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
 }
 
 object SourceSpy extends ExternalChannelFactory[SourceSpy] {

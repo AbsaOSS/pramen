@@ -148,7 +148,6 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       compareText(actualTable1Before, expectedOffsetOnly1)
       compareText(actualTable2Before, expectedOffsetOnly1)
 
-      fsUtils.deleteFile(path1)
       fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
 
       val exitCode2 = AppRunner.runPipeline(conf)
