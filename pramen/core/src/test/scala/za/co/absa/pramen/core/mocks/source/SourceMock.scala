@@ -75,7 +75,7 @@ class SourceMock(
     SourceResult(df, Nil, Nil)
   }
 
-  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
 }
 
 object SourceMock extends ExternalChannelFactory[SourceMock] {

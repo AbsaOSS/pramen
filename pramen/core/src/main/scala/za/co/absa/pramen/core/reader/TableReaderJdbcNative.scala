@@ -65,7 +65,14 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): DataFrame = ???
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): DataFrame = {
+    query match {
+      case Query.Table(tableName) =>
+        getDataForTableIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
+      case other =>
+        throw new IllegalArgumentException(s"'${other.name}' incremental ingestion is not supported by the JDBC Native reader. Use 'table' instead.")
+    }
+  }
 
   private[core] def getSqlExpression(query: Query): String = {
     query match {
@@ -101,6 +108,31 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
             df.schema
         }
         df = spark.createDataFrame(df.rdd, schemaWithColumnDescriptions)
+      }
+    }
+
+    df
+  }
+
+  private[core] def getDataForTableIncremental(tableName: String,
+                                               onlyForInfoDate: Option[LocalDate],
+                                               offsetFrom: Option[OffsetValue],
+                                               offsetTo: Option[OffsetValue],
+                                               columns: Seq[String]): DataFrame = {
+    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns, jdbcReaderConfig.limitRecords)
+    log.info(s"JDBC Query: $sql")
+
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+
+    if (log.isDebugEnabled) {
+      log.debug(df.schema.treeString)
+    }
+
+    if (jdbcReaderConfig.enableSchemaMetadata) {
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, _) =>
+        log.info(s"Reading JDBC metadata descriptions the table: $tableName")
+        df = spark.createDataFrame(df.rdd,
+          JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, sqlGen.unquote(tableName), connection))
       }
     }
 

@@ -77,7 +77,7 @@ trait Source extends ExternalChannel {
     * @param onlyForInfoDate An information date to get data for. Can be empty if the source table doesn't have such a column.
     * @param columns         Select only specified columns. Selects all if an empty Seq is passed.
     */
-  def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult
+  def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult
 
   /**
     * This method is called after the ingestion is finished. You can query the output table form the output information
