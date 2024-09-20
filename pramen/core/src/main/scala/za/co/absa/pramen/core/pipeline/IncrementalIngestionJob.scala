@@ -71,63 +71,28 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     }
   }
 
-  private def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, infoDate: LocalDate, uncommittedOffsets: Array[DataOffset]): Unit = {
-    val minOffset = uncommittedOffsets.map(_.minOffset).min
-
-    val offsetInfo = source.getOffsetInfo.getOrElse(throw new IllegalArgumentException(s"Offset column not defined for the ingestion job '${operationDef.name}', " +
-      s"query: '${sourceTable.query.query}''"))
-
-    val df = try {
-      mt.getTable(outputTable.name, Option(infoDate), Option(infoDate))
-    } catch {
-      case ex: AnalysisException =>
-        rollbackOffsets(infoDate, om, uncommittedOffsets)
-        return
-    }
-
-    if (df.isEmpty) {
-      rollbackOffsets(infoDate, om, uncommittedOffsets)
-      return
-    }
-
-    if (!df.schema.fields.exists(_.name.equalsIgnoreCase(offsetInfo.offsetColumn))) {
-      throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' not found in the output table '${outputTable.name}'. Cannot update uncommitted offsets.")
-    }
-
-    val newMaxOffset = if (df.isEmpty) {
-      minOffset
-    } else {
-      getMaximumOffsetFromDf(df, offsetInfo)
-    }
-
-    log.warn(s"Fixing uncommitted offsets. New offset to commit for ${outputTable.name} at $infoDate: " +
-      s"min offset: ${minOffset.valueString}, max offset: ${newMaxOffset.valueString}.")
-
-    val req = om.startWriteOffsets(outputTable.name, infoDate, minOffset)
-    om.commitOffsets(req, newMaxOffset)
-
-    uncommittedOffsets.foreach { of =>
-      log.warn(s"Cleaning uncommitted offset: $of...")
-      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.minOffset, of.createdAt))
-    }
-
-    latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
-  }
-
-  private[core] def rollbackOffsets(infoDate: LocalDate, om: OffsetManager, uncommittedOffsets: Array[DataOffset]): Unit = {
-    log.warn(s"No data found for ${outputTable.name}. Rolling back uncommitted offsets...")
-
-    uncommittedOffsets.foreach { of =>
-      log.warn(s"Cleaning uncommitted offset: $of...")
-      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.minOffset, of.createdAt))
-    }
-
-    latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
-  }
-
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     if (source.getOffsetInfo.nonEmpty) {
-      Reason.Ready
+      if (runReason == TaskRunReason.Rerun) {
+        val om = bookkeeper.getOffsetManager
+
+        om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
+          case Some(a) =>
+            log.info(s"Rerunning ingestion to '${outputTable.name}' at '$infoDate' for ${a.minimumOffset.dataTypeString} < offset <=  ${a.maximumOffset.dataTypeString}.")
+            Reason.Ready
+          case None =>
+            log.info(s"Offsets not found for '${outputTable.name}' at '$infoDate'.")
+            Reason.SkipOnce("No offsets registered")
+        }
+      } else {
+        latestOffset match {
+          case Some(offset) if offset.maximumInfoDate.isAfter(infoDate) =>
+            log.warn(s"Cannot run '${outputTable.name}' for '$infoDate' since offsets exists for ${offset.maximumInfoDate}.")
+            Reason.Skip("Incremental ingestion cannot be retrospective")
+          case _ =>
+            Reason.Ready
+        }
+      }
     } else {
       Reason.NotReady(s"Offset column is not configured for source '$sourceName' of '${operationDef.name}'")
     }
@@ -142,7 +107,18 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     val sourceResult = latestOffset match {
       case None =>
-        source.getData(sourceTable.query, infoDate, infoDate, columns)
+        if (runReason == TaskRunReason.Rerun) {
+          val om = bookkeeper.getOffsetManager
+
+          om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
+            case Some(offsets) =>
+              source.getIncrementalDataRange(sourceTable.query, offsets.minimumOffset, offsets.maximumOffset, Some(infoDate), columns)
+            case None =>
+              throw new IllegalStateException(s"No offsets for '${outputTable.name}' for '$infoDate'. Cannot rerun.")
+          }
+        } else {
+          source.getData(sourceTable.query, infoDate, infoDate, columns)
+        }
       case Some(maxOffset) =>
         if (runReason == TaskRunReason.Rerun)
           source.getIncrementalDataRange(sourceTable.query, maxOffset.minimumOffset, maxOffset.maximumOffset, Some(infoDate), columns)
@@ -228,6 +204,60 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, sourceTable.warnMaxExecutionTimeSeconds)
 
     SaveResult(stats, warnings = tooLongWarnings)
+  }
+
+  private[core] def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, infoDate: LocalDate, uncommittedOffsets: Array[DataOffset]): Unit = {
+    val minOffset = uncommittedOffsets.map(_.minOffset).min
+
+    val offsetInfo = source.getOffsetInfo.getOrElse(throw new IllegalArgumentException(s"Offset column not defined for the ingestion job '${operationDef.name}', " +
+      s"query: '${sourceTable.query.query}''"))
+
+    val df = try {
+      mt.getTable(outputTable.name, Option(infoDate), Option(infoDate))
+    } catch {
+      case ex: AnalysisException =>
+        rollbackOffsets(infoDate, om, uncommittedOffsets)
+        return
+    }
+
+    if (df.isEmpty) {
+      rollbackOffsets(infoDate, om, uncommittedOffsets)
+      return
+    }
+
+    if (!df.schema.fields.exists(_.name.equalsIgnoreCase(offsetInfo.offsetColumn))) {
+      throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' not found in the output table '${outputTable.name}'. Cannot update uncommitted offsets.")
+    }
+
+    val newMaxOffset = if (df.isEmpty) {
+      minOffset
+    } else {
+      getMaximumOffsetFromDf(df, offsetInfo)
+    }
+
+    log.warn(s"Fixing uncommitted offsets. New offset to commit for ${outputTable.name} at $infoDate: " +
+      s"min offset: ${minOffset.valueString}, max offset: ${newMaxOffset.valueString}.")
+
+    val req = om.startWriteOffsets(outputTable.name, infoDate, minOffset)
+    om.commitOffsets(req, newMaxOffset)
+
+    uncommittedOffsets.foreach { of =>
+      log.warn(s"Cleaning uncommitted offset: $of...")
+      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.minOffset, of.createdAt))
+    }
+
+    latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
+  }
+
+  private[core] def rollbackOffsets(infoDate: LocalDate, om: OffsetManager, uncommittedOffsets: Array[DataOffset]): Unit = {
+    log.warn(s"No data found for ${outputTable.name}. Rolling back uncommitted offsets...")
+
+    uncommittedOffsets.foreach { of =>
+      log.warn(s"Cleaning uncommitted offset: $of...")
+      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.minOffset, of.createdAt))
+    }
+
+    latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
   }
 
   private[core] def getMaximumOffsetFromDf(df: DataFrame, offsetInfo: OffsetInfo): OffsetValue = {
