@@ -145,7 +145,11 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
     val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)
 
     if (offsetWhere.nonEmpty) {
-      s"$dataQuery AND $offsetWhere"
+      if (onlyForInfoDate.isEmpty) {
+        s"$dataQuery WHERE $offsetWhere"
+      } else {
+        s"$dataQuery AND $offsetWhere"
+      }
     } else {
       dataQuery
     }
