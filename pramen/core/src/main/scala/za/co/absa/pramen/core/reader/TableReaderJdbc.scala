@@ -159,7 +159,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
                                                offsetFrom: Option[OffsetValue],
                                                offsetTo: Option[OffsetValue],
                                                columns: Seq[String]): DataFrame = {
-    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns, jdbcReaderConfig.limitRecords)
+    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
 
     log.info(s"JDBC Query: $sql")
 
@@ -248,8 +248,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 }
 
 object TableReaderJdbc {
-  def apply(conf: Config, parent: String)(implicit spark: SparkSession): TableReaderJdbc = {
-    val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, parent)
+  def apply(conf: Config, workflowConf: Config, parent: String)(implicit spark: SparkSession): TableReaderJdbc = {
+    val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, workflowConf, parent)
 
     val urlSelector = JdbcUrlSelector(jdbcTableReaderConfig.jdbcConfig)
 

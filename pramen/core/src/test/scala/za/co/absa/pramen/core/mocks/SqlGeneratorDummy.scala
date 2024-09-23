@@ -36,7 +36,7 @@ class SqlGeneratorDummy(sqlConfig: SqlConfig) extends SqlGenerator {
 
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = null
 
-  override def getDataQueryIncremental(tableName: String, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String], limit: Option[Int]): String = null
+  override def getDataQueryIncremental(tableName: String, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): String = null
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = null
 

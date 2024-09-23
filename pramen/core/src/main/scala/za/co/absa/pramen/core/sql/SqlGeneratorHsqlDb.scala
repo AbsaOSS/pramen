@@ -19,9 +19,8 @@ package za.co.absa.pramen.core.sql
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.TimeZone
+import java.time.{LocalDate, LocalDateTime}
 
 class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
@@ -98,10 +97,9 @@ class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
   override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
       case OffsetValue.DateTimeType(ts) =>
-        // UNIX_MILLIS() in HSQLDB always produces the epoch milli as if the timestamp is in UTC timezone
-        // But the actual timestamp is in Africa/Johannesburg timezone, so the time set ends up 2 hours bigger then expected.
-        val timeZoneOffsetHours = TimeZone.getDefault.getRawOffset
-        s"UNIX_MILLIS($column)-$timeZoneOffsetHours $condition ${ts.toEpochMilli}"
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        s"$column $condition TIMESTAMP '$tsLiteral'"
       case OffsetValue.IntegralType(value) =>
         s"$column $condition $value"
       case OffsetValue.StringType(value) =>

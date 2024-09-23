@@ -119,7 +119,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
                                                offsetFrom: Option[OffsetValue],
                                                offsetTo: Option[OffsetValue],
                                                columns: Seq[String]): DataFrame = {
-    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns, jdbcReaderConfig.limitRecords)
+    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
     log.info(s"JDBC Query: $sql")
 
     var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
@@ -144,9 +144,10 @@ object TableReaderJdbcNative {
   val FETCH_SIZE_KEY = "option.fetchsize"
 
   def apply(conf: Config,
+            workflowConf: Config,
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
-    val tableReaderJdbcOrig = TableReaderJdbcConfig.load(conf, parent)
+    val tableReaderJdbcOrig = TableReaderJdbcConfig.load(conf, workflowConf, parent)
     val jdbcConfig = getJdbcConfig(tableReaderJdbcOrig, conf)
     val tableReaderJdbc = tableReaderJdbcOrig.copy(jdbcConfig = jdbcConfig)
     val urlSelector = JdbcUrlSelector(tableReaderJdbc.jdbcConfig)

@@ -620,6 +620,10 @@ is determined by the pipeline configuration.
     # Specifies the maximum number of records to fetch. Good for testing purposes.
     #limit.records = 100
 
+    # Specify the timezone of the database server, if it is different from the default timezone.
+    # It is needed for incremental ingestion based on offset field that has a timestamp or datetime data type.
+    #server.timezone = "Africa/Johannesburg"
+
     # Optionally, you can specify a class for a custom SQL generator for your RDMS engine.
     # The class whould extend 'za.co.absa.pramen.api.sql.SqlGenerator'
     #sql.generator.class = "com.example.MySqlGenerator"

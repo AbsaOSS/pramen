@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.tests.sql
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
 
@@ -26,7 +27,7 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
 
   import za.co.absa.pramen.core.sql.SqlGeneratorLoader._
 
-  private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D")
+  private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", offsetInfo = Some(OffsetInfo("offset", OffsetValue.IntegralType(-1))))
   private val sqlConfigEscape = DummySqlConfigFactory.getDummyConfig(infoDateColumn = "Info date", identifierQuotingPolicy = QuotingPolicy.Always)
   private val sqlConfigDateTime = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATETIME, infoDateColumn = "D")
   private val sqlConfigString = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, infoDateColumn = "D")
@@ -196,6 +197,71 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
       val actual = genDate.unquote("System User.\"Table Name\"")
 
       assert(actual == "System User.Table Name")
+    }
+  }
+
+  "getDataQueryIncremental" should {
+    "info date is absent" when {
+      "work without offsets" in {
+        val sql = genDate.getDataQueryIncremental("table1", None, None, None, Seq.empty)
+
+        assert(sql == "SELECT * FROM table1")
+      }
+
+      "work with only from offset" in {
+        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), None, Seq.empty)
+
+        assert(sql == "SELECT * FROM table1 WHERE offset > 1")
+      }
+
+      "work with only to offset" in {
+        val sql = genDate.getDataQueryIncremental("table1", None, None, Some(OffsetValue.IntegralType(1)), Seq.empty)
+
+        assert(sql == "SELECT * FROM table1 WHERE offset <= 1")
+      }
+
+      "work with from and to offsets" in {
+        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), Seq.empty)
+
+        assert(sql == "SELECT * FROM table1 WHERE offset > 1 AND offset <= 2")
+      }
+
+      "work with from and to offsets, column projection" in {
+        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), columns)
+
+        assert(sql == "SELECT A, D, \"Column with spaces\" FROM table1 WHERE offset > 1 AND offset <= 2")
+      }
+    }
+    "info date is present" when {
+      "work without offsets" in {
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), None, None, Seq.empty)
+
+        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17'")
+      }
+
+      "work with only from offset" in {
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), None, Seq.empty)
+
+        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset > 1")
+      }
+
+      "work with only to offset" in {
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), None, Some(OffsetValue.IntegralType(1)), Seq.empty)
+
+        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset <= 1")
+      }
+
+      "work with from and to offsets" in {
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), Seq.empty)
+
+        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset > 1 AND offset <= 2")
+      }
+
+      "work with from and to offsets, column projection" in {
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), columns)
+
+        assert(sql == "SELECT A, D, \"Column with spaces\" FROM table1 WHERE D = date'2020-08-17' AND offset > 1 AND offset <= 2")
+      }
     }
   }
 }

@@ -21,12 +21,13 @@ import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdenti
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.MutableStack
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
 
 class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
+  private val timestampMsDbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
   private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
 
   // 23 is "yyyy-MM-dd", see https://www.mssqltips.com/sqlservertip/1145/date-and-time-conversions-using-sql-server/
@@ -132,14 +133,13 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
                                        onlyForInfoDate: Option[LocalDate],
                                        offsetFromOpt: Option[OffsetValue],
                                        offsetToOpt: Option[OffsetValue],
-                                       columns: Seq[String], limit:
-                                       Option[Int]): String = {
+                                       columns: Seq[String]): String = {
     if (sqlConfig.offsetInfo.isEmpty)
       throw new IllegalArgumentException(s"Offset information is not configured for database table: $tableName.")
 
     val dataQuery = onlyForInfoDate match {
-      case Some(infoDate) => getDataQuery(tableName, infoDate, infoDate, columns, limit)
-      case None => getDataQuery(tableName, columns, limit)
+      case Some(infoDate) => getDataQuery(tableName, infoDate, infoDate, columns, None)
+      case None => getDataQuery(tableName, columns, None)
     }
 
     val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)
@@ -173,7 +173,9 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
   private[core] def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
       case OffsetValue.DateTimeType(ts) =>
-        s"$column $condition DATEADD(MILLISECOND, ${ts.toEpochMilli}, '1970-01-01')"
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampMsDbFormatter.format(ldt)
+        s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralType(value) =>
         s"$column $condition $value"
       case OffsetValue.StringType(value) =>

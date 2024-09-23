@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.sql
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
 
 class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
@@ -97,7 +97,9 @@ class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
   override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
       case OffsetValue.DateTimeType(ts) =>
-        s"$column $condition TIMESTAMP('1970-01-01', '00:00:00') + (${ts.toEpochMilli} / 1000) SECONDS"
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        s"$column $condition TIMESTAMP('$tsLiteral')"
       case OffsetValue.IntegralType(value) =>
         s"$column $condition $value"
       case OffsetValue.StringType(value) =>
