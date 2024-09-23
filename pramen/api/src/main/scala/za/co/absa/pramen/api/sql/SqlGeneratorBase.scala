@@ -19,6 +19,7 @@ package za.co.absa.pramen.api.sql
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -28,6 +29,8 @@ import scala.collection.mutable.ListBuffer
   */
 abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
   import SqlGeneratorBase._
+
+  protected val timestampGenericDbFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
   /**
     * This returns characters used for escaping into a mode that allows special characters in identifiers.
@@ -85,14 +88,13 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
                                        onlyForInfoDate: Option[LocalDate],
                                        offsetFromOpt: Option[OffsetValue],
                                        offsetToOpt: Option[OffsetValue],
-                                       columns: Seq[String], limit:
-                                       Option[Int]): String = {
+                                       columns: Seq[String]): String = {
     if (sqlConfig.offsetInfo.isEmpty)
       throw new IllegalArgumentException(s"Offset information is not configured for database table: $tableName.")
 
     val dataQuery = onlyForInfoDate match {
-      case Some(infoDate) => getDataQuery(tableName, infoDate, infoDate, columns, limit)
-      case None => getDataQuery(tableName, columns, limit)
+      case Some(infoDate) => getDataQuery(tableName, infoDate, infoDate, columns, None)
+      case None => getDataQuery(tableName, columns, None)
     }
 
     val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)

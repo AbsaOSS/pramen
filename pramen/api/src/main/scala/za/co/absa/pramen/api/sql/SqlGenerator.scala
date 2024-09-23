@@ -60,8 +60,7 @@ trait SqlGenerator {
                               onlyForInfoDate: Option[LocalDate],
                               offsetFrom: Option[OffsetValue],
                               offsetTo: Option[OffsetValue],
-                              columns: Seq[String], limit:
-                              Option[Int]): String
+                              columns: Seq[String]): String
 
   /**
     * Returns WHERE condition for table that has the information date field given the time period.

@@ -19,11 +19,14 @@ package za.co.absa.pramen.api.sql
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.offset.OffsetInfo
 
+import java.time.ZoneId
+
 case class SqlConfig(
                       infoDateColumn: String,
                       infoDateType: SqlColumnType,
                       dateFormatApp: String,
                       offsetInfo: Option[OffsetInfo],
+                      serverTimeZone: ZoneId,
                       identifierQuotingPolicy: QuotingPolicy,
                       sqlGeneratorClass: Option[String],
                       extraConfig: Config

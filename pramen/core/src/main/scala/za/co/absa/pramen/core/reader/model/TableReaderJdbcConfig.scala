@@ -20,7 +20,10 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.OffsetInfo
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType}
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.utils.ConfigUtils
+
+import java.time.ZoneId
 
 case class TableReaderJdbcConfig(
                                   jdbcConfig: JdbcConfig,
@@ -35,6 +38,7 @@ case class TableReaderJdbcConfig(
                                   correctDecimalsFixPrecision: Boolean = false,
                                   enableSchemaMetadata: Boolean = false,
                                   useJdbcNative: Boolean = false,
+                                  serverTimeZone: ZoneId = ZoneId.systemDefault(),
                                   identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto,
                                   sqlGeneratorClass: Option[String] = None
                                 )
@@ -54,10 +58,11 @@ object TableReaderJdbcConfig {
   val CORRECT_DECIMALS_FIX_PRECISION = "correct.decimals.fix.precision"
   val ENABLE_SCHEMA_METADATA_KEY = "enable.schema.metadata"
   val USE_JDBC_NATIVE = "use.jdbc.native"
+  val SERVER_TIMEZONE = "server.timezone"
   val IDENTIFIER_QUOTING_POLICY = "identifier.quoting.policy"
   val SQL_GENERATOR_CLASS_KEY = "sql.generator.class"
 
-  def load(conf: Config, parent: String = ""): TableReaderJdbcConfig = {
+  def load(conf: Config, workflowConf: Config, parent: String = ""): TableReaderJdbcConfig = {
     ConfigUtils.validatePathsExistence(conf, parent, HAS_INFO_DATE :: Nil)
 
     val hasInformationDate = conf.getBoolean(HAS_INFO_DATE)
@@ -82,6 +87,9 @@ object TableReaderJdbcConfig {
 
     val offsetInfoOpt = OffsetInfoParser.fromConfig(conf)
 
+    val defaultTimezone = ConfigUtils.getOptionString(workflowConf, Keys.TIMEZONE).getOrElse("Africa/Johannesburg")
+    val serverTimezone = ZoneId.of(ConfigUtils.getOptionString(conf, SERVER_TIMEZONE).getOrElse(defaultTimezone))
+
     val identifierQuotingPolicy = ConfigUtils.getOptionString(conf, IDENTIFIER_QUOTING_POLICY)
       .map(s => QuotingPolicy.fromString(s))
       .getOrElse(QuotingPolicy.Auto)
@@ -99,6 +107,7 @@ object TableReaderJdbcConfig {
       correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
       useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false),
+      serverTimezone,
       identifierQuotingPolicy = identifierQuotingPolicy,
       sqlGeneratorClass = ConfigUtils.getOptionString(conf, SQL_GENERATOR_CLASS_KEY)
     )

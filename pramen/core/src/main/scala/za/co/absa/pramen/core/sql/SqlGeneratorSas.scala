@@ -23,8 +23,9 @@ import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.SasDialect
 
 import java.sql.{Connection, ResultSet}
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import scala.collection.mutable.ListBuffer
 
 object SqlGeneratorSas {
@@ -42,6 +43,7 @@ object SqlGeneratorSas {
 
 class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
+  private val timestampSasDbFormatter = DateTimeFormatter.ofPattern("ddMMMyyyy:HH:mm:ss.SSS", Locale.ENGLISH)
 
   override val beginEndEscapeChars: (Char, Char) = ('\'', '\'')
 
@@ -168,7 +170,9 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
   override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
       case OffsetValue.DateTimeType(ts) =>
-        throw new UnsupportedOperationException("Timestamp offset queries is not supported for SAS.")
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampSasDbFormatter.format(ldt)
+        s"$column $condition '$tsLiteral'dt"
       case OffsetValue.IntegralType(value) =>
         s"$column $condition $value"
       case OffsetValue.StringType(value) =>
