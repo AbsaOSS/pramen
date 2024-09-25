@@ -43,6 +43,39 @@ class DateExprEvaluatorSuite extends AnyWordSpec {
     expr.setValue("now", now)
     expr.setValue("two", 2)
 
+    "check variable existence" in {
+      assert(expr.contains("now"))
+      assert(expr.contains("two"))
+      assert(!expr.contains("dummy"))
+      assert(!expr.contains("TWO"))
+    }
+
+    "get date variable directly" in {
+      val actual = expr.getDate("now")
+
+      assert(actual == now)
+    }
+
+    "get numeric variable directly" in {
+      val actual = expr.getInt("two")
+
+      assert(actual == 2)
+    }
+
+    "get Any variable directly 1" in {
+      val actual = expr.getAny("now")
+
+      assert(actual.isInstanceOf[LocalDate])
+      assert(actual.asInstanceOf[LocalDate] == now)
+    }
+
+    "get Any variable directly 2" in {
+      val actual = expr.getAny("two")
+
+      assert(actual.isInstanceOf[Int])
+      assert(actual.asInstanceOf[Int] == 2)
+    }
+
     "evaluate a simple expression" in {
       assert(expr.evalDate("@now") == now)
     }
@@ -151,6 +184,20 @@ class DateExprEvaluatorSuite extends AnyWordSpec {
         expr.evalDate("'10-10-2020'")
       }
       assert(ex.getMessage.contains("could not be parsed at index"))
+    }
+
+    "throw an exception on a wrong type variable (date)" in {
+      val ex = intercept[IllegalArgumentException] {
+        expr.getDate("two")
+      }
+      assert(ex.getMessage.contains("Expected a date variable"))
+    }
+
+    "throw an exception on a wrong type variable (int)" in {
+      val ex = intercept[IllegalArgumentException] {
+        expr.getInt("now")
+      }
+      assert(ex.getMessage.contains("Expected a numeric variable"))
     }
 
     "throw an exception on a wrong type (date)" in {

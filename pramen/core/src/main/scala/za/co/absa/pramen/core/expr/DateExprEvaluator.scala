@@ -51,7 +51,7 @@ class DateExprEvaluator {
     val tokens = new Lexer(expression).lex()
 
     val exprBuilder = new DateExpressionEvaluator(vars.toMap, expression)
-    new Parser(tokens, exprBuilder).parse()
+    new Parser(expression, tokens, exprBuilder).parse()
 
     exprBuilder.getResult match {
       case d: LocalDate => d
@@ -63,7 +63,7 @@ class DateExprEvaluator {
     val tokens = new Lexer(expression).lex()
 
     val exprBuilder = new DateExpressionEvaluator(vars.toMap, expression)
-    new Parser(tokens, exprBuilder).parse()
+    new Parser(expression, tokens, exprBuilder).parse()
 
     exprBuilder.getResult match {
       case n: Int => n
@@ -75,8 +75,31 @@ class DateExprEvaluator {
     val tokens = new Lexer(expression).lex()
 
     val exprBuilder = new DateExpressionEvaluator(vars.toMap, expression)
-    new Parser(tokens, exprBuilder).parse()
+    new Parser(expression, tokens, exprBuilder).parse()
 
     exprBuilder.getResult
   }
+
+  def contains(variable: String): Boolean = {
+    vars.contains(variable)
+  }
+
+  def getInt(variable: String): Int = {
+    vars(variable) match {
+      case n: Int => n
+      case d => throw new IllegalArgumentException(s"Expected a numeric variable, but a date ($d) is returned for '$variable' variable.")
+    }
+  }
+
+  def getDate(variable: String): LocalDate = {
+    vars(variable) match {
+      case d: LocalDate => d
+      case n => throw new IllegalArgumentException(s"Expected a date variable, but a number ($n) is returned for '$variable' variable.")
+    }
+  }
+
+  def getAny(variable: String): Any = {
+    vars(variable)
+  }
+
 }
