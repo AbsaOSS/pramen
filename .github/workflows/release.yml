@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.inputs.branch }}
           
       - uses: actions/setup-python@v4
         with:
@@ -62,7 +62,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.inputs.branch }}
           
       - name: Prepare the release branch
         id: release_branch1
@@ -122,7 +122,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Setup JDK and sbt
         uses: actions/setup-java@v4.2.1
@@ -165,7 +165,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.event.inputs.branch }}
 
       - name: Checkout the release branch
         id: release_branch3
@@ -179,7 +179,7 @@ jobs:
           git checkout release/$VERSION
 
       - name: Create Pull Request
-        run: gh pr create -B main -H "release/$VERSION" --title "Release Pramen v$VERSION" --body 'Created by Github action'
+        run: gh pr create -B ${{ github.event.inputs.branch }} -H "release/$VERSION" --title "Release Pramen v$VERSION" --body 'Created by Github action'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.release_branch3.outputs.VERSION }}
