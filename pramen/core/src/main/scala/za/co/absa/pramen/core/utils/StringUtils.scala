@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.utils
 
 import za.co.absa.pramen.core.exceptions.ThreadStackTrace
 import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -223,17 +224,17 @@ object StringUtils {
     *
     *
     * @param template A template to replace variablesin.
-    * @param dateVar A variable name for the date (does not include '@') - case sensitive.
-    * @param date The date to replace the the variable with.
+    * @param expr An expression evaluator for date and other types of expressions.
     * @return The processed template.
     */
-  def replaceFormattedDateExpression(template: String, dateVar: String, date: LocalDate): String = {
+  def replaceFormattedDateExpression(template: String, expr: DateExprEvaluator): String = {
+    val identifierChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
     val output = new StringBuilder()
     val outputPartial = new StringBuilder()
     val outputExpression = new StringBuilder()
+    var variable = new StringBuilder()
     var state = 0
     var i = 0
-    var j = 0
 
     val COPY_FROM_TEMPLATE = 0
     val POSSIBLE_VARIABLE = 1
@@ -241,83 +242,101 @@ object StringUtils {
     val FORMAT_EXPRESSION = 3
     val DATE_EXPRESSION = 4
 
-    val expr = new DateExprEvaluator
-    expr.setValue(dateVar, date)
-
-    while (i < template.length) {
-      val c = template(i)
-      state match {
-        case COPY_FROM_TEMPLATE =>
-          if (c == '@') {
-            outputExpression.clear()
-            outputPartial.clear()
-            if (i < template.length - 2 && template(i + 1) == '{') {
-              i += 1
-              state = DATE_EXPRESSION
+    try {
+      while (i < template.length) {
+        val c = template(i)
+        state match {
+          case COPY_FROM_TEMPLATE =>
+            if (c == '@') {
+              outputExpression.clear()
+              outputPartial.clear()
+              if (i < template.length - 2 && template(i + 1) == '{') {
+                i += 1
+                state = DATE_EXPRESSION
+              } else {
+                state = POSSIBLE_VARIABLE
+                outputPartial.append(s"$c")
+              }
             } else {
-              state = POSSIBLE_VARIABLE
-              j = 0
-              outputPartial.append(s"$c")
+              output.append(s"$c")
             }
-          } else {
-            output.append(s"$c")
-          }
-        case POSSIBLE_VARIABLE =>
-          outputPartial.append(s"$c")
-          if (c == dateVar(j)) {
-            j += 1
-            if (j == dateVar.length) {
-              state = END_OF_VARIABLE
-              if (i == template.length - 1) {
-                output.append(s"$date")
+          case POSSIBLE_VARIABLE =>
+            val isIdChar = identifierChars.contains(c)
+            if (isIdChar) {
+              outputPartial.append(s"$c")
+              variable.append(s"$c")
+            } else {
+              if (c == '%') {
+                state = FORMAT_EXPRESSION
+                outputPartial.clear()
+              } else if (expr.contains(variable.toString())) {
+                state = END_OF_VARIABLE
+                i -= 1
+              } else {
+                output.append(s"${outputPartial.toString()}$c")
+                outputPartial.clear()
+                variable.clear()
+                state = COPY_FROM_TEMPLATE
               }
             }
-          } else {
-            output.append(s"${outputPartial.toString()}")
-            outputPartial.clear()
-            state = COPY_FROM_TEMPLATE
-          }
-        case END_OF_VARIABLE =>
-          if (c == '%') {
-            state = FORMAT_EXPRESSION
-            outputPartial.clear()
-          } else {
-            if (outputExpression.nonEmpty) {
-              val calculatedDate = expr.evalDate(outputExpression.toString())
-              output.append(s"$calculatedDate$c")
+          case END_OF_VARIABLE =>
+            if (c == '%') {
+              state = FORMAT_EXPRESSION
+              outputPartial.clear()
             } else {
-              output.append(s"$date$c")
+              if (outputExpression.nonEmpty) {
+                val value = expr.evalAny(outputExpression.toString())
+                output.append(s"$value$c")
+              } else {
+                val value = expr.getAny(variable.toString())
+                output.append(s"$value$c")
+              }
+              variable.clear()
+              state = COPY_FROM_TEMPLATE
             }
-            state = COPY_FROM_TEMPLATE
-          }
-        case FORMAT_EXPRESSION =>
-          if (c == '%') {
-            state = COPY_FROM_TEMPLATE
-            if (outputExpression.nonEmpty) {
-              val calculatedDate = expr.evalDate(outputExpression.toString())
+          case FORMAT_EXPRESSION =>
+            if (c == '%') {
+              state = COPY_FROM_TEMPLATE
               val formatter = DateTimeFormatter.ofPattern(outputPartial.toString())
-              output.append(s"${formatter.format(calculatedDate)}")
+              if (outputExpression.nonEmpty) {
+                val calculatedDate = expr.evalDate(outputExpression.toString())
+                output.append(s"${formatter.format(calculatedDate)}")
+                variable.clear()
+              } else {
+                val date = expr.getDate(variable.toString())
+                output.append(s"${formatter.format(date)}")
+                variable.clear()
+              }
             } else {
-              val formatter = DateTimeFormatter.ofPattern(outputPartial.toString())
-              output.append(s"${formatter.format(date)}")
+              outputPartial.append(s"$c")
             }
-          } else {
-            outputPartial.append(s"$c")
-          }
-        case DATE_EXPRESSION =>
-          if (c == '}') {
-            state = END_OF_VARIABLE
-            if (i == template.length - 1) {
-              val calculatedDate = expr.evalDate(outputExpression.toString())
-              output.append(s"$calculatedDate")
+          case DATE_EXPRESSION =>
+            if (c == '}') {
+              state = END_OF_VARIABLE
+              if (i == template.length - 1) {
+                val calculatedExpr = expr.evalAny(outputExpression.toString())
+                output.append(s"$calculatedExpr")
+              }
+            } else {
+              outputExpression.append(s"$c")
             }
-          } else {
-            outputExpression.append(s"$c")
-          }
 
+        }
+        i += 1
       }
-      i += 1
+
+      if (state == POSSIBLE_VARIABLE) {
+        if (expr.contains(variable.toString())) {
+          val anyVal = expr.getAny(variable.toString())
+          output.append(s"$anyVal")
+        } else {
+          output.append(s"${outputPartial.toString()}")
+        }
+      }
+    } catch {
+      case ex: SyntaxErrorException => throw new IllegalArgumentException(s"Syntax error in SQL expression: $template", ex)
     }
+
     if (state == DATE_EXPRESSION) {
       throw new IllegalArgumentException(s"No matching '{' in the date expression: $template")
     }

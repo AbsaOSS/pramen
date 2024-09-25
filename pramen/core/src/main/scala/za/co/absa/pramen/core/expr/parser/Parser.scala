@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.expr.lexer.Token._
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
 
-class Parser(tokens: List[Token], builder: DateExprBuilder) {
+class Parser(expr: String, tokens: List[Token], builder: DateExprBuilder) {
 
   val STATE0 = 0
   val STATE_VARIABLE = 1
@@ -47,18 +47,18 @@ class Parser(tokens: List[Token], builder: DateExprBuilder) {
           case VAR_PREFIX(_) =>
             state = STATE_VARIABLE
           case COMMA(pos) =>
-            throw new SyntaxErrorException(s"Unexpected ',' at pos $pos")
+            throw new SyntaxErrorException(s"Unexpected ',' at pos $pos of expression: '$expr'")
           case OPEN_PARAN(pos) =>
             paranPos += pos
             builder.openParen(pos)
           case CLOSE_PARAN(pos) =>
             if (paranPos.isEmpty) {
-              throw new SyntaxErrorException(s"Unmatched ')' at pos $pos")
+              throw new SyntaxErrorException(s"Unmatched ')' at pos $pos of expression: '$expr'")
             }
             paranPos.remove(paranPos.size - 1)
             builder.closeParen(pos)
           case PLUS(pos) =>
-            throw new SyntaxErrorException(s"Unexpected '+' at pos $pos")
+            throw new SyntaxErrorException(s"Unexpected '+' at pos $pos of expression: '$expr'")
           case MINUS(_) =>
             state = MINUS_NUM
           case NAME(pos, s) =>
@@ -68,12 +68,12 @@ class Parser(tokens: List[Token], builder: DateExprBuilder) {
             state = STATE1
           case DATE_LITERAL(pos, s) =>
             builder.addDateLiteral(LocalDate.parse(s, dateFormatter), pos)
-          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos}")
+          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos} of expression: '$expr'")
         }
       } else if (state == STATE1) {
         token match {
           case VAR_PREFIX(pos) =>
-            throw new SyntaxErrorException(s"Unexpected variable at pos $pos")
+            throw new SyntaxErrorException(s"Unexpected variable at pos $pos of expression: '$expr'")
           case COMMA(_) =>
             state = STATE0
           case OPEN_PARAN(pos) =>
@@ -82,7 +82,7 @@ class Parser(tokens: List[Token], builder: DateExprBuilder) {
             state = STATE0
           case CLOSE_PARAN(pos) =>
             if (paranPos.isEmpty) {
-              throw new SyntaxErrorException(s"Unmatched ')' at pos $pos")
+              throw new SyntaxErrorException(s"Unmatched ')' at pos $pos of expression: '$expr'")
             }
             paranPos.remove(paranPos.size - 1)
             builder.closeParen(pos)
@@ -97,14 +97,14 @@ class Parser(tokens: List[Token], builder: DateExprBuilder) {
             builder.addFunction(s, pos)
           case NUM_LITERAL(pos, s) =>
             builder.addNumLiteral(s.toInt, pos)
-          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos}")
+          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos} of expression: '$expr'")
         }
       } else if (state == STATE_VARIABLE) {
         token match {
           case NAME(pos, s) =>
             builder.addVariable(s, pos)
             state = STATE1
-          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos}")
+          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos} of expression: '$expr'")
         }
       } else if (state == MINUS_NUM) {
         token match {
@@ -120,13 +120,13 @@ class Parser(tokens: List[Token], builder: DateExprBuilder) {
           case NUM_LITERAL(pos, s) =>
             builder.addNumLiteral(-s.toInt, pos)
             state = STATE1
-          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos}")
+          case _ => new SyntaxErrorException(s"Unexpected '$token' at pos ${token.pos} of expression: '$expr'")
         }
       }
     }
 
     if (paranPos.nonEmpty) {
-      throw new SyntaxErrorException(s"Unmatched '(' at pos ${paranPos.head}")
+      throw new SyntaxErrorException(s"Unmatched '(' at pos ${paranPos.head} of expression: '$expr'")
     }
   }
 

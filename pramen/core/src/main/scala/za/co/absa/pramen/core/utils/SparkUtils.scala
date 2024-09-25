@@ -25,6 +25,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.FieldChange
+import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.pipeline.TransformExpression
 
 import java.io.ByteArrayOutputStream
@@ -205,10 +206,14 @@ object SparkUtils {
 
   def applyFilters(df: DataFrame, filters: Seq[String], infoDate: LocalDate, dateFrom: LocalDate, dateTo: LocalDate): DataFrame = {
     filters.foldLeft(df)((df, filter) => {
-      val f1 = StringUtils.replaceFormattedDateExpression(filter, "dateFrom", dateFrom)
-      val f2 = StringUtils.replaceFormattedDateExpression(f1, "dateTo", dateTo)
-      val f3 = StringUtils.replaceFormattedDateExpression(f2, "date", infoDate)
-      val actualFilter = f3.replaceAll("@infoDate", s"date'${infoDate.toString}'")
+      val exprEvaluator = new DateExprEvaluator()
+
+      exprEvaluator.setValue("dateFrom", dateFrom)
+      exprEvaluator.setValue("dateTo", dateTo)
+      exprEvaluator.setValue("date", infoDate)
+
+      val withInfoDate = filter.replaceAll("@infoDate", s"date'${infoDate.toString}'")
+      val actualFilter = StringUtils.replaceFormattedDateExpression(withInfoDate, exprEvaluator)
 
       log.info(s"Applying filter: $actualFilter")
       df.filter(expr(actualFilter))

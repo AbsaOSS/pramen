@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, JdbcSparkUtils, StringUtils, TimeUtils}
 
@@ -128,11 +129,15 @@ object TableReaderJdbcNative {
   }
 
   def getFilteredSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
-    val f1 = StringUtils.replaceFormattedDateExpression(sqlExpression, "dateFrom", infoDateBegin)
-    val f2 = StringUtils.replaceFormattedDateExpression(f1, "dateTo", infoDateEnd)
-    val f3 = StringUtils.replaceFormattedDateExpression(f2, "date", infoDateEnd)
-    val f4 = StringUtils.replaceFormattedDateExpression(f3, "infoDateBegin", infoDateBegin)
-    val f5 = StringUtils.replaceFormattedDateExpression(f4, "infoDateEnd", infoDateEnd)
-    StringUtils.replaceFormattedDateExpression(f5, "infoDate", infoDateEnd)
+    val expr = new DateExprEvaluator()
+
+    expr.setValue("dateFrom", infoDateBegin)
+    expr.setValue("dateTo", infoDateEnd)
+    expr.setValue("date", infoDateEnd)
+    expr.setValue("infoDateBegin", infoDateBegin)
+    expr.setValue("infoDateEnd", infoDateEnd)
+    expr.setValue("infoDate", infoDateEnd)
+
+    StringUtils.replaceFormattedDateExpression(sqlExpression, expr)
   }
 }

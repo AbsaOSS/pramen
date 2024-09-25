@@ -235,11 +235,15 @@ class StringUtilsSuite extends AnyWordSpec {
 
   "replaceFormattedDateExpression" should {
     val infoDate = LocalDate.of(2022, 2, 18)
+    val expr = new DateExprEvaluator()
+
+    expr.setValue("date", infoDate)
+    expr.setValue("dateTo", infoDate.plusDays(1))
 
     "work with normal variables" in {
       val template = "SELECT @dat FROM my_table_@date + 1"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "SELECT @dat FROM my_table_2022-02-18 + 1")
     }
@@ -247,7 +251,7 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with variables at the end" in {
       val template = "SELECT @dat FROM my_table_@date"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "SELECT @dat FROM my_table_2022-02-18")
     }
@@ -255,7 +259,7 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with just variables" in {
       val template = "@date"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "2022-02-18")
     }
@@ -263,15 +267,31 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with 2 variables" in {
       val template = "@date @date"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "2022-02-18 2022-02-18")
+    }
+
+    "work with 2 different variables" in {
+      val template = "@date @dateTo%yyyyMMdd%"
+
+      val replaced = replaceFormattedDateExpression(template, expr)
+
+      assert(replaced == "2022-02-18 20220219")
+    }
+
+    "work with 2 different variable expressions" in {
+      val template = "@{@date + 1}%yyyyMMdd% @{@dateTo + 1}%yyyyMMdd%"
+
+      val replaced = replaceFormattedDateExpression(template, expr)
+
+      assert(replaced == "20220219 20220220")
     }
 
     "work with formatted variables" in {
       val template = "SELECT * FROM my_table_@date%yyyyMMdd% WHERE a = b"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "SELECT * FROM my_table_20220218 WHERE a = b")
     }
@@ -279,7 +299,7 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with just formatted variables" in {
       val template = "@date%yyyyMMdd%"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "20220218")
     }
@@ -287,7 +307,7 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with 2 formatted variables" in {
       val template = "@date%yyyyMMdd%@date%ddMMyyy%"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "2022021818022022")
     }
@@ -295,7 +315,7 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with partial formatter" in {
       val template = "@date%yyyyMM%"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "202202")
     }
@@ -303,7 +323,7 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with expressions" in {
       val template = "my_table_@{@date + 1}"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "my_table_2022-02-19")
     }
@@ -311,7 +331,7 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with formatted expressions" in {
       val template = "my_table_@{@date + 1}%yyyyMM%"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "my_table_202202")
     }
@@ -319,24 +339,35 @@ class StringUtilsSuite extends AnyWordSpec {
     "work with formatted expressions 2" in {
       val template = "SELECT * FROM my_table_@{plusMonths(@date, 1)}%yyyyMMdd% WHERE a = b"
 
-      val replaced = replaceFormattedDateExpression(template, "date", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "SELECT * FROM my_table_20220318 WHERE a = b")
     }
 
     "work with formatted expressions 3" in {
-      val template = "SELECT * FROM my_table WHERE snapshot_date = date'@{beginOfMonth(minusMonths(@infoDate, 1))}'"
+      val template = "SELECT * FROM my_table WHERE snapshot_date = date'@{beginOfMonth(minusMonths(@date, 1))}'"
 
-      val replaced = replaceFormattedDateExpression(template, "infoDate", infoDate)
+      val replaced = replaceFormattedDateExpression(template, expr)
 
       assert(replaced == "SELECT * FROM my_table WHERE snapshot_date = date'2022-01-01'")
+    }
+
+    "throw an exception if an expression has syntax errors" in {
+      val template = "@{@date + 1}%yyyyMMdd% @{dateTo + 1}%yyyyMMdd%"
+
+      val ex = intercept[IllegalArgumentException] {
+        replaceFormattedDateExpression(template, expr)
+      }
+
+      assert(ex.getMessage.contains("Syntax error in SQL expression: @{@date + 1}%yyyyMMdd% @{dateTo + 1}%yyyyMMdd%"))
+      assert(ex.getCause.getMessage.contains("Unexpected '+' at pos 7 of expression: 'dateTo + 1'"))
     }
 
     "throw an exception if format is incomplete" in {
       val template = "SELECT * FROM my_table WHERE snapshot_date = date'@infoDate%yyyy-mm-dd'"
 
       val ex = intercept[IllegalArgumentException] {
-        replaceFormattedDateExpression(template, "infoDate", infoDate)
+        replaceFormattedDateExpression(template, expr)
       }
 
       assert(ex.getMessage.contains("No matching '%' in the formatted date expression: SELECT * FROM my_table WHERE snapshot_date = date'@infoDate%yyyy-mm-dd'"))
@@ -346,7 +377,7 @@ class StringUtilsSuite extends AnyWordSpec {
       val template = "SELECT * FROM my_table WHERE snapshot_date = date'@{beginOfMonth(minusMonths(@infoDate, 1))'"
 
       val ex = intercept[IllegalArgumentException] {
-        replaceFormattedDateExpression(template, "infoDate", infoDate)
+        replaceFormattedDateExpression(template, expr)
       }
 
       assert(ex.getMessage.contains("No matching '{' in the date expression: SELECT * FROM my_table WHERE snapshot_date = date'@{beginOfMonth(minusMonths(@infoDate, 1))'"))
