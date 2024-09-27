@@ -149,7 +149,7 @@ abstract class JobBase(operationDef: OperationDef,
             log.warn(s"${Emoji.WARNING} The dependent table '$table' has been updated at ${Instant.ofEpochSecond(chunk.jobFinished)} retrospectively " +
               s"after the transformation at ${Instant.ofEpochSecond(targetJobFinishedSeconds)} .")
             true
-          case Some(_) =>
+          case _ =>
             false
         }
       }
