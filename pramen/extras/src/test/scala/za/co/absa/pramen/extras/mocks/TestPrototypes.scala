@@ -40,7 +40,7 @@ object TestPrototypes {
     Map.empty,
     Map.empty)
 
-  val taskStatus: RunStatus = RunStatus.Succeeded(None, 100, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
+  val taskStatus: RunStatus = RunStatus.Succeeded(None, 100, None, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   val taskNotification: TaskResult = status.TaskResult(
     "Dummy Job",

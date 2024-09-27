@@ -20,10 +20,10 @@ import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
 
 object TestPrototypes {
 
-  val runStatusSuccess: RunStatus = RunStatus.Succeeded(Some(100), 200, Some(1000), TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
+  val runStatusSuccess: RunStatus = RunStatus.Succeeded(Some(100), 200, None, Some(1000), TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   val runStatusWarning: RunStatus = RunStatus.Succeeded(
-    Some(10000), 20000, Some(100000), TaskRunReason.New, Seq("file1.txt", "file1.ctl"),
+    Some(10000), 20000, None, Some(100000), TaskRunReason.New, Seq("file1.txt", "file1.ctl"),
     Seq("file1.csv", "file2.csv"), Seq("`db`.`table1`"), Seq("Test warning")
   )
 

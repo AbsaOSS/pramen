@@ -21,6 +21,7 @@ import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
 object RunStatusFactory {
   def getDummySuccess(recordCountOld: Option[Long] = None,
                       recordCount: Long = 1000,
+                      recordsAppended: Option[Long] = None,
                       sizeBytes: Option[Long] = None,
                       reason: TaskRunReason = TaskRunReason.New,
                       filesRead: Seq[String] = Nil,
@@ -29,6 +30,7 @@ object RunStatusFactory {
                       warnings: Seq[String] = Nil): RunStatus.Succeeded = {
     RunStatus.Succeeded(recordCountOld,
       recordCount,
+      recordsAppended,
       sizeBytes,
       reason,
       filesRead,

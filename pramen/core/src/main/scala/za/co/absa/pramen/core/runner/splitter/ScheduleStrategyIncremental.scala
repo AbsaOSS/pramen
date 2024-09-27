@@ -40,13 +40,37 @@ class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated], has
                              minimumDate: LocalDate
                            ): Seq[TaskPreDef] = {
     val dates = params match {
-      case ScheduleParams.Normal(runDate, _, _, _, _) =>
+      case ScheduleParams.Normal(runDate, trackDays, _, _, _) =>
         val infoDate = evaluateRunDate(runDate, infoDateExpression)
         log.info(s"Normal run strategy: runDate=$runDate, infoDate=$infoDate")
 
-        val runInfoDays = if (hasInfoDateColumn)
-          Seq(TaskPreDef(infoDate.minusDays(1), TaskRunReason.New), TaskPreDef(infoDate, TaskRunReason.New))
-        else {
+        val runInfoDays = if (hasInfoDateColumn) {
+          lastOffsets match {
+            case Some(lastOffset) =>
+              if (lastOffset.maximumInfoDate.isBefore(infoDate)) {
+                val startDate = if (trackDays > 1) {
+                  val trackDate = infoDate.minusDays(trackDays - 1)
+                  val date = if (trackDate.isAfter(lastOffset.maximumInfoDate))
+                    trackDate
+                  else
+                    lastOffset.maximumInfoDate
+                  log.warn(s"Last ran day: ${lastOffset.maximumInfoDate}. Tracking days = '$trackDate'. Catching up from '$date' until '$infoDate'.")
+                  date
+                } else {
+                  log.warn(s"Last ran day: ${lastOffset.maximumInfoDate}. Catching up data until '$infoDate'.")
+                  lastOffset.maximumInfoDate
+                }
+
+                val potentialDates = getInfoDateRange(startDate, infoDate, "@runDate", schedule)
+                potentialDates.map(date => {
+                  TaskPreDef(date, TaskRunReason.New)
+                })
+              } else {
+                Seq(TaskPreDef(infoDate, TaskRunReason.New))
+              }
+            case None => Seq(TaskPreDef(infoDate.minusDays(1), TaskRunReason.New), TaskPreDef(infoDate, TaskRunReason.New))
+          }
+        } else {
           lastOffsets match {
             case Some(offset) if offset.maximumInfoDate.isAfter(infoDate) => Seq.empty
             case _ => Seq(TaskPreDef(infoDate, TaskRunReason.New))

@@ -25,7 +25,6 @@ import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
-import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_MEGABYTES, MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
@@ -545,7 +544,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   private[core] def getRecordCountText(task: TaskResult): String = {
-    def renderDifference(numRecords: Long, numRecordsOld: Option[Long]): String = {
+    def renderDifference(numRecords: Long, numRecordsOld: Option[Long], numRecordsAppended: Option[Long]): String = {
       numRecordsOld match {
         case Some(old) if old > 0 =>
           val diff = numRecords - old
@@ -556,7 +555,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           else {
             numRecords.toString
           }
-        case _ => numRecords.toString
+        case _ =>
+          numRecordsAppended match {
+            case Some(n) => s"$numRecords (+$n)"
+            case None => numRecords.toString
+          }
       }
     }
 
@@ -564,8 +567,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       "-"
     } else {
       task.runStatus match {
-        case s: Succeeded        => renderDifference(s.recordCount, s.recordCountOld)
-        case d: InsufficientData => renderDifference(d.actual, d.recordCountOld)
+        case s: Succeeded        => renderDifference(s.recordCount, s.recordCountOld, s.recordsAppended)
+        case d: InsufficientData => renderDifference(d.actual, d.recordCountOld, None)
         case _                   => ""
       }
     }

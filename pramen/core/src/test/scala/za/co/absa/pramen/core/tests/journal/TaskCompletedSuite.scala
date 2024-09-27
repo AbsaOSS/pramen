@@ -50,7 +50,7 @@ class TaskCompletedSuite extends AnyWordSpec {
       val taskResult = TaskResult(
         job.name,
         MetaTable.getMetaTableDef(job.outputTable),
-        RunStatus.Succeeded(Some(1000), 2000, Some(3000), runReason, Nil, Nil, Nil, Nil),
+        RunStatus.Succeeded(Some(1000), 2000, None, Some(3000), runReason, Nil, Nil, Nil, Nil),
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
         "app_123",
         isTransient = false,

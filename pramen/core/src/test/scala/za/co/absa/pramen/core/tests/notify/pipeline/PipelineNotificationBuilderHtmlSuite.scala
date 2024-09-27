@@ -518,6 +518,17 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       assert(actual == "90 (-10)")
     }
 
+    "work for successful appends" in {
+      val builder = getBuilder()
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, 110, Some(10), reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "110 (+10)")
+    }
+
     "work for insufficient data" in {
       val builder = getBuilder()
 

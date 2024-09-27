@@ -63,48 +63,42 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       handleUncommittedOffsets(om, metastore, infoDate, uncommittedOffsets)
     }
 
-    val hasInfoDateColumn = source.hasInfoDateColumn(sourceTable.query)
-    if (hasInfoDateColumn && runReason == TaskRunReason.Rerun) {
-      super.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)
-    } else {
-      JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Nil)
-    }
+    JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Nil)
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     val hasInfoDate = source.hasInfoDateColumn(sourceTable.query)
-    if (source.getOffsetInfo.nonEmpty) {
-      if (runReason == TaskRunReason.Rerun) {
-        if (hasInfoDate) {
-          log.info(s"Rerunning ingestion to '${outputTable.name}' at '$infoDate'.")
-          Reason.Ready
-        } else {
-          val om = bookkeeper.getOffsetManager
+    val isReRun = runReason == TaskRunReason.Rerun
 
-          om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
-            case Some(offsets) =>
-              log.info(s"Rerunning ingestion to '${outputTable.name}' at '$infoDate' for ${offsets.minimumOffset.valueString} < offsets <= ${offsets.maximumOffset.valueString}.")
-              Reason.Ready
-            case None =>
-              log.info(s"Offsets not found for '${outputTable.name}' at '$infoDate'.")
-              Reason.SkipOnce("No offsets registered")
-          }
+    if (source.getOffsetInfo.isEmpty) {
+      return Reason.NotReady(s"Offset column is not configured for source '$sourceName' of '${operationDef.name}'")
+    }
+
+    (hasInfoDate, isReRun) match {
+      case (false, false) =>
+        latestOffset match {
+          case Some(offset) if offset.maximumInfoDate.isAfter(infoDate) =>
+            log.warn(s"Cannot run '${outputTable.name}' for '$infoDate' since offsets exists for ${offset.maximumInfoDate}.")
+            Reason.Skip("Incremental ingestion cannot be retrospective")
+          case _ =>
+            Reason.Ready
         }
-      } else {
-        if (hasInfoDate) {
-          Reason.Ready
-        } else {
-          latestOffset match {
-            case Some(offset) if offset.maximumInfoDate.isAfter(infoDate) =>
-              log.warn(s"Cannot run '${outputTable.name}' for '$infoDate' since offsets exists for ${offset.maximumInfoDate}.")
-              Reason.Skip("Incremental ingestion cannot be retrospective")
-            case _ =>
-              Reason.Ready
-          }
+      case (false, true) =>
+        val om = bookkeeper.getOffsetManager
+
+        om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
+          case Some(offsets) =>
+            log.info(s"Rerunning ingestion to '${outputTable.name}' at '$infoDate' for ${offsets.minimumOffset.valueString} < offsets <= ${offsets.maximumOffset.valueString}.")
+            Reason.Ready
+          case None =>
+            log.info(s"Offsets not found for '${outputTable.name}' at '$infoDate'.")
+            Reason.SkipOnce("No offsets registered")
         }
-      }
-    } else {
-      Reason.NotReady(s"Offset column is not configured for source '$sourceName' of '${operationDef.name}'")
+      case (true, false) =>
+        Reason.Ready
+      case (true, true) =>
+        log.info(s"Rerunning ingestion to '${outputTable.name}' at '$infoDate'.")
+        Reason.Ready
     }
   }
 
@@ -116,11 +110,26 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     }
 
     val hasInfoDate = source.hasInfoDateColumn(sourceTable.query)
+    val isReRun = runReason == TaskRunReason.Rerun
 
-    val sourceResult = if (hasInfoDate) {
-      if (runReason == TaskRunReason.Rerun) {
-        source.getData(sourceTable.query, infoDate, infoDate, columns)
-      } else {
+    val sourceResult = (hasInfoDate, isReRun) match {
+      case (false, false) =>
+        latestOffset match {
+          case Some(maxOffset) =>
+            source.getDataIncremental(sourceTable.query, None, Option(maxOffset.maximumOffset), None, columns)
+          case None =>
+            source.getData(sourceTable.query, infoDate, infoDate, columns)
+        }
+      case (false, true) =>
+        val om = bookkeeper.getOffsetManager
+
+        om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
+          case Some(offsets) =>
+            source.getDataIncremental(sourceTable.query, None, Option(offsets.minimumOffset), Option(offsets.maximumOffset), columns)
+          case None =>
+            throw new IllegalStateException(s"No offsets for '${outputTable.name}' for '$infoDate'. Cannot rerun.")
+        }
+      case (true, false) =>
         val om = bookkeeper.getOffsetManager
         val infoDateLatestOffset = om.getMaxInfoDateAndOffset(outputTable.name, Some(infoDate))
         infoDateLatestOffset match {
@@ -131,25 +140,8 @@ class IncrementalIngestionJob(operationDef: OperationDef,
             log.info(s"Running ingestion to '${outputTable.name}' at '$infoDate' for all data available at the day.")
             source.getData(sourceTable.query, infoDate, infoDate, columns)
         }
-      }
-    } else {
-      if (runReason == TaskRunReason.Rerun) {
-        val om = bookkeeper.getOffsetManager
-
-        om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
-          case Some(offsets) =>
-            source.getDataIncremental(sourceTable.query, None, Option(offsets.minimumOffset), Option(offsets.maximumOffset), columns)
-          case None =>
-            throw new IllegalStateException(s"No offsets for '${outputTable.name}' for '$infoDate'. Cannot rerun.")
-        }
-      } else {
-        latestOffset match {
-          case Some(maxOffset) =>
-            source.getDataIncremental(sourceTable.query, None, Option(maxOffset.maximumOffset), None, columns)
-          case None =>
-            source.getData(sourceTable.query, infoDate, infoDate, columns)
-        }
-      }
+      case (true, true) =>
+        source.getData(sourceTable.query, infoDate, infoDate, columns)
     }
 
     val sanitizedDf = sanitizeDfColumns(sourceResult.data, specialCharacters)
