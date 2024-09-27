@@ -109,8 +109,8 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  protected def preRunTransformationCheck(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    if (isIncremental) {
+  protected def preRunTransformationCheck(infoDate: LocalDate, runReason: TaskRunReason, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
+    if (isIncremental || runReason == TaskRunReason.Rerun) {
       JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
     } else {
       validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {

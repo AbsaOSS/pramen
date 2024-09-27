@@ -70,9 +70,9 @@ class SqlGeneratorMySqlSuite extends AnyWordSpec {
 
     "date is in DATETIME format" in {
       assert(genDateTime.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE DATE(D) = '2020-08-17'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17 00:00:00' AND D < '2020-08-18 00:00:00'")
       assert(genDateTime.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE DATE(D) >= '2020-08-17' AND DATE(D) <= '2020-08-30'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17 00:00:00' AND D < '2020-08-31 00:00:00'")
     }
 
     "date is in STRING format" in {
@@ -107,9 +107,9 @@ class SqlGeneratorMySqlSuite extends AnyWordSpec {
 
     "date is in DATETIME format" in {
       assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE DATE(D) = '2020-08-17'")
+        "SELECT * FROM A WHERE D >= '2020-08-17 00:00:00' AND D < '2020-08-18 00:00:00'")
       assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE DATE(D) >= '2020-08-17' AND DATE(D) <= '2020-08-30'")
+        "SELECT * FROM A WHERE D >= '2020-08-17 00:00:00' AND D < '2020-08-31 00:00:00'")
     }
 
     "date is in STRING format" in {

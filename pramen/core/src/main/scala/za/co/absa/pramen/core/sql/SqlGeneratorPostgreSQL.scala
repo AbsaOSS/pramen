@@ -58,22 +58,17 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
-    val dateBeginLit = getDateLiteral(dateBegin)
-    val dateEndLit = getDateLiteral(dateEnd)
-
-    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
-
-    val infoDateColumnAdjusted =
-      if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"CAST($infoDateColumn AS DATE)"
-      } else {
-        infoDateColumn
-      }
-
-    if (dateBeginLit == dateEndLit) {
-      s"$infoDateColumnAdjusted = $dateBeginLit"
+    if (sqlConfig.infoDateType == SqlColumnType.DATETIME) {
+      s"$infoDateColumn >= '$dateBegin' AND $infoDateColumn < '${dateEnd.plusDays(1)}'"
     } else {
-      s"$infoDateColumnAdjusted >= $dateBeginLit AND $infoDateColumnAdjusted <= $dateEndLit"
+      val dateBeginLit = getDateLiteral(dateBegin)
+      val dateEndLit = getDateLiteral(dateEnd)
+
+      if (dateBeginLit == dateEndLit) {
+        s"$infoDateColumn = $dateBeginLit"
+      } else {
+        s"$infoDateColumn >= $dateBeginLit AND $infoDateColumn <= $dateEndLit"
+      }
     }
   }
 
@@ -84,7 +79,7 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
         s"date'$dateStr'"
       case SqlColumnType.DATETIME =>
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
-        s"date'$dateStr'"
+        s"'$dateStr'"
       case SqlColumnType.STRING =>
         val dateStr = dateFormatterApp.format(date)
         s"'$dateStr'"

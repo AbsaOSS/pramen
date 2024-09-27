@@ -46,7 +46,7 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    preRunTransformationCheck(infoDate, dependencyWarnings)
+    preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {

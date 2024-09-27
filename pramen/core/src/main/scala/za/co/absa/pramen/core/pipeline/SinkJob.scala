@@ -48,7 +48,7 @@ class SinkJob(operationDef: OperationDef,
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    val alreadyRanStatus = preRunTransformationCheck(infoDate, dependencyWarnings)
+    val alreadyRanStatus = preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
 
     alreadyRanStatus.status match {
       case JobPreRunStatus.Ready => JobPreRunResult(Ready, Some(getDataDf(infoDate).count()), dependencyWarnings, alreadyRanStatus.warnings)

@@ -58,22 +58,17 @@ class SqlGeneratorMySQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
-    val dateBeginLit = getDateLiteral(dateBegin)
-    val dateEndLit = getDateLiteral(dateEnd)
-
-    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
-
-    val infoDateColumnAdjusted =
-      if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"DATE($infoDateColumn)"
-      } else {
-        infoDateColumn
-      }
-
-    if (dateBeginLit == dateEndLit) {
-      s"$infoDateColumnAdjusted = $dateBeginLit"
+    if (sqlConfig.infoDateType == SqlColumnType.DATETIME) {
+      s"$infoDateColumn >= '$dateBegin 00:00:00' AND $infoDateColumn < '${dateEnd.plusDays(1)} 00:00:00'"
     } else {
-      s"$infoDateColumnAdjusted >= $dateBeginLit AND $infoDateColumnAdjusted <= $dateEndLit"
+      val dateBeginLit = getDateLiteral(dateBegin)
+      val dateEndLit = getDateLiteral(dateEnd)
+
+      if (dateBeginLit == dateEndLit) {
+        s"$infoDateColumn = $dateBeginLit"
+      } else {
+        s"$infoDateColumn >= $dateBeginLit AND $infoDateColumn <= $dateEndLit"
+      }
     }
   }
 

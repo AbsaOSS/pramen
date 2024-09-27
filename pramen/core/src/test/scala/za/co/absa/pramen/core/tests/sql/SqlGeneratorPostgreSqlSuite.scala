@@ -70,9 +70,9 @@ class SqlGeneratorPostgreSqlSuite extends AnyWordSpec {
 
     "date is in DATETIME format" in {
       assert(genDateTime.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D < '2020-08-18'")
       assert(genDateTime.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D < '2020-08-31'")
     }
 
     "date is in STRING format" in {
@@ -107,9 +107,9 @@ class SqlGeneratorPostgreSqlSuite extends AnyWordSpec {
 
     "date is in DATETIME format" in {
       assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
+        "SELECT * FROM A WHERE D >= '2020-08-17' AND D < '2020-08-18'")
       assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
+        "SELECT * FROM A WHERE D >= '2020-08-17' AND D < '2020-08-31'")
     }
 
     "date is in STRING format" in {
