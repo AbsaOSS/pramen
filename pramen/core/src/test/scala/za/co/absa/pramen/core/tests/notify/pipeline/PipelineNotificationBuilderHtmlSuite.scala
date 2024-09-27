@@ -421,6 +421,17 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       assert(actual.text == "225 r/s")
     }
 
+    "work for an incremental successful task" in {
+      val builder = getBuilder()
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, 1000000, recordsAppended = Some(500000), reason = TaskRunReason.New)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getThroughputRps(task)
+
+      assert(actual.text == "112 r/s")
+    }
+
     "work for a raw file task" in {
       val builder = getBuilder()
 

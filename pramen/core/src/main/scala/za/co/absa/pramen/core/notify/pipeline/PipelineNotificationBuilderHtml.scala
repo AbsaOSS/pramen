@@ -500,7 +500,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private[core] def getThroughputRps(task: TaskResult): TextElement = {
     val recordCount = task.runStatus match {
-      case s: Succeeded => s.recordCount
+      case s: Succeeded =>
+        s.recordsAppended match {
+          case Some(appended) => appended
+          case None => s.recordCount
+        }
       case _            => 0
     }
 
