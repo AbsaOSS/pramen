@@ -120,7 +120,9 @@ class MetastoreImpl(appConfig: Config,
 
     val finish = Instant.now.getEpochSecond
 
-    if (!skipBookKeepingUpdates) {
+    val nothingAppended = stats.recordCountAppended.contains(0)
+
+    if (!skipBookKeepingUpdates && !nothingAppended) {
       bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(stats.recordCount), stats.recordCount, start, finish, isTransient)
     }
 

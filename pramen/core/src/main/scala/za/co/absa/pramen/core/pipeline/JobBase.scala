@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.Emoji._
-import za.co.absa.pramen.core.utils.TimeUtils
+import za.co.absa.pramen.core.utils.{Emoji, TimeUtils}
 
 import java.time.{Instant, LocalDate}
 import scala.util.{Failure, Success, Try}
@@ -126,7 +126,8 @@ abstract class JobBase(operationDef: OperationDef,
         val outOfDateTables = getOutdatedTables(infoDate, chunk.jobFinished)
         if (outOfDateTables.nonEmpty) {
           log.info(s"Job for table ${outputTableDef.name} as already ran for $infoDate, but has outdated tables: ${outOfDateTables.mkString(", ")}")
-          Some(JobPreRunResult(JobPreRunStatus.NeedsUpdate, None, dependencyWarnings, Seq.empty[String]))
+          val warning = s"Based on outdated tables: ${outOfDateTables.mkString(", ")}"
+          Some(JobPreRunResult(JobPreRunStatus.NeedsUpdate, None, dependencyWarnings, Seq(warning)))
         } else {
           log.info(s"Job for table ${outputTableDef.name} as already ran for $infoDate.")
           Some(JobPreRunResult(JobPreRunStatus.AlreadyRan, None, dependencyWarnings, Seq.empty[String]))
@@ -143,12 +144,12 @@ abstract class JobBase(operationDef: OperationDef,
       .flatMap(_.tables)
       .distinct
       .filter { table =>
-        bookkeeper.getLatestDataChunk(outputTableDef.name, infoDate, infoDate) match {
+        bookkeeper.getLatestDataChunk(table, infoDate, infoDate) match {
           case Some(chunk) if chunk.jobFinished >= targetJobFinishedSeconds =>
-            log.warn(s"The dependent table '$table' has been updated at ${Instant.ofEpochSecond(chunk.jobFinished)} retrospectively " +
+            log.warn(s"${Emoji.WARNING} The dependent table '$table' has been updated at ${Instant.ofEpochSecond(chunk.jobFinished)} retrospectively " +
               s"after the transformation at ${Instant.ofEpochSecond(targetJobFinishedSeconds)} .")
             true
-          case Some(chunk) =>
+          case Some(_) =>
             false
         }
       }

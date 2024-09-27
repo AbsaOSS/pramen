@@ -680,8 +680,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     } else {
       if (status.warnings.nonEmpty)
         TextElement("Warning", style)
-      else
-        TextElement("Success", style)
+      else {
+        if (status.recordsAppended.contains(0))
+          TextElement("No new data", style)
+        else
+          TextElement("Success", style)
+      }
     }
   }
 
