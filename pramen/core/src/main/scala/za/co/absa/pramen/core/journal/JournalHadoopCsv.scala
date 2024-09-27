@@ -77,6 +77,7 @@ class JournalHadoopCsv(journalPath: String)
         inputRecordCountOld = v.inputRecordCountOld,
         outputRecordCount = v.outputRecordCount,
         outputRecordCountOld = v.outputRecordCountOld,
+        appendedRecordCount = v.appendedRecordCount,
         outputSize = v.outputSize,
         startedAt = v.startedAt,
         finishedAt = v.finishedAt,
@@ -97,6 +98,7 @@ class JournalHadoopCsv(journalPath: String)
 
     val outputRecordCount = t.outputRecordCount.map(_.toString).getOrElse("")
     val outputRecordCountOld = t.outputRecordCountOld.map(_.toString).getOrElse("")
+    val appendedRecordCount = t.appendedRecordCount.map(_.toString).getOrElse("")
     val outputSize = t.outputSize.map(_.toString).getOrElse("")
 
     val record = removeSeparators(t.jobName) ::
@@ -108,6 +110,7 @@ class JournalHadoopCsv(journalPath: String)
       t.inputRecordCountOld ::
       outputRecordCount ::
       outputRecordCountOld ::
+      appendedRecordCount ::
       outputSize ::
       t.startedAt ::
       t.finishedAt ::

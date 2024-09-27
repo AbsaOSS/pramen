@@ -27,6 +27,7 @@ case class TaskCompletedCsv(
                              outputRecordCount: Option[Long],
                              outputRecordCountOld: Option[Long],
                              outputSize: Option[Long],
+                             appendedRecordCount: Option[Long],
                              startedAt: Long,
                              finishedAt: Long,
                              status: String,

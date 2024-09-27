@@ -33,6 +33,7 @@ case class TaskCompleted(
                           inputRecordCountOld: Long,
                           outputRecordCount: Option[Long],
                           outputRecordCountOld: Option[Long],
+                          appendedRecordCount: Option[Long],
                           outputSize: Option[Long],
                           startedAt: Long,
                           finishedAt: Long,
@@ -58,9 +59,9 @@ object TaskCompleted {
     val failureReason = taskResult.runStatus.getReason
     val sparkApplicationId = Option(taskResult.applicationId)
 
-    val (recordCountOld, inputRecordCount, outputRecordCount, sizeBytes) = taskResult.runStatus match {
-      case s: Succeeded => (s.recordCountOld, s.recordCount, Some(s.recordCount), s.sizeBytes)
-      case _            => (None, 0L, None, None)
+    val (recordCountOld, inputRecordCount, outputRecordCount, sizeBytes, appendedRecords) = taskResult.runStatus match {
+      case s: Succeeded => (s.recordCountOld, s.recordCount, Some(s.recordCount), s.sizeBytes, s.recordsAppended)
+      case _            => (None, 0L, None, None, None)
     }
 
     TaskCompleted(
@@ -73,6 +74,7 @@ object TaskCompleted {
       recordCountOld.getOrElse(0L),
       outputRecordCount,
       recordCountOld,
+      appendedRecords,
       sizeBytes,
       taskStarted,
       taskFinished,

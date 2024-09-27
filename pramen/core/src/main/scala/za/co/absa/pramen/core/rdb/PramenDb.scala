@@ -75,6 +75,10 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (dbVersion < 5) {
       initTable(OffsetRecords.records.schema)
     }
+
+    if (0 < dbVersion && dbVersion < 6) {
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "appended_record_count", "bigint")
+    }
   }
 
   def initTable(schema: H2Profile.SchemaDescription): Unit = {
@@ -110,7 +114,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 }
 
 object PramenDb {
-  val MODEL_VERSION = 5
+  val MODEL_VERSION = 6
   val DEFAULT_RETRIES = 3
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {

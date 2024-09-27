@@ -454,7 +454,8 @@ abstract class TaskRunnerBase(conf: Config,
       log.warn("Skipping the interrupted exception of the killed task.")
     } else {
       pipelineState.addTaskCompletion(Seq(updatedResult))
-      addJournalEntry(task, updatedResult, pipelineState.getState.pipelineInfo)
+      if (taskResult.runStatus != RunStatus.NotRan)
+        addJournalEntry(task, updatedResult, pipelineState.getState.pipelineInfo)
     }
 
     updatedResult.runStatus
