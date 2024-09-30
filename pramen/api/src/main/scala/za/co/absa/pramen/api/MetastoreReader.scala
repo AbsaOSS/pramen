@@ -44,9 +44,10 @@ trait MetastoreReader {
                infoDateTo: Option[LocalDate] = None): DataFrame
 
   /**
-    * Reads the 'current batch' of the table.
+    * Reads the 'current batch' of the table to be processed incrementally.
     *
     * For incremental processing this method returns the current chunk being processed.
+    * It may include multiple chunks from non-processed data if transformer has failed previously.
     *
     * For non-incremental processing the call to this method is equivalent to:
     * {{{
@@ -55,7 +56,7 @@ trait MetastoreReader {
     *
     * which returns all data for the current information date being processed.
     *
-    * This method is the method to use for transformers that
+    * This method is the method to use for transformers that would use 'incremental' schedule.
     *
     * In order to read a table it is not sufficient the table to be registered in the metastore. It also
     * should be defined as input tables of the job. Otherwise, a runtime exception will be thrown.
