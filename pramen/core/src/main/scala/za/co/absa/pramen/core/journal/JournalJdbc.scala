@@ -41,8 +41,8 @@ class JournalJdbc(db: Database) extends Journal {
       periodBegin,
       periodEnd,
       infoDate,
-      entry.inputRecordCount,
-      entry.inputRecordCountOld,
+      entry.inputRecordCount.getOrElse(-1L),
+      entry.inputRecordCountOld.getOrElse(-1L),
       entry.outputRecordCount,
       entry.outputRecordCountOld,
       entry.appendedRecordCount,
@@ -73,14 +73,16 @@ class JournalJdbc(db: Database) extends Journal {
     val entries = SlickUtils.executeQuery(db, JournalTasks.journalTasks.filter(d => d.finishedAt >= fromSec && d.finishedAt <= toSec ))
 
     entries.map(v => {
+      val recordCountOpt = if (v.inputRecordCount < 0) None else Option(v.inputRecordCount)
+      val recordCountOldOpt = if (v.inputRecordCountOld < 0) None else Option(v.inputRecordCountOld)
       model.TaskCompleted(
         jobName = v.jobName,
         tableName = v.pramenTableName,
         periodBegin = LocalDate.parse(v.periodBegin, dateFormatter),
         periodEnd = LocalDate.parse(v.periodEnd, dateFormatter),
         informationDate = LocalDate.parse(v.informationDate, dateFormatter),
-        inputRecordCount = v.inputRecordCount,
-        inputRecordCountOld = v.inputRecordCountOld,
+        inputRecordCount = recordCountOpt,
+        inputRecordCountOld = recordCountOldOpt,
         outputRecordCount = v.outputRecordCount,
         outputRecordCountOld = v.outputRecordCountOld,
         appendedRecordCount = v.appendedRecordCount,

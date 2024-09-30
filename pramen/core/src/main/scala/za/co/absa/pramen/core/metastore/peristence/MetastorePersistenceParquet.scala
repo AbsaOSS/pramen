@@ -100,10 +100,10 @@ class MetastorePersistenceParquet(path: String,
 
     stats.recordCountAppended match {
       case Some(recordsAppended) =>
-        log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount}, " +
+        log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount.get}, " +
           s"new size: ${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
       case None =>
-        log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records " +
+        log.info(s"$SUCCESS Successfully saved ${stats.recordCount.get} records " +
           s"(${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
     }
 
@@ -123,11 +123,11 @@ class MetastorePersistenceParquet(path: String,
       val batchCount = df.filter(col(batchIdColumn) === batchId).count()
       val countAll = df.count()
 
-      MetaTableStats(countAll, Option(batchCount), Option(size))
+      MetaTableStats(Option(countAll), Option(batchCount), Option(size))
     } else {
       val countAll = df.count()
 
-      MetaTableStats(countAll, None, Option(size))
+      MetaTableStats(Option(countAll), None, Option(size))
     }
   }
 

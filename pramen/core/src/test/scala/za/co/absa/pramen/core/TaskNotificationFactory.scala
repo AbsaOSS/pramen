@@ -29,7 +29,7 @@ object TaskNotificationFactory {
                                  Instant.ofEpochMilli(1613600000000L),
                                  Instant.ofEpochMilli(1672759508000L)
                                )),
-                               status: RunStatus = RunStatus.Succeeded(None, 100, None, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
+                               status: RunStatus = RunStatus.Succeeded(None, Some(100), None, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
                                applicationId: String = "app_12345",
                                isTransient: Boolean = false,
                                isRawFilesJob: Boolean = false,

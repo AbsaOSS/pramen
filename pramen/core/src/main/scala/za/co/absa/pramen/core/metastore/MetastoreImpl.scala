@@ -112,7 +112,7 @@ class MetastoreImpl(appConfig: Config,
     val isTransient = mt.format.isTransient
     val start = Instant.now.getEpochSecond
 
-    var stats = MetaTableStats(0, None, None)
+    var stats = MetaTableStats(Some(0), None, None)
 
     withSparkConfig(mt.sparkConfig) {
       stats = MetastorePersistence.fromMetaTable(mt, appConfig, saveModeOverride, batchId).saveTable(infoDate, df, inputRecordCount)
@@ -122,8 +122,10 @@ class MetastoreImpl(appConfig: Config,
 
     val nothingAppended = stats.recordCountAppended.contains(0)
 
-    if (!skipBookKeepingUpdates && !nothingAppended) {
-      bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(stats.recordCount), stats.recordCount, start, finish, isTransient)
+    stats.recordCount.foreach{recordCount =>
+      if (!skipBookKeepingUpdates && !nothingAppended) {
+        bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, start, finish, isTransient)
+      }
     }
 
     stats

@@ -54,8 +54,13 @@ class MetastorePersistenceTransientEager(tempPathOpt: Option[String],
     }
 
     val recordCount = numberOfRecordsEstimate match {
-      case Some(n) => n
-      case None => dfOut.count()
+      case Some(n) => Option(n)
+      case None =>
+        cachePolicy match {
+          case CachePolicy.Cache => Option(dfOut.count())
+          case CachePolicy.Persist => Option(dfOut.count())
+          case _ => None
+        }
     }
 
     MetaTableStats(

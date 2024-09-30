@@ -120,25 +120,29 @@ class PythonTransformationJob(operationDef: OperationDef,
       case ex: AnalysisException => throw new RuntimeException(s"Output data not found in the metastore for $infoDate", ex)
     }
 
-    if (stats.recordCount == 0 && minimumRecords > 0) {
+    val recordCount = stats.recordCount.getOrElse(0L)
+
+    if (recordCount == 0 && minimumRecords > 0) {
       throw new RuntimeException(s"Output table is empty in the metastore for $infoDate")
     }
 
-    if (stats.recordCount < minimumRecords) {
-      throw new RuntimeException(s"The transformation returned too few records (${stats.recordCount} < $minimumRecords).")
+    if (recordCount < minimumRecords) {
+      throw new RuntimeException(s"The transformation returned too few records ($recordCount < $minimumRecords).")
     }
 
     val jobFinished = Instant.now()
 
-    bookkeeper.setRecordCount(outputTable.name,
-      infoDate,
-      infoDate,
-      infoDate,
-      stats.recordCount,
-      stats.recordCount,
-      jobStarted.getEpochSecond,
-      jobFinished.getEpochSecond,
-      isTableTransient = false)
+    stats.recordCount.foreach{ recordCount =>
+      bookkeeper.setRecordCount(outputTable.name,
+        infoDate,
+        infoDate,
+        infoDate,
+        recordCount,
+        recordCount,
+        jobStarted.getEpochSecond,
+        jobFinished.getEpochSecond,
+        isTableTransient = false)
+    }
 
     SaveResult(stats)
   }

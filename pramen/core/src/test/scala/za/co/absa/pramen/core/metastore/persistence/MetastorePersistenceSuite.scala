@@ -217,7 +217,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
 
     val stats = mtp.getStats(infoDate, onlyForCurrentBatchId = false)
 
-    assert(stats.recordCount == 3)
+    assert(stats.recordCount.contains(3))
     assert(stats.dataSizeBytes.exists(_ > 0))
   }
 
@@ -226,7 +226,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
 
     val stats = mtp.getStats(infoDate, onlyForCurrentBatchId = false)
 
-    assert(stats.recordCount == 0)
+    assert(stats.recordCount.contains(0))
     assert(stats.dataSizeBytes.contains(0L))
   }
 

@@ -377,7 +377,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         val stats = m.getStats("table1", infoDate)
 
-        assert(stats.recordCount == 3)
+        assert(stats.recordCount.contains(3))
         assert(stats.dataSizeBytes.exists(_ > 0))
       }
     }

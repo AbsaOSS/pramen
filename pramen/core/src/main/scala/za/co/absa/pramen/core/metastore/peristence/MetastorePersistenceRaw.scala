@@ -88,7 +88,7 @@ class MetastorePersistenceRaw(path: String,
     }
 
     MetaTableStats(
-      totalSize,
+      Option(totalSize),
       None,
       Some(totalSize)
     )
@@ -108,7 +108,7 @@ class MetastorePersistenceRaw(path: String,
     })
 
     MetaTableStats(
-      files.length,
+      Option(files.length),
       None,
       Some(totalSize)
     )

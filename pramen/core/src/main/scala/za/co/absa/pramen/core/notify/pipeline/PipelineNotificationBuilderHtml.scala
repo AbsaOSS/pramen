@@ -498,14 +498,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withTable(tableBuilder)
   }
 
-  private[core] def getThroughputRps(task: TaskResult): TextElement = {
+  def getThroughputRps(task: TaskResult): TextElement = {
     val recordCount = task.runStatus match {
       case s: Succeeded =>
         s.recordsAppended match {
           case Some(appended) => appended
-          case None => s.recordCount
+          case None => s.recordCount.getOrElse(0L)
         }
-      case _            => 0
+      case _ => 0L
     }
 
     task.runInfo match {
@@ -547,7 +547,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private[core] def getRecordCountText(task: TaskResult): String = {
+  def getRecordCountText(task: TaskResult): String = {
     def renderDifference(numRecords: Long, numRecordsOld: Option[Long], numRecordsAppended: Option[Long]): String = {
       numRecordsOld match {
         case Some(old) if old > 0 =>
@@ -571,14 +571,18 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       "-"
     } else {
       task.runStatus match {
-        case s: Succeeded        => renderDifference(s.recordCount, s.recordCountOld, s.recordsAppended)
+        case s: Succeeded        =>
+          s.recordCount match {
+            case Some(recordCount) => renderDifference(recordCount, s.recordCountOld, s.recordsAppended)
+            case None => "-"
+          }
         case d: InsufficientData => renderDifference(d.actual, d.recordCountOld, None)
-        case _                   => ""
+        case _                   => "-"
       }
     }
   }
 
-  private[core] def getSizeText(task: TaskResult): String = {
+  def getSizeText(task: TaskResult): String = {
     def renderDifferenceSize(numBytes: Long, numBytesOld: Option[Long]): String = {
       numBytesOld match {
         case Some(old) if old > 0 =>
@@ -595,7 +599,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
 
     task.runStatus match {
-      case s: Succeeded        => renderDifferenceSize(s.recordCount, s.recordCountOld)
+      case s: Succeeded        =>
+        s.recordCount match {
+          case Some(recordCount) => renderDifferenceSize(recordCount, s.recordCountOld)
+          case None => ""
+        }
       case d: InsufficientData => renderDifferenceSize(d.actual, d.recordCountOld)
       case _                   => ""
     }

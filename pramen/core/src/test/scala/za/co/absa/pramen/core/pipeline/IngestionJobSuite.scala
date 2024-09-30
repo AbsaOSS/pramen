@@ -369,7 +369,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
 
       val stats = saveResult.stats
 
-      assert(stats.recordCount == 3)
+      assert(stats.recordCount.contains(3))
       assert(mt.saveTableInvocations.length == 1)
       assert(mt.saveTableInvocations.head._1 == "table1")
       assert(mt.saveTableInvocations.head._2 == infoDate)

@@ -120,18 +120,18 @@ class MetastorePersistenceDelta(query: Query,
       case Some(size) =>
         stats.recordCountAppended match {
           case Some(recordsAppended) =>
-            log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount}, " +
+            log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount.get}, " +
               s"new size: ${StringUtils.prettySize(size)}) to ${query.query}")
           case None =>
-            log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records " +
+            log.info(s"$SUCCESS Successfully saved ${stats.recordCount.get} records " +
               s"(${StringUtils.prettySize(size)}) to ${query.query}")
         }
       case None =>
         stats.recordCountAppended match {
           case Some(recordsAppended) =>
-            log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount} to ${query.query}")
+            log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount.get} to ${query.query}")
           case None =>
-            log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records  to ${query.query}")
+            log.info(s"$SUCCESS Successfully saved ${stats.recordCount.get} records  to ${query.query}")
         }
     }
 
@@ -160,11 +160,11 @@ class MetastorePersistenceDelta(query: Query,
       val batchCount = df.filter(col(batchIdColumn) === batchId).count()
       val countAll = df.count()
 
-      MetaTableStats(countAll, Option(batchCount), sizeOpt)
+      MetaTableStats(Option(countAll), Option(batchCount), sizeOpt)
     } else {
       val countAll = df.count()
 
-      MetaTableStats(countAll, None, sizeOpt)
+      MetaTableStats(Option(countAll), None, sizeOpt)
     }
   }
 

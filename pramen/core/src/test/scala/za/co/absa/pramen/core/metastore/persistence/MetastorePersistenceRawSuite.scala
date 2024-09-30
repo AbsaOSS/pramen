@@ -232,7 +232,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         val stats = persistence.getStats(infoDate, onlyForCurrentBatchId = false)
 
-        assert(stats.recordCount == 2)
+        assert(stats.recordCount.contains(2))
         assert(stats.dataSizeBytes.contains(7L))
       }
     }

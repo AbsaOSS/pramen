@@ -29,8 +29,8 @@ case class TaskCompleted(
                           periodBegin: LocalDate,
                           periodEnd: LocalDate,
                           informationDate: LocalDate,
-                          inputRecordCount: Long,
-                          inputRecordCountOld: Long,
+                          inputRecordCount: Option[Long],
+                          inputRecordCountOld: Option[Long],
                           outputRecordCount: Option[Long],
                           outputRecordCountOld: Option[Long],
                           appendedRecordCount: Option[Long],
@@ -60,8 +60,8 @@ object TaskCompleted {
     val sparkApplicationId = Option(taskResult.applicationId)
 
     val (recordCountOld, inputRecordCount, outputRecordCount, sizeBytes, appendedRecords) = taskResult.runStatus match {
-      case s: Succeeded => (s.recordCountOld, s.recordCount, Some(s.recordCount), s.sizeBytes, s.recordsAppended)
-      case _            => (None, 0L, None, None, None)
+      case s: Succeeded => (s.recordCountOld, s.recordCount, s.recordCount, s.sizeBytes, s.recordsAppended)
+      case _            => (None, None, None, None, None)
     }
 
     TaskCompleted(
@@ -71,7 +71,7 @@ object TaskCompleted {
       task.infoDate,
       task.infoDate,
       inputRecordCount,
-      recordCountOld.getOrElse(0L),
+      recordCountOld,
       outputRecordCount,
       recordCountOld,
       appendedRecords,
