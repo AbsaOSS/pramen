@@ -17,13 +17,14 @@
 package za.co.absa.pramen.core.tests.sql
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
 import za.co.absa.pramen.core.samples.RdbExampleTable
 
 import java.sql.Connection
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 class SqlGeneratorSasSuite extends AnyWordSpec with RelationalDbFixture {
 
@@ -157,6 +158,29 @@ class SqlGeneratorSasSuite extends AnyWordSpec with RelationalDbFixture {
 
     "wrapped query without alias for SQL queries " in {
       assert(gen.getDtable("SELECT A FROM B") == "(SELECT A FROM B)")
+    }
+  }
+
+  "getOffsetWhereCondition" should {
+    "return the correct condition for integral offsets" in {
+      val actual = gen.asInstanceOf[SqlGeneratorBase]
+        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralType(1))
+
+      assert(actual == "offset < 1")
+    }
+
+    "return the correct condition for datetime offsets" in {
+      val actual = gen.asInstanceOf[SqlGeneratorBase]
+        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeType(Instant.ofEpochMilli(1727761000)))
+
+      assert(actual == "offset > '21Jan1970:01:56:01.000'dt")
+    }
+
+    "return the correct condition for string offsets" in {
+      val actual = gen.asInstanceOf[SqlGeneratorBase]
+        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringType("AAA"))
+
+      assert(actual == "offset >= 'AAA'")
     }
   }
 }

@@ -21,7 +21,7 @@ import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 class SqlGeneratorGenericSuite extends AnyWordSpec {
 
@@ -262,6 +262,29 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
 
         assert(sql == "SELECT A, D, \"Column with spaces\" FROM table1 WHERE D = date'2020-08-17' AND offset > 1 AND offset <= 2")
       }
+    }
+  }
+
+  "getOffsetWhereCondition" should {
+    "return the correct condition for integral offsets" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase]
+        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralType(1))
+
+      assert(actual == "offset < 1")
+    }
+
+    "return the correct condition for datetime offsets" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase]
+        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeType(Instant.ofEpochMilli(1727761000)))
+
+      assert(actual == "offset > '1970-01-21 01:56:01.000'")
+    }
+
+    "return the correct condition for string offsets" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase]
+        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringType("AAA"))
+
+      assert(actual == "offset >= 'AAA'")
     }
   }
 }
