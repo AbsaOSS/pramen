@@ -808,6 +808,34 @@ pramen.operations = [
 ]
 ```
 
+### Incremental Ingestion (experimental)
+Pramen `version 1.10` introduces the concept of incremental ingestion. It allows running a pipeline multiple times a day
+without reprocessing data that was already processed. In order to enable it, use `incremental` schedule when defining your
+ingestion operation:
+```hocon
+schedule = "incremental"
+```
+
+In order for the incremental ingestion to work you need to define a monotonically increasing field, called an offset.
+Usually, this incremental field can be a counter, or a record creation timestamp. You need to define the offset field in
+your source. The source should support incremental ingestion in order to use this mode.
+```hocon
+offset.column {
+  name = "created_at"
+  type = "datetime"
+}
+```
+
+Offset types available at the moment:
+
+| Type     | Description                                |
+|----------|--------------------------------------------|
+| integral | Any integral type (`short`, `int`, `long`) |
+| datetime | A `datetime `or `timestamp` fields         |
+| string   | Only `string` / `varchar(n)` types.        |
+
+Only ingestion jobs support incremental schedule at the moment. Incremental transformations and sinks are planned to be
+available soon.
 
 ### Sinks
 Sinks define a way data needs to be sent to a target system. Built-in sinks include:
