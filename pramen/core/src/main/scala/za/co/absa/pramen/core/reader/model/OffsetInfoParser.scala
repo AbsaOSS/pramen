@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.reader.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 object OffsetInfoParser {
@@ -28,7 +28,7 @@ object OffsetInfoParser {
     for {
       columnName <- ConfigUtils.getOptionString(conf, OFFSET_COLUMN_NAME_KEY)
       columnType <- ConfigUtils.getOptionString(conf, OFFSET_COLUMN_TYPE_KEY)
-    } yield OffsetInfo(columnName, OffsetValue.getMinimumForType(columnType))
+    } yield OffsetInfo(columnName, OffsetType.fromString(columnType))
   }
 
 }

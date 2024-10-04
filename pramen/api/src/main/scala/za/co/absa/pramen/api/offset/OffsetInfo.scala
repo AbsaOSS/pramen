@@ -16,4 +16,4 @@
 
 package za.co.absa.pramen.api.offset
 
-case class OffsetInfo(offsetColumn: String, minimalOffset: OffsetValue)
+case class OffsetInfo(offsetColumn: String, offsetType: OffsetType)

@@ -96,13 +96,13 @@ class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
 
   override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
-      case OffsetValue.DateTimeType(ts) =>
+      case OffsetValue.DateTimeValue(ts) =>
         val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
         val tsLiteral = timestampGenericDbFormatter.format(ldt)
         s"$column $condition TIMESTAMP '$tsLiteral'"
-      case OffsetValue.IntegralType(value) =>
+      case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
-      case OffsetValue.StringType(value) =>
+      case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
     }
   }

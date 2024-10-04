@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.sql
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
 import za.co.absa.pramen.core.sql.SqlGeneratorMicrosoft
@@ -28,9 +28,9 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
 
   import za.co.absa.pramen.core.sql.SqlGeneratorLoader._
 
-  private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", offsetInfo = Some(OffsetInfo("offset", OffsetValue.IntegralType(-1))))
+  private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", offsetInfo = Some(OffsetInfo("offset", OffsetType.IntegralType)))
   private val sqlConfigEscape = DummySqlConfigFactory.getDummyConfig(infoDateColumn = "Info date", identifierQuotingPolicy = QuotingPolicy.Always)
-  private val sqlConfigDateTime = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATETIME, infoDateColumn = "D", offsetInfo = Some(OffsetInfo("offset", OffsetValue.getMinimumForType("datetime"))))
+  private val sqlConfigDateTime = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATETIME, infoDateColumn = "D", offsetInfo = Some(OffsetInfo("offset", OffsetType.DateTimeType)))
   private val sqlConfigString = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, infoDateColumn = "D")
   private val sqlConfigNumber = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.NUMBER, infoDateColumn = "D", dateFormatApp = "yyyyMMdd")
   private val columns = Seq("A", "D", "Column with spaces")
@@ -325,27 +325,27 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         }
 
         "work with only from offset" in {
-          val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), None, Seq.empty)
+          val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset > 1")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset >= 1")
         }
 
         "work with only to offset" in {
-          val sql = genDate.getDataQueryIncremental("table1", None, None, Some(OffsetValue.IntegralType(1)), Seq.empty)
+          val sql = genDate.getDataQueryIncremental("table1", None, None, Some(OffsetValue.IntegralValue(1)), Seq.empty)
 
           assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset <= 1")
         }
 
         "work with from and to offsets" in {
-          val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), Seq.empty)
+          val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset > 1 AND offset <= 2")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset >= 1 AND offset <= 2")
         }
 
         "work with from and to offsets, column projection" in {
-          val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), columns)
+          val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), columns)
 
-          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE offset > 1 AND offset <= 2")
+          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE offset >= 1 AND offset <= 2")
         }
       }
       "info date is present" when {
@@ -356,27 +356,27 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         }
 
         "work with only from offset" in {
-          val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), None, Seq.empty)
+          val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset > 1")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset >= 1")
         }
 
         "work with only to offset" in {
-          val sql = genDate.getDataQueryIncremental("table1", Some(date1), None, Some(OffsetValue.IntegralType(1)), Seq.empty)
+          val sql = genDate.getDataQueryIncremental("table1", Some(date1), None, Some(OffsetValue.IntegralValue(1)), Seq.empty)
 
           assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset <= 1")
         }
 
         "work with from and to offsets" in {
-          val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), Seq.empty)
+          val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset > 1 AND offset <= 2")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset >= 1 AND offset <= 2")
         }
 
         "work with from and to offsets, column projection" in {
-          val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), columns)
+          val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), columns)
 
-          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset > 1 AND offset <= 2")
+          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset >= 1 AND offset <= 2")
         }
       }
     }
@@ -391,27 +391,27 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         }
 
         "work with only from offset" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", None, Some(OffsetValue.DateTimeType(offset1)), None, Seq.empty)
+          val sql = genDateTime.getDataQueryIncremental("table1", None, Some(OffsetValue.DateTimeValue(offset1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset > '1970-01-21 01:56:01.000'")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset >= '1970-01-21 01:56:01.000'")
         }
 
         "work with only to offset" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", None, None, Some(OffsetValue.DateTimeType(offset1)), Seq.empty)
+          val sql = genDateTime.getDataQueryIncremental("table1", None, None, Some(OffsetValue.DateTimeValue(offset1)), Seq.empty)
 
           assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset <= '1970-01-21 01:56:01.000'")
         }
 
         "work with from and to offsets" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", None, Some(OffsetValue.DateTimeType(offset1)), Some(OffsetValue.DateTimeType(offset2)), Seq.empty)
+          val sql = genDateTime.getDataQueryIncremental("table1", None, Some(OffsetValue.DateTimeValue(offset1)), Some(OffsetValue.DateTimeValue(offset2)), Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset > '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset >= '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
         }
 
         "work with from and to offsets, column projection" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", None, Some(OffsetValue.DateTimeType(offset1)), Some(OffsetValue.DateTimeType(offset2)), columns)
+          val sql = genDateTime.getDataQueryIncremental("table1", None, Some(OffsetValue.DateTimeValue(offset1)), Some(OffsetValue.DateTimeValue(offset2)), columns)
 
-          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE offset > '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
+          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE offset >= '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
         }
       }
       "info date is present" when {
@@ -422,27 +422,27 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         }
 
         "work with only from offset" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.DateTimeType(offset1)), None, Seq.empty)
+          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.DateTimeValue(offset1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset > '1970-01-21 01:56:01.000'")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset >= '1970-01-21 01:56:01.000'")
         }
 
         "work with only to offset" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), None, Some(OffsetValue.DateTimeType(offset1)), Seq.empty)
+          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), None, Some(OffsetValue.DateTimeValue(offset1)), Seq.empty)
 
           assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset <= '1970-01-21 01:56:01.000'")
         }
 
         "work with from and to offsets" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.DateTimeType(offset1)), Some(OffsetValue.DateTimeType(offset2)), Seq.empty)
+          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.DateTimeValue(offset1)), Some(OffsetValue.DateTimeValue(offset2)), Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset > '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset >= '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
         }
 
         "work with from and to offsets, column projection" in {
-          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.DateTimeType(offset1)), Some(OffsetValue.DateTimeType(offset2)), columns)
+          val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.DateTimeValue(offset1)), Some(OffsetValue.DateTimeValue(offset2)), columns)
 
-          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset > '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
+          assert(sql == "SELECT A, D, [Column with spaces] FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset >= '1970-01-21 01:56:01.000' AND offset <= '1970-01-21 01:56:02.000'")
         }
       }
     }
@@ -451,21 +451,21 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
   "getOffsetWhereCondition" should {
     "return the correct condition for integral offsets" in {
       val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft]
-        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralType(1))
+        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralValue(1))
 
       assert(actual == "offset < 1")
     }
 
     "return the correct condition for datetime offsets" in {
       val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft]
-        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeType(Instant.ofEpochMilli(1727761000)))
+        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeValue(Instant.ofEpochMilli(1727761000)))
 
       assert(actual == "offset > '1970-01-21 01:56:01.000'")
     }
 
     "return the correct condition for string offsets" in {
       val actual = genDate.asInstanceOf[SqlGeneratorMicrosoft]
-        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringType("AAA"))
+        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringValue("AAA"))
 
       assert(actual == "offset >= 'AAA'")
     }

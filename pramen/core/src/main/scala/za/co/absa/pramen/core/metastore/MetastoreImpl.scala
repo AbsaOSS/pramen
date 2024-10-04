@@ -82,10 +82,11 @@ class MetastoreImpl(appConfig: Config,
     MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(infoDateFrom, infoDateTo)
   }
 
-  override def getCurrentBatch(tableName: String, infoDate: LocalDate): DataFrame = {
+  override def getBatch(tableName: String, infoDate: LocalDate, batchIdOpt: Option[Long]): DataFrame = {
     val mt = getTableDef(tableName)
+    val effectiveBatchId = batchIdOpt.getOrElse(batchId)
 
-    val df = MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(Option(infoDate), Option(infoDate))
+    val df = MetastorePersistence.fromMetaTable(mt, appConfig, batchId = effectiveBatchId).loadTable(Option(infoDate), Option(infoDate))
 
     if (df.schema.fields.exists(_.name.equalsIgnoreCase(mt.batchIdColumn))) {
       df.filter(col(mt.batchIdColumn) === lit(batchId))
@@ -214,7 +215,7 @@ class MetastoreImpl(appConfig: Config,
       override def getCurrentBatch(tableName: String): DataFrame = {
         validateTable(tableName)
         if (isIncremental)
-          metastore.getCurrentBatch(tableName, infoDate)
+          metastore.getBatch(tableName, infoDate, None)
         else
           metastore.getTable(tableName, Option(infoDate), Option(infoDate))
       }
@@ -245,7 +246,7 @@ class MetastoreImpl(appConfig: Config,
       }
 
       override def getTableDef(tableName: String): MetaTableDef = {
-        validateTable(tableName)
+        validateTable(tableName) // ToDo Consider removing
 
         MetaTable.getMetaTableDef(metastore.getTableDef(tableName))
       }

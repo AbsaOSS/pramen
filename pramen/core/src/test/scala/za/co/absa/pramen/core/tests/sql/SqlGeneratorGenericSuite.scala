@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.sql
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
 
@@ -27,7 +27,7 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
 
   import za.co.absa.pramen.core.sql.SqlGeneratorLoader._
 
-  private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", offsetInfo = Some(OffsetInfo("offset", OffsetValue.IntegralType(-1))))
+  private val sqlConfigDate = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATE, infoDateColumn = "D", offsetInfo = Some(OffsetInfo("offset", OffsetType.IntegralType)))
   private val sqlConfigEscape = DummySqlConfigFactory.getDummyConfig(infoDateColumn = "Info date", identifierQuotingPolicy = QuotingPolicy.Always)
   private val sqlConfigDateTime = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.DATETIME, infoDateColumn = "D")
   private val sqlConfigString = DummySqlConfigFactory.getDummyConfig(infoDateType = SqlColumnType.STRING, infoDateColumn = "D")
@@ -209,27 +209,27 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
       }
 
       "work with only from offset" in {
-        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), None, Seq.empty)
+        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-        assert(sql == "SELECT * FROM table1 WHERE offset > 1")
+        assert(sql == "SELECT * FROM table1 WHERE offset >= 1")
       }
 
       "work with only to offset" in {
-        val sql = genDate.getDataQueryIncremental("table1", None, None, Some(OffsetValue.IntegralType(1)), Seq.empty)
+        val sql = genDate.getDataQueryIncremental("table1", None, None, Some(OffsetValue.IntegralValue(1)), Seq.empty)
 
         assert(sql == "SELECT * FROM table1 WHERE offset <= 1")
       }
 
       "work with from and to offsets" in {
-        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), Seq.empty)
+        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), Seq.empty)
 
-        assert(sql == "SELECT * FROM table1 WHERE offset > 1 AND offset <= 2")
+        assert(sql == "SELECT * FROM table1 WHERE offset >= 1 AND offset <= 2")
       }
 
       "work with from and to offsets, column projection" in {
-        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), columns)
+        val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), columns)
 
-        assert(sql == "SELECT A, D, \"Column with spaces\" FROM table1 WHERE offset > 1 AND offset <= 2")
+        assert(sql == "SELECT A, D, \"Column with spaces\" FROM table1 WHERE offset >= 1 AND offset <= 2")
       }
     }
     "info date is present" when {
@@ -240,27 +240,27 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
       }
 
       "work with only from offset" in {
-        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), None, Seq.empty)
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset > 1")
+        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset >= 1")
       }
 
       "work with only to offset" in {
-        val sql = genDate.getDataQueryIncremental("table1", Some(date1), None, Some(OffsetValue.IntegralType(1)), Seq.empty)
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), None, Some(OffsetValue.IntegralValue(1)), Seq.empty)
 
         assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset <= 1")
       }
 
       "work with from and to offsets" in {
-        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), Seq.empty)
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), Seq.empty)
 
-        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset > 1 AND offset <= 2")
+        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset >= 1 AND offset <= 2")
       }
 
       "work with from and to offsets, column projection" in {
-        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralType(1)), Some(OffsetValue.IntegralType(2)), columns)
+        val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), Some(OffsetValue.IntegralValue(2)), columns)
 
-        assert(sql == "SELECT A, D, \"Column with spaces\" FROM table1 WHERE D = date'2020-08-17' AND offset > 1 AND offset <= 2")
+        assert(sql == "SELECT A, D, \"Column with spaces\" FROM table1 WHERE D = date'2020-08-17' AND offset >= 1 AND offset <= 2")
       }
     }
   }
@@ -268,21 +268,21 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
   "getOffsetWhereCondition" should {
     "return the correct condition for integral offsets" in {
       val actual = genDate.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralType(1))
+        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralValue(1))
 
       assert(actual == "offset < 1")
     }
 
     "return the correct condition for datetime offsets" in {
       val actual = genDate.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeType(Instant.ofEpochMilli(1727761000)))
+        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeValue(Instant.ofEpochMilli(1727761000)))
 
       assert(actual == "offset > '1970-01-21 01:56:01.000'")
     }
 
     "return the correct condition for string offsets" in {
       val actual = genDate.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringType("AAA"))
+        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringValue("AAA"))
 
       assert(actual == "offset >= 'AAA'")
     }

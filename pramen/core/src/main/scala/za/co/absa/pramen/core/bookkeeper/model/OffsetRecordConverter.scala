@@ -22,16 +22,15 @@ import java.time.LocalDate
 
 object OffsetRecordConverter {
   def toDataOffset(r: OffsetRecord): DataOffset = {
-    val maxOffsetOpt = if (r.maxOffset.nonEmpty) {
-      Option(OffsetValue.fromString(r.dataType, r.maxOffset))
-    } else {
-      None
-    }
+    val minOffsetOpt = OffsetValue.fromString(r.dataType, r.minOffset)
+
+    val maxOffsetOpt = OffsetValue.fromString(r.dataType, r.maxOffset)
 
     DataOffset(
       r.pramenTableName,
       LocalDate.parse(r.infoDate),
-      OffsetValue.fromString(r.dataType, r.minOffset),
+      r.batchId,
+      minOffsetOpt,
       maxOffsetOpt,
       r.createdAtMilli,
       r.committedAtMilli

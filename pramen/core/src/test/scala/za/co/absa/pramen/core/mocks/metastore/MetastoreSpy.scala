@@ -71,7 +71,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     tableDf
   }
 
-  override def getCurrentBatch(tableName: String, infoDate: LocalDate): DataFrame = {
+  override def getBatch(tableName: String, infoDate: LocalDate, batchIdOpt: Option[Long]): DataFrame = {
     getTable(tableName, Option(infoDate), Option(infoDate))
   }
 

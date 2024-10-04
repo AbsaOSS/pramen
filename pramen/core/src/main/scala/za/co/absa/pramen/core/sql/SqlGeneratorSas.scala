@@ -23,8 +23,8 @@ import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.SasDialect
 
 import java.sql.{Connection, ResultSet}
-import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
 import java.util.Locale
 import scala.collection.mutable.ListBuffer
 
@@ -169,13 +169,13 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
 
   override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
-      case OffsetValue.DateTimeType(ts) =>
+      case OffsetValue.DateTimeValue(ts) =>
         val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
         val tsLiteral = timestampSasDbFormatter.format(ldt)
         s"$column $condition '$tsLiteral'dt"
-      case OffsetValue.IntegralType(value) =>
+      case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
-      case OffsetValue.StringType(value) =>
+      case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
     }
   }

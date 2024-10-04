@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode, SparkSession}
-import za.co.absa.pramen.api.offset.{DataOffset, OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.offset.{DataOffset, OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
@@ -30,7 +30,7 @@ import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental}
 import za.co.absa.pramen.core.utils.SparkUtils._
 
-import java.time.{Instant, LocalDate, ZoneId}
+import java.time.{Instant, LocalDate}
 
 class IncrementalIngestionJob(operationDef: OperationDef,
                               metastore: Metastore,
@@ -169,9 +169,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     validateOffsetColumn(df, offsetInfo)
 
-    val minimumOffset = latestOffset.map(_.maximumOffset).getOrElse(offsetInfo.minimalOffset)
-
-    val req = om.startWriteOffsets(outputTable.name, infoDate, minimumOffset)
+    val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType)
 
     val stats = try {
       val statsToReturn = if (isRerun) {
@@ -180,21 +178,17 @@ class IncrementalIngestionJob(operationDef: OperationDef,
         metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
       }
 
-      val updatedDf = metastore.getCurrentBatch(outputTable.name, infoDate)
+      val updatedDf = metastore.getBatch(outputTable.name, infoDate, None)
 
       if (updatedDf.isEmpty) {
-        if (isRerun) {
-          om.commitRerun(req, OffsetValue.getMinimumForType(offsetInfo.minimalOffset.dataTypeString))
-        } else {
-          om.rollbackOffsets(req)
-        }
+        om.rollbackOffsets(req)
       } else {
-        val maxOffset = getMaximumOffsetFromDf(df, offsetInfo)
+        val (minOffset, maxOffset) = getMinMaxOffsetFromDf(df, offsetInfo)
 
         if (isRerun) {
-          om.commitRerun(req, maxOffset)
+          om.commitRerun(req, minOffset, maxOffset)
         } else {
-          om.commitOffsets(req, maxOffset)
+          om.commitOffsets(req, minOffset, maxOffset)
         }
       }
       statsToReturn
@@ -225,8 +219,6 @@ class IncrementalIngestionJob(operationDef: OperationDef,
   }
 
   private[core] def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, infoDate: LocalDate, uncommittedOffsets: Array[DataOffset]): Unit = {
-    val minOffset = uncommittedOffsets.map(_.minOffset).min
-
     val offsetInfo = source.getOffsetInfo.getOrElse(throw new IllegalArgumentException(s"Offset column not defined for the ingestion job '${operationDef.name}', " +
       s"query: '${sourceTable.query.query}''"))
 
@@ -247,21 +239,22 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' not found in the output table '${outputTable.name}'. Cannot update uncommitted offsets.")
     }
 
-    val newMaxOffset = if (df.isEmpty) {
-      minOffset
+    val (newMinOffset, newMaxOffset) = if (df.isEmpty) {
+      rollbackOffsets(infoDate, om, uncommittedOffsets)
+      return
     } else {
-      getMaximumOffsetFromDf(df, offsetInfo)
+      getMinMaxOffsetFromDf(df, offsetInfo)
     }
 
     log.warn(s"Fixing uncommitted offsets. New offset to commit for ${outputTable.name} at $infoDate: " +
-      s"min offset: ${minOffset.valueString}, max offset: ${newMaxOffset.valueString}.")
+      s"min offset: ${newMinOffset.valueString}, max offset: ${newMaxOffset.valueString}.")
 
-    val req = om.startWriteOffsets(outputTable.name, infoDate, minOffset)
-    om.commitOffsets(req, newMaxOffset)
+    val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType)
+    om.commitOffsets(req, newMinOffset, newMaxOffset)
 
     uncommittedOffsets.foreach { of =>
       log.warn(s"Cleaning uncommitted offset: $of...")
-      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.minOffset, of.createdAt))
+      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.batchId, of.createdAt))
     }
 
     latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
@@ -272,17 +265,18 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     uncommittedOffsets.foreach { of =>
       log.warn(s"Cleaning uncommitted offset: $of...")
-      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.minOffset, of.createdAt))
+      om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.batchId, of.createdAt))
     }
 
     latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
   }
 
-  private[core] def getMaximumOffsetFromDf(df: DataFrame, offsetInfo: OffsetInfo): OffsetValue = {
-    val row = df.agg(max(offsetInfo.minimalOffset.getSparkCol(col(offsetInfo.offsetColumn)))
-        .cast(StringType))
+  private[core] def getMinMaxOffsetFromDf(df: DataFrame, offsetInfo: OffsetInfo): (OffsetValue, OffsetValue) = {
+    val row = df.agg(min(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn)).cast(StringType)),
+        max(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn))).cast(StringType))
       .collect()(0)
-    OffsetValue.fromString(offsetInfo.minimalOffset.dataTypeString, row(0).asInstanceOf[String])
+    (OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(0).asInstanceOf[String]).get,
+      OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(1).asInstanceOf[String]).get)
   }
 
   private[core] def validateOffsetColumn(df: DataFrame, offsetInfo: OffsetInfo): Unit = {
@@ -292,21 +286,21 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     val field = df.schema.fields.find(_.name.equalsIgnoreCase(offsetInfo.offsetColumn)).get
 
-    offsetInfo.minimalOffset match {
-      case v: OffsetValue.DateTimeType =>
+    offsetInfo.offsetType match {
+      case OffsetType.DateTimeType =>
         if (!field.dataType.isInstanceOf[TimestampType]) {
           throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' has type '${field.dataType}'. " +
-            s"But only '${TimestampType.typeName}' is supported for offset type '${v.dataTypeString}'.")
+            s"But only '${TimestampType.typeName}' is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
-      case v: OffsetValue.IntegralType =>
+      case OffsetType.IntegralType =>
         if (!field.dataType.isInstanceOf[ShortType] && !field.dataType.isInstanceOf[IntegerType] && !field.dataType.isInstanceOf[LongType]) {
           throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' has type '${field.dataType}'. " +
-            s"But only integral types are supported for offset type '${v.dataTypeString}'.")
+            s"But only integral types are supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
-      case v: OffsetValue.StringType =>
+      case OffsetType.StringType =>
         if (!field.dataType.isInstanceOf[StringType]) {
           throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' has type '${field.dataType}'. " +
-            s"But only string type is supported for offset type '${v.dataTypeString}'.")
+            s"But only string type is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
     }
   }

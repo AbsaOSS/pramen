@@ -20,7 +20,8 @@ import java.time.LocalDate
 
 case class DataOffset(tableName: String,
                       infoDate: LocalDate,
-                      minOffset: OffsetValue,
+                      batchId: Long,
+                      minOffset: Option[OffsetValue],
                       maxOffset: Option[OffsetValue], /* Can be None for uncommitted offsets. */
                       createdAt: Long,
                       committedAt: Option[Long]

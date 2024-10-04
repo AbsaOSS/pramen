@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.api.offset.{DataOffset, OffsetValue}
+import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.model._
 import za.co.absa.pramen.core.utils.SlickUtils
 
@@ -52,42 +52,32 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
     }
   }
 
-  override def startWriteOffsets(table: String, infoDate: LocalDate, minOffset: OffsetValue): DataOffsetRequest = {
+  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest = {
     val createdAt = Instant.now().toEpochMilli
 
-    val record = OffsetRecord(table, infoDate.toString, minOffset.dataTypeString, minOffset.valueString, "", batchId, createdAt, None)
+    val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, "", "", batchId, createdAt, None)
 
     db.run(
       OffsetRecords.records += record
     ).execute()
 
-    DataOffsetRequest(table, infoDate, minOffset, createdAt)
+    DataOffsetRequest(table, infoDate, batchId, createdAt)
   }
 
-  override def commitOffsets(request: DataOffsetRequest, maxOffset: OffsetValue): Unit = {
+  override def commitOffsets(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
     val committedAt = Instant.now().toEpochMilli
 
     db.run(
       OffsetRecords.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt)
-        .map(r => (r.maxOffset, r.committedAt))
-        .update((maxOffset.valueString, Some(committedAt)))
+        .map(r => (r.minOffset, r.maxOffset, r.committedAt))
+        .update((minOffset.valueString, maxOffset.valueString, Some(committedAt)))
     ).execute()
   }
 
-  override def commitRerun(request: DataOffsetRequest, maxOffset: OffsetValue): Unit = {
-    val existingOffsets = getOffsets(request.tableName, request.infoDate)
-
-    val newMinOffset = if (existingOffsets.isEmpty) {
-      OffsetValue.getMinimumForType(maxOffset.dataTypeString)
-    } else {
-      existingOffsets.map(_.minOffset).min
-    }
-
-    val newMaxOffset = if (maxOffset.compareTo(request.minOffset) < 0) {
-      newMinOffset
-    } else {
-      maxOffset
+  override def commitRerun(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
+    if (minOffset.compareTo(maxOffset) > 0) {
+      throw new IllegalArgumentException(s"minOffset is greater than maxOffset: ${minOffset.valueString} > ${maxOffset.valueString}")
     }
 
     val committedAt = Instant.now().toEpochMilli
@@ -96,7 +86,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
       OffsetRecords.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt)
         .map(r => (r.minOffset, r.maxOffset, r.committedAt))
-        .update((newMinOffset.valueString, newMaxOffset.valueString, Some(committedAt)))
+        .update((minOffset.valueString, maxOffset.valueString, Some(committedAt)))
     ).execute()
 
     // Cleaning up previous batches
@@ -147,8 +137,8 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
     validateOffsets(table, infoDate, offsets)
 
     val offsetDataType =  offsets.head.dataType
-    val minOffset = offsets.map(or => OffsetValue.fromString(offsetDataType, or.minOffset)).min
-    val maxOffset = offsets.map(or => OffsetValue.fromString(offsetDataType, or.maxOffset)).max
+    val minOffset = offsets.flatMap(or => OffsetValue.fromString(offsetDataType, or.minOffset)).min
+    val maxOffset = offsets.flatMap(or => OffsetValue.fromString(offsetDataType, or.maxOffset)).max
 
     Some(DataOffsetAggregated(table, infoDate, minOffset, maxOffset, offsets.map(OffsetRecordConverter.toDataOffset)))
   }

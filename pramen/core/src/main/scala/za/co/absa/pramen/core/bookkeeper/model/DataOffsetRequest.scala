@@ -16,13 +16,11 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import za.co.absa.pramen.api.offset.OffsetValue
-
 import java.time.LocalDate
 
 case class DataOffsetRequest(
                               tableName: String,
                               infoDate: LocalDate,
-                              minOffset: OffsetValue,
+                              batchId: Long,
                               createdAt: Long /* Acts as a batch_id as well*/
                             )

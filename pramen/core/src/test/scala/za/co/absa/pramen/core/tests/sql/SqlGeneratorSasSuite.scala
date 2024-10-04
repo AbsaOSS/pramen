@@ -164,21 +164,21 @@ class SqlGeneratorSasSuite extends AnyWordSpec with RelationalDbFixture {
   "getOffsetWhereCondition" should {
     "return the correct condition for integral offsets" in {
       val actual = gen.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralType(1))
+        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralValue(1))
 
       assert(actual == "offset < 1")
     }
 
     "return the correct condition for datetime offsets" in {
       val actual = gen.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeType(Instant.ofEpochMilli(1727761000)))
+        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeValue(Instant.ofEpochMilli(1727761000)))
 
       assert(actual == "offset > '21Jan1970:01:56:01.000'dt")
     }
 
     "return the correct condition for string offsets" in {
       val actual = gen.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringType("AAA"))
+        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringValue("AAA"))
 
       assert(actual == "offset >= 'AAA'")
     }

@@ -113,7 +113,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.infoDateFormat == "yyyy-MM-DD")
       assert(jdbc.offsetInfoOpt.nonEmpty)
       assert(jdbc.offsetInfoOpt.get.offsetColumn == "ts")
-      assert(jdbc.offsetInfoOpt.get.minimalOffset.dataTypeString == "datetime")
+      assert(jdbc.offsetInfoOpt.get.offsetType.dataTypeString == "datetime")
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Never)
       assert(jdbc.sqlGeneratorClass.isEmpty)
       assert(!jdbc.hasInfoDate)

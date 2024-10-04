@@ -22,8 +22,8 @@ import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.DenodoDialect
 
-import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
 
 object SqlGeneratorDenodo {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -114,13 +114,13 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
 
   override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
-      case OffsetValue.DateTimeType(ts) =>
+      case OffsetValue.DateTimeValue(ts) =>
         val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
         val tsLiteral = timestampGenericDbFormatter.format(ldt)
         s"$column $condition TIMESTAMP '$tsLiteral'"
-      case OffsetValue.IntegralType(value) =>
+      case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
-      case OffsetValue.StringType(value) =>
+      case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
     }
   }

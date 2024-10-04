@@ -117,10 +117,10 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
       case (Some(offsetFrom), Some(offsetTo)) =>
         validateOffsetValue(offsetFrom)
         validateOffsetValue(offsetTo)
-        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
       case (Some(offsetFrom), None) =>
         validateOffsetValue(offsetFrom)
-        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)}"
       case (None, Some(offsetTo)) =>
         validateOffsetValue(offsetTo)
         s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
@@ -230,7 +230,7 @@ object SqlGeneratorBase {
 
   final def validateOffsetValue(offset: OffsetValue): Unit = {
     offset match {
-      case OffsetValue.StringType(s) =>
+      case OffsetValue.StringValue(s) =>
         if (s.contains('\''))
           throw new IllegalArgumentException(s"Offset value '$s' contains a single quote character, which is not supported.")
       case _ =>

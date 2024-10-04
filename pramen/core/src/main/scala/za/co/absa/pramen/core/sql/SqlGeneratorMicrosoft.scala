@@ -21,8 +21,8 @@ import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdenti
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.MutableStack
 
-import java.time.{LocalDate, LocalDateTime}
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
 import scala.collection.mutable.ListBuffer
 
 class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
@@ -162,10 +162,10 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
       case (Some(offsetFrom), Some(offsetTo)) =>
         validateOffsetValue(offsetFrom)
         validateOffsetValue(offsetTo)
-        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
       case (Some(offsetFrom), None) =>
         validateOffsetValue(offsetFrom)
-        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)}"
       case (None, Some(offsetTo)) =>
         validateOffsetValue(offsetTo)
         s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
@@ -176,13 +176,13 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
 
   private[core] def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
-      case OffsetValue.DateTimeType(ts) =>
+      case OffsetValue.DateTimeValue(ts) =>
         val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
         val tsLiteral = timestampMsDbFormatter.format(ldt)
         s"$column $condition '$tsLiteral'"
-      case OffsetValue.IntegralType(value) =>
+      case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
-      case OffsetValue.StringType(value) =>
+      case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
     }
   }
