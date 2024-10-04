@@ -55,6 +55,15 @@ trait SqlGenerator {
 
   /**
     * Generates a query for incremental ingestion, the result can be restricted by an information column, if present, but also by offset range.
+    *
+    * <ul>
+    * <li> When both `offsetFrom` from and `offsetTo` are passed the generator should return offsets using an inclusive interval
+    *   (offsetFrom <= offset <= offsetTo) </li>
+    * <li> When only `offsetFrom` is present the generator should return offsets using an exclusive interval interval
+    *   (offset > offsetFrom)</li>
+    * <li> When only `offsetTo` is present the generator should return offsets using an inclusive interval
+    *   (offset <= offsetTo)</li>
+    *</ul>
     */
   def getDataQueryIncremental(tableName: String,
                               onlyForInfoDate: Option[LocalDate],

@@ -72,8 +72,17 @@ trait Source extends ExternalChannel {
     *
     * If an information date is provided and available at the source, the query will be limited to that date.
     *
+    * <ul>
+    * <li> When both `offsetFrom` from and `offsetTo` are passed the source should return offsets using an inclusive interval
+    *   (offsetFrom <= offset <= offsetTo) </li>
+    * <li> When only `offsetFrom` is present the source should return offsets using an exclusive interval interval
+    *   (offset > offsetFrom)</li>
+    * <li> When only `offsetTo` is present the source should return offsets using an inclusive interval
+    *   (offset <= offsetTo)</li>
+    *</ul>
+    *
     * @param offsetFromOpt   This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
-    * @param offsetToOpt     This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
+    * @param offsetToOpt     This is an exclusive parameter the query will be SELECT ... WHERE offset_col <= min_offset
     * @param onlyForInfoDate An information date to get data for. Can be empty if the source table doesn't have such a column.
     * @param columns         Select only specified columns. Selects all if an empty Seq is passed.
     */

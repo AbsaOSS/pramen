@@ -211,7 +211,7 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
       "work with only from offset" in {
         val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-        assert(sql == "SELECT * FROM table1 WHERE offset >= 1")
+        assert(sql == "SELECT * FROM table1 WHERE offset > 1")
       }
 
       "work with only to offset" in {
@@ -242,7 +242,7 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
       "work with only from offset" in {
         val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset >= 1")
+        assert(sql == "SELECT * FROM table1 WHERE D = date'2020-08-17' AND offset > 1")
       }
 
       "work with only to offset" in {

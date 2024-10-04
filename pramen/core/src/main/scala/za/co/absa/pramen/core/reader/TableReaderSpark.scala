@@ -82,9 +82,9 @@ class TableReaderSpark(formatOpt: Option[String],
             getData(query, infoDate, infoDate, columns)
               .filter(offsetCol >= offsetFrom.getSparkLit && offsetCol <= offsetTo.getSparkLit)
           case (Some(offsetFrom), None) =>
-            log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} >= ${offsetFrom.valueString}")
+            log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} > ${offsetFrom.valueString}")
             getData(query, infoDate, infoDate, columns)
-              .filter(offsetCol >= offsetFrom.getSparkLit)
+              .filter(offsetCol > offsetFrom.getSparkLit)
           case (None, Some(offsetTo)) =>
             log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
             getData(query, infoDate, infoDate, columns)
@@ -100,9 +100,9 @@ class TableReaderSpark(formatOpt: Option[String],
             getBaseDataFrame(query)
               .filter(offsetCol >= offsetFrom.getSparkLit && offsetCol <= offsetTo.getSparkLit)
           case (Some(offsetFrom), None) =>
-            log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} >= ${offsetFrom.valueString}")
+            log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${offsetFrom.valueString}")
             getBaseDataFrame(query)
-              .filter(offsetCol >= offsetFrom.getSparkLit)
+              .filter(offsetCol > offsetFrom.getSparkLit)
           case (None, Some(offsetTo)) =>
             log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
             getBaseDataFrame(query)
