@@ -81,8 +81,6 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     }
 
     "return committed offsets" in {
-      val now = Instant.now()
-      val nextHour = now.plusSeconds(3600)
       val om = getOffsetManager
 
       val transactionReference = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
@@ -101,10 +99,13 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
 
       val offset = actualNonEmpty.head.asInstanceOf[CommittedOffset]
 
+      val now = Instant.now()
+      val nextHour = now.plusSeconds(3600)
+
       assert(offset.infoDate == infoDate)
       assert(!offset.createdAt.isAfter(now))
       assert(offset.createdAt.isBefore(nextHour))
-      assert(!offset.committedAt.isBefore(now))
+      assert(offset.committedAt.isBefore(now))
       assert(offset.committedAt.isBefore(nextHour))
       assert(offset.committedAt.isAfter(actualNonEmpty.head.createdAt))
       assert(offset.minOffset == OffsetValue.IntegralValue(1))
