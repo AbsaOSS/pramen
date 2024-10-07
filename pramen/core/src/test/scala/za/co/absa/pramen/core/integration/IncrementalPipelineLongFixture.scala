@@ -22,6 +22,7 @@ import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.TimestampType
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{Assertion, BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.api.offset.DataOffset.CommittedOffset
 import za.co.absa.pramen.api.offset.OffsetType
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.OffsetManagerJdbc
@@ -213,13 +214,13 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       val om = new OffsetManagerJdbc(pramenDb.db, 123L)
       val offsets0 = om.getOffsets("table1", infoDate.minusDays(2))
       val offsets1 = om.getOffsets("table1", infoDate.minusDays(1))
-      val offsets2 = om.getOffsets("table1", infoDate)
+      val offsets2 = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset])
 
       assert(offsets0.isEmpty)
       assert(offsets1.isEmpty)
       assert(offsets2.nonEmpty)
 
-      assert(offsets2.head.maxOffset.get.valueString == "3")
+      assert(offsets2.head.maxOffset.valueString == "3")
 
       // Expecting empty records
       assert(dfTable1After0.isEmpty)
@@ -617,13 +618,12 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       assert(batchIds.length == 1)
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.createdAt)
+      val offsets = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset]).sortBy(_.createdAt)
 
       assert(offsets.length == 1)
 
-      assert(offsets.head.minOffset.get.valueString.toLong == 1)
-      assert(offsets.head.maxOffset.get.valueString.toLong == 3)
-      assert(offsets.head.committedAt.nonEmpty)
+      assert(offsets.head.minOffset.valueString.toLong == 1)
+      assert(offsets.head.maxOffset.valueString.toLong == 3)
     }
     succeed
   }
@@ -670,13 +670,12 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       assert(batchIds.length == 1)
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.createdAt)
+      val offsets = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset]).sortBy(_.createdAt)
 
       assert(offsets.length == 1)
 
-      assert(offsets.head.minOffset.get.valueString.toLong == 1)
-      assert(offsets.head.maxOffset.get.valueString.toLong == 3)
-      assert(offsets.head.committedAt.nonEmpty)
+      assert(offsets.head.minOffset.valueString.toLong == 1)
+      assert(offsets.head.maxOffset.valueString.toLong == 3)
     }
     succeed
   }
@@ -732,16 +731,14 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       assert(batchIds.length == 2)
 
-      val offsets = om2.getOffsets("table1", infoDate).sortBy(_.createdAt)
+      val offsets = om2.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset]).sortBy(_.createdAt)
 
       assert(offsets.length == 2)
 
-      assert(offsets.head.minOffset.get.valueString.toLong == 1)
-      assert(offsets.head.maxOffset.get.valueString.toLong == 3)
-      assert(offsets.head.committedAt.nonEmpty)
-      assert(offsets(1).minOffset.get.valueString.toLong == 4)
-      assert(offsets(1).maxOffset.get.valueString.toLong == 6)
-      assert(offsets(1).committedAt.nonEmpty)
+      assert(offsets.head.minOffset.valueString.toLong == 1)
+      assert(offsets.head.maxOffset.valueString.toLong == 3)
+      assert(offsets(1).minOffset.valueString.toLong == 4)
+      assert(offsets(1).maxOffset.valueString.toLong == 6)
     }
     succeed
   }
@@ -1042,22 +1039,19 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       val om = new OffsetManagerJdbc(pramenDb.db, 123L)
 
-      val offsets1 = om.getOffsets("table1", infoDate.minusDays(1))
-      assert(offsets1.head.minOffset.get.valueString.toLong == 1613563930000L)
-      assert(offsets1.head.maxOffset.get.valueString.toLong == 1613563930000L)
-      assert(offsets1.head.committedAt.nonEmpty)
+      val offsets1 = om.getOffsets("table1", infoDate.minusDays(1)).map(_.asInstanceOf[CommittedOffset])
+      assert(offsets1.head.minOffset.valueString.toLong == 1613563930000L)
+      assert(offsets1.head.maxOffset.valueString.toLong == 1613563930000L)
 
-      val offsets2 = om.getOffsets("table1", infoDate)
+      val offsets2 = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset])
       assert(offsets2.length == 1)
-      assert(offsets2.head.minOffset.get.valueString.toLong == 1613639398123L)
-      assert(offsets2.head.maxOffset.get.valueString.toLong == 1613639399123L)
-      assert(offsets2.head.committedAt.nonEmpty)
+      assert(offsets2.head.minOffset.valueString.toLong == 1613639398123L)
+      assert(offsets2.head.maxOffset.valueString.toLong == 1613639399123L)
 
-      val offsets3 = om.getOffsets("table1", infoDate.plusDays(1))
+      val offsets3 = om.getOffsets("table1", infoDate.plusDays(1)).map(_.asInstanceOf[CommittedOffset])
       assert(offsets3.length == 1)
-      assert(offsets3.head.minOffset.get.valueString.toLong == 1613740330000L)
-      assert(offsets3.head.maxOffset.get.valueString.toLong == 1613740330000L)
-      assert(offsets3.head.committedAt.nonEmpty)
+      assert(offsets3.head.minOffset.valueString.toLong == 1613740330000L)
+      assert(offsets3.head.maxOffset.valueString.toLong == 1613740330000L)
     }
     succeed
   }
@@ -1106,17 +1100,15 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       val om = new OffsetManagerJdbc(pramenDb.db, 123L)
 
-      val offsets1 = om.getOffsets("table1", infoDate.minusDays(1))
+      val offsets1 = om.getOffsets("table1", infoDate.minusDays(1)).map(_.asInstanceOf[CommittedOffset])
       assert(offsets1.length == 1)
-      assert(offsets1.head.minOffset.get.valueString.toLong == 1)
-      assert(offsets1.head.maxOffset.get.valueString.toLong == 2)
-      assert(offsets1.head.committedAt.nonEmpty)
+      assert(offsets1.head.minOffset.valueString.toLong == 1)
+      assert(offsets1.head.maxOffset.valueString.toLong == 2)
 
-      val offsets2 = om.getOffsets("table1", infoDate)
+      val offsets2 = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset])
       assert(offsets2.length == 1)
-      assert(offsets2.head.minOffset.get.valueString.toLong == 3)
-      assert(offsets2.head.maxOffset.get.valueString.toLong == 4)
-      assert(offsets2.head.committedAt.nonEmpty)
+      assert(offsets2.head.minOffset.valueString.toLong == 3)
+      assert(offsets2.head.maxOffset.valueString.toLong == 4)
     }
     succeed
   }

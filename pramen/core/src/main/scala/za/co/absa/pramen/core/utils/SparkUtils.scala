@@ -31,7 +31,6 @@ import za.co.absa.pramen.core.pipeline.TransformExpression
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
-import scala.annotation.tailrec
 import scala.collection.mutable.ArrayBuffer
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
@@ -128,13 +127,7 @@ object SparkUtils {
     */
   def compareSchemas(schema1: StructType, schema2: StructType): List[FieldChange] = {
     def dataTypeToString(dt: DataType, metadata: Metadata): String = {
-      val maxLength = if (metadata.contains(MAX_LENGTH_METADATA_KEY)) {
-        Try {
-          metadata.getLong(MAX_LENGTH_METADATA_KEY).toInt
-        }.getOrElse(0)
-      } else {
-        0
-      }
+      val maxLength = getLengthFromMetadata(metadata).getOrElse(0)
 
       dt match {
         case _: StructType | _: ArrayType    => dt.simpleString
@@ -240,11 +233,9 @@ object SparkUtils {
     def transformPrimitive(dataType: DataType, field: StructField): DataType = {
       dataType match {
         case _: StringType =>
-          if (field.metadata.contains(MAX_LENGTH_METADATA_KEY)) {
-            val length = field.metadata.getLong(MAX_LENGTH_METADATA_KEY).toInt
-            VarcharType(length)
-          } else {
-            StringType
+          getLengthFromMetadata(field.metadata) match {
+            case Some(n) => VarcharType(n)
+            case None => StringType
           }
         case _ =>
           dataType
@@ -264,6 +255,26 @@ object SparkUtils {
     }
 
     transformStruct(schema)
+  }
+
+  def getLengthFromMetadata(metadata: Metadata): Option[Int] = {
+    if (metadata.contains(MAX_LENGTH_METADATA_KEY)) {
+      val try1 = Try {
+        val length = metadata.getLong(MAX_LENGTH_METADATA_KEY).toInt
+        Option(length)
+      }
+      val try2 = if (try1.isFailure) {
+        Try {
+          val length = metadata.getString(MAX_LENGTH_METADATA_KEY).toInt
+          Option(length)
+        }
+      } else {
+        try1
+      }
+      try2.getOrElse(None)
+    } else {
+      None
+    }
   }
 
   /**

@@ -165,7 +165,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
         s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
       case (Some(offsetFrom), None) =>
         validateOffsetValue(offsetFrom)
-        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
       case (None, Some(offsetTo)) =>
         validateOffsetValue(offsetTo)
         s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"

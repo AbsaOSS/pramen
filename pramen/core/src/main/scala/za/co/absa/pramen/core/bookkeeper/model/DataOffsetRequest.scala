@@ -16,11 +16,11 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 case class DataOffsetRequest(
                               tableName: String,
                               infoDate: LocalDate,
                               batchId: Long,
-                              createdAt: Long /* Acts as a batch_id as well*/
+                              createdAt: Instant
                             )

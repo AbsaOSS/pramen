@@ -16,13 +16,42 @@
 
 package za.co.absa.pramen.api.offset
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
-case class DataOffset(tableName: String,
-                      infoDate: LocalDate,
-                      batchId: Long,
-                      minOffset: Option[OffsetValue],
-                      maxOffset: Option[OffsetValue], /* Can be None for uncommitted offsets. */
-                      createdAt: Long,
-                      committedAt: Option[Long]
-                     )
+sealed trait DataOffset {
+  val tableName: String
+
+  val infoDate: LocalDate
+
+  val batchId: Long
+
+  val createdAt: Instant
+
+  val isCommitted: Boolean
+}
+
+object DataOffset {
+  case class CommittedOffset(
+                              tableName: String,
+                              infoDate: LocalDate,
+                              batchId: Long,
+                              minOffset: OffsetValue,
+                              maxOffset: OffsetValue,
+                              createdAt: Instant,
+                              committedAt: Instant
+                            ) extends DataOffset {
+
+    override val isCommitted: Boolean = true
+  }
+
+  case class UncommittedOffset(
+                                tableName: String,
+                                infoDate: LocalDate,
+                                batchId: Long,
+                                offsetType: OffsetType,
+                                createdAt: Instant
+                              ) extends DataOffset {
+
+    override val isCommitted: Boolean = false
+  }
+}

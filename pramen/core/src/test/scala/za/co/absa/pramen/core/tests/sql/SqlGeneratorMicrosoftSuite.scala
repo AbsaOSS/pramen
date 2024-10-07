@@ -327,7 +327,7 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         "work with only from offset" in {
           val sql = genDate.getDataQueryIncremental("table1", None, Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset >= 1")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset > 1")
         }
 
         "work with only to offset" in {
@@ -358,7 +358,7 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         "work with only from offset" in {
           val sql = genDate.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.IntegralValue(1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset >= 1")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23) AND offset > 1")
         }
 
         "work with only to offset" in {
@@ -393,7 +393,7 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         "work with only from offset" in {
           val sql = genDateTime.getDataQueryIncremental("table1", None, Some(OffsetValue.DateTimeValue(offset1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset >= '1970-01-21 01:56:01.000'")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE offset > '1970-01-21 01:56:01.000'")
         }
 
         "work with only to offset" in {
@@ -424,7 +424,7 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
         "work with only from offset" in {
           val sql = genDateTime.getDataQueryIncremental("table1", Some(date1), Some(OffsetValue.DateTimeValue(offset1)), None, Seq.empty)
 
-          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset >= '1970-01-21 01:56:01.000'")
+          assert(sql == "SELECT * FROM table1 WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23) AND offset > '1970-01-21 01:56:01.000'")
         }
 
         "work with only to offset" in {

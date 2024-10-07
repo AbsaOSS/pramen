@@ -53,9 +53,9 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   }
 
   override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest = {
-    val createdAt = Instant.now().toEpochMilli
+    val createdAt = Instant.now()
 
-    val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, "", "", batchId, createdAt, None)
+    val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, "", "", batchId, createdAt.toEpochMilli, None)
 
     db.run(
       OffsetRecords.records += record
@@ -69,7 +69,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
     db.run(
       OffsetRecords.records
-        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt)
+        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
         .map(r => (r.minOffset, r.maxOffset, r.committedAt))
         .update((minOffset.valueString, maxOffset.valueString, Some(committedAt)))
     ).execute()
@@ -84,7 +84,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
     db.run(
       OffsetRecords.records
-        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt)
+        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
         .map(r => (r.minOffset, r.maxOffset, r.committedAt))
         .update((minOffset.valueString, maxOffset.valueString, Some(committedAt)))
     ).execute()
@@ -92,7 +92,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
     // Cleaning up previous batches
     db.run(
       OffsetRecords.records
-        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt =!= request.createdAt)
+        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt =!= request.createdAt.toEpochMilli)
         .delete
     ).execute()
   }
@@ -100,7 +100,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   override def rollbackOffsets(request: DataOffsetRequest): Unit = {
     db.run(
       OffsetRecords.records
-        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt)
+        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
         .delete
     ).execute()
   }

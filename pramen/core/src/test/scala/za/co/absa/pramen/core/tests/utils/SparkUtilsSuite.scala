@@ -441,6 +441,52 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "getLengthFromMetadata" should {
+    "work for long type" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(10))
+    }
+
+    "work for string type" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "10")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(10))
+    }
+
+    "work for wrong type" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "abc")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.isEmpty)
+    }
+
+    "work for wrong value" in {
+      val metadata = new MetadataBuilder
+      metadata.putDouble(MAX_LENGTH_METADATA_KEY, 12.25)
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.isEmpty)
+    }
+
+    "work if not specified" in {
+      val metadata = new MetadataBuilder
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.isEmpty)
+    }
+  }
+
   "removeNestedMetadata" should {
     "remove metadata, but only from nested fields" in {
       val metadata1 = new MetadataBuilder().putLong("maxLength", 5).putString("comment", "Employee name").build()

@@ -20,7 +20,9 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode, SparkSession}
-import za.co.absa.pramen.api.offset.{DataOffset, OffsetInfo, OffsetType, OffsetValue}
+import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
+import za.co.absa.pramen.api.sql.SqlGeneratorBase
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
@@ -56,7 +58,9 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     val om = bookkeeper.getOffsetManager
     latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
 
-    val uncommittedOffsets = om.getOffsets(outputTable.name, infoDate).filter(_.committedAt.isEmpty)
+    val uncommittedOffsets = om.getOffsets(outputTable.name, infoDate)
+      .filter(!_.isCommitted)
+      .map(_.asInstanceOf[UncommittedOffset])
 
     if (uncommittedOffsets.nonEmpty) {
       log.warn(s"Found uncommitted offsets for ${outputTable.name} at $infoDate. Fixing...")
@@ -218,7 +222,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     SaveResult(stats, warnings = tooLongWarnings)
   }
 
-  private[core] def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, infoDate: LocalDate, uncommittedOffsets: Array[DataOffset]): Unit = {
+  private[core] def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, infoDate: LocalDate, uncommittedOffsets: Array[UncommittedOffset]): Unit = {
     val offsetInfo = source.getOffsetInfo.getOrElse(throw new IllegalArgumentException(s"Offset column not defined for the ingestion job '${operationDef.name}', " +
       s"query: '${sourceTable.query.query}''"))
 
@@ -260,7 +264,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
   }
 
-  private[core] def rollbackOffsets(infoDate: LocalDate, om: OffsetManager, uncommittedOffsets: Array[DataOffset]): Unit = {
+  private[core] def rollbackOffsets(infoDate: LocalDate, om: OffsetManager, uncommittedOffsets: Array[UncommittedOffset]): Unit = {
     log.warn(s"No data found for ${outputTable.name}. Rolling back uncommitted offsets...")
 
     uncommittedOffsets.foreach { of =>
@@ -275,8 +279,13 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     val row = df.agg(min(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn)).cast(StringType)),
         max(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn))).cast(StringType))
       .collect()(0)
-    (OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(0).asInstanceOf[String]).get,
-      OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(1).asInstanceOf[String]).get)
+    val minValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(0).asInstanceOf[String]).get
+    val maxValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(1).asInstanceOf[String]).get
+
+    SqlGeneratorBase.validateOffsetValue(minValue)
+    SqlGeneratorBase.validateOffsetValue(maxValue)
+
+    (minValue, maxValue)
   }
 
   private[core] def validateOffsetColumn(df: DataFrame, offsetInfo: OffsetInfo): Unit = {

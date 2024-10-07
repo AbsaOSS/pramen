@@ -16,24 +16,35 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import za.co.absa.pramen.api.offset.{DataOffset, OffsetValue}
+import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 object OffsetRecordConverter {
   def toDataOffset(r: OffsetRecord): DataOffset = {
     val minOffsetOpt = OffsetValue.fromString(r.dataType, r.minOffset)
-
     val maxOffsetOpt = OffsetValue.fromString(r.dataType, r.maxOffset)
 
-    DataOffset(
-      r.pramenTableName,
-      LocalDate.parse(r.infoDate),
-      r.batchId,
-      minOffsetOpt,
-      maxOffsetOpt,
-      r.createdAtMilli,
-      r.committedAtMilli
-    )
+    if (r.committedAtMilli.nonEmpty && minOffsetOpt.isDefined && maxOffsetOpt.isDefined) {
+      DataOffset.CommittedOffset(
+        r.pramenTableName,
+        LocalDate.parse(r.infoDate),
+        r.batchId,
+        minOffsetOpt.get,
+        maxOffsetOpt.get,
+        Instant.ofEpochMilli(r.createdAtMilli),
+        Instant.ofEpochMilli(r.committedAtMilli.get)
+      )
+    } else {
+      val dataType = OffsetType.fromString(r.dataType)
+
+      DataOffset.UncommittedOffset(
+        r.pramenTableName,
+        LocalDate.parse(r.infoDate),
+        r.batchId,
+        dataType,
+        Instant.ofEpochMilli(r.createdAtMilli)
+      )
+    }
   }
 }

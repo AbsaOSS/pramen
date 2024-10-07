@@ -210,6 +210,8 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 }
 
 object SqlGeneratorBase {
+  val MAX_STRING_OFFSET_CHARACTERS = 64
+
   val forbiddenCharacters = ";'\\"
   val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
 
@@ -233,6 +235,8 @@ object SqlGeneratorBase {
       case OffsetValue.StringValue(s) =>
         if (s.contains('\''))
           throw new IllegalArgumentException(s"Offset value '$s' contains a single quote character, which is not supported.")
+        if (s.length > MAX_STRING_OFFSET_CHARACTERS)
+          throw new IllegalArgumentException(s"Offset value '$s' is bigger than $MAX_STRING_OFFSET_CHARACTERS bytes")
       case _ =>
       // Any value is okay
     }

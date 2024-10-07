@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.api.offset.DataOffset.{CommittedOffset, UncommittedOffset}
 import za.co.absa.pramen.api.offset.{OffsetType, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.{OffsetManager, OffsetManagerJdbc}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
@@ -56,8 +57,8 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     }
 
     "return uncommitted offsets" in {
-      val now = Instant.now().toEpochMilli
-      val nextHour = now + 3600000
+      val now = Instant.now()
+      val nextHour = now.plusSeconds(3600)
       val om = getOffsetManager
 
       om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
@@ -72,19 +73,16 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       assert(actualNonEmpty.nonEmpty)
       assert(actualNonEmpty.length == 1)
 
-      val offset = actualNonEmpty.head
+      val offset = actualNonEmpty.head.asInstanceOf[UncommittedOffset]
 
       assert(offset.infoDate == infoDate)
-      assert(offset.createdAt >= now)
-      assert(offset.createdAt < nextHour)
-      assert(offset.committedAt.isEmpty)
-      assert(offset.minOffset.isEmpty)
-      assert(offset.maxOffset.isEmpty)
+      assert(!offset.createdAt.isBefore(now))
+      assert(offset.createdAt.isBefore(nextHour))
     }
 
     "return committed offsets" in {
-      val now = Instant.now().toEpochMilli
-      val nextHour = now + 3600000
+      val now = Instant.now()
+      val nextHour = now.plusSeconds(3600)
       val om = getOffsetManager
 
       val transactionReference = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
@@ -101,16 +99,16 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       assert(actualNonEmpty.nonEmpty)
       assert(actualNonEmpty.length == 1)
 
-      val offset = actualNonEmpty.head
+      val offset = actualNonEmpty.head.asInstanceOf[CommittedOffset]
 
       assert(offset.infoDate == infoDate)
-      assert(offset.createdAt >= now)
-      assert(offset.createdAt < nextHour)
-      assert(offset.committedAt.get >= now)
-      assert(offset.committedAt.get < nextHour)
-      assert(offset.committedAt.get > actualNonEmpty.head.createdAt)
-      assert(offset.minOffset.get == OffsetValue.IntegralValue(1))
-      assert(offset.maxOffset.get == OffsetValue.IntegralValue(100))
+      assert(!offset.createdAt.isAfter(now))
+      assert(offset.createdAt.isBefore(nextHour))
+      assert(!offset.committedAt.isBefore(now))
+      assert(offset.committedAt.isBefore(nextHour))
+      assert(offset.committedAt.isAfter(actualNonEmpty.head.createdAt))
+      assert(offset.minOffset == OffsetValue.IntegralValue(1))
+      assert(offset.maxOffset == OffsetValue.IntegralValue(100))
     }
   }
 
@@ -179,11 +177,11 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
 
       assert(offsets.length == 1)
 
-      val offset = offsets.head
+      val offset = offsets.head.asInstanceOf[CommittedOffset]
       assert(offset.tableName == "table1")
       assert(offset.infoDate == infoDate)
-      assert(offset.minOffset.get == OffsetValue.IntegralValue(10))
-      assert(offset.maxOffset.get == OffsetValue.IntegralValue(100))
+      assert(offset.minOffset == OffsetValue.IntegralValue(10))
+      assert(offset.maxOffset == OffsetValue.IntegralValue(100))
     }
 
     "work for non-empty offsets" in {
@@ -196,21 +194,23 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
       om.commitOffsets(t2, OffsetValue.IntegralValue(101), OffsetValue.IntegralValue(200))
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.minOffset.get.valueString.toLong)
+      val offsets = om.getOffsets("table1", infoDate)
+        .map(_.asInstanceOf[CommittedOffset])
+        .sortBy(_.minOffset.valueString.toLong)
 
       assert(offsets.length == 2)
 
       val offset1 = offsets.head
       assert(offset1.tableName == "table1")
       assert(offset1.infoDate == infoDate)
-      assert(offset1.minOffset.get == OffsetValue.IntegralValue(10))
-      assert(offset1.maxOffset.get == OffsetValue.IntegralValue(100))
+      assert(offset1.minOffset == OffsetValue.IntegralValue(10))
+      assert(offset1.maxOffset == OffsetValue.IntegralValue(100))
 
       val offset2 = offsets(1)
       assert(offset2.tableName == "table1")
       assert(offset2.infoDate == infoDate)
-      assert(offset2.minOffset.get == OffsetValue.IntegralValue(101))
-      assert(offset2.maxOffset.get == OffsetValue.IntegralValue(200))
+      assert(offset2.minOffset == OffsetValue.IntegralValue(101))
+      assert(offset2.maxOffset == OffsetValue.IntegralValue(200))
     }
   }
 
@@ -229,15 +229,17 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
       om.commitRerun(t3, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(200))
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.minOffset.get.valueString.toLong)
+      val offsets = om.getOffsets("table1", infoDate)
+        .map(_.asInstanceOf[CommittedOffset])
+        .sortBy(_.minOffset.valueString.toLong)
 
       assert(offsets.length == 1)
 
       val offset1 = offsets.head
       assert(offset1.tableName == "table1")
       assert(offset1.infoDate == infoDate)
-      assert(offset1.minOffset.get.valueString == "0")
-      assert(offset1.maxOffset.get.valueString == "200")
+      assert(offset1.minOffset.valueString == "0")
+      assert(offset1.maxOffset.valueString == "200")
     }
 
     "work with reruns that do change offsets" in {
@@ -254,15 +256,17 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
       om.commitRerun(t3, OffsetValue.IntegralValue(201), OffsetValue.IntegralValue(300))
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.minOffset.get.valueString.toLong)
+      val offsets = om.getOffsets("table1", infoDate)
+        .map(_.asInstanceOf[CommittedOffset])
+        .sortBy(_.minOffset.valueString.toLong)
 
       assert(offsets.length == 1)
 
       val offset1 = offsets.head
       assert(offset1.tableName == "table1")
       assert(offset1.infoDate == infoDate)
-      assert(offset1.minOffset.get.valueString == "201")
-      assert(offset1.maxOffset.get.valueString == "300")
+      assert(offset1.minOffset.valueString == "201")
+      assert(offset1.maxOffset.valueString == "300")
     }
 
     "work with reruns that deletes all data and no previous offsets" in {
@@ -279,15 +283,17 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
       om.commitRerun(t3, OffsetValue.IntegralValue(-1), OffsetValue.IntegralValue(-1))
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.minOffset.get.valueString.toLong)
+      val offsets = om.getOffsets("table1", infoDate)
+        .map(_.asInstanceOf[CommittedOffset])
+        .sortBy(_.minOffset.valueString.toLong)
 
       assert(offsets.length == 1)
 
       val offset1 = offsets.head
       assert(offset1.tableName == "table1")
       assert(offset1.infoDate == infoDate)
-      assert(offset1.minOffset.get.valueString.toLong == -1)
-      assert(offset1.maxOffset.get.valueString.toLong == -1)
+      assert(offset1.minOffset.valueString.toLong == -1)
+      assert(offset1.maxOffset.valueString.toLong == -1)
     }
 
     "work with reruns that deletes all data and there are previous offsets" in {
@@ -304,15 +310,17 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
       om.commitRerun(t3, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(0))
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.minOffset.get.valueString.toLong)
+      val offsets = om.getOffsets("table1", infoDate)
+        .map(_.asInstanceOf[CommittedOffset])
+        .sortBy(_.minOffset.valueString.toLong)
 
       assert(offsets.length == 1)
 
       val offset1 = offsets.head
       assert(offset1.tableName == "table1")
       assert(offset1.infoDate == infoDate)
-      assert(offset1.minOffset.get.valueString.toLong == 0)
-      assert(offset1.maxOffset.get.valueString.toLong == 0)
+      assert(offset1.minOffset.valueString.toLong == 0)
+      assert(offset1.maxOffset.valueString.toLong == 0)
     }
 
     "throw an exception when offsets are incorrect" in {
@@ -333,8 +341,13 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
 
       assert(ex.getMessage == "minOffset is greater than maxOffset: 1 > -1")
 
-      val offsets0 = om.getOffsets("table1", infoDate).filter(_.committedAt.nonEmpty).sortBy(_.minOffset.get.valueString.toLong)
-      val offsets1 = om.getOffsets("table1", infoDate).filter(_.committedAt.isEmpty)
+      val offsets0 = om.getOffsets("table1", infoDate)
+        .filter(_.isCommitted)
+        .map(_.asInstanceOf[CommittedOffset])
+        .sortBy(_.minOffset.valueString.toLong)
+      val offsets1 = om.getOffsets("table1", infoDate)
+        .filter(!_.isCommitted)
+        .map(_.asInstanceOf[UncommittedOffset])
 
       assert(offsets0.length == 2)
       assert(offsets1.length == 1)
@@ -345,18 +358,16 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
 
       assert(offset1.tableName == "table1")
       assert(offset1.infoDate == infoDate)
-      assert(offset1.minOffset.get.valueString.toLong == Long.MinValue)
-      assert(offset1.maxOffset.get.valueString.toLong == 0)
+      assert(offset1.minOffset.valueString.toLong == Long.MinValue)
+      assert(offset1.maxOffset.valueString.toLong == 0)
 
       assert(offset2.tableName == "table1")
       assert(offset2.infoDate == infoDate)
-      assert(offset2.minOffset.get.valueString.toLong == 1)
-      assert(offset2.maxOffset.get.valueString.toLong == 100)
+      assert(offset2.minOffset.valueString.toLong == 1)
+      assert(offset2.maxOffset.valueString.toLong == 100)
 
       assert(offset3.tableName == "table1")
       assert(offset3.infoDate == infoDate)
-      assert(offset3.minOffset.isEmpty)
-      assert(offset3.maxOffset.isEmpty)
     }
   }
 
@@ -382,15 +393,17 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
       om.rollbackOffsets(t2)
 
-      val offsets = om.getOffsets("table1", infoDate).sortBy(_.minOffset.get.valueString.toLong)
+      val offsets = om.getOffsets("table1", infoDate)
+        .map(_.asInstanceOf[CommittedOffset])
+        .sortBy(_.minOffset.valueString.toLong)
 
       assert(offsets.length == 1)
 
       val offset1 = offsets.head
       assert(offset1.tableName == "table1")
       assert(offset1.infoDate == infoDate)
-      assert(offset1.minOffset.get == OffsetValue.IntegralValue(0))
-      assert(offset1.maxOffset.get == OffsetValue.IntegralValue(100))
+      assert(offset1.minOffset == OffsetValue.IntegralValue(0))
+      assert(offset1.maxOffset == OffsetValue.IntegralValue(100))
     }
   }
 

@@ -39,6 +39,7 @@ object PipelineNotificationBuilderHtml {
   val MIN_MEGABYTES = 10
   val NOTIFICATION_REASON_MAX_LENGTH_KEY = "pramen.notifications.reason.max.length"
   val NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY = "pramen.notifications.exception.max.length"
+  val SUPPRESS_WARNING_STARTING_WITH = "Based on outdated tables: "
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
@@ -265,9 +266,17 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private[core] def hasWarnings: Boolean = {
     completedTasks.exists{task =>
+      val hasTaskWarnings = task.runStatus match {
+        case succeeded: Succeeded =>
+          val warnings = succeeded.warnings
+            .filterNot(_.startsWith(SUPPRESS_WARNING_STARTING_WITH))
+          warnings.nonEmpty
+        case _ =>
+          false
+      }
+
       val hasDependencyWarnings = task.dependencyWarnings.nonEmpty
       val hasNotificationErrors = task.notificationTargetErrors.nonEmpty
-      val hasTaskWarnings = task.runStatus.isInstanceOf[RunStatus.Succeeded] && task.runStatus.asInstanceOf[RunStatus.Succeeded].warnings.nonEmpty
       val hasSkippedWithWarnings = task.runStatus.isInstanceOf[RunStatus.Skipped] && task.runStatus.asInstanceOf[RunStatus.Skipped].isWarning
       val hasSchemaChanges = task.schemaChanges.nonEmpty
       val hasPipelineNotificationFailures = pipelineNotificationFailures.nonEmpty
