@@ -31,8 +31,6 @@ sealed trait OffsetValue extends Comparable[OffsetValue] {
 }
 
 object OffsetValue {
-  val MINIMUM_TIMESTAMP_EPOCH_MILLI: Long = -62135596800000L
-
   case class DateTimeValue(t: Instant) extends OffsetValue {
     override val dataType: OffsetType = OffsetType.DateTimeType
 
@@ -75,15 +73,6 @@ object OffsetValue {
         case StringValue(otherValue) => s.compareTo(otherValue)
         case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${o.dataType.dataTypeString}")
       }
-    }
-  }
-
-  def getMinimumForType(dataType: String): OffsetValue = {
-    dataType match {
-      case DATETIME_TYPE_STR => DateTimeValue(Instant.ofEpochMilli(MINIMUM_TIMESTAMP_EPOCH_MILLI)) // LocalDateTime.of(1, 1, 1, 0, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli
-      case INTEGRAL_TYPE_STR => IntegralValue(Long.MinValue)
-      case STRING_TYPE_STR => StringValue("")
-      case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
     }
   }
 

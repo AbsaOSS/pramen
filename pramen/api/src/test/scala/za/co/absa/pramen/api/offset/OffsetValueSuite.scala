@@ -19,7 +19,6 @@ package za.co.absa.pramen.api.offset
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StringType}
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.offset.OffsetValue.MINIMUM_TIMESTAMP_EPOCH_MILLI
 
 import java.time.Instant
 
@@ -47,32 +46,6 @@ class OffsetValueSuite extends AnyWordSpec {
       assert(offsetValue.valueString == "foo")
       assert(offsetValue.getSparkLit == lit("foo"))
       assert(offsetValue.dataType.getSparkCol(col("a")) == col("a").cast(StringType))
-    }
-  }
-
-  "getMinimumForType" should {
-    "be able to get minimum value for datetime type" in {
-      val offsetValue = OffsetValue.getMinimumForType("datetime")
-      assert(offsetValue.dataType == OffsetType.DateTimeType)
-      assert(offsetValue.valueString == MINIMUM_TIMESTAMP_EPOCH_MILLI.toString)
-    }
-
-    "be able to get minimum value for integral type" in {
-      val offsetValue = OffsetValue.getMinimumForType("integral")
-      assert(offsetValue.dataType == OffsetType.IntegralType)
-      assert(offsetValue.valueString == Long.MinValue.toString)
-    }
-
-    "be able to get minimum value for string type" in {
-      val offsetValue = OffsetValue.getMinimumForType("string")
-      assert(offsetValue.dataType == OffsetType.StringType)
-      assert(offsetValue.valueString == "")
-    }
-
-    "throw an exception when trying to get minimum value for an unknown type" in {
-      assertThrows[IllegalArgumentException] {
-        OffsetValue.getMinimumForType("unknown")
-      }
     }
   }
 
