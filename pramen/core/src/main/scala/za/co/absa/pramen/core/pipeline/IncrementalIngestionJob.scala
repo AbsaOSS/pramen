@@ -55,16 +55,28 @@ class IncrementalIngestionJob(operationDef: OperationDef,
   override def trackDays: Int = 0
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
+    if (source.getOffsetInfo.isEmpty) {
+      return throw new IllegalArgumentException(s"Offset column is not configured for source '$sourceName' of '${operationDef.name}'")
+    }
+
     val om = bookkeeper.getOffsetManager
     latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
 
-    val uncommittedOffsets = om.getOffsets(outputTable.name, infoDate)
-      .filter(!_.isCommitted)
-      .map(_.asInstanceOf[UncommittedOffset])
+    val onlyForInfoDate = if (source.hasInfoDateColumn(sourceTable.query))
+      Some(infoDate)
+    else
+      None
+
+    val uncommittedOffsets = om.getUncommittedOffsets(outputTable.name, onlyForInfoDate)
 
     if (uncommittedOffsets.nonEmpty) {
-      log.warn(s"Found uncommitted offsets for ${outputTable.name} at $infoDate. Fixing...")
-      handleUncommittedOffsets(om, metastore, infoDate, uncommittedOffsets)
+      if (onlyForInfoDate.isEmpty) {
+        log.warn(s"Found uncommitted offsets for ${outputTable.name} at $infoDate. Fixing...")
+      } else {
+        log.warn(s"Found uncommitted offsets for ${outputTable.name}. Fixing...")
+      }
+
+      handleUncommittedOffsets(om, metastore, uncommittedOffsets)
     }
 
     JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Nil)
@@ -222,19 +234,31 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     SaveResult(stats, warnings = tooLongWarnings)
   }
 
-  private[core] def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, infoDate: LocalDate, uncommittedOffsets: Array[UncommittedOffset]): Unit = {
+  private[core] def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, uncommittedOffsets: Array[UncommittedOffset]): Unit = {
+    import za.co.absa.pramen.core.utils.DateUtils._
+
     val offsetInfo = source.getOffsetInfo.getOrElse(throw new IllegalArgumentException(s"Offset column not defined for the ingestion job '${operationDef.name}', " +
       s"query: '${sourceTable.query.query}''"))
 
+    val infoDates = uncommittedOffsets.map(_.infoDate).distinct.sorted
+
+    infoDates.foreach { infoDate =>
+      handleUncommittedOffsetsForDay(om, mt, uncommittedOffsets.filter(_.infoDate == infoDate), infoDate, offsetInfo)
+    }
+  }
+
+  private[core] def handleUncommittedOffsetsForDay(om: OffsetManager, mt: Metastore, uncommittedOffsets: Array[UncommittedOffset], infoDate: LocalDate, offsetInfo: OffsetInfo): Unit = {
     val df = try {
       mt.getTable(outputTable.name, Option(infoDate), Option(infoDate))
     } catch {
-      case ex: AnalysisException =>
+      case _: AnalysisException =>
+        log.warn(s"Table ${outputTable.name} has empty partition for $infoDate. Rolling back uncommitted offsets..")
         rollbackOffsets(infoDate, om, uncommittedOffsets)
         return
     }
 
     if (df.isEmpty) {
+      log.warn(s"Table ${outputTable.name} is empty for $infoDate. Rolling back uncommitted offsets...")
       rollbackOffsets(infoDate, om, uncommittedOffsets)
       return
     }
@@ -243,12 +267,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' not found in the output table '${outputTable.name}'. Cannot update uncommitted offsets.")
     }
 
-    val (newMinOffset, newMaxOffset) = if (df.isEmpty) {
-      rollbackOffsets(infoDate, om, uncommittedOffsets)
-      return
-    } else {
-      getMinMaxOffsetFromDf(df, offsetInfo)
-    }
+    val (newMinOffset, newMaxOffset) = getMinMaxOffsetFromDf(df, offsetInfo)
 
     log.warn(s"Fixing uncommitted offsets. New offset to commit for ${outputTable.name} at $infoDate: " +
       s"min offset: ${newMinOffset.valueString}, max offset: ${newMaxOffset.valueString}.")

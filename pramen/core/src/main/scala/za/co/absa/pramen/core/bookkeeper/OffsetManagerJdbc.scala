@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
+import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.model._
 import za.co.absa.pramen.core.utils.SlickUtils
@@ -38,6 +39,24 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
     }
 
     offsets.map(OffsetRecordConverter.toDataOffset)
+  }
+
+  override def getUncommittedOffsets(table: String, onlyForInfoDate: Option[LocalDate]): Array[UncommittedOffset] = {
+    val query = onlyForInfoDate match {
+      case Some(infoDate) =>
+        val infoDateStr = infoDate.toString
+        OffsetRecords.records
+          .filter(r => r.pramenTableName === table && r.infoDate === infoDateStr && r.committedAt.isEmpty)
+          .sorted(r => r.infoDate)
+      case None =>
+        OffsetRecords.records
+          .filter(r => r.pramenTableName === table && r.committedAt.isEmpty)
+          .sorted(r => r.infoDate)
+    }
+
+    SlickUtils.executeQuery[OffsetRecords, OffsetRecord](db, query)
+      .toArray[OffsetRecord]
+      .map(record => OffsetRecordConverter.toDataOffset(record).asInstanceOf[UncommittedOffset])
   }
 
   override def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = {

@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
+import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
 
@@ -42,6 +43,11 @@ trait OffsetManager {
     * - previous uncommitted offsets should be rolled back.
     */
   def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset]
+
+  /**
+    * Returns only uncommitted offsets for a give table.
+    */
+  def getUncommittedOffsets(table: String, onlyForInfoDate: Option[LocalDate]): Array[UncommittedOffset]
 
   /**
     * Returns the maximum information date the bookkeeping has offsets for.

@@ -29,6 +29,7 @@ class OffsetRecords(tag: Tag) extends Table[OffsetRecord](tag, "offsets") {
   def committedAt = column[Option[Long]]("committed_at")
   def * = (pramenTableName, infoDate, dataType, minOffset, maxOffset, batchId, createdAt, committedAt) <> (OffsetRecord.tupled, OffsetRecord.unapply)
   def idx1 = index("offset_idx_1", (pramenTableName, infoDate, createdAt), unique = true)
+  def idx2 = index("offset_idx_2", (pramenTableName, committedAt), unique = false)
 }
 
 object OffsetRecords {

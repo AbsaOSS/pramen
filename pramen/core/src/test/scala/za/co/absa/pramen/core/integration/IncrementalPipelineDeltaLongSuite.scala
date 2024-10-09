@@ -28,6 +28,10 @@ class IncrementalPipelineDeltaLongSuite extends IncrementalPipelineLongFixture {
       testOffsetOnlyRunningOutOfOrderOffsets(format)
     }
 
+    "work for uncommitted late offsets" in {
+      testOffsetOnlyUncommittedLateOffsets(format)
+    }
+
     "work with incremental ingestion and normal transformer" in {
       testOffsetOnlyIncrementalIngestionNormalTransformer(format)
     }

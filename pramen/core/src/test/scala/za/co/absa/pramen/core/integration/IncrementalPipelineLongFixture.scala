@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.integration
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.TimestampType
 import org.scalatest.wordspec.AnyWordSpec
@@ -229,6 +230,110 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       assert(dfTable2After1.isEmpty)
       compareText(actualTable1After2, expectedOffsetOnly1)
       compareText(actualTable2After2, expectedOffsetOnly1)
+    }
+    succeed
+  }
+
+  def testOffsetOnlyUncommittedLateOffsets(metastoreFormat: String): Assertion = {
+    withTempDirectory("incremental1") { tempDir =>
+      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+      val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+      val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+      fsUtils.writeFile(path1, "id,name\n1,John\n2,Jack\n3,Jill\n")
+
+      val conf = getConfig(tempDir, metastoreFormat, useInfoDate = infoDate.minusDays(2))
+
+      // Running a job that ingests initial data for offsets 1..3 at 2021-02-16
+      val exitCode1 = AppRunner.runPipeline(conf)
+      assert(exitCode1 == 0)
+
+      // Adding an uncommitted offset for 2021-02-17
+      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType)
+      Thread.sleep(10)
+
+      val table1Path = new Path(tempDir, "table1")
+      val table2Path = new Path(tempDir, "table2")
+
+      fsUtils.writeFile(path2, "id,name\n4,Mary\n5,Jane\n6,Kate\n")
+
+      // Writing data for the metastore table for the uncommitted offset at 2021-02-17
+      val dfIn = spark.read
+        .option("header", "true")
+        .option("inferSchema", "true")
+        .csv(path2.toString)
+        .withColumn(INFO_DATE_COLUMN, lit(Date.valueOf(infoDate.minusDays(1))))
+
+      dfIn.write
+        .mode(SaveMode.Append)
+        .partitionBy(INFO_DATE_COLUMN)
+        .format(metastoreFormat)
+        .save(table1Path.toString)
+
+      val dfTable1Before = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(2)))
+      val dfTable2Before = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(2)))
+      val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      compareText(actualTable1Before, expectedOffsetOnly1)
+      compareText(actualTable2Before, expectedOffsetOnly1)
+
+      // Checking expected offset table
+      val offsetsBefore0 = om.getOffsets("table1", infoDate.minusDays(2))
+      val offsetsBefore1 = om.getOffsets("table1", infoDate.minusDays(1))
+      val offsetsBefore2 = om.getOffsets("table1", infoDate)
+
+      assert(offsetsBefore0.length == 1)
+      assert(offsetsBefore1.length == 1)
+      assert(offsetsBefore2.isEmpty)
+
+      assert(offsetsBefore0.head.isCommitted)
+      assert(!offsetsBefore1.head.isCommitted)
+      assert(offsetsBefore0.head.asInstanceOf[CommittedOffset].minOffset.valueString == "1")
+      assert(offsetsBefore0.head.asInstanceOf[CommittedOffset].maxOffset.valueString == "3")
+
+      // Running the job for 2021-02-18. It should reconcile uncommitted offsets and return with 'No data' since no data arrived since 2021-02-17
+      val conf2 = getConfig(tempDir, metastoreFormat, useInfoDate = infoDate)
+      val exitCode2 = AppRunner.runPipeline(conf2)
+      assert(exitCode2 == 2)
+
+      // Checking expected offset table
+      val offsetsAfter0 = om.getOffsets("table1", infoDate.minusDays(2))
+      val offsetsAfter1 = om.getOffsets("table1", infoDate.minusDays(1))
+      val offsetsAfter2 = om.getOffsets("table1", infoDate)
+
+      assert(offsetsAfter0.length == 1)
+      assert(offsetsAfter1.length == 1)
+      assert(offsetsAfter2.isEmpty)
+
+      assert(offsetsAfter0.head.isCommitted)
+      assert(offsetsAfter1.head.isCommitted)
+      assert(offsetsAfter0.head.asInstanceOf[CommittedOffset].minOffset.valueString == "1")
+      assert(offsetsAfter0.head.asInstanceOf[CommittedOffset].maxOffset.valueString == "3")
+      assert(offsetsAfter1.head.asInstanceOf[CommittedOffset].minOffset.valueString == "4")
+      assert(offsetsAfter1.head.asInstanceOf[CommittedOffset].maxOffset.valueString == "6")
+
+      // Checking expected data
+      val dfTable1After0 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(2)))
+      val dfTable2After0 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(2)))
+      val dfTable1After1 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(1)))
+      val dfTable2After1 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate.minusDays(1)))
+      val dfTable1After2 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2After2 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1After0 = dfTable1After0.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2After0 = dfTable2After0.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable1After1 = dfTable1After1.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      /* This will be enabled when incremental processing is implemented.
+      val actualTable2After1 = dfTable2After1.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")*/
+
+      // Expecting empty records
+      compareText(actualTable1After0, expectedOffsetOnly1)
+      compareText(actualTable2After0, expectedOffsetOnly1)
+      compareText(actualTable1After1, expectedOffsetOnly2)
+      /*compareText(actualTable2After1, expectedOffsetOnly2) This will be enabled when incremental processing is implemented. */
+      assert(dfTable1After2.isEmpty)
+      assert(dfTable2After2.isEmpty)
     }
     succeed
   }
