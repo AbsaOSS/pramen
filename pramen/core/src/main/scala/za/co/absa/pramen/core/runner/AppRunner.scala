@@ -96,7 +96,9 @@ object AppRunner {
 
   private[core] def createPipelineState(implicit conf: Config): Try[PipelineState] = {
     Try {
-      new PipelineStateImpl()(conf, PramenImpl.instance.notificationBuilder)
+      val state = new PipelineStateImpl()(conf, PramenImpl.instance.notificationBuilder)
+      log.info(s"Starting pipeline, batchId=${state.getBatchId}")
+      state
     }
   }
 
@@ -105,7 +107,7 @@ object AppRunner {
                                      spark: SparkSession): Try[AppContext] = {
     handleFailure(Try {
       PramenImpl.instance.asInstanceOf[PramenImpl].setPipelineState(state)
-      AppContextImpl(conf)
+      AppContextImpl(conf, state.getBatchId)
     }, state, "initialization of the pipeline")
   }
 
@@ -183,7 +185,7 @@ object AppRunner {
                               spark: SparkSession): Try[Seq[Job]] = {
     handleFailure(Try {
       val isHistoricalRun = appContext.appConfig.runtimeConfig.runDateTo.nonEmpty
-      val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper)
+      val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper, state.getBatchId)
 
       if (isHistoricalRun)
         log.info("This is a historical run. Making all dependencies 'passive' for all jobs...")

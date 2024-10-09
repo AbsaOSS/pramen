@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.rdb
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile
 import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, MetadataRecords, SchemaRecords}
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, MetadataRecords, OffsetRecords, SchemaRecords}
 import za.co.absa.pramen.core.journal.model.JournalTasks
 import za.co.absa.pramen.core.lock.model.LockTickets
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
@@ -71,6 +71,14 @@ class PramenDb(val jdbcConfig: JdbcConfig,
       addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "environmentName", "varchar(128)")
       addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "tenant", "varchar(200)")
     }
+
+    if (dbVersion < 5) {
+      initTable(OffsetRecords.records.schema)
+    }
+
+    if (0 < dbVersion && dbVersion < 6) {
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "appended_record_count", "bigint")
+    }
   }
 
   def initTable(schema: H2Profile.SchemaDescription): Unit = {
@@ -106,7 +114,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 }
 
 object PramenDb {
-  val MODEL_VERSION = 4
+  val MODEL_VERSION = 6
   val DEFAULT_RETRIES = 3
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {

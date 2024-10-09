@@ -326,7 +326,7 @@ class OperationSplitterSuite extends AnyWordSpec with SparkTestBase {
   }
 
   def getUseCase(conf: Config = appConfig): (OperationSplitter, OperationDef) = {
-    val splitter = new OperationSplitter(conf, new MetastoreSpy(trackDays = 2), new SyncBookkeeperMock)
+    val splitter = new OperationSplitter(conf, new MetastoreSpy(trackDays = 2), new SyncBookkeeperMock, 0L)
     val operation = OperationDefFactory.getDummyOperationDef()
 
     (splitter, operation)

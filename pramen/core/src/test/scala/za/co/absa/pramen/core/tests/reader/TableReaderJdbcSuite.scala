@@ -21,7 +21,7 @@ import org.mockito.Mockito.{mock, when => whenMock}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.api.sql.QuotingPolicy
+import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.SqlGeneratorDummy
@@ -62,6 +62,11 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |  information.date.type = "number"
          |  information.date.format = "yyyy-MM-DD"
          |
+         |  offset.column {
+         |    name = "ts"
+         |    type = "datetime"
+         |  }
+         |
          |  identifier.quoting.policy = "never"
          |}
          |reader_legacy {
@@ -94,7 +99,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |}""".stripMargin)
 
     "be able to be constructed properly from config" in {
-      val reader = TableReaderJdbc(conf.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(conf.getConfig("reader"), conf.getConfig("reader"), "reader")
 
       val jdbc = reader.getJdbcConfig
 
@@ -104,8 +109,11 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == "number")
+      assert(jdbc.infoDateType == SqlColumnType.NUMBER)
       assert(jdbc.infoDateFormat == "yyyy-MM-DD")
+      assert(jdbc.offsetInfoOpt.nonEmpty)
+      assert(jdbc.offsetInfoOpt.get.offsetColumn == "ts")
+      assert(jdbc.offsetInfoOpt.get.offsetType.dataTypeString == "datetime")
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Never)
       assert(jdbc.sqlGeneratorClass.isEmpty)
       assert(!jdbc.hasInfoDate)
@@ -113,7 +121,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
     }
 
     "be able to be constructed properly from legacy config" in {
-      val reader = TableReaderJdbc(conf.getConfig("reader_legacy"), "reader_legacy")
+      val reader = TableReaderJdbc(conf.getConfig("reader_legacy"), conf.getConfig("reader_legacy"), "reader_legacy")
 
       val jdbc = reader.getJdbcConfig
 
@@ -123,7 +131,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateType == SqlColumnType.DATE)
       assert(jdbc.infoDateFormat == "YYYY-MM-dd")
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Auto)
       assert(jdbc.sqlGeneratorClass.contains("za.co.absa.pramen.core.mocks.SqlGeneratorDummy"))
@@ -132,7 +140,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
     }
 
     "be able to be constructed properly from minimal config" in {
-      val reader = TableReaderJdbc(conf.getConfig("reader_minimal"), "reader_minimal")
+      val reader = TableReaderJdbc(conf.getConfig("reader_minimal"), conf.getConfig("reader_minimal"), "reader_minimal")
 
       val jdbc = reader.getJdbcConfig
 
@@ -142,8 +150,9 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateType == SqlColumnType.DATE)
       assert(jdbc.infoDateFormat == "yyyy-MM-dd")
+      assert(jdbc.offsetInfoOpt.isEmpty)
       assert(jdbc.hasInfoDate)
       assert(!jdbc.saveTimestampsAsDates)
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Auto)
@@ -151,13 +160,13 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
     }
 
     "ensure sql query generator is properly selected 1" in {
-      val reader = TableReaderJdbc(conf.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(conf.getConfig("reader"), conf.getConfig("reader"), "reader")
 
       assert(reader.sqlGen.isInstanceOf[SqlGeneratorHsqlDb])
     }
 
     "ensure sql query generator is properly selected 2" in {
-      val reader = TableReaderJdbc(conf.getConfig("reader_legacy"), "reader_legacy")
+      val reader = TableReaderJdbc(conf.getConfig("reader_legacy"), conf.getConfig("reader_legacy"), "reader_legacy")
 
       assert(reader.sqlGen.isInstanceOf[SqlGeneratorDummy])
     }
@@ -166,7 +175,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       val testConfig = conf
         .withValue("reader.save.timestamps.as.dates", ConfigValueFactory.fromAnyRef(true))
         .withValue("reader.correct.decimals.in.schema", ConfigValueFactory.fromAnyRef(true))
-      val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
       val jdbc = reader.getJdbcConfig
 
@@ -186,7 +195,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
            |
            |  has.information.date.column = false
            |}""".stripMargin)
-      val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
       val jdbc = reader.getJdbcConfig
 
@@ -207,19 +216,19 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
            |  information.date.column = "sync_date"
            |  information.date.type = "date"
            |}""".stripMargin)
-      val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+      val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
       val jdbc = reader.getJdbcConfig
 
       assert(jdbc.hasInfoDate)
       assert(jdbc.infoDateColumn == "sync_date")
-      assert(jdbc.infoDateType == "date")
+      assert(jdbc.infoDateType == SqlColumnType.DATE)
     }
 
     "getWithRetry" should {
       "return the successful dataframe on the second try" in {
         val readerConfig = conf.getConfig("reader")
-        val jdbcTableReaderConfig = TableReaderJdbcConfig.load(readerConfig, "reader")
+        val jdbcTableReaderConfig = TableReaderJdbcConfig.load(readerConfig, readerConfig, "reader")
 
         val urlSelector = mock(classOf[JdbcUrlSelector])
 
@@ -238,7 +247,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
       "pass the exception when out of retries" in {
         val readerConfig = conf.getConfig("reader")
-        val jdbcTableReaderConfig = TableReaderJdbcConfig.load(readerConfig, "reader")
+        val jdbcTableReaderConfig = TableReaderJdbcConfig.load(readerConfig, readerConfig, "reader")
 
         val urlSelector = mock(classOf[JdbcUrlSelector])
 
@@ -264,7 +273,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("reader.correct.decimals.in.schema", ConfigValueFactory.fromAnyRef(true))
           .withValue("enable.schema.metadata", ConfigValueFactory.fromAnyRef(true))
 
-        val jdbcTableReaderConfig = TableReaderJdbcConfig.load(readerConfig, "reader")
+        val jdbcTableReaderConfig = TableReaderJdbcConfig.load(readerConfig, readerConfig, "reader")
         val urlSelector = JdbcUrlSelector(jdbcTableReaderConfig.jdbcConfig)
 
         val reader = new TableReaderJdbc(jdbcTableReaderConfig, urlSelector, readerConfig)
@@ -284,7 +293,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
     "getCount()" should {
       "return count for a table snapshot-like query" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val count = reader.getRecordCount(Query.Table("company"), null, null)
 
@@ -293,7 +302,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
       "return count for a sql snapshot-like query" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val count = reader.getRecordCount(Query.Sql("SELECT * FROM company"), null, null)
 
@@ -307,7 +316,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
           .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
+        val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
         val count = reader.getRecordCount(Query.Table("company"), infoDate,  infoDate)
 
@@ -316,7 +325,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
       "return count for a snapshot-like SQL" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val count = reader.getRecordCount(Query.Sql("SELECT id FROM company"), infoDate, infoDate)
 
@@ -330,7 +339,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
           .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
+        val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
         val count = reader.getRecordCount(Query.Sql("SELECT id, info_date FROM company WHERE info_date BETWEEN '@dateFrom' AND '@dateTo'"), infoDate, infoDate)
 
@@ -341,7 +350,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
     "getCountSqlQuery" should {
       "return a count query for a table snapshot-like query" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val sql = reader.getCountSqlQuery("SELECT * FROM COMPANY", infoDate, infoDate)
 
@@ -355,7 +364,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
           .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
+        val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
         val sql = reader.getCountSqlQuery("SELECT * FROM COMPANY WHERE info_date BETWEEN '@dateFrom' AND '@dateTo'", infoDate, infoDate)
 
@@ -370,7 +379,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
           .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
+        val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
         val sql = reader.getCountSqlQuery("SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('@infoDate' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)", infoDate, infoDate)
 
@@ -381,7 +390,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
     "getData()" should {
       "return data for a table snapshot-like query" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val df = reader.getData(Query.Table("company"), null, null, Seq.empty[String])
 
@@ -391,7 +400,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
       "return selected column for a table snapshot-like query" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val df = reader.getData(Query.Table("company"), null, null, Seq("id", "name"))
 
@@ -407,7 +416,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
           .withValue("correct.decimals.in.schema", ConfigValueFactory.fromAnyRef(true))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
+        val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
         val df = reader.getData(Query.Table("company"), infoDate, infoDate, Seq.empty[String])
 
@@ -416,7 +425,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
       "return data for a snapshot-like SQL" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val df = reader.getData(Query.Sql("SELECT id FROM company"), infoDate, infoDate, Seq.empty[String])
 
@@ -426,7 +435,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
       "return selected columns for a snapshot-like SQL" in {
         val testConfig = conf
-        val reader = TableReaderJdbc(testConfig.getConfig("reader"), "reader")
+        val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
         val df = reader.getData(Query.Sql("SELECT * FROM company"), infoDate, infoDate, Seq("id", "name"))
 
@@ -441,7 +450,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("string"))
           .withValue("information.date.format", ConfigValueFactory.fromAnyRef("yyyy-MM-dd"))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
+        val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
         val df = reader.getData(Query.Sql("SELECT id, info_date FROM company WHERE info_date BETWEEN '@dateFrom' AND '@dateTo'"), infoDate, infoDate, Seq.empty[String])
 
@@ -456,10 +465,8 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
           .withValue("information.date.column", ConfigValueFactory.fromAnyRef("info_date"))
           .withValue("information.date.type", ConfigValueFactory.fromAnyRef("not_exist"))
 
-        val reader = TableReaderJdbc(testConfig, "reader")
-
         assertThrows[IllegalArgumentException] {
-          reader.getSqlConfig
+          TableReaderJdbc(testConfig, testConfig, "reader")
         }
       }
     }

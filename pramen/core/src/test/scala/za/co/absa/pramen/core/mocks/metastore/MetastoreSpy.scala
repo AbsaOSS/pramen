@@ -16,8 +16,10 @@
 
 package za.co.absa.pramen.core.mocks.metastore
 
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{DataFrame, SaveMode}
+import za.co.absa.pramen.api.offset.DataOffset
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -33,7 +35,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    availableDates: Seq[LocalDate] = Seq(LocalDate.of(2022, 2, 17)),
                    tableDf: DataFrame = null,
                    tableException: Throwable = null,
-                   stats: MetaTableStats = MetaTableStats(0, None),
+                   stats: MetaTableStats = MetaTableStats(Some(0), None, None),
                    statsException: Throwable = null,
                    isTableAvailable: Boolean = true,
                    isTableEmpty: Boolean = false,
@@ -69,11 +71,15 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     tableDf
   }
 
+  override def getBatch(tableName: String, infoDate: LocalDate, batchIdOpt: Option[Long]): DataFrame = {
+    getTable(tableName, Option(infoDate), Option(infoDate))
+  }
+
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = null
 
-  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
+  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long], saveModeOverride: Option[SaveMode]): MetaTableStats = {
     saveTableInvocations.append((tableName, infoDate, df))
-    MetaTableStats(df.count(), None)
+    MetaTableStats(Option(df.count()), None, None)
   }
 
   def getHiveHelper(tableName: String): HiveHelper = {
@@ -99,7 +105,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     stats
   }
 
-  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, taskRunReason: TaskRunReason, isIncremental: Boolean): MetastoreReader = {
     val metastore = this
 
     new MetastoreReader {
@@ -108,6 +114,10 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         val from = infoDateFrom.orElse(Option(infoDate))
         val to = infoDateTo.orElse(Option(infoDate))
         metastore.getTable(tableName, from, to)
+      }
+
+      override def getCurrentBatch(tableName: String): DataFrame = {
+        getTable(tableName, Option(infoDate), Option(infoDate))
       }
 
       override def getLatest(tableName: String, until: Option[LocalDate] = None): DataFrame = {
@@ -128,6 +138,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         metastore.isDataAvailable(tableName, fromDate, untilDate)
       }
 
+      override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = Array.empty
+
       override def getTableDef(tableName: String): MetaTableDef = {
         validateTable(tableName)
 
@@ -136,6 +148,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         MetaTableDef(table.name,
           table.description,
           table.format,
+          table.batchIdColumn,
           table.infoDateColumn,
           table.infoDateFormat,
           table.hiveTable,
@@ -146,6 +159,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
       }
 
       override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
+
+      override def getRunReason: TaskRunReason = TaskRunReason.New
 
       override def metadataManager: MetadataManager = metadataManagerMock
 

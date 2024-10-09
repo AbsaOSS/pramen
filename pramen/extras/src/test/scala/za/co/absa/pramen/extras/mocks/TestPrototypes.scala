@@ -33,13 +33,14 @@ object TestPrototypes {
     DataFormat.Null(),
     "pramen_info_date",
     "yyyy-MM-dd",
+    "pramen_batchid",
     None,
     None,
     LocalDate.MIN,
     Map.empty,
     Map.empty)
 
-  val taskStatus: RunStatus = RunStatus.Succeeded(None, 100, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
+  val taskStatus: RunStatus = RunStatus.Succeeded(None, Some(100), None, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
   val taskNotification: TaskResult = status.TaskResult(
     "Dummy Job",

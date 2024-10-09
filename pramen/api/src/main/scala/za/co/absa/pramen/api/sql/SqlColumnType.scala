@@ -44,4 +44,20 @@ object SqlColumnType {
       case _ => None
     }
   }
+
+  def fromStringStrict(s: String, configPath: String = ""): SqlColumnType = {
+    s.toLowerCase() match {
+      case DATE.toString     => DATE
+      case DATETIME.toString => DATETIME
+      case STRING.toString   => STRING
+      case NUMBER.toString   => NUMBER
+      case _ =>
+        val allowedTypes = Seq(DATE.toString, DATETIME.toString, STRING.toString, NUMBER.toString).mkString(", ")
+        if (configPath.nonEmpty) {
+          throw new IllegalArgumentException(s"Unknown information type '$s' configured at $configPath. Allowed valued: $allowedTypes.")
+        } else {
+          throw new IllegalArgumentException(s"Unknown information type '$s'. Allowed valued: $allowedTypes.")
+        }
+    }
+  }
 }

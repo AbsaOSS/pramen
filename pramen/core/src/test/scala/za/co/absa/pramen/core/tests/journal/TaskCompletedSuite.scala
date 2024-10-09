@@ -50,7 +50,7 @@ class TaskCompletedSuite extends AnyWordSpec {
       val taskResult = TaskResult(
         job.name,
         MetaTable.getMetaTableDef(job.outputTable),
-        RunStatus.Succeeded(Some(1000), 2000, Some(3000), runReason, Nil, Nil, Nil, Nil),
+        RunStatus.Succeeded(Some(1000), Some(2000), None, Some(3000), runReason, Nil, Nil, Nil, Nil),
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
         "app_123",
         isTransient = false,
@@ -66,8 +66,8 @@ class TaskCompletedSuite extends AnyWordSpec {
       assert(taskCompleted.periodBegin == infoDate)
       assert(taskCompleted.periodEnd == infoDate)
       assert(taskCompleted.informationDate == infoDate)
-      assert(taskCompleted.inputRecordCount == 2000)
-      assert(taskCompleted.inputRecordCountOld == 1000)
+      assert(taskCompleted.inputRecordCount.contains(2000))
+      assert(taskCompleted.inputRecordCountOld.contains(1000))
       assert(taskCompleted.outputRecordCount.contains(2000))
       assert(taskCompleted.outputRecordCountOld.contains(1000))
       assert(taskCompleted.outputSize.contains(3000))
@@ -106,8 +106,8 @@ class TaskCompletedSuite extends AnyWordSpec {
       assert(taskCompleted.periodBegin == infoDate)
       assert(taskCompleted.periodEnd == infoDate)
       assert(taskCompleted.informationDate == infoDate)
-      assert(taskCompleted.inputRecordCount == 0)
-      assert(taskCompleted.inputRecordCountOld == 0)
+      assert(taskCompleted.inputRecordCount.isEmpty)
+      assert(taskCompleted.inputRecordCountOld.isEmpty)
       assert(taskCompleted.outputRecordCount.isEmpty)
       assert(taskCompleted.outputRecordCountOld.isEmpty)
       assert(taskCompleted.outputSize.isEmpty)

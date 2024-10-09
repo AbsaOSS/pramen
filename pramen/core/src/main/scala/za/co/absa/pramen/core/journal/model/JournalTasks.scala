@@ -29,6 +29,7 @@ class JournalTasks(tag: Tag) extends Table[JournalTask](tag, "journal") {
   def inputRecordCountOld = column[Long]("input_record_count_old")
   def outputRecordCount = column[Option[Long]]("output_record_count")
   def outputRecordCountOld = column[Option[Long]]("output_record_count_old")
+  def appendedRecordCount = column[Option[Long]]("appended_record_count")
   def outputSize = column[Option[Long]]("output_size")
   def startedAt = column[Long]("started_at")
   def finishedAt = column[Long]("finished_at")
@@ -41,7 +42,7 @@ class JournalTasks(tag: Tag) extends Table[JournalTask](tag, "journal") {
   def tenant = column[Option[String]]("tenant", O.Length(200))
   def * = (jobName, pramenTableName, periodBegin, periodEnd,
     informationDate, inputRecordCount, inputRecordCountOld, outputRecordCount,
-    outputRecordCountOld, outputSize, startedAt, finishedAt, status, failureReason, sparkApplicationId, pipelineId, pipelineName, environmentName, tenant) <> (JournalTask.tupled, JournalTask.unapply)
+    outputRecordCountOld, appendedRecordCount, outputSize, startedAt, finishedAt, status, failureReason, sparkApplicationId, pipelineId, pipelineName, environmentName, tenant) <> (JournalTask.tupled, JournalTask.unapply)
   def idx1 = index("idx_started_at", startedAt, unique = false)
   def idx2 = index("idx_finished_at", finishedAt, unique = false)
 }

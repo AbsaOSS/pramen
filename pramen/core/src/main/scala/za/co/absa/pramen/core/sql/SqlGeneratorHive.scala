@@ -18,11 +18,12 @@ package za.co.absa.pramen.core.sql
 
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.HiveDialect
 
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
 
 object SqlGeneratorHive {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -104,6 +105,19 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
+    }
+  }
+
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+    offset match {
+      case OffsetValue.DateTimeValue(ts) =>
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        s"$column $condition '$tsLiteral'"
+      case OffsetValue.IntegralValue(value) =>
+        s"$column $condition $value"
+      case OffsetValue.StringValue(value) =>
+        s"$column $condition '$value'"
     }
   }
 

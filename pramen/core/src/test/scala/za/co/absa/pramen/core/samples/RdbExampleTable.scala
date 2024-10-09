@@ -82,6 +82,36 @@ object RdbExampleTable {
     )
   }
 
+  object IncrementalTable extends RdbExampleTable {
+    val tableName: String = "INCREMENTAL_TABLE"
+    val schemaName: String = "PUBLIC"
+    val databaseName: String = "PUBLIC"
+
+    val ddl: String =
+      s"""
+         |CREATE TABLE $tableName (
+         |  id INT NOT NULL,
+         |  name VARCHAR(50) NOT NULL,
+         |  last_updated TIMESTAMP NOT NULL,
+         |  info_date VARCHAR(10) NOT NULL,
+         |  PRIMARY KEY (id))
+         |""".stripMargin
+
+    override val comments: Seq[String] = Seq.empty
+
+    val inserts: Seq[String] = Seq(
+      s"INSERT INTO $tableName VALUES (1,'John', TIMESTAMP '2022-02-18 10:11:00', '2022-02-18')",
+      s"INSERT INTO $tableName VALUES (2,'Jack', TIMESTAMP '2022-02-18 10:22:33', '2022-02-18')",
+      s"INSERT INTO $tableName VALUES (3,'Jill', TIMESTAMP '2022-02-18 10:33:59', '2022-02-18')"
+    )
+
+    val inserts2: Seq[String] = Seq(
+      s"INSERT INTO $tableName VALUES (4,'Mary', TIMESTAMP '2022-02-18 11:11:00', '2022-02-18')",
+      s"INSERT INTO $tableName VALUES (5,'Jane', TIMESTAMP '2022-02-18 11:22:33', '2022-02-18')",
+      s"INSERT INTO $tableName VALUES (6,'Kate', TIMESTAMP '2022-02-18 11:33:59', '2022-02-18')"
+    )
+  }
+
   object Empty extends RdbExampleTable {
     val tableName: String = "empty"
 

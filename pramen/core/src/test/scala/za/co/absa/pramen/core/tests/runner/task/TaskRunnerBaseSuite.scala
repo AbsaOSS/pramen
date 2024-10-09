@@ -477,7 +477,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val success = result.runStatus.asInstanceOf[Succeeded]
 
       assert(success.recordCountOld.isEmpty)
-      assert(success.recordCount == 2)
+      assert(success.recordCount.contains(2))
       assert(success.sizeBytes.contains(100))
 
       val actualData = SparkUtils.convertDataFrameToPrettyJSON(job.saveDf)
@@ -511,7 +511,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       val success = result.runStatus.asInstanceOf[Succeeded]
 
-      assert(success.recordCount == 2)
+      assert(success.recordCount.contains(2))
       assert(success.sizeBytes.isEmpty)
       assert(bk.getDataChunks("table_out", infoDate, infoDate).isEmpty)
     }
@@ -638,7 +638,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       killMaxExecutionTimeSeconds = killTimer
     )
 
-    val stats = MetaTableStats(2, Some(100))
+    val stats = MetaTableStats(Some(2), None, Some(100))
 
     val job = new JobSpy(preRunCheckFunction = preRunCheckFunction,
       validationFunction = validationFunction,

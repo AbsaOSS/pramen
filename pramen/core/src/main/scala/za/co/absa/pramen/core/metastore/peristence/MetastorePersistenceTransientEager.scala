@@ -54,17 +54,23 @@ class MetastorePersistenceTransientEager(tempPathOpt: Option[String],
     }
 
     val recordCount = numberOfRecordsEstimate match {
-      case Some(n) => n
-      case None => dfOut.count()
+      case Some(n) => Option(n)
+      case None =>
+        cachePolicy match {
+          case CachePolicy.Cache => Option(dfOut.count())
+          case CachePolicy.Persist => Option(dfOut.count())
+          case _ => None
+        }
     }
 
     MetaTableStats(
       recordCount,
+      None,
       sizeBytesOpt
     )
   }
 
-  override def getStats(infoDate: LocalDate): MetaTableStats = {
+  override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
     throw new UnsupportedOperationException("Transient format does not support getting record count and size statistics.")
   }
 

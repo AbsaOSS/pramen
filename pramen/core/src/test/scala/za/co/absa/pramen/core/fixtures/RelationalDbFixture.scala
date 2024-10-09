@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.fixtures
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import java.sql._
+import java.util.TimeZone
 import scala.collection.mutable.ListBuffer
 
 trait RelationalDbFixture extends BeforeAndAfterAll {
@@ -35,6 +36,8 @@ trait RelationalDbFixture extends BeforeAndAfterAll {
   def getConnection: Connection = DriverManager.getConnection(url, user, password)
 
   override protected def beforeAll(): Unit = {
+    TimeZone.setDefault(TimeZone.getTimeZone("Africa/Johannesburg"))
+
     super.beforeAll()
     Class.forName(driver)
   }

@@ -119,7 +119,7 @@ class PramenImplSuite extends AnyWordSpec {
       )
 
       val pipelineState = mock(classOf[PipelineState])
-      when(pipelineState.getState()).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
+      when(pipelineState.getState).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
 
       pramen.setPipelineState(pipelineState)
 
@@ -153,7 +153,7 @@ class PramenImplSuite extends AnyWordSpec {
       )
 
       val pipelineState = mock(classOf[PipelineState])
-      when(pipelineState.getState()).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
+      when(pipelineState.getState).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
 
       pramen.setPipelineState(pipelineState)
 
@@ -188,7 +188,7 @@ class PramenImplSuite extends AnyWordSpec {
       )
 
       val pipelineState = mock(classOf[PipelineState])
-      when(pipelineState.getState()).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
+      when(pipelineState.getState).thenReturn(PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(taskResults = taskResults))
 
       pramen.setPipelineState(pipelineState)
 
