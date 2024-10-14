@@ -214,7 +214,7 @@ object ScheduleStrategyUtils {
         dependency.tables.foldLeft(false)((acc, table) => {
           bookkeeper.getLatestDataChunk(table, dateFrom, dateTo) match {
             case Some(dependencyUpdated) =>
-              val isUpdatedRetrospectively = dependencyUpdated.jobFinished > lastUpdated.jobFinished
+              val isUpdatedRetrospectively = dependencyUpdated.jobFinished >= lastUpdated.jobFinished
               if (isUpdatedRetrospectively) {
                 log.warn(s"Input table '$table' has updated retrospectively${renderPeriod(Option(dateFrom), Option(dateTo))}. " +
                   s"Adding '$outputTable' to rerun for $infoDate.")
