@@ -2,12 +2,16 @@ name: ScalaCI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - "main"
+      - "support/*"
     paths:
       - "pramen/**"
       - ".github/workflows/scala.yml"
   pull_request:
-    branches: [ main ]
+    branches:
+      - "main"
+      - "support/*"
     paths:
       - "pramen/**"
       - ".github/workflows/scala.yml"
