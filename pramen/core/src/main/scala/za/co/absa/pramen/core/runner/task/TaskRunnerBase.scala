@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.runner.task
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.lit
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
@@ -31,11 +31,12 @@ import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
+import za.co.absa.pramen.core.pipeline.PipelineDef.{ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
-import za.co.absa.pramen.core.utils.{ThreadUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, ThreadUtils, TimeUtils}
 import za.co.absa.pramen.core.utils.hive.HiveHelper
 
 import java.sql.Date
@@ -53,6 +54,8 @@ abstract class TaskRunnerBase(conf: Config,
                               runtimeConfig: RuntimeConfig,
                               pipelineState: PipelineState,
                               applicationId: String) extends TaskRunner {
+  import TaskRunnerBase._
+
   implicit private val ecDefault: ExecutionContext = ExecutionContext.global
   implicit val localDateOrdering: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
 
@@ -123,6 +126,12 @@ abstract class TaskRunnerBase(conf: Config,
         @volatile var runStatus: RunStatus = null
 
         try {
+          runtimeConfig.sparkAppDescriptionTemplate.foreach { template =>
+            val description = applyAppDescriptionTemplate(template, task, runtimeConfig, conf)
+            val spark = SparkSession.builder().getOrCreate()
+            spark.sparkContext.setJobDescription(description)
+          }
+
           ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
             log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
             runStatus = doValidateAndRunTask(task)
@@ -602,5 +611,25 @@ abstract class TaskRunnerBase(conf: Config,
       case RunStatus.NotRan =>
         log.info(s"$taskStr '${result.jobName}'$infoDateMsg is SKIPPED.")
     }
+  }
+}
+
+object TaskRunnerBase {
+  def applyAppDescriptionTemplate(template: String, task: Task, runtimeConfig: RuntimeConfig, conf: Config): String = {
+    val job = task.job
+    val pipelineName = conf.getString(PIPELINE_NAME_KEY)
+    val environmentName = ConfigUtils.getOptionString(conf, ENVIRONMENT_NAME).getOrElse("UNKNOWN")
+    val tenant = ConfigUtils.getOptionString(conf, TENANT_KEY).getOrElse("UNKNOWN")
+    val dryRun = if (runtimeConfig.isDryRun) "(DRY RUN)" else ""
+
+    template.replaceAll("@jobName", job.name)
+      .replaceAll("@infoDate", task.infoDate.toString)
+      .replaceAll("@metastoreTable", job.outputTable.name)
+      .replaceAll("@outputTable", job.outputTable.name)
+      .replaceAll("@table", job.outputTable.name)
+      .replaceAll("@pipeline", pipelineName)
+      .replaceAll("@tenant", tenant)
+      .replaceAll("@environment", environmentName)
+      .replaceAll("@dryRun", dryRun)
   }
 }
