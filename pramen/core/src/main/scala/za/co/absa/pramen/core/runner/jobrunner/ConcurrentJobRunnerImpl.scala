@@ -99,6 +99,10 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
     completedJobsChannel.close()
   }
 
+  private[core] def setSparkAppDescription(): Unit = synchronized {
+    ???
+  }
+
   private[core] def onFatalException(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
     log.error(s"${Emoji.FAILURE} A FATAL error has been encountered.", ex)
     val fatalEx = new FatalErrorWrapper(s"FATAL exception encountered, stopping the pipeline.", ex)
