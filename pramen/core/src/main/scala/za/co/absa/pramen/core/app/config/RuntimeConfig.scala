@@ -42,7 +42,8 @@ case class RuntimeConfig(
                           parallelTasks: Int,
                           stopSparkSession: Boolean,
                           allowEmptyPipeline: Boolean,
-                          historicalRunMode: RunMode
+                          historicalRunMode: RunMode,
+                          sparkAppDescriptionTemplate: Option[String]
                         )
 
 object RuntimeConfig {
@@ -66,6 +67,7 @@ object RuntimeConfig {
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
   val VERBOSE = "pramen.verbose"
   val ALLOW_EMPTY_PIPELINE = "pramen.allow.empty.pipeline"
+  val SPARK_APP_DESCRIPTION_TEMPLATE = "pramen.job.description.template"
 
   def fromConfig(conf: Config): RuntimeConfig = {
     val infoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
@@ -128,6 +130,7 @@ object RuntimeConfig {
     }
 
     val allowEmptyPipeline = ConfigUtils.getOptionBoolean(conf, ALLOW_EMPTY_PIPELINE).getOrElse(false)
+    val sparkAppDescriptionTemplate = ConfigUtils.getOptionString(conf, SPARK_APP_DESCRIPTION_TEMPLATE)
 
     RuntimeConfig(
       isDryRun = isDryRun,
@@ -144,7 +147,8 @@ object RuntimeConfig {
       parallelTasks = parallelTasks,
       stopSparkSession = conf.getBoolean(STOP_SPARK_SESSION),
       allowEmptyPipeline,
-      runMode
+      runMode,
+      sparkAppDescriptionTemplate
     )
   }
 }

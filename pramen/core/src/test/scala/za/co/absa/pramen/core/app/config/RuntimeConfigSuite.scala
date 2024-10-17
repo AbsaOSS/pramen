@@ -43,6 +43,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
            |  load.date.to = 2021-01-10
            |  parallel.tasks = 4
            |  stop.spark.session = true
+           |  job.description.template = "Test template"
            |}
            |""".stripMargin
 
@@ -64,6 +65,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.runDateTo.get.toString == "2021-01-10")
       assert(runtimeConfig.parallelTasks == 4)
       assert(runtimeConfig.stopSparkSession)
+      assert(runtimeConfig.sparkAppDescriptionTemplate.contains("Test template"))
     }
 
     "have default values" in {
@@ -84,6 +86,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.runDateTo.isEmpty)
       assert(runtimeConfig.parallelTasks == 1)
       assert(!runtimeConfig.stopSparkSession)
+      assert(runtimeConfig.sparkAppDescriptionTemplate.isEmpty)
     }
   }
 
