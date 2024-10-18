@@ -355,15 +355,17 @@ object StringUtils {
     * @return An escaped string.
     */
   def escapeHTML(s: String): String = {
-    val out = new StringBuilder(Math.max(16, s.length))
-    for (i <- 0 until s.length) {
+    val out = new StringBuilder(Math.max(64, s.length))
+    var i = 0
+    while (i < s.length) {
       val c = s.charAt(i)
-      if (c > 127 || c == '"' || c == '\'' || c == '<' || c == '>' || c == '&') {
+      if (c == '<' || c == '>' || c == '&') {
         out.append("&#")
         out.append(c.toInt)
         out.append(';')
       }
       else out.append(c)
+      i += 1
     }
     out.toString
   }
