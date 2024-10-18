@@ -138,6 +138,16 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |    "nullable" : true,
           |    "metadata" : { }
           |  }, {
+          |    "name" : "IS_TAX_FREE",
+          |    "type" : "boolean",
+          |    "nullable" : true,
+          |    "metadata" : { }
+          |  }, {
+          |    "name" : "TAX_ID",
+          |    "type" : "long",
+          |    "nullable" : true,
+          |    "metadata" : { }
+          |  }, {
           |    "name" : "LAST_UPDATED",
           |    "type" : "timestamp",
           |    "nullable" : true,
@@ -163,17 +173,22 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |  "ID" : 1,
           |  "NAME" : "Company1",
           |  "EMAIL" : "company1@example.com",
-          |  "FOUNDED" : "2000-10-11"
+          |  "FOUNDED" : "2000-10-11",
+          |  "IS_TAX_FREE" : false,
+          |  "TAX_ID" : 123
           |}, {
           |  "ID" : 2,
           |  "NAME" : "Company2",
           |  "EMAIL" : "company2@example.com",
-          |  "FOUNDED" : "2005-03-29"
+          |  "FOUNDED" : "2005-03-29",
+          |  "IS_TAX_FREE" : true,
+          |  "TAX_ID" : 456
           |}, {
           |  "ID" : 3,
           |  "NAME" : "Company3",
           |  "EMAIL" : "company3@example.com",
-          |  "FOUNDED" : "2016-12-30"
+          |  "FOUNDED" : "2016-12-30",
+          |  "IS_TAX_FREE" : false
           |}, {
           |  "ID" : 4,
           |  "NAME" : "Company4",
@@ -181,7 +196,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |  "FOUNDED" : "2016-12-31"
           |} ]""".stripMargin
 
-      val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT id, name, email, founded FROM $tableName")
+      val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT id, name, email, founded, is_tax_free, tax_id FROM $tableName")
       val actual = SparkUtils.convertDataFrameToPrettyJSON(df)
 
       compareText(actual, expected)
@@ -236,35 +251,35 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
   }
 
   "getDecimalDataType" should {
-      val resultSet = mock(classOf[ResultSet])
-      val resultSetMetaData = mock(classOf[ResultSetMetaData])
+    val resultSet = mock(classOf[ResultSet])
+    val resultSetMetaData = mock(classOf[ResultSetMetaData])
 
-      when(resultSetMetaData.getColumnCount).thenReturn(1)
-      when(resultSet.getMetaData).thenReturn(resultSetMetaData)
+    when(resultSetMetaData.getColumnCount).thenReturn(1)
+    when(resultSet.getMetaData).thenReturn(resultSetMetaData)
 
-      "return normal decimal for correct precision and scale" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
-        when(resultSetMetaData.getPrecision(0)).thenReturn(10)
-        when(resultSetMetaData.getScale(0)).thenReturn(2)
+    "return normal decimal for correct precision and scale" in {
+      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
+      when(resultSetMetaData.getPrecision(0)).thenReturn(10)
+      when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-        assert(iterator.getDecimalDataType(0) == NUMERIC)
-      }
+      assert(iterator.getDecimalDataType(0) == NUMERIC)
+    }
 
-      "return fixed decimal for incorrect precision and scale" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
-        when(resultSetMetaData.getPrecision(0)).thenReturn(0)
-        when(resultSetMetaData.getScale(0)).thenReturn(2)
+    "return fixed decimal for incorrect precision and scale" in {
+      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false)
+      when(resultSetMetaData.getPrecision(0)).thenReturn(0)
+      when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-        assert(iterator.getDecimalDataType(0) == NUMERIC)
-      }
+      assert(iterator.getDecimalDataType(0) == NUMERIC)
+    }
 
-      "return string type for incorrect precision and scale" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = true)
-        when(resultSetMetaData.getPrecision(0)).thenReturn(0)
-        when(resultSetMetaData.getScale(0)).thenReturn(2)
+    "return string type for incorrect precision and scale" in {
+      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = true)
+      when(resultSetMetaData.getPrecision(0)).thenReturn(0)
+      when(resultSetMetaData.getScale(0)).thenReturn(2)
 
-        assert(iterator.getDecimalDataType(0) == VARCHAR)
-      }
+      assert(iterator.getDecimalDataType(0) == VARCHAR)
+    }
   }
 
   "sanitizeDateTime" when {
