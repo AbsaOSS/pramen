@@ -170,9 +170,10 @@ object StringUtils {
   }
 
   /** Renders an exception as a string */
-  def renderThrowable(ex: Throwable, level: Int = 1, maximumLength: Option[Int] = None): String = {
+  def renderThrowable(ex: Throwable, level: Int = 1, maximumLength: Option[Int] = None, escapeHTML: Boolean = false): String = {
     val prefix = " " * (level * 2)
-    val base = s"""${ex.toString}\n${ex.getStackTrace.map(s => s"$prefix$s").mkString("", EOL, EOL)}"""
+    val errMsg = if (escapeHTML) StringUtils.escapeHTML(ex.toString) else ex.toString
+    val base = s"""$errMsg\n${ex.getStackTrace.map(s => s"$prefix$s").mkString("", EOL, EOL)}"""
     val cause = Option(ex.getCause) match {
       case Some(c) if level < 6 => s"\n${prefix}Caused by " + renderThrowable(c, level + 1)
       case _                    => ""
@@ -346,4 +347,24 @@ object StringUtils {
     output.toString()
   }
 
+  /**
+    * Escapes HTML tags and symbols from a string.
+    * Based on https://stackoverflow.com/a/25228492/1038282
+    *
+    * @param s A string to escape HTML from.
+    * @return An escaped string.
+    */
+  def escapeHTML(s: String): String = {
+    val out = new StringBuilder(Math.max(16, s.length))
+    for (i <- 0 until s.length) {
+      val c = s.charAt(i)
+      if (c > 127 || c == '"' || c == '\'' || c == '<' || c == '>' || c == '&') {
+        out.append("&#")
+        out.append(c.toInt)
+        out.append(';')
+      }
+      else out.append(c)
+    }
+    out.toString
+  }
 }
