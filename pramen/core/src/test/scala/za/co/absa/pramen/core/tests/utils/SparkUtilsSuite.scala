@@ -263,9 +263,6 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val newField2 = schema1Orig.fields.head.copy(metadata = metadata2)
       val schema2 = schema1Orig.copy(fields = newField2 +: schema1Orig.fields.tail)
 
-      println(schema1.prettyJson)
-      println(schema2.prettyJson)
-
       val diff = compareSchemas(schema1, schema2)
 
       assert(diff.length == 1)

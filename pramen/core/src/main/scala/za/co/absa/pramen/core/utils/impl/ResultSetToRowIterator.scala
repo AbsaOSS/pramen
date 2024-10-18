@@ -112,13 +112,27 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 
     // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
     dataType match {
-      case BIT | BOOLEAN => rs.getBoolean(columnIndex)
-      case TINYINT       => rs.getByte(columnIndex)
-      case SMALLINT      => rs.getShort(columnIndex)
-      case INTEGER       => rs.getInt(columnIndex)
-      case BIGINT        => rs.getLong(columnIndex)
-      case FLOAT         => rs.getFloat(columnIndex)
-      case DOUBLE        => rs.getDouble(columnIndex)
+      case BIT | BOOLEAN =>
+        val v = rs.getBoolean(columnIndex)
+        if (rs.wasNull()) null else v
+      case TINYINT       =>
+        val v = rs.getByte(columnIndex)
+        if (rs.wasNull()) null else v
+      case SMALLINT      =>
+        val v = rs.getShort(columnIndex)
+        if (rs.wasNull()) null else v
+      case INTEGER       =>
+        val v = rs.getInt(columnIndex)
+        if (rs.wasNull()) null else v
+      case BIGINT        =>
+        val v = rs.getLong(columnIndex)
+        if (rs.wasNull()) null else v
+      case FLOAT         =>
+        val v = rs.getFloat(columnIndex)
+        if (rs.wasNull()) null else v
+      case DOUBLE        =>
+        val v = rs.getDouble(columnIndex)
+        if (rs.wasNull()) null else v
       case REAL          => rs.getBigDecimal(columnIndex)
       case NUMERIC       => rs.getBigDecimal(columnIndex)
       case DATE          => sanitizeDate(rs.getDate(columnIndex))
