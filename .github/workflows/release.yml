@@ -25,8 +25,7 @@ defaults:
 
 jobs:
   release-sbt:
-    needs: [ "release-python" ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Release Scala artifacts
     steps:
       - name: Checkout code
@@ -34,23 +33,23 @@ jobs:
         with:
           ref: ${{ github.event.inputs.branch }}
 
+      - name: Prepare the release branch
+        id: release_branch1
+        working-directory: "./pramen"
+        run: |
+          VERSION=$(grep "ThisBuild / version" version.sbt | cut -d\" -f2 | sed 's/-SNAPSHOT//')
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          git config --global user.email "absa_ci_cd_bot@absa.africa"
+          git config --global user.name "CI/CD bot"
+          git checkout -b release/$VERSION
+          git push --set-upstream origin release/$VERSION
+
       - name: Setup JDK and sbt
         uses: actions/setup-java@v4.2.1
         with:
           distribution: temurin
           java-version: 8
           cache: sbt
-
-      - name: Install sbt
-        run: |
-          sudo apt-get update
-          sudo apt-get install apt-transport-https curl gnupg -yqq
-          echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
-          echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
-          curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo -H gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/scalasbt-release.gpg --import
-          sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
-          sudo apt-get update
-          sudo apt-get install sbt
 
       - name: Import GPG Key
         run: |
@@ -79,7 +78,7 @@ jobs:
 
   create-pr:
     needs: [ "release-sbt" ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Create Pull Request
 
     steps:
