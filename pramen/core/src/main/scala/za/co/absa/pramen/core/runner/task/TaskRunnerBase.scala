@@ -121,17 +121,18 @@ abstract class TaskRunnerBase(conf: Config,
   /** Runs a task in the single thread. Performs all task logging and notification sending activities. */
   protected def runTask(task: Task): RunStatus = {
     val started = Instant.now()
+
+    runtimeConfig.sparkAppDescriptionTemplate.foreach { template =>
+      val description = applyAppDescriptionTemplate(template, task, runtimeConfig, conf)
+      val spark = SparkSession.builder().getOrCreate()
+      spark.sparkContext.setJobDescription(description)
+    }
+
     task.job.operation.killMaxExecutionTimeSeconds match {
       case Some(timeout) if timeout > 0 =>
         @volatile var runStatus: RunStatus = null
 
         try {
-          runtimeConfig.sparkAppDescriptionTemplate.foreach { template =>
-            val description = applyAppDescriptionTemplate(template, task, runtimeConfig, conf)
-            val spark = SparkSession.builder().getOrCreate()
-            spark.sparkContext.setJobDescription(description)
-          }
-
           ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
             log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
             runStatus = doValidateAndRunTask(task)
