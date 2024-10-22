@@ -101,6 +101,6 @@ jobs:
       - name: Create Pull Request
         run: gh pr create -B "$BASE" -H "release/$VERSION" --title "Release Pramen v$VERSION" --body 'Created by Github action'
         env:
-          BASE: ${{ github.event.inputs.branch }}
+          BASE: ${{ github.head_ref || github.ref_name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.release_branch3.outputs.VERSION }}
