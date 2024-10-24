@@ -451,7 +451,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(len.contains(10))
     }
 
-    "work for string type" in {
+    "return length for string type" in {
       val metadata = new MetadataBuilder
       metadata.putString(MAX_LENGTH_METADATA_KEY, "10")
 
