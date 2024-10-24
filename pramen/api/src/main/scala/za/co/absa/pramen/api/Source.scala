@@ -68,7 +68,7 @@ trait Source extends ExternalChannel {
 
   /**
     * Returns the incremental data between specified offsets. The offset intervals could be half open,
-    * e.g. only offsetFrom or offsetFrom is specified.
+    * e.g. only offsetFrom or offsetTo is specified.
     *
     * If an information date is provided and available at the source, the query will be limited to that date.
     *
