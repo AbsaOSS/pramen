@@ -112,15 +112,13 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   val csv1WithTimestampStr = s"tss,name\n1613563930000,Old\n1613639398123,John\n1613639398124,Jack\n1613639399123,Jill\n1613740330000,New\n"
 
   val expectedWithTimestamp1: String =
-    """{"ts":"2021-02-17T14:12:10.000+02:00","name":"Old","pramen_info_date":"2021-02-17"}
-      |{"ts":"2021-02-18T11:09:58.123+02:00","name":"John","pramen_info_date":"2021-02-18"}
+    """{"ts":"2021-02-18T11:09:58.123+02:00","name":"John","pramen_info_date":"2021-02-18"}
       |{"ts":"2021-02-18T11:09:58.124+02:00","name":"Jack","pramen_info_date":"2021-02-18"}
       |{"ts":"2021-02-18T11:09:59.123+02:00","name":"Jill","pramen_info_date":"2021-02-18"}
       |""".stripMargin
 
-  val expectedWithTimestampAll: String =
-    """{"ts":"2021-02-17T14:12:10.000+02:00","name":"Old","pramen_info_date":"2021-02-17"}
-      |{"ts":"2021-02-18T11:09:58.123+02:00","name":"John","pramen_info_date":"2021-02-18"}
+  val expectedWithTimestamp2: String =
+    """{"ts":"2021-02-18T11:09:58.123+02:00","name":"John","pramen_info_date":"2021-02-18"}
       |{"ts":"2021-02-18T11:09:58.124+02:00","name":"Jack","pramen_info_date":"2021-02-18"}
       |{"ts":"2021-02-18T11:09:59.123+02:00","name":"Jill","pramen_info_date":"2021-02-18"}
       |{"ts":"2021-02-19T15:12:10.000+02:00","name":"New","pramen_info_date":"2021-02-19"}
@@ -1139,14 +1137,14 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       val actualTable1After = dfTable1After.select("ts", "name", INFO_DATE_COLUMN).orderBy("ts").toJSON.collect().mkString("\n")
       val actualTable2After = dfTable2After.select("ts", "name", INFO_DATE_COLUMN).orderBy("ts").toJSON.collect().mkString("\n")
 
-      compareText(actualTable1After, expectedWithTimestampAll)
-      compareText(actualTable2After, expectedWithTimestampAll)
+      compareText(actualTable1After, expectedWithTimestamp2)
+      compareText(actualTable2After, expectedWithTimestamp2)
 
       val om = new OffsetManagerJdbc(pramenDb.db, 123L)
 
       val offsets1 = om.getOffsets("table1", infoDate.minusDays(1)).map(_.asInstanceOf[CommittedOffset])
-      assert(offsets1.head.minOffset.valueString.toLong == 1613563930000L)
-      assert(offsets1.head.maxOffset.valueString.toLong == 1613563930000L)
+      assert(offsets1.isEmpty)
+      assert(offsets1.isEmpty)
 
       val offsets2 = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset])
       assert(offsets2.length == 1)
@@ -1162,12 +1160,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   }
 
   def testOffsetCrossInfoDateEdgeCase(metastoreFormat: String): Assertion = {
-    val expected1 =
-      """{"id":1,"name":"John"}
-        |{"id":2,"name":"Jack"}
-        |""".stripMargin
-
-    val expected2 =
+    val expected =
       """{"id":3,"name":"Jill"}
         |{"id":4,"name":"Mary"}
         |""".stripMargin
@@ -1193,22 +1186,18 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       val dfTable1_2 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
       val dfTable2_2 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
 
-      val actualTable1_1 = dfTable1_1.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
-      val actualTable2_1 = dfTable2_1.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
       val actualTable1_2 = dfTable1_2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
       val actualTable2_2 = dfTable2_2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
 
-      compareText(actualTable1_1, expected1)
-      compareText(actualTable2_1, expected1)
-      compareText(actualTable1_2, expected2)
-      compareText(actualTable2_2, expected2)
+      assert(dfTable1_1.isEmpty)
+      assert(dfTable2_1.isEmpty)
+      compareText(actualTable1_2, expected)
+      compareText(actualTable2_2, expected)
 
       val om = new OffsetManagerJdbc(pramenDb.db, 123L)
 
       val offsets1 = om.getOffsets("table1", infoDate.minusDays(1)).map(_.asInstanceOf[CommittedOffset])
-      assert(offsets1.length == 1)
-      assert(offsets1.head.minOffset.valueString.toLong == 1)
-      assert(offsets1.head.maxOffset.valueString.toLong == 2)
+      assert(offsets1.isEmpty)
 
       val offsets2 = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset])
       assert(offsets2.length == 1)

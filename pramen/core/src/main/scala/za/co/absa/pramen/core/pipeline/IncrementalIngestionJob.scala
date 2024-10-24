@@ -48,9 +48,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
                              (implicit spark: SparkSession)
   extends IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, None, false) {
 
-  private var latestOffset = latestOffsetIn
-
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffset.map(_.maximumInfoDate), source.hasInfoDateColumn(sourceTable.query))
+  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffsetIn.map(_.maximumInfoDate), source.hasInfoDateColumn(sourceTable.query))
 
   override def trackDays: Int = 0
 
@@ -84,20 +82,19 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       Seq.empty[String]
     }
 
+    val om = bookkeeper.getOffsetManager
     val hasInfoDate = source.hasInfoDateColumn(sourceTable.query)
     val isReRun = runReason == TaskRunReason.Rerun
 
     val sourceResult = (hasInfoDate, isReRun) match {
       case (false, false) =>
-        latestOffset match {
+        om.getMaxInfoDateAndOffset(outputTable.name, None) match {
           case Some(maxOffset) =>
             source.getDataIncremental(sourceTable.query, None, Option(maxOffset.maximumOffset), None, columns)
           case None =>
             source.getData(sourceTable.query, infoDate, infoDate, columns)
         }
       case (false, true) =>
-        val om = bookkeeper.getOffsetManager
-
         om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)) match {
           case Some(offsets) =>
             source.getDataIncremental(sourceTable.query, None, Option(offsets.minimumOffset), Option(offsets.maximumOffset), columns)
@@ -196,7 +193,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
   private[core] def validateReadiness(infoDate: LocalDate, om: OffsetManager, hasInfoDate: Boolean, isRerun: Boolean): Reason = {
     (hasInfoDate, isRerun) match {
       case (false, false) =>
-        latestOffset match {
+        om.getMaxInfoDateAndOffset(outputTable.name, None) match {
           case Some(offset) if offset.maximumInfoDate.isAfter(infoDate) =>
             log.warn(s"Cannot run '${outputTable.name}' for '$infoDate' since offsets exists for ${offset.maximumInfoDate}.")
             Reason.Skip("Incremental ingestion cannot be retrospective")
@@ -231,8 +228,6 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
       handleUncommittedOffsets(om, metastore, uncommittedOffsets)
     }
-
-    latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
   }
 
   private[core] def handleUncommittedOffsets(om: OffsetManager, mt: Metastore, uncommittedOffsets: Array[UncommittedOffset]): Unit = {
@@ -280,8 +275,6 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       log.warn(s"Cleaning uncommitted offset: $of...")
       om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.batchId, of.createdAt))
     }
-
-    latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
   }
 
   private[core] def rollbackOffsets(infoDate: LocalDate, om: OffsetManager, uncommittedOffsets: Array[UncommittedOffset]): Unit = {
@@ -291,8 +284,6 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       log.warn(s"Cleaning uncommitted offset: $of...")
       om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.batchId, of.createdAt))
     }
-
-    latestOffset = om.getMaxInfoDateAndOffset(outputTable.name, None)
   }
 
   private[core] def getMinMaxOffsetFromDf(df: DataFrame, offsetInfo: OffsetInfo): (OffsetValue, OffsetValue) = {
