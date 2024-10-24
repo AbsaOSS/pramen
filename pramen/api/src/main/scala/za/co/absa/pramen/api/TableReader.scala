@@ -17,6 +17,7 @@
 package za.co.absa.pramen.api
 
 import org.apache.spark.sql.DataFrame
+import za.co.absa.pramen.api.offset.OffsetValue
 
 import java.time.LocalDate
 
@@ -24,4 +25,6 @@ trait TableReader {
   def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
 
   def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame
+
+  def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): DataFrame
 }

@@ -33,12 +33,14 @@ class PipelineStateSpy extends PipelineState {
   var closeCalled = 0
   var sparkAppId: Option[String] = None
 
-  override def getState(): PipelineStateSnapshot = {
+  override def getState: PipelineStateSnapshot = {
     PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(PipelineInfoFactory.getDummyPipelineInfo(sparkApplicationId = sparkAppId),
       customShutdownHookCanRun = setShutdownHookCanRunCount > 0,
       taskResults = completedStatuses.toList
     )
   }
+
+  override def getBatchId: Long = 0L
 
   override def setShutdownHookCanRun(): Unit = synchronized {
     setShutdownHookCanRunCount += 1

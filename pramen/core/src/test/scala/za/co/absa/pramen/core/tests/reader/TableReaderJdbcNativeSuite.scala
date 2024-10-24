@@ -97,7 +97,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
   }
 
   private def getReader: TableReaderJdbcNative =
-    TableReaderJdbcNative(conf.getConfig("reader"), "reader")
+    TableReaderJdbcNative(conf.getConfig("reader"), conf.getConfig("reader"), "reader")
 
   "TableReaderJdbcNative factory" should {
     "construct a reader object" in {
@@ -109,13 +109,13 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     }
 
     "work with legacy config" in {
-      val reader = TableReaderJdbcNative(conf.getConfig("reader_legacy"), "reader_legacy")
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_legacy"), conf.getConfig("reader_legacy"), "reader_legacy")
       assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-DD")
       assert(!reader.getJdbcReaderConfig.jdbcConfig.sanitizeDateTime)
     }
 
     "work with minimal config" in {
-      val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), "reader_minimal")
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), conf.getConfig("reader_minimal"), "reader_minimal")
       assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-dd")
       assert(reader.getJdbcReaderConfig.jdbcConfig.sanitizeDateTime)
       assert(!reader.getJdbcReaderConfig.jdbcConfig.autoCommit)
@@ -124,7 +124,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
 
     "throw an exception if config is missing" in {
       intercept[IllegalArgumentException] {
-        TableReaderJdbcNative(conf)
+        TableReaderJdbcNative(conf, conf)
       }
     }
   }
@@ -293,7 +293,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     }
 
     "return a query without info date if it is disabled" in {
-      val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), "reader_minimal")
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), conf.getConfig("reader_minimal"), "reader_minimal")
 
       val actual = reader.getSqlDataQuery("table1", infoDateBegin, infoDateEnd, Nil)
 
@@ -301,7 +301,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     }
 
     "return a query without with limits" in {
-      val reader = TableReaderJdbcNative(conf.getConfig("reader_limit"), "reader_limit")
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_limit"), conf.getConfig("reader_limit"), "reader_limit")
 
       val actual = reader.getSqlDataQuery("table1", infoDateBegin, infoDateEnd, Nil)
 

@@ -30,13 +30,15 @@ import za.co.absa.pramen.core.pipeline.OperationSplitter.{DISABLE_COUNT_QUERY, g
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
+import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
 import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
-                        bookkeeper: Bookkeeper)(implicit spark: SparkSession) {
+                        bookkeeper: Bookkeeper,
+                        batchId: Long)(implicit spark: SparkSession) {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   def createJobs(operationDef: OperationDef): Seq[Job] = {
@@ -68,7 +70,12 @@ class OperationSplitter(conf: Config,
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
 
-      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery)
+      if (operationDef.schedule == Schedule.Incremental) {
+        val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
+        new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, sourceTable, outputTable, specialCharacters)
+      } else {
+        new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery)
+      }
     })
   }
 

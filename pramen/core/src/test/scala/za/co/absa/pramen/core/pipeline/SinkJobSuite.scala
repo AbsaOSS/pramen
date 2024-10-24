@@ -76,7 +76,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "return Ready when the data frame is not empty" in {
       val (job, _) = getUseCase(tableDf = exampleDf)
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result == Reason.Ready)
     }
@@ -84,7 +84,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "return Skip when the data frame is empty" in {
       val (job, _) = getUseCase(tableDf = exampleDf.filter(col("b") > 10))
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result.isInstanceOf[Reason.Skip])
     }
@@ -95,7 +95,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(sink = sink, tableDf = exampleDf)
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result == Reason.Ready)
     }
@@ -106,7 +106,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(sink = sink, tableDf = exampleDf)
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result.isInstanceOf[Reason.NotReady])
     }
@@ -116,7 +116,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "returns a dataframe when it is available" in {
       val (job, _) = getUseCase(tableDf = exampleDf)
 
-      val actual = job.run(infoDate, conf).data
+      val actual = job.run(infoDate, runReason, conf).data
 
       assert(actual.count() == 3)
     }
@@ -125,7 +125,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val (job, _) = getUseCase(tableException = new RuntimeException("Dummy Exception"))
 
       val ex = intercept[IllegalStateException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason, conf)
       }
 
       assert(ex.getMessage == "Unable to read input table table1 for 2022-01-18.")
@@ -152,7 +152,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(sinkTable = sinkTable, tableDf = exampleDf)
 
-      val dfIn = job.run(infoDate, conf).data
+      val dfIn = job.run(infoDate, runReason, conf).data
 
       val dfOut = job.postProcessing(dfIn, infoDate, conf).orderBy("b1")
 
@@ -170,7 +170,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(sinkTable = sinkTable, tableDf = exampleDf)
 
-      val dfIn = job.run(infoDate, conf).data
+      val dfIn = job.run(infoDate, runReason, conf).data
 
       val ex = intercept[IllegalStateException] {
         job.postProcessing(dfIn, infoDate, conf).orderBy("b1")
@@ -188,7 +188,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, bk) = getUseCase(tableDf = df, sink = sink)
 
-      job.save(df, infoDate, conf, Instant.now(), Some(10L))
+      job.save(df, infoDate, runReason, conf, Instant.now(), Some(10L))
 
       val outputTable = "table1->mysink"
 
@@ -210,7 +210,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val (job, _) = getUseCase(tableDf = exampleDf, sink = sink)
 
       val ex = intercept[IllegalStateException] {
-        job.save(exampleDf, infoDate, conf, Instant.now(), Some(10L))
+        job.save(exampleDf, infoDate, runReason, conf, Instant.now(), Some(10L))
       }
 
       assert(sink.connectCalled == 1)
@@ -226,7 +226,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val (job, _) = getUseCase(tableDf = exampleDf, sink = sink)
 
       val ex = intercept[IllegalStateException] {
-        job.save(exampleDf, infoDate, conf, Instant.now(), Some(10L))
+        job.save(exampleDf, infoDate, runReason, conf, Instant.now(), Some(10L))
       }
 
       assert(sink.connectCalled == 1)
@@ -241,7 +241,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(tableDf = exampleDf, sink = sink)
 
-      job.save(exampleDf, infoDate, conf, Instant.now(), Some(10L))
+      job.save(exampleDf, infoDate, runReason, conf, Instant.now(), Some(10L))
 
       assert(sink.connectCalled == 1)
       assert(sink.writeCalled == 1)

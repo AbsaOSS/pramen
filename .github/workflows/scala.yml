@@ -2,12 +2,16 @@ name: ScalaCI
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - "main"
+      - "support/*"
     paths:
       - "pramen/**"
       - ".github/workflows/scala.yml"
   pull_request:
-    branches: [ main ]
+    branches:
+      - "main"
+      - "support/*"
     paths:
       - "pramen/**"
       - ".github/workflows/scala.yml"
@@ -18,7 +22,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        scala: [2.11.12, 2.12.19, 2.13.13]
+        scala: [2.11.12, 2.12.20, 2.13.14]
         spark: [2.4.8, 3.3.4, 3.4.2, 3.5.1]
         exclude:
           - scala: 2.11.12
@@ -27,9 +31,9 @@ jobs:
             spark: 3.4.2
           - scala: 2.11.12
             spark: 3.5.1
-          - scala: 2.12.19
+          - scala: 2.12.20
             spark: 2.4.8
-          - scala: 2.13.13
+          - scala: 2.13.14
             spark: 2.4.8
     name: Test Spark ${{matrix.spark}} on Scala ${{matrix.scala}}
     steps:
@@ -42,9 +46,19 @@ jobs:
           distribution: temurin
           java-version: 8
           cache: sbt
+      - name: Install sbt
+        run: |
+          sudo apt-get update
+          sudo apt-get install apt-transport-https curl gnupg -yqq
+          echo "deb https://repo.scala-sbt.org/scalasbt/debian all main" | sudo tee /etc/apt/sources.list.d/sbt.list
+          echo "deb https://repo.scala-sbt.org/scalasbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt_old.list
+          curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | sudo -H gpg --no-default-keyring --keyring gnupg-ring:/etc/apt/trusted.gpg.d/scalasbt-release.gpg --import
+          sudo chmod 644 /etc/apt/trusted.gpg.d/scalasbt-release.gpg
+          sudo apt-get update
+          sudo apt-get install sbt
       - name: Build and run unit tests
         working-directory: ./pramen
-        run: sbt ++${{matrix.scala}} test -DSPARK_VERSION=${{matrix.spark}}
+        run: sbt ++${{matrix.scala}} unit:test -DSPARK_VERSION=${{matrix.spark}}
       - name: Run integration tests
         working-directory: ./pramen
         run: sbt ++${{matrix.scala}} integration:test -DSPARK_VERSION=${{matrix.spark}}

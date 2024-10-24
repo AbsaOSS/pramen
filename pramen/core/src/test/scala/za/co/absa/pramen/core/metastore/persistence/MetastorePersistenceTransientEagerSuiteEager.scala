@@ -117,7 +117,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       val saveResult = persistor.saveTable(infoDate, exampleDf, Some(10))
 
-      assert(saveResult.recordCount == 10)
+      assert(saveResult.recordCount.contains(10))
       assert(saveResult.dataSizeBytes.isEmpty)
 
       TransientTableManager.reset()
@@ -128,7 +128,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       val saveResult = persistor.saveTable(infoDate, exampleDf, None)
 
-      assert(saveResult.recordCount == 3)
+      assert(saveResult.recordCount.contains(3))
       assert(saveResult.dataSizeBytes.isEmpty)
 
       TransientTableManager.reset()
@@ -139,7 +139,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
 
       val saveResult = persistor.saveTable(infoDate, exampleDf, None)
 
-      assert(saveResult.recordCount == 3)
+      assert(saveResult.recordCount.contains(3))
       assert(saveResult.dataSizeBytes.isDefined)
       assert(saveResult.dataSizeBytes.exists(_ > 100))
 
@@ -152,7 +152,7 @@ class MetastorePersistenceTransientEagerSuiteEager extends AnyWordSpec with Befo
       val persistor = new MetastorePersistenceTransientEager(null, null, null)
 
       assertThrows[UnsupportedOperationException] {
-        persistor.getStats(null)
+        persistor.getStats(null, onlyForCurrentBatchId = false)
       }
     }
   }

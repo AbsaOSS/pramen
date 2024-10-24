@@ -18,11 +18,12 @@ package za.co.absa.pramen.core.sql
 
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.DenodoDialect
 
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
 
 object SqlGeneratorDenodo {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -94,7 +95,7 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     }
   }
 
-  def getDateLiteral(date: LocalDate): String = {
+  override def getDateLiteral(date: LocalDate): String = {
     sqlConfig.infoDateType match {
       case SqlColumnType.DATE =>
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
@@ -108,6 +109,19 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
+    }
+  }
+
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+    offset match {
+      case OffsetValue.DateTimeValue(ts) =>
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        s"$column $condition TIMESTAMP '$tsLiteral'"
+      case OffsetValue.IntegralValue(value) =>
+        s"$column $condition $value"
+      case OffsetValue.StringValue(value) =>
+        s"$column $condition '$value'"
     }
   }
 

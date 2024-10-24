@@ -18,12 +18,14 @@ package za.co.absa.pramen.core.sql
 
 import org.apache.spark.sql.jdbc.JdbcDialects
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.SasDialect
 
 import java.sql.{Connection, ResultSet}
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
+import java.util.Locale
 import scala.collection.mutable.ListBuffer
 
 object SqlGeneratorSas {
@@ -41,6 +43,7 @@ object SqlGeneratorSas {
 
 class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
+  private val timestampSasDbFormatter = DateTimeFormatter.ofPattern("ddMMMyyyy:HH:mm:ss.SSS", Locale.ENGLISH)
 
   override val beginEndEscapeChars: (Char, Char) = ('\'', '\'')
 
@@ -162,5 +165,18 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
 
   private def getLimit(limit: Option[Int], hasWhere: Boolean): String = {
     limit.map(n => s" LIMIT $n").getOrElse("")
+  }
+
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+    offset match {
+      case OffsetValue.DateTimeValue(ts) =>
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampSasDbFormatter.format(ldt)
+        s"$column $condition '$tsLiteral'dt"
+      case OffsetValue.IntegralValue(value) =>
+        s"$column $condition $value"
+      case OffsetValue.StringValue(value) =>
+        s"$column $condition '$value'"
+    }
   }
 }

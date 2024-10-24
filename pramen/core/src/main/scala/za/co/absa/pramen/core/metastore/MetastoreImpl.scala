@@ -18,10 +18,13 @@ package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.DataOffset
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
@@ -38,6 +41,7 @@ class MetastoreImpl(appConfig: Config,
                     tableDefs: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
                     metadata: MetadataManager,
+                    batchId: Long,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
   import MetastoreImpl._
 
@@ -75,14 +79,27 @@ class MetastoreImpl(appConfig: Config,
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
 
-    MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(infoDateFrom, infoDateTo)
+    MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(infoDateFrom, infoDateTo)
+  }
+
+  override def getBatch(tableName: String, infoDate: LocalDate, batchIdOpt: Option[Long]): DataFrame = {
+    val mt = getTableDef(tableName)
+    val effectiveBatchId = batchIdOpt.getOrElse(batchId)
+
+    val df = MetastorePersistence.fromMetaTable(mt, appConfig, batchId = effectiveBatchId).loadTable(Option(infoDate), Option(infoDate))
+
+    if (df.schema.fields.exists(_.name.equalsIgnoreCase(mt.batchIdColumn))) {
+      df.filter(col(mt.batchIdColumn) === lit(batchId))
+    } else {
+      df
+    }
   }
 
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
     val isLazy = mt.format.isLazy
     if (isLazy) {
-      MetastorePersistence.fromMetaTable(mt, appConfig).loadTable(None, until)
+      MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(None, until)
     } else {
       bookkeeper.getLatestProcessedDate(tableName, until) match {
         case Some(infoDate) => getTable(tableName, Some(infoDate), Some(infoDate))
@@ -91,21 +108,25 @@ class MetastoreImpl(appConfig: Config,
     }
   }
 
-  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long]): MetaTableStats = {
+  override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long], saveModeOverride: Option[SaveMode]): MetaTableStats = {
     val mt = getTableDef(tableName)
     val isTransient = mt.format.isTransient
     val start = Instant.now.getEpochSecond
 
-    var stats = MetaTableStats(0, None)
+    var stats = MetaTableStats(Some(0), None, None)
 
     withSparkConfig(mt.sparkConfig) {
-      stats = MetastorePersistence.fromMetaTable(mt, appConfig).saveTable(infoDate, df, inputRecordCount)
+      stats = MetastorePersistence.fromMetaTable(mt, appConfig, saveModeOverride, batchId).saveTable(infoDate, df, inputRecordCount)
     }
 
     val finish = Instant.now.getEpochSecond
 
-    if (!skipBookKeepingUpdates) {
-      bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(stats.recordCount), stats.recordCount, start, finish, isTransient)
+    val nothingAppended = stats.recordCountAppended.contains(0)
+
+    stats.recordCount.foreach{recordCount =>
+      if (!skipBookKeepingUpdates && !nothingAppended) {
+        bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, start, finish, isTransient)
+      }
     }
 
     stats
@@ -177,10 +198,10 @@ class MetastoreImpl(appConfig: Config,
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {
     val mt = getTableDef(tableName)
 
-    MetastorePersistence.fromMetaTable(mt, appConfig).getStats(infoDate)
+    MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).getStats(infoDate, onlyForCurrentBatchId = false)
   }
 
-  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean): MetastoreReader = {
     val metastore = this
 
     new MetastoreReader {
@@ -189,6 +210,14 @@ class MetastoreImpl(appConfig: Config,
         val from = infoDateFrom.orElse(Option(infoDate))
         val to = infoDateTo.orElse(Option(infoDate))
         metastore.getTable(tableName, from, to)
+      }
+
+      override def getCurrentBatch(tableName: String): DataFrame = {
+        validateTable(tableName)
+        if (isIncremental)
+          metastore.getBatch(tableName, infoDate, None)
+        else
+          metastore.getTable(tableName, Option(infoDate), Option(infoDate))
       }
 
       override def getLatest(tableName: String, until: Option[LocalDate] = None): DataFrame = {
@@ -210,8 +239,14 @@ class MetastoreImpl(appConfig: Config,
         metastore.isDataAvailable(tableName, fromDate, untilDate)
       }
 
+      override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
+        val om = bookkeeper.getOffsetManager
+
+        om.getOffsets(table, infoDate)
+      }
+
       override def getTableDef(tableName: String): MetaTableDef = {
-        validateTable(tableName)
+        validateTable(tableName) // ToDo Consider removing
 
         MetaTable.getMetaTableDef(metastore.getTableDef(tableName))
       }
@@ -222,6 +257,8 @@ class MetastoreImpl(appConfig: Config,
             MetaTableRunInfo(tableName, LocalDate.parse(chunk.infoDate), chunk.inputRecordCount, chunk.outputRecordCount, Instant.ofEpochSecond(chunk.jobStarted), Instant.ofEpochSecond(chunk.jobFinished))
           )
       }
+
+      override def getRunReason: TaskRunReason = runReason
 
       override def metadataManager: MetadataManager = metadata
 
@@ -253,12 +290,13 @@ object MetastoreImpl {
   def fromConfig(conf: Config,
                  infoDateConfig: InfoDateConfig,
                  bookkeeper: Bookkeeper,
-                 metadataManager: MetadataManager)(implicit spark: SparkSession): MetastoreImpl = {
+                 metadataManager: MetadataManager,
+                 batchId: Long)(implicit spark: SparkSession): MetastoreImpl = {
     val tableDefs = MetaTable.fromConfig(conf, infoDateConfig, METASTORE_KEY)
 
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
 
-    new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, isUndercover)
+    new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, batchId, isUndercover)
   }
 
   private[core] def withSparkConfig(sparkConfig: Map[String, String])

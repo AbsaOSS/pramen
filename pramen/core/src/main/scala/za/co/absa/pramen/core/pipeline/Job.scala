@@ -19,8 +19,8 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
+import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.api.status.TaskRunReason
-import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
 
@@ -52,12 +52,14 @@ trait Job {
     * Validates if the job can run. This is the business side of the validation.
     */
   def validate(infoDate: LocalDate,
+               runReason: TaskRunReason,
                conf: Config): Reason
 
   /**
     * Runs the business logic of the job, resulting in a DataFrame.
     */
   def run(infoDate: LocalDate,
+          runReason: TaskRunReason,
           conf: Config): RunResult
 
   /**
@@ -81,6 +83,7 @@ trait Job {
     */
   def save(df: DataFrame,
            infoDate: LocalDate,
+           runReason: TaskRunReason,
            conf: Config,
            jobStarted: Instant,
            inputRecordCount: Option[Long]): SaveResult

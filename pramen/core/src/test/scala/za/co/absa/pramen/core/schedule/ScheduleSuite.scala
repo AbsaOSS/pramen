@@ -26,6 +26,15 @@ import java.time.{DayOfWeek, LocalDate}
 class ScheduleSuite extends AnyWordSpec {
 
   "Schedule.fromConfig" should {
+    "Deserialize incremental jobs" when {
+      "a normal incremental job is provided" in {
+        val config = ConfigFactory.parseString(s"$SCHEDULE_TYPE_KEY = incremental")
+        val schedule = fromConfig(config)
+
+        assert(schedule == Schedule.Incremental)
+      }
+    }
+
     "Deserialize daily jobs" when {
       "a normal daily job is provided" in {
         val config = ConfigFactory.parseString(s"$SCHEDULE_TYPE_KEY = daily")

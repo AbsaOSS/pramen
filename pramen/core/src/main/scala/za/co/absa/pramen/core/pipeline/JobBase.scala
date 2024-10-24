@@ -24,8 +24,9 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.Emoji._
-import za.co.absa.pramen.core.utils.TimeUtils
+import za.co.absa.pramen.core.utils.{Emoji, TimeUtils}
 
 import java.time.{Instant, LocalDate}
 import scala.util.{Failure, Success, Try}
@@ -51,6 +52,8 @@ abstract class JobBase(operationDef: OperationDef,
   override def trackDays: Int = outputTable.trackDays
 
   def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult
+
+  def isIncremental: Boolean = operationDef.schedule == Schedule.Incremental
 
   final override def preRunCheck(infoDate: LocalDate,
                                  runReason: TaskRunReason,
@@ -106,21 +109,50 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  protected def preRunTransformationCheck(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
-      case Some(result) => result
-      case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
+  protected def preRunTransformationCheck(infoDate: LocalDate, runReason: TaskRunReason, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
+    if (isIncremental || runReason == TaskRunReason.Rerun) {
+      JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
+    } else {
+      validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
+        case Some(result) => result
+        case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
+      }
     }
   }
 
   protected def validateTransformationAlreadyRanCases(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning]): Option[JobPreRunResult] = {
-    if (bookkeeper.getLatestDataChunk(outputTableDef.name, infoDate, infoDate).isDefined) {
-      log.info(s"Job for table ${outputTableDef.name} as already ran for $infoDate.")
-      Some(JobPreRunResult(JobPreRunStatus.AlreadyRan, None, dependencyWarnings, Seq.empty[String]))
-    } else {
-      log.info(s"Job for table ${outputTableDef.name} has not yet ran $infoDate.")
-      None
+    bookkeeper.getLatestDataChunk(outputTableDef.name, infoDate, infoDate) match {
+      case Some(chunk) =>
+        val outOfDateTables = getOutdatedTables(infoDate, chunk.jobFinished)
+        if (outOfDateTables.nonEmpty) {
+          log.info(s"Job for table ${outputTableDef.name} as already ran for $infoDate, but has outdated tables: ${outOfDateTables.mkString(", ")}")
+          val warning = s"Based on outdated tables: ${outOfDateTables.mkString(", ")}"
+          Some(JobPreRunResult(JobPreRunStatus.NeedsUpdate, None, dependencyWarnings, Seq(warning)))
+        } else {
+          log.info(s"Job for table ${outputTableDef.name} as already ran for $infoDate.")
+          Some(JobPreRunResult(JobPreRunStatus.AlreadyRan, None, dependencyWarnings, Seq.empty[String]))
+        }
+      case None =>
+        log.info(s"Job for table ${outputTableDef.name} has not yet ran $infoDate.")
+        None
     }
+  }
+
+  private def getOutdatedTables(infoDate: LocalDate, targetJobFinishedSeconds: Long): Seq[String] = {
+    operationDef.dependencies
+      .filter(d => !d.isOptional && !d.isPassive)
+      .flatMap(_.tables)
+      .distinct
+      .filter { table =>
+        bookkeeper.getLatestDataChunk(table, infoDate, infoDate) match {
+          case Some(chunk) if chunk.jobFinished >= targetJobFinishedSeconds =>
+            log.warn(s"${Emoji.WARNING} The dependent table '$table' has been updated at ${Instant.ofEpochSecond(chunk.jobFinished)} retrospectively " +
+              s"after the transformation at ${Instant.ofEpochSecond(targetJobFinishedSeconds)} .")
+            true
+          case _ =>
+            false
+        }
+      }
   }
 
   protected def checkDependency(dep: MetastoreDependency, infoDate: LocalDate): Option[DependencyFailure] = {

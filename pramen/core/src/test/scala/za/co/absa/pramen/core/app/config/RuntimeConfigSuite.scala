@@ -34,7 +34,6 @@ class RuntimeConfigSuite extends AnyWordSpec {
            |  }
            |  undercover = true
            |  use.lock = false
-           |  track.updates = false
            |  check.only.late.data = true
            |  check.only.new.data = true
            |  email.if.no.changes = false

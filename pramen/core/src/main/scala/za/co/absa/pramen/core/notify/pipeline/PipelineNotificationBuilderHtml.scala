@@ -25,7 +25,6 @@ import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
-import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{MIN_MEGABYTES, MIN_RPS_JOB_DURATION_SECONDS, MIN_RPS_RECORDS}
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
@@ -40,6 +39,7 @@ object PipelineNotificationBuilderHtml {
   val MIN_MEGABYTES = 10
   val NOTIFICATION_REASON_MAX_LENGTH_KEY = "pramen.notifications.reason.max.length"
   val NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY = "pramen.notifications.exception.max.length"
+  val SUPPRESS_WARNING_STARTING_WITH = "Based on outdated tables: "
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
@@ -266,9 +266,17 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private[core] def hasWarnings: Boolean = {
     completedTasks.exists{task =>
+      val hasTaskWarnings = task.runStatus match {
+        case succeeded: Succeeded =>
+          val warnings = succeeded.warnings
+            .filterNot(_.startsWith(SUPPRESS_WARNING_STARTING_WITH))
+          warnings.nonEmpty
+        case _ =>
+          false
+      }
+
       val hasDependencyWarnings = task.dependencyWarnings.nonEmpty
       val hasNotificationErrors = task.notificationTargetErrors.nonEmpty
-      val hasTaskWarnings = task.runStatus.isInstanceOf[RunStatus.Succeeded] && task.runStatus.asInstanceOf[RunStatus.Succeeded].warnings.nonEmpty
       val hasSkippedWithWarnings = task.runStatus.isInstanceOf[RunStatus.Skipped] && task.runStatus.asInstanceOf[RunStatus.Skipped].isWarning
       val hasSchemaChanges = task.schemaChanges.nonEmpty
       val hasPipelineNotificationFailures = pipelineNotificationFailures.nonEmpty
@@ -499,10 +507,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.withTable(tableBuilder)
   }
 
-  private[core] def getThroughputRps(task: TaskResult): TextElement = {
+  def getThroughputRps(task: TaskResult): TextElement = {
     val recordCount = task.runStatus match {
-      case s: Succeeded => s.recordCount
-      case _            => 0
+      case s: Succeeded =>
+        s.recordsAppended match {
+          case Some(appended) => appended
+          case None => s.recordCount.getOrElse(0L)
+        }
+      case _ => 0L
     }
 
     task.runInfo match {
@@ -544,8 +556,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
-  private[core] def getRecordCountText(task: TaskResult): String = {
-    def renderDifference(numRecords: Long, numRecordsOld: Option[Long]): String = {
+  def getRecordCountText(task: TaskResult): String = {
+    def renderDifference(numRecords: Long, numRecordsOld: Option[Long], numRecordsAppended: Option[Long]): String = {
       numRecordsOld match {
         case Some(old) if old > 0 =>
           val diff = numRecords - old
@@ -556,7 +568,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           else {
             numRecords.toString
           }
-        case _ => numRecords.toString
+        case _ =>
+          numRecordsAppended match {
+            case Some(n) => s"$numRecords (+$n)"
+            case None => numRecords.toString
+          }
       }
     }
 
@@ -564,14 +580,18 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       "-"
     } else {
       task.runStatus match {
-        case s: Succeeded        => renderDifference(s.recordCount, s.recordCountOld)
-        case d: InsufficientData => renderDifference(d.actual, d.recordCountOld)
-        case _                   => ""
+        case s: Succeeded        =>
+          s.recordCount match {
+            case Some(recordCount) => renderDifference(recordCount, s.recordCountOld, s.recordsAppended)
+            case None => "-"
+          }
+        case d: InsufficientData => renderDifference(d.actual, d.recordCountOld, None)
+        case _                   => "-"
       }
     }
   }
 
-  private[core] def getSizeText(task: TaskResult): String = {
+  def getSizeText(task: TaskResult): String = {
     def renderDifferenceSize(numBytes: Long, numBytesOld: Option[Long]): String = {
       numBytesOld match {
         case Some(old) if old > 0 =>
@@ -588,7 +608,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
 
     task.runStatus match {
-      case s: Succeeded        => renderDifferenceSize(s.recordCount, s.recordCountOld)
+      case s: Succeeded        =>
+        s.recordCount match {
+          case Some(recordCount) => renderDifferenceSize(recordCount, s.recordCountOld)
+          case None => ""
+        }
       case d: InsufficientData => renderDifferenceSize(d.actual, d.recordCountOld)
       case _                   => ""
     }
@@ -673,8 +697,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     } else {
       if (status.warnings.nonEmpty)
         TextElement("Warning", style)
-      else
-        TextElement("Success", style)
+      else {
+        if (status.recordsAppended.contains(0))
+          TextElement("No new data", style)
+        else
+          TextElement("Success", style)
+      }
     }
   }
 

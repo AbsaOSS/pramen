@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.utils
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row, types}
+import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.core.NestedDataFrameFactory
@@ -263,9 +263,6 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val newField2 = schema1Orig.fields.head.copy(metadata = metadata2)
       val schema2 = schema1Orig.copy(fields = newField2 +: schema1Orig.fields.tail)
 
-      println(schema1.prettyJson)
-      println(schema2.prettyJson)
-
       val diff = compareSchemas(schema1, schema2)
 
       assert(diff.length == 1)
@@ -441,6 +438,52 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       if (spark.version.split('.').head.toInt >= 3.0) {
         assert(actual.replace("`", "") == expected)
       }
+    }
+  }
+
+  "getLengthFromMetadata" should {
+    "return length for long type" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(10))
+    }
+
+    "return length for string type" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "10")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(10))
+    }
+
+    "return None for wrong type" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "abc")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.isEmpty)
+    }
+
+    "return None for wrong value" in {
+      val metadata = new MetadataBuilder
+      metadata.putDouble(MAX_LENGTH_METADATA_KEY, 12.25)
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.isEmpty)
+    }
+
+    "return None if not specified" in {
+      val metadata = new MetadataBuilder
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.isEmpty)
     }
   }
 

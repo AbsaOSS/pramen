@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.MetastoreDependency
 import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_INCREMENTAL_INFO_DATE_EXPR
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.MetastoreDependencyFactory
 import za.co.absa.pramen.core.schedule.Schedule
@@ -113,6 +114,7 @@ object OperationDef {
       case Some(expr) => expr
       case None       =>
         schedule match {
+          case Schedule.Incremental => DEFAULT_INCREMENTAL_INFO_DATE_EXPR
           case _: Schedule.EveryDay => infoDateConfig.expressionDaily
           case _: Schedule.Weekly   => infoDateConfig.expressionWeekly
           case _: Schedule.Monthly  => infoDateConfig.expressionMonthly
@@ -123,9 +125,10 @@ object OperationDef {
       case Some(expr) => expr
       case None       =>
         schedule match {
-          case _: Schedule.EveryDay => infoDateConfig.initialSourcingDateExprDaily
-          case _: Schedule.Weekly   => infoDateConfig.initialSourcingDateExprWeekly
-          case _: Schedule.Monthly  => infoDateConfig.initialSourcingDateExprMonthly
+          case Schedule.Incremental    => DEFAULT_INCREMENTAL_INFO_DATE_EXPR
+          case _: Schedule.EveryDay    => infoDateConfig.initialSourcingDateExprDaily
+          case _: Schedule.Weekly      => infoDateConfig.initialSourcingDateExprWeekly
+          case _: Schedule.Monthly     => infoDateConfig.initialSourcingDateExprMonthly
         }
     }
 

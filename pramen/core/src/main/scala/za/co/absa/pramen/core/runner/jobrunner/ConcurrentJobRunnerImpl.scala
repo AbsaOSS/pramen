@@ -92,7 +92,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
         completedJobsChannel.send((job, Nil, isSucceeded))
       } catch {
         case ex: FatalErrorWrapper if ex.cause != null => onFatalException(ex.cause, job, isTransient)
-        case NonFatal(ex)                              => sendFailure(ex, job, isTransient)
+        case NonFatal(ex)                              => onNonFatalException(ex, job, isTransient)
         case ex: Throwable                             => onFatalException(ex, job, isTransient)
       }
     }
@@ -103,6 +103,11 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
     log.error(s"${Emoji.FAILURE} A FATAL error has been encountered.", ex)
     val fatalEx = new FatalErrorWrapper(s"FATAL exception encountered, stopping the pipeline.", ex)
     sendFailure(fatalEx, job, isTransient)
+  }
+
+  private[core] def onNonFatalException(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
+    log.error(s"${Emoji.FAILURE} Job '${job.name}' outputting to '${job.outputTable.name}' has thrown an error", ex)
+    sendFailure(ex, job, isTransient)
   }
 
   private[core] def sendFailure(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
