@@ -442,7 +442,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
   }
 
   "getLengthFromMetadata" should {
-    "work for long type" in {
+    "return length for long type" in {
       val metadata = new MetadataBuilder
       metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
 
@@ -460,7 +460,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(len.contains(10))
     }
 
-    "work for wrong type" in {
+    "return None for wrong type" in {
       val metadata = new MetadataBuilder
       metadata.putString(MAX_LENGTH_METADATA_KEY, "abc")
 
@@ -469,7 +469,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(len.isEmpty)
     }
 
-    "work for wrong value" in {
+    "return None for wrong value" in {
       val metadata = new MetadataBuilder
       metadata.putDouble(MAX_LENGTH_METADATA_KEY, 12.25)
 
@@ -478,7 +478,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(len.isEmpty)
     }
 
-    "work if not specified" in {
+    "return None if not specified" in {
       val metadata = new MetadataBuilder
 
       val len = SparkUtils.getLengthFromMetadata(metadata.build())
