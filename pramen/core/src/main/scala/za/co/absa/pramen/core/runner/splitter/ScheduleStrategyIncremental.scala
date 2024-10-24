@@ -18,15 +18,14 @@ package za.co.absa.pramen.core.runner.splitter
 
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.bookkeeper.model.DataOffsetAggregated
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.pipeline.TaskPreDef
-import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.{log, _}
+import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.LocalDate
 
-class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated], hasInfoDateColumn: Boolean) extends ScheduleStrategy {
+class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], hasInfoDateColumn: Boolean) extends ScheduleStrategy {
   private val log = org.slf4j.LoggerFactory.getLogger(this.getClass)
 
   override def getDaysToRun(
@@ -40,39 +39,32 @@ class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated], has
                              minimumDate: LocalDate
                            ): Seq[TaskPreDef] = {
     val dates = params match {
-      case ScheduleParams.Normal(runDate, trackDays, _, _, _) =>
+      case ScheduleParams.Normal(runDate, trackDays, _, newOnly, lateOnly) =>
         val infoDate = evaluateRunDate(runDate, infoDateExpression)
         log.info(s"Normal run strategy: runDate=$runDate, infoDate=$infoDate")
 
         val runInfoDays = if (hasInfoDateColumn) {
-          lastOffsets match {
-            case Some(lastOffset) =>
-              if (lastOffset.maximumInfoDate.isBefore(infoDate)) {
-                val startDate = if (trackDays > 1) {
-                  val trackDate = infoDate.minusDays(trackDays - 1)
-                  val date = if (trackDate.isAfter(lastOffset.maximumInfoDate))
-                    trackDate
-                  else
-                    lastOffset.maximumInfoDate
-                  log.warn(s"Last ran day: ${lastOffset.maximumInfoDate}. Tracking days = '$trackDate'. Catching up from '$date' until '$infoDate'.")
-                  date
-                } else {
-                  log.warn(s"Last ran day: ${lastOffset.maximumInfoDate}. Catching up data until '$infoDate'.")
-                  lastOffset.maximumInfoDate
-                }
-
-                val potentialDates = getInfoDateRange(startDate, infoDate, "@runDate", schedule)
-                potentialDates.map(date => {
-                  TaskPreDef(date, TaskRunReason.New)
-                })
-              } else {
+          lastInfoDateProcessedOpt match {
+            case Some(lastInfoDate) =>
+              val newDays = if (lastInfoDate.isBefore(infoDate))
+                Seq(TaskPreDef(infoDate.minusDays(1), TaskRunReason.New), TaskPreDef(infoDate, TaskRunReason.New))
+              else
                 Seq(TaskPreDef(infoDate, TaskRunReason.New))
+
+              val lateDays = getLateDays(infoDate, lastInfoDate, trackDays)
+
+              if (newOnly) {
+                newDays
+              } else if (lateOnly) {
+                lateDays
+              } else {
+                lateDays ++ newDays
               }
-            case None => Seq(TaskPreDef(infoDate.minusDays(1), TaskRunReason.New), TaskPreDef(infoDate, TaskRunReason.New))
+            case None => Seq(TaskPreDef(infoDate, TaskRunReason.New))
           }
         } else {
-          lastOffsets match {
-            case Some(offset) if offset.maximumInfoDate.isAfter(infoDate) => Seq.empty
+          lastInfoDateProcessedOpt match {
+            case Some(lastInfoDate) if lastInfoDate.isAfter(infoDate) => Seq.empty
             case _ => Seq(TaskPreDef(infoDate, TaskRunReason.New))
           }
         }
@@ -97,4 +89,36 @@ class ScheduleStrategyIncremental(lastOffsets: Option[DataOffsetAggregated], has
 
     filterOutPastMinimumDates(dates, minimumDate)
   }
+
+  private[core] def getLateDays(infoDate: LocalDate, lastInfoDate: LocalDate, trackDays: Int): Seq[TaskPreDef] = {
+    val lastNewDate = infoDate.minusDays(1)
+
+    if (lastInfoDate.isBefore(lastNewDate)) {
+      val startDate = if (trackDays > 1) {
+        val trackDate = lastNewDate.minusDays(trackDays - 1)
+        val date = if (trackDate.isAfter(lastInfoDate))
+          trackDate
+        else
+          lastInfoDate
+        log.warn(s"Last ran day: $lastInfoDate. Tracking days = '$trackDate'. Catching up from '$date' until '$infoDate'.")
+        date
+      } else {
+        if (trackDays < 0) {
+          log.warn(s"Last ran day: $lastInfoDate. Catching up data until '$infoDate'.")
+          lastInfoDate
+        } else {
+          log.warn(s"Last ran day: $lastInfoDate. Not catching up since 'track.days=$trackDays'. Set it to the number of days or '-1' for infinite catching up.")
+          lastNewDate
+        }
+      }
+
+      val potentialDates = getInfoDateRange(startDate, lastNewDate.minusDays(1), "@runDate", Schedule.Incremental)
+      potentialDates.map(date => {
+        TaskPreDef(date, TaskRunReason.Late)
+      })
+    } else {
+      Seq.empty
+    }
+  }
 }
+

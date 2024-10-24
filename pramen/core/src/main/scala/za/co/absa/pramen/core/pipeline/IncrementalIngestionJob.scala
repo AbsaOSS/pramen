@@ -50,7 +50,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
   private var latestOffset = latestOffsetIn
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffset, source.hasInfoDateColumn(sourceTable.query))
+  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffset.map(_.maximumInfoDate), source.hasInfoDateColumn(sourceTable.query))
 
   override def trackDays: Int = 0
 
