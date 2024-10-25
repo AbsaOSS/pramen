@@ -161,6 +161,34 @@ class SqlGeneratorSasSuite extends AnyWordSpec with RelationalDbFixture {
     }
   }
 
+  "quote" should {
+    "quote an identifier" in {
+      assert(gen.quote("database.table") == "'database'n.'table'n")
+    }
+
+    "quote a partially quoted identifier" in {
+      assert(gen.quote("'database'n.table") == "'database'n.'table'n")
+    }
+
+    "not quote already quoted identifier" in {
+      assert(gen.quote("'database'n.'table'n") == "'database'n.'table'n")
+    }
+  }
+
+  "unquote" should {
+    "unquote a quoted identifier" in {
+      assert(gen.unquote("'database'n.'table'n") == "database.table")
+    }
+
+    "unquote a partially quoted identifier" in {
+      assert(gen.unquote("'database'n.table") == "database.table")
+    }
+
+    "not unquote a not quoted identifier" in {
+      assert(gen.unquote("database.table") == "database.table")
+    }
+  }
+
   "getOffsetWhereCondition" should {
     "return the correct condition for integral offsets" in {
       val actual = gen.asInstanceOf[SqlGeneratorBase]

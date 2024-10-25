@@ -66,17 +66,17 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     s"$expression AS ${escape(alias)}"
   }
 
-  override final def quote(identifier: String): String = {
+  override def quote(identifier: String): String = {
     validateIdentifier(identifier)
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
   }
 
-  override final def unquote(identifier: String): String = {
+  override def unquote(identifier: String): String = {
     validateIdentifier(identifier)
     splitComplexIdentifier(identifier).map(unquoteSingleIdentifier).mkString(".")
   }
 
-  override final def escape(identifier: String): String = {  
+  override def escape(identifier: String): String = {
     if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
       quote(identifier)
     } else {

@@ -113,7 +113,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     }
   }
 
-  "getMaximumDateAndOffset" should {
+  "getMaxInfoDateAndOffset" should {
     "return None when no offsets have loaded yet" in {
       val om = getOffsetManager
 

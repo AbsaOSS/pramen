@@ -58,10 +58,10 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     val om = bookkeeper.getOffsetManager
-    val hasInfoDate = source.hasInfoDateColumn(sourceTable.query)
+    val sourceHasInfoDate = source.hasInfoDateColumn(sourceTable.query)
     val isReRun = runReason == TaskRunReason.Rerun
 
-    val onlyForInfoDate = if (hasInfoDate)
+    val onlyForInfoDate = if (sourceHasInfoDate)
       Some(infoDate)
     else
       None
@@ -72,7 +72,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     validateUncommittedOffsets(onlyForInfoDate, om)
 
-    validateReadiness(infoDate, om, hasInfoDate, isReRun)
+    validateReadiness(infoDate, om, sourceHasInfoDate, isReRun)
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
@@ -83,10 +83,10 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     }
 
     val om = bookkeeper.getOffsetManager
-    val hasInfoDate = source.hasInfoDateColumn(sourceTable.query)
+    val sourceHasInfoDate = source.hasInfoDateColumn(sourceTable.query)
     val isReRun = runReason == TaskRunReason.Rerun
 
-    val sourceResult = (hasInfoDate, isReRun) match {
+    val sourceResult = (sourceHasInfoDate, isReRun) match {
       case (false, false) =>
         om.getMaxInfoDateAndOffset(outputTable.name, None) match {
           case Some(maxOffset) =>

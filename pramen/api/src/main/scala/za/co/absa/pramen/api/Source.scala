@@ -81,6 +81,29 @@ trait Source extends ExternalChannel {
     *   (offset <= offsetTo)</li>
     *</ul>
     *
+    * The method will be used in incremental ingestion like this. When the framework queries new data the caller would
+    * specify only `offsetFrom`, and the query is going to look like:
+    *
+    * {{{
+    * SELECT * FROM table WHERE offset > offsetFrom
+    * (exclusive)
+    * }}}
+    *
+    * When a rerun is happening for a day, the caller provided both minimum and maximum offsets for that day and runs:
+    *
+    * {{{
+    * SELECT * FROM table WHERE offset >= offsetFrom offset <= offsetTo
+    * (inclusive)
+    * }}}
+    *
+    * The last case, when only `offsetTo` is available might not be used in practice. Added it for completion.
+    * Potentially it can be used to query the old database for all data that was already loaded:
+    *
+    * {{{
+    * SELECT * FROM table WHERE offset <= offsetTo
+    * (inclusive)
+    * }}}
+    *
     * @param offsetFromOpt   This is an exclusive parameter the query will be SELECT ... WHERE offset_col > min_offset
     * @param offsetToOpt     This is an exclusive parameter the query will be SELECT ... WHERE offset_col <= min_offset
     * @param onlyForInfoDate An information date to get data for. Can be empty if the source table doesn't have such a column.

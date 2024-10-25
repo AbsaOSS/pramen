@@ -18,10 +18,9 @@ package za.co.absa.pramen.core.integration
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.functions.{col, concat, date_format, unix_timestamp}
-import org.apache.spark.sql.types.LongType
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.apache.spark.sql.functions.col
 import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.rdb.PramenDb
@@ -29,7 +28,7 @@ import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.core.samples.RdbExampleTable
-import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils}
+import za.co.absa.pramen.core.utils.{JdbcNativeUtils, ResourceUtils}
 
 import java.sql.Date
 import java.time.LocalDate
@@ -101,9 +100,6 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
       val batchIds = dfTable1After.select(BATCH_ID_COLUMN).distinct().collect()
 
       assert(batchIds.length == 2)
-
-      //dfTable1After.withColumn("ttt", concat(unix_timestamp(col("LAST_UPDATED")), date_format(col("LAST_UPDATED"), "SSS")).cast(LongType)).show(false)
-      //debugSql("SELECT id, name, last_updated, info_date, UNIX_MILLIS(last_updated) AS ttt FROM incremental_table")
 
       val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
 

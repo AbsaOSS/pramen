@@ -38,10 +38,10 @@ object OffsetValue {
 
     override def getSparkLit: Column = lit(t.toEpochMilli)
 
-    override def compareTo(o: OffsetValue): Int = {
-      o match {
+    override def compareTo(other: OffsetValue): Int = {
+      other match {
         case DateTimeValue(otherValue) => t.compareTo(otherValue)
-        case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${o.dataType.dataTypeString}")
+        case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${other.dataType.dataTypeString}")
       }
     }
   }
@@ -53,10 +53,10 @@ object OffsetValue {
 
     override def getSparkLit: Column = lit(value)
 
-    override def compareTo(o: OffsetValue): Int = {
-      o match {
+    override def compareTo(other: OffsetValue): Int = {
+      other match {
         case IntegralValue(otherValue) => value.compareTo(otherValue)
-        case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${o.dataType.dataTypeString}")
+        case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${other.dataType.dataTypeString}")
       }
     }
   }
@@ -68,10 +68,10 @@ object OffsetValue {
 
     override def getSparkLit: Column = lit(s)
 
-    override def compareTo(o: OffsetValue): Int = {
-      o match {
+    override def compareTo(other: OffsetValue): Int = {
+      other match {
         case StringValue(otherValue) => s.compareTo(otherValue)
-        case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${o.dataType.dataTypeString}")
+        case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${other.dataType.dataTypeString}")
       }
     }
   }

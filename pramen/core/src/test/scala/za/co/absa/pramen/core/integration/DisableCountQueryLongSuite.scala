@@ -36,7 +36,7 @@ class DisableCountQueryLongSuite extends AnyWordSpec with SparkTestBase with Tem
         |{"id":"3","name":"Jill"}
         |""".stripMargin
 
-    "be able to access inner source configintegruration" in {
+    "be able to access inner source configuration" in {
       withTempDirectory("integration_disable_count_query") { tempDir =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 

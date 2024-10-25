@@ -156,11 +156,33 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
   }
 
   override final def quoteSingleIdentifier(identifier: String): String = {
-    if (identifier.startsWith(".") && identifier.toLowerCase.endsWith("n")) {
+    if (identifier.startsWith("'") && identifier.toLowerCase.endsWith("'n")) {
       identifier
     } else {
       s"'$identifier'n"
     }
+  }
+
+  override final def unquoteSingleIdentifier(identifier: String): String = {
+    val (escapeBegin, escapeEnd) = beginEndEscapeChars
+
+    if (identifier.startsWith(s"$escapeBegin") && identifier.endsWith(s"${escapeEnd}n") && identifier.length > 3) {
+      identifier.substring(1, identifier.length - 2)
+    } else {
+      identifier
+    }
+  }
+
+  override def quote(identifier: String): String = {
+    splitComplexSasIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
+  }
+
+  override def unquote(identifier: String): String = {
+    splitComplexSasIdentifier(identifier).map(unquoteSingleIdentifier).mkString(".")
+  }
+
+  private def splitComplexSasIdentifier(identifier: String): Seq[String] = {
+    identifier.split('.')
   }
 
   private def getLimit(limit: Option[Int], hasWhere: Boolean): String = {
