@@ -14,6 +14,11 @@
  * limitations under the License.
  */
 
+import Dependencies._
+import Versions._
+import BuildInfoTemplateSettings._
+import com.github.sbt.jacoco.report.JacocoReportSettings
+
 val scala211 = "2.11.12"
 val scala212 = "2.12.20"
 val scala213 = "2.13.14"
