@@ -18,8 +18,10 @@ package za.co.absa.pramen.core.tests.sql
 
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
+import za.co.absa.pramen.api.sql.SqlGeneratorBase.MAX_STRING_OFFSET_CHARACTERS
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
+import za.co.absa.pramen.core.sql.SqlGeneratorGeneric
 
 import java.time.{Instant, LocalDate}
 
@@ -265,6 +267,128 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
     }
   }
 
+  "splitComplexIdentifier" should {
+    "throw on an empty identifier" in {
+      assertThrows[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier(" ")
+      }
+    }
+
+    "keep original column name as is" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User")
+
+      assert(actual == Seq("System User"))
+    }
+
+    "split a complex column" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.\"Table Name\"")
+
+      assert(actual == Seq("System User", "\"Table Name\""))
+    }
+
+    "handle escaped dots" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System User.Table Name\"")
+
+      assert(actual == Seq("\"System User.Table Name\""))
+    }
+
+    "handle first identifier escaped" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System User\".Table Name")
+
+      assert(actual == Seq("\"System User\"", "Table Name"))
+    }
+
+    "handle multiple level of identifiers" in {
+      val actual = genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("My Catalog.My Schema.\"My Table\".My column")
+
+      assert(actual == Seq("My Catalog", "My Schema", "\"My Table\"", "My column"))
+    }
+
+    "when opening and closing  characters are different" when {
+      val gen2 = new SqlGeneratorGeneric(sqlConfigEscape) {
+        override val beginEndEscapeChars: (Char, Char) = ('[', ']')
+      }
+
+      "handle the situation with multiple identifiers" in {
+        val actual = gen2.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("My Catalog.My Schema.[My Table].My column")
+
+        assert(actual == Seq("My Catalog", "My Schema", "[My Table]", "My column"))
+      }
+
+      "handle not matching open bracket" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen2.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("My Catalog.[My Schema].[[My Table].My column")
+        }
+
+        assert(ex.getMessage.contains("Invalid character '[' in the identifier"))
+      }
+
+      "handle not matching close bracket" in {
+        val ex = intercept[IllegalArgumentException] {
+          gen2.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("My Catalog.My Schema.[My Table]].My column")
+        }
+
+        assert(ex.getMessage.contains("Found not matching ']' in the identifier"))
+      }
+    }
+
+    "handle escaped 2 quotes (maybe support this eventually)" in {
+      val ex = intercept[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"User\"\".Table Name\"")
+      }
+
+      assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"User\"\".Table Name\"', position 8.")
+    }
+
+    "handle escaped 3 quotes (this is never supported)" in {
+      val ex = intercept[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("\"System \"\"\"User\"\"\".Table Name\"")
+      }
+
+      assert(ex.getMessage == "Invalid character '\"' in the identifier '\"System \"\"\"User\"\"\".Table Name\"', position 8.")
+    }
+
+    "throw an exception if quotes are found inside an identifier" in {
+      val ex = intercept[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System Use\"r.T\"able Name")
+      }
+
+      assert(ex.getMessage.contains("Invalid character '\"' in the identifier 'System Use\"r.T\"able Name'"))
+    }
+
+    "handle multiple level of identifiers of multiple levels" in {
+      val ex = intercept[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("My Catalog.My Schema.\"My Tab\"le.My column")
+      }
+
+      assert(ex.getMessage == "Invalid character '\"' in the identifier 'My Catalog.My Schema.\"My Tab\"le.My column', position 28.")
+    }
+
+    "throw on unmatched open bracket" in {
+      val ex = intercept[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.\"Table Name")
+      }
+
+      assert(ex.getMessage.contains("Found not matching '\"' in the identifier 'System User.\"Table Name'."))
+    }
+
+    "throw on unmatched closing bracket" in {
+      val ex = intercept[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("System User.Table Name\"")
+      }
+
+      assert(ex.getMessage.contains("Found not matching '\"' in the identifier 'System User.Table Name\"'."))
+    }
+
+    "throw on only whitespace identifier" in {
+      val ex = intercept[IllegalArgumentException] {
+        genDate.asInstanceOf[SqlGeneratorBase].splitComplexIdentifier("   ")
+      }
+
+      assert(ex.getMessage.contains("Found an empty table name or column name ('   ')."))
+    }
+  }
+
   "getOffsetWhereCondition" should {
     "return the correct condition for integral offsets" in {
       val actual = genDate.asInstanceOf[SqlGeneratorBase]
@@ -285,6 +409,29 @@ class SqlGeneratorGenericSuite extends AnyWordSpec {
         .getOffsetWhereCondition("offset", ">=", OffsetValue.StringValue("AAA"))
 
       assert(actual == "offset >= 'AAA'")
+    }
+  }
+
+  "validateOffsetValue" should {
+    "just return for a non-string offset type" in {
+      SqlGeneratorBase.validateOffsetValue(OffsetValue.IntegralValue(1))
+    }
+
+    "just return for a conforming string offset balue" in {
+      SqlGeneratorBase.validateOffsetValue(OffsetValue.StringValue("AAA"))
+    }
+
+    "throw an exception on a string value with quote character" in {
+      assertThrows[IllegalArgumentException] {
+        SqlGeneratorBase.validateOffsetValue(OffsetValue.StringValue("AAA'"))
+      }
+    }
+
+    "throw an exception on a string longer than maximum allowed" in {
+      val s = "A" * (MAX_STRING_OFFSET_CHARACTERS + 1)
+      assertThrows[IllegalArgumentException] {
+        SqlGeneratorBase.validateOffsetValue(OffsetValue.StringValue(s))
+      }
     }
   }
 }

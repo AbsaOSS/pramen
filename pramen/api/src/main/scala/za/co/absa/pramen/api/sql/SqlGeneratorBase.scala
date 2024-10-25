@@ -145,7 +145,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     val trimmedIdentifier = identifier.trim
 
     if (trimmedIdentifier.isEmpty) {
-      throw new IllegalArgumentException(f"Found an empty table name or column name ('$identifier').")
+      throw new IllegalArgumentException(s"Found an empty table name or column name ('$identifier').")
     }
 
     val (escapeBegin, escapeEnd) = beginEndEscapeChars
