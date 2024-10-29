@@ -278,7 +278,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       assert(df.schema.fields(2).name == "DESCRIPTION")
       assert(df.schema.fields(3).name == "EMAIL")
       assert(df.schema.fields(4).name == "FOUNDED")
-      assert(df.schema.fields(5).name == "LAST_UPDATED")
+      assert(df.schema.fields(5).name == "IS_TAX_FREE")
     }
 
     "get the source data frame for source with disabled count query" in {
@@ -301,7 +301,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
         assert(df.schema.fields(2).name == "DESCRIPTION")
         assert(df.schema.fields(3).name == "EMAIL")
         assert(df.schema.fields(4).name == "FOUNDED")
-        assert(df.schema.fields(5).name == "LAST_UPDATED")
+        assert(df.schema.fields(5).name == "IS_TAX_FREE")
 
         TransientTableManager.reset()
       }

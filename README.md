@@ -2504,6 +2504,27 @@ You can use any source/sink combination in transfer jobs.
 
 We describe here a more complicated use cases.
 
+### Dynamically changing Spark Application description
+You can set up a template for Spark Application, and it will be set dynamically each time a new job is executing.
+
+Example configuration:
+```hocon
+pramen.job.description.template = "Pramen - running @pipeline, job @jobName for @infoDate"
+```
+
+These variables are available:
+
+| Variable     | Description                                                                   |
+|--------------|-------------------------------------------------------------------------------|
+| @pipeline    | The name of the pipeline (if defined at `pramen.pipeline.name`).              |
+| @tenant      | The name of the tenant (if defined at `pramen.environment.name`).             |
+| @environment | The environment (if defined at `pramen.tenant`).                              |
+| @jobName     | The name of the job as defined in the operation definition.                   |
+| @infoDate    | The information date the job is running for.                                  |
+| @outputTable | The output metastore table of the job.                                        |
+| @dryRun      | Adds `(DRY RUN)` when running in the dry run mode, am empty string otherwise. |
+
+
 ### Startup and shutdown hooks
 
 Startup and shutdown hooks allow running custom code before and after the pipeline runs.

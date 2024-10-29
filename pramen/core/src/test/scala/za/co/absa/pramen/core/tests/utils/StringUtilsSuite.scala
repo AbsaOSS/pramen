@@ -188,6 +188,12 @@ class StringUtilsSuite extends AnyWordSpec {
       assert(s.contains("java.lang.RuntimeException: test"))
     }
 
+    "render a throwable with an HTML message" in {
+      val ex = new RuntimeException("test <b>exception</b>")
+      val s = renderThrowable(ex, escapeHTML = true)
+      assert(s.contains("java.lang.RuntimeException: test &#60;b&#62;exception&#60;/b&#62;"))
+    }
+
     "render a throwable with a length limit" in {
       val ex = new RuntimeException("test")
       val s = renderThrowable(ex, maximumLength = Some(4))
@@ -381,6 +387,16 @@ class StringUtilsSuite extends AnyWordSpec {
       }
 
       assert(ex.getMessage.contains("No matching '{' in the date expression: SELECT * FROM my_table WHERE snapshot_date = date'@{beginOfMonth(minusMonths(@infoDate, 1))'"))
+    }
+  }
+
+  "escapeHTML" should {
+    "escape HTML from a string" in {
+      val s = """This <b>is</b> an HTML &123"""
+
+      val actual = StringUtils.escapeHTML(s)
+
+      assert(actual == """This &#60;b&#62;is&#60;/b&#62; an HTML &#38;123""")
     }
   }
 
