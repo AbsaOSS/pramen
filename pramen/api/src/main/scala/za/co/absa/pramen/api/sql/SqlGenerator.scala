@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.api.sql
 
+import za.co.absa.pramen.api.offset.OffsetValue
+
 import java.sql.Connection
 import java.time.LocalDate
 
@@ -50,6 +52,24 @@ trait SqlGenerator {
     * Generates a query that returns the data of a table for the given period when the table does have the information date field.
     */
   def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String
+
+  /**
+    * Generates a query for incremental ingestion, the result can be restricted by an information column, if present, but also by offset range.
+    *
+    * <ul>
+    * <li> When both `offsetFrom` from and `offsetTo` are passed the generator should return offsets using an inclusive interval
+    *   (offsetFrom <= offset <= offsetTo) </li>
+    * <li> When only `offsetFrom` is present the generator should return offsets using an exclusive interval interval
+    *   (offset > offsetFrom)</li>
+    * <li> When only `offsetTo` is present the generator should return offsets using an inclusive interval
+    *   (offset <= offsetTo)</li>
+    *</ul>
+    */
+  def getDataQueryIncremental(tableName: String,
+                              onlyForInfoDate: Option[LocalDate],
+                              offsetFrom: Option[OffsetValue],
+                              offsetTo: Option[OffsetValue],
+                              columns: Seq[String]): String
 
   /**
     * Returns WHERE condition for table that has the information date field given the time period.

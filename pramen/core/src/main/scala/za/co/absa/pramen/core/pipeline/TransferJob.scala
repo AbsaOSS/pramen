@@ -51,12 +51,12 @@ class TransferJob(operationDef: OperationDef,
     ingestionJob.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
-    ingestionJob.validate(infoDate, jobConfig)
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
+    ingestionJob.validate(infoDate, runReason, jobConfig)
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    ingestionJob.run(infoDate, conf)
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
+    ingestionJob.run(infoDate, runReason, conf)
   }
 
   def postProcessing(df: DataFrame,
@@ -67,9 +67,10 @@ class TransferJob(operationDef: OperationDef,
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
-    sinkJob.save(df, infoDate, conf, jobStarted, inputRecordCount)
+    sinkJob.save(df, infoDate, runReason, conf, jobStarted, inputRecordCount)
   }
 }

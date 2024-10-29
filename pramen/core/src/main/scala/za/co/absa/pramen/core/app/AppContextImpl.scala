@@ -51,13 +51,13 @@ class AppContextImpl(val appConfig: AppConfig,
 }
 
 object AppContextImpl {
-  def apply(conf: Config)(implicit spark: SparkSession): AppContextImpl = {
+  def apply(conf: Config, batchId: Long)(implicit spark: SparkSession): AppContextImpl = {
 
     val appConfig = AppConfig.fromConfig(conf)
 
-    val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig)
+    val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, appConfig.infoDateDefaults, bookkeeper, metadataManager)
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, appConfig.infoDateDefaults, bookkeeper, metadataManager, batchId)
 
     PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
     PramenImpl.instance.asInstanceOf[PramenImpl].setWorkflowConfig(conf)
@@ -84,7 +84,7 @@ object AppContextImpl {
 
     val metadataManager = new MetadataManagerNull(isPersistenceEnabled = false)
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, infoDateConfig, bookkeeper, metadataManager)
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, infoDateConfig, bookkeeper, metadataManager, 0L)
 
     val appContext = new AppContextImpl(
       appConfig,

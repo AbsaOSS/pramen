@@ -17,13 +17,13 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
 
@@ -38,18 +38,23 @@ class TransformationJob(operationDef: OperationDef,
 
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
+  override val scheduleStrategy: ScheduleStrategy = {
+    if (isIncremental)
+      new ScheduleStrategyIncremental(None, true)
+    else
+      new ScheduleStrategySourcing
+  }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    preRunTransformationCheck(infoDate, dependencyWarnings)
+    preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
-    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions)
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
+    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate, runReason, isIncremental), infoDate, operationDef.extraOptions)
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
-    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate), infoDate, operationDef.extraOptions))
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
+    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate, runReason, isIncremental), infoDate, operationDef.extraOptions))
   }
 
   def postProcessing(df: DataFrame,
@@ -60,15 +65,19 @@ class TransformationJob(operationDef: OperationDef,
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
-    val saveResults = SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
+    val saveResults = if (isIncremental && runReason != TaskRunReason.Rerun)
+      SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None, saveModeOverride = Some(SaveMode.Append)))
+    else
+      SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
 
     try {
       transformer.postProcess(
         outputTable.name,
-        metastore.getMetastoreReader(inputTables :+ outputTable.name, infoDate),
+        metastore.getMetastoreReader(inputTables :+ outputTable.name, infoDate, runReason, isIncremental),
         infoDate, operationDef.extraOptions
       )
     } catch {

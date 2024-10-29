@@ -26,6 +26,7 @@ case class JournalTask(
                           inputRecordCountOld: Long,
                           outputRecordCount: Option[Long],
                           outputRecordCountOld: Option[Long],
+                          appendedRecordCount: Option[Long],
                           outputSize: Option[Long],
                           startedAt: Long,
                           finishedAt: Long,

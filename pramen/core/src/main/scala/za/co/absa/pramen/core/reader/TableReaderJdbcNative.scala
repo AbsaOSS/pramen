@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils.{JdbcNativeUtils, JdbcSparkUtils, StringUtils, TimeUtils}
@@ -64,6 +65,15 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): DataFrame = {
+    query match {
+      case Query.Table(tableName) =>
+        getDataForTableIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
+      case other =>
+        throw new IllegalArgumentException(s"'${other.name}' incremental ingestion is not supported by the JDBC Native reader. Use 'table' instead.")
+    }
+  }
+
   private[core] def getSqlExpression(query: Query): String = {
     query match {
       case Query.Sql(sql) => sql
@@ -103,15 +113,41 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
     df
   }
+
+  private[core] def getDataForTableIncremental(tableName: String,
+                                               onlyForInfoDate: Option[LocalDate],
+                                               offsetFrom: Option[OffsetValue],
+                                               offsetTo: Option[OffsetValue],
+                                               columns: Seq[String]): DataFrame = {
+    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
+    log.info(s"JDBC Query: $sql")
+
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+
+    if (log.isDebugEnabled) {
+      log.debug(df.schema.treeString)
+    }
+
+    if (jdbcReaderConfig.enableSchemaMetadata) {
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, _) =>
+        log.info(s"Reading JDBC metadata descriptions the table: $tableName")
+        df = spark.createDataFrame(df.rdd,
+          JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, sqlGen.unquote(tableName), connection))
+      }
+    }
+
+    df
+  }
 }
 
 object TableReaderJdbcNative {
   val FETCH_SIZE_KEY = "option.fetchsize"
 
   def apply(conf: Config,
+            workflowConf: Config,
             parent: String = "")
            (implicit spark: SparkSession): TableReaderJdbcNative = {
-    val tableReaderJdbcOrig = TableReaderJdbcConfig.load(conf, parent)
+    val tableReaderJdbcOrig = TableReaderJdbcConfig.load(conf, workflowConf, parent)
     val jdbcConfig = getJdbcConfig(tableReaderJdbcOrig, conf)
     val tableReaderJdbc = tableReaderJdbcOrig.copy(jdbcConfig = jdbcConfig)
     val urlSelector = JdbcUrlSelector(tableReaderJdbc.jdbcConfig)

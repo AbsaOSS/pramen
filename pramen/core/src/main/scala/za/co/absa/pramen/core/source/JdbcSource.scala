@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
 
@@ -34,6 +35,10 @@ class JdbcSource(sourceConfig: Config,
 
   override def hasInfoDateColumn(query: Query): Boolean = jdbcReaderConfig.hasInfoDate
 
+  override def getOffsetInfo: Option[OffsetInfo] = {
+    jdbcReaderConfig.offsetInfoOpt
+  }
+
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val reader = getReader(query, isCountQuery = true)
 
@@ -44,6 +49,14 @@ class JdbcSource(sourceConfig: Config,
     val reader = getReader(query, isCountQuery = false)
 
     val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
+
+    SourceResult(df)
+  }
+
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
+    val reader = getReader(query, isCountQuery = false)
+
+    val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
 
     SourceResult(df)
   }
@@ -76,9 +89,9 @@ class JdbcSource(sourceConfig: Config,
   }
 }
 
-object JdbcSource extends ExternalChannelFactory[JdbcSource] {
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): JdbcSource = {
-    val tableReaderJdbc = TableReaderJdbcConfig.load(conf)
+object JdbcSource extends ExternalChannelFactoryV2[JdbcSource] {
+  override def apply(conf: Config, workflowConf: Config, parentPath: String, spark: SparkSession): JdbcSource = {
+    val tableReaderJdbc = TableReaderJdbcConfig.load(conf, workflowConf)
 
     new JdbcSource(conf, parentPath, tableReaderJdbc)(spark)
   }

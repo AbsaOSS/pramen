@@ -68,7 +68,7 @@ class ConcurrentJobRunnerSpy(includeFails: Boolean = false,
     var idx = 0
     incomingJobs.foreach(job => {
       val status = if (!includeFails || idx % 3 == 0) {
-        RunStatus.Succeeded(Some(1000), 500, Some(10000), TaskRunReason.New, Nil, Nil, Nil, Nil)
+        RunStatus.Succeeded(Some(1000), Some(500), None, Some(10000), TaskRunReason.New, Nil, Nil, Nil, Nil)
       } else if (idx % 3 == 1) {
         RunStatus.Failed(new RuntimeException("Dummy exception"))
       } else {

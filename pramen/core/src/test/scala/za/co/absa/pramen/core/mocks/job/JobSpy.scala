@@ -40,7 +40,7 @@ class JobSpy(jobName: String = "DummyJob",
              runFunction: () => RunResult = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing,
              allowParallel: Boolean = true,
-             saveStats: MetaTableStats = MetaTableStats(0, None),
+             saveStats: MetaTableStats = MetaTableStats(Some(0), None, None),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty,
              jobTrackDays: Int = 0
             ) extends Job {
@@ -74,12 +74,12 @@ class JobSpy(jobName: String = "DummyJob",
     preRunCheckFunction()
   }
 
-  override def validate(infoDate: LocalDate, conf: Config): Reason = {
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): Reason = {
     validateCount += 1
     validationFunction()
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
     runCount += 1
     runFunction()
   }
@@ -89,7 +89,7 @@ class JobSpy(jobName: String = "DummyJob",
     df
   }
 
-  override def save(df: DataFrame, infoDate: LocalDate, jobConfig: Config, jobStarted: Instant, inputRecordCount: Option[Long]): SaveResult = {
+  override def save(df: DataFrame, infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, jobStarted: Instant, inputRecordCount: Option[Long]): SaveResult = {
     saveDf = df
     saveCount += 1
 

@@ -36,6 +36,8 @@ import scala.util.control.NonFatal
 class MetastorePersistenceParquet(path: String,
                                   infoDateColumn: String,
                                   infoDateFormat: String,
+                                  batchIdColumn: String,
+                                  batchId: Long,
                                   recordsPerPartition: Option[Long],
                                   saveModeOpt: Option[SaveMode],
                                   readOptions: Map[String, String],
@@ -64,45 +66,69 @@ class MetastorePersistenceParquet(path: String,
 
     fsUtils.createDirectoryRecursive(new Path(path))
 
+    val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
+
+    val isAppend = saveMode match {
+      case SaveMode.Append =>
+        log.info(s"Appending to '$outputDirStr'...")
+        true
+      case _               =>
+        log.info(s"Writing to '$outputDirStr'...")
+        false
+    }
+
     val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn))) {
       df.drop(infoDateColumn)
     } else {
       df
     }
 
-    val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
+    val dfRepartitioned = if (recordsPerPartition.nonEmpty) {
+      val recordCount = numberOfRecordsEstimate match {
+        case Some(count) => count
+        case None => dfIn.count()
+      }
 
-    saveMode match {
-      case SaveMode.Append => log.info(s"Appending to '$outputDirStr'...")
-      case _               => log.info(s"Writing to '$outputDirStr'...")
+      applyRepartitioning(dfIn, recordCount)
+    } else {
+      dfIn
     }
-
-    val recordCount = numberOfRecordsEstimate match {
-      case Some(count) => count
-      case None => dfIn.count()
-    }
-
-    val dfRepartitioned = applyRepartitioning(dfIn, recordCount)
 
     writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils, saveMode)
 
-    val stats = getStats(infoDate)
+    val stats = getStats(infoDate, isAppend)
 
-    log.info(s"$SUCCESS Successfully saved ${stats.recordCount} records (${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+    stats.recordCountAppended match {
+      case Some(recordsAppended) =>
+        log.info(s"$SUCCESS Successfully saved $recordsAppended records (new count: ${stats.recordCount.get}, " +
+          s"new size: ${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+      case None =>
+        log.info(s"$SUCCESS Successfully saved ${stats.recordCount.get} records " +
+          s"(${StringUtils.prettySize(stats.dataSizeBytes.get)}) to $outputDir")
+    }
 
     stats
   }
 
-  override def getStats(infoDate: LocalDate): MetaTableStats = {
+  override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
     val outputDirStr = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path).toUri.toString
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
-    val actualCount = spark.read.parquet(outputDirStr).count()
+    val df = spark.read.parquet(outputDirStr)
 
     val size = fsUtils.getDirectorySize(outputDirStr)
 
-    MetaTableStats(actualCount, Option(size))
+    if (onlyForCurrentBatchId && df.schema.exists(_.name.equalsIgnoreCase(batchIdColumn))) {
+      val batchCount = df.filter(col(batchIdColumn) === batchId).count()
+      val countAll = df.count()
+
+      MetaTableStats(Option(countAll), Option(batchCount), Option(size))
+    } else {
+      val countAll = df.count()
+
+      MetaTableStats(Option(countAll), None, Option(size))
+    }
   }
 
   override def createOrUpdateHiveTable(infoDate: LocalDate,

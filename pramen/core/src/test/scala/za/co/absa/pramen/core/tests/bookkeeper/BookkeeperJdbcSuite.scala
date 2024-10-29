@@ -38,7 +38,7 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
   }
 
   def getBookkeeper: Bookkeeper = {
-    new BookkeeperJdbc(pramenDb.slickDb)
+    new BookkeeperJdbc(pramenDb.slickDb, 0L)
   }
 
   "BookkeeperJdbc" when {
@@ -49,6 +49,7 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
         assert(getTables.exists(_.equalsIgnoreCase("bookkeeping")))
         assert(getTables.exists(_.equalsIgnoreCase("schemas")))
         assert(getTables.exists(_.equalsIgnoreCase("metadata")))
+        assert(getTables.exists(_.equalsIgnoreCase("offsets")))
       }
     }
 

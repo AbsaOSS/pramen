@@ -52,7 +52,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
     "return Ready when the underlying validation returns ready" in {
       val (job, _) = getUseCase(validateFunction = () => Reason.Ready)
 
-      val actual = job.validate(infoDate, conf)
+      val actual = job.validate(infoDate, runReason, conf)
 
       assert(actual == Reason.Ready)
     }
@@ -60,7 +60,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
     "return NotReady when the underlying validation returns not ready" in {
       val (job, _) = getUseCase(validateFunction = () => Reason.NotReady("DummyNotReady"))
 
-      val actual = job.validate(infoDate, conf)
+      val actual = job.validate(infoDate, runReason, conf)
 
       assert(actual == Reason.NotReady("DummyNotReady"))
     }
@@ -68,7 +68,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
     "return Skip when the underlying validation returns skip" in {
       val (job, _) = getUseCase(validateFunction = () => Reason.Skip("DummySkip"))
 
-      val actual = job.validate(infoDate, conf)
+      val actual = job.validate(infoDate, runReason, conf)
 
       assert(actual == Reason.Skip("DummySkip"))
     }
@@ -77,7 +77,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
       val (job, _) = getUseCase(validateFunction = () => throw new IllegalStateException("DummyMsg"))
 
       val ex = intercept[IllegalStateException] {
-        job.validate(infoDate, conf)
+        job.validate(infoDate, runReason, conf)
       }
 
       assert(ex.getMessage == "DummyMsg")
@@ -88,7 +88,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
     "invoke run() method of the transformer" in {
       val (job, _) = getUseCase(runFunction = () => exampleDf)
 
-      val actual = job.run(infoDate, conf).data
+      val actual = job.run(infoDate, runReason, conf).data
 
       assert(actual.count() == 3)
     }
@@ -116,7 +116,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
     "invoke save() method of teh metastore" in {
       val (job, mt) = getUseCase()
 
-      job.save(exampleDf, infoDate, conf, Instant.now(), None)
+      job.save(exampleDf, infoDate, runReason, conf, Instant.now(), None)
 
       assert(mt.saveTableInvocations.length == 1)
       assert(mt.saveTableInvocations.head._1 == "table1")

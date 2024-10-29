@@ -24,7 +24,8 @@ sealed trait RunStatus {
 
 object RunStatus {
   case class Succeeded(recordCountOld: Option[Long],
-                       recordCount: Long,
+                       recordCount: Option[Long],
+                       recordsAppended: Option[Long],
                        sizeBytes: Option[Long],
                        reason: TaskRunReason,
                        filesRead: Seq[String],

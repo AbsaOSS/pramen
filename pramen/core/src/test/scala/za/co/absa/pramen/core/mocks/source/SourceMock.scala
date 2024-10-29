@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.mocks.source
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.LocalDate
@@ -73,6 +74,8 @@ class SourceMock(
     val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
     SourceResult(df, Nil, Nil)
   }
+
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
 }
 
 object SourceMock extends ExternalChannelFactory[SourceMock] {

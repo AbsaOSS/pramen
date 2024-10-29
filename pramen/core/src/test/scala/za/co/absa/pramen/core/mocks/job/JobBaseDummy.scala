@@ -41,11 +41,11 @@ class JobBaseDummy(operationDef: OperationDef,
 
   override val scheduleStrategy: ScheduleStrategy = null
 
-  override def validate(infoDate: LocalDate, conf: Config): Reason = null
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): Reason = null
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = null
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = null
 
   override def postProcessing(df: DataFrame, infoDate: LocalDate, conf: Config): DataFrame = null
 
-  override def save(df: DataFrame, infoDate: LocalDate, conf: Config, jobStarted: Instant, inputRecordCount: Option[Long]): SaveResult = null
+  override def save(df: DataFrame, infoDate: LocalDate, runReason: TaskRunReason, conf: Config, jobStarted: Instant, inputRecordCount: Option[Long]): SaveResult = null
 }

@@ -48,7 +48,7 @@ class SinkJob(operationDef: OperationDef,
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    val alreadyRanStatus = preRunTransformationCheck(infoDate, dependencyWarnings)
+    val alreadyRanStatus = preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
 
     alreadyRanStatus.status match {
       case JobPreRunStatus.Ready => JobPreRunResult(Ready, Some(getDataDf(infoDate).count()), dependencyWarnings, alreadyRanStatus.warnings)
@@ -56,7 +56,7 @@ class SinkJob(operationDef: OperationDef,
     }
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     val minimumRecordsOpt = ConfigUtils.getOptionInt(sink.config, MINIMUM_RECORDS_KEY)
 
     minimumRecordsOpt.foreach(n => log.info(s"Minimum records to send: $n"))
@@ -81,7 +81,7 @@ class SinkJob(operationDef: OperationDef,
     }
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
     RunResult(getDataDf(infoDate))
   }
 
@@ -108,6 +108,7 @@ class SinkJob(operationDef: OperationDef,
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
@@ -120,7 +121,7 @@ class SinkJob(operationDef: OperationDef,
     try {
       val sinkResult = sink.send(df,
         sinkTable.metaTableName,
-        metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, infoDate),
+        metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, infoDate, runReason, isIncremental),
         infoDate,
         sinkTable.options
       )
@@ -141,7 +142,7 @@ class SinkJob(operationDef: OperationDef,
         isTransient
       )
 
-      val stats = MetaTableStats(sinkResult.recordsSent, None)
+      val stats = MetaTableStats(Option(sinkResult.recordsSent), None, None)
       SaveResult(stats, sinkResult.filesSent, sinkResult.hiveTables, sinkResult.warnings ++ tooLongWarnings)
     } catch {
       case NonFatal(ex) => throw new IllegalStateException("Unable to write to the sink.", ex)

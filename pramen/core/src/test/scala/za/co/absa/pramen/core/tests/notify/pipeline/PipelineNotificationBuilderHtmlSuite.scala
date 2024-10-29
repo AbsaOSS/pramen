@@ -402,7 +402,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for a task without a run info" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(None, 1000000, reason = TaskRunReason.New)
+      val runStatus = RunStatusFactory.getDummySuccess(None, Some(1000000), reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, runInfo = None)
 
       val actual = builder.getThroughputRps(task)
@@ -413,7 +413,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for a normal successful task" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(None, 1000000, reason = TaskRunReason.New)
+      val runStatus = RunStatusFactory.getDummySuccess(None, Some(1000000), reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
 
       val actual = builder.getThroughputRps(task)
@@ -421,10 +421,21 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       assert(actual.text == "225 r/s")
     }
 
+    "work for an incremental successful task" in {
+      val builder = getBuilder()
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, Some(1000000), recordsAppended = Some(500000), reason = TaskRunReason.New)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getThroughputRps(task)
+
+      assert(actual.text == "112 r/s")
+    }
+
     "work for a raw file task" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(None, 1000 * megabyte, reason = TaskRunReason.New)
+      val runStatus = RunStatusFactory.getDummySuccess(None, Some(1000 * megabyte), reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
 
       val actual = builder.getThroughputRps(task)
@@ -460,13 +471,13 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       val actual = builder.getRecordCountText(task)
 
-      assert(actual.isEmpty)
+      assert(actual == "-")
     }
 
     "work for success file based job" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 100, reason = TaskRunReason.Update)
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), Some(100), reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
 
       val actual = builder.getRecordCountText(task)
@@ -477,7 +488,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success new" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(None, 100, reason = TaskRunReason.New)
+      val runStatus = RunStatusFactory.getDummySuccess(None, Some(100), reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
 
       val actual = builder.getRecordCountText(task)
@@ -488,7 +499,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success unchanged" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 100, reason = TaskRunReason.Update)
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), Some(100), reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
 
       val actual = builder.getRecordCountText(task)
@@ -499,7 +510,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success increased" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 110, reason = TaskRunReason.Update)
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), Some(110), reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
 
       val actual = builder.getRecordCountText(task)
@@ -510,12 +521,23 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success decreased" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(Some(100), 90, reason = TaskRunReason.Update)
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100), Some(90), reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
 
       val actual = builder.getRecordCountText(task)
 
       assert(actual == "90 (-10)")
+    }
+
+    "work for successful appends" in {
+      val builder = getBuilder()
+
+      val runStatus = RunStatusFactory.getDummySuccess(None, Some(110), Some(10), reason = TaskRunReason.Update)
+      val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus)
+
+      val actual = builder.getRecordCountText(task)
+
+      assert(actual == "110 (+10)")
     }
 
     "work for insufficient data" in {
@@ -544,7 +566,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success new" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(None, 100 * megabyte, reason = TaskRunReason.New)
+      val runStatus = RunStatusFactory.getDummySuccess(None, Some(100 * megabyte), reason = TaskRunReason.New)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
 
       val actual = builder.getSizeText(task)
@@ -555,7 +577,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success unchanged" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 100 * megabyte, reason = TaskRunReason.Update)
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), Some(100 * megabyte), reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
 
       val actual = builder.getSizeText(task)
@@ -566,7 +588,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success increased" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 110 * megabyte, reason = TaskRunReason.Update)
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), Some(110 * megabyte), reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
 
       val actual = builder.getSizeText(task)
@@ -577,7 +599,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     "work for success decreased" in {
       val builder = getBuilder()
 
-      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), 90 * megabyte, reason = TaskRunReason.Update)
+      val runStatus = RunStatusFactory.getDummySuccess(Some(100 * megabyte), Some(90 * megabyte), reason = TaskRunReason.Update)
       val task = TaskResultFactory.getDummyTaskResult(runStatus = runStatus, isRawFilesJob = true)
 
       val actual = builder.getSizeText(task)

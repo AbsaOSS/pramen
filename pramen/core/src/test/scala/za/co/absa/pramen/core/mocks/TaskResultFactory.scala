@@ -25,7 +25,7 @@ import java.time.{Instant, LocalDate}
 object TaskResultFactory {
   def getDummyTaskResult(jobName: String = "DummyJob",
                          outputTable: MetaTableDef = MetaTable.getMetaTableDef(MetaTableFactory.getDummyMetaTable(name = "table_out")),
-                         runStatus: RunStatus = RunStatus.Succeeded(Some(100), 200, Some(1000), TaskRunReason.New, Nil, Nil, Nil, Nil),
+                         runStatus: RunStatus = RunStatus.Succeeded(Some(100), Some(200), None, Some(1000), TaskRunReason.New, Nil, Nil, Nil, Nil),
                          runInfo: Option[RunInfo] = Some(RunInfo(LocalDate.of(2022, 2, 18), Instant.ofEpochSecond(1234), Instant.ofEpochSecond(5678))),
                          applicationId: String = "app_123",
                          isTransient: Boolean = false,

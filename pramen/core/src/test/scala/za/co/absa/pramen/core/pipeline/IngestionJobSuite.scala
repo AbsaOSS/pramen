@@ -258,7 +258,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
     "return Ready" in {
       val (_, _, job) = getUseCase(sourceTable = "empty")
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason: TaskRunReason, conf)
 
       assert(result == Reason.Ready)
     }
@@ -268,7 +268,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
     "get the source data frame" in {
       val (_, _, job) = getUseCase()
 
-      val runResult = job.run(infoDate, conf)
+      val runResult = job.run(infoDate, runReason: TaskRunReason, conf)
 
       val df = runResult.data
 
@@ -291,7 +291,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
         assert(preRunCheck.inputRecordsCount.contains(4))
         assert(TransientTableManager.hasDataForTheDate("source_cache://jdbc|company|2022-02-18", infoDate))
 
-        val runResult = job.run(infoDate, conf)
+        val runResult = job.run(infoDate, runReason: TaskRunReason, conf)
 
         val df = runResult.data
 
@@ -311,7 +311,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       val (_, _, job) = getUseCase(disableCountQuery = true)
 
       val ex = intercept[IllegalArgumentException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason: TaskRunReason, conf)
       }
 
       assert(ex.getMessage.contains("a temporary directory in Hadoop (HDFS, S3, etc) should be set at 'pramen.temporary.directory'"))
@@ -321,7 +321,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       val (_, _, job) = getUseCase(sourceTable = "noSuchTable")
 
       val ex = intercept[SQLSyntaxErrorException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason: TaskRunReason, conf)
       }
 
       assert(ex.getMessage.contains("NOSUCHTABLE"))
@@ -349,7 +349,7 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
           |} ]""".stripMargin
       val (_, _, job) = getUseCase()
 
-      val runResult = job.run(infoDate, conf)
+      val runResult = job.run(infoDate, runReason: TaskRunReason, conf)
 
       val dfIn = runResult.data
 
@@ -365,11 +365,11 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
     "save the dataframe to the metastore" in {
       val (_, mt, job) = getUseCase()
 
-      val saveResult = job.save(exampleDf, infoDate, conf, Instant.now(), Some(150))
+      val saveResult = job.save(exampleDf, infoDate, runReason: TaskRunReason, conf, Instant.now(), Some(150))
 
       val stats = saveResult.stats
 
-      assert(stats.recordCount == 3)
+      assert(stats.recordCount.contains(3))
       assert(mt.saveTableInvocations.length == 1)
       assert(mt.saveTableInvocations.head._1 == "table1")
       assert(mt.saveTableInvocations.head._2 == infoDate)

@@ -16,6 +16,10 @@
 
 package za.co.absa.pramen.api.sql
 
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -25,6 +29,8 @@ import scala.collection.mutable.ListBuffer
   */
 abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
   import SqlGeneratorBase._
+
+  protected val timestampGenericDbFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
 
   /**
     * This returns characters used for escaping into a mode that allows special characters in identifiers.
@@ -54,25 +60,72 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
+  def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String
+
   override def getAliasExpression(expression: String, alias: String): String = {
     s"$expression AS ${escape(alias)}"
   }
 
-  override final def quote(identifier: String): String = {
+  override def quote(identifier: String): String = {
     validateIdentifier(identifier)
     splitComplexIdentifier(identifier).map(quoteSingleIdentifier).mkString(".")
   }
 
-  override final def unquote(identifier: String): String = {
+  override def unquote(identifier: String): String = {
     validateIdentifier(identifier)
     splitComplexIdentifier(identifier).map(unquoteSingleIdentifier).mkString(".")
   }
 
-  override final def escape(identifier: String): String = {  
+  override def escape(identifier: String): String = {
     if (needsEscaping(sqlConfig.identifierQuotingPolicy, identifier)) {
       quote(identifier)
     } else {
       identifier
+    }
+  }
+
+  override def getDataQueryIncremental(tableName: String,
+                                       onlyForInfoDate: Option[LocalDate],
+                                       offsetFromOpt: Option[OffsetValue],
+                                       offsetToOpt: Option[OffsetValue],
+                                       columns: Seq[String]): String = {
+    if (sqlConfig.offsetInfo.isEmpty)
+      throw new IllegalArgumentException(s"Offset information is not configured for database table: $tableName.")
+
+    val dataQuery = onlyForInfoDate match {
+      case Some(infoDate) => getDataQuery(tableName, infoDate, infoDate, columns, None)
+      case None => getDataQuery(tableName, columns, None)
+    }
+
+    val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)
+
+    if (offsetWhere.nonEmpty) {
+      if (onlyForInfoDate.isEmpty) {
+        s"$dataQuery WHERE $offsetWhere"
+      } else {
+        s"$dataQuery AND $offsetWhere"
+      }
+    } else {
+      dataQuery
+    }
+  }
+
+  def getOffsetWhereClause(offsetInfo: OffsetInfo, offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue]): String = {
+    val offsetColumn = escape(offsetInfo.offsetColumn)
+
+    (offsetFromOpt, offsetToOpt) match {
+      case (Some(offsetFrom), Some(offsetTo)) =>
+        validateOffsetValue(offsetFrom)
+        validateOffsetValue(offsetTo)
+        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+      case (Some(offsetFrom), None) =>
+        validateOffsetValue(offsetFrom)
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
+      case (None, Some(offsetTo)) =>
+        validateOffsetValue(offsetTo)
+        s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+      case (None, None) =>
+        ""
     }
   }
 
@@ -92,7 +145,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     val trimmedIdentifier = identifier.trim
 
     if (trimmedIdentifier.isEmpty) {
-      throw new IllegalArgumentException(f"Found an empty table name or column name ('$identifier').")
+      throw new IllegalArgumentException(s"Found an empty table name or column name ('$identifier').")
     }
 
     val (escapeBegin, escapeEnd) = beginEndEscapeChars
@@ -157,6 +210,8 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 }
 
 object SqlGeneratorBase {
+  val MAX_STRING_OFFSET_CHARACTERS = 64
+
   val forbiddenCharacters = ";'\\"
   val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
 
@@ -172,6 +227,18 @@ object SqlGeneratorBase {
       case QuotingPolicy.Always => true
       case QuotingPolicy.Never => false
       case QuotingPolicy.Auto => !identifier.forall(normalCharacters.contains(_))
+    }
+  }
+
+  final def validateOffsetValue(offset: OffsetValue): Unit = {
+    offset match {
+      case OffsetValue.StringValue(s) =>
+        if (s.contains('\''))
+          throw new IllegalArgumentException(s"Offset value '$s' contains a single quote character, which is not supported.")
+        if (s.length > MAX_STRING_OFFSET_CHARACTERS)
+          throw new IllegalArgumentException(s"Offset value '$s' is bigger than $MAX_STRING_OFFSET_CHARACTERS bytes")
+      case _ =>
+      // Any value is okay
     }
   }
 }

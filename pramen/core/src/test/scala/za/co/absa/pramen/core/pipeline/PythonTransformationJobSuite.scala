@@ -132,7 +132,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
     "return Ready" in {
       val (job, _, _, _) = getUseCase()
 
-      val result = job.validate(infoDate, conf)
+      val result = job.validate(infoDate, runReason, conf)
 
       assert(result == Reason.Ready)
     }
@@ -142,7 +142,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
     "run the command line script" in {
       val (job, runner, _, _) = getUseCase(tableDf = exampleDf)
 
-      val runResult = job.run(infoDate, conf)
+      val runResult = job.run(infoDate, runReason, conf)
 
       val df = runResult.data
 
@@ -159,7 +159,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
       )
       val databricksClient = databricksClientOpt.get
 
-      job.run(infoDate, conf)
+      job.run(infoDate, runReason, conf)
 
       val (contents, filename, overwrite) = databricksClient.createFileInvocations.head
       val expectedSubmittedJob = Map("job_setting_1" -> "spark-3.3.1")
@@ -181,7 +181,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
       )
 
       val ex = intercept[RuntimeException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason, conf)
       }
 
       assert(ex.getMessage == "Neither command line options nor databricks client configured correctly for Pramen-Py.")
@@ -191,7 +191,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
       val (job, _, _, _) = getUseCase(tableDf = exampleDf, runException = new IllegalStateException(s"Dummy exception"))
 
       val ex = intercept[RuntimeException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason, conf)
       }
 
       assert(ex.getCause.getMessage == "Dummy exception")
@@ -201,7 +201,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
       val (job, _, _, _) = getUseCase(tableDf = exampleDf, tableException = new NoSuchDatabaseException("Dummy"))
 
       val ex = intercept[RuntimeException] {
-        job.run(infoDate, conf)
+        job.run(infoDate, runReason, conf)
       }
 
       assert(ex.getMessage.contains("Output data not found in the metastore"))
@@ -220,13 +220,13 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
 
   "save" should {
     "update the bookkeeper" in {
-      val statsIn = MetaTableStats(100, None)
+      val statsIn = MetaTableStats(Some(100), None, None)
 
       val (job, _, _, _) = getUseCase(stats = statsIn)
 
       val started = Instant.ofEpochSecond(12345678L)
 
-      val statsOut = job.save(exampleDf, infoDate, conf, started, None).stats
+      val statsOut = job.save(exampleDf, infoDate, runReason, conf, started, None).stats
 
       assert(statsOut == statsIn)
     }
@@ -237,47 +237,47 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
       val started = Instant.ofEpochSecond(12345678L)
 
       val ex = intercept[RuntimeException] {
-        job.save(exampleDf, infoDate, conf, started, None)
+        job.save(exampleDf, infoDate, runReason, conf, started, None)
       }
 
       assert(ex.getMessage.contains("Output data not found in the metastore"))
     }
 
     "allow no records in the output table" in {
-      val statsIn = MetaTableStats(0, None)
+      val statsIn = MetaTableStats(Some(0), None, None)
 
       val (job, _, _, _) = getUseCase(stats = statsIn)
 
       val started = Instant.ofEpochSecond(12345678L)
 
-      val statsOut = job.save(exampleDf, infoDate, conf, started, None).stats
+      val statsOut = job.save(exampleDf, infoDate, runReason, conf, started, None).stats
 
-      assert(statsOut.recordCount == 0)
+      assert(statsOut.recordCount.contains(0))
     }
 
     "throw an exception if no records in the output table" in {
-      val statsIn = MetaTableStats(0, None)
+      val statsIn = MetaTableStats(Some(0), None, None)
 
       val (job, _, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "1"))
 
       val started = Instant.ofEpochSecond(12345678L)
 
       val ex = intercept[RuntimeException] {
-        job.save(exampleDf, infoDate, conf, started, None)
+        job.save(exampleDf, infoDate, runReason, conf, started, None)
       }
 
       assert(ex.getMessage.contains("Output table is empty in the metastore"))
     }
 
     "throw an exception if the number of records is less then expected" in {
-      val statsIn = MetaTableStats(9, None)
+      val statsIn = MetaTableStats(Some(9), None, None)
 
       val (job, _, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "10"))
 
       val started = Instant.ofEpochSecond(12345678L)
 
       val ex = intercept[RuntimeException] {
-        job.save(exampleDf, infoDate, conf, started, None)
+        job.save(exampleDf, infoDate, runReason, conf, started, None)
       }
 
       assert(ex.getMessage.contains("The transformation returned too few records (9 < 10)"))
@@ -289,7 +289,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
       val started = Instant.ofEpochSecond(12345678L)
 
       val ex = intercept[RuntimeException] {
-        job.save(exampleDf, infoDate, conf, started, None)
+        job.save(exampleDf, infoDate, runReason, conf, started, None)
       }
 
       assert(ex.getMessage.contains("Dummy"))

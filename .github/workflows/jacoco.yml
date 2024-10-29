@@ -48,7 +48,7 @@ jobs:
         run: sbt -DSPARK_VERSION=${{matrix.spark}} ++${{matrix.scala}} jacoco
       - name: Add coverage to PR
         id: jacoco
-        uses: madrapps/jacoco-report@v1.3
+        uses: madrapps/jacoco-report@v1.7.1
         with:
           paths: >
             ${{ github.workspace }}/pramen/core/target/scala-${{ matrix.scala_short }}/jacoco/report/jacoco.xml,
@@ -58,6 +58,7 @@ jobs:
           min-coverage-changed-files: ${{ matrix.changed }}
           title: Unit Test Coverage
           update-comment: true
+          #debug-mode: true
       - name: Get the Coverage info
         run: |
           echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"

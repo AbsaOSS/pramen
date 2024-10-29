@@ -41,4 +41,37 @@ class SqlColumnTypeSuite extends AnyWordSpec {
     }
   }
 
+  "fromStringStrict" should {
+    "return corresponding type" in {
+      assert(fromStringStrict("date") == DATE)
+      assert(fromStringStrict("datetime") == DATETIME)
+      assert(fromStringStrict("string") == STRING)
+      assert(fromStringStrict("number") == NUMBER)
+    }
+
+    "support mixed case values" in {
+      assert(fromStringStrict("Date") == DATE)
+      assert(fromStringStrict("DateTimE") == DATETIME)
+      assert(fromStringStrict("STRING") == STRING)
+      assert(fromStringStrict("nUmbeR") == NUMBER)
+    }
+
+    "throw IllegalArgumentException for unknown type with parent" in {
+      val ex = intercept[IllegalArgumentException] {
+        fromStringStrict("Hello", "parent")
+      }
+
+      assert(ex.getMessage.contains("Unknown information type 'Hello' configured at parent. Allowed valued: date, datetime, string, number."))
+    }
+
+    "throw IllegalArgumentException for unknown type without parent" in {
+      val ex = intercept[IllegalArgumentException] {
+        fromStringStrict("Hello")
+      }
+
+      assert(ex.getMessage.contains("Unknown information type 'Hello'. Allowed valued: date, datetime, string, number."))
+    }
+
+  }
+
 }

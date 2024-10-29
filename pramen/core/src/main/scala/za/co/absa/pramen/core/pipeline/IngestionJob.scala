@@ -131,11 +131,11 @@ class IngestionJob(operationDef: OperationDef,
     }
   }
 
-  override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
+  override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
     Reason.Ready
   }
 
-  override def run(infoDate: LocalDate, conf: Config): RunResult = {
+  override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
     val result = getSourcingResult(infoDate)
 
     RunResult(result.data, result.filesRead, result.warnings)
@@ -160,6 +160,7 @@ class IngestionJob(operationDef: OperationDef,
 
   override def save(df: DataFrame,
                     infoDate: LocalDate,
+                    runReason: TaskRunReason,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
@@ -169,7 +170,7 @@ class IngestionJob(operationDef: OperationDef,
       source.postProcess(
         sourceTable.query,
         outputTable.name,
-        metastore.getMetastoreReader(Seq(outputTable.name), infoDate),
+        metastore.getMetastoreReader(Seq(outputTable.name), infoDate, runReason, isIncremental = false),
         infoDate,
         operationDef.extraOptions
       )

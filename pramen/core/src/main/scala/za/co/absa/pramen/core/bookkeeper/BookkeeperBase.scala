@@ -112,6 +112,11 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
     }
   }
 
+  private[pramen] override def getOffsetManager: OffsetManager = {
+    throw new IllegalArgumentException(s"This implementation of bookeeping does not support offset management and incremental pipelines. " +
+      "Please, use JDBC for bookkeeping to enable this.")
+  }
+
   private def getLatestTransientDate(table: String, from: Option[LocalDate], until: Option[LocalDate]): Option[LocalDate] = {
     val chunks = getTransientDataChunks(table, from, until)
 

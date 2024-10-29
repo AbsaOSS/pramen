@@ -18,8 +18,8 @@ package za.co.absa.pramen.core.mocks.job
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.{ExternalChannelFactory, Query, Source, SourceResult}
-import za.co.absa.pramen.core.mocks.reader.ReaderSpy
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
@@ -57,6 +57,8 @@ class SourceSpy(sourceConfig: Config = ConfigFactory.empty(),
 
     SourceResult(df)
   }
+
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
 }
 
 object SourceSpy extends ExternalChannelFactory[SourceSpy] {

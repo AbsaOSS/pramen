@@ -115,6 +115,24 @@ In addition to basic error notification, typical operational warnings are genera
 
 Pramen is built using SBT.
 
+**Note** By default `sbt test` runs unit tests and integration tests. In order to run just unit tests, please use
+`sbt t` alias.
+
+- `sbt +t` - runs unit tests only, for all Scala versions
+- `sbt test` - runs all tests (unit and integration)
+- `sbt unit:test` - runs unit tests only
+- `sbt integration:test` - runs integration tests only
+
+Install locally for `sbt` projects:
+```
+sbt +publishLocal
+```
+
+Install locally for `Maven` projects:
+```
+sbt +publishM2
+```
+
 ## Project structure
 Pramen consists of a few components:
 - `pramen-api` - contains traits (interfaces) for defining custom transformations, sources and sinks. 
@@ -188,8 +206,8 @@ dependencies in an uber jar that you can build for your Scala version. You can d
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
 sbt ++2.11.12 assembly 
-sbt ++2.12.18 assembly
-sbt ++2.13.12 assembly
+sbt ++2.12.20 assembly
+sbt ++2.13.14 assembly
 ```
 
 You can collect the uber jar of Pramen either at
@@ -201,8 +219,8 @@ Spark distributions. This makes the runner independent of Spark version. But if 
 in your bundle, use one of example commands specifying your Spark version:
 ```sh
 sbt -DSPARK_VERSION="2.4.8" -Dassembly.features="includeDelta" ++2.11.12 assembly 
-sbt -DSPARK_VERSION="3.3.3" -Dassembly.features="includeDelta" ++2.12.18 assembly
-sbt -DSPARK_VERSION="3.4.1" -Dassembly.features="includeDelta" ++2.13.12 assembly
+sbt -DSPARK_VERSION="3.3.4" -Dassembly.features="includeDelta" ++2.12.20 assembly
+sbt -DSPARK_VERSION="3.5.2" -Dassembly.features="includeDelta" ++2.13.14 assembly
 ```
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
@@ -602,6 +620,10 @@ is determined by the pipeline configuration.
     # Specifies the maximum number of records to fetch. Good for testing purposes.
     #limit.records = 100
 
+    # Specify the timezone of the database server, if it is different from the default timezone.
+    # It is needed for incremental ingestion based on offset field that has a timestamp or datetime data type.
+    #server.timezone = "Africa/Johannesburg"
+
     # Optionally, you can specify a class for a custom SQL generator for your RDMS engine.
     # The class whould extend 'za.co.absa.pramen.api.sql.SqlGenerator'
     #sql.generator.class = "com.example.MySqlGenerator"
@@ -786,6 +808,34 @@ pramen.operations = [
 ]
 ```
 
+### Incremental Ingestion (experimental)
+Pramen `version 1.10` introduces the concept of incremental ingestion. It allows running a pipeline multiple times a day
+without reprocessing data that was already processed. In order to enable it, use `incremental` schedule when defining your
+ingestion operation:
+```hocon
+schedule = "incremental"
+```
+
+In order for the incremental ingestion to work you need to define a monotonically increasing field, called an offset.
+Usually, this incremental field can be a counter, or a record creation timestamp. You need to define the offset field in
+your source. The source should support incremental ingestion in order to use this mode.
+```hocon
+offset.column {
+  name = "created_at"
+  type = "datetime"
+}
+```
+
+Offset types available at the moment:
+
+| Type     | Description                                |
+|----------|--------------------------------------------|
+| integral | Any integral type (`short`, `int`, `long`) |
+| datetime | A `datetime `or `timestamp` fields         |
+| string   | Only `string` / `varchar(n)` types.        |
+
+Only ingestion jobs support incremental schedule at the moment. Incremental transformations and sinks are planned to be
+available soon.
 
 ### Sinks
 Sinks define a way data needs to be sent to a target system. Built-in sinks include:

@@ -166,7 +166,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
     "runs a job via teh task runner and return the dataframe" in {
       val taskRunner = mock(classOf[TaskRunner])
       val job = mock(classOf[Job])
-      val successStatus = RunStatus.Succeeded(None, 1, None, TaskRunReason.OnRequest, Nil, Nil, Nil, Nil)
+      val successStatus = RunStatus.Succeeded(None, Some(1), None, None, TaskRunReason.OnRequest, Nil, Nil, Nil, Nil)
 
       whenMock(taskRunner.runLazyTask(job, infoDate)).thenReturn(successStatus)
       whenMock(job.outputTable).thenReturn(MetaTableFactory.getDummyMetaTable("table1", format = DataFormat.Transient(CachePolicy.NoCache)))

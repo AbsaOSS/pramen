@@ -20,8 +20,9 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
+import za.co.absa.pramen.core.reader.model.{OffsetInfoParser, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
@@ -34,8 +35,6 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
                       conf: Config
                      )(implicit spark: SparkSession) extends TableReaderJdbcBase(jdbcReaderConfig, jdbcUrlSelector, conf) {
   private val log = LoggerFactory.getLogger(this.getClass)
-
-  private val infoDateFormatter = DateTimeFormatter.ofPattern(jdbcReaderConfig.infoDateFormat)
 
   logConfiguration()
 
@@ -64,6 +63,15 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
         getDataForSql(sql, infoDateBegin, infoDateEnd, columns)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
+    }
+  }
+
+  override def getIncrementalData(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): DataFrame = {
+    query match {
+      case Query.Table(tableName) =>
+        getDataForTableIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
+      case other =>
+        throw new IllegalArgumentException(s"'${other.name}' incremental ingestion is not supported by the JDBC reader. Use 'table' instead.")
     }
   }
 
@@ -136,6 +144,24 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     } else {
       sqlGen.getDataQuery(tableName, columns, jdbcReaderConfig.limitRecords)
     }
+
+    val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries, Option(tableName))(df => {
+      // Make sure connection to the server is made without fetching the data
+      log.debug(df.schema.treeString)
+      df
+    })
+
+    df
+  }
+
+  private[core] def getDataForTableIncremental(tableName: String,
+                                               onlyForInfoDate: Option[LocalDate],
+                                               offsetFrom: Option[OffsetValue],
+                                               offsetTo: Option[OffsetValue],
+                                               columns: Seq[String]): DataFrame = {
+    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
+
+    log.info(s"JDBC Query: $sql")
 
     val df = getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries, Option(tableName))(df => {
       // Make sure connection to the server is made without fetching the data
@@ -222,8 +248,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 }
 
 object TableReaderJdbc {
-  def apply(conf: Config, parent: String)(implicit spark: SparkSession): TableReaderJdbc = {
-    val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, parent)
+  def apply(conf: Config, workflowConf: Config, parent: String)(implicit spark: SparkSession): TableReaderJdbc = {
+    val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, workflowConf, parent)
 
     val urlSelector = JdbcUrlSelector(jdbcTableReaderConfig.jdbcConfig)
 

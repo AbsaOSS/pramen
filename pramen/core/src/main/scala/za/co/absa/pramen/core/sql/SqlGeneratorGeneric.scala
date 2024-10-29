@@ -16,10 +16,11 @@
 
 package za.co.absa.pramen.core.sql
 
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime}
 
 class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
@@ -90,6 +91,19 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
       case SqlColumnType.NUMBER =>
         val dateStr = dateFormatterApp.format(date)
         s"$dateStr"
+    }
+  }
+
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+    offset match {
+      case OffsetValue.DateTimeValue(ts) =>
+        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        s"$column $condition '$tsLiteral'"
+      case OffsetValue.IntegralValue(value) =>
+        s"$column $condition $value"
+      case OffsetValue.StringValue(value) =>
+        s"$column $condition '$value'"
     }
   }
 

@@ -35,8 +35,8 @@ import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
-import za.co.absa.pramen.core.utils.{ThreadUtils, TimeUtils}
 import za.co.absa.pramen.core.utils.hive.HiveHelper
+import za.co.absa.pramen.core.utils.{ThreadUtils, TimeUtils}
 
 import java.sql.Date
 import java.time.{Instant, LocalDate}
@@ -282,7 +282,7 @@ abstract class TaskRunnerBase(conf: Config,
         Left(result)
       case Right(status) =>
         Try {
-          task.job.validate(task.infoDate, conf)
+          task.job.validate(task.infoDate, task.reason, conf)
         } match {
           case Success(validationResult) =>
             validationResult match {
@@ -335,7 +335,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
 
-        val runResult = task.job.run(task.infoDate, conf)
+        val runResult = task.job.run(task.infoDate, task.reason, conf)
 
         val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
 
@@ -369,9 +369,9 @@ abstract class TaskRunnerBase(conf: Config,
 
         val saveResult = if (runtimeConfig.isDryRun) {
           log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
-          SaveResult(MetaTableStats(dfTransformed.count(), None))
+          SaveResult(MetaTableStats(Option(dfTransformed.count()), None, None))
         } else {
-          task.job.save(dfTransformed, task.infoDate, conf, started, validationResult.inputRecordsCount)
+          task.job.save(dfTransformed, task.infoDate, task.reason, conf, started, validationResult.inputRecordsCount)
         }
 
         val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
@@ -397,6 +397,7 @@ abstract class TaskRunnerBase(conf: Config,
           MetaTable.getMetaTableDef(task.job.outputTable),
           RunStatus.Succeeded(recordCountOldOpt,
             stats.recordCount,
+            stats.recordCountAppended,
             stats.dataSizeBytes,
             completionReason,
             runResult.filesRead,
@@ -453,7 +454,8 @@ abstract class TaskRunnerBase(conf: Config,
       log.warn("Skipping the interrupted exception of the killed task.")
     } else {
       pipelineState.addTaskCompletion(Seq(updatedResult))
-      addJournalEntry(task, updatedResult, pipelineState.getState().pipelineInfo)
+      if (taskResult.runStatus != RunStatus.NotRan)
+        addJournalEntry(task, updatedResult, pipelineState.getState.pipelineInfo)
     }
 
     updatedResult.runStatus
@@ -491,7 +493,7 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   private def sendNotifications(task: Task, result: TaskResult): Seq[NotificationFailure] = {
-    val pipelineInfo = pipelineState.getState().pipelineInfo
+    val pipelineInfo = pipelineState.getState.pipelineInfo
     task.job.notificationTargets.flatMap(notificationTarget => sendNotifications(task, result, notificationTarget, pipelineInfo))
   }
 

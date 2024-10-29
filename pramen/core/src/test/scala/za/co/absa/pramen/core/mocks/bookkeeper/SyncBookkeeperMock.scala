@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks.bookkeeper
 
 import org.apache.spark.sql.types.{DataType, StructType}
-import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
 import java.time.LocalDate
@@ -131,4 +131,6 @@ class SyncBookkeeperMock extends Bookkeeper {
 
     schemas += table -> (infoDate, tableSchema)
   }
+
+  override private[pramen] def getOffsetManager: OffsetManager = null
 }

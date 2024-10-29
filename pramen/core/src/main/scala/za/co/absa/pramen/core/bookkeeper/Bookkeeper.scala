@@ -57,12 +57,16 @@ trait Bookkeeper {
   def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
 
   private[pramen] def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit
+
+  private[pramen] def getOffsetManager: OffsetManager
 }
 
 object Bookkeeper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def fromConfig(bookkeepingConfig: BookkeeperConfig, runtimeConfig: RuntimeConfig)
+  def fromConfig(bookkeepingConfig: BookkeeperConfig,
+                 runtimeConfig: RuntimeConfig,
+                 batchId: Long)
                 (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, MetadataManager, AutoCloseable) = {
     val mongoDbConnection = bookkeepingConfig.bookkeepingConnectionString.map { url =>
       MongoDbConnection.getConnection(url, bookkeepingConfig.bookkeepingDbName.get)
@@ -106,7 +110,7 @@ object Bookkeeper {
       log.info(s"Bookkeeping is DISABLED. Updates won't be tracked")
       new BookkeeperNull()
     } else if (hasBookkeepingJdbc) {
-      new BookkeeperJdbc(dbOpt.get.slickDb)
+      new BookkeeperJdbc(dbOpt.get.slickDb, batchId)
     } else {
       mongoDbConnection match {
         case Some(connection) =>

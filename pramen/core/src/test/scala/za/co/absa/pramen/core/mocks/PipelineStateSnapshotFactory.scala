@@ -21,6 +21,7 @@ import za.co.absa.pramen.api.status.{CustomNotification, PipelineNotificationFai
 
 object PipelineStateSnapshotFactory {
   def getDummyPipelineStateSnapshot(pipelineInfo: PipelineInfo = PipelineInfoFactory.getDummyPipelineInfo(),
+                                    batchId: Long = 0L,
                                     isFinished: Boolean = false,
                                     warningFlag: Boolean = false,
                                     exitedNormally: Boolean = false,
@@ -30,6 +31,7 @@ object PipelineStateSnapshotFactory {
                                     pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty,
                                     customNotification: CustomNotification = CustomNotification(Seq.empty, Seq.empty)): PipelineStateSnapshot = {
     PipelineStateSnapshot(pipelineInfo,
+      batchId,
       isFinished,
       warningFlag,
       exitedNormally,

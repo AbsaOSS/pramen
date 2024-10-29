@@ -39,6 +39,8 @@ case class InfoDateConfig(
 object InfoDateConfig {
   val DEFAULT_DATE_FORMAT = "yyyy-MM-dd"
 
+  val DEFAULT_INCREMENTAL_INFO_DATE_EXPR = "@runDate"
+
   val INFORMATION_DATE_COLUMN_KEY = "pramen.information.date.column"
   val INFORMATION_DATE_FORMAT_KEY = "pramen.information.date.format"
 

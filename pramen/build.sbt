@@ -20,12 +20,12 @@ import BuildInfoTemplateSettings._
 import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
-val scala212 = "2.12.19"
-val scala213 = "2.13.13"
+val scala212 = "2.12.20"
+val scala213 = "2.13.14"
 
 ThisBuild / organization := "za.co.absa.pramen"
 
-ThisBuild / scalaVersion := scala211
+ThisBuild / scalaVersion := scala212
 ThisBuild / crossScalaVersions := Seq(scala211, scala212, scala213)
 
 ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation")
@@ -52,6 +52,7 @@ val shadeBase = "za.co.absa.pramen.shaded"
 
 def itFilter(name: String): Boolean = name endsWith "LongSuite"
 def unitFilter(name: String): Boolean = (name endsWith "Suite") && !itFilter(name)
+def allFilter(name: String): Boolean = (name endsWith "Suite")
 def shade(pkg: String): (String, String) = s"$pkg.**" -> s"$shadeBase.$pkg.@1"
 
 /* This is so that Pramen uber jar has the name compatible to versions where 'pramen-runner' module existed */
@@ -70,6 +71,7 @@ def runnerSparkVersionSuffix(moduleName: String, scalaVersion: String, includeDe
 
 val assemblyFeatures = settingKey[Seq[String]]("Define assembly scope")
 
+lazy val UnitTest = config("unit") extend Test
 lazy val IntegrationTest = config("integration") extend Test
 
 lazy val pramen = (project in file("."))
@@ -86,6 +88,10 @@ lazy val pramen = (project in file("."))
 
 lazy val api = (project in file("api"))
   .disablePlugins(sbtassembly.AssemblyPlugin)
+  .configs( UnitTest )
+  .configs( IntegrationTest )
+  .settings( inConfig(UnitTest)(Defaults.testTasks) : _*)
+  .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-api",
     printSparkVersion := {
@@ -95,12 +101,17 @@ lazy val api = (project in file("api"))
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
     libraryDependencies ++= ApiDependencies(scalaVersion.value) :+ getScalaDependency(scalaVersion.value),
+    (Test / testOptions) := Seq(Tests.Filter(allFilter)),
+    (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
+    (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     releasePublishArtifactsAction := PgpKeys.publishSigned.value
   )
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val core = (project in file("core"))
+  .configs( UnitTest )
   .configs( IntegrationTest )
+  .settings( inConfig(UnitTest)(Defaults.testTasks) : _*)
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-core",
@@ -114,7 +125,8 @@ lazy val core = (project in file("core"))
     libraryDependencies ++= CoreDependencies(scalaVersion.value, assemblyFeatures.value.contains("includeDelta"))  ++
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
-    (Test / testOptions) := Seq(Tests.Filter(unitFilter)),
+    (Test / testOptions) := Seq(Tests.Filter(allFilter)),
+    (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     populateBuildInfoTemplate,
@@ -127,6 +139,10 @@ lazy val core = (project in file("core"))
   .enablePlugins(AutomateHeaderPlugin)
 
 lazy val extras = (project in file("extras"))
+  .configs( UnitTest )
+  .configs( IntegrationTest )
+  .settings( inConfig(UnitTest)(Defaults.testTasks) : _*)
+  .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-extras",
     printSparkVersion := {
@@ -140,6 +156,9 @@ lazy val extras = (project in file("extras"))
       getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
       getScalaDependency(scalaVersion.value),
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
+    (Test / testOptions) := Seq(Tests.Filter(allFilter)),
+    (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
+    (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
@@ -274,5 +293,7 @@ lazy val assemblySettingsRunner = assemblySettingsCommon ++ Seq(assembly / assem
 )
 
 addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bump.Bugfix; release with-defaults")
+addCommandAlias("t", "unit:test")
+addCommandAlias("utest", "unit:test")
 addCommandAlias("itTest", "integration:test")
-addCommandAlias("xcoverage", "clean;coverage;test;coverageReport")
+addCommandAlias("xcoverage", "jacoco")

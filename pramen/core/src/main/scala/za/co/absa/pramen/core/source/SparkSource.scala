@@ -18,12 +18,15 @@ package za.co.absa.pramen.core.source
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.sql.SqlColumnType
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderSpark
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig.{HAS_INFO_DATE, INFORMATION_DATE_COLUMN, getInfoDateFormat}
+import za.co.absa.pramen.core.reader.model.OffsetInfoParser
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig._
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
@@ -32,7 +35,9 @@ class SparkSource(val format: Option[String],
                   val schema: Option[String],
                   val hasInfoDateCol: Boolean,
                   val infoDateColumn: String,
+                  val infoDateType: SqlColumnType,
                   val infoDateFormat: String,
+                  val offsetInfo: Option[OffsetInfo],
                   val sourceConfig: Config,
                   val options: Map[String, String])(implicit spark: SparkSession) extends Source {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -40,6 +45,10 @@ class SparkSource(val format: Option[String],
   override val config: Config = sourceConfig
 
   override def hasInfoDateColumn(query: Query): Boolean = hasInfoDateCol
+
+  override def getOffsetInfo: Option[OffsetInfo] = {
+    offsetInfo
+  }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val reader = getReader(query)
@@ -52,14 +61,7 @@ class SparkSource(val format: Option[String],
 
     val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
 
-    val filesRead = query match {
-      case _: Query.Table   => df.inputFiles
-      case _: Query.Sql     => Array.empty[String]
-      case Query.Path(path) =>
-        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
-        fsUtils.getHadoopFiles(new Path(path)).map(_.getPath.toString).sorted
-      case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
-    }
+    val filesRead = getFilesRead(query, df)
 
     SourceResult(df, filesRead)
   }
@@ -68,13 +70,13 @@ class SparkSource(val format: Option[String],
     val tableReader = query match {
       case Query.Table(table) =>
         log.info(s"Using TableReaderSpark to read table: $table")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateType, infoDateFormat, getOffsetInfo, options)
       case Query.Sql(sql)     =>
         log.info(s"Using TableReaderSpark to read SQL for: $sql")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateType, infoDateFormat, getOffsetInfo, options)
       case Query.Path(path)   =>
         log.info(s"Using TableReaderSpark to read '$format' from: $path")
-        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateFormat, options)
+        new TableReaderSpark(format, schema, hasInfoDateCol, infoDateColumn, infoDateType, infoDateFormat, getOffsetInfo, options)
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
 
@@ -85,6 +87,27 @@ class SparkSource(val format: Option[String],
 
     schema.foreach(s => log.info(s"Using schema: $s"))
     tableReader
+  }
+
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
+    val reader = getReader(query)
+
+    val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
+
+    val filesRead = getFilesRead(query, df)
+
+    SourceResult(df, filesRead)
+  }
+
+  private def getFilesRead(query: Query, df: DataFrame): Seq[String] = {
+    query match {
+      case _: Query.Table   => df.inputFiles
+      case _: Query.Sql     => Array.empty[String]
+      case Query.Path(path) =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+        fsUtils.getHadoopFiles(new Path(path)).map(_.getPath.toString).sorted
+      case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
+    }
   }
 }
 
@@ -97,14 +120,18 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
     val schema = ConfigUtils.getOptionString(conf, SCHEMA)
 
     val hasInfoDate = conf.hasPath(HAS_INFO_DATE) && conf.getBoolean(HAS_INFO_DATE)
-    val (infoDateColumn, infoDateFormat) = if (hasInfoDate) {
-      (conf.getString(INFORMATION_DATE_COLUMN), getInfoDateFormat(conf))
+    val (infoDateColumn, infoDateType, infoDateFormat) = if (hasInfoDate) {
+      val infoDateTypeStr = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date")
+      val infoDateType = SqlColumnType.fromString(infoDateTypeStr).getOrElse(throw new IllegalArgumentException(s"Unknown info date type: $infoDateTypeStr"))
+      (conf.getString(INFORMATION_DATE_COLUMN), infoDateType, getInfoDateFormat(conf))
     } else {
-      ("", "")
+      ("", SqlColumnType.DATE, "")
     }
+
+    val offsetInfoOpt = OffsetInfoParser.fromConfig(conf)
 
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
-    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateFormat, conf, options)(spark)
+    new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateType, infoDateFormat, offsetInfoOpt, conf, options)(spark)
   }
 }
