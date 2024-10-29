@@ -72,7 +72,4 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
     }
   }
 
-  "Generic SQL generator" should {
-  }
-
 }

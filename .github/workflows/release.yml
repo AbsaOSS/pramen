@@ -24,46 +24,15 @@ defaults:
     shell: bash
 
 jobs:
-  test-python:
-    strategy:
-      matrix:
-        python-version: [ "3.10" ]
-    runs-on: ubuntu-latest
-    name: Test Pramen-Py
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
-          
-      - uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-          
-      - name: setup poetry
-        uses: abatilo/actions-poetry@v2.1.6
-        with:
-          poetry-version: 1.4.2
-          
-      - name: install dependencies
-        working-directory: "./pramen-py"
-        run: make --silent install
-        
-      - name: test
-        working-directory: "./pramen-py"
-        env:
-          ENV: ci
-        run: make --silent test
-        
-  release-python:
-    needs: [ "test-python" ]
-    runs-on: ubuntu-latest
-    name: Release Python artifact
+  release-sbt:
+    runs-on: ubuntu-22.04
+    name: Release Scala artifacts
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
-          
+
       - name: Prepare the release branch
         id: release_branch1
         working-directory: "./pramen"
@@ -74,55 +43,6 @@ jobs:
           git config --global user.name "CI/CD bot"
           git checkout -b release/$VERSION
           git push --set-upstream origin release/$VERSION
-          
-      - name: Update version number
-        id: release_branch
-        working-directory: "./pramen-py"
-        env:
-          VERSION: ${{ steps.release_branch1.outputs.VERSION }}
-        run: |
-          PY_VERSION=$(grep -m 1 ^version pyproject.toml | tr -s ' ' | tr -d '"' | tr -d "'" | cut -d' ' -f3)
-          if [[ "$PY_VERSION" != "$VERSION" ]]; then
-            sed -i "s/version = \"$PY_VERSION\"/version = \"$VERSION\"/g" pyproject.toml
-            git add pyproject.toml
-            git commit -m "Update version number to $VERSION"
-            git push
-          fi
-          
-      - name: install project dependencies
-        run: |
-          sudo apt install -y --no-install-recommends \
-            libssl-dev \
-            make
-          
-      - uses: actions/setup-python@v4
-        with:
-          python-version: "3.10"
-          
-      - uses: abatilo/actions-poetry@v2.1.6
-        with:
-          poetry-version: 1.4.2
-          
-      - name: Install dependencies
-        working-directory: "./pramen-py"
-        run: poetry install --no-interaction --no-root
-          
-      - name: build and publish the wheel to jfrog
-        working-directory: "./pramen-py"
-        env:
-          ENV: pypi
-          PRAMENPY_PYPI_TOKEN: ${{ secrets.PRAMENPY_PYPI_TOKEN }}
-        run: make --silent publish
-          
-  release-sbt:
-    needs: [ "release-python" ]
-    runs-on: ubuntu-latest
-    name: Release Scala artifacts
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.branch }}
 
       - name: Setup JDK and sbt
         uses: actions/setup-java@v4.2.1
@@ -158,7 +78,7 @@ jobs:
 
   create-pr:
     needs: [ "release-sbt" ]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     name: Create Pull Request
 
     steps:
@@ -181,6 +101,6 @@ jobs:
       - name: Create Pull Request
         run: gh pr create -B "$BASE" -H "release/$VERSION" --title "Release Pramen v$VERSION" --body 'Created by Github action'
         env:
-          BASE: ${{ github.event.inputs.branch }}
+          BASE: ${{ github.head_ref || github.ref_name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ steps.release_branch3.outputs.VERSION }}

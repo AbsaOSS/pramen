@@ -308,8 +308,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     val errorMessage = ex.getMessage
 
     val errorMessageTruncated = maxReasonLength match {
-      case Some(maxLength) if errorMessage.length > maxLength => errorMessage.substring(0, maxLength) + "..."
-      case _ => errorMessage
+      case Some(maxLength) if errorMessage.length > maxLength =>  StringUtils.escapeHTML(errorMessage.substring(0, maxLength)) + "..."
+      case _ => StringUtils.escapeHTML(errorMessage)
     }
 
     paragraphBuilder
@@ -333,7 +333,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         val stderrMsg = if (stderr.isEmpty) "" else s"""Last <b>stderr</b> lines:\n${stderr.mkString("", EOL, EOL)}"""
         s"$msg\n$stdoutMsg\n$stderrMsg"
       case ex: Throwable                     =>
-        renderThrowable(ex, maximumLength = maxExceptionLength)
+        renderThrowable(ex, maximumLength = maxExceptionLength, escapeHTML = true)
     }
 
     builder.withUnformattedText(text)
@@ -648,10 +648,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
         }
     }
 
-    maxReasonLength match {
+    StringUtils.escapeHTML(maxReasonLength match {
       case Some(maxLength) if reason.length > maxLength =>  reason.substring(0, maxLength) + "..."
       case _ => reason
-    }
+    })
   }
 
   private[core] def getFinishTime(task: TaskResult): String = {
