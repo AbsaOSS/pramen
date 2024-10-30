@@ -24,11 +24,12 @@ import java.time.LocalDate
 
 class InfoDateConfigSuite extends AnyWordSpec {
   "InfoDateConfig" should {
-    "deserialize the config properly when set" in {
+    " set" in {
       val configStr =
         s"""pramen {
            |  information.date.column = "dummy_col"
            |  information.date.format = "dummy_format"
+           |  information.date.partition.by = true
            |  information.date.start = "2020-01-31"
            |
            |  track.days = 4

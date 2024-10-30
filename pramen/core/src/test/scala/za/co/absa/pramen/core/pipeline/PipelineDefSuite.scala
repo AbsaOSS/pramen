@@ -32,6 +32,7 @@ import java.time.LocalDate
 class PipelineDefSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val defaults = InfoDateConfig("INFO_DATE",
     "yyyy-MM-dd",
+    partitionByInfoDate = true,
     LocalDate.of(2022, 1, 1),
     4,
     0,

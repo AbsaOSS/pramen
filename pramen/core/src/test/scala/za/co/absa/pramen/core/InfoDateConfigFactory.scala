@@ -23,6 +23,7 @@ import java.time.LocalDate
 object InfoDateConfigFactory {
   def getDummyInfoDateConfig(columnName: String = "pramen_info_date",
                              dateFormat: String = "yyyy-MM-dd",
+                             partitionByInfoDate: Boolean = true,
                              startDate: LocalDate = LocalDate.parse("2010-01-01"),
                              defaultTrackDays: Int = 0,
                              defaultDelayDays: Int = 0,
@@ -35,6 +36,7 @@ object InfoDateConfigFactory {
     InfoDateConfig(
       columnName,
       dateFormat,
+      partitionByInfoDate,
       startDate,
       defaultTrackDays,
       defaultDelayDays,
