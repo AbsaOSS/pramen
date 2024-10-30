@@ -57,7 +57,7 @@ case class TransferTable(
   }
 
   def getMetaTable: MetaTable = {
-    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", "", HiveConfig.getNullConfig, None, None, hivePreferAddPartition = true, None, infoDateStart, trackDays, trackDaysExplicitlySet = trackDaysExplicitlySet, None, readOptions, writeOptions, sparkConfig)
+    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", partitionByInfoDate = false, "", HiveConfig.getNullConfig, None, None, hivePreferAddPartition = true, None, infoDateStart, trackDays, trackDaysExplicitlySet = trackDaysExplicitlySet, None, readOptions, writeOptions, sparkConfig)
   }
 }
 

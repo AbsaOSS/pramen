@@ -20,7 +20,9 @@ import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.offset.DataOffset
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.core.MetaTableDefFactory
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
+import za.co.absa.pramen.core.mocks.MetaTableFactory
 
 import java.time.LocalDate
 
@@ -58,7 +60,8 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
 
   override def getTableDef(tableName: String): MetaTableDef = {
     tables.find(_._1 == tableName) match {
-      case Some((name, _)) => MetaTableDef(name, "", DataFormat.Null(), "pramen_info_date", "yyyy-MM-dd", "pramen_batchid", None, None, null, Map.empty[String, String], Map.empty[String, String])
+      case Some((name, _)) =>
+        MetaTableDefFactory.getDummyMetaTableDef(name, format = DataFormat.Null(), infoDateColumn = "pramen_info_date")
       case None          => throw new IllegalArgumentException(s"Table $tableName not found")
     }
   }

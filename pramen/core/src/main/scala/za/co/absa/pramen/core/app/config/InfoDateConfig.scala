@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter
 case class InfoDateConfig(
                            columnName: String,
                            dateFormat: String,
+                           partitionByInfoDate: Boolean,
                            startDate: LocalDate,
                            defaultTrackDays: Int,
                            defaultDelayDays: Int,
@@ -43,6 +44,7 @@ object InfoDateConfig {
 
   val INFORMATION_DATE_COLUMN_KEY = "pramen.information.date.column"
   val INFORMATION_DATE_FORMAT_KEY = "pramen.information.date.format"
+  val INFORMATION_DATE_PARTITION_BY_KEY = "pramen.information.date.partition.by"
 
   val INFORMATION_DATE_START_KEY = "pramen.information.date.start"
   val INFORMATION_DATE_START_DAYS_KEY = "pramen.information.date.max.days.behind"
@@ -63,6 +65,7 @@ object InfoDateConfig {
 
   def fromConfig(conf: Config): InfoDateConfig = {
     val dateFormat = conf.getString(INFORMATION_DATE_FORMAT_KEY)
+    val partitionByInfoDate = conf.getBoolean(INFORMATION_DATE_PARTITION_BY_KEY)
 
     val columnName = conf.getString(INFORMATION_DATE_COLUMN_KEY)
     val expressionDaily = conf.getString(INFORMATION_DATE_EXPRESSION_DAILY_KEY)
@@ -93,6 +96,7 @@ object InfoDateConfig {
 
     InfoDateConfig(columnName,
       dateFormat,
+      partitionByInfoDate,
       startDate,
       defaultTrackDays,
       defaultDelayDays,
