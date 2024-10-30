@@ -35,6 +35,7 @@ import scala.util.{Failure, Success, Try}
   * @param format                 The format of the table.
   * @param infoDateColumn         The name of the column that contains the information date (partitioned by).
   * @param infoDateFormat         The format of the information date.
+  * @param partitionByInfoDate    Should the table be partitioned by the information date column.
   * @param batchIdColumn          The name of the column that contains the batch id.
   * @param hiveConfig             The effective Hive configuration to use for Hive operations.
   * @param hiveTable              The name of the Hive table.
@@ -54,6 +55,7 @@ case class MetaTable(
                       format: DataFormat,
                       infoDateColumn: String,
                       infoDateFormat: String,
+                      partitionByInfoDate: Boolean,
                       batchIdColumn: String,
                       hiveConfig: HiveConfig,
                       hiveTable: Option[String],
@@ -91,6 +93,7 @@ object MetaTable {
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = infoDateConfig.columnName
     val defaultInfoDateFormat = infoDateConfig.dateFormat
+    val defaultPartitionByInfoDate = infoDateConfig.partitionByInfoDate
     val defaultStartDate = infoDateConfig.startDate
     val defaultTrackDays = infoDateConfig.defaultTrackDays
     val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
@@ -104,7 +107,7 @@ object MetaTable {
     }
 
     val metatables = tableConfigs
-      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultStartDate, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition, defaultBatchIdColumnName))
+      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultPartitionByInfoDate, defaultStartDate, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition, defaultBatchIdColumnName))
       .toSeq
 
     val duplicates = AlgorithmUtils.findDuplicates(metatables.map(_.name))
@@ -118,6 +121,7 @@ object MetaTable {
                              appConf: Config,
                              defaultInfoColumnName: String,
                              defaultInfoDateFormat: String,
+                             defaultPartitionByInfoDate: Boolean,
                              defaultStartDate: LocalDate,
                              defaultTrackDays: Int,
                              defaultHiveConfig: HiveDefaultConfig,
@@ -129,6 +133,7 @@ object MetaTable {
     val infoDateColumn = infoDateOverride.columnName.getOrElse(defaultInfoColumnName)
     val infoDateFormat = infoDateOverride.dateFormat.getOrElse(defaultInfoDateFormat)
     val infoDateExpressionOpt = infoDateOverride.expression
+    val partitionByInfoDate = infoDateOverride.partitionByInfoDate.getOrElse(defaultPartitionByInfoDate)
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
@@ -161,6 +166,7 @@ object MetaTable {
       format,
       infoDateColumn,
       infoDateFormat,
+      partitionByInfoDate,
       batchIdColumn,
       hiveConfig,
       hiveTable,
@@ -183,6 +189,7 @@ object MetaTable {
       table.format,
       table.infoDateColumn,
       table.infoDateFormat,
+      table.partitionByInfoDate,
       table.batchIdColumn,
       table.hiveTable,
       table.hivePath,

@@ -25,6 +25,7 @@ import java.time.LocalDate
 case class InfoDateOverride(
                              columnName: Option[String],
                              dateFormat: Option[String],
+                             partitionByInfoDate: Option[Boolean],
                              expression: Option[String],
                              startDate: Option[LocalDate]
                            )
@@ -32,6 +33,7 @@ case class InfoDateOverride(
 object InfoDateOverride {
   val INFORMATION_DATE_COLUMN_KEY = "information.date.column"
   val INFORMATION_DATE_FORMAT_KEY = "information.date.format"
+  val INFORMATION_DATE_PARTITION_BY_KEY = "information.date.partition.by"
   val INFORMATION_DATE_EXPRESSION_KEY = "information.date.expression"
   val INFORMATION_DATE_START_KEY = "information.date.start"
   val INFORMATION_DATE_MAX_DAYS_BEHIND_KEY = "information.date.max.days.behind"
@@ -39,6 +41,7 @@ object InfoDateOverride {
   def fromConfig(conf: Config): InfoDateOverride = {
     val columnNameOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN_KEY)
     val dateFormatOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_FORMAT_KEY)
+    val infoDatePartitionByOpt = ConfigUtils.getOptionBoolean(conf, INFORMATION_DATE_PARTITION_BY_KEY)
     val expressionOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_EXPRESSION_KEY)
 
     val startDateOpt = ConfigUtils.getDateOpt(conf, INFORMATION_DATE_START_KEY, DEFAULT_DATE_FORMAT)
@@ -56,6 +59,6 @@ object InfoDateOverride {
         None
     }
 
-    InfoDateOverride(columnNameOpt, dateFormatOpt, expressionOpt, startDate)
+    InfoDateOverride(columnNameOpt, dateFormatOpt, infoDatePartitionByOpt, expressionOpt, startDate)
   }
 }

@@ -21,17 +21,18 @@ import java.time.LocalDate
 /**
   * This is metatable details available to read from the metastore.
   *
-  * @param name            The name of the table.
-  * @param description     The description of the table.
-  * @param format          The format of the table.
-  * @param infoDateColumn  The name of the column that contains the information date (partitioned by).
-  * @param infoDateFormat  The format of the information date.
-  * @param batchIdColumn   The name of the column that contains the batch id.
-  * @param hiveTable       The name of the Hive table.
-  * @param hivePath        The path of the Hive table (if it differs from the path in the underlying format).
-  * @param infoDateStart   The start date of the information date.
-  * @param readOptions     The read options for the table.
-  * @param writeOptions    The write options for the table.
+  * @param name                The name of the table.
+  * @param description         The description of the table.
+  * @param format              The format of the table.
+  * @param infoDateColumn      The name of the column that contains the information date (partitioned by).
+  * @param infoDateFormat      The format of the information date.
+  * @param partitionByInfoDate Should the table be partitioned by the information date column.
+  * @param batchIdColumn       The name of the column that contains the batch id.
+  * @param hiveTable           The name of the Hive table.
+  * @param hivePath            The path of the Hive table (if it differs from the path in the underlying format).
+  * @param infoDateStart       The start date of the information date.
+  * @param readOptions         The read options for the table.
+  * @param writeOptions        The write options for the table.
   */
 case class MetaTableDef(
                          name: String,
@@ -39,6 +40,7 @@ case class MetaTableDef(
                          format: DataFormat,
                          infoDateColumn: String,
                          infoDateFormat: String,
+                         partitionByInfoDate: Boolean,
                          batchIdColumn: String,
                          hiveTable: Option[String],
                          hivePath: Option[String],
