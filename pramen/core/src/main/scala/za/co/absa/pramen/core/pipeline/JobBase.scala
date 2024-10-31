@@ -106,10 +106,14 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  protected def preRunTransformationCheck(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
-      case Some(result) => result
-      case None => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
+  protected def preRunTransformationCheck(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning], runReason: TaskRunReason): JobPreRunResult = {
+    if (runReason == TaskRunReason.Rerun) {
+      JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
+    } else {
+      validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
+        case Some(result) => result
+        case None         => JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Seq.empty[String])
+      }
     }
   }
 
