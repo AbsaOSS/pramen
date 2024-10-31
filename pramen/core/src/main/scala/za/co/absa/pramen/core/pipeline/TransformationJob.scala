@@ -41,7 +41,7 @@ class TransformationJob(operationDef: OperationDef,
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
-    preRunTransformationCheck(infoDate, dependencyWarnings)
+    preRunTransformationCheck(infoDate, dependencyWarnings, runReason)
   }
 
   override def validate(infoDate: LocalDate, jobConfig: Config): Reason = {
