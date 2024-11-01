@@ -99,7 +99,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     if (jdbcReaderConfig.enableSchemaMetadata) {
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, _) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, sql) { (connection, _) =>
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>
             log.info(s"Reading JDBC metadata descriptions the table: $table")

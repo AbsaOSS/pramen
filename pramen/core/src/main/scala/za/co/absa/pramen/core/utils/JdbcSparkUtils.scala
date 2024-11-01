@@ -143,30 +143,34 @@ object JdbcSparkUtils {
   def getColumnMetadata(fullTableName: String, connection: Connection): ResultSet = {
     val dbMetadata: DatabaseMetaData = connection.getMetaData
 
-    if (!dbMetadata.getColumns(null, null, fullTableName, null).next()) {
-      val parts = fullTableName.split('.')
-      if (parts.length == 3) {
-        // database, schema, and table table are all present
-        dbMetadata.getColumns(parts(0), parts(1), parts(2), null)
-      } else if (parts.length == 2) {
-        if (dbMetadata.getColumns(null, parts(0), parts(1), null).next()) {
-          dbMetadata.getColumns(null, parts(0), parts(1), null)
-          // schema and table only
-        } else {
-          // database and table only
-          dbMetadata.getColumns(parts(0), null, parts(1), null)
-        }
+    val parts = fullTableName.split('.')
+    if (parts.length == 3) {
+      // database, schema, and table table are all present
+      dbMetadata.getColumns(parts(0), parts(1), parts(2), null)
+    } else if (parts.length == 2) {
+      val rs = dbMetadata.getColumns(null, parts(0), parts(1), null)
+      if (rs.isBeforeFirst) {
+        rs
+        // schema and table only
       } else {
-        // Table only. The exact casing was already checked. Checking upper and lower casing in case
-        // the JDBC driver is case-sensitive, but objects ub db metadata are automatically upper- or lower- cased.
-        if (dbMetadata.getColumns(null, null, fullTableName.toUpperCase, null).next())
-          dbMetadata.getColumns(null, null, fullTableName.toUpperCase, null)
+        // database and table only
+        dbMetadata.getColumns(parts(0), null, parts(1), null)
+      }
+    } else {
+      // Table only.
+      val rs = dbMetadata.getColumns(null, null, fullTableName, null)
+
+      if (rs.isBeforeFirst) {
+        rs
+      } else {
+        // The exact casing was already checked. Checking upper and lower casing in case
+        // the JDBC driver is case-sensitive, but objects ub db metadata are automatically upper- or lower- cased (HSQLDB).
+        val rsUpper = dbMetadata.getColumns(null, null, fullTableName.toUpperCase, null)
+        if (rsUpper.isBeforeFirst)
+          rsUpper
         else
           dbMetadata.getColumns(null, null, fullTableName.toLowerCase, null)
       }
-    } else {
-      // table only
-      dbMetadata.getColumns(null, null, fullTableName, null)
     }
   }
 
@@ -185,10 +189,19 @@ object JdbcSparkUtils {
 
     connection.setAutoCommit(false)
 
+    /** If not filtered out, some JDBC drivers will try to receive all data before closing the result set.
+      * ToDo Fix this properly using SQL generators by adding a generator for schema query. */
+    val q = if (nativeQuery.toLowerCase.contains(" where ")) {
+      nativeQuery + " AND 0=1"
+    } else {
+      nativeQuery + " WHERE 0=1"
+    }
+
     log.info(s"Successfully connected to JDBC URL: $url")
+    log.info(s"Getting metadata for: $q")
 
     try {
-      withMetadataResultSet(connection, nativeQuery) { rs =>
+      withMetadataResultSet(connection, q) { rs =>
         action(connection, rs.getMetaData)
       }
     } finally {
