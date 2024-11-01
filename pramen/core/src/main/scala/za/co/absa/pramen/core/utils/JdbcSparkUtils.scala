@@ -202,9 +202,7 @@ object JdbcSparkUtils {
 
     try {
       withMetadataResultSet(connection, q) { rs =>
-        val metadata = rs.getMetaData
-        rs.close()
-        action(connection, metadata)
+        action(connection, rs.getMetaData)
       }
     } finally {
       connection.close()
