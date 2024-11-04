@@ -37,6 +37,7 @@ class MetastorePersistenceDelta(query: Query,
                                 infoDateFormat: String,
                                 batchIdColumn: String,
                                 batchId: Long,
+                                partitionByInfoDate: Boolean,
                                 recordsPerPartition: Option[Long],
                                 saveModeOpt: Option[SaveMode],
                                 readOptions: Map[String, String],
@@ -64,19 +65,17 @@ class MetastorePersistenceDelta(query: Query,
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
     val infoDateStr = dateFormatter.format(infoDate)
 
-    val dfIn = df.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
-
     val whereCondition = s"$infoDateColumn='$infoDateStr'"
 
-    val dfRepartitioned = if (recordsPerPartition.nonEmpty) {
+    val dfRepartitioned = if (partitionByInfoDate && recordsPerPartition.nonEmpty) {
       val recordCount = numberOfRecordsEstimate match {
         case Some(count) => count
-        case None => dfIn.count()
+        case None => df.count()
       }
 
-      applyRepartitioning(dfIn, recordCount)
+      applyRepartitioning(df, recordCount)
     } else {
-      dfIn
+      df
     }
 
     val saveMode = saveModeOpt.getOrElse(SaveMode.Overwrite)
@@ -87,19 +86,36 @@ class MetastorePersistenceDelta(query: Query,
     }
 
     if (log.isDebugEnabled) {
-      log.debug(s"Schema: ${dfIn.schema.treeString}")
+      log.debug(s"Schema: ${df.schema.treeString}")
       log.debug(s"Info date column: $infoDateColumn")
       log.debug(s"Info date: $infoDateStr")
     }
 
-    val writer = dfRepartitioned
-      .write
-      .format("delta")
-      .mode(saveMode)
-      .partitionBy(infoDateColumn)
-      .option("mergeSchema", "true")
-      .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
-      .options(writeOptions)
+    val writer = if (partitionByInfoDate) {
+      val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
+
+      dfIn
+        .write
+        .format("delta")
+        .mode(saveMode)
+        .partitionBy(infoDateColumn)
+        .option("mergeSchema", "true")
+        .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
+        .options(writeOptions)
+    } else {
+      val dfIn = dfRepartitioned.drop(infoDateColumn)
+
+      dfIn.select(
+          lit(infoDateStr).cast(DateType).as(infoDateColumn) +: dfIn.columns.map(col): _*
+        )
+        .withColumn(infoDateColumn, col(infoDateColumn)) // Move the column to the front for index purposes
+        .write
+        .format("delta")
+        .mode(saveMode)
+        .option("mergeSchema", "true")
+        .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
+        .options(writeOptions)
+    }
 
     query match {
       case Query.Path(path)   =>
@@ -142,7 +158,7 @@ class MetastorePersistenceDelta(query: Query,
     val df = loadTable(Option(infoDate), Option(infoDate))
 
     val sizeOpt = query match {
-      case Query.Path(path)   =>
+      case Query.Path(path) if partitionByInfoDate  =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
         val size = Try {
           // When 0 records is saved to a Delta directory, the directory is not created.
