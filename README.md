@@ -341,7 +341,8 @@ pramen.metastore {
       # (Experimental) Save mode to use when writing to partitions.
       # Supported: overwrite (default), append
       #save.mode = append
-      
+
+      information.date.partition.by = true
       information.date.column = "INFORMATION_DATE"
       information.date.format = "yyyy-MM-dd"
 
@@ -373,6 +374,7 @@ Metastore table options:
 | `table`                            | Delta Lake table name (if Delta Lake tables are the underlying storage).                                                                                                 |
 | `cache.ploicy`                     | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.---- |
 | `records.per.partition`            | Number of records per partition (in order to avoid small files problem).                                                                                                 |
+| `information.date.partition.by`    | If `true` (default) the table will be partitioned by the information date. If `false`, the table won't be partitioned (supported for `delta` format only).               |
 | `information.date.column`          | Name of the column that contains the information date. *                                                                                                                 |
 | `information.date.format`          | Format of the information date used for partitioning (in Java format notation). *                                                                                        |
 | `information.date.start`           | The earliest date the table contains data for. *                                                                                                                         |

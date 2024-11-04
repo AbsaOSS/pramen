@@ -53,7 +53,7 @@ object MetastorePersistence {
         )
       case DataFormat.Delta(query, recordsPerPartition)  =>
         new MetastorePersistenceDelta(
-          query, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          query, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, metaTable.partitionByInfoDate, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Raw(path)                          =>
         new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, saveModeOpt)
