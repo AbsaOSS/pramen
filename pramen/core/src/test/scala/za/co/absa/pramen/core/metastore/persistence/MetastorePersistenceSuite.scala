@@ -484,8 +484,10 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
         }
       }
       "load non-partitioned table periods" in {
-        withTempDirectory("mt_persist") { tempDir =>
-          testLoadTablePeriods(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+        if (spark.version.split('.').head.toInt >= 3) {
+          withTempDirectory("mt_persist") { tempDir =>
+            testLoadTablePeriods(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+          }
         }
       }
       "load empty table if wrong period partitioned" in {
@@ -494,8 +496,10 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
         }
       }
       "load empty table if wrong period non partitioned" in {
-        withTempDirectory("mt_persist") { tempDir =>
-          testLoadEmptyTable(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+        if (spark.version.split('.').head.toInt >= 3) {
+          withTempDirectory("mt_persist") { tempDir =>
+            testLoadEmptyTable(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+          }
         }
       }
       "throw an exception is the folder does not exist" in {
@@ -513,8 +517,10 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "supports fixing the existing info date column not partitioned" in {
-        withTempDirectory("mt_persist") { tempDir =>
-          testInfoDateExists(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+        if (spark.version.split('.').head.toInt >= 3) {
+          withTempDirectory("mt_persist") { tempDir =>
+            testInfoDateExists(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+          }
         }
       }
 
@@ -525,8 +531,10 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "support partition overwrites not partitioned" in {
-        withTempDirectory("mt_persist") { tempDir =>
-          testOverwritePartition(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+        if (spark.version.split('.').head.toInt >= 3) {
+          withTempDirectory("mt_persist") { tempDir =>
+            testOverwritePartition(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+          }
         }
       }
 
@@ -537,8 +545,10 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "support partition appends not partitioned" in {
-        withTempDirectory("mt_persist") { tempDir =>
-          testAppendPartition(getDeltaMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append), partitionByInfoDate = false))
+        if (spark.version.split('.').head.toInt >= 3) {
+          withTempDirectory("mt_persist") { tempDir =>
+            testAppendPartition(getDeltaMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append), partitionByInfoDate = false))
+          }
         }
       }
 
@@ -573,8 +583,10 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "supports schema merges not partitioned" in {
-        withTempDirectory("mt_persist") { tempDir =>
-          testSchemaMerge(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+        if (spark.version.split('.').head.toInt >= 3) {
+          withTempDirectory("mt_persist") { tempDir =>
+            testSchemaMerge(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+          }
         }
       }
 
@@ -599,8 +611,10 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "get stats after a save not partitioned" in {
-        withTempDirectory("mt_persist") { tempDir =>
-          testStatsEmptyForNonPartitionedTables(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+        if (spark.version.split('.').head.toInt >= 3) {
+          withTempDirectory("mt_persist") { tempDir =>
+            testStatsEmptyForNonPartitionedTables(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+          }
         }
       }
 
