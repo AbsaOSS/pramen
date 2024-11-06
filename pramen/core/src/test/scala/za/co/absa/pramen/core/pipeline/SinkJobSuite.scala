@@ -20,6 +20,7 @@ import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.jobdef.{SinkTable, TransformExpression}
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.core.OperationDefFactory
@@ -261,7 +262,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1->mysink")
 
-    (new SinkJob(operation, metastore, bk, Nil, outputTable, sink, sinkTable), bk)
+    (new SinkJob(operation, metastore, bk, Nil, outputTable, "sink_name", sink, sinkTable), bk)
   }
 
 }

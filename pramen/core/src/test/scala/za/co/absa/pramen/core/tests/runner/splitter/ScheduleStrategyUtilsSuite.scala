@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.runner.splitter
 
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
@@ -25,7 +26,6 @@ import za.co.absa.pramen.core.model.DataChunk
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.runner.splitter.RunMode
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
-import za.co.absa.pramen.core.schedule.Schedule
 
 import java.time.{DayOfWeek, LocalDate}
 

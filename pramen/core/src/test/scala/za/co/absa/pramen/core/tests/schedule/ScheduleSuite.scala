@@ -18,7 +18,8 @@ package za.co.absa.pramen.core.tests.schedule
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.schedule.Schedule
+import za.co.absa.pramen.api.jobdef.Schedule
+import za.co.absa.pramen.core.schedule.ScheduleParser
 
 import java.time.{DayOfWeek, LocalDate}
 
@@ -117,14 +118,14 @@ class ScheduleSuite extends AnyWordSpec {
   "fromConfig()" should {
     "work for daily schedules" in {
       val conf = getConfigString("daily")
-      val schedule = Schedule.fromConfig(conf)
+      val schedule = ScheduleParser.fromConfig(conf)
 
       assert(schedule == Schedule.EveryDay())
     }
 
     "work for weekly schedules" in {
       val conf = getConfigString("weekly", "6, 7")
-      val schedule = Schedule.fromConfig(conf)
+      val schedule = ScheduleParser.fromConfig(conf)
 
       assert(schedule == Schedule.Weekly(Seq(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)))
     }
@@ -132,21 +133,21 @@ class ScheduleSuite extends AnyWordSpec {
     "work for monthly schedules" when {
       "days of month are numeric" in {
         val conf = getConfigString("monthly", "2, -1")
-        val schedule = Schedule.fromConfig(conf)
+        val schedule = ScheduleParser.fromConfig(conf)
 
         assert(schedule == Schedule.Monthly(Seq(2, -1)))
       }
 
       "days of month contains 'last'" in {
         val conf = getConfigString("monthly", """5, "last"""")
-        val schedule = Schedule.fromConfig(conf)
+        val schedule = ScheduleParser.fromConfig(conf)
 
         assert(schedule == Schedule.Monthly(Seq(5, -1)))
       }
 
       "days of month contains 'L'" in {
         val conf = getConfigString("monthly", "L")
-        val schedule = Schedule.fromConfig(conf)
+        val schedule = ScheduleParser.fromConfig(conf)
 
         assert(schedule == Schedule.Monthly(Seq(-1)))
       }
@@ -155,7 +156,7 @@ class ScheduleSuite extends AnyWordSpec {
         val conf = getConfigString("monthly", "")
 
         assertThrows[IllegalArgumentException] {
-          Schedule.fromConfig(conf)
+          ScheduleParser.fromConfig(conf)
         }
       }
 
@@ -163,7 +164,7 @@ class ScheduleSuite extends AnyWordSpec {
         val conf = getConfigString("monthly", "first")
 
         assertThrows[IllegalArgumentException] {
-          Schedule.fromConfig(conf)
+          ScheduleParser.fromConfig(conf)
         }
       }
 
@@ -171,7 +172,7 @@ class ScheduleSuite extends AnyWordSpec {
         val conf = getConfigString("monthly", "32")
 
         assertThrows[IllegalArgumentException] {
-          Schedule.fromConfig(conf)
+          ScheduleParser.fromConfig(conf)
         }
       }
     }

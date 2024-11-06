@@ -19,7 +19,8 @@ package za.co.absa.pramen.core.schedule
 import com.typesafe.config.ConfigException.WrongType
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.schedule.Schedule._
+import za.co.absa.pramen.api.jobdef.Schedule
+import za.co.absa.pramen.core.schedule.ScheduleParser.{SCHEDULE_DAYS_OF_MONTH_KEY, SCHEDULE_DAYS_OF_WEEK_KEY, SCHEDULE_TYPE_KEY}
 
 import java.time.{DayOfWeek, LocalDate}
 
@@ -29,7 +30,7 @@ class ScheduleSuite extends AnyWordSpec {
     "Deserialize incremental jobs" when {
       "a normal incremental job is provided" in {
         val config = ConfigFactory.parseString(s"$SCHEDULE_TYPE_KEY = incremental")
-        val schedule = fromConfig(config)
+        val schedule = ScheduleParser.fromConfig(config)
 
         assert(schedule == Schedule.Incremental)
       }
@@ -38,7 +39,7 @@ class ScheduleSuite extends AnyWordSpec {
     "Deserialize daily jobs" when {
       "a normal daily job is provided" in {
         val config = ConfigFactory.parseString(s"$SCHEDULE_TYPE_KEY = daily")
-        val schedule = fromConfig(config)
+        val schedule = ScheduleParser.fromConfig(config)
 
         assert(schedule == Schedule.EveryDay())
       }
@@ -49,7 +50,7 @@ class ScheduleSuite extends AnyWordSpec {
         val config = ConfigFactory.parseString(
           s"""$SCHEDULE_TYPE_KEY = weekly
              |$SCHEDULE_DAYS_OF_WEEK_KEY = [ 7 ]""".stripMargin)
-        val schedule = fromConfig(config)
+        val schedule = ScheduleParser.fromConfig(config)
 
         assert(schedule == Schedule.Weekly(DayOfWeek.SUNDAY :: Nil))
       }
@@ -57,7 +58,7 @@ class ScheduleSuite extends AnyWordSpec {
         val config = ConfigFactory.parseString(
           s"""$SCHEDULE_TYPE_KEY = weekly
              |$SCHEDULE_DAYS_OF_WEEK_KEY = [ 1, 7 ]""".stripMargin)
-        val schedule = fromConfig(config)
+        val schedule = ScheduleParser.fromConfig(config)
 
         assert(schedule == Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.SUNDAY :: Nil))
       }
@@ -67,7 +68,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = weekly
              |$SCHEDULE_DAYS_OF_WEEK_KEY = [ 1, 7, 8 ]""".stripMargin)
         intercept[java.time.DateTimeException] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
       }
 
@@ -76,7 +77,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = weekly
              |$SCHEDULE_DAYS_OF_WEEK_KEY = [ 0 ]""".stripMargin)
         intercept[java.time.DateTimeException] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
       }
 
@@ -85,7 +86,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = weekly
              |$SCHEDULE_DAYS_OF_WEEK_KEY = [ ]""".stripMargin)
         val ex = intercept[IllegalArgumentException] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
 
         assert(ex.getMessage.contains("No days of week are provided"))
@@ -96,7 +97,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = weekly
              |$SCHEDULE_DAYS_OF_WEEK_KEY = aaa""".stripMargin)
         val ex = intercept[WrongType] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
 
         assert(ex.getMessage.contains("has type STRING rather than LIST"))
@@ -108,17 +109,17 @@ class ScheduleSuite extends AnyWordSpec {
         val config = ConfigFactory.parseString(
           s"""$SCHEDULE_TYPE_KEY = monthly
              |$SCHEDULE_DAYS_OF_MONTH_KEY = [ 1 ]""".stripMargin)
-        val schedule = fromConfig(config)
+        val schedule = ScheduleParser.fromConfig(config)
 
-        assert(schedule == Monthly(1 :: Nil))
+        assert(schedule == Schedule.Monthly(1 :: Nil))
       }
       "a multiple days weekly job is provided" in {
         val config = ConfigFactory.parseString(
           s"""$SCHEDULE_TYPE_KEY = monthly
              |$SCHEDULE_DAYS_OF_MONTH_KEY = [ 1, 2, 31 ]""".stripMargin)
-        val schedule = fromConfig(config)
+        val schedule = ScheduleParser.fromConfig(config)
 
-        assert(schedule == Monthly(1 :: 2 :: 31 :: Nil))
+        assert(schedule == Schedule.Monthly(1 :: 2 :: 31 :: Nil))
       }
 
       "throw an exception when a wrong month day is provided 1" in {
@@ -126,7 +127,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = monthly
              |$SCHEDULE_DAYS_OF_MONTH_KEY = [ 1, 7, 32 ]""".stripMargin)
         val ex = intercept[IllegalArgumentException] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
 
         assert(ex.getMessage.contains("Invalid day of month"))
@@ -137,7 +138,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = monthly
              |$SCHEDULE_DAYS_OF_MONTH_KEY = [ 0 ]""".stripMargin)
         val ex = intercept[IllegalArgumentException] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
 
         assert(ex.getMessage.contains("Invalid day of month"))
@@ -148,7 +149,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = monthly
              |$SCHEDULE_DAYS_OF_MONTH_KEY = [ ]""".stripMargin)
         val ex = intercept[IllegalArgumentException] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
 
         assert(ex.getMessage.contains("No days of month are provided"))
@@ -159,7 +160,7 @@ class ScheduleSuite extends AnyWordSpec {
           s"""$SCHEDULE_TYPE_KEY = monthly
              |$SCHEDULE_DAYS_OF_MONTH_KEY = aaa""".stripMargin)
         val ex = intercept[WrongType] {
-          fromConfig(config)
+          ScheduleParser.fromConfig(config)
         }
 
         assert(ex.getMessage.contains("has type STRING rather than LIST"))
@@ -171,7 +172,7 @@ class ScheduleSuite extends AnyWordSpec {
       val config = ConfigFactory.parseString(s"$SCHEDULE_TYPE_KEY = dummy")
 
       val ex = intercept[IllegalArgumentException] {
-        fromConfig(config)
+        ScheduleParser.fromConfig(config)
       }
 
       assert(ex.getMessage == "Unknown schedule type: dummy")
@@ -188,7 +189,7 @@ class ScheduleSuite extends AnyWordSpec {
     val sunday = LocalDate.of(2020, 8, 16)
 
     "Always return true for everyday jobs" in {
-      val schedule = EveryDay()
+      val schedule = Schedule.EveryDay()
 
       assert(schedule.isEnabled(monday))
       assert(schedule.isEnabled(tuesday))
@@ -200,7 +201,7 @@ class ScheduleSuite extends AnyWordSpec {
     }
 
     "Return true for specific week days for weekly jobs" in {
-      val schedule = Weekly(DayOfWeek.MONDAY :: DayOfWeek.SUNDAY :: Nil)
+      val schedule = Schedule.Weekly(DayOfWeek.MONDAY :: DayOfWeek.SUNDAY :: Nil)
 
       assert(schedule.isEnabled(monday))
       assert(!schedule.isEnabled(tuesday))
@@ -212,7 +213,7 @@ class ScheduleSuite extends AnyWordSpec {
     }
 
     "Return true for specific days of month for monthly jobs" in {
-      val schedule = Monthly(1 :: 10 :: 15 :: Nil)
+      val schedule = Schedule.Monthly(1 :: 10 :: 15 :: Nil)
 
       assert(schedule.isEnabled(LocalDate.of(2020, 8, 1)))
       assert(schedule.isEnabled(LocalDate.of(2020, 9, 1)))

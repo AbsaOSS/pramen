@@ -18,11 +18,11 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.pipeline.OperationType.{Ingestion, Transformation}
-import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.sink.{SinkManager, SparkSink}
 import za.co.absa.pramen.core.source.{JdbcSource, SourceManager}
 import za.co.absa.pramen.core.utils.ResourceUtils

@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.mocks.job
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -34,6 +34,7 @@ class JobBaseDummy(operationDef: OperationDef,
                    bookkeeper: Bookkeeper,
                    outputTableDef: MetaTable)
   extends JobBase(operationDef, metastore, bookkeeper, jobNotificationTargets, outputTableDef) {
+  override def jobType: JobType = JobType.Transformation("dummy_class")
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     JobPreRunResult(null, None, dependencyWarnings, Seq.empty[String])

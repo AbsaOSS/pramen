@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Reason
+import za.co.absa.pramen.api.jobdef.{TransferTable, TransformExpression}
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -270,9 +271,9 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
 
     val sink = new SinkSpy()
 
-    val outputTable = transferTable.getMetaTable
+    val outputTable = TransferTableParser.getMetaTable(transferTable)
 
-    (new TransferJob(operation, metastore, bk, Nil, "testSource", source, transferTable, outputTable, sink, " ", tempDirectory, disableCountQuery), bk)
+    (new TransferJob(operation, metastore, bk, Nil, "testSource", source, transferTable, outputTable, "sink_name", sink, " ", tempDirectory, disableCountQuery), bk)
   }
 
 }

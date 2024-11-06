@@ -18,12 +18,13 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.jobdef.{Schedule, TransformExpression}
 import za.co.absa.pramen.api.status.MetastoreDependency
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_INCREMENTAL_INFO_DATE_EXPR
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.MetastoreDependencyFactory
-import za.co.absa.pramen.core.schedule.Schedule
+import za.co.absa.pramen.core.schedule.ScheduleParser
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.collection.JavaConverters._
@@ -89,7 +90,7 @@ object OperationDef {
     }
 
     val operationType = OperationType.fromConfig(conf, appConfig, infoDateConfig, parent)
-    val schedule = Schedule.fromConfig(conf)
+    val schedule = ScheduleParser.fromConfig(conf)
     val expectedDelayDays = ConfigUtils.getOptionInt(conf, EXPECTED_DELAY_DAYS_KEY).getOrElse(defaultDelayDays)
     val consumeThreads = getThreadsToConsume(name, conf, appConfig)
     val allowParallel = ConfigUtils.getOptionBoolean(conf, ALLOW_PARALLEL_KEY).getOrElse(true)
@@ -100,7 +101,7 @@ object OperationDef {
     val processingTimestampColumn = ConfigUtils.getOptionString(conf, PROCESSING_TIMESTAMP_COLUMN_KEY)
     val warnMaximumExecutionTimeSeconds = ConfigUtils.getOptionInt(conf, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY)
     val killMaximumExecutionTimeSeconds = ConfigUtils.getOptionInt(conf, KILL_MAXIMUM_EXECUTION_TIME_SECONDS_KEY)
-    val schemaTransformations = TransformExpression.fromConfig(conf, SCHEMA_TRANSFORMATIONS_KEY, parent)
+    val schemaTransformations = TransformExpressionParser.fromConfig(conf, SCHEMA_TRANSFORMATIONS_KEY, parent)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
     val notificationTargets = ConfigUtils.getOptListStrings(conf, NOTIFICATION_TARGETS_KEY)
     val sparkConfigOptions = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX) ++ ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX_V2)

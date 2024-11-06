@@ -20,10 +20,11 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode, SparkSession}
+import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlGeneratorBase
-import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskDef, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager}

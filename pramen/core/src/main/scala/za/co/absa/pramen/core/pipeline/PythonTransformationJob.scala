@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
-import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, Reason}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -66,6 +66,8 @@ class PythonTransformationJob(operationDef: OperationDef,
                               databricksClientOpt: Option[DatabricksClient])
                              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper,notificationTargets, outputTable) {
+
+  override val jobType: JobType = JobType.PythonTransformation(pythonClass)
 
   private val minimumRecords: Int = operationDef.extraOptions.getOrElse(MINIMUM_RECORDS_OPTION, "0").toInt
 

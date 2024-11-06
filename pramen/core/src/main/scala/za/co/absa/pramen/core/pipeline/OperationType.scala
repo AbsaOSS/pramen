@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.jobdef.{SinkTable, SourceTable, TransferTable}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -61,7 +62,7 @@ object OperationType {
         ConfigUtils.validatePathsExistence(conf, parent, Seq(SOURCE_KEY, TABLES_KEY))
         val source = conf.getString(SOURCE_KEY)
 
-        val tables = SourceTable.fromConfig(conf, TABLES_KEY)
+        val tables = SourceTableParser.fromConfig(conf, TABLES_KEY)
         Ingestion(source, tables)
       case "transformation" | "transformer" | "transform" =>
         ConfigUtils.validatePathsExistence(conf, parent, Seq(CLASS_KEY, OUTPUT_TABLE_KEY))
@@ -79,14 +80,14 @@ object OperationType {
         ConfigUtils.validatePathsExistence(conf, parent, Seq(SINK_KEY, TABLES_KEY))
         val sink = conf.getString(SINK_KEY)
 
-        val tables = SinkTable.fromConfig(conf, TABLES_KEY)
+        val tables = SinkTableParser.fromConfig(conf, TABLES_KEY)
         Sink(sink, tables)
       case "transfer" | "source2sink" =>
         ConfigUtils.validatePathsExistence(conf, parent, Seq(SOURCE_KEY, SINK_KEY, TABLES_KEY))
         val source = conf.getString(SOURCE_KEY)
         val sink = conf.getString(SINK_KEY)
 
-        val tables = TransferTable.fromConfig(conf, infoDateConfig, TABLES_KEY, sink)
+        val tables = TransferTableParser.fromConfig(conf, infoDateConfig, TABLES_KEY, sink)
 
         Transfer(source, sink, tables)
       case _ => throw new IllegalArgumentException(s"Unknown operation type: ${conf.getString(TYPE_KEY)} at $parent")

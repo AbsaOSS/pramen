@@ -295,9 +295,9 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
     val paragraphBuilder = ParagraphBuilder()
       .withText("Job ", Style.Exception)
-      .withText(taskResult.jobName, Style.Error)
+      .withText(taskResult.taskDef.name, Style.Error)
       .withText(" outputting to ", Style.Exception)
-      .withText(taskResult.outputTable.name, Style.Error)
+      .withText(taskResult.taskDef.outputTable.name, Style.Error)
 
     taskResult.runInfo.foreach(info =>
       paragraphBuilder
@@ -404,8 +404,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     tasks.foreach(task => {
       val row = new ListBuffer[TextElement]
 
-      row.append(TextElement(task.jobName, getTransientTextStyle(task)))
-      row.append(TextElement(task.outputTable.name, getTransientTextStyle(task)))
+      row.append(TextElement(task.taskDef.name, getTransientTextStyle(task)))
+      row.append(TextElement(task.taskDef.outputTable.name, getTransientTextStyle(task)))
 
       if (haveHiveColumn) {
         val hiveTable = task.runStatus match {
@@ -490,7 +490,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     val tableHeaders = new ListBuffer[TableHeader]
 
-    val taskName = s"Files sourced - ${task.outputTable.name} - ${task.runInfo.map(_.infoDate.toString).getOrElse(" ")}"
+    val taskName = s"Files sourced - ${task.taskDef.outputTable.name} - ${task.runInfo.map(_.infoDate.toString).getOrElse(" ")}"
 
     tableHeaders.append(TableHeader(TextElement(taskName), Align.Left))
     tableBuilder.withHeaders(tableHeaders.toSeq)

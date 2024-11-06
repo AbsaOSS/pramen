@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 
-class SinkTableSuite extends AnyWordSpec {
+class SinkTableParserSuite extends AnyWordSpec {
   "fromConfig" should {
     "create a list of source tables" in {
       val conf = ConfigFactory.parseString(
@@ -52,7 +52,7 @@ class SinkTableSuite extends AnyWordSpec {
           |]
           |""".stripMargin)
 
-      val sinkTables = SinkTable.fromConfig(conf, "sink.tables")
+      val sinkTables = SinkTableParser.fromConfig(conf, "sink.tables")
 
       assert(sinkTables.size == 4)
 
@@ -116,7 +116,7 @@ class SinkTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        SinkTable.fromConfig(conf, "sink.tables")
+        SinkTableParser.fromConfig(conf, "sink.tables")
       }
 
       assert(ex.getMessage.contains("Duplicate sink table definitions for the sink job: table11"))
@@ -136,7 +136,7 @@ class SinkTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        SinkTable.fromConfig(conf, "sink.tables")
+        SinkTableParser.fromConfig(conf, "sink.tables")
       }
 
       assert(ex.getMessage.contains("'col' not set for the transformation"))
@@ -156,7 +156,7 @@ class SinkTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        SinkTable.fromConfig(conf, "sink.tables")
+        SinkTableParser.fromConfig(conf, "sink.tables")
       }
 
       assert(ex.getMessage.contains("Either 'expr' or 'comment' should be defined for for the transformation of '2.2' in sink.tables[0].transformations[0]"))

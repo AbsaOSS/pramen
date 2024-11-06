@@ -14,25 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.runner.splitter
+package za.co.absa.pramen.api.status
 
+import com.typesafe.config.Config
+import za.co.absa.pramen.api.MetaTableDef
 import za.co.absa.pramen.api.jobdef.Schedule
-import za.co.absa.pramen.api.status.MetastoreDependency
-import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.pipeline.TaskPreDef
 
-import java.time.LocalDate
-
-trait ScheduleStrategy {
-
-  def getDaysToRun(
-                    outputTable: String,
-                    dependencies: Seq[MetastoreDependency],
-                    bookkeeper: Bookkeeper,
-                    infoDateExpression: String,
+case class TaskDef(
+                    name: String,
+                    jobType: JobType,
+                    outputTable: MetaTableDef,
                     schedule: Schedule,
-                    params: ScheduleParams,
-                    initialSourcingDateExpr: String,
-                    minimumDate: LocalDate
-                  ): Seq[TaskPreDef]
-}
+                    operationConf: Config
+                  )

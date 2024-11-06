@@ -18,7 +18,8 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.jobdef.SinkTable
+import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -37,11 +38,14 @@ class SinkJob(operationDef: OperationDef,
               bookkeeper: Bookkeeper,
               notificationTargets: Seq[JobNotificationTarget],
               outputTable: MetaTable,
+              sinkName: String,
               sink: Sink,
               sinkTable: SinkTable)
              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
+
+  override val jobType: JobType = JobType.Sink(sinkName, sinkTable, sink.config)
 
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 

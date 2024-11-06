@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.jobdef.{Schedule, SinkTable, SourceTable, TransferTable}
 import za.co.absa.pramen.api.{DataFormat, Transformer}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -30,7 +31,6 @@ import za.co.absa.pramen.core.pipeline.OperationSplitter.{DISABLE_COUNT_QUERY, g
 import za.co.absa.pramen.core.pipeline.OperationType._
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
-import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
 import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
@@ -100,12 +100,12 @@ class OperationSplitter(conf: Config,
       }
 
       val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
-      val outputTable = transferTable.getMetaTable
+      val outputTable = TransferTableParser.getMetaTable(transferTable)
 
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
 
-      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, transferTable, outputTable, sink, specialCharacters, temporaryDirectory, disableCountQuery)
+      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery)
     })
   }
 
@@ -119,7 +119,7 @@ class OperationSplitter(conf: Config,
     val notificationTargets = operationDef.notificationTargets
       .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
-    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, transformer))
+    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, clazz, transformer))
   }
 
   def createPythonTransformation(operationDef: OperationDef,
@@ -163,7 +163,7 @@ class OperationSplitter(conf: Config,
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sinkTable.conf))
 
-      new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, outputTable, sink, sinkTable)
+      new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, outputTable, sinkName, sink, sinkTable)
     })
   }
 }

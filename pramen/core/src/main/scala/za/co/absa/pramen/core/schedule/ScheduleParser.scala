@@ -17,57 +17,23 @@
 package za.co.absa.pramen.core.schedule
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.jobdef.Schedule
 
 import java.time.{DayOfWeek, LocalDate}
 import scala.collection.JavaConverters._
 import scala.util.Try
 
-sealed trait Schedule {
-  def isEnabled(day: LocalDate): Boolean
-}
-
-object Schedule {
+object ScheduleParser {
   val SCHEDULE_TYPE_KEY = "schedule.type"
   val SCHEDULE_DAYS_OF_WEEK_KEY = "schedule.days.of.week"
   val SCHEDULE_DAYS_OF_MONTH_KEY = "schedule.days.of.month"
 
-  case object Incremental extends Schedule {
-    def isEnabled(day: LocalDate): Boolean = true
-
-    override def toString: String = "incremental"
-  }
-
-  case class EveryDay() extends Schedule {
-    def isEnabled(day: LocalDate): Boolean = true
-
-    override def toString: String = "daily"
-  }
-
-  case class Weekly(days: Seq[DayOfWeek]) extends Schedule {
-    def isEnabled(day: LocalDate): Boolean = days.contains(day.getDayOfWeek)
-
-    override def toString: String = s"weekly (${days.mkString(", ")})"
-  }
-
-  case class Monthly(days: Seq[Int]) extends Schedule {
-    val hasPositiveDays: Boolean = days.exists(_ > 0)
-    val hasNegativeDays: Boolean = days.exists(_ < 0)
-
-    def isEnabled(day: LocalDate): Boolean = {
-      val isInPositives = hasPositiveDays && days.contains(day.getDayOfMonth)
-      val isInNegatives = hasNegativeDays && days.contains(-day.lengthOfMonth() + day.getDayOfMonth - 1)
-      isInPositives || isInNegatives
-    }
-
-    override def toString: String = s"monthly (${days.mkString(", ")})"
-  }
-
   def fromConfig(conf: Config): Schedule = {
     conf.getString(SCHEDULE_TYPE_KEY) match {
-      case "incremental"   => Incremental
-      case "daily"         => EveryDay()
-      case "weekly"        => Weekly(getDaysOfWeek(conf))
-      case "monthly"       => Monthly(getDaysOfMonth(conf))
+      case "incremental"   => Schedule.Incremental
+      case "daily"         => Schedule.EveryDay()
+      case "weekly"        => Schedule.Weekly(getDaysOfWeek(conf))
+      case "monthly"       => Schedule.Monthly(getDaysOfMonth(conf))
       case s               => throw new IllegalArgumentException(s"Unknown schedule type: $s")
     }
   }

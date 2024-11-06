@@ -76,8 +76,7 @@ class ConcurrentJobRunnerSpy(includeFails: Boolean = false,
       }
 
       val taskResult = TaskResult(
-        job.name,
-        MetaTable.getMetaTableDef(job.outputTable),
+        job.taskDef,
         status,
         Some(RunInfo(infoDate, started, finished)),
         "app_123",

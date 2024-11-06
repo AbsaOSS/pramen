@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.jobdef.{SourceTable, TransformExpression}
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{Query, Reason}
 import za.co.absa.pramen.core.OperationDefFactory

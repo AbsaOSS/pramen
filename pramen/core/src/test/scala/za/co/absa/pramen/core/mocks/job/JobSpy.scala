@@ -19,9 +19,9 @@ package za.co.absa.pramen.core.mocks.job
 import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
-import za.co.absa.pramen.api.status.TaskRunReason
+import za.co.absa.pramen.api.status.{TaskDef, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, Reason}
-import za.co.absa.pramen.core.OperationDefFactory
+import za.co.absa.pramen.core.{OperationDefFactory, TaskDefFactory}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.mocks.MetaTableFactory.getDummyMetaTable
@@ -30,7 +30,7 @@ import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrateg
 
 import java.time.{Instant, LocalDate}
 
-class JobSpy(jobName: String = "DummyJob",
+class JobSpy(jobName: String = "Dummy Job",
              outputTableIn: String = "table_out",
              outputTableFormat: DataFormat = DataFormat.Parquet("/tmp/dummy", None),
              hiveTable: Option[String] = None,
@@ -52,6 +52,8 @@ class JobSpy(jobName: String = "DummyJob",
   var saveCount = 0
   var saveDf: DataFrame = _
   var createHiveTableCount = 0
+
+  override def taskDef: TaskDef = TaskDefFactory.getDummyTaskNotification(outputTable = MetaTable.getMetaTableDef(outputTable))
 
   override val name: String = jobName
 
