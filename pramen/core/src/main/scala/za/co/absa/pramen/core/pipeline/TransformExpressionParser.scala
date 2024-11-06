@@ -17,17 +17,12 @@
 package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.collection.JavaConverters._
 
-case class TransformExpression(
-                              column: String,
-                              expression: Option[String],
-                              comment: Option[String]
-                              )
-
-object TransformExpression {
+object TransformExpressionParser {
   val COLUMN_KEY = "col"
   val EXPRESSION_KEY = "expr"
   val COMMENT_KEY = "comment"

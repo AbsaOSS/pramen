@@ -18,13 +18,13 @@ package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference}
+import za.co.absa.pramen.core.TaskDefFactory
 import za.co.absa.pramen.core.metastore.model.MetaTable
 
 import java.time.{Instant, LocalDate}
 
 object TaskResultFactory {
-  def getDummyTaskResult(jobName: String = "DummyJob",
-                         outputTable: MetaTableDef = MetaTable.getMetaTableDef(MetaTableFactory.getDummyMetaTable(name = "table_out")),
+  def getDummyTaskResult(taskDef: TaskDef = TaskDefFactory.getDummyTaskNotification(name = "DummyJob", outputTable = MetaTable.getMetaTableDef(MetaTableFactory.getDummyMetaTable(name = "table_out"))),
                          runStatus: RunStatus = RunStatus.Succeeded(Some(100), Some(200), None, Some(1000), TaskRunReason.New, Nil, Nil, Nil, Nil),
                          runInfo: Option[RunInfo] = Some(RunInfo(LocalDate.of(2022, 2, 18), Instant.ofEpochSecond(1234), Instant.ofEpochSecond(5678))),
                          applicationId: String = "app_123",
@@ -34,8 +34,7 @@ object TaskResultFactory {
                          dependencyWarnings: Seq[DependencyWarning] = Nil,
                          notificationTargetErrors: Seq[NotificationFailure] = Nil,
                          options: Map[String, String] = Map.empty): TaskResult = {
-    TaskResult(jobName,
-      outputTable,
+    TaskResult(taskDef,
       runStatus,
       runInfo,
       applicationId,

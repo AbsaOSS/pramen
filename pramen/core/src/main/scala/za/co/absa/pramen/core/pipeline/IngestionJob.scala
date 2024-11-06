@@ -19,7 +19,8 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.jobdef.SourceTable
+import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -47,6 +48,8 @@ class IngestionJob(operationDef: OperationDef,
                   (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
+
+  override val jobType: JobType = JobType.Ingestion(sourceName, sourceTable, source.config)
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
 

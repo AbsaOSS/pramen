@@ -18,7 +18,8 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.jobdef.TransferTable
+import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Sink, Source}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
@@ -35,6 +36,7 @@ class TransferJob(operationDef: OperationDef,
                   source: Source,
                   table: TransferTable,
                   bookkeepingMetaTable: MetaTable,
+                  sinkName: String,
                   sink: Sink,
                   specialCharacters: String,
                   tempDirectory: Option[String],
@@ -42,8 +44,10 @@ class TransferJob(operationDef: OperationDef,
                  (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable) {
 
-  val ingestionJob = new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, table.getSourceTable, bookkeepingMetaTable, specialCharacters, tempDirectory, disableCountQuery)
-  val sinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable, sink, table.getSinkTable)
+  override val jobType: JobType = JobType.Transfer(sourceName, source.config, sinkName, sink.config, table)
+
+  val ingestionJob = new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, TransferTableParser.getSourceTable(table), bookkeepingMetaTable, specialCharacters, tempDirectory, disableCountQuery)
+  val sinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable, sinkName, sink, TransferTableParser.getSinkTable(table))
 
   override val scheduleStrategy: ScheduleStrategy = ingestionJob.scheduleStrategy
 

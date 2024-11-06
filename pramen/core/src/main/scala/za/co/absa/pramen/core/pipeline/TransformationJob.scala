@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
-import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
@@ -32,9 +32,12 @@ class TransformationJob(operationDef: OperationDef,
                         bookkeeper: Bookkeeper,
                         notificationTargets: Seq[JobNotificationTarget],
                         outputTable: MetaTable,
+                        transformerFactoryClass: String,
                         transformer: Transformer)
                        (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
+
+  override val jobType: JobType = JobType.Transformation(transformerFactoryClass)
 
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 

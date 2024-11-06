@@ -22,10 +22,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.FieldChange._
+import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.core.NestedDataFrameFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.pipeline.TransformExpression
 import za.co.absa.pramen.core.samples.SampleCaseClass2
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.SparkUtils._

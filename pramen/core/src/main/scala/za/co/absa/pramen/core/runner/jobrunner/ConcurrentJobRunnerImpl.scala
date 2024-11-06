@@ -112,8 +112,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
 
   private[core] def sendFailure(ex: Throwable, job: Job, isTransient: Boolean): Unit = {
     completedJobsChannel.send((job,
-      TaskResult(job.name,
-        MetaTable.getMetaTableDef(job.outputTable),
+      TaskResult(job.taskDef,
         RunStatus.Failed(ex),
         None,
         applicationId,

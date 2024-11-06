@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.api.status.RunStatus.{Failed, NotRan, Skipped, Succeeded}
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{DataFormat, Reason}

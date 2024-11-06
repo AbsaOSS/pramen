@@ -52,7 +52,7 @@ class HyperdriveNotificationTarget(conf: Config,
         log.info(s"Not sending '$token' to the Hyperdrive Kafka topic: '$topic' for the unsuccessful job...")
       }
     } else {
-      log.warn(s"$WARNING Token is not configured for ${notification.outputTable.name}. Hyperdrive notification won't be sent. Please, set 'notification.$TOKEN_KEY' option for the job.")
+      log.warn(s"$WARNING Token is not configured for ${notification.taskDef.outputTable.name}. Hyperdrive notification won't be sent. Please, set 'notification.$TOKEN_KEY' option for the job.")
     }
   }
 

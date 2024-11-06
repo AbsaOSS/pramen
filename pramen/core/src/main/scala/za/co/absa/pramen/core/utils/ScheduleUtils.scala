@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.utils
 
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.schedule.Schedule
+import za.co.absa.pramen.api.jobdef.Schedule
 
 import java.time.{Instant, LocalDate, ZoneId, ZonedDateTime}
 import scala.collection.mutable.ListBuffer

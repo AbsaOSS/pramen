@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
 import za.co.absa.pramen.api.Reason
-import za.co.absa.pramen.api.status.TaskRunReason
+import za.co.absa.pramen.api.status.{TaskDef, TaskRunReason}
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
 
@@ -34,6 +34,8 @@ trait Job {
   val operation: OperationDef
 
   val scheduleStrategy: ScheduleStrategy
+
+  def taskDef: TaskDef
 
   def allowRunningTasksInParallel: Boolean
 

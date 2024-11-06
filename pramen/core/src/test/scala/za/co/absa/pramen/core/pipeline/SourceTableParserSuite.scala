@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.Query
 
-class SourceTableSuite extends AnyWordSpec {
+class SourceTableParserSuite extends AnyWordSpec {
   "fromConfig" should {
     "create a list of source tables" in {
       val conf = ConfigFactory.parseString(
@@ -54,7 +54,7 @@ class SourceTableSuite extends AnyWordSpec {
           |]
           |""".stripMargin)
 
-      val sourceTables = SourceTable.fromConfig(conf, "source.tables")
+      val sourceTables = SourceTableParser.fromConfig(conf, "source.tables")
 
       assert(sourceTables.size == 4)
 
@@ -116,7 +116,7 @@ class SourceTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        SourceTable.fromConfig(conf, "source.tables")
+        SourceTableParser.fromConfig(conf, "source.tables")
       }
 
       assert(ex.getMessage.contains("No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table' at source.tables[0]."))
@@ -143,7 +143,7 @@ class SourceTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        SourceTable.fromConfig(conf, "source.tables")
+        SourceTableParser.fromConfig(conf, "source.tables")
       }
 
       assert(ex.getMessage.contains("Duplicate source table definitions for the sourcing job: table11"))
@@ -163,7 +163,7 @@ class SourceTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        SourceTable.fromConfig(conf, "source.tables")
+        SourceTableParser.fromConfig(conf, "source.tables")
       }
 
       assert(ex.getMessage.contains("'col' not set for the transformation"))
@@ -183,7 +183,7 @@ class SourceTableSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        SourceTable.fromConfig(conf, "source.tables")
+        SourceTableParser.fromConfig(conf, "source.tables")
       }
 
       assert(ex.getMessage.contains("Either 'expr' or 'comment' should be defined for for the transformation"))

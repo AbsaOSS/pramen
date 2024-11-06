@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.status.{CustomNotification, RuntimeInfo}
 import za.co.absa.pramen.api.{DataFormat, PipelineInfo, Query}
+import za.co.absa.pramen.extras.TaskDefFactory
 import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
 import za.co.absa.pramen.extras.notification.EcsPipelineNotificationTarget.{ECS_API_SECRET_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
@@ -46,13 +47,19 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
         override protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = httpClient
       }
 
-      val task1 = TestPrototypes.taskNotification.copy(outputTable = metaTableDef)
       val dataFormat2 = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path2", None)
-      val metaTableDef2 = TestPrototypes.metaTableDef.copy(name = "table2", format = dataFormat2)
-      val task2 = TestPrototypes.taskNotification.copy(jobName = "Job 3", outputTable = metaTableDef2)
       val dataFormat3 = DataFormat.Delta(Query.Table("table2"), None)
+
+      val metaTableDef2 = TestPrototypes.metaTableDef.copy(name = "table2", format = dataFormat2)
       val metaTableDef3 = TestPrototypes.metaTableDef.copy(name = "table3", format = dataFormat3)
-      val task3 = TestPrototypes.taskNotification.copy(jobName = "Job 3", outputTable = metaTableDef3)
+
+      val taskDef1 = TaskDefFactory.getDummyTaskNotification(name = "Job 1", outputTable = metaTableDef)
+      val taskDef2 = TaskDefFactory.getDummyTaskNotification(name = "Job 2", outputTable = metaTableDef2)
+      val taskDef3 = TaskDefFactory.getDummyTaskNotification(name = "Job 3", outputTable = metaTableDef3)
+
+      val task1 = TestPrototypes.taskNotification.copy(taskDef = taskDef1)
+      val task2 = TestPrototypes.taskNotification.copy(taskDef = taskDef2)
+      val task3 = TestPrototypes.taskNotification.copy(taskDef = taskDef3)
 
       notificationTarget.sendNotification(
         PipelineInfo("Dummy", "DEV", RuntimeInfo(), Instant.now, None, None, None, Seq.empty, "pid_123", None),

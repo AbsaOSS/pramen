@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.mocks
 
 import com.typesafe.config.{Config, ConfigFactory}
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.core.pipeline.{SourceTable, TransformExpression}
+import za.co.absa.pramen.api.jobdef.{SourceTable, TransformExpression}
 
 object SourceTableFactory {
   def getDummySourceTable(metaTableName: String = "table1",

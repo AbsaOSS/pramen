@@ -25,8 +25,8 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.FieldChange
+import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.core.expr.DateExprEvaluator
-import za.co.absa.pramen.core.pipeline.TransformExpression
 
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter

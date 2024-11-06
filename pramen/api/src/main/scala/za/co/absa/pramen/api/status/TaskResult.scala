@@ -16,11 +16,10 @@
 
 package za.co.absa.pramen.api.status
 
-import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference}
+import za.co.absa.pramen.api.SchemaDifference
 
 case class TaskResult(
-                       jobName: String,
-                       outputTable: MetaTableDef,
+                       taskDef: TaskDef,
                        runStatus: RunStatus,
                        runInfo: Option[RunInfo],
                        applicationId: String,

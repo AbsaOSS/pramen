@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.jobdef.{SinkTable, SourceTable, TransferTable}
 import za.co.absa.pramen.api.{DataFormat, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
@@ -29,39 +30,7 @@ import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 import java.time.LocalDate
 import scala.collection.JavaConverters._
 
-case class TransferTable(
-                          query: Query,
-                          jobMetaTableName: String,
-                          conf: Config,
-                          rangeFromExpr: Option[String],
-                          rangeToExpr: Option[String],
-                          infoDateStart: LocalDate,
-                          trackDays: Int,
-                          trackDaysExplicitlySet: Boolean,
-                          warnMaxExecutionTimeSeconds: Option[Int],
-                          transformations: Seq[TransformExpression],
-                          filters: Seq[String],
-                          columns: Seq[String],
-                          readOptions: Map[String, String],
-                          writeOptions: Map[String, String],
-                          sparkConfig: Map[String, String],
-                          sourceOverrideConf: Option[Config],
-                          sinkOverrideConf: Option[Config]
-                        ) {
-  def getSourceTable: SourceTable = {
-    SourceTable(jobMetaTableName, query, conf, rangeFromExpr, rangeToExpr, warnMaxExecutionTimeSeconds, transformations, filters, columns, sourceOverrideConf)
-  }
-
-  def getSinkTable: SinkTable = {
-    SinkTable(jobMetaTableName, Option(jobMetaTableName), conf, rangeFromExpr, rangeToExpr, warnMaxExecutionTimeSeconds, transformations, filters, columns, writeOptions, sinkOverrideConf)
-  }
-
-  def getMetaTable: MetaTable = {
-    MetaTable(jobMetaTableName, "", DataFormat.Null(), "", "", partitionByInfoDate = false, "", HiveConfig.getNullConfig, None, None, hivePreferAddPartition = true, None, infoDateStart, trackDays, trackDaysExplicitlySet = trackDaysExplicitlySet, None, readOptions, writeOptions, sparkConfig)
-  }
-}
-
-object TransferTable {
+object TransferTableParser {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   val JOB_METASTORE_OUTPUT_TABLE_KEY = "job.metastore.table"
@@ -83,7 +52,7 @@ object TransferTable {
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
     val columns = ConfigUtils.getOptListStrings(conf, COLUMNS_KEY)
-    val transformations = TransformExpression.fromConfig(conf, TRANSFORMATIONS_KEY, parentPath)
+    val transformations = TransformExpressionParser.fromConfig(conf, TRANSFORMATIONS_KEY, parentPath)
     val filters = ConfigUtils.getOptListStrings(conf, FILTERS_KEY)
     val readOptions = ConfigUtils.getExtraOptions(conf, "read.option")
     val writeOptions = ConfigUtils.getExtraOptions(conf, "output")
@@ -147,4 +116,57 @@ object TransferTable {
         }
     }
   }
+
+  private[core] def getSourceTable(transferTable: TransferTable): SourceTable = {
+    SourceTable(transferTable.jobMetaTableName,
+      transferTable.query,
+      transferTable.conf,
+      transferTable.rangeFromExpr,
+      transferTable.rangeToExpr,
+      transferTable.warnMaxExecutionTimeSeconds,
+      transferTable.transformations,
+      transferTable.filters,
+      transferTable.columns,
+      transferTable.sourceOverrideConf
+    )
+  }
+
+  private[core] def getSinkTable(transferTable: TransferTable): SinkTable = {
+    SinkTable(transferTable.jobMetaTableName,
+      Option(transferTable.jobMetaTableName),
+      transferTable.conf,
+      transferTable.rangeFromExpr,
+      transferTable.rangeToExpr,
+      transferTable.warnMaxExecutionTimeSeconds,
+      transferTable.transformations,
+      transferTable.filters,
+      transferTable.columns,
+      transferTable.writeOptions,
+      transferTable.sinkOverrideConf
+    )
+  }
+
+  private[core] def getMetaTable(transferTable: TransferTable): MetaTable = {
+    MetaTable(transferTable.jobMetaTableName,
+      "",
+      DataFormat.Null(),
+      "",
+      "",
+      partitionByInfoDate = false,
+      "",
+      HiveConfig.getNullConfig,
+      None,
+      None,
+      hivePreferAddPartition = true,
+      None,
+      transferTable.infoDateStart,
+      transferTable.trackDays,
+      trackDaysExplicitlySet = transferTable.trackDaysExplicitlySet,
+      None,
+      transferTable.readOptions,
+      transferTable.writeOptions,
+      transferTable.sparkConfig
+    )
+  }
+
 }

@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks
 
 import com.typesafe.config.{Config, ConfigFactory}
-import za.co.absa.pramen.core.pipeline.{SinkTable, TransformExpression}
+import za.co.absa.pramen.api.jobdef.{SinkTable, TransformExpression}
 
 object SinkTableFactory {
   def getDummySinkTable(metaTableName: String = "table1",

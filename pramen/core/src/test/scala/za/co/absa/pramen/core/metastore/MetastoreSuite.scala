@@ -21,6 +21,7 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{CachePolicy, DataFormat}
 import za.co.absa.pramen.core.OperationDefFactory
@@ -32,7 +33,6 @@ import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
-import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.hive.{HiveHelperSql, HiveQueryTemplates, QueryExecutorSpark}
 

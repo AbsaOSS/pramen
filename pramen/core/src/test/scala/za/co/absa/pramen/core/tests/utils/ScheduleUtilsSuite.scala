@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.schedule.Schedule
+import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.core.utils.ScheduleUtils
 
 import java.time._
@@ -25,7 +25,7 @@ import java.time._
 class ScheduleUtilsSuite extends AnyWordSpec {
 
   // Various schedules
-  private val everyday = Schedule. EveryDay()
+  private val everyday = Schedule.EveryDay()
   private val onSundays = Schedule.Weekly(DayOfWeek.SUNDAY :: Nil)
   private val onSundaysAndWednesdays = Schedule.Weekly(DayOfWeek.WEDNESDAY :: DayOfWeek.SUNDAY :: Nil)
   private val onFirstDayOfMonth = Schedule.Monthly(1 :: Nil)

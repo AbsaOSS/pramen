@@ -20,6 +20,8 @@ import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.api.status.TaskDef
+import za.co.absa.pramen.extras.TaskDefFactory
 import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
 import za.co.absa.pramen.extras.notification.EcsNotificationTarget.{ECS_API_SECRET_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
@@ -45,7 +47,8 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
         override protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = httpClient
       }
 
-      notificationTarget.sendNotification(null, TestPrototypes.taskNotification.copy(outputTable = metaTableDef))
+      val taskDef = TaskDefFactory.getDummyTaskNotification(outputTable = metaTableDef)
+      notificationTarget.sendNotification(null, TestPrototypes.taskNotification.copy(taskDef = taskDef))
 
       assert(httpClient.executeCalled == 1)
       assert(httpClient.requests.head.url == "https://dummyurl.local/kk")

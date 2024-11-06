@@ -19,12 +19,12 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.types.StructType
 import org.slf4j.{Logger, LoggerFactory}
-import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, MetastoreDependency, TaskRunReason}
+import za.co.absa.pramen.api.jobdef.Schedule
+import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, JobType, MetastoreDependency, TaskDef, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.schedule.Schedule
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.{Emoji, TimeUtils}
 
@@ -38,6 +38,12 @@ abstract class JobBase(operationDef: OperationDef,
                        outputTableDef: MetaTable
                       ) extends Job {
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
+
+  def jobType: JobType
+
+  override def taskDef: TaskDef = TaskDef(
+    name, jobType, MetaTable.getMetaTableDef(outputTableDef), operationDef.schedule, operationDef.operationConf
+  )
 
   override val name: String = operationDef.name
 

@@ -127,8 +127,7 @@ class OrchestratorImpl extends Orchestrator {
       val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
 
       val taskResult = TaskResult(
-        job.name,
-        MetaTable.getMetaTableDef(job.outputTable),
+        job.taskDef,
         RunStatus.MissingDependencies(isFailure, missingTables),
         None,
         applicationId,

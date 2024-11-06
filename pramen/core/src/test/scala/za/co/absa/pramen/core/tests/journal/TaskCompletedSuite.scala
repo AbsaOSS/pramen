@@ -48,8 +48,7 @@ class TaskCompletedSuite extends AnyWordSpec {
       val runReason = TaskRunReason.Update
       val task = Task(job, infoDate, runReason)
       val taskResult = TaskResult(
-        job.name,
-        MetaTable.getMetaTableDef(job.outputTable),
+        job.taskDef,
         RunStatus.Succeeded(Some(1000), Some(2000), None, Some(3000), runReason, Nil, Nil, Nil, Nil),
         Some(RunInfo(infoDate, now.minusSeconds(10), now)),
         "app_123",
@@ -87,8 +86,7 @@ class TaskCompletedSuite extends AnyWordSpec {
       val runReason = TaskRunReason.Update
       val task = Task(job, infoDate, runReason)
       val taskResult = TaskResult(
-        job.name,
-        MetaTable.getMetaTableDef(job.outputTable),
+        job.taskDef,
         RunStatus.Failed(new IllegalStateException("Dummy Exception")),
         None,
         "app_123",
