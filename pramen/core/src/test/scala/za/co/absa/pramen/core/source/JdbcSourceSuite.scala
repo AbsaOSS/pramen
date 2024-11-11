@@ -85,6 +85,35 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
        |      information.date.type = "date"
        |      information.date.app.format = "yyyy-MM-DD"
        |      information.date.sql.format = "YYYY-mm-DD"
+       |    },
+       |    {
+       |      name = "jdbc3"
+       |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
+       |      jdbc {
+       |        driver = "driver3"
+       |        connection.string = "url3"
+       |        user = "user3"
+       |        password = "password3"
+       |      }
+       |
+       |      has.information.date.column = false
+       |      information.date.type = "wrong"
+       |    },
+       |    {
+       |      name = "jdbc4"
+       |      factory.class = "za.co.absa.pramen.core.source.JdbcSource"
+       |      jdbc {
+       |        driver = "driver4"
+       |        connection.string = "url4"
+       |        user = "user4"
+       |        password = "password4"
+       |      }
+       |
+       |      has.information.date.column = true
+       |      information.date.type = "wrong"
+       |      information.date.column = "INFO_DATE"
+       |      information.date.app.format = "yyyy-MM-DD"
+       |      information.date.sql.format = "YYYY-mm-DD"
        |    }
        |  ]
        | }
@@ -114,6 +143,24 @@ class JdbcSourceSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestB
       assert(src.jdbcReaderConfig.jdbcConfig.extraOptions("database") == "mydb")
       assert(index == 1)
       assert(fetchedConfig.hasPath(DISABLE_COUNT_QUERY))
+    }
+
+    "be able to get a source if the source is snapshot and info date column type is wrong" in {
+      val src = ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "Jdbc3", "source").asInstanceOf[JdbcSource]
+      val (fetchedConfig, index) = ExternalChannelFactoryReflect.getConfigByName(conf, None, "pramen.sources", "jdbc2", "source")
+
+      assert(src.jdbcReaderConfig.jdbcConfig.driver == "driver3")
+      assert(!src.jdbcReaderConfig.hasInfoDate)
+      assert(index == 1)
+      assert(fetchedConfig.hasPath(DISABLE_COUNT_QUERY))
+    }
+
+    "throw a proper exception when info date column type is wrong" in {
+      val ex = intercept[IllegalArgumentException] {
+        ExternalChannelFactoryReflect.fromConfigByName[Source](conf, None, "pramen.sources", "Jdbc4", "source").asInstanceOf[JdbcSource]
+      }
+
+      assert(ex.getMessage.contains("nknown information type 'wrong'"))
     }
 
     "be able to get a source by its name from the manager" in {
