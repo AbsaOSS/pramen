@@ -25,12 +25,15 @@ class ExternalChannelV2Mock(conf: Config, val workflowConfig: Config, val value1
 }
 
 object ExternalChannelV2Mock extends ExternalChannelFactoryV2[ExternalChannelV2Mock] {
+  val CONFIG_FAIL_KEY = "fail"
   val CONFIG_KEY1 = "key1"
   val CONFIG_KEY2 = "key2"
 
   override def apply(conf: Config, workflowConfig: Config, parentPath: String, spark: SparkSession): ExternalChannelV2Mock = {
+    if (conf.hasPath(CONFIG_FAIL_KEY)) throw new RuntimeException("Test exception")
     val value1 = conf.getString(CONFIG_KEY1)
     val value2 = conf.getString(CONFIG_KEY2)
+
     new ExternalChannelV2Mock(conf, workflowConfig, value1, value2)
   }
 }

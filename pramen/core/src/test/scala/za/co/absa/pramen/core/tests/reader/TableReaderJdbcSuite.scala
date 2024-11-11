@@ -59,8 +59,6 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |  has.information.date.column = false
          |
          |  information.date.column = "INFO_DATE"
-         |  information.date.type = "number"
-         |  information.date.format = "yyyy-MM-DD"
          |
          |  offset.column {
          |    name = "ts"
@@ -95,7 +93,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |  has.information.date.column = true
          |
          |  information.date.column = "INFO_DATE"
-         |  information.date.type = "date"
+         |  information.date.type = "number"
          |}""".stripMargin)
 
     "be able to be constructed properly from config" in {
@@ -108,9 +106,6 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.primaryUrl.get == url)
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
-      assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == SqlColumnType.NUMBER)
-      assert(jdbc.infoDateFormat == "yyyy-MM-DD")
       assert(jdbc.offsetInfoOpt.nonEmpty)
       assert(jdbc.offsetInfoOpt.get.offsetColumn == "ts")
       assert(jdbc.offsetInfoOpt.get.offsetType.dataTypeString == "datetime")
@@ -150,7 +145,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
       assert(jdbc.infoDateColumn == "INFO_DATE")
-      assert(jdbc.infoDateType == SqlColumnType.DATE)
+      assert(jdbc.infoDateType == SqlColumnType.NUMBER)
       assert(jdbc.infoDateFormat == "yyyy-MM-dd")
       assert(jdbc.offsetInfoOpt.isEmpty)
       assert(jdbc.hasInfoDate)
@@ -194,6 +189,27 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
            |  }
            |
            |  has.information.date.column = false
+           |}""".stripMargin)
+      val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
+
+      val jdbc = reader.getJdbcConfig
+
+      assert(!jdbc.hasInfoDate)
+    }
+
+    "ensure jdbc minimal snapshot configuration works even if wrong format for the info date is specified" in {
+      val testConfig = ConfigFactory.parseString(
+        s"""reader {
+           |  jdbc {
+           |    driver = "$driver"
+           |    connection.string = "$url"
+           |    user = "$user"
+           |    password = "$password"
+           |  }
+           |
+           |  has.information.date.column = false
+           |  information.date.column = "INFO_DATE"
+           |  information.date.type = "wrong"
            |}""".stripMargin)
       val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 

@@ -75,7 +75,11 @@ object TableReaderJdbcConfig {
 
     val infoDateTypeStr = ConfigUtils.getOptionString(conf, INFORMATION_DATE_TYPE).getOrElse("date")
 
-    val infoDateType = SqlColumnType.fromStringStrict(infoDateTypeStr, parent)
+    val infoDateType = if (hasInformationDate) {
+      SqlColumnType.fromStringStrict(infoDateTypeStr, parent)
+    } else {
+      SqlColumnType.DATE
+    }
 
     val saveTimestampsAsDates = ConfigUtils.getOptionBoolean(conf, JDBC_TIMESTAMPS_AS_DATES).getOrElse(false)
 

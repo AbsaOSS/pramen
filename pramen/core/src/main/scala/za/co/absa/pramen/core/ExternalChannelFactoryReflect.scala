@@ -41,13 +41,18 @@ object ExternalChannelFactoryReflect {
       throw new IllegalArgumentException(s"A class should be specified for the $channelType at '$parentPath'.")
     }
     val clazz = conf.getString(FACTORY_CLASS_KEY)
-    try {
-      val factory = ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactoryV2[T]](clazz)
-      factory.apply(conf, workflowConfig, parentPath, spark)
+    val factory = try {
+      ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactoryV2[T]](clazz)
     } catch {
       case _: Throwable =>
-        val factory = ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactory[T]](clazz)
-        factory.apply(conf, parentPath, spark)
+        ClassLoaderUtils.loadSingletonClassOfType[ExternalChannelFactory[T]](clazz)
+    }
+
+    factory match {
+      case fv2: ExternalChannelFactoryV2[T] =>
+        fv2.apply(conf, workflowConfig, parentPath, spark)
+      case fv1: ExternalChannelFactory[T] =>
+        fv1.apply(conf, parentPath, spark)
     }
   }
 

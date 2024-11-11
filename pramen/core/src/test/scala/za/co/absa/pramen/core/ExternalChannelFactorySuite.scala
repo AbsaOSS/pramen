@@ -70,6 +70,42 @@ class ExternalChannelFactorySuite extends AnyWordSpec with SparkTestBase {
 
       assert(ex.getMessage.contains("A class should be specified for the dummy"))
     }
+
+    "re-throw an exception from the V1 factory call" in {
+      val workflowConf = ConfigFactory.parseString(
+        """test = "test"
+          |""".stripMargin)
+
+
+      val conf = ConfigFactory.parseString(
+        """factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelV2Mock"
+          |fail = true
+          |""".stripMargin)
+
+      val ex = intercept[RuntimeException] {
+        ExternalChannelFactoryReflect.fromConfig[ExternalChannelV2Mock](conf, workflowConf, "", "dummy")
+      }
+
+      assert(ex.getMessage == "Test exception")
+    }
+
+    "re-throw an exception from the V2 factory call" in {
+      val workflowConf = ConfigFactory.parseString(
+        """test = "test"
+          |""".stripMargin)
+
+
+      val conf = ConfigFactory.parseString(
+        """factory.class = "za.co.absa.pramen.core.mocks.ExternalChannelMock"
+          |fail = true
+          |""".stripMargin)
+
+      val ex = intercept[RuntimeException] {
+        ExternalChannelFactoryReflect.fromConfig[ExternalChannelMock](conf, workflowConf, "", "dummy")
+      }
+
+      assert(ex.getMessage == "Test exception")
+    }
   }
 
   "fromConfigByName" should {
