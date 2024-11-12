@@ -99,7 +99,11 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     if (jdbcReaderConfig.enableSchemaMetadata) {
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, sql) { (connection, _) =>
+      val schemaQuery = tableOpt match {
+        case Some(table) => sqlGen.getSchemaQuery(table, Seq.empty)
+        case _ => JdbcSparkUtils.getSchemaQuery(sql)
+      }
+      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, schemaQuery) { (connection, _) =>
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>
             log.info(s"Reading JDBC metadata descriptions the table: $table")
@@ -129,7 +133,9 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     if (jdbcReaderConfig.enableSchemaMetadata) {
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, _) =>
+      val schemaQuery = sqlGen.getSchemaQuery(tableName, columns)
+
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, schemaQuery) { (connection, _) =>
         log.info(s"Reading JDBC metadata descriptions the table: $tableName")
         df = spark.createDataFrame(df.rdd,
           JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, sqlGen.unquote(tableName), connection))

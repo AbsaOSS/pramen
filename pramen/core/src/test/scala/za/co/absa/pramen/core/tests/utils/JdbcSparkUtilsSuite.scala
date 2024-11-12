@@ -143,6 +143,22 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
     }
   }
 
+  "getSchemaQuery" should {
+    "work for queries without where clause" in {
+      val expected = s"SELECT * FROM A WHERE 0=1"
+      val actual = JdbcSparkUtils.getSchemaQuery("SELECT * FROM A")
+
+      assert(actual == expected)
+    }
+
+    "work for queries with where clause" in {
+      val expected = s"SELECT * FROM A WHERE X>0 AND 0=1"
+      val actual = JdbcSparkUtils.getSchemaQuery("SELECT * FROM A WHERE X>0")
+
+      assert(actual == expected)
+    }
+  }
+
   "withMetadataResultSet" should {
     "provide the resultset object for the query" in {
       JdbcSparkUtils.withMetadataResultSet(getConnection, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { rs =>

@@ -20,12 +20,11 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.reader.model.{OffsetInfoParser, TableReaderJdbcConfig}
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, TimeUtils}
 
-import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
 import scala.annotation.tailrec
 import scala.util.{Failure, Success, Try}
@@ -214,8 +213,11 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     if (isDataQuery && jdbcReaderConfig.enableSchemaMetadata) {
-      log.info(s"Reading JDBC metadata from the query: $sql")
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, sql) { (connection, jdbcMetadata) =>
+      val schemaQuery = tableOpt match {
+        case Some(table) => sqlGen.getSchemaQuery(table, Seq.empty)
+        case _ => JdbcSparkUtils.getSchemaQuery(sql)
+      }
+      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, schemaQuery) { (connection, jdbcMetadata) =>
         val schemaWithMetadata = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>

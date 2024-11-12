@@ -179,33 +179,32 @@ object JdbcSparkUtils {
     * metadata of the query.
     *
     * @param jdbcConfig  a JDBC configuration.
-    * @param nativeQuery a SQL query in the dialect native to the database.
+    * @param schemaQuery a SQL query in the dialect native to the database which does not return records.
     * @param action      the action to execute on a connection + resultset metadata.
     */
   def withJdbcMetadata(jdbcConfig: JdbcConfig,
-                       nativeQuery: String)
+                       schemaQuery: String)
                       (action: (Connection, ResultSetMetaData) => Unit): Unit = {
-    val (url, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
+    val (_, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
 
     connection.setAutoCommit(false)
 
-    /** If not filtered out, some JDBC drivers will try to receive all data before closing the result set.
-      * ToDo Fix this properly using SQL generators by adding a generator for schema query. */
-    val q = if (nativeQuery.toLowerCase.contains(" where ")) {
-      nativeQuery + " AND 0=1"
-    } else {
-      nativeQuery + " WHERE 0=1"
-    }
-
-    log.info(s"Successfully connected to JDBC URL: $url")
-    log.info(s"Getting metadata for: $q")
+    log.info(s"Getting metadata for: $schemaQuery")
 
     try {
-      withMetadataResultSet(connection, q) { rs =>
+      withMetadataResultSet(connection, schemaQuery) { rs =>
         action(connection, rs.getMetaData)
       }
     } finally {
       connection.close()
+    }
+  }
+
+  private[core] def getSchemaQuery(sql: String): String = {
+    if (sql.toLowerCase.contains(" where ")) {
+      sql + " AND 0=1"
+    } else {
+      sql + " WHERE 0=1"
     }
   }
 
