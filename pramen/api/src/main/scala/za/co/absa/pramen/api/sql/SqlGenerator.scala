@@ -29,6 +29,13 @@ trait SqlGenerator {
   def getDtable(sql: String): String
 
   /**
+    * Generates a query that returns no records. It should be used to get the schema for a table.
+    *
+    * If the list of columns passed to this method is empty, all columns will be returned.
+    */
+  def getSchemaQuery(tableName: String, columns: Seq[String]): String
+
+  /**
     * Generates a query that returns the record count of a table that does not have the information date field.
     */
   def getCountQuery(tableName: String): String

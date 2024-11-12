@@ -48,6 +48,14 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
   val genEscaped: SqlGenerator = getSqlGenerator(driver, sqlConfigEscape)
   val genEscaped2: SqlGenerator = getSqlGenerator(driver,  DummySqlConfigFactory.getDummyConfig(infoDateColumn = "[Info date]", identifierQuotingPolicy = QuotingPolicy.Auto))
 
+  "generate schema query without list of columns specified" in {
+    assert(genDate.getSchemaQuery("A", Seq.empty) == "SELECT * FROM A WITH (NOLOCK) WHERE 0=1")
+  }
+
+  "generate schema queries when list of columns is specified" in {
+    assert(genEscaped.getSchemaQuery("A", columns) == "SELECT [A], [D], [Column with spaces] FROM [A] WITH (NOLOCK) WHERE 0=1")
+  }
+
   "generate count queries without date ranges" in {
     assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK)")
   }
