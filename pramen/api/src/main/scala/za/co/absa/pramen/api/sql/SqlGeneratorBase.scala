@@ -62,6 +62,12 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 
   def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String
 
+  override def getSchemaQuery(tableName: String, columns: Seq[String]): String = {
+    val dataQuery = getDataQuery(tableName, columns, None)
+
+    s"$dataQuery WHERE 0=1"
+  }
+
   override def getAliasExpression(expression: String, alias: String): String = {
     s"$expression AS ${escape(alias)}"
   }

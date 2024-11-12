@@ -26,6 +26,8 @@ class SqlGeneratorDummy(sqlConfig: SqlConfig) extends SqlGenerator {
 
   override def getDtable(sql: String): String = null
 
+  override def getSchemaQuery(tableName: String, columns: Seq[String]): String = null
+
   override def getCountQuery(tableName: String): String = null
 
   override def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = null
