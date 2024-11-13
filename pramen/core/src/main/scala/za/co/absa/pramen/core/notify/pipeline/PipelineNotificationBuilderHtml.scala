@@ -308,6 +308,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     val errorMessage = ex.getMessage
 
     val errorMessageTruncated = maxReasonLength match {
+      case _ if errorMessage == null => "<null error message>"
       case Some(maxLength) if errorMessage.length > maxLength =>  StringUtils.escapeHTML(errorMessage.substring(0, maxLength)) + "..."
       case _ => StringUtils.escapeHTML(errorMessage)
     }

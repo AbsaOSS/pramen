@@ -17,10 +17,12 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.{FileStatus, Path}
-import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
+import za.co.absa.pramen.core.metastore.peristence.TransientTableManager.{RAW_OFFSET_FIELD_KEY, RAW_PATH_FIELD_KEY}
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 import za.co.absa.pramen.core.utils.{FsUtils, SparkUtils}
 
@@ -30,30 +32,30 @@ import scala.collection.mutable
 class MetastorePersistenceRaw(path: String,
                               infoDateColumn: String,
                               infoDateFormat: String,
-                              saveModeOpt: Option[SaveMode]
-                             )(implicit spark: SparkSession) extends MetastorePersistence {
+                              saveModeOpt: Option[SaveMode])
+                             (implicit spark: SparkSession) extends MetastorePersistence {
+
+  import spark.implicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
-    import spark.implicits._
-
     (infoDateFrom, infoDateTo) match {
       case (Some(from), Some(to)) if from.isEqual(to) =>
-        getListOfFiles(from).map(_.getPath.toString).toDF("path")
+        listOfPathsToDf(getListOfFiles(from))
       case (Some(from), Some(to)) =>
-        getListOfFilesRange(from, to).map(_.getPath.toString).toDF("path")
+        listOfPathsToDf(getListOfFilesRange(from, to))
       case _ =>
         throw new IllegalArgumentException("Metastore 'raw' format requires info date for querying its contents.")
     }
   }
 
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
-    if (!df.schema.exists(_.name == "path")) {
+    if (!df.schema.exists(_.name == RAW_PATH_FIELD_KEY)) {
       throw new IllegalArgumentException("The 'raw' persistent format data frame should have 'path' column.")
     }
 
-    val files = df.select("path").collect().map(_.getString(0))
+    val files = df.select(RAW_PATH_FIELD_KEY).collect().map(_.getString(0))
 
     val outputDir = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
 
@@ -158,5 +160,23 @@ class MetastorePersistenceRaw(path: String,
     } else {
       fsUtils.getHadoopFiles(subPath).toSeq
     }
+  }
+
+  private def listOfPathsToDf(listOfPaths: Seq[FileStatus]): DataFrame = {
+    val list = listOfPaths.map { path =>
+      (path.getPath.toString, path.getPath.getName)
+    }
+    if (list.isEmpty)
+      getEmptyRawDf
+    else {
+      list.toDF(RAW_PATH_FIELD_KEY, RAW_OFFSET_FIELD_KEY)
+    }
+  }
+
+  private def getEmptyRawDf(implicit spark: SparkSession): DataFrame = {
+    val schema = StructType(Seq(StructField(RAW_PATH_FIELD_KEY, StringType), StructField(RAW_OFFSET_FIELD_KEY, StringType)))
+
+    val emptyRDD = spark.sparkContext.emptyRDD[Row]
+    spark.createDataFrame(emptyRDD, schema)
   }
 }

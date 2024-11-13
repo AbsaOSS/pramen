@@ -79,7 +79,7 @@ class MetastoreImpl(appConfig: Config,
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
 
-    MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(infoDateFrom, infoDateTo)
+    MetastorePersistence.fromMetaTable(mt, appConfig, batchId).loadTable(infoDateFrom, infoDateTo)
   }
 
   override def getBatch(tableName: String, infoDate: LocalDate, batchIdOpt: Option[Long]): DataFrame = {
@@ -116,7 +116,7 @@ class MetastoreImpl(appConfig: Config,
     var stats = MetaTableStats(Some(0), None, None)
 
     withSparkConfig(mt.sparkConfig) {
-      stats = MetastorePersistence.fromMetaTable(mt, appConfig, saveModeOverride, batchId).saveTable(infoDate, df, inputRecordCount)
+      stats = MetastorePersistence.fromMetaTable(mt, appConfig, batchId, saveModeOverride).saveTable(infoDate, df, inputRecordCount)
     }
 
     val finish = Instant.now.getEpochSecond

@@ -43,7 +43,7 @@ trait MetastorePersistence {
 }
 
 object MetastorePersistence {
-  def fromMetaTable(metaTable: MetaTable, conf: Config, saveModeOverride: Option[SaveMode] = None, batchId: Long)(implicit spark: SparkSession): MetastorePersistence = {
+  def fromMetaTable(metaTable: MetaTable, conf: Config, batchId: Long, saveModeOverride: Option[SaveMode] = None)(implicit spark: SparkSession): MetastorePersistence = {
     val saveModeOpt = saveModeOverride.orElse(metaTable.saveModeOpt)
 
     metaTable.format match {
