@@ -77,9 +77,9 @@ object OffsetValue {
   }
 
   def fromString(dataType: String, value: String): Option[OffsetValue] = {
-    if (value.isEmpty)
+    if (value == null || value.isEmpty) {
       None
-    else
+    } else
       dataType match {
         case DATETIME_TYPE_STR => Some(DateTimeValue(Instant.ofEpochMilli(value.toLong)))
         case INTEGRAL_TYPE_STR => Some(IntegralValue(value.toLong))

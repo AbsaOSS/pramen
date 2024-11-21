@@ -24,8 +24,8 @@ import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlGeneratorBase
-import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskDef, TaskRunReason}
-import za.co.absa.pramen.api.{Reason, Source}
+import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
+import za.co.absa.pramen.api.{DataFormat, Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager}
 import za.co.absa.pramen.core.metastore.Metastore
@@ -151,12 +151,15 @@ class IncrementalIngestionJob(operationDef: OperationDef,
         metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
       }
 
-      val updatedDf = metastore.getBatch(outputTable.name, infoDate, None)
+      val updatedDf = if (outputTable.format.isInstanceOf[DataFormat.Raw])
+        df
+      else
+        metastore.getBatch(outputTable.name, infoDate, None)
 
       if (updatedDf.isEmpty) {
         om.rollbackOffsets(req)
       } else {
-        val (minOffset, maxOffset) = getMinMaxOffsetFromDf(df, offsetInfo)
+        val (minOffset, maxOffset) = getMinMaxOffsetFromDf(updatedDf, offsetInfo)
 
         if (isRerun) {
           om.commitRerun(req, minOffset, maxOffset)
@@ -291,8 +294,9 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     val row = df.agg(min(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn)).cast(StringType)),
         max(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn))).cast(StringType))
       .collect()(0)
-    val minValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(0).asInstanceOf[String]).get
-    val maxValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(1).asInstanceOf[String]).get
+
+    val minValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(0).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(0)}"))
+    val maxValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(1).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(1)}"))
 
     SqlGeneratorBase.validateOffsetValue(minValue)
     SqlGeneratorBase.validateOffsetValue(maxValue)
