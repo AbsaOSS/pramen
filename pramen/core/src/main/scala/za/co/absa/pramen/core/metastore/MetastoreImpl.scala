@@ -25,9 +25,8 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.DataOffset
 import za.co.absa.pramen.api.status.TaskRunReason
-import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
-import za.co.absa.pramen.core.app.config.RuntimeConfig.UNDERCOVER
+import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.MetaTable
@@ -36,12 +35,14 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 
 import java.time.{Instant, LocalDate}
+import scala.collection.mutable.ListBuffer
 
 class MetastoreImpl(appConfig: Config,
                     tableDefs: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
                     metadata: MetadataManager,
                     batchId: Long,
+                    isRerun: Boolean,
                     skipBookKeepingUpdates: Boolean)(implicit spark: SparkSession) extends Metastore {
   import MetastoreImpl._
 
@@ -201,10 +202,12 @@ class MetastoreImpl(appConfig: Config,
     MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).getStats(infoDate, onlyForCurrentBatchId = false)
   }
 
-  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean, incrementalDryRun: Boolean, isPostProcessing: Boolean): MetastoreReader = {
     val metastore = this
 
-    new MetastoreReader {
+    new MetastoreReaderCore {
+      private val incrementalInputTables = new ListBuffer[String]
+
       override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
         validateTable(tableName)
         val from = infoDateFrom.orElse(Option(infoDate))
@@ -214,9 +217,12 @@ class MetastoreImpl(appConfig: Config,
 
       override def getCurrentBatch(tableName: String): DataFrame = {
         validateTable(tableName)
-        if (isIncremental)
+        if (isPostProcessing && isIncremental) {
           metastore.getBatch(tableName, infoDate, None)
-        else
+        } else if (isIncremental && !isRerun && !isPostProcessing) {
+          incrementalInputTables += tableName
+          getIncremental(tableName, outputTable, infoDate)
+        } else
           metastore.getTable(tableName, Option(infoDate), Option(infoDate))
       }
 
@@ -262,10 +268,23 @@ class MetastoreImpl(appConfig: Config,
 
       override def metadataManager: MetadataManager = metadata
 
+      override def commitIncremental(): Unit = {
+        // ToDo Replace this with proper offset management implementation
+      }
+
       private def validateTable(tableName: String): Unit = {
         if (!tables.contains(tableName)) {
           throw new TableNotConfigured(s"Attempt accessing non-dependent table: $tableName")
         }
+      }
+
+      private def getIncremental(tableName: String, transformationOutputTable: String, infoDate: LocalDate): DataFrame = {
+        // Don't forget to use incrementalDryRun to decide if we need to commit
+        val needsToCommit = !isPostProcessing && !incrementalDryRun
+        val om = bookkeeper.getOffsetManager
+
+        // ToDo Replace this with proper offset management implementation
+        metastore.getBatch(tableName, infoDate, None)
       }
     }
   }
@@ -288,15 +307,20 @@ object MetastoreImpl {
   val DEFAULT_RECORDS_PER_PARTITION = 500000
 
   def fromConfig(conf: Config,
+                 runtimeConfig: RuntimeConfig,
                  infoDateConfig: InfoDateConfig,
                  bookkeeper: Bookkeeper,
                  metadataManager: MetadataManager,
                  batchId: Long)(implicit spark: SparkSession): MetastoreImpl = {
     val tableDefs = MetaTable.fromConfig(conf, infoDateConfig, METASTORE_KEY)
 
-    val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
-
-    new MetastoreImpl(conf, tableDefs, bookkeeper, metadataManager, batchId, isUndercover)
+    new MetastoreImpl(conf,
+      tableDefs,
+      bookkeeper,
+      metadataManager,
+      batchId,
+      runtimeConfig.isRerun,
+      runtimeConfig.isUndercover)
   }
 
   private[core] def withSparkConfig(sparkConfig: Map[String, String])

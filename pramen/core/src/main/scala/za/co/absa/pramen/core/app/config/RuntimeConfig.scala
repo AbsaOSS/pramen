@@ -151,4 +151,25 @@ object RuntimeConfig {
       sparkAppDescriptionTemplate
     )
   }
+
+  def default: RuntimeConfig = {
+    RuntimeConfig(
+      isDryRun = false,
+      isRerun = false,
+      runTables = Seq.empty,
+      isUndercover = false,
+      useLocks = true,
+      checkOnlyLateData = false,
+      checkOnlyNewData = true,
+      emailIfNoChanges = false,
+      runDate = LocalDate.now(),
+      runDateTo = None,
+      isInverseOrder = false,
+      parallelTasks = 1,
+      stopSparkSession = true,
+      allowEmptyPipeline = false,
+      historicalRunMode = RunMode.CheckUpdates,
+      sparkAppDescriptionTemplate = None
+    )
+  }
 }
