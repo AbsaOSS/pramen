@@ -24,7 +24,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{CachePolicy, DataFormat}
-import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -35,6 +34,7 @@ import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.hive.{HiveHelperSql, HiveQueryTemplates, QueryExecutorSpark}
+import za.co.absa.pramen.core.{OperationDefFactory, RuntimeConfigFactory}
 
 import java.time.LocalDate
 
@@ -390,7 +390,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table1" :: Nil, infoDate, TaskRunReason.New, isIncremental = false)
+        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
 
         val df1 = reader.getTable("table1", Some(infoDate), Some(infoDate))
 
@@ -404,7 +404,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table2" :: Nil, infoDate, TaskRunReason.New, isIncremental = false)
+        val reader = m.getMetastoreReader("table2" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
 
         val ex = intercept[TableNotConfigured] {
           reader.getTable("table1", Some(infoDate), Some(infoDate))
@@ -420,7 +420,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table1" :: Nil, infoDate, TaskRunReason.New, isIncremental = false)
+        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
         val runInfo1 = reader.getTableRunInfo("table1", infoDate)
         val runInfo2 = reader.getTableRunInfo("table1", infoDate.plusDays(1))
 
@@ -438,7 +438,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table1" :: Nil, infoDate, TaskRunReason.New, isIncremental = false)
+        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
         val metadataManager = reader.metadataManager
 
         metadataManager.setMetadata("table1", infoDate, "key1", "value1")
@@ -456,7 +456,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
           m.saveTable("table1", infoDate, getDf)
           m.saveTable("table1", infoDate.plusDays(1), getDf)
 
-          val reader = m.getMetastoreReader("table1" :: "table2" :: Nil, infoDate.plusDays(10), TaskRunReason.New, isIncremental = false)
+          val reader = m.getMetastoreReader("table1" :: "table2" :: Nil, "output_table", infoDate.plusDays(10), TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
 
           val date1 = reader.getLatestAvailableDate("table1")
           val date2 = reader.getLatestAvailableDate("table1", Some(infoDate))
@@ -579,9 +579,10 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         operationDef = OperationDefFactory.getDummyOperationDef(schedule = schedule))
     )
 
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig().copy(isUndercover = undercover)
     val infoDateConfig = InfoDateConfig.fromConfig(conf)
     val bk = new SyncBookkeeperMock
     val mm = new MetadataManagerNull(isPersistenceEnabled = false)
-    (MetastoreImpl.fromConfig(conf, infoDateConfig, bk, mm, 0L), bk)
+    (MetastoreImpl.fromConfig(conf, runtimeConfig, infoDateConfig, bk, mm, 0L), bk)
   }
 }

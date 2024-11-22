@@ -21,8 +21,8 @@ import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.{Metastore, MetastoreReaderCore}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
@@ -53,11 +53,18 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
-    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate, runReason, isIncremental), infoDate, operationDef.extraOptions)
+    transformer.validate(metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = false), infoDate, operationDef.extraOptions)
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
-    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate, runReason, isIncremental), infoDate, operationDef.extraOptions))
+    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = true, isPostProcessing = false)
+    val runResult = try {
+      RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
+    } finally {
+      metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncremental()
+    }
+
+    runResult
   }
 
   def postProcessing(df: DataFrame,
@@ -77,10 +84,12 @@ class TransformationJob(operationDef: OperationDef,
     else
       SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
 
+    val metastoreReader = metastore.getMetastoreReader(inputTables :+ outputTable.name, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = true)
+
     try {
       transformer.postProcess(
         outputTable.name,
-        metastore.getMetastoreReader(inputTables :+ outputTable.name, infoDate, runReason, isIncremental),
+        metastoreReader,
         infoDate, operationDef.extraOptions
       )
     } catch {

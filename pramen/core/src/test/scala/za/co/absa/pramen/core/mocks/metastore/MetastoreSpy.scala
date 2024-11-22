@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, TableNotConfigured}
+import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderCore, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperSql, HiveQueryTemplates}
@@ -105,10 +105,10 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     stats
   }
 
-  override def getMetastoreReader(tables: Seq[String], infoDate: LocalDate, taskRunReason: TaskRunReason, isIncremental: Boolean): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, taskRunReason: TaskRunReason, isIncremental: Boolean, incrementalDryRun: Boolean, isPostProcessing: Boolean): MetastoreReader = {
     val metastore = this
 
-    new MetastoreReader {
+    new MetastoreReaderCore {
       override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
         validateTable(tableName)
         val from = infoDateFrom.orElse(Option(infoDate))
@@ -170,6 +170,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
           throw new TableNotConfigured(s"Attempt accessing non-dependent table: $tableName")
         }
       }
+
+      override def commitIncremental(): Unit = {}
     }
   }
 }

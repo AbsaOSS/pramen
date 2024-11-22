@@ -23,7 +23,6 @@ import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
-import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner.JobRunResults
@@ -91,9 +90,12 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
 
         completedJobsChannel.send((job, Nil, isSucceeded))
       } catch {
-        case ex: FatalErrorWrapper if ex.cause != null => onFatalException(ex.cause, job, isTransient)
-        case NonFatal(ex)                              => onNonFatalException(ex, job, isTransient)
-        case ex: Throwable                             => onFatalException(ex, job, isTransient)
+        case ex: FatalErrorWrapper if ex.cause != null =>
+          onFatalException(ex.cause, job, isTransient)
+        case NonFatal(ex) =>
+          onNonFatalException(ex, job, isTransient)
+        case ex: Throwable =>
+          onFatalException(ex, job, isTransient)
       }
     }
     completedJobsChannel.close()
