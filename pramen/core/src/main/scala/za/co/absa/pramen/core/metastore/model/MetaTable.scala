@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, MetaTableDef}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceRaw.RAW_OFFSET_FIELD_KEY
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
 import java.time.LocalDate
@@ -137,13 +138,18 @@ object MetaTable {
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
-    val batchIdColumn = ConfigUtils.getOptionString(conf, BATCH_ID_COLUMN_KEY).getOrElse(defaultBatchIdColumn)
 
     val format = Try {
       DataFormatParser.fromConfig(conf, appConf)
     } match {
       case Success(f) => f
       case Failure(ex) => throw new IllegalArgumentException(s"Unable to read data format from config for the metastore table: $name", ex)
+    }
+
+    val batchIdColumn = if (format.isInstanceOf[DataFormat.Raw]) {
+      ConfigUtils.getOptionString(conf, BATCH_ID_COLUMN_KEY).getOrElse(RAW_OFFSET_FIELD_KEY)
+    } else {
+      ConfigUtils.getOptionString(conf, BATCH_ID_COLUMN_KEY).getOrElse(defaultBatchIdColumn)
     }
 
     val hiveTable = ConfigUtils.getOptionString(conf, HIVE_TABLE_KEY)
