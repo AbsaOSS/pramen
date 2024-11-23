@@ -22,7 +22,7 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
-import za.co.absa.pramen.api.offset.OffsetValue
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceRaw.{RAW_OFFSET_FIELD_KEY, RAW_PATH_FIELD_KEY}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
@@ -93,6 +93,8 @@ class RawFileSource(val sourceConfig: Config,
 
   override val config: Config = sourceConfig
 
+  override def getOffsetInfo: Option[OffsetInfo] = Some(OffsetInfo(RAW_OFFSET_FIELD_KEY, OffsetType.StringType))
+
   override def hasInfoDateColumn(query: Query): Boolean = {
     query match {
       case Query.Path(pathPattern) => pathPattern.contains("{{")
@@ -121,7 +123,6 @@ class RawFileSource(val sourceConfig: Config,
 
   override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = {
     val filePaths = getPaths(query, onlyForInfoDate.get, onlyForInfoDate.get)
-    val fileNames = filePaths.map(_.getPath.getName).sorted
     val list = filePaths.map { path =>
       (path.getPath.toString, path.getPath.getName)
     }.filter {
@@ -136,7 +137,7 @@ class RawFileSource(val sourceConfig: Config,
 
     val df = listOfFilesToDataFrame(list)
 
-    SourceResult(df, fileNames)
+    SourceResult(df, list.map(_._2).sorted)
   }
 
 

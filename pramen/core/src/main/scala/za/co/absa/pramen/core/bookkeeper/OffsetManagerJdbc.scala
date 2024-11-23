@@ -116,6 +116,16 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
     ).execute()
   }
 
+  override def postCommittedRecord(table: String, infoDate: LocalDate, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
+    val createdAt = Instant.now()
+
+    val record = OffsetRecord(table, infoDate.toString, minOffset.dataType.dataTypeString, minOffset.valueString, maxOffset.valueString, batchId, createdAt.toEpochMilli, Some(createdAt.toEpochMilli))
+
+    db.run(
+      OffsetRecords.records += record
+    ).execute()
+  }
+
   override def rollbackOffsets(request: DataOffsetRequest): Unit = {
     db.run(
       OffsetRecords.records

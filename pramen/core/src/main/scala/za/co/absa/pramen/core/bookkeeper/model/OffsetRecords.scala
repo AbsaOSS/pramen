@@ -19,11 +19,13 @@ package za.co.absa.pramen.core.bookkeeper.model
 import slick.jdbc.H2Profile.api._
 
 class OffsetRecords(tag: Tag) extends Table[OffsetRecord](tag, "offsets") {
-  def pramenTableName = column[String]("table_name", O.Length(128))
+  def pramenTableName = column[String]("table_name", O.Length(200))
   def infoDate = column[String]("info_date", O.Length(20))
   def dataType = column[String]("data_type", O.Length(20))
-  def minOffset = column[String]("min_offset", O.Length(64))
-  def maxOffset = column[String]("max_offset", O.Length(64))
+
+  def minOffset = column[String]("min_offset", O.Length(128))
+
+  def maxOffset = column[String]("max_offset", O.Length(128))
   def batchId = column[Long]("batch_id")
   def createdAt = column[Long]("created_at")
   def committedAt = column[Option[Long]]("committed_at")

@@ -16,12 +16,15 @@
 
 package za.co.absa.pramen.core.metastore.model
 
-import org.apache.spark.sql.DataFrame
-import za.co.absa.pramen.core.bookkeeper.model.DataOffsetRequest
+import za.co.absa.pramen.api.offset.OffsetValue
+
+import java.time.LocalDate
 
 case class TrackingTable(
                           inputTable: String,
                           outputTable: String,
-                          commitRequest: DataOffsetRequest,
-                          data: DataFrame
+                          trackingName: String,
+                          batchIdColumn: String,
+                          currentMaxOffset: Option[OffsetValue],
+                          infoDate: LocalDate
                         )

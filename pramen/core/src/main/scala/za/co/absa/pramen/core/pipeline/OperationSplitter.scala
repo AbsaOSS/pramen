@@ -106,7 +106,7 @@ class OperationSplitter(conf: Config,
     val notificationTargets = operationDef.notificationTargets
       .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
-    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, clazz, transformer))
+    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, clazz, transformer, batchId))
   }
 
   def createPythonTransformation(operationDef: OperationDef,

@@ -33,7 +33,8 @@ class TransformationJob(operationDef: OperationDef,
                         notificationTargets: Seq[JobNotificationTarget],
                         outputTable: MetaTable,
                         transformerFactoryClass: String,
-                        transformer: Transformer)
+                        transformer: Transformer,
+                        batchId: Long)
                        (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
 
@@ -53,11 +54,12 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
-    transformer.validate(metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = false), infoDate, operationDef.extraOptions)
+    transformer.validate(metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = true, isPostProcessing = false), infoDate, operationDef.extraOptions)
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
-    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = true, isPostProcessing = false)
+    val isTransitive = outputTable.format.isTransient
+    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = !isTransitive)
     val runResult = try {
       RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
     } finally {

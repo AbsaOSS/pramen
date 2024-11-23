@@ -137,7 +137,7 @@ class TransformationJobSuite extends AnyWordSpec with SparkTestBase {
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1")
 
-    (new TransformationJob(operation, metastore, bk, Nil, outputTable, "dummy_class", transformer), metastore)
+    (new TransformationJob(operation, metastore, bk, Nil, outputTable, "dummy_class", transformer, 1), metastore)
   }
 
 }
