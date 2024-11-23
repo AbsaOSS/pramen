@@ -17,8 +17,8 @@
 package za.co.absa.pramen.core.runner.task
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.status._
@@ -219,8 +219,6 @@ abstract class TaskRunnerBase(conf: Config,
     * @return an instance of TaskResult on the check failure or optional record count on success.
     */
   private[core] def preRunCheck(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
-    val jobName = task.job.name
-    val outputTable = MetaTable.getMetaTableDef(task.job.outputTable)
     val outputTableName = task.job.outputTable.name
     val options = task.job.operation.extraOptions
     val isTransient = task.job.outputTable.format.isTransient
@@ -358,7 +356,15 @@ abstract class TaskRunnerBase(conf: Config,
           dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
         }
 
-        val postProcessed = task.job.postProcessing(dfWithInfoDate, task.infoDate, conf)
+        val batchIdColumn = task.job.outputTable.batchIdColumn
+
+        val dfWithBatchIdColumn = if (dfWithInfoDate.schema.exists(f => f.name == batchIdColumn)) {
+          dfWithInfoDate
+        } else {
+          dfWithInfoDate.withColumn(batchIdColumn, lit(pipelineState.getBatchId))
+        }
+
+        val postProcessed = task.job.postProcessing(dfWithBatchIdColumn, task.infoDate, conf)
 
         val dfTransformed = applyFilters(
           applyTransformations(postProcessed, task.job.operation.schemaTransformations),

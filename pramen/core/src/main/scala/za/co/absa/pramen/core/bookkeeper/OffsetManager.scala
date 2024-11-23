@@ -80,6 +80,11 @@ trait OffsetManager {
   def commitRerun(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit
 
   /**
+    * Combines both startWriteOffsets() and commitOffsets() into one operation when it is applicable.
+    */
+  def postCommittedRecord(table: String, infoDate: LocalDate, minOffset: OffsetValue, maxOffset: OffsetValue): Unit
+
+  /**
     * Rolls back an offset request
     */
   def rollbackOffsets(request: DataOffsetRequest): Unit

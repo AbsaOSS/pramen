@@ -122,7 +122,7 @@ class SinkJob(operationDef: OperationDef,
       case NonFatal(ex) => throw new IllegalStateException("Unable to connect to the sink.", ex)
     }
 
-    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = true, isPostProcessing = false)
+    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = false)
 
     try {
       val sinkResult = sink.send(df,
