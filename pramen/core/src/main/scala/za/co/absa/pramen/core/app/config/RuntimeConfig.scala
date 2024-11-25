@@ -42,6 +42,7 @@ case class RuntimeConfig(
                           parallelTasks: Int,
                           stopSparkSession: Boolean,
                           allowEmptyPipeline: Boolean,
+                          alwaysAddBatchIdColumn: Boolean,
                           historicalRunMode: RunMode,
                           sparkAppDescriptionTemplate: Option[String]
                         )
@@ -67,6 +68,7 @@ object RuntimeConfig {
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
   val VERBOSE = "pramen.verbose"
   val ALLOW_EMPTY_PIPELINE = "pramen.allow.empty.pipeline"
+  val ALWAYS_ADD_BATCHID_COLUMN = "pramen.always.add.batchid.column"
   val SPARK_APP_DESCRIPTION_TEMPLATE = "pramen.job.description.template"
 
   def fromConfig(conf: Config): RuntimeConfig = {
@@ -130,6 +132,7 @@ object RuntimeConfig {
     }
 
     val allowEmptyPipeline = ConfigUtils.getOptionBoolean(conf, ALLOW_EMPTY_PIPELINE).getOrElse(false)
+    val alwaysAddBatchIdColumn = ConfigUtils.getOptionBoolean(conf, ALWAYS_ADD_BATCHID_COLUMN).getOrElse(false)
     val sparkAppDescriptionTemplate = ConfigUtils.getOptionString(conf, SPARK_APP_DESCRIPTION_TEMPLATE)
 
     RuntimeConfig(
@@ -147,6 +150,7 @@ object RuntimeConfig {
       parallelTasks = parallelTasks,
       stopSparkSession = conf.getBoolean(STOP_SPARK_SESSION),
       allowEmptyPipeline,
+      alwaysAddBatchIdColumn,
       runMode,
       sparkAppDescriptionTemplate
     )
@@ -168,6 +172,7 @@ object RuntimeConfig {
       parallelTasks = 1,
       stopSparkSession = true,
       allowEmptyPipeline = false,
+      alwaysAddBatchIdColumn = false,
       historicalRunMode = RunMode.CheckUpdates,
       sparkAppDescriptionTemplate = None
     )

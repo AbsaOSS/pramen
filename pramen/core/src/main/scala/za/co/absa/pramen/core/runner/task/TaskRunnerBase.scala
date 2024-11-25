@@ -21,6 +21,7 @@ import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -356,23 +357,24 @@ abstract class TaskRunnerBase(conf: Config,
           dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
         }
 
-        val batchIdColumn = task.job.outputTable.batchIdColumn
+        val needAddBatchId = runtimeConfig.alwaysAddBatchIdColumn || task.job.operation.schedule == Schedule.Incremental
 
-        val dfWithBatchIdColumn = if (dfWithInfoDate.schema.exists(f => f.name == batchIdColumn)) {
-          dfWithInfoDate
-        } else {
+        val dfWithBatchIdColumn = if (needAddBatchId) {
+          val batchIdColumn = task.job.outputTable.batchIdColumn
           dfWithInfoDate.withColumn(batchIdColumn, lit(pipelineState.getBatchId))
+        } else {
+          dfWithInfoDate
         }
 
-        val postProcessed = task.job.postProcessing(dfWithBatchIdColumn, task.infoDate, conf)
-
         val dfTransformed = applyFilters(
-          applyTransformations(postProcessed, task.job.operation.schemaTransformations),
+          applyTransformations(dfWithBatchIdColumn, task.job.operation.schemaTransformations),
           task.job.operation.filters,
           task.infoDate,
           task.infoDate,
           task.infoDate
         )
+
+        val postProcessed = task.job.postProcessing(dfTransformed, task.infoDate, conf)
 
         val schemaChangesAfterTransform = if (task.job.operation.schemaTransformations.nonEmpty) {
           val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")
