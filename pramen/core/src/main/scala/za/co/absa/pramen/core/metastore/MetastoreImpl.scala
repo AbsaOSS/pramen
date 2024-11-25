@@ -327,8 +327,6 @@ class MetastoreImpl(appConfig: Config,
           throw new IllegalArgumentException(s"Table '$tableName' does not contain column '${tableDef.batchIdColumn}' needed for incremental processing.")
         }
 
-        // ToDo Handle uncommitted offsets
-
         val offsets = om.getMaxInfoDateAndOffset(trackingName, Option(infoDate))
 
         val df = offsets match {

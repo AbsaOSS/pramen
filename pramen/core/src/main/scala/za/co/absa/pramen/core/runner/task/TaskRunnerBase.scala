@@ -357,7 +357,7 @@ abstract class TaskRunnerBase(conf: Config,
           dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
         }
 
-        val needAddBatchId = runtimeConfig.alwaysAddBatchIdColumn || task.job.operation.schedule == Schedule.Incremental
+        val needAddBatchId = (runtimeConfig.alwaysAddBatchIdColumn || task.job.operation.schedule == Schedule.Incremental) && !task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
 
         val dfWithBatchIdColumn = if (needAddBatchId) {
           val batchIdColumn = task.job.outputTable.batchIdColumn
@@ -366,15 +366,15 @@ abstract class TaskRunnerBase(conf: Config,
           dfWithInfoDate
         }
 
+        val postProcessed = task.job.postProcessing(dfWithBatchIdColumn, task.infoDate, conf)
+
         val dfTransformed = applyFilters(
-          applyTransformations(dfWithBatchIdColumn, task.job.operation.schemaTransformations),
+          applyTransformations(postProcessed, task.job.operation.schemaTransformations),
           task.job.operation.filters,
           task.infoDate,
           task.infoDate,
           task.infoDate
         )
-
-        val postProcessed = task.job.postProcessing(dfTransformed, task.infoDate, conf)
 
         val schemaChangesAfterTransform = if (task.job.operation.schemaTransformations.nonEmpty) {
           val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")

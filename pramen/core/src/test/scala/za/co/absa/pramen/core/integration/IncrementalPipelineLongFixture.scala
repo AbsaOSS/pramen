@@ -828,7 +828,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       val actualTable2 = dfTable2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
 
       compareText(actualTable1, expectedOffsetOnlyAll)
-      compareText(actualTable2, expectedOffsetOnly2) // ToDo This logic is to be changed when incremental transformations are supported
+      compareText(actualTable2, expectedOffsetOnlyAll)
 
       val batchIds = dfTable1.select(BATCH_ID_COLUMN).distinct().collect()
 
@@ -1207,11 +1207,84 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
     succeed
   }
 
+  def testTransformerPicksUpFromDoubleIngestedData(metastoreFormat: String): Assertion = {
+    val csv1DataStr = s"id,name,info_date\n1,John,$infoDate\n2,Jack,$infoDate\n"
+    val csv2DataStr = s"id,name,info_date\n3,Jill,$infoDate\n4,Mary,$infoDate\n"
+    val csv3DataStr = s"id,name,info_date\n5,Jane,$infoDate\n6,Kate,$infoDate\n"
+
+    val expectedStr1: String =
+      """{"id":1,"name":"John"}
+        |{"id":2,"name":"Jack"}
+        |""".stripMargin
+
+    val expectedStr2: String =
+      """{"id":1,"name":"John"}
+        |{"id":2,"name":"Jack"}
+        |{"id":3,"name":"Jill"}
+        |{"id":4,"name":"Mary"}
+        |""".stripMargin
+
+    withTempDirectory("incremental1") { tempDir =>
+      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+      val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+      val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+      val path3 = new Path(tempDir, new Path("landing", "landing_file3.csv"))
+
+      val table1Path = new Path(tempDir, "table1")
+      val table2Path = new Path(tempDir, "table2")
+
+      fsUtils.writeFile(path1, csv1DataStr)
+      val conf1 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema)
+      val exitCode1 = AppRunner.runPipeline(conf1)
+      assert(exitCode1 == 0)
+
+      fsUtils.writeFile(path2, csv2DataStr)
+      val conf2 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema, isTransformerDisabled = true)
+      val exitCode2 = AppRunner.runPipeline(conf2)
+      assert(exitCode2 == 0)
+
+      val dfTable1Before = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2Before = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1Before = dfTable1Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2Before = dfTable2Before.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      compareText(actualTable1Before, expectedStr2)
+      compareText(actualTable2Before, expectedStr1)
+
+      fsUtils.writeFile(path3, csv3DataStr)
+
+      val conf3 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema)
+      val exitCode3 = AppRunner.runPipeline(conf3)
+      assert(exitCode3 == 0)
+
+      val dfTable1After = spark.read.parquet(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2After = spark.read.parquet(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+
+      val batchIds = dfTable1After.select(BATCH_ID_COLUMN).distinct().collect()
+
+      assert(batchIds.length == 3)
+
+      val actualTable1After = dfTable1After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2After = dfTable2After.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      compareText(actualTable1After, expectedWithInfoDateAll)
+      compareText(actualTable2After, expectedWithInfoDateAll)
+
+      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+
+      val offsets = om.getOffsets("table1->table2", infoDate).map(_.asInstanceOf[CommittedOffset])
+      assert(offsets.length == 2)
+    }
+    succeed
+  }
+
   def getConfig(basePath: String,
                 metastoreFormat: String,
                 isRerun: Boolean = false,
                 useDataFrame: Boolean = false,
                 isTransformerIncremental: Boolean = true,
+                isTransformerDisabled: Boolean = false,
                 isHistoricalRun: Boolean = false,
                 historyRunMode: String = "force",
                 inferSchema: Boolean = true,
@@ -1237,6 +1310,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
            |pramen.runtime.is.rerun = $isRerun
            |pramen.current.date = "$useInfoDate"
            |transformer.schedule = "$transformerSchedule"
+           |transformer.disabled = "$isTransformerDisabled"
            |infer.schema = $inferSchema
            |$historicalConfigStr
            |has.information.date.column = $hasInfoDate
