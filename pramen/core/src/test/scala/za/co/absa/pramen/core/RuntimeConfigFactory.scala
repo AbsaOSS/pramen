@@ -37,6 +37,7 @@ object RuntimeConfigFactory {
                             parallelTasks: Int = 1,
                             stopSparkSession: Boolean = false,
                             allowEmptyPipeline: Boolean = false,
+                            alwaysAddBatchIdColumn: Boolean = false,
                             historicalRunMode: RunMode = RunMode.CheckUpdates,
                             sparkAppDescriptionTemplate: Option[String] = None): RuntimeConfig = {
     RuntimeConfig(isDryRun,
@@ -53,6 +54,7 @@ object RuntimeConfigFactory {
       parallelTasks,
       stopSparkSession,
       allowEmptyPipeline,
+      alwaysAddBatchIdColumn,
       historicalRunMode,
       sparkAppDescriptionTemplate)
   }
