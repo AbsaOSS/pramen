@@ -58,8 +58,7 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
-    val isTransitive = outputTable.format.isTransient
-    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = !isTransitive)
+    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = false)
     val runResult = try {
       RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
     } finally {
