@@ -58,11 +58,15 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
+    val isTransient = outputTable.format.isTransient
     val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, incrementalDryRun = false, isPostProcessing = false)
     val runResult = try {
       RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
     } finally {
-      metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncremental()
+      // (!) ToDo Commit only on success, and commit only on save.
+      // Rollback everything on failure
+      // Use ThreadId for parallrl jobs
+      metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncremental(isTransient)
     }
 
     runResult

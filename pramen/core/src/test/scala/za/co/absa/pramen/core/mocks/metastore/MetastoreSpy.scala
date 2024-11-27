@@ -171,7 +171,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         }
       }
 
-      override def commitIncremental(): Unit = {}
+      override def commitIncremental(isTransient: Boolean): Unit = {}
     }
   }
 }

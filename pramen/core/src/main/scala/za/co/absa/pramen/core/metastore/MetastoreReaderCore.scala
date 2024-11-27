@@ -19,5 +19,5 @@ package za.co.absa.pramen.core.metastore
 import za.co.absa.pramen.api.MetastoreReader
 
 trait MetastoreReaderCore extends MetastoreReader {
-  def commitIncremental(): Unit
+  def commitIncremental(isTransient: Boolean): Unit
 }
