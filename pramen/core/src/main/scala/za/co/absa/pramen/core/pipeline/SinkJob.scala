@@ -155,7 +155,7 @@ class SinkJob(operationDef: OperationDef,
     } finally {
       Try {
         sink.close()
-        metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncremental()
+        metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncremental(false)
       }
     }
   }

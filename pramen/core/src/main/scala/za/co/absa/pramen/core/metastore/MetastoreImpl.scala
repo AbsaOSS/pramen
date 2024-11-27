@@ -48,6 +48,8 @@ class MetastoreImpl(appConfig: Config,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  private val globalTrackingTables = new ListBuffer[TrackingTable]
+
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
 
   override def getRegisteredMetaTables: Seq[MetaTable] = tableDefs
@@ -267,45 +269,14 @@ class MetastoreImpl(appConfig: Config,
 
       override def metadataManager: MetadataManager = metadata
 
-      override def commitIncremental(): Unit = {
-        val om = if (trackingTables.nonEmpty) bookkeeper.getOffsetManager else null
-
-        trackingTables.foreach { trackingTable =>
-          log.info(s"Committing offsets for table '${trackingTable.trackingName}' for '$infoDate'")
-
-          val df = metastore.getTable(trackingTable.inputTable, Option(infoDate), Option(infoDate))
-
-          getMinMaxOffsetFromDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
-            case Some((minOffset, maxOffset)) =>
-              val offsetType = if (df.schema.fields.find(_.name == trackingTable.batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
-              val req = om.startWriteOffsets(trackingTable.trackingName, infoDate, offsetType)
-              om.commitOffsets(req, minOffset, maxOffset)
-              log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '$infoDate' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
-            case None =>
-              log.info(s"No new data processed that requires offsets update of table '${trackingTable.trackingName}' for '$infoDate'.")
-          }
-        }
-      }
-
-      private def getMinMaxOffsetFromDf(dfIn: DataFrame, batchIdColumn: String, currentMax: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
-        val df = currentMax match {
-          case Some(currentMax) =>
-            dfIn.filter(col(batchIdColumn) > currentMax.getSparkLit)
-          case None =>
-            dfIn
-        }
-
-        if (df.isEmpty) {
-          None
+      override def commitIncremental(isTransient: Boolean): Unit = {
+        if (isTransient) {
+          metastore.addTrackingTables(trackingTables.toSeq)
+          trackingTables.clear()
         } else {
-          val offsetType = if (df.schema.fields.find(_.name == batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
-          val row = df.agg(min(offsetType.getSparkCol(col(batchIdColumn)).cast(StringType)),
-              max(offsetType.getSparkCol(col(batchIdColumn))).cast(StringType))
-            .collect()(0)
-
-          val minValue = OffsetValue.fromString(offsetType.dataTypeString, row(0).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(0)}"))
-          val maxValue = OffsetValue.fromString(offsetType.dataTypeString, row(1).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(1)}"))
-          Some(minValue, maxValue)
+          metastore.commitIncremental(trackingTables.toSeq)
+          metastore.commitGlobalTrackingTables()
+          trackingTables.clear()
         }
       }
 
@@ -367,6 +338,34 @@ class MetastoreImpl(appConfig: Config,
 
     StructType(fieldsWithPartitionColumn)
   }
+
+  private[core] def addTrackingTables(trackingTables: Seq[TrackingTable]): Unit = synchronized {
+    globalTrackingTables ++= trackingTables
+  }
+
+  private[core] def commitGlobalTrackingTables(): Unit = synchronized {
+    commitIncremental(globalTrackingTables.toSeq)
+    globalTrackingTables.clear()
+  }
+
+  private[core] def commitIncremental(trackingTables: Seq[TrackingTable]): Unit = {
+    val om = if (trackingTables.nonEmpty) bookkeeper.getOffsetManager else null
+
+    trackingTables.foreach { trackingTable =>
+      log.info(s"Committing offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}'")
+      val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
+
+      getMinMaxOffsetFromDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
+        case Some((minOffset, maxOffset)) =>
+          val offsetType = if (df.schema.fields.find(_.name == trackingTable.batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
+          val req = om.startWriteOffsets(trackingTable.trackingName, trackingTable.infoDate, offsetType)
+          om.commitOffsets(req, minOffset, maxOffset)
+          log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
+        case None =>
+          log.info(s"No new data processed that requires offsets update of table '${trackingTable.trackingName}' for '${trackingTable.infoDate}'.")
+      }
+    }
+  }
 }
 
 object MetastoreImpl {
@@ -420,6 +419,28 @@ object MetastoreImpl {
             spark.conf.unset(k)
         }
       }
+    }
+  }
+
+  private[core] def getMinMaxOffsetFromDf(dfIn: DataFrame, batchIdColumn: String, currentMax: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
+    val df = currentMax match {
+      case Some(currentMax) =>
+        dfIn.filter(col(batchIdColumn) > currentMax.getSparkLit)
+      case None =>
+        dfIn
+    }
+
+    if (df.isEmpty) {
+      None
+    } else {
+      val offsetType = if (df.schema.fields.find(_.name == batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
+      val row = df.agg(min(offsetType.getSparkCol(col(batchIdColumn)).cast(StringType)),
+          max(offsetType.getSparkCol(col(batchIdColumn))).cast(StringType))
+        .collect()(0)
+
+      val minValue = OffsetValue.fromString(offsetType.dataTypeString, row(0).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(0)}"))
+      val maxValue = OffsetValue.fromString(offsetType.dataTypeString, row(1).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(1)}"))
+      Some(minValue, maxValue)
     }
   }
 }
