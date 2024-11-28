@@ -72,7 +72,7 @@ class MetastorePersistenceRaw(path: String,
 
     fsUtilsTrg.createDirectoryRecursive(outputDir)
 
-    var totalSize = 0L
+    var copiedSize = 0L
 
     if (files.isEmpty) {
       log.info("Nohting to save")
@@ -84,16 +84,37 @@ class MetastorePersistenceRaw(path: String,
 
         log.info(s"Copying file from $srcPath to $trgPath")
 
-        totalSize += fsSrc.getContentSummary(srcPath).getLength
+        copiedSize += fsSrc.getContentSummary(srcPath).getLength
         fsUtilsTrg.copyFile(srcPath, trgPath)
       })
     }
 
-    MetaTableStats(
-      Option(totalSize),
-      None,
-      Some(totalSize)
-    )
+    val stats = if (saveModeOpt.contains(SaveMode.Append)) {
+      val list = getListOfFilesRange(infoDate, infoDate)
+      if (list.isEmpty) {
+        MetaTableStats(
+          Option(copiedSize),
+          None,
+          Some(copiedSize)
+        )
+      } else {
+        val totalSize = list.map(_.getLen).sum
+        MetaTableStats(
+          Option(totalSize),
+          Some(copiedSize),
+          Some(totalSize)
+        )
+      }
+    } else {
+      MetaTableStats(
+        Option(copiedSize),
+        None,
+        Some(copiedSize)
+      )
+    }
+
+    log.info(s"Stats: ${stats}")
+    stats
   }
 
   override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {

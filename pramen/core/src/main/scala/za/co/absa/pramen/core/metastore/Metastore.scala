@@ -55,4 +55,8 @@ trait Metastore {
   def getStats(tableName: String, infoDate: LocalDate): MetaTableStats
 
   def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean, incrementalDryRun: Boolean, isPostProcessing: Boolean): MetastoreReader
+
+  def commitIncrementalTables(): Unit
+
+  def rollbackIncrementalTables(): Unit
 }

@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.types.StructType
 import org.slf4j.{Logger, LoggerFactory}
 import za.co.absa.pramen.api.jobdef.Schedule
-import za.co.absa.pramen.api.status.{DependencyFailure, DependencyWarning, JobType, MetastoreDependency, TaskDef, TaskRunReason}
+import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.metastore.Metastore
@@ -32,7 +32,7 @@ import java.time.{Instant, LocalDate}
 import scala.util.{Failure, Success, Try}
 
 abstract class JobBase(operationDef: OperationDef,
-                       metastore: Metastore,
+                       val metastore: Metastore,
                        bookkeeper: Bookkeeper,
                        jobNotificationTargets: Seq[JobNotificationTarget],
                        outputTableDef: MetaTable

@@ -116,13 +116,15 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
     ).execute()
   }
 
-  override def postCommittedRecord(table: String, infoDate: LocalDate, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
-    val createdAt = Instant.now()
+  override def postCommittedRecords(commitRequests: Seq[OffsetCommitRequest]): Unit = {
+    val committedAt = Instant.now()
 
-    val record = OffsetRecord(table, infoDate.toString, minOffset.dataType.dataTypeString, minOffset.valueString, maxOffset.valueString, batchId, createdAt.toEpochMilli, Some(createdAt.toEpochMilli))
+    val records = commitRequests.map { req =>
+      OffsetRecord(req.table, req.infoDate.toString, req.minOffset.dataType.dataTypeString, req.minOffset.valueString, req.maxOffset.valueString, batchId, req.createdAt.toEpochMilli, Some(committedAt.toEpochMilli))
+    }
 
     db.run(
-      OffsetRecords.records += record
+      OffsetRecords.records ++= records
     ).execute()
   }
 

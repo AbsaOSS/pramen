@@ -610,9 +610,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     task.runStatus match {
       case s: Succeeded        =>
-        s.recordCount match {
-          case Some(recordCount) => renderDifferenceSize(recordCount, s.recordCountOld)
-          case None => ""
+        (s.recordCount, s.recordsAppended) match {
+          case (Some(sizeTotal), Some(sizeAppended)) => renderDifferenceSize(sizeTotal, Some(sizeTotal - sizeAppended))
+          case (Some(sizeTotal), None) => renderDifferenceSize(sizeTotal, s.recordCountOld)
+          case _ => ""
         }
       case d: InsufficientData => renderDifferenceSize(d.actual, d.recordCountOld)
       case _                   => ""

@@ -18,13 +18,15 @@ package za.co.absa.pramen.core.metastore.model
 
 import za.co.absa.pramen.api.offset.OffsetValue
 
-import java.time.LocalDate
+import java.time.{Instant, LocalDate}
 
 case class TrackingTable(
+                          threadId: Long,
                           inputTable: String,
                           outputTable: String,
                           trackingName: String,
                           batchIdColumn: String,
                           currentMaxOffset: Option[OffsetValue],
-                          infoDate: LocalDate
+                          infoDate: LocalDate,
+                          createdAt: Instant
                         )
