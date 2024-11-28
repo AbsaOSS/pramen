@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.metastore
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.functions.{col, lit, max, min}
+import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
@@ -27,7 +27,7 @@ import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
-import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetCommitRequest}
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetCommitRequest, OffsetManagerUtils}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.{MetaTable, TrackingTable}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
@@ -219,9 +219,9 @@ class MetastoreImpl(appConfig: Config,
 
       override def getCurrentBatch(tableName: String): DataFrame = {
         validateTable(tableName)
-        if (isPostProcessing && isIncremental) {
+        if (isPostProcessing && isIncremental && !isRerun) {
           metastore.getBatch(tableName, infoDate, None)
-        } else if (isIncremental && !isRerun && !isPostProcessing) {
+        } else if (isIncremental && !isRerun) {
           getIncremental(tableName, outputTable, infoDate)
         } else
           metastore.getTable(tableName, Option(infoDate), Option(infoDate))
@@ -355,7 +355,7 @@ class MetastoreImpl(appConfig: Config,
     val commitRequests = trackingTables.flatMap { trackingTable =>
       val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
 
-      getMinMaxOffsetFromDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
+      getMinMaxOffsetFromMetastoreDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
         case Some((minOffset, maxOffset)) =>
           log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
           Some(OffsetCommitRequest(
@@ -433,7 +433,7 @@ object MetastoreImpl {
     }
   }
 
-  private[core] def getMinMaxOffsetFromDf(dfIn: DataFrame, batchIdColumn: String, currentMax: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
+  private[core] def getMinMaxOffsetFromMetastoreDf(dfIn: DataFrame, batchIdColumn: String, currentMax: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
     val df = currentMax match {
       case Some(currentMax) =>
         dfIn.filter(col(batchIdColumn) > currentMax.getSparkLit)
@@ -441,18 +441,7 @@ object MetastoreImpl {
         dfIn
     }
 
-    if (df.isEmpty) {
-      None
-    } else {
-      val offsetType = if (df.schema.fields.find(_.name == batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
-      val row = df.agg(min(offsetType.getSparkCol(col(batchIdColumn)).cast(StringType)),
-          max(offsetType.getSparkCol(col(batchIdColumn))).cast(StringType))
-        .collect()(0)
-
-      val minValue = OffsetValue.fromString(offsetType.dataTypeString, row(0).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(0)}"))
-      val maxValue = OffsetValue.fromString(offsetType.dataTypeString, row(1).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(1)}"))
-      Some(minValue, maxValue)
-    }
+    val offsetType = if (df.schema.fields.find(_.name == batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
+    OffsetManagerUtils.getMinMaxValueFromData(df, batchIdColumn, offsetType)
   }
 }
-

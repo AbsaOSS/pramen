@@ -22,12 +22,11 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
-import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
-import za.co.absa.pramen.api.sql.SqlGeneratorBase
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
-import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager}
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager, OffsetManagerUtils}
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental}
@@ -156,17 +155,16 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       else
         metastore.getBatch(outputTable.name, infoDate, None)
 
-      if (updatedDf.isEmpty) {
-        om.rollbackOffsets(req)
-      } else {
-        val (minOffset, maxOffset) = getMinMaxOffsetFromDf(updatedDf, offsetInfo)
-
-        if (isRerun) {
-          om.commitRerun(req, minOffset, maxOffset)
-        } else {
-          om.commitOffsets(req, minOffset, maxOffset)
-        }
+      OffsetManagerUtils.getMinMaxValueFromData(updatedDf, offsetInfo.offsetColumn, offsetInfo.offsetType) match {
+        case Some((minOffset, maxOffset)) =>
+          if (isRerun) {
+            om.commitRerun(req, minOffset, maxOffset)
+          } else {
+            om.commitOffsets(req, minOffset, maxOffset)
+          }
+        case _ => om.rollbackOffsets(req)
       }
+
       statsToReturn
     } catch {
       case ex: Throwable =>
@@ -267,7 +265,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' not found in the output table '${outputTable.name}'. Cannot update uncommitted offsets.")
     }
 
-    val (newMinOffset, newMaxOffset) = getMinMaxOffsetFromDf(df, offsetInfo)
+    val (newMinOffset, newMaxOffset) = OffsetManagerUtils.getMinMaxValueFromData(df, offsetInfo.offsetColumn, offsetInfo.offsetType).get
 
     log.warn(s"Fixing uncommitted offsets. New offset to commit for ${outputTable.name} at $infoDate: " +
       s"min offset: ${newMinOffset.valueString}, max offset: ${newMaxOffset.valueString}.")
@@ -288,20 +286,6 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       log.warn(s"Cleaning uncommitted offset: $of...")
       om.rollbackOffsets(DataOffsetRequest(outputTable.name, infoDate, of.batchId, of.createdAt))
     }
-  }
-
-  private[core] def getMinMaxOffsetFromDf(df: DataFrame, offsetInfo: OffsetInfo): (OffsetValue, OffsetValue) = {
-    val row = df.agg(min(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn)).cast(StringType)),
-        max(offsetInfo.offsetType.getSparkCol(col(offsetInfo.offsetColumn))).cast(StringType))
-      .collect()(0)
-
-    val minValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(0).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(0)}"))
-    val maxValue = OffsetValue.fromString(offsetInfo.offsetType.dataTypeString, row(1).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(1)}"))
-
-    SqlGeneratorBase.validateOffsetValue(minValue)
-    SqlGeneratorBase.validateOffsetValue(maxValue)
-
-    (minValue, maxValue)
   }
 
   private[core] def validateOffsetColumn(df: DataFrame, offsetInfo: OffsetInfo): Unit = {
