@@ -27,7 +27,7 @@ import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
-import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetCommitRequest}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.{MetaTable, TrackingTable}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
@@ -269,15 +269,9 @@ class MetastoreImpl(appConfig: Config,
 
       override def metadataManager: MetadataManager = metadata
 
-      override def commitIncremental(isTransient: Boolean): Unit = {
-        if (isTransient) {
-          metastore.addTrackingTables(trackingTables.toSeq)
-          trackingTables.clear()
-        } else {
-          metastore.commitIncremental(trackingTables.toSeq)
-          metastore.commitGlobalTrackingTables()
-          trackingTables.clear()
-        }
+      override def commitIncrementalStage(): Unit = {
+        metastore.addTrackingTables(trackingTables.toSeq)
+        trackingTables.clear()
       }
 
       private def validateTable(tableName: String): Unit = {
@@ -313,12 +307,14 @@ class MetastoreImpl(appConfig: Config,
           log.info(s"Starting offset commit for table '$trackingName' for '$infoDate''")
 
           val trackingTable = TrackingTable(
+            Thread.currentThread().getId,
             tableName,
             outputTable,
             trackingName,
             tableDef.batchIdColumn,
             offsets.map(_.maximumOffset),
-            infoDate
+            infoDate,
+            Instant.now()
           )
 
           trackingTables += trackingTable
@@ -327,6 +323,18 @@ class MetastoreImpl(appConfig: Config,
         df
       }
     }
+  }
+
+  override def commitIncrementalTables(): Unit = synchronized {
+    val threadId = Thread.currentThread().getId
+    val tablesToCommit = globalTrackingTables.filter(_.threadId == threadId)
+    commitIncremental(tablesToCommit.toSeq)
+    globalTrackingTables --= tablesToCommit
+  }
+
+  override def rollbackIncrementalTables(): Unit = synchronized {
+    val threadId = Thread.currentThread().getId
+    globalTrackingTables --= globalTrackingTables.filter(_.threadId == threadId)
   }
 
   private[core] def prepareHiveSchema(schema: StructType, mt: MetaTable): StructType = {
@@ -343,27 +351,30 @@ class MetastoreImpl(appConfig: Config,
     globalTrackingTables ++= trackingTables
   }
 
-  private[core] def commitGlobalTrackingTables(): Unit = synchronized {
-    commitIncremental(globalTrackingTables.toSeq)
-    globalTrackingTables.clear()
-  }
-
   private[core] def commitIncremental(trackingTables: Seq[TrackingTable]): Unit = {
-    val om = if (trackingTables.nonEmpty) bookkeeper.getOffsetManager else null
-
-    trackingTables.foreach { trackingTable =>
-      log.info(s"Committing offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}'")
+    val commitRequests = trackingTables.flatMap { trackingTable =>
       val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
 
       getMinMaxOffsetFromDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
         case Some((minOffset, maxOffset)) =>
-          val offsetType = if (df.schema.fields.find(_.name == trackingTable.batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
-          val req = om.startWriteOffsets(trackingTable.trackingName, trackingTable.infoDate, offsetType)
-          om.commitOffsets(req, minOffset, maxOffset)
           log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
+          Some(OffsetCommitRequest(
+            trackingTable.trackingName,
+            trackingTable.infoDate,
+            minOffset,
+            maxOffset,
+            trackingTable.createdAt
+          ))
         case None =>
           log.info(s"No new data processed that requires offsets update of table '${trackingTable.trackingName}' for '${trackingTable.infoDate}'.")
+          None
       }
+    }
+
+    if (commitRequests.nonEmpty) {
+      val om = bookkeeper.getOffsetManager
+      om.postCommittedRecords(commitRequests)
+      log.info(s"Committed ${commitRequests.length} requests.'")
     }
   }
 }

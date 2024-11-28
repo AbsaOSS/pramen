@@ -82,7 +82,7 @@ trait OffsetManager {
   /**
     * Combines both startWriteOffsets() and commitOffsets() into one operation when it is applicable.
     */
-  def postCommittedRecord(table: String, infoDate: LocalDate, minOffset: OffsetValue, maxOffset: OffsetValue): Unit
+  def postCommittedRecords(commitRequests: Seq[OffsetCommitRequest]): Unit
 
   /**
     * Rolls back an offset request

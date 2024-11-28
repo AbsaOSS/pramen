@@ -14,10 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.metastore
+package za.co.absa.pramen.core.bookkeeper
 
-import za.co.absa.pramen.api.MetastoreReader
+import za.co.absa.pramen.api.offset.OffsetValue
 
-trait MetastoreReaderCore extends MetastoreReader {
-  def commitIncrementalStage(): Unit
-}
+import java.time.{Instant, LocalDate}
+
+case class OffsetCommitRequest(
+                                table: String,
+                                infoDate: LocalDate,
+                                minOffset: OffsetValue,
+                                maxOffset: OffsetValue,
+                                createdAt: Instant
+                              )

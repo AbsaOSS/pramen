@@ -148,6 +148,8 @@ class SinkJob(operationDef: OperationDef,
         isTransient
       )
 
+      metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
+
       val stats = MetaTableStats(Option(sinkResult.recordsSent), None, None)
       SaveResult(stats, sinkResult.filesSent, sinkResult.hiveTables, sinkResult.warnings ++ tooLongWarnings)
     } catch {
@@ -155,7 +157,6 @@ class SinkJob(operationDef: OperationDef,
     } finally {
       Try {
         sink.close()
-        metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncremental(false)
       }
     }
   }

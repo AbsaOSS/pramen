@@ -390,6 +390,10 @@ abstract class TaskRunnerBase(conf: Config,
           task.job.save(dfTransformed, task.infoDate, task.reason, conf, started, validationResult.inputRecordsCount)
         }
 
+        if (!isTransient) {
+          task.job.metastore.commitIncrementalTables()
+        }
+
         val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
           val recreate = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || task.reason == TaskRunReason.Rerun
           task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, recreate)
@@ -432,6 +436,7 @@ abstract class TaskRunnerBase(conf: Config,
       case ex: Throwable => Failure(new FatalErrorWrapper("Fatal error has occurred.", ex))
     } finally {
       if (!isTransient) {
+        task.job.metastore.rollbackIncrementalTables()
         lock.release()
       }
     }
