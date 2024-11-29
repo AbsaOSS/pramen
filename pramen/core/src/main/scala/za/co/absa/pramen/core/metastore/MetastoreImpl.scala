@@ -204,7 +204,7 @@ class MetastoreImpl(appConfig: Config,
     MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).getStats(infoDate, onlyForCurrentBatchId = false)
   }
 
-  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean, incrementalDryRun: Boolean, isPostProcessing: Boolean): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean, commitChanges: Boolean, isPostProcessing: Boolean): MetastoreReader = {
     val metastore = this
 
     new MetastoreReaderCore {
@@ -219,7 +219,7 @@ class MetastoreImpl(appConfig: Config,
 
       override def getCurrentBatch(tableName: String): DataFrame = {
         validateTable(tableName)
-        if (isPostProcessing && isIncremental && !isRerun) {
+        if (isIncremental && !isRerun && isPostProcessing) {
           metastore.getBatch(tableName, infoDate, None)
         } else if (isIncremental && !isRerun) {
           getIncremental(tableName, outputTable, infoDate)
@@ -284,7 +284,6 @@ class MetastoreImpl(appConfig: Config,
         val trackingName = s"$tableName->$transformationOutputTable"
         val tableDef = getTableDef(tableName)
         val offsetType = if (tableDef.format.isInstanceOf[DataFormat.Raw]) OffsetType.StringType else OffsetType.IntegralType
-        val needsToCommit = !isPostProcessing && !incrementalDryRun
         val om = bookkeeper.getOffsetManager
         val tableDf = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
 
@@ -303,7 +302,7 @@ class MetastoreImpl(appConfig: Config,
             tableDf
         }
 
-        if (needsToCommit && !trackingTables.exists(t => t.trackingName == trackingName && t.infoDate == infoDate)) {
+        if (commitChanges && !trackingTables.exists(t => t.trackingName == trackingName && t.infoDate == infoDate)) {
           log.info(s"Starting offset commit for table '$trackingName' for '$infoDate''")
 
           val trackingTable = TrackingTable(
