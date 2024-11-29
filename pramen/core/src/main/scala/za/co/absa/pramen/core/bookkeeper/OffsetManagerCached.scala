@@ -40,12 +40,17 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
   }
 
   def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = synchronized {
+    val tbl = onlyForInfoDate match {
+      case Some(date) => s"'$table' for '$date'"
+      case None => s"'$table'"
+    }
+
     if (aggregatedOffsetsCache.contains((table, onlyForInfoDate))) {
-      log.info(s"Got min/max offsets for '$table' from cache.")
+      log.info(s"Got min/max offsets for $tbl from cache.")
       aggregatedOffsetsCache((table, onlyForInfoDate))
     } else {
       val value = offsetManager.getMaxInfoDateAndOffset(table, onlyForInfoDate)
-      log.info(s"Got min/max offsets for '$table' from the database. Saving to cache...")
+      log.info(s"Got min/max offsets for $tbl from the database. Saving to cache...")
       aggregatedOffsetsCache += (table, onlyForInfoDate) -> value
       value
     }
