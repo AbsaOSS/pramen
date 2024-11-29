@@ -28,7 +28,7 @@ import za.co.absa.pramen.api.{DataFormat, Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager, OffsetManagerUtils}
 import za.co.absa.pramen.core.metastore.Metastore
-import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental}
 import za.co.absa.pramen.core.utils.SparkUtils._
 
@@ -169,7 +169,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       source.postProcess(
         sourceTable.query,
         outputTable.name,
-        metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, isIncremental = true, commitChanges = false, isPostProcessing = true),
+        metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, ReaderMode.IncrementalPostProcessing),
         infoDate,
         operationDef.extraOptions
       )
