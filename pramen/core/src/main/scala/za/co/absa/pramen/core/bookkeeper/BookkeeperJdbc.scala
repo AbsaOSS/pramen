@@ -33,7 +33,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val offsetManagement = new OffsetManagerJdbc(db, batchId)
+  private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(db, batchId))
 
   override val bookkeepingEnabled: Boolean = true
 
