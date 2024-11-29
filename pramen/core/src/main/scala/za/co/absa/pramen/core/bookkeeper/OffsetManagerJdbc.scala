@@ -57,7 +57,6 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   }
 
   override def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = {
-    // ToDo Consider adding a caching layer for this
     val maxInfoDateOpt = onlyForInfoDate.orElse(getMaximumInfoDate(table))
 
     try {
