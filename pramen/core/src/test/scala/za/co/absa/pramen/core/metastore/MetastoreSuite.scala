@@ -390,7 +390,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
+        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, commitChanges = false, isPostProcessing = false)
 
         val df1 = reader.getTable("table1", Some(infoDate), Some(infoDate))
 
@@ -404,7 +404,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table2" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
+        val reader = m.getMetastoreReader("table2" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, commitChanges = false, isPostProcessing = false)
 
         val ex = intercept[TableNotConfigured] {
           reader.getTable("table1", Some(infoDate), Some(infoDate))
@@ -420,7 +420,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
+        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, commitChanges = false, isPostProcessing = false)
         val runInfo1 = reader.getTableRunInfo("table1", infoDate)
         val runInfo2 = reader.getTableRunInfo("table1", infoDate.plusDays(1))
 
@@ -438,7 +438,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
         m.saveTable("table1", infoDate, getDf)
 
-        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
+        val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, isIncremental = false, commitChanges = false, isPostProcessing = false)
         val metadataManager = reader.metadataManager
 
         metadataManager.setMetadata("table1", infoDate, "key1", "value1")
@@ -456,7 +456,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
           m.saveTable("table1", infoDate, getDf)
           m.saveTable("table1", infoDate.plusDays(1), getDf)
 
-          val reader = m.getMetastoreReader("table1" :: "table2" :: Nil, "output_table", infoDate.plusDays(10), TaskRunReason.New, isIncremental = false, incrementalDryRun = false, isPostProcessing = false)
+          val reader = m.getMetastoreReader("table1" :: "table2" :: Nil, "output_table", infoDate.plusDays(10), TaskRunReason.New, isIncremental = false, commitChanges = false, isPostProcessing = false)
 
           val date1 = reader.getLatestAvailableDate("table1")
           val date2 = reader.getLatestAvailableDate("table1", Some(infoDate))

@@ -130,25 +130,18 @@ class IncrementalIngestionJob(operationDef: OperationDef,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
     val isRerun = runReason == TaskRunReason.Rerun
-
     val dfToSave = df.withColumn(outputTable.batchIdColumn, lit(batchId))
-
     val om = bookkeeper.getOffsetManager
-
     val offsetInfo = source.getOffsetInfo.getOrElse(
-      throw new IllegalArgumentException(s"Offset type is not configured for the source '$sourceName' outputting to '${outputTable.name}''")
+      throw new IllegalArgumentException(s"Offset type is not configured for the source '$sourceName' outputting to '${outputTable.name}'")
     )
 
     validateOffsetColumn(df, offsetInfo)
-
     val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType)
 
     val stats = try {
-      val statsToReturn = if (isRerun) {
-        metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Overwrite))
-      } else {
-        metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(SaveMode.Append))
-      }
+      val saveMode = if (isRerun) SaveMode.Overwrite else SaveMode.Append
+      val statsToReturn = metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(saveMode))
 
       val updatedDf = if (outputTable.format.isInstanceOf[DataFormat.Raw])
         df
@@ -176,7 +169,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       source.postProcess(
         sourceTable.query,
         outputTable.name,
-        metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, isIncremental = true, incrementalDryRun = false, isPostProcessing = true),
+        metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, isIncremental = true, commitChanges = false, isPostProcessing = true),
         infoDate,
         operationDef.extraOptions
       )

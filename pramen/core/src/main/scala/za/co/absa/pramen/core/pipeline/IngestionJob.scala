@@ -173,7 +173,7 @@ class IngestionJob(operationDef: OperationDef,
       source.postProcess(
         sourceTable.query,
         outputTable.name,
-        metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, isIncremental = false, incrementalDryRun = false, isPostProcessing = true),
+        metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, isIncremental = false, commitChanges = false, isPostProcessing = true),
         infoDate,
         operationDef.extraOptions
       )

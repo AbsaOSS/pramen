@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
-import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
@@ -28,8 +27,6 @@ import scala.util.control.NonFatal
 
 class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   import za.co.absa.pramen.core.utils.FutureImplicits._
-
-  private val log = LoggerFactory.getLogger(this.getClass)
 
   override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
     val offsets = getOffsetRecords(table, infoDate)
@@ -60,6 +57,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   }
 
   override def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = {
+    // ToDo Consider adding a caching layer for this
     val maxInfoDateOpt = onlyForInfoDate.orElse(getMaximumInfoDate(table))
 
     try {
