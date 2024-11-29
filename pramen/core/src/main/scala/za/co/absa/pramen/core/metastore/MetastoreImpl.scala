@@ -222,7 +222,7 @@ class MetastoreImpl(appConfig: Config,
         if (readMode == ReaderMode.IncrementalPostProcessing && !isRerun) {
           metastore.getBatch(tableName, infoDate, None)
         } else if ((readMode == ReaderMode.IncrementalValidation || readMode == ReaderMode.IncrementalRun) && !isRerun) {
-          getIncremental(tableName, outputTable, infoDate)
+          getIncremental(tableName, infoDate)
         } else
           metastore.getTable(tableName, Option(infoDate), Option(infoDate))
       }
@@ -269,6 +269,12 @@ class MetastoreImpl(appConfig: Config,
 
       override def metadataManager: MetadataManager = metadata
 
+      override def commitTable(tableName: String, trackingName: String): Unit = {
+        if (readMode != ReaderMode.Batch) {
+          getIncrementalDf(tableName, trackingName, infoDate, commit = true)
+        }
+      }
+
       override def commitIncrementalStage(): Unit = {
         metastore.addTrackingTables(trackingTables.toSeq)
         trackingTables.clear()
@@ -280,30 +286,38 @@ class MetastoreImpl(appConfig: Config,
         }
       }
 
-      private def getIncremental(tableName: String, transformationOutputTable: String, infoDate: LocalDate): DataFrame = {
+      private def getIncremental(tableName: String, infoDate: LocalDate): DataFrame = {
         val commitChanges = readMode == ReaderMode.IncrementalRun
-        val trackingName = s"$tableName->$transformationOutputTable"
-        val tableDef = getTableDef(tableName)
-        val offsetType = if (tableDef.format.isInstanceOf[DataFormat.Raw]) OffsetType.StringType else OffsetType.IntegralType
+        val trackingName = s"$tableName->$outputTable"
+
+        getIncrementalDf(tableName, trackingName, infoDate, commitChanges)
+      }
+
+      private def getIncrementalDf(tableName: String, trackingName: String, infoDate: LocalDate, commit: Boolean): DataFrame = {
+        val tableDef = metastore.getTableDef(tableName)
         val om = bookkeeper.getOffsetManager
         val tableDf = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
-
-        if (!tableDf.schema.exists(_.name == tableDef.batchIdColumn)) {
-          throw new IllegalArgumentException(s"Table '$tableName' does not contain column '${tableDef.batchIdColumn}' needed for incremental processing.")
-        }
-
         val offsets = om.getMaxInfoDateAndOffset(trackingName, Option(infoDate))
 
-        val df = offsets match {
-          case Some(values) =>
-            log.info(s"Getting incremental table '$trackingName' for '$infoDate', column '${tableDef.batchIdColumn}' > ${values.maximumOffset.valueString}")
-            tableDf.filter(col(tableDef.batchIdColumn) > values.maximumOffset.getSparkLit)
-          case None =>
-            log.info(s"Getting incremental table '$trackingName' for '$infoDate''")
-            tableDf
+        val df = if (tableDf.isEmpty) {
+          tableDf
+        } else {
+          if (!tableDf.schema.exists(_.name == tableDef.batchIdColumn)) {
+            log.error(tableDf.schema.treeString)
+            throw new IllegalArgumentException(s"Table '$tableName' does not contain column '${tableDef.batchIdColumn}' needed for incremental processing.")
+          }
+
+          offsets match {
+            case Some(values) =>
+              log.info(s"Getting incremental table '$trackingName' for '$infoDate', column '${tableDef.batchIdColumn}' > ${values.maximumOffset.valueString}")
+              tableDf.filter(col(tableDef.batchIdColumn) > values.maximumOffset.getSparkLit)
+            case None =>
+              log.info(s"Getting incremental table '$trackingName' for '$infoDate''")
+              tableDf
+          }
         }
 
-        if (commitChanges && !trackingTables.exists(t => t.trackingName == trackingName && t.infoDate == infoDate)) {
+        if (commit && !trackingTables.exists(t => t.trackingName == trackingName && t.infoDate == infoDate)) {
           log.info(s"Starting offset commit for table '$trackingName' for '$infoDate''")
 
           val trackingTable = TrackingTable(
@@ -355,19 +369,23 @@ class MetastoreImpl(appConfig: Config,
     val commitRequests = trackingTables.flatMap { trackingTable =>
       val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
 
-      getMinMaxOffsetFromMetastoreDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
-        case Some((minOffset, maxOffset)) =>
-          log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
-          Some(OffsetCommitRequest(
-            trackingTable.trackingName,
-            trackingTable.infoDate,
-            minOffset,
-            maxOffset,
-            trackingTable.createdAt
-          ))
-        case None =>
-          log.info(s"No new data processed that requires offsets update of table '${trackingTable.trackingName}' for '${trackingTable.infoDate}'.")
-          None
+      if (df.isEmpty) {
+        None
+      } else {
+        getMinMaxOffsetFromMetastoreDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
+          case Some((minOffset, maxOffset)) =>
+            log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
+            Some(OffsetCommitRequest(
+              trackingTable.trackingName,
+              trackingTable.infoDate,
+              minOffset,
+              maxOffset,
+              trackingTable.createdAt
+            ))
+          case None =>
+            log.info(s"No new data processed that requires offsets update of table '${trackingTable.trackingName}' for '${trackingTable.infoDate}'.")
+            None
+        }
       }
     }
 

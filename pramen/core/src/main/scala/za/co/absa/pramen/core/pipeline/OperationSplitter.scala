@@ -106,7 +106,11 @@ class OperationSplitter(conf: Config,
     val notificationTargets = operationDef.notificationTargets
       .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
-    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, clazz, transformer, batchId))
+    val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
+      bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable, None).map(_.maximumInfoDate)
+    } else None
+
+    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, clazz, transformer, latestInfoDateOpt))
   }
 
   def createPythonTransformation(operationDef: OperationDef,
@@ -126,7 +130,11 @@ class OperationSplitter(conf: Config,
     val notificationTargets = operationDef.notificationTargets
       .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
-    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner, databricksClientOpt))
+    val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
+      bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable, None).map(_.maximumInfoDate)
+    } else None
+
+    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner, databricksClientOpt, latestInfoDateOpt))
   }
 
   def createSink(operationDef: OperationDef,
