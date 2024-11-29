@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetCommitRequest, OffsetManagerUtils}
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.metastore.model.{MetaTable, TrackingTable}
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
@@ -204,7 +204,7 @@ class MetastoreImpl(appConfig: Config,
     MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).getStats(infoDate, onlyForCurrentBatchId = false)
   }
 
-  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean, commitChanges: Boolean, isPostProcessing: Boolean): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, readMode: ReaderMode): MetastoreReader = {
     val metastore = this
 
     new MetastoreReaderCore {
@@ -219,9 +219,9 @@ class MetastoreImpl(appConfig: Config,
 
       override def getCurrentBatch(tableName: String): DataFrame = {
         validateTable(tableName)
-        if (isIncremental && !isRerun && isPostProcessing) {
+        if (readMode == ReaderMode.IncrementalPostProcessing && !isRerun) {
           metastore.getBatch(tableName, infoDate, None)
-        } else if (isIncremental && !isRerun) {
+        } else if ((readMode == ReaderMode.IncrementalValidation || readMode == ReaderMode.IncrementalRun) && !isRerun) {
           getIncremental(tableName, outputTable, infoDate)
         } else
           metastore.getTable(tableName, Option(infoDate), Option(infoDate))
@@ -281,6 +281,7 @@ class MetastoreImpl(appConfig: Config,
       }
 
       private def getIncremental(tableName: String, transformationOutputTable: String, infoDate: LocalDate): DataFrame = {
+        val commitChanges = readMode == ReaderMode.IncrementalRun
         val trackingName = s"$tableName->$transformationOutputTable"
         val tableDef = getTableDef(tableName)
         val offsetType = if (tableDef.format.isInstanceOf[DataFormat.Raw]) OffsetType.StringType else OffsetType.IntegralType

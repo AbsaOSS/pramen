@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.jobdef.SinkTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderCore}
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus.Ready
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
@@ -122,7 +122,9 @@ class SinkJob(operationDef: OperationDef,
       case NonFatal(ex) => throw new IllegalStateException("Unable to connect to the sink.", ex)
     }
 
-    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, isIncremental, commitChanges = true, isPostProcessing = false)
+    val readerMode = if (isIncremental) ReaderMode.IncrementalPostProcessing else ReaderMode.Batch
+
+    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, readerMode)
 
     try {
       val sinkResult = sink.send(df,

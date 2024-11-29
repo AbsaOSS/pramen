@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.offset.DataOffset
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
-import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderCore, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
@@ -105,7 +105,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
     stats
   }
 
-  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, taskRunReason: TaskRunReason, isIncremental: Boolean, commitChanges: Boolean, isPostProcessing: Boolean): MetastoreReader = {
+  override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, taskRunReason: TaskRunReason, readMode: ReaderMode): MetastoreReader = {
     val metastore = this
 
     new MetastoreReaderCore {

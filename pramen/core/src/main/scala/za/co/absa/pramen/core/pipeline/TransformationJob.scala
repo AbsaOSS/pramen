@@ -21,7 +21,7 @@ import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreReaderCore}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 
@@ -54,11 +54,13 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
-    transformer.validate(metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, commitChanges = false, isPostProcessing = false), infoDate, operationDef.extraOptions)
+    val readerMode = if (isIncremental) ReaderMode.IncrementalValidation else ReaderMode.Batch
+    transformer.validate(metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, readerMode), infoDate, operationDef.extraOptions)
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
-    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, isIncremental, commitChanges = true, isPostProcessing = false)
+    val readerMode = if (isIncremental) ReaderMode.IncrementalRun else ReaderMode.Batch
+    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, readerMode)
     val runResult = RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
 
     metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
@@ -83,7 +85,8 @@ class TransformationJob(operationDef: OperationDef,
     else
       SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
 
-    val metastoreReader = metastore.getMetastoreReader(inputTables :+ outputTable.name, outputTable.name, infoDate, runReason, isIncremental, commitChanges = false, isPostProcessing = true)
+    val readerMode = if (isIncremental) ReaderMode.IncrementalPostProcessing else ReaderMode.Batch
+    val metastoreReader = metastore.getMetastoreReader(inputTables :+ outputTable.name, outputTable.name, infoDate, runReason, readerMode)
 
     try {
       transformer.postProcess(

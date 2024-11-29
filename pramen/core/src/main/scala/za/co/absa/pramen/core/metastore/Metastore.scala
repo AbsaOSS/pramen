@@ -20,7 +20,7 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.status.TaskRunReason
-import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.utils.hive.HiveHelper
 
 import java.time.LocalDate
@@ -54,7 +54,7 @@ trait Metastore {
 
   def getStats(tableName: String, infoDate: LocalDate): MetaTableStats
 
-  def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, isIncremental: Boolean, commitChanges: Boolean, isPostProcessing: Boolean): MetastoreReader
+  def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, readMode: ReaderMode): MetastoreReader
 
   def commitIncrementalTables(): Unit
 
