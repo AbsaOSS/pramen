@@ -171,7 +171,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         }
       }
 
-      override def commitTable(tableName: String, trackingName: String): Unit = {}
+      override def commitOutputTable(tableName: String, trackingName: String): Unit = {}
 
       override def commitIncrementalStage(): Unit = {}
     }

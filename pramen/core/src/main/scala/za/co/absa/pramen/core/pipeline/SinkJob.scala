@@ -143,8 +143,6 @@ class SinkJob(operationDef: OperationDef,
 
     val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, readerMode)
 
-    metastoreReader.asInstanceOf[MetastoreReaderCore].commitTable(sinkTable.metaTableName, s"${sinkTable.metaTableName}->$sinkName")
-
     try {
       val sinkResult = sink.send(df,
         sinkTable.metaTableName,
@@ -153,9 +151,13 @@ class SinkJob(operationDef: OperationDef,
         sinkTable.options
       )
 
-      val jobFinished = Instant.now
-
       val isTransient = outputTable.format.isTransient
+
+      if (!isTransient) {
+        metastoreReader.asInstanceOf[MetastoreReaderCore].commitOutputTable(sinkTable.metaTableName, s"${sinkTable.metaTableName}->$sinkName")
+      }
+
+      val jobFinished = Instant.now
 
       val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, sinkTable.warnMaxExecutionTimeSeconds)
 
