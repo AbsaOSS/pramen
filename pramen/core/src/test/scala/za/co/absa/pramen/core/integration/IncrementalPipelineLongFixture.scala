@@ -1274,7 +1274,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       val om = new OffsetManagerJdbc(pramenDb.db, 123L)
 
       val offsets = om.getOffsets("table1->table2", infoDate).map(_.asInstanceOf[CommittedOffset])
-      assert(offsets.length == 2)
+      assert(offsets.length == 1)
     }
     succeed
   }

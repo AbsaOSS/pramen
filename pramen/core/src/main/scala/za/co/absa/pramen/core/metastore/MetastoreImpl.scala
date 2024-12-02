@@ -220,11 +220,15 @@ class MetastoreImpl(appConfig: Config,
       override def getCurrentBatch(tableName: String): DataFrame = {
         validateTable(tableName)
         if (readMode == ReaderMode.IncrementalPostProcessing && !isRerun) {
+          log.info(s"Getting the current batch for table '$tableName' at '$infoDate'...")
           metastore.getBatch(tableName, infoDate, None)
         } else if ((readMode == ReaderMode.IncrementalValidation || readMode == ReaderMode.IncrementalRun) && !isRerun) {
+          log.info(s"Getting the current incremental chunk for table '$tableName' at '$infoDate'...")
           getIncremental(tableName, infoDate)
-        } else
+        } else {
+          log.info(s"Getting daily data for table '$tableName' at '$infoDate'...")
           metastore.getTable(tableName, Option(infoDate), Option(infoDate))
+        }
       }
 
       override def getLatest(tableName: String, until: Option[LocalDate] = None): DataFrame = {
@@ -269,9 +273,25 @@ class MetastoreImpl(appConfig: Config,
 
       override def metadataManager: MetadataManager = metadata
 
-      override def commitTable(tableName: String, trackingName: String): Unit = {
+      override def commitOutputTable(tableName: String, trackingName: String): Unit = {
         if (readMode != ReaderMode.Batch) {
-          getIncrementalDf(tableName, trackingName, infoDate, commit = true)
+          val om = bookkeeper.getOffsetManager
+          val minMax = om.getMaxInfoDateAndOffset(trackingName, Option(infoDate))
+          val batchIdValue = OffsetValue.IntegralValue(batchId)
+          log.info(s"Starting offset commit for output table '$trackingName' for '$infoDate'.")
+          val trackingTable = TrackingTable(
+            Thread.currentThread().getId,
+            tableName,
+            outputTable,
+            trackingName,
+            "",
+            minMax.map(_.minimumOffset),
+            minMax.map(_.maximumOffset),
+            infoDate,
+            Instant.now()
+          )
+
+          trackingTables += trackingTable
         }
       }
 
@@ -318,7 +338,7 @@ class MetastoreImpl(appConfig: Config,
         }
 
         if (commit && !trackingTables.exists(t => t.trackingName == trackingName && t.infoDate == infoDate)) {
-          log.info(s"Starting offset commit for table '$trackingName' for '$infoDate''")
+          log.info(s"Starting offset commit for table '$trackingName' for '$infoDate'")
 
           val trackingTable = TrackingTable(
             Thread.currentThread().getId,
@@ -326,6 +346,7 @@ class MetastoreImpl(appConfig: Config,
             outputTable,
             trackingName,
             tableDef.batchIdColumn,
+            offsets.map(_.minimumOffset),
             offsets.map(_.maximumOffset),
             infoDate,
             Instant.now()
@@ -366,12 +387,16 @@ class MetastoreImpl(appConfig: Config,
   }
 
   private[core] def commitIncremental(trackingTables: Seq[TrackingTable]): Unit = {
-    val commitRequests = trackingTables.flatMap { trackingTable =>
-      val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
+    if (trackingTables.isEmpty)
+      return
 
-      if (df.isEmpty) {
-        None
-      } else {
+    val om = bookkeeper.getOffsetManager
+    val batchIdValue = OffsetValue.IntegralValue(batchId)
+
+    val commitRequests = trackingTables.flatMap { trackingTable =>
+      val tableDef = getTableDef(trackingTable.inputTable)
+      if (tableDef.format.isInstanceOf[DataFormat.Raw]) {
+        val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
         getMinMaxOffsetFromMetastoreDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
           case Some((minOffset, maxOffset)) =>
             log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
@@ -386,11 +411,20 @@ class MetastoreImpl(appConfig: Config,
             log.info(s"No new data processed that requires offsets update of table '${trackingTable.trackingName}' for '${trackingTable.infoDate}'.")
             None
         }
+      } else {
+        val minOffset = trackingTable.currentMinOffset.getOrElse(batchIdValue)
+        log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='$batchId'.")
+        Some(OffsetCommitRequest(
+          trackingTable.trackingName,
+          trackingTable.infoDate,
+          minOffset,
+          batchIdValue,
+          trackingTable.createdAt
+        ))
       }
     }
 
     if (commitRequests.nonEmpty) {
-      val om = bookkeeper.getOffsetManager
       om.postCommittedRecords(commitRequests)
       log.info(s"Committed ${commitRequests.length} requests.'")
     }
@@ -451,14 +485,7 @@ object MetastoreImpl {
     }
   }
 
-  private[core] def getMinMaxOffsetFromMetastoreDf(dfIn: DataFrame, batchIdColumn: String, currentMax: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
-    val df = currentMax match {
-      case Some(currentMax) =>
-        dfIn.filter(col(batchIdColumn) > currentMax.getSparkLit)
-      case None =>
-        dfIn
-    }
-
+  private[core] def getMinMaxOffsetFromMetastoreDf(df: DataFrame, batchIdColumn: String, currentMax: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
     val offsetType = if (df.schema.fields.find(_.name == batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
     OffsetManagerUtils.getMinMaxValueFromData(df, batchIdColumn, offsetType)
   }

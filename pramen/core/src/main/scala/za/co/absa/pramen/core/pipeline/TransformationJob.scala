@@ -102,7 +102,7 @@ class TransformationJob(operationDef: OperationDef,
       val readerMode = if (isIncremental) ReaderMode.IncrementalRun else ReaderMode.Batch
       val metastoreReaderRun = metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, readerMode)
 
-      metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitTable(outputTable.name, outputTable.name)
+      metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitOutputTable(outputTable.name, outputTable.name)
       metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
     }
 

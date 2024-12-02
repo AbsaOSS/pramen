@@ -115,14 +115,25 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
   override def postCommittedRecords(commitRequests: Seq[OffsetCommitRequest]): Unit = {
     val committedAt = Instant.now()
+    val committedAtMilli = committedAt.toEpochMilli
 
     val records = commitRequests.map { req =>
-      OffsetRecord(req.table, req.infoDate.toString, req.minOffset.dataType.dataTypeString, req.minOffset.valueString, req.maxOffset.valueString, batchId, req.createdAt.toEpochMilli, Some(committedAt.toEpochMilli))
+      OffsetRecord(req.table, req.infoDate.toString, req.minOffset.dataType.dataTypeString, req.minOffset.valueString, req.maxOffset.valueString, batchId, req.createdAt.toEpochMilli, Some(committedAtMilli))
     }
 
     db.run(
       OffsetRecords.records ++= records
     ).execute()
+
+    commitRequests.map(r => (r.table, r.infoDate))
+      .distinct
+      .foreach { case (table, infoDate) =>
+        db.run(
+          OffsetRecords.records
+            .filter(r => r.pramenTableName === table && r.infoDate === infoDate.toString && r.committedAt =!= committedAtMilli)
+            .delete
+        ).execute()
+      }
   }
 
   override def rollbackOffsets(request: DataOffsetRequest): Unit = {

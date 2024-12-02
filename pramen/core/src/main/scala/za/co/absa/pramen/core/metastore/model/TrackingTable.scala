@@ -26,6 +26,7 @@ case class TrackingTable(
                           outputTable: String,
                           trackingName: String,
                           batchIdColumn: String,
+                          currentMinOffset: Option[OffsetValue],
                           currentMaxOffset: Option[OffsetValue],
                           infoDate: LocalDate,
                           createdAt: Instant
