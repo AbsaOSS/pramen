@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.reader.model
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.sql.QuotingPolicy
+import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class TableReaderJdbcConfig(
@@ -33,6 +34,7 @@ case class TableReaderJdbcConfig(
                                   correctDecimalsFixPrecision: Boolean = false,
                                   enableSchemaMetadata: Boolean = false,
                                   useJdbcNative: Boolean = false,
+                                  specialCharacters: String = " ",
                                   identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto,
                                   sqlGeneratorClass: Option[String] = None
                                 )
@@ -55,7 +57,7 @@ object TableReaderJdbcConfig {
   val IDENTIFIER_QUOTING_POLICY = "identifier.quoting.policy"
   val SQL_GENERATOR_CLASS_KEY = "sql.generator.class"
 
-  def load(conf: Config, parent: String = ""): TableReaderJdbcConfig = {
+  def load(conf: Config, workflowConf: Config, parent: String = ""): TableReaderJdbcConfig = {
     ConfigUtils.validatePathsExistence(conf, parent, HAS_INFO_DATE :: Nil)
 
     val hasInformationDate = conf.getBoolean(HAS_INFO_DATE)
@@ -78,6 +80,8 @@ object TableReaderJdbcConfig {
       .map(s => QuotingPolicy.fromString(s))
       .getOrElse(QuotingPolicy.Auto)
 
+    val specialCharacters = ConfigUtils.getOptionString(workflowConf, SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(" ")
+
     TableReaderJdbcConfig(
       jdbcConfig = JdbcConfig.load(conf, parent),
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
@@ -90,6 +94,7 @@ object TableReaderJdbcConfig {
       correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
       useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false),
+      specialCharacters,
       identifierQuotingPolicy = identifierQuotingPolicy,
       sqlGeneratorClass = ConfigUtils.getOptionString(conf, SQL_GENERATOR_CLASS_KEY)
     )

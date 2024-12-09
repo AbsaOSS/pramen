@@ -76,9 +76,9 @@ class JdbcSource(sourceConfig: Config,
   }
 }
 
-object JdbcSource extends ExternalChannelFactory[JdbcSource] {
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): JdbcSource = {
-    val tableReaderJdbc = TableReaderJdbcConfig.load(conf)
+object JdbcSource extends ExternalChannelFactoryV2[JdbcSource] {
+  override def apply(conf: Config, workflowConfig: Config, parentPath: String, spark: SparkSession): JdbcSource = {
+    val tableReaderJdbc = TableReaderJdbcConfig.load(conf, workflowConfig)
 
     new JdbcSource(conf, parentPath, tableReaderJdbc)(spark)
   }
