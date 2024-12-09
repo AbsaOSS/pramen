@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, TimeUtils}
+import za.co.absa.pramen.core.utils._
 
 import java.time.{Instant, LocalDate}
 import scala.annotation.tailrec
@@ -198,6 +198,10 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       .load()
 
     if (jdbcReaderConfig.correctDecimalsInSchema || jdbcReaderConfig.correctDecimalsFixPrecision) {
+      if (isDataQuery) {
+        df = SparkUtils.sanitizeDfColumns(df, jdbcReaderConfig.specialCharacters)
+      }
+
       JdbcSparkUtils.getCorrectedDecimalsSchema(df, jdbcReaderConfig.correctDecimalsFixPrecision).foreach(schema =>
         df = spark
           .read
