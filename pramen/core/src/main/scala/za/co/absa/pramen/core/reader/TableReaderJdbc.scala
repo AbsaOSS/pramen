@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils, JdbcSparkUtils, SparkUtils, TimeUtils}
 
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
@@ -173,6 +173,10 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       .load()
 
     if (jdbcReaderConfig.correctDecimalsInSchema || jdbcReaderConfig.correctDecimalsFixPrecision) {
+      if (isDataQuery) {
+        df = SparkUtils.sanitizeDfColumns(df, jdbcReaderConfig.specialCharacters)
+      }
+
       JdbcSparkUtils.getCorrectedDecimalsSchema(df, jdbcReaderConfig.correctDecimalsFixPrecision).foreach(schema =>
         df = spark
           .read
@@ -222,8 +226,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
 }
 
 object TableReaderJdbc {
-  def apply(conf: Config, parent: String)(implicit spark: SparkSession): TableReaderJdbc = {
-    val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, parent)
+  def apply(conf: Config, workflowConf: Config, parent: String)(implicit spark: SparkSession): TableReaderJdbc = {
+    val jdbcTableReaderConfig = TableReaderJdbcConfig.load(conf, workflowConf, parent)
 
     val urlSelector = JdbcUrlSelector(jdbcTableReaderConfig.jdbcConfig)
 
