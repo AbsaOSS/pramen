@@ -24,9 +24,8 @@ import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.sink.LocalCsvSink.OUTPUT_PATH_KEY
-import za.co.absa.pramen.core.utils.{FsUtils, LocalFsUtils}
+import za.co.absa.pramen.core.utils.FsUtils
 
-import java.io.{BufferedWriter, FileOutputStream, OutputStreamWriter}
 import java.nio.file.{Files, Paths}
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, ZonedDateTime}
@@ -82,7 +81,7 @@ import java.time.{LocalDate, ZonedDateTime}
   *
   *    tables = [
   *      {
-  *        metastore.table = metastore_table
+  *        input.metastore.table = metastore_table
   *        output.path = "/local/csv/path"
   *
   *        # Date range to read the source table for. By default the job information date is used.
