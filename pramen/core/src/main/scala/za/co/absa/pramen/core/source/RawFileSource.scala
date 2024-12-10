@@ -140,7 +140,6 @@ class RawFileSource(val sourceConfig: Config,
     SourceResult(df, list.map(_._2).sorted)
   }
 
-
   @throws[FileNotFoundException]
   private[source] def getPaths(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[FileStatus] = {
     query match {

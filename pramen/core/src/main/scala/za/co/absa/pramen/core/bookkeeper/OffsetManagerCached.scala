@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.bookkeeper
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
-import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
+import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest, OffsetCommitRequest}
 
 import java.time.LocalDate
 import scala.collection.mutable

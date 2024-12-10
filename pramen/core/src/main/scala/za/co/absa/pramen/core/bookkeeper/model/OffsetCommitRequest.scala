@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.bookkeeper
+package za.co.absa.pramen.core.bookkeeper.model
 
 import za.co.absa.pramen.api.offset.OffsetValue
 
