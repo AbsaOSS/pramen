@@ -396,7 +396,7 @@ class MetastoreImpl(appConfig: Config,
 
     val commitRequests = trackingTables.flatMap { trackingTable =>
       val tableDef = getTableDef(trackingTable.inputTable)
-      if (tableDef.format.isInstanceOf[DataFormat.Raw]) {
+      if (tableDef.format.isRaw) {
         val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
         getMinMaxOffsetFromMetastoreDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
           case Some((minOffset, maxOffset)) =>

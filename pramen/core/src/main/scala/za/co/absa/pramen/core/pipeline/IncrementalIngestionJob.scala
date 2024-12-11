@@ -24,7 +24,7 @@ import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
-import za.co.absa.pramen.api.{DataFormat, Reason, Source}
+import za.co.absa.pramen.api.{Reason, Source}
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager, OffsetManagerUtils}
 import za.co.absa.pramen.core.metastore.Metastore
@@ -143,7 +143,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       val saveMode = if (isRerun) SaveMode.Overwrite else SaveMode.Append
       val statsToReturn = metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(saveMode))
 
-      val updatedDf = if (outputTable.format.isInstanceOf[DataFormat.Raw])
+      val updatedDf = if (outputTable.format.isRaw)
         df
       else
         metastore.getBatch(outputTable.name, infoDate, None)

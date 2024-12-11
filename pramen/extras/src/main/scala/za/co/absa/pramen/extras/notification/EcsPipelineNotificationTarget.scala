@@ -57,7 +57,7 @@ class EcsPipelineNotificationTarget(conf: Config) extends PipelineNotificationTa
           case Some(runInfo) if task.runStatus.isInstanceOf[RunStatus.Succeeded] =>
             if (!task.taskDef.outputTable.format.isTransient &&
               !task.taskDef.outputTable.format.isInstanceOf[DataFormat.Null] &&
-              !task.taskDef.outputTable.format.isInstanceOf[DataFormat.Raw]) {
+              !task.taskDef.outputTable.format.isRaw) {
               EcsNotificationTarget.cleanUpS3VersionsForTable(task.taskDef.outputTable, runInfo.infoDate, ecsApiUrl, ecsApiKey, httpClient)
             } else {
               log.info(s"The task outputting to '${task.taskDef.outputTable.name}' for '${runInfo.infoDate}' outputs to ${task.taskDef.outputTable.format.name} format - skipping ECS cleanup...")

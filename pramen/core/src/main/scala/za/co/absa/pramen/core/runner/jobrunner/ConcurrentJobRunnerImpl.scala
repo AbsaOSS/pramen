@@ -18,7 +18,6 @@ package za.co.absa.pramen.core.runner.jobrunner
 
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -119,7 +118,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
         None,
         applicationId,
         isTransient,
-        job.outputTable.format.isInstanceOf[DataFormat.Raw],
+        job.outputTable.format.isRaw,
         Nil,
         Nil,
         Nil,
