@@ -146,7 +146,7 @@ object MetaTable {
       case Failure(ex) => throw new IllegalArgumentException(s"Unable to read data format from config for the metastore table: $name", ex)
     }
 
-    val batchIdColumn = if (format.isInstanceOf[DataFormat.Raw]) {
+    val batchIdColumn = if (format.isRaw) {
       ConfigUtils.getOptionString(conf, BATCH_ID_COLUMN_KEY).getOrElse(RAW_OFFSET_FIELD_KEY)
     } else {
       ConfigUtils.getOptionString(conf, BATCH_ID_COLUMN_KEY).getOrElse(defaultBatchIdColumn)

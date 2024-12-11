@@ -200,7 +200,7 @@ abstract class TaskRunnerBase(conf: Config,
       Option(runInfo),
       applicationId,
       isTransient,
-      isRawFilesJob = task.job.outputTable.format.isInstanceOf[DataFormat.Raw],
+      isRawFilesJob = task.job.outputTable.format.isRaw,
       Nil,
       Nil,
       Nil,
@@ -223,7 +223,7 @@ abstract class TaskRunnerBase(conf: Config,
     val outputTableName = task.job.outputTable.name
     val options = task.job.operation.extraOptions
     val isTransient = task.job.outputTable.format.isTransient
-    val isRawFileBased = task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
+    val isRawFileBased = task.job.outputTable.format.isRaw
 
     Try {
       task.job.preRunCheck(task.infoDate, task.reason, conf)
@@ -277,12 +277,10 @@ abstract class TaskRunnerBase(conf: Config,
     * @return an instance of TaskResult on validation failure or optional record count on success.
     */
   private[core] def validate(task: Task, started: Instant): Either[TaskResult, JobPreRunResult] = {
-    val jobName = task.job.name
-    val outputTable = MetaTable.getMetaTableDef(task.job.outputTable)
     val outputTableName = task.job.outputTable.name
     val options = task.job.operation.extraOptions
     val isTransient = task.job.outputTable.format.isTransient
-    val isRawFileBased = task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
+    val isRawFileBased = task.job.outputTable.format.isRaw
 
     preRunCheck(task, started) match {
       case Left(result) =>
@@ -330,7 +328,7 @@ abstract class TaskRunnerBase(conf: Config,
     */
   private[core] def run(task: Task, started: Instant, validationResult: JobPreRunResult): TaskResult = {
     val isTransient = task.job.outputTable.format.isTransient
-    val isRawFileBased = task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
+    val isRawFileBased = task.job.outputTable.format.isRaw
     val lock = lockFactory.getLock(getTokenName(task))
 
     val attempt = try {
@@ -357,7 +355,7 @@ abstract class TaskRunnerBase(conf: Config,
           dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
         }
 
-        val needAddBatchId = (runtimeConfig.alwaysAddBatchIdColumn || task.job.operation.schedule == Schedule.Incremental) && !task.job.outputTable.format.isInstanceOf[DataFormat.Raw]
+        val needAddBatchId = (runtimeConfig.alwaysAddBatchIdColumn || task.job.operation.schedule == Schedule.Incremental) && !task.job.outputTable.format.isRaw
 
         val dfWithBatchIdColumn = if (needAddBatchId) {
           val batchIdColumn = task.job.outputTable.batchIdColumn
@@ -554,7 +552,7 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, infoDate: LocalDate): List[SchemaDifference] = {
-    if (table.format.isInstanceOf[DataFormat.Raw]) {
+    if (table.format.isRaw) {
       // Raw tables do need schema check
       return List.empty[SchemaDifference]
     }
