@@ -122,6 +122,10 @@ class RawFileSource(val sourceConfig: Config,
   }
 
   override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = {
+    if (onlyForInfoDate.isEmpty) {
+      throw new IllegalArgumentException("Incremental ingestion of raw files requires an info date to be part of filename pattern.")
+    }
+
     val filePaths = getPaths(query, onlyForInfoDate.get, onlyForInfoDate.get)
     val list = filePaths.map { path =>
       (path.getPath.toString, path.getPath.getName)
