@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.MetadataManager
 import za.co.absa.pramen.core.PramenImpl
-import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
@@ -57,7 +57,7 @@ object AppContextImpl {
 
     val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, appConfig.infoDateDefaults, bookkeeper, metadataManager, batchId)
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, appConfig.runtimeConfig, appConfig.infoDateDefaults, bookkeeper, metadataManager, batchId)
 
     PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
     PramenImpl.instance.asInstanceOf[PramenImpl].setWorkflowConfig(conf)
@@ -83,8 +83,9 @@ object AppContextImpl {
     val appConfig = AppConfig.fromConfig(conf)
 
     val metadataManager = new MetadataManagerNull(isPersistenceEnabled = false)
+    val runtimeConfig = RuntimeConfig.default
 
-    val metastore: Metastore = MetastoreImpl.fromConfig(conf, infoDateConfig, bookkeeper, metadataManager, 0L)
+    val metastore: Metastore = MetastoreImpl.fromConfig(conf, runtimeConfig, infoDateConfig, bookkeeper, metadataManager, 0L)
 
     val appContext = new AppContextImpl(
       appConfig,

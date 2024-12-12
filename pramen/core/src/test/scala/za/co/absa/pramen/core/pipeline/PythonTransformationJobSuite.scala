@@ -611,7 +611,8 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
       "python_class",
       pramenPyConfigOpt,
       processRunner,
-      databricksClientOpt
+      databricksClientOpt,
+      None
     )
 
     (job, processRunner, pramenPyConfigOpt, databricksClientOpt)

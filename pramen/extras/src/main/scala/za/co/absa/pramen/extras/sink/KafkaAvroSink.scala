@@ -83,7 +83,7 @@ import java.time.LocalDate
   *
   *    tables = [
   *      {
-  *        metastore.table = metastore_table
+  *        input.metastore.table = metastore_table
   *        output.topic.name = "my.topic"
   *
   *        # All following settings are OPTIONAL

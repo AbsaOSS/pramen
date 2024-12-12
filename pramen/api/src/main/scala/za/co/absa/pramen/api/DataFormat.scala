@@ -23,6 +23,8 @@ sealed trait DataFormat {
   def isTransient: Boolean
 
   def isLazy: Boolean
+
+  def isRaw: Boolean
 }
 
 object DataFormat {
@@ -32,6 +34,8 @@ object DataFormat {
     override val isTransient: Boolean = false
 
     override val isLazy: Boolean = false
+
+    override val isRaw: Boolean = false
   }
 
   case class Delta(query: Query, recordsPerPartition: Option[Long]) extends DataFormat {
@@ -40,6 +44,8 @@ object DataFormat {
     override val isTransient: Boolean = false
 
     override val isLazy: Boolean = false
+
+    override val isRaw: Boolean = false
   }
 
   // This format is used for metatables which are just files and can only be used for further sourcing
@@ -49,6 +55,8 @@ object DataFormat {
     override val isTransient: Boolean = false
 
     override val isLazy: Boolean = false
+
+    override val isRaw: Boolean = true
   }
 
   // This format is used for tables that exist only for the duration of the process, and is not persisted
@@ -58,6 +66,8 @@ object DataFormat {
     override val isTransient: Boolean = true
 
     override val isLazy: Boolean = false
+
+    override val isRaw: Boolean = false
   }
 
   // This format is used for tables are calculated only if requested, and is not persisted
@@ -67,6 +77,8 @@ object DataFormat {
     override val isTransient: Boolean = true
 
     override val isLazy: Boolean = true
+
+    override val isRaw: Boolean = false
   }
 
   // This format is used for metatables which do not support persistence, e.g. for sink or transfer jobs
@@ -76,5 +88,7 @@ object DataFormat {
     override val isTransient: Boolean = false
 
     override val isLazy: Boolean = false
+
+    override val isRaw: Boolean = false
   }
 }

@@ -21,12 +21,13 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.types.StructType
 import za.co.absa.pramen.api.status.{TaskDef, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, Reason}
-import za.co.absa.pramen.core.{OperationDefFactory, TaskDefFactory}
-import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
 import za.co.absa.pramen.core.mocks.MetaTableFactory.getDummyMetaTable
+import za.co.absa.pramen.core.mocks.metastore.MetastoreSpy
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.{OperationDefFactory, TaskDefFactory}
 
 import java.time.{Instant, LocalDate}
 
@@ -58,6 +59,8 @@ class JobSpy(jobName: String = "Dummy Job",
   override val name: String = jobName
 
   override val outputTable: MetaTable = getDummyMetaTable(outputTableIn, format = outputTableFormat, hiveTable = hiveTable)
+
+  override val metastore: Metastore = new MetastoreSpy()
 
   override val operation: OperationDef = operationDef
 

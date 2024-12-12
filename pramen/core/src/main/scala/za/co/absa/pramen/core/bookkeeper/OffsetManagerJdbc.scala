@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
-import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
@@ -28,8 +27,6 @@ import scala.util.control.NonFatal
 
 class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   import za.co.absa.pramen.core.utils.FutureImplicits._
-
-  private val log = LoggerFactory.getLogger(this.getClass)
 
   override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
     val offsets = getOffsetRecords(table, infoDate)
@@ -114,6 +111,29 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt =!= request.createdAt.toEpochMilli)
         .delete
     ).execute()
+  }
+
+  override def postCommittedRecords(commitRequests: Seq[OffsetCommitRequest]): Unit = {
+    val committedAt = Instant.now()
+    val committedAtMilli = committedAt.toEpochMilli
+
+    val records = commitRequests.map { req =>
+      OffsetRecord(req.table, req.infoDate.toString, req.minOffset.dataType.dataTypeString, req.minOffset.valueString, req.maxOffset.valueString, batchId, req.createdAt.toEpochMilli, Some(committedAtMilli))
+    }
+
+    db.run(
+      OffsetRecords.records ++= records
+    ).execute()
+
+    commitRequests.map(r => (r.table, r.infoDate))
+      .distinct
+      .foreach { case (table, infoDate) =>
+        db.run(
+          OffsetRecords.records
+            .filter(r => r.pramenTableName === table && r.infoDate === infoDate.toString && r.committedAt =!= committedAtMilli)
+            .delete
+        ).execute()
+      }
   }
 
   override def rollbackOffsets(request: DataOffsetRequest): Unit = {

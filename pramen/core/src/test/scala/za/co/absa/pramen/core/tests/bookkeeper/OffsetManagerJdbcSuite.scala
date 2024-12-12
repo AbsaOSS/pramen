@@ -20,7 +20,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.api.offset.DataOffset.{CommittedOffset, UncommittedOffset}
 import za.co.absa.pramen.api.offset.{OffsetType, OffsetValue}
-import za.co.absa.pramen.core.bookkeeper.{OffsetManager, OffsetManagerJdbc}
+import za.co.absa.pramen.core.bookkeeper.{OffsetManager, OffsetManagerCached, OffsetManagerJdbc}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
@@ -44,7 +44,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
   }
 
   def getOffsetManager: OffsetManager = {
-    new OffsetManagerJdbc(pramenDb.slickDb, 123L)
+    new OffsetManagerCached(new OffsetManagerJdbc(pramenDb.slickDb, 123L))
   }
 
   "getOffsets" should {

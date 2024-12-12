@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTIT
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
-import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 import za.co.absa.pramen.core.utils.StringUtils.escapeString
 
 import java.io.{BufferedWriter, File, FileWriter}
@@ -63,7 +63,8 @@ class PythonTransformationJob(operationDef: OperationDef,
                               pythonClass: String,
                               pramenPyCmdConfigOpt: Option[PramenPyCmdConfig],
                               processRunner: ProcessRunner,
-                              databricksClientOpt: Option[DatabricksClient])
+                              databricksClientOpt: Option[DatabricksClient],
+                              latestInfoDate: Option[LocalDate])
                              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper,notificationTargets, outputTable) {
 
@@ -71,7 +72,12 @@ class PythonTransformationJob(operationDef: OperationDef,
 
   private val minimumRecords: Int = operationDef.extraOptions.getOrElse(MINIMUM_RECORDS_OPTION, "0").toInt
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
+  override val scheduleStrategy: ScheduleStrategy = {
+    if (isIncremental)
+      new ScheduleStrategyIncremental(latestInfoDate, true)
+    else
+      new ScheduleStrategySourcing
+  }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
