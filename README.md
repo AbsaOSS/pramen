@@ -839,6 +839,24 @@ Offset types available at the moment:
 Only ingestion jobs support incremental schedule at the moment. Incremental transformations and sinks are planned to be
 available soon.
 
+### Incremental transformers and sinks (experimental)
+In order for a transformer or a sink to use a table from metastore in incremental way, the code should invoke 
+`metastore.getCurrentBatch()` method instead of `metastore.getTable()`. `metastore.getCurrentBatch()` also works for 
+normal batch pipelines.
+
+- When `getCurrentBatch()` is used with daily, weekly or monthly schedule, it returns data for the information date 
+  corresponding to the running job, same as invoking `metastore.getTable("my_table", Some(infoDate), Some(infoDate))`.
+- When `getCurrentBatch()` is used with incremental schedule, it returns only latests non-processed data. The offset 
+  management is used to keep tracked of processed data.
+- The column `pramen_batchid` is added automatically to output tables of ingested and transformed data in order to track 
+  offsets. The exception is metastore `raw` format, which keeps original files as they are, and so we can't add the 
+  `pramen_batchid` column to such tables.
+- The offsets manager updates the offsets only after output of transformers or sinks have succeeded. It does the update 
+  in transactional manner. But if update failed in the middle, duplicates are possible on next runs, so we can say that 
+  Pramen provides 'AT LEAST ONCE' semantics for incremental transformation pipelines.
+- Reruns are possible for full days to remove duplicates. But for incremental sinks, such ask Kafka sink duplicates still 
+  might happen.
+
 ### Sinks
 Sinks define a way data needs to be sent to a target system. Built-in sinks include:
 - Kafka sink.
