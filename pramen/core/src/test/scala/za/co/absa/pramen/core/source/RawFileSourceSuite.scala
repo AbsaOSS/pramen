@@ -20,10 +20,12 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.{Query, Source}
 import za.co.absa.pramen.core.ExternalChannelFactoryReflect
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceRaw.RAW_OFFSET_FIELD_KEY
 import za.co.absa.pramen.core.source.RawFileSource.FILE_PATTERN_CASE_SENSITIVE_KEY
 import za.co.absa.pramen.core.utils.{FsUtils, LocalFsUtils}
 
@@ -289,6 +291,79 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
 
       assert(filesRead.exists(_.contains("1.dat")))
       assert(filesRead.exists(_.contains("2.dat")))
+    }
+  }
+
+  "getOffsetInfo" should {
+    "always return the same column name and type" in {
+      val source = new RawFileSource(emptyConfig, null)(spark)
+
+      assert(source.getOffsetInfo.contains(OffsetInfo(RAW_OFFSET_FIELD_KEY, OffsetType.StringType)))
+    }
+  }
+
+  "getDataIncremental" should {
+    val conf = ConfigFactory.parseString(
+      s"$FILE_PATTERN_CASE_SENSITIVE_KEY = false"
+    )
+    val source = new RawFileSource(conf, null)(spark)
+
+    "work with from offset" in {
+      val files = source.getDataIncremental(Query.Path(filesPattern.toString), Some(infoDate), Some(OffsetValue.StringValue("FILE_TEST_2022-02-18_A.dat")), None, Seq.empty)
+
+      val fileNames = files.filesRead
+
+      assert(fileNames.length == 2)
+      assert(fileNames.contains("FILE_TEST_2022-02-18_B.dat"))
+      assert(fileNames.contains("FILE_TEST_2022-02-18_C.DAT"))
+    }
+
+    "work with to offset" in {
+      val files = source.getDataIncremental(Query.Path(filesPattern.toString), Some(infoDate), None, Some(OffsetValue.StringValue("FILE_TEST_2022-02-18_B.dat")), Seq.empty)
+
+      val fileNames = files.filesRead
+
+      assert(fileNames.length == 2)
+      assert(fileNames.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(fileNames.contains("FILE_TEST_2022-02-18_B.dat"))
+    }
+
+    "work from and to offset" in {
+      val fileB = Some(OffsetValue.StringValue("FILE_TEST_2022-02-18_B.dat"))
+      val files = source.getDataIncremental(Query.Path(filesPattern.toString), Some(infoDate), fileB, fileB, Seq.empty)
+
+      val fileNames = files.filesRead
+
+      assert(fileNames.length == 1)
+      assert(fileNames.contains("FILE_TEST_2022-02-18_B.dat"))
+    }
+
+    "work from and to offset and an empty data frame" in {
+      val fileB = Some(OffsetValue.StringValue("FILE_TEST_2022-02-18_D.dat"))
+      val files = source.getDataIncremental(Query.Path(filesPattern.toString), Some(infoDate), fileB, fileB, Seq.empty)
+
+      val fileNames = files.filesRead
+
+      assert(fileNames.isEmpty)
+    }
+
+    "work when no offsets are specified" in {
+      val files = source.getDataIncremental(Query.Path(filesPattern.toString), Some(infoDate), None, None, Seq.empty)
+
+      val fileNames = files.filesRead
+
+      assert(fileNames.length == 3)
+      assert(fileNames.contains("FILE_TEST_2022-02-18_A.dat"))
+      assert(fileNames.contains("FILE_TEST_2022-02-18_B.dat"))
+      assert(fileNames.contains("FILE_TEST_2022-02-18_C.DAT"))
+    }
+
+    "throw an exception when info date is not passed" in {
+      val ex = intercept[IllegalArgumentException] {
+        source.getDataIncremental(Query.Path(filesPattern.toString), None, None, None, Seq.empty)
+      }
+
+      assert(ex.getMessage == "Incremental ingestion of raw files requires an info date to be part of filename pattern.")
     }
   }
 
