@@ -22,6 +22,40 @@ import za.co.absa.pramen.core.transformers.IdentityTransformer._
 
 import java.time.LocalDate
 
+/**
+  * The transformer does not do any actual transformation and just returns the input DataFrame.
+  *
+  * It can be used to copy data between metastore tables located in different storages.
+  *
+  * The transformer supports incremental processing.
+  *
+  * Example usage:
+  * {{{
+  *   pramen.operations = [
+  *     {
+  *       name = "Copy table"
+  *       type = "transformation"
+  *
+  *       class = "za.co.absa.pramen.core.transformers.IdentityTransformer"
+  *       schedule.type = "daily"
+  *
+  *       dependencies = [
+  *         {
+  *           tables = [ table_from ]
+  *           date.from = "@infoDate"
+  *         }
+  *       ]
+  *
+  *       option {
+  *         input.table = "table_from"
+  *         empty.allowed = true
+  *       }
+  *
+  *       output.table = "table_to"
+  *     }
+  *   ]
+  * }}}
+  */
 class IdentityTransformer extends Transformer {
   override def validate(metastore: MetastoreReader, infoDate: LocalDate, options: Map[String, String]): Reason = {
     if (!options.contains(INPUT_TABLE_KEY) && !options.contains(INPUT_TABLE_LEGACY_KEY)) {
