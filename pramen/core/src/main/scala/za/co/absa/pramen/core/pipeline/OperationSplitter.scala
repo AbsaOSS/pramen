@@ -146,15 +146,10 @@ class OperationSplitter(conf: Config,
                  sinkName: String,
                  sinkTables: Seq[SinkTable])
                 (implicit spark: SparkSession): Seq[Job] = {
-    val sinkBase = SinkManager.getSinkByName(sinkName, conf, None)
-
     sinkTables.map(sinkTable => {
       val inputTable = metastore.getTableDef(sinkTable.metaTableName)
 
-      val sink = sinkTable.overrideConf match {
-        case Some(confOverride) => SinkManager.getSinkByName(sinkName, conf, Some(confOverride))
-        case None               => sinkBase
-      }
+      val sink = SinkManager.getSinkByName(sinkName, conf, sinkTable.overrideConf)
 
       val outputTableName = sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->$sinkName")
 
