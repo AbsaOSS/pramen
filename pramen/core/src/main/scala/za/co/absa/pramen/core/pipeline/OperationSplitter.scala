@@ -56,13 +56,9 @@ class OperationSplitter(conf: Config,
                       sourceTables: Seq[SourceTable])(implicit spark: SparkSession): Seq[Job] = {
     val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
-    val sourceBase = SourceManager.getSourceByName(sourceName, conf, None)
 
     sourceTables.map(sourceTable => {
-      val source = sourceTable.overrideConf match {
-        case Some(confOverride) => SourceManager.getSourceByName(sourceName, conf, Some(confOverride))
-        case None               => sourceBase
-      }
+      val source = SourceManager.getSourceByName(sourceName, conf, sourceTable.overrideConf)
 
       val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
@@ -85,19 +81,10 @@ class OperationSplitter(conf: Config,
                      tables: Seq[TransferTable])(implicit spark: SparkSession): Seq[Job] = {
     val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
-    val sourceBase = SourceManager.getSourceByName(sourceName, conf, None)
-    val sinkBase = SinkManager.getSinkByName(sinkName, conf, None)
 
     tables.map(transferTable => {
-      val source = transferTable.sourceOverrideConf match {
-        case Some(confOverride) => SourceManager.getSourceByName(sourceName, conf, Some(confOverride))
-        case None               => sourceBase
-      }
-
-      val sink = transferTable.sinkOverrideConf match {
-        case Some(confOverride) => SinkManager.getSinkByName(sinkName, conf, Some(confOverride))
-        case None               => sinkBase
-      }
+      val source = SourceManager.getSourceByName(sourceName, conf, transferTable.sourceOverrideConf)
+      val sink = SinkManager.getSinkByName(sinkName, conf, transferTable.sinkOverrideConf)
 
       val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = TransferTableParser.getMetaTable(transferTable)
