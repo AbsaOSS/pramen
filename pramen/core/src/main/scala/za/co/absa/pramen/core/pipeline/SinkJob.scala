@@ -20,12 +20,12 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.jobdef.SinkTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
-import za.co.absa.pramen.api.{Reason, Sink}
+import za.co.absa.pramen.api.{MetastoreReader, Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.model.MetaTable
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore}
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
+import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderCore}
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus.Ready
-import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
 
@@ -49,13 +49,20 @@ class SinkJob(operationDef: OperationDef,
 
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
+  override val scheduleStrategy: ScheduleStrategy = {
+    if (isIncremental)
+      new ScheduleStrategyIncremental(None, true)
+    else
+      new ScheduleStrategySourcing
+  }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     val alreadyRanStatus = preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
+    val readerMode = if (isIncremental) ReaderMode.IncrementalValidation else ReaderMode.Batch
+    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, readerMode)
 
     alreadyRanStatus.status match {
-      case JobPreRunStatus.Ready => JobPreRunResult(Ready, Some(getDataDf(infoDate).count()), dependencyWarnings, alreadyRanStatus.warnings)
+      case JobPreRunStatus.Ready => JobPreRunResult(Ready, Some(getDataDf(infoDate, metastoreReader).count()), dependencyWarnings, alreadyRanStatus.warnings)
       case _                     => alreadyRanStatus
     }
   }
@@ -65,7 +72,10 @@ class SinkJob(operationDef: OperationDef,
 
     minimumRecordsOpt.foreach(n => log.info(s"Minimum records to send: $n"))
 
-    val df = getDataDf(infoDate)
+    val readerMode = if (isIncremental) ReaderMode.IncrementalValidation else ReaderMode.Batch
+    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, readerMode)
+
+    val df = getDataDf(infoDate, metastoreReader)
 
     val inputRecordCount = df.count()
 
@@ -86,7 +96,14 @@ class SinkJob(operationDef: OperationDef,
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
-    RunResult(getDataDf(infoDate))
+    val readerMode = if (isIncremental) ReaderMode.IncrementalRun else ReaderMode.Batch
+    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, readerMode)
+
+    val result = RunResult(getDataDf(infoDate, metastoreReader))
+
+    metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
+
+    result
   }
 
   def postProcessing(df: DataFrame,
@@ -122,16 +139,25 @@ class SinkJob(operationDef: OperationDef,
       case NonFatal(ex) => throw new IllegalStateException("Unable to connect to the sink.", ex)
     }
 
+    val readerMode = if (isIncremental) ReaderMode.IncrementalRun else ReaderMode.Batch
+
+    val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, readerMode)
+
     try {
       val sinkResult = sink.send(df,
         sinkTable.metaTableName,
-        metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, infoDate, runReason, isIncremental),
+        metastoreReader,
         infoDate,
         sinkTable.options
       )
-      val jobFinished = Instant.now
 
       val isTransient = outputTable.format.isTransient
+
+      if (!isTransient) {
+        metastoreReader.asInstanceOf[MetastoreReaderCore].commitOutputTable(sinkTable.metaTableName, s"${sinkTable.metaTableName}->$sinkName")
+      }
+
+      val jobFinished = Instant.now
 
       val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, sinkTable.warnMaxExecutionTimeSeconds)
 
@@ -146,6 +172,8 @@ class SinkJob(operationDef: OperationDef,
         isTransient
       )
 
+      metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
+
       val stats = MetaTableStats(Option(sinkResult.recordsSent), None, None)
       SaveResult(stats, sinkResult.filesSent, sinkResult.hiveTables, sinkResult.warnings ++ tooLongWarnings)
     } catch {
@@ -157,10 +185,14 @@ class SinkJob(operationDef: OperationDef,
     }
   }
 
-  private def getDataDf(infoDate: LocalDate): DataFrame = {
+  private def getDataDf(infoDate: LocalDate, metastoreReader: MetastoreReader): DataFrame = {
     try {
-      val (from, to) = getInfoDateRange(infoDate, sinkTable.rangeFromExpr, sinkTable.rangeToExpr)
-      metastore.getTable(sinkTable.metaTableName, Option(from), Option(to))
+      if (isIncremental) {
+        metastoreReader.getCurrentBatch(sinkTable.metaTableName)
+      } else {
+        val (from, to) = getInfoDateRange(infoDate, sinkTable.rangeFromExpr, sinkTable.rangeToExpr)
+        metastore.getTable(sinkTable.metaTableName, Option(from), Option(to))
+      }
     } catch {
       case NonFatal(ex) => throw new IllegalStateException(s"Unable to read input table ${sinkTable.metaTableName} for $infoDate.", ex)
     }

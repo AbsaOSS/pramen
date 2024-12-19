@@ -119,7 +119,7 @@ class ConversionTransformer extends Transformer {
 
     val filesDf = metastore.getTable(inputTable, Option(infoDate), Option(infoDate))
 
-    if (!metastore.getTableDef(inputTable).format.isInstanceOf[DataFormat.Raw]) {
+    if (!metastore.getTableDef(inputTable).format.isRaw) {
       throw new IllegalArgumentException(s"Table $inputTable should be in 'raw' format so the for each file the metastore returns a file path.")
     }
 

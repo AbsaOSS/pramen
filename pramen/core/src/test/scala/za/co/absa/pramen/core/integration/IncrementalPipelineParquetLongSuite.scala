@@ -109,5 +109,9 @@ class IncrementalPipelineParquetLongSuite extends IncrementalPipelineLongFixture
     "offsets cross info days" in {
       testOffsetCrossInfoDateEdgeCase(format)
     }
+
+    "transformer picks up doubly ingested offsets" in {
+      testTransformerPicksUpFromDoubleIngestedData(format)
+    }
   }
 }

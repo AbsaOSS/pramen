@@ -32,9 +32,6 @@ import scala.util.Random
 object TransientTableManager {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  val RAW_PATH_FIELD_KEY = "path"
-  val RAW_OFFSET_FIELD_KEY = "file_name"
-
   private val rawDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val cachedDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val persistedLocations = new mutable.HashMap[MetastorePartition, String]()

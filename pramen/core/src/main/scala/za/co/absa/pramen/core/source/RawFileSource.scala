@@ -18,10 +18,12 @@ package za.co.absa.pramen.core.source
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.{FileStatus, FileSystem, Path}
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
-import za.co.absa.pramen.api.offset.OffsetValue
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceRaw.{RAW_OFFSET_FIELD_KEY, RAW_PATH_FIELD_KEY}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.io.FileNotFoundException
@@ -91,6 +93,8 @@ class RawFileSource(val sourceConfig: Config,
 
   override val config: Config = sourceConfig
 
+  override def getOffsetInfo: Option[OffsetInfo] = Some(OffsetInfo(RAW_OFFSET_FIELD_KEY, OffsetType.StringType))
+
   override def hasInfoDateColumn(query: Query): Boolean = {
     query match {
       case Query.Path(pathPattern) => pathPattern.contains("{{")
@@ -106,11 +110,38 @@ class RawFileSource(val sourceConfig: Config,
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
-    val files = getPaths(query, infoDateBegin, infoDateEnd)
-    val df = files.map(_.getPath.toString).toDF(PATH_FIELD)
-    val fileNames = files.map(_.getPath.getName).sorted
+    val filePaths = getPaths(query, infoDateBegin, infoDateEnd)
+    val fileNames = filePaths.map(_.getPath.getName).sorted
+    val list = filePaths.map { path =>
+      (path.getPath.toString, path.getPath.getName)
+    }
+
+    val df = listOfFilesToDataFrame(list)
 
     SourceResult(df, fileNames)
+  }
+
+  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult = {
+    if (onlyForInfoDate.isEmpty) {
+      throw new IllegalArgumentException("Incremental ingestion of raw files requires an info date to be part of filename pattern.")
+    }
+
+    val filePaths = getPaths(query, onlyForInfoDate.get, onlyForInfoDate.get)
+    val list = filePaths.map { path =>
+      (path.getPath.toString, path.getPath.getName)
+    }.filter {
+      case (_, fileName) =>
+        (offsetFromOpt, offsetToOpt) match {
+          case (Some(offsetFrom), Some(offsetTo)) => fileName >= offsetFrom.valueString && fileName <= offsetTo.valueString
+          case (Some(offsetFrom), None) => fileName > offsetFrom.valueString
+          case (None, Some(offsetTo)) => fileName <= offsetTo.valueString
+          case _ => true
+        }
+    }
+
+    val df = listOfFilesToDataFrame(list)
+
+    SourceResult(df, list.map(_._2).sorted)
   }
 
   @throws[FileNotFoundException]
@@ -140,13 +171,17 @@ class RawFileSource(val sourceConfig: Config,
     }
   }
 
-  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = ???
+  private[source] def listOfFilesToDataFrame(list: Seq[(String, String)]): DataFrame = {
+    if (list.isEmpty)
+      getEmptyRawDf
+    else
+      list.toDF(RAW_PATH_FIELD_KEY, RAW_OFFSET_FIELD_KEY)
+  }
 }
 
 object RawFileSource extends ExternalChannelFactory[RawFileSource] {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  val PATH_FIELD = "path"
   val FILE_PREFIX = "file"
   val FILE_PATTERN_CASE_SENSITIVE_KEY = "file.pattern.case.sensitive"
 
@@ -230,5 +265,12 @@ object RawFileSource extends ExternalChannelFactory[RawFileSource] {
       case filePattern =>
         filePattern
     }
+  }
+
+  private[core] def getEmptyRawDf(implicit spark: SparkSession): DataFrame = {
+    val schema = StructType(Seq(StructField(RAW_PATH_FIELD_KEY, StringType), StructField(RAW_OFFSET_FIELD_KEY, StringType)))
+
+    val emptyRDD = spark.sparkContext.emptyRDD[Row]
+    spark.createDataFrame(emptyRDD, schema)
   }
 }

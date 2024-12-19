@@ -20,11 +20,9 @@ import com.github.yruslan.channel.Channel
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
-import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
@@ -132,7 +130,7 @@ class OrchestratorImpl extends Orchestrator {
         None,
         applicationId,
         isTransient,
-        job.outputTable.format.isInstanceOf[DataFormat.Raw],
+        job.outputTable.format.isRaw,
         Nil,
         Nil,
         Nil,

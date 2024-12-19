@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.OffsetInfo
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType}
 import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.ZoneId
@@ -38,6 +39,7 @@ case class TableReaderJdbcConfig(
                                   correctDecimalsFixPrecision: Boolean = false,
                                   enableSchemaMetadata: Boolean = false,
                                   useJdbcNative: Boolean = false,
+                                  specialCharacters: String = " ",
                                   serverTimeZone: ZoneId = ZoneId.systemDefault(),
                                   identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto,
                                   sqlGeneratorClass: Option[String] = None
@@ -98,6 +100,8 @@ object TableReaderJdbcConfig {
       .map(s => QuotingPolicy.fromString(s))
       .getOrElse(QuotingPolicy.Auto)
 
+    val specialCharacters = ConfigUtils.getOptionString(workflowConf, SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(" ")
+
     TableReaderJdbcConfig(
       jdbcConfig = JdbcConfig.load(conf, parent),
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
@@ -111,6 +115,7 @@ object TableReaderJdbcConfig {
       correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
       useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false),
+      specialCharacters,
       serverTimezone,
       identifierQuotingPolicy = identifierQuotingPolicy,
       sqlGeneratorClass = ConfigUtils.getOptionString(conf, SQL_GENERATOR_CLASS_KEY)

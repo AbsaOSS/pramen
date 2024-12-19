@@ -21,8 +21,8 @@ import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.metastore.Metastore
-import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
+import za.co.absa.pramen.core.metastore.{Metastore, MetastoreReaderCore}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
@@ -33,7 +33,8 @@ class TransformationJob(operationDef: OperationDef,
                         notificationTargets: Seq[JobNotificationTarget],
                         outputTable: MetaTable,
                         transformerFactoryClass: String,
-                        transformer: Transformer)
+                        transformer: Transformer,
+                        latestInfoDate: Option[LocalDate])
                        (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
 
@@ -42,9 +43,9 @@ class TransformationJob(operationDef: OperationDef,
   private val inputTables = operationDef.dependencies.flatMap(_.tables).distinct
 
   override val scheduleStrategy: ScheduleStrategy = {
-    if (isIncremental)
-      new ScheduleStrategyIncremental(None, true)
-    else
+    if (isIncremental) {
+      new ScheduleStrategyIncremental(latestInfoDate, true)
+    } else
       new ScheduleStrategySourcing
   }
 
@@ -53,11 +54,18 @@ class TransformationJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
-    transformer.validate(metastore.getMetastoreReader(inputTables, infoDate, runReason, isIncremental), infoDate, operationDef.extraOptions)
+    val readerMode = if (isIncremental) ReaderMode.IncrementalValidation else ReaderMode.Batch
+    transformer.validate(metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, readerMode), infoDate, operationDef.extraOptions)
   }
 
   override def run(infoDate: LocalDate, runReason: TaskRunReason, conf: Config): RunResult = {
-    RunResult(transformer.run(metastore.getMetastoreReader(inputTables, infoDate, runReason, isIncremental), infoDate, operationDef.extraOptions))
+    val readerMode = if (isIncremental) ReaderMode.IncrementalRun else ReaderMode.Batch
+    val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, readerMode)
+    val runResult = RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
+
+    metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
+
+    runResult
   }
 
   def postProcessing(df: DataFrame,
@@ -77,14 +85,25 @@ class TransformationJob(operationDef: OperationDef,
     else
       SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
 
+    val readerMode = if (isIncremental) ReaderMode.IncrementalPostProcessing else ReaderMode.Batch
+    val metastoreReaderPostProcess = metastore.getMetastoreReader(inputTables :+ outputTable.name, outputTable.name, infoDate, runReason, readerMode)
+
     try {
       transformer.postProcess(
         outputTable.name,
-        metastore.getMetastoreReader(inputTables :+ outputTable.name, infoDate, runReason, isIncremental),
+        metastoreReaderPostProcess,
         infoDate, operationDef.extraOptions
       )
     } catch {
       case _: AbstractMethodError => log.warn(s"Transformers were built using old version of Pramen that does not support post processing. Ignoring...")
+    }
+
+    if (!outputTable.format.isTransient) {
+      val readerMode = if (isIncremental) ReaderMode.IncrementalRun else ReaderMode.Batch
+      val metastoreReaderRun = metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, readerMode)
+
+      metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitOutputTable(outputTable.name, outputTable.name)
+      metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
     }
 
     val jobFinished = Instant.now

@@ -174,8 +174,31 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.infoDateColumn == "INFO_DATE")
       assert(metaTable.infoDateFormat == "dd-MM-yyyy")
       assert(metaTable.infoDateStart.toString == "2020-01-31")
+      assert(metaTable.batchIdColumn == "batchid")
       assert(metaTable.sparkConfig("key1") == "value1")
       assert(metaTable.saveModeOpt.contains(SaveMode.Append))
+    }
+
+    "load a metatable definition for raw format" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |name = my_table
+          |format = raw
+          |path = /a/b/c
+          |""".stripMargin)
+
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
+
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionByInfoDate = true, LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+
+      assert(metaTable.name == "my_table")
+      assert(metaTable.format.name == "raw")
+      assert(metaTable.hiveTable.isEmpty)
+      assert(metaTable.hivePath.isEmpty)
+      assert(metaTable.infoDateColumn == "INFO_DATE")
+      assert(metaTable.infoDateFormat == "dd-MM-yyyy")
+      assert(metaTable.infoDateStart.toString == "2020-01-31")
+      assert(metaTable.batchIdColumn == "file_name")
     }
 
     "load a metatable definition with hive table defined" in {

@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.bookkeeper
 
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
-import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
+import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest, OffsetCommitRequest}
 
 import java.time.LocalDate
 
@@ -78,6 +78,11 @@ trait OffsetManager {
     * and offsets for that day with new batch id.
     */
   def commitRerun(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit
+
+  /**
+    * Combines both startWriteOffsets() and commitOffsets() into one operation when it is applicable.
+    */
+  def postCommittedRecords(commitRequests: Seq[OffsetCommitRequest]): Unit
 
   /**
     * Rolls back an offset request

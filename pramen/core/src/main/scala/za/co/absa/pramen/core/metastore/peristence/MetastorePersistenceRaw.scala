@@ -22,7 +22,6 @@ import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
-import za.co.absa.pramen.core.metastore.peristence.TransientTableManager.{RAW_OFFSET_FIELD_KEY, RAW_PATH_FIELD_KEY}
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 import za.co.absa.pramen.core.utils.{FsUtils, SparkUtils}
 
@@ -35,6 +34,7 @@ class MetastorePersistenceRaw(path: String,
                               saveModeOpt: Option[SaveMode])
                              (implicit spark: SparkSession) extends MetastorePersistence {
 
+  import MetastorePersistenceRaw._
   import spark.implicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -72,7 +72,7 @@ class MetastorePersistenceRaw(path: String,
 
     fsUtilsTrg.createDirectoryRecursive(outputDir)
 
-    var totalSize = 0L
+    var copiedSize = 0L
 
     if (files.isEmpty) {
       log.info("Nohting to save")
@@ -84,16 +84,37 @@ class MetastorePersistenceRaw(path: String,
 
         log.info(s"Copying file from $srcPath to $trgPath")
 
-        totalSize += fsSrc.getContentSummary(srcPath).getLength
+        copiedSize += fsSrc.getContentSummary(srcPath).getLength
         fsUtilsTrg.copyFile(srcPath, trgPath)
       })
     }
 
-    MetaTableStats(
-      Option(totalSize),
-      None,
-      Some(totalSize)
-    )
+    val stats = if (saveModeOpt.contains(SaveMode.Append)) {
+      val list = getListOfFilesRange(infoDate, infoDate)
+      if (list.isEmpty) {
+        MetaTableStats(
+          Option(copiedSize),
+          None,
+          Some(copiedSize)
+        )
+      } else {
+        val totalSize = list.map(_.getLen).sum
+        MetaTableStats(
+          Option(totalSize),
+          Some(copiedSize),
+          Some(totalSize)
+        )
+      }
+    } else {
+      MetaTableStats(
+        Option(copiedSize),
+        None,
+        Some(copiedSize)
+      )
+    }
+
+    log.info(s"Stats: ${stats}")
+    stats
   }
 
   override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
@@ -179,4 +200,9 @@ class MetastorePersistenceRaw(path: String,
     val emptyRDD = spark.sparkContext.emptyRDD[Row]
     spark.createDataFrame(emptyRDD, schema)
   }
+}
+
+object MetastorePersistenceRaw {
+  val RAW_PATH_FIELD_KEY = "path"
+  val RAW_OFFSET_FIELD_KEY = "file_name"
 }
