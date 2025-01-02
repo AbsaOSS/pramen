@@ -18,8 +18,8 @@ package za.co.absa.pramen.core.metastore
 
 import za.co.absa.pramen.api.MetastoreReader
 
-trait MetastoreReaderCore extends MetastoreReader {
-  def commitOutputTable(tableName: String, trackingName: String): Unit
+trait MetastoreReaderIncremental extends MetastoreReader {
+  def commitIncrementalOutputTable(tableName: String, trackingName: String): Unit
 
   def commitIncrementalStage(): Unit
 }

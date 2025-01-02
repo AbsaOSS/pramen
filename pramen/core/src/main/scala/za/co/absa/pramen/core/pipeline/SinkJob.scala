@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{MetastoreReader, Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderCore}
+import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental}
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus.Ready
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -101,8 +101,6 @@ class SinkJob(operationDef: OperationDef,
 
     val result = RunResult(getDataDf(infoDate, metastoreReader))
 
-    metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
-
     result
   }
 
@@ -153,10 +151,6 @@ class SinkJob(operationDef: OperationDef,
 
       val isTransient = outputTable.format.isTransient
 
-      if (!isTransient) {
-        metastoreReader.asInstanceOf[MetastoreReaderCore].commitOutputTable(sinkTable.metaTableName, s"${sinkTable.metaTableName}->$sinkName")
-      }
-
       val jobFinished = Instant.now
 
       val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, sinkTable.warnMaxExecutionTimeSeconds)
@@ -172,7 +166,10 @@ class SinkJob(operationDef: OperationDef,
         isTransient
       )
 
-      metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
+      if (isIncremental) {
+        metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalOutputTable(sinkTable.metaTableName, s"${sinkTable.metaTableName}->$sinkName")
+        metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalStage()
+      }
 
       val stats = MetaTableStats(Option(sinkResult.recordsSent), None, None)
       SaveResult(stats, sinkResult.filesSent, sinkResult.hiveTables, sinkResult.warnings ++ tooLongWarnings)
