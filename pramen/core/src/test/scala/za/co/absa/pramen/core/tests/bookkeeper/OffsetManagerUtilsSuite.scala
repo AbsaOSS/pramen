@@ -40,7 +40,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "work for an string data type" in {
-      val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("offset", "b")
+      val df = List(("A", 3), ("B", 1), ("C", 2)).toDF("offset", "b")
 
       val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "offset", OffsetType.StringType).get
 
