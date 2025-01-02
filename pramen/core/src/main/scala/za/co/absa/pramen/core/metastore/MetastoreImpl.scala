@@ -278,7 +278,6 @@ class MetastoreImpl(appConfig: Config,
         if (readMode != ReaderMode.Batch) {
           val om = bookkeeper.getOffsetManager
           val minMax = om.getMaxInfoDateAndOffset(trackingName, Option(infoDate))
-          val batchIdValue = OffsetValue.IntegralValue(batchId)
           log.info(s"Starting offset commit for output table '$trackingName' for '$infoDate'.")
           val trackingTable = TrackingTable(
             Thread.currentThread().getId,

@@ -98,9 +98,8 @@ class TransformationJob(operationDef: OperationDef,
       case _: AbstractMethodError => log.warn(s"Transformers were built using old version of Pramen that does not support post processing. Ignoring...")
     }
 
-    if (!outputTable.format.isTransient) {
-      val readerMode = if (isIncremental) ReaderMode.IncrementalRun else ReaderMode.Batch
-      val metastoreReaderRun = metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, readerMode)
+    if (isIncremental && !outputTable.format.isTransient) {
+      val metastoreReaderRun = metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, ReaderMode.IncrementalRun)
 
       metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitOutputTable(outputTable.name, outputTable.name)
       metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
