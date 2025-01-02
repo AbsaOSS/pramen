@@ -64,6 +64,7 @@ class TransformationJob(operationDef: OperationDef,
     val runResult = RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
 
     if (isIncremental) {
+      // Output tables for transient transformations should not be tracked since they are calculated on-demand.
       if (!outputTable.format.isTransient)
         metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalOutputTable(outputTable.name, outputTable.name)
       metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalStage()

@@ -101,6 +101,11 @@ class SinkJob(operationDef: OperationDef,
 
     val result = RunResult(getDataDf(infoDate, metastoreReader))
 
+    if (isIncremental) {
+      // This ensures offsets are tracked for the input table used as sink's source.
+      metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalStage()
+    }
+
     result
   }
 
@@ -167,6 +172,7 @@ class SinkJob(operationDef: OperationDef,
       )
 
       if (isIncremental) {
+        // This ensures offsets are tracked for all incremental tables used by 'sink.send()'.
         metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalOutputTable(sinkTable.metaTableName, s"${sinkTable.metaTableName}->$sinkName")
         metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalStage()
       }
