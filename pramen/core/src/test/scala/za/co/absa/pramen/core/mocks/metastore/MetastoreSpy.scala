@@ -22,8 +22,8 @@ import za.co.absa.pramen.api.offset.DataOffset
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.api.{MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
-import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
-import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderCore, TableNotConfigured}
+import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
+import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental, TableNotConfigured}
 import za.co.absa.pramen.core.mocks.MetaTableFactory
 import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperSql, HiveQueryTemplates}
@@ -108,7 +108,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, taskRunReason: TaskRunReason, readMode: ReaderMode): MetastoreReader = {
     val metastore = this
 
-    new MetastoreReaderCore {
+    new MetastoreReaderIncremental {
       override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
         validateTable(tableName)
         val from = infoDateFrom.orElse(Option(infoDate))
@@ -171,11 +171,13 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
         }
       }
 
-      override def commitOutputTable(tableName: String, trackingName: String): Unit = {}
+      override def commitIncrementalOutputTable(tableName: String, trackingName: String): Unit = {}
 
       override def commitIncrementalStage(): Unit = {}
     }
   }
+
+  override def addTrackingTables(trackingTables: Seq[TrackingTable]): Unit = {}
 
   override def commitIncrementalTables(): Unit = {}
 

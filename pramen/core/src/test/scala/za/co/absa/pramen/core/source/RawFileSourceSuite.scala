@@ -339,7 +339,7 @@ class RawFileSourceSuite extends AnyWordSpec with BeforeAndAfterAll with TempDir
     }
 
     "work from and to offset and an empty data frame" in {
-      val fileB = Some(OffsetValue.StringValue("FILE_TEST_2022-02-18_D.dat"))
+      val fileB = Some(OffsetValue.StringValue("NONEXISTENT_FILE.dat"))
       val files = source.getDataIncremental(Query.Path(filesPattern.toString), Some(infoDate), fileB, fileB, Seq.empty)
 
       val fileNames = files.filesRead

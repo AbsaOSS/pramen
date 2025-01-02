@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
-import za.co.absa.pramen.core.metastore.{Metastore, MetastoreReaderCore}
+import za.co.absa.pramen.core.metastore.{Metastore, MetastoreReaderIncremental}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental, ScheduleStrategySourcing}
 
 import java.time.{Instant, LocalDate}
@@ -63,7 +63,11 @@ class TransformationJob(operationDef: OperationDef,
     val metastoreReader = metastore.getMetastoreReader(inputTables, outputTable.name, infoDate, runReason, readerMode)
     val runResult = RunResult(transformer.run(metastoreReader, infoDate, operationDef.extraOptions))
 
-    metastoreReader.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
+    if (isIncremental) {
+      if (!outputTable.format.isTransient)
+        metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalOutputTable(outputTable.name, outputTable.name)
+      metastoreReader.asInstanceOf[MetastoreReaderIncremental].commitIncrementalStage()
+    }
 
     runResult
   }
@@ -96,13 +100,6 @@ class TransformationJob(operationDef: OperationDef,
       )
     } catch {
       case _: AbstractMethodError => log.warn(s"Transformers were built using old version of Pramen that does not support post processing. Ignoring...")
-    }
-
-    if (isIncremental && !outputTable.format.isTransient) {
-      val metastoreReaderRun = metastore.getMetastoreReader(Seq(outputTable.name), outputTable.name, infoDate, runReason, ReaderMode.IncrementalRun)
-
-      metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitOutputTable(outputTable.name, outputTable.name)
-      metastoreReaderRun.asInstanceOf[MetastoreReaderCore].commitIncrementalStage()
     }
 
     val jobFinished = Instant.now
