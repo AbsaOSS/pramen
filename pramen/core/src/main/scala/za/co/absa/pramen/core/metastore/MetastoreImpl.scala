@@ -400,7 +400,7 @@ class MetastoreImpl(appConfig: Config,
         val df = getTable(trackingTable.inputTable, Option(trackingTable.infoDate), Option(trackingTable.infoDate))
         getMinMaxOffsetFromMetastoreDf(df, trackingTable.batchIdColumn, trackingTable.currentMaxOffset) match {
           case Some((minOffset, maxOffset)) =>
-            log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
+            log.info(s"Committed offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='${maxOffset.valueString}'.")
             Some(OffsetCommitRequest(
               trackingTable.trackingName,
               trackingTable.infoDate,
@@ -414,7 +414,7 @@ class MetastoreImpl(appConfig: Config,
         }
       } else {
         val minOffset = trackingTable.currentMinOffset.getOrElse(batchIdValue)
-        log.info(s"Commited offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='$batchId'.")
+        log.info(s"Committed offsets for table '${trackingTable.trackingName}' for '${trackingTable.infoDate}' with min='${minOffset.valueString}', max='$batchId'.")
         Some(OffsetCommitRequest(
           trackingTable.trackingName,
           trackingTable.infoDate,
