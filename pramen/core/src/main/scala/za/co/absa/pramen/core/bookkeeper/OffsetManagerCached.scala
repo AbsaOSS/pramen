@@ -46,11 +46,12 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
     }
 
     if (aggregatedOffsetsCache.contains((table, onlyForInfoDate))) {
-      log.info(s"Got min/max offsets for $tbl from cache.")
-      aggregatedOffsetsCache((table, onlyForInfoDate))
+      val value = aggregatedOffsetsCache((table, onlyForInfoDate))
+      log.info(s"Got min/max offsets for $tbl from cache (${renderAggregatedOptionalOffset(value)}).")
+      value
     } else {
       val value = offsetManager.getMaxInfoDateAndOffset(table, onlyForInfoDate)
-      log.info(s"Got min/max offsets for $tbl from the database. Saving to cache...")
+      log.info(s"Got min/max offsets for $tbl from the database (${renderAggregatedOptionalOffset(value)}). Saving to cache...")
       aggregatedOffsetsCache += (table, onlyForInfoDate) -> value
       value
     }
@@ -87,5 +88,16 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
 
   def rollbackOffsets(request: DataOffsetRequest): Unit = {
     offsetManager.rollbackOffsets(request)
+  }
+
+  private def renderAggregatedOptionalOffset(offsetsOpt: Option[DataOffsetAggregated]): String = {
+    offsetsOpt match {
+      case Some(offsets) =>
+        val minOffsetStr = offsets.minimumOffset.valueString
+        val maxOffsetStr = offsets.maximumOffset.valueString
+        s"max_info_date=${offsets.maximumInfoDate} min: '$minOffsetStr', max: $maxOffsetStr"
+      case None =>
+        "offsets are not defined"
+    }
   }
 }
