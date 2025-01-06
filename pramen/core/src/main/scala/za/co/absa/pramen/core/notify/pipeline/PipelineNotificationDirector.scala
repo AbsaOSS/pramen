@@ -27,7 +27,8 @@ object PipelineNotificationDirector {
     * Apply the builder steps in order to create a formatted notification.
     */
   def build(notificationBuilder: PipelineNotificationBuilder,
-            notification: PipelineNotification)
+            notification: PipelineNotification,
+            validatedEmails: ValidatedEmails)
            (implicit conf: Config): PipelineNotificationBuilder = {
     val minRps = conf.getInt(Keys.WARN_THROUGHPUT_RPS)
     val goodRps = conf.getInt(Keys.GOOD_THROUGHPUT_RPS)

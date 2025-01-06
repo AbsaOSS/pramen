@@ -28,6 +28,7 @@ object Keys {
   val MAIL_FROM = "mail.send.from"
   val MAIL_TO = "mail.send.to"
   val MAIL_FAILURES_TO = "mail.send.failures.to"
+  val MAIL_ALLOWED_DOMAINS = "mail.allowed.domains"
 
   val HADOOP_REDACT_TOKENS = "hadoop.redacted.tokens"
   val HADOOP_OPTION_PREFIX = "hadoop.option"

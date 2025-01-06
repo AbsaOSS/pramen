@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RunStatus}
 import za.co.absa.pramen.core.mocks.notify.PipelineNotificationBuilderSpy
 import za.co.absa.pramen.core.mocks.{PipelineNotificationFactory, SchemaDifferenceFactory, TaskResultFactory}
-import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationDirector
+import za.co.absa.pramen.core.notify.pipeline.{PipelineNotificationDirector, ValidatedEmails}
 
 import java.time.Instant
 
@@ -56,7 +56,7 @@ class PipelineNotificationDirectorSuite extends AnyWordSpec {
 
       val builderSpy = new PipelineNotificationBuilderSpy
 
-      PipelineNotificationDirector.build(builderSpy, notification)
+      PipelineNotificationDirector.build(builderSpy, notification, ValidatedEmails(Seq("test@example.com"), Seq.empty, Seq.empty))
 
       assert(builderSpy.appName == "DummyPipeline")
       assert(builderSpy.environmentName == "DummyEnvironment")
