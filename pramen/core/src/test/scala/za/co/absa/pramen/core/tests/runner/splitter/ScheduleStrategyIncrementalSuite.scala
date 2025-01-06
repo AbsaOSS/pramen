@@ -180,8 +180,6 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       val dates = strategy.getDaysToRun("table1", Seq.empty, bk, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
-      dates.foreach(println)
-
       assert(dates.length == 3)
       assert(dates.head.infoDate == infoDate.minusDays(2))
       assert(dates.head.reason == TaskRunReason.New)

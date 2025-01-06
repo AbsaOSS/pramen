@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.notify.Sendable
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.{ConfigUtils, Emoji}
 
 import scala.collection.mutable.ListBuffer
 
@@ -41,10 +41,6 @@ class PipelineNotificationEmail(notification: PipelineNotification)
     builder
   }
 
-  def getSubject: String = {
-    notificationBuilder.renderSubject()
-  }
-
   override def getConfig: Config = conf
 
   override def getFrom: String = conf.getString(Keys.MAIL_FROM)
@@ -53,14 +49,18 @@ class PipelineNotificationEmail(notification: PipelineNotification)
     val validatedEmails = validateRecipientEmails(getEmailRecipients, allowedDomains)
 
     validatedEmails.invalidFormatEmails.foreach(email =>
-      log.warn(s"Invalid email format: $email")
+      log.error(s"${Emoji.FAILURE} Invalid email format: $email")
     )
 
     validatedEmails.invalidDomainEmails.foreach(email =>
-      log.warn(s"Invalid email domain: $email")
+      log.error(s"${Emoji.FAILURE} Invalid email domain: $email")
     )
 
     validatedEmails.validEmails.mkString(", ")
+  }
+
+  override def getSubject: String = {
+    notificationBuilder.renderSubject()
   }
 
   override def getBody: String = {
@@ -82,7 +82,7 @@ class PipelineNotificationEmail(notification: PipelineNotification)
         to
       } else {
         val to = conf.getString(Keys.MAIL_TO)
-        log.warn(s"Sending success to the normal mail list: $to")
+        log.info(s"Sending success to the normal mail list: $to")
         to
       }
     } else {
@@ -131,7 +131,7 @@ object PipelineNotificationEmail {
   }
 
   private[core] def isEmailProperlyFormed(email: String): Boolean = {
-    val emailRegex = "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}$".r
+    val emailRegex = "^[^@]+@[^@]+$".r
     emailRegex.findFirstMatchIn(email).isDefined
   }
 
