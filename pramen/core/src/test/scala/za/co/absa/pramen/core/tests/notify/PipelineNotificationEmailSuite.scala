@@ -22,6 +22,54 @@ import za.co.absa.pramen.core.mocks.PipelineNotificationFactory
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationEmail
 
 class PipelineNotificationEmailSuite extends AnyWordSpec {
+  "getConfig" should {
+    "returns the config passed to the constructor" in {
+      val pipelineNotificationEmail = getUseCase()
+      val conf = pipelineNotificationEmail.getConfig
+
+      assert(conf.getString("test.key") == "test.value")
+    }
+  }
+
+  "getFrom" should {
+    "return the configured sender from config" in {
+      val pipelineNotificationEmail = getUseCase()
+      val sender = pipelineNotificationEmail.getFrom
+
+      assert(sender == "Pramen <noreply@example.com>")
+    }
+  }
+
+  "getTo" should {
+    "return the input email recipients from the config" in {
+      val pipelineNotificationEmail = getUseCase()
+      val recipients = pipelineNotificationEmail.getTo
+
+      assert(recipients == "test@example.com")
+    }
+
+    "return the input email recipients if allowed domain list is empty" in {
+      val pipelineNotificationEmail = getUseCase(allowedDomains = Seq.empty)
+      val recipients = pipelineNotificationEmail.getTo
+
+      assert(recipients == "test@example.com")
+    }
+
+    "not return emails that are not in allowed domains" in {
+      val pipelineNotificationEmail = getUseCase(allowedDomains = Seq("test.com"))
+      val recipients = pipelineNotificationEmail.getTo
+
+      assert(recipients == "")
+    }
+
+    "not return improperly formed emails" in {
+      val pipelineNotificationEmail = getUseCase(mailTo = "abc123", allowedDomains = Seq.empty)
+      val recipients = pipelineNotificationEmail.getTo
+
+      assert(recipients == "")
+    }
+  }
+
   "getSubject" should {
     "return the appropriate subject" in {
       val pipelineNotificationEmail = getUseCase()
@@ -30,37 +78,44 @@ class PipelineNotificationEmailSuite extends AnyWordSpec {
     }
   }
 
-  "getTo" should {
+  "getBody" should {
+    "return the body of the email" in {
+      val pipelineNotificationEmail = getUseCase()
+
+      assert(pipelineNotificationEmail.getBody.contains("<p>This is a notification from Pramen"))
+    }
+  }
+
+  "getEmailRecipients" should {
     "return the input email recipients from the config" in {
       val pipelineNotificationEmail = getUseCase()
 
-      val recipients = pipelineNotificationEmail.getTo
+      val recipients = pipelineNotificationEmail.getEmailRecipients
 
       assert(recipients == "test@example.com")
     }
 
-    "return the input email recipients if allowed domain list is empty" in {
-      val pipelineNotificationEmail = getUseCase(allowedDomains = Seq.empty)
-
-      val recipients = pipelineNotificationEmail.getTo
-
-      assert(recipients == "test@example.com")
-    }
-
-    "not return emails that are not in allowed domains" in {
+    "return emails even iof they are not in the allowed domains" in {
       val pipelineNotificationEmail = getUseCase(allowedDomains = Seq("test.com"))
+      val recipients = pipelineNotificationEmail.getEmailRecipients
 
-      val recipients = pipelineNotificationEmail.getTo
-
-      assert(recipients == "")
+      assert(recipients == "test@example.com")
     }
 
-    "not return improperly formed emails" in {
-      val pipelineNotificationEmail = getUseCase(mailTo = "abc123", allowedDomains = Seq.empty)
+    "return the failure email recipients from the config" in {
+      val pipelineNotificationEmail = getUseCase(isFailure = true, failureEmailRecipients = "failure@test.com")
 
-      val recipients = pipelineNotificationEmail.getTo
+      val recipients = pipelineNotificationEmail.getEmailRecipients
 
-      assert(recipients == "")
+      assert(recipients == "failure@test.com")
+    }
+
+    "return the success email recipients if the app succeeded" in {
+      val pipelineNotificationEmail = getUseCase(failureEmailRecipients = "failure@test.com")
+
+      val recipients = pipelineNotificationEmail.getEmailRecipients
+
+      assert(recipients == "test@example.com")
     }
   }
 
@@ -123,19 +178,17 @@ class PipelineNotificationEmailSuite extends AnyWordSpec {
       assert(actual(1) == "email2@example.com")
       assert(actual(2) == "email3@example.com")
     }
-
   }
 
   "isEmailProperlyFormed" should {
     "return true for valid emails" in {
       assert(PipelineNotificationEmail.isEmailProperlyFormed("test@examile.com"))
-      assert(PipelineNotificationEmail.isEmailProperlyFormed("123test_%+345.abc1234@TEST123.COM"))
-      assert(PipelineNotificationEmail.isEmailProperlyFormed("123test_%+345.abc1234@ABSA.CO1.ZA"))
+      assert(PipelineNotificationEmail.isEmailProperlyFormed("123test_%+-345.abc1234@TEST123.COM"))
+      assert(PipelineNotificationEmail.isEmailProperlyFormed("123test_%+-345.abc1234@ABSA.CO1.ZA"))
     }
     "return false for invalid emails" in {
       assert(!PipelineNotificationEmail.isEmailProperlyFormed("test_examile.com"))
-      assert(!PipelineNotificationEmail.isEmailProperlyFormed("123test_%+345$.abc1234@TEST123.COM"))
-      assert(!PipelineNotificationEmail.isEmailProperlyFormed("123test_%+345.abc1234@ABSA.CO1.ZA1"))
+      assert(!PipelineNotificationEmail.isEmailProperlyFormed("123test_%+345@.abc1234@TEST123.COM"))
       assert(!PipelineNotificationEmail.isEmailProperlyFormed("123test_%@345.abc1234@ABSA.CO1.ZA"))
     }
   }
@@ -143,14 +196,14 @@ class PipelineNotificationEmailSuite extends AnyWordSpec {
   "isEmailDomainAllowed" should {
     "return true for empty allowed domains" in {
       assert(PipelineNotificationEmail.isEmailDomainAllowed("test1@test.com", Seq.empty))
-      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+345.abc1234@TEST123.COM", Seq.empty))
-      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+345.abc1234@ABSA.CO1.ZA", Seq.empty))
+      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+-345.abc1234@TEST123.COM", Seq.empty))
+      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+-345.abc1234@ABSA.CO1.ZA", Seq.empty))
     }
 
     "return true for allowed domains" in {
       assert(PipelineNotificationEmail.isEmailDomainAllowed("test1@test.com", Seq("test.com")))
-      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+345.abc1234@TEST123.COM", Seq("test123.com", "test.com")))
-      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+345.abc1234@ABSA.CO.ZA", Seq("absa.co.za")))
+      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+-345.abc1234@TEST123.COM", Seq("test123.com", "test.com")))
+      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+-345.abc1234@ABSA.CO.ZA", Seq("absa.co.za")))
     }
 
     "return true for not allowed domains" in {
@@ -176,28 +229,24 @@ class PipelineNotificationEmailSuite extends AnyWordSpec {
     }
   }
 
-  "getEmailRecipients" should {
-    "return the input email recipients from the config" in {
-      val pipelineNotificationEmail = getUseCase()
-
-      val recipients = pipelineNotificationEmail.getEmailRecipients
-
-      assert(recipients == "test@example.com")
-    }
-  }
-
   def getUseCase(
                   mailTo: String = "test@example.com",
-                  allowedDomains: Seq[String] = Seq("@example.com")
+                  allowedDomains: Seq[String] = Seq("@example.com"),
+                  isFailure: Boolean = false,
+                  failureEmailRecipients: String = ""
                 ): PipelineNotificationEmail = {
     import za.co.absa.pramen.core.config.Keys._
 
-    val notification = PipelineNotificationFactory.getDummyNotification()
+    val appException = if (isFailure) Some(new RuntimeException("test exception")) else None
+    val notification = PipelineNotificationFactory.getDummyNotification(exception = appException)
+
+    val failureEmailStr = if (failureEmailRecipients.isEmpty) "" else s"""$MAIL_FAILURES_TO = "$failureEmailRecipients""""
     implicit val conf: Config = ConfigFactory.parseString(
-      s"""
-         |$MAIL_FROM = \"Pramen <noreply@example.com>\"
-         |$MAIL_TO = \"$mailTo\"
-         |$MAIL_ALLOWED_DOMAINS = [ ${allowedDomains.map(s => s"""\"$s\"""").mkString(", ")} ]
+      s"""test.key = "test.value"
+         |$MAIL_FROM = "Pramen <noreply@example.com>"
+         |$MAIL_TO = "$mailTo"
+         |$failureEmailStr
+         |$MAIL_ALLOWED_DOMAINS = [ ${allowedDomains.map(s => s""""$s"""").mkString(", ")} ]
          |""".stripMargin
     ).withFallback(ConfigFactory.load())
 
