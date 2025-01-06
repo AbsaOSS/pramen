@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.notify
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification.NotificationEntry
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji._
 
@@ -28,16 +29,6 @@ import javax.mail.{Message, Session, Transport}
 import scala.util.control.NonFatal
 
 object Sendable {
-  // Configuration keys
-  val MAIL_SEND_FROM_KEY = "mail.send.from"
-  val MAIL_SEND_TO_KEY = "mail.send.to"
-
-  val MAIL_SMTP_HOST_KEY = "mail.smtp.host"
-  val MAIL_SMTP_PORT_KEY = "mail.smtp.port"
-  val MAIL_SMTP_AUTH_KEY = "mail.smtp.auth"
-  val MAIL_SMTP_LOCALHOST = "mail.smtp.localhost"
-  val MAIL_SMTP_STARTTLS_ENABLE_KEY = "mail.smtp.starttls.enable"
-  val MAIL_SMTP_SSL_ENABLE_KEY = "mail.smtp.EnableSSL.enable"
   val MAIL_DEBUG_KEY = "mail.debug"
 }
 
@@ -52,9 +43,9 @@ trait Sendable {
 
   def getFormat: String = "html"
 
-  def getFrom: String = getConfig.getString(MAIL_SEND_FROM_KEY)
+  def getFrom: String
 
-  def getTo: String = getConfig.getString(MAIL_SEND_TO_KEY)
+  def getTo: String
 
   def getSubject: String
 
@@ -63,10 +54,10 @@ trait Sendable {
   def getFiles: Seq[NotificationEntry.AttachedFile] = Seq()
 
   final def send(): Unit = {
-    if (getConfig.hasPath(MAIL_SEND_TO_KEY) && getConfig.getString(MAIL_SEND_TO_KEY).trim.nonEmpty) {
+    if (getTo.nonEmpty) {
       doSend()
     } else {
-      log.info(s"No senders are configured at ($MAIL_SEND_TO_KEY). The notification email won't be sent.")
+      log.info(s"No senders are configured at ('${Keys.MAIL_TO}', '${Keys.MAIL_FAILURES_TO}'). The notification email won't be sent.")
     }
   }
 
