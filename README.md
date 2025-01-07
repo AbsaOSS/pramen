@@ -237,12 +237,58 @@ Let's take a look on components of a data pipeline in more detail.
 
 ## Pipeline components
 
-A pipeline consists of _sources_, _the metastore_ and _sinks_.
+A pipeline consists of _common options_, _sources_, _the metastore_, _sinks_, and _operations_. All these
+definitions form the workflow config. For big pipelines these definitions can be split among multiple files. Check out
+`examples/` folder for example workflow definitions. Let's take a look at each section of a workflow separately.
 
 Currently there are 3 types of jobs:
 - _Ingestion_ jobs to get data from external sources to the metastore.
 - _Transformation jobs_ to transform data inside the metastore.
 - _Sink_ jobs to send data from the metastore to external systems.
+
+### Common options
+Pramen pipeline should have several options defined. Here is the minimum configuration. For the list of all options
+and their default values check out [reference.conf](pramen/core/src/main/resources/reference.conf).
+
+```hocon
+pramen {
+  environment.name = "AWS Glue (DEV)"
+  pipeline.name = "CDC PoC"
+
+  bookkeeping.enabled = true
+  bookkeeping.jdbc {
+    driver = "org.postgresql.Driver"
+    url = "jdbc:postgresql://myhost:5432/pramen_database"
+    user = "postgresql_user"
+    password = "password"
+  }
+  temporary.directory = "s3://bucket/prefix/tmp/"
+}
+```
+
+#### Email notifications
+One section of config defines options for email notifications. You can define
+```hocon
+mail {
+  # SMTP configuration
+  # Any options from https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html
+  smtp.host = "smtp.example.com"
+  smtp.port = "25"
+  smtp.auth = "false"
+  smtp.starttls.enable = "false"
+  smtp.EnableSSL.enable = "false"
+  debug = "false"
+  
+  # A custom email sender (optional)
+  send.from = "Pramen <pramen.noreply@example.com"
+  
+  # Email recipients
+  send.to = "user1@example.com, user2@example.com"
+  
+  # A list of allowed domains (optional)
+  allowed.domains = [ "example.com", "test.com" ]
+}
+```
 
 ### Dates
 Before diving into pipeline definition it is important to understand how dates are handled. Pramen is a batch data
