@@ -34,18 +34,7 @@ class PipelineNotificationEmail(notification: PipelineNotification)
 
   private val allowedDomains = getDomainList(ConfigUtils.getOptListStrings(conf, Keys.MAIL_ALLOWED_DOMAINS))
 
-  private lazy val notificationBuilder = {
-    val builder = new PipelineNotificationBuilderHtml
-
-    PipelineNotificationDirector.build(builder, notification, validateRecipientEmails(getEmailRecipients, allowedDomains))
-    builder
-  }
-
-  override def getConfig: Config = conf
-
-  override def getFrom: String = conf.getString(Keys.MAIL_FROM)
-
-  override def getTo: String = {
+  private lazy val validatedEmails = {
     val validatedEmails = validateRecipientEmails(getEmailRecipients, allowedDomains)
 
     validatedEmails.invalidFormatEmails.foreach(email =>
@@ -56,6 +45,29 @@ class PipelineNotificationEmail(notification: PipelineNotification)
       log.error(s"${Emoji.FAILURE} Invalid email domain: $email")
     )
 
+    if (validatedEmails.invalidFormatEmails.nonEmpty || validatedEmails.invalidDomainEmails.nonEmpty) {
+      if (validatedEmails.validEmails.nonEmpty) {
+        log.warn(s"${Emoji.WARNING} Sending the notification to valid emails only: ${validatedEmails.validEmails.mkString(", ")}")
+      } else {
+        log.error(s"${Emoji.FAILURE} No valid emails found. The notification will not be sent.")
+      }
+    }
+
+    validatedEmails
+  }
+
+  private lazy val notificationBuilder = {
+    val builder = new PipelineNotificationBuilderHtml
+
+    PipelineNotificationDirector.build(builder, notification, validatedEmails)
+    builder
+  }
+
+  override def getConfig: Config = conf
+
+  override def getFrom: String = conf.getString(Keys.MAIL_FROM)
+
+  override def getTo: String = {
     validatedEmails.validEmails.mkString(", ")
   }
 
@@ -113,7 +125,7 @@ object PipelineNotificationEmail {
       }
     }
 
-    ValidatedEmails(validEmails, invalidFormatEmails, invalidDomainEmails)
+    ValidatedEmails(validEmails.toList, invalidFormatEmails.toList, invalidDomainEmails.toList)
   }
 
   private[core] def getDomainList(domains: Seq[String]): Seq[String] = {

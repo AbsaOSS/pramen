@@ -57,6 +57,7 @@ object PipelineNotificationDirector {
 
     notificationBuilder.addCustomEntries(notification.customEntries)
     notificationBuilder.addSignature(notification.customSignature: _*)
+    notificationBuilder.addValidatedEmails(validatedEmails)
 
     notificationBuilder
   }

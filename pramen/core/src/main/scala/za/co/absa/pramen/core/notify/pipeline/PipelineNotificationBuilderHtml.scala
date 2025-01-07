@@ -69,6 +69,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   var isDryRun = false
   var isUndercover = false
   var customSignature = Seq.empty[TextElement]
+  var validatedEmailsOpt: Option[ValidatedEmails] = None
 
   val completedTasks = new ListBuffer[TaskResult]
   val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
@@ -124,6 +125,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   override def addSignature(signature: TextElement*): Unit = customSignature = signature
 
+  override def addValidatedEmails(validatedEmailsIn: ValidatedEmails): Unit = validatedEmailsOpt = Option(validatedEmailsIn)
+
   def renderSubject(): String = {
     val timeCreatedStr = ZonedDateTime.now(zoneId).format(timestampFmt)
 
@@ -141,6 +144,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     val builder = new MessageBuilderHtml(conf)
 
     renderHeader(builder)
+
+    renderValidatedEmails(builder)
 
     renderCompletedTasks(builder)
 
@@ -773,6 +778,26 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case NotificationEntry.Html(contents)        => builder.withHtmlText(contents)
       case _: NotificationEntry.AttachedFile       => // Skipping... This is going to be added elsewhere.
       case c                                       => log.error(s"Notification entry ${c.getClass} is not supported. Maybe this is related to Pramen runtime version mismatch.")
+    }
+  }
+
+  private def renderValidatedEmails(builder: MessageBuilderHtml): Unit = {
+    validatedEmailsOpt.foreach { validatedEmails =>
+      if (validatedEmails.invalidFormatEmails.nonEmpty) {
+        val emailText = TextElement(validatedEmails.invalidFormatEmails.mkString(", "), Style.Error)
+        builder.withParagraph(Seq(
+          TextElement("Warning! ", Style.Error),
+          TextElement(s"Some email recipients are not proper emails: ", Style.Exception)
+        ) :+ emailText)
+      }
+
+      if (validatedEmails.invalidDomainEmails.nonEmpty) {
+        val emailText = TextElement(validatedEmails.invalidDomainEmails.mkString(", "), Style.Error)
+        builder.withParagraph(Seq(
+          TextElement("Warning! ", Style.Error),
+          TextElement(s"Some email recipients have domain names that are not allowed: ", Style.Exception)
+        ) :+ emailText)
+      }
     }
   }
 

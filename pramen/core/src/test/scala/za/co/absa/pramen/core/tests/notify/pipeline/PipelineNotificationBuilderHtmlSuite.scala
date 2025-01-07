@@ -20,13 +20,13 @@ import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification._
-import za.co.absa.pramen.api.status.{DependencyWarning, NotificationFailure, PipelineNotificationFailure, RunStatus, TaskRunReason}
+import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.fixtures.TextComparisonFixture
 import za.co.absa.pramen.core.mocks.{RunStatusFactory, SchemaDifferenceFactory, TaskResultFactory, TestPrototypes}
 import za.co.absa.pramen.core.notify.message.{MessageBuilderHtml, ParagraphBuilder}
-import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationBuilderHtml.{NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY, NOTIFICATION_REASON_MAX_LENGTH_KEY}
+import za.co.absa.pramen.core.notify.pipeline.{PipelineNotificationBuilderHtml, ValidatedEmails}
 import za.co.absa.pramen.core.utils.ResourceUtils
 
 import java.time.{Instant, LocalDate}
@@ -145,6 +145,8 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       ))
 
       builder.addSignature(TextElement("Test signature"))
+
+      builder.addValidatedEmails(ValidatedEmails(Seq("valid_email@test.com"), Seq("invalid_email"), Seq("invalid_domain@test.com")))
 
       val actual = builder.renderBody()
 

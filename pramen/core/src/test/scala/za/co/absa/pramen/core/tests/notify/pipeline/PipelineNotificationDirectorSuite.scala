@@ -71,6 +71,7 @@ class PipelineNotificationDirectorSuite extends AnyWordSpec {
       assert(builderSpy.addCompletedTaskCalled == 3)
       assert(builderSpy.addCustomEntriesCalled == 1)
       assert(builderSpy.addPipelineNotificationFailure == 1)
+      assert(builderSpy.validatedEmailsOpt.isDefined)
     }
   }
 
