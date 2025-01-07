@@ -47,4 +47,6 @@ trait PipelineNotificationBuilder {
   def addCustomEntries(entries: Seq[NotificationEntry]): Unit
 
   def addSignature(signature: TextElement*): Unit
+
+  def addValidatedEmails(validatedEmails: ValidatedEmails): Unit
 }
