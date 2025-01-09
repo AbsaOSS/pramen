@@ -39,6 +39,7 @@ object PipelineNotificationBuilderHtml {
   val MIN_MEGABYTES = 10
   val NOTIFICATION_REASON_MAX_LENGTH_KEY = "pramen.notifications.reason.max.length"
   val NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY = "pramen.notifications.exception.max.length"
+  val NOTIFICATION_STRICT_FAILURES_KEY = "pramen.notifications.strict.failures"
   val SUPPRESS_WARNING_STARTING_WITH = "Based on outdated tables: "
 }
 
@@ -58,6 +59,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private val maxReasonLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_REASON_MAX_LENGTH_KEY)
   private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY)
+  private val strictFailures = ConfigUtils.getOptionBoolean(conf, NOTIFICATION_STRICT_FAILURES_KEY).getOrElse(true)
 
   var appException: Option[Throwable] = None
   var warningFlag: Boolean = false
@@ -182,15 +184,16 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   def pipelineStatus: PipelineStatus = {
     val isCertainFailure = appException.nonEmpty
     val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
-    val hasAtLeastOneWarning = warningFlag || hasWarnings
+    val hasInvalidEmails = validatedEmailsOpt.exists(v => v.invalidDomainEmails.nonEmpty || v.invalidFormatEmails.nonEmpty)
+    val hasAtLeastOneWarning = warningFlag || hasWarnings || hasInvalidEmails
 
     if (isCertainFailure) {
       PipelineStatus.Failure
     } else if (!someTasksFailed && !hasAtLeastOneWarning) {
       PipelineStatus.Success
-    } else if (someTasksSucceeded && someTasksFailed) {
+    } else if (someTasksSucceeded && someTasksFailed && !strictFailures) {
       PipelineStatus.PartialSuccess
-    } else if (someTasksSucceeded && hasAtLeastOneWarning) {
+    } else if (someTasksSucceeded && !someTasksFailed && hasAtLeastOneWarning) {
       PipelineStatus.Warning
     } else {
       PipelineStatus.Failure

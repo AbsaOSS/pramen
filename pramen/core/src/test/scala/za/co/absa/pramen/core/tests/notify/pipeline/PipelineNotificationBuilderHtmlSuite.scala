@@ -94,6 +94,16 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
 
       assert(builder.renderSubject().startsWith("Notification of PARTIAL SUCCESS for MyNewApp at"))
     }
+
+    "render failure when strict failures are turned on" in {
+      val builder = getBuilder(structFailure = true)
+
+      builder.addAppName("MyNewApp")
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusWarning))
+      builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(runStatus = TestPrototypes.runStatusFailure))
+
+      assert(builder.renderSubject().startsWith("Notification of FAILURE for MyNewApp at"))
+    }
   }
 
   "renderBody()" should {
@@ -673,13 +683,16 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
   }
 
-  def getBuilder(conf: Config = emptyConfig): PipelineNotificationBuilderHtml  = {
+  def getBuilder(conf: Config = emptyConfig,
+                 structFailure: Boolean = false): PipelineNotificationBuilderHtml = {
     implicit val implicitConfig: Config =
       conf.withFallback(
         ConfigFactory.parseString(
-          """pramen {
+          s"""pramen {
             |  application.version = 1.0.0
             |  timezone = "Africa/Johannesburg"
+            |
+            |  notifications.strict.failures = $structFailure
             |}
             |""".stripMargin)
       )
