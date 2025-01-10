@@ -35,7 +35,6 @@ object Dependencies {
     "org.postgresql"       %  "postgresql"                 % postgreSqlDriverVersion,
     "com.github.scopt"     %% "scopt"                      % scoptVersion,
     "com.github.yruslan"   %% "channel_scala"              % channelVersion,
-    "org.apache.kafka"     %  "kafka-clients"              % kafkaClientVersion,
     "com.sun.mail"         %  "javax.mail"                 % javaXMailVersion,
     "com.lihaoyi"          %% "requests"                   % requestsVersion,
     "org.scalatest"        %% "scalatest"                  % scalatestVersion           % Test,
@@ -51,6 +50,7 @@ object Dependencies {
     "org.scalatest"             %% "scalatest"                  % scalatestVersion           % Test,
     "org.mockito"               %  "mockito-core"               % mockitoVersion             % Test
   ) ++ Seq(
+    getKafkaClientsDependency(sparkVersion(scalaVersion)),
     getAbrisDependency(sparkVersion(scalaVersion)),
     getDeltaDependency(sparkVersion(scalaVersion), isCompile = false, isTest = true)
   )

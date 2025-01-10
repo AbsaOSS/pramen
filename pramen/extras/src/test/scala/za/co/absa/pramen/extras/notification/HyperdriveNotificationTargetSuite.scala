@@ -14,15 +14,13 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.tests.notify
+package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.status.{RunStatus, TaskStatus}
-import za.co.absa.pramen.core.TaskNotificationFactory
-import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.mocks.notify.SingleMessageProducerSpy
-import za.co.absa.pramen.core.notify.HyperdriveNotificationTarget
+import za.co.absa.pramen.api.status.RunStatus
+import za.co.absa.pramen.extras.TaskNotificationFactory
+import za.co.absa.pramen.extras.base.SparkTestBase
 
 class HyperdriveNotificationTargetSuite extends AnyWordSpec with SparkTestBase {
   "apply()" should {
