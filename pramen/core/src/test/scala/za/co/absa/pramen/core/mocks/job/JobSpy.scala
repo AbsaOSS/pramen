@@ -33,7 +33,7 @@ import java.time.{Instant, LocalDate}
 
 class JobSpy(jobName: String = "Dummy Job",
              outputTableIn: String = "table_out",
-             outputTableFormat: DataFormat = DataFormat.Parquet("/tmp/dummy", None),
+             outputTableFormat: DataFormat = DataFormat.Parquet("/tmp/dummy"),
              hiveTable: Option[String] = None,
              operationDef: OperationDef = OperationDefFactory.getDummyOperationDef(),
              preRunCheckFunction: () => JobPreRunResult = () => JobPreRunResult(JobPreRunStatus.Ready, None, Nil, Nil),

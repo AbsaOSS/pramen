@@ -36,7 +36,7 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
        |""".stripMargin
   )
 
-  private val dataFormat = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path", None)
+  private val dataFormat = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path")
   private val metaTableDef = TestPrototypes.metaTableDef.copy(format = dataFormat)
 
   "sendNotification" should {
@@ -47,8 +47,8 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
         override protected def getHttpClient(trustAllSslCerts: Boolean): SimpleHttpClient = httpClient
       }
 
-      val dataFormat2 = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path2", None)
-      val dataFormat3 = DataFormat.Delta(Query.Table("table2"), None)
+      val dataFormat2 = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path2")
+      val dataFormat3 = DataFormat.Delta(Query.Table("table2"))
 
       val metaTableDef2 = TestPrototypes.metaTableDef.copy(name = "table2", format = dataFormat2)
       val metaTableDef3 = TestPrototypes.metaTableDef.copy(name = "table3", format = dataFormat3)

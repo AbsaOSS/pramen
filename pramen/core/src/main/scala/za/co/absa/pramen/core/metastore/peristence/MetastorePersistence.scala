@@ -47,13 +47,13 @@ object MetastorePersistence {
     val saveModeOpt = saveModeOverride.orElse(metaTable.saveModeOpt)
 
     metaTable.format match {
-      case DataFormat.Parquet(path, recordsPerPartition) =>
+      case DataFormat.Parquet(path, partitionInfo) =>
         new MetastorePersistenceParquet(
-          path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, partitionInfo, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
-      case DataFormat.Delta(query, recordsPerPartition)  =>
+      case DataFormat.Delta(query, partitionInfo) =>
         new MetastorePersistenceDelta(
-          query, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, metaTable.partitionByInfoDate, recordsPerPartition, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          query, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, metaTable.partitionByInfoDate, partitionInfo, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Raw(path)                          =>
         new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, saveModeOpt)

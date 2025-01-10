@@ -138,7 +138,7 @@ class ConversionTransformerSuite extends AnyWordSpec with SparkTestBase with Tem
     val emptyDf = filesDf.filter($"path" === "_")
 
     val tableFormat = if (useWrongFormat) {
-      DataFormat.Parquet(basePath.toString, None)
+      DataFormat.Parquet(basePath.toString)
     } else {
       DataFormat.Raw(basePath.toString)
     }

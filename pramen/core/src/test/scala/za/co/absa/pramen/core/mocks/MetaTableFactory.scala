@@ -25,7 +25,7 @@ import java.time.LocalDate
 object MetaTableFactory {
   def getDummyMetaTable(name: String = "dummy",
                         description: String = "description",
-                        format: DataFormat = DataFormat.Parquet("/tmp/dummy", None),
+                        format: DataFormat = DataFormat.Parquet("/tmp/dummy"),
                         infoDateColumn: String = "INFO_DATE",
                         infoDateFormat: String = "yyyy-MM-dd",
                         partitionByInfoDate: Boolean = true,

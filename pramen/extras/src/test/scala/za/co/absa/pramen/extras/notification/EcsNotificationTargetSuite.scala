@@ -20,7 +20,6 @@ import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat
-import za.co.absa.pramen.api.status.TaskDef
 import za.co.absa.pramen.extras.TaskDefFactory
 import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
 import za.co.absa.pramen.extras.notification.EcsNotificationTarget.{ECS_API_SECRET_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
@@ -36,7 +35,7 @@ class EcsNotificationTargetSuite extends AnyWordSpec {
        |""".stripMargin
   )
 
-  private val dataFormat = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path", None)
+  private val dataFormat = DataFormat.Parquet("s3a://dummy_bucket_not_exist/dummy/path")
   private val metaTableDef = TestPrototypes.metaTableDef.copy(format = dataFormat)
 
   "sendNotification" should {

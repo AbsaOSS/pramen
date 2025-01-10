@@ -21,9 +21,10 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.Query
+import za.co.absa.pramen.api.{PartitionInfo, Query}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceParquet.applyPartitioning
 import za.co.absa.pramen.core.utils.Emoji.SUCCESS
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
@@ -38,7 +39,7 @@ class MetastorePersistenceDelta(query: Query,
                                 batchIdColumn: String,
                                 batchId: Long,
                                 partitionByInfoDate: Boolean,
-                                recordsPerPartition: Option[Long],
+                                partitionInfo: PartitionInfo,
                                 saveModeOpt: Option[SaveMode],
                                 readOptions: Map[String, String],
                                 writeOptions: Map[String, String]
@@ -67,13 +68,8 @@ class MetastorePersistenceDelta(query: Query,
 
     val whereCondition = s"$infoDateColumn='$infoDateStr'"
 
-    val dfRepartitioned = if (partitionByInfoDate && recordsPerPartition.nonEmpty) {
-      val recordCount = numberOfRecordsEstimate match {
-        case Some(count) => count
-        case None => df.count()
-      }
-
-      applyRepartitioning(df, recordCount)
+    val dfRepartitioned = if (partitionByInfoDate) {
+      applyPartitioning(df, partitionInfo, numberOfRecordsEstimate)
     } else {
       df
     }
@@ -203,15 +199,6 @@ class MetastorePersistenceDelta(query: Query,
       case (Some(from), None)     => col(infoDateColumn) >= lit(dateFormatter.format(from))
       case (None, Some(to))       => col(infoDateColumn) <= lit(dateFormatter.format(to))
       case (Some(from), Some(to)) => col(infoDateColumn) >= lit(dateFormatter.format(from)) && col(infoDateColumn) <= lit(dateFormatter.format(to))
-    }
-  }
-
-  def applyRepartitioning(dfIn: DataFrame, recordCount: Long): DataFrame = {
-    recordsPerPartition match {
-      case None      => dfIn
-      case Some(rpp) =>
-        val numPartitions = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
-        dfIn.repartition(numPartitions)
     }
   }
 

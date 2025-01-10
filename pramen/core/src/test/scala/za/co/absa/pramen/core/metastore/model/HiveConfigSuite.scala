@@ -35,7 +35,7 @@ class HiveConfigSuite extends AnyWordSpec {
         alwaysEscapeColumnNames = false,
         optimizeExistQuery = true)
 
-      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy", None))
+      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy"))
 
       assert(hiveConfig.hiveApi == HiveApi.SparkCatalog)
       assert(hiveConfig.database.contains("mydb1"))
@@ -82,7 +82,7 @@ class HiveConfigSuite extends AnyWordSpec {
         alwaysEscapeColumnNames = false,
         optimizeExistQuery = true)
 
-      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy", None))
+      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy"))
 
       assert(hiveConfig.hiveApi == HiveApi.SparkCatalog)
       assert(hiveConfig.database.contains("mydb2"))
@@ -109,7 +109,7 @@ class HiveConfigSuite extends AnyWordSpec {
         alwaysEscapeColumnNames = true,
         optimizeExistQuery = true)
 
-      val hiveConfig = HiveConfig.fromDefaults(defaultConfig, DataFormat.Parquet("dummy", None))
+      val hiveConfig = HiveConfig.fromDefaults(defaultConfig, DataFormat.Parquet("dummy"))
 
       assert(hiveConfig.hiveApi == HiveApi.Sql)
       assert(hiveConfig.database.contains("mydb"))

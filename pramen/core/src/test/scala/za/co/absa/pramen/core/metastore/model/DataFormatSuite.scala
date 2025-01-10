@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.metastore.model
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat._
-import za.co.absa.pramen.api.{CachePolicy, Query}
+import za.co.absa.pramen.api.{CachePolicy, PartitionInfo, Query}
 import za.co.absa.pramen.core.metastore.model.DataFormatParser.{PATH_KEY, TABLE_KEY}
 
 class DataFormatSuite extends AnyWordSpec {
@@ -33,10 +33,10 @@ class DataFormatSuite extends AnyWordSpec {
       assert(!format.isTransient)
       assert(format.isInstanceOf[Parquet])
       assert(format.asInstanceOf[Parquet].path == "/a/b/c")
-      assert(format.asInstanceOf[Parquet].recordsPerPartition.isEmpty)
+      assert(format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.Default)
     }
 
-    "use 'parquet' when specified explicitly" in {
+    "use 'parquet' when rpp specified explicitly" in {
       val conf = ConfigFactory.parseString(
         """format = parquet
           |path = /a/b/c
@@ -49,10 +49,26 @@ class DataFormatSuite extends AnyWordSpec {
       assert(!format.isTransient)
       assert(format.isInstanceOf[Parquet])
       assert(format.asInstanceOf[Parquet].path == "/a/b/c")
-      assert(format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
+      assert(format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100L))
     }
 
-    "use 'delta' when specified explicitly" in {
+    "use 'parquet' when npp specified explicitly" in {
+      val conf = ConfigFactory.parseString(
+        """format = parquet
+          |path = /a/b/c
+          |number.of.partitions = 10
+          |""".stripMargin)
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "parquet")
+      assert(!format.isTransient)
+      assert(format.isInstanceOf[Parquet])
+      assert(format.asInstanceOf[Parquet].path == "/a/b/c")
+      assert(format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.Explicit(10))
+    }
+
+    "use 'delta' when rpp specified explicitly" in {
       val conf = ConfigFactory.parseString(
         """format = delta
           |path = /a/b/c
@@ -66,7 +82,24 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.isInstanceOf[Delta])
       assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
       assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
-      assert(format.asInstanceOf[Delta].recordsPerPartition.contains(200))
+      assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.PerRecordCount(200L))
+    }
+
+    "use 'delta' when npp specified explicitly" in {
+      val conf = ConfigFactory.parseString(
+        """format = delta
+          |path = /a/b/c
+          |number.of.partitions = 10
+          |""".stripMargin)
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "delta")
+      assert(!format.isTransient)
+      assert(format.isInstanceOf[Delta])
+      assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
+      assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
+      assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.Explicit(10))
     }
 
     "use 'raw' when specified explicitly" in {
@@ -151,7 +184,7 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.isInstanceOf[Delta])
       assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
       assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
-      assert(format.asInstanceOf[Delta].recordsPerPartition.contains(100))
+      assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.PerRecordCount(100))
     }
 
     "throw an exception on unknown format" in {

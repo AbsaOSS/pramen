@@ -99,7 +99,7 @@ class CmdLineSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
       withTempDirectory("cmd_sink") { tempDir =>
         val metastoreReader = mock(classOf[MetastoreReader])
         val metatable = MetaTableDefFactory.getDummyMetaTableDef(name = "table1",
-          format = DataFormat.Parquet(tempDir, None)
+          format = DataFormat.Parquet(tempDir)
         )
         when(metastoreReader.getTableDef("table1")).thenReturn(metatable)
 
