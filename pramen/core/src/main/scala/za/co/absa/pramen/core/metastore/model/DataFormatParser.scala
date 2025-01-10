@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{CachePolicy, DataFormat, Query}
+import za.co.absa.pramen.api.{CachePolicy, DataFormat, PartitionInfo, Query}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 object DataFormatParser {
@@ -30,6 +30,7 @@ object DataFormatParser {
   val FORMAT_KEY = "format"
   val PATH_KEY = "path"
   val TABLE_KEY = "table"
+  val NUMBER_OF_PARTITIONS_KEY = "number.of.partitions"
   val RECORDS_PER_PARTITION_KEY = "records.per.partition"
   val CACHE_POLICY_KEY = "cache.policy"
   val DEFAULT_FORMAT = "parquet"
@@ -44,14 +45,12 @@ object DataFormatParser {
     format match {
       case FORMAT_PARQUET =>
         val path = getPath(conf)
-        val recordsPerPartition = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
-          .orElse(defaultRecordsPerPartition)
-        DataFormat.Parquet(path, recordsPerPartition)
+        val partitionInfo = getPartitionInfo(conf, defaultRecordsPerPartition)
+        DataFormat.Parquet(path, partitionInfo)
       case FORMAT_DELTA   =>
         val query = getQuery(conf)
-        val recordsPerPartition = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
-          .orElse(defaultRecordsPerPartition)
-        DataFormat.Delta(query, recordsPerPartition)
+        val partitionInfo = getPartitionInfo(conf, defaultRecordsPerPartition)
+        DataFormat.Delta(query, partitionInfo)
       case FORMAT_RAW =>
         if (!conf.hasPath(PATH_KEY)) throw new IllegalArgumentException(s"Mandatory option for a metastore table having 'raw' format: $PATH_KEY")
         val path = Query.Path(conf.getString(PATH_KEY)).path
@@ -63,6 +62,26 @@ object DataFormatParser {
         val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
         DataFormat.Transient(cachePolicy)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
+    }
+  }
+
+  private[core] def getPartitionInfo(conf: Config, defaultRecordsPerPartition: Option[Long]): PartitionInfo = {
+    val numberOfPartitionsOpt = ConfigUtils.getOptionInt(conf, NUMBER_OF_PARTITIONS_KEY)
+    val recordsPerPartitionOpt = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
+
+    (numberOfPartitionsOpt, recordsPerPartitionOpt) match {
+      case (Some(_), Some(_)) =>
+        throw new IllegalArgumentException(
+          s"Both '$NUMBER_OF_PARTITIONS_KEY' and '$RECORDS_PER_PARTITION_KEY' are specified. Please specify only one of those options.")
+      case (Some(nop), None) =>
+        PartitionInfo.Explicit(nop)
+      case (None, Some(rpp)) =>
+        PartitionInfo.PerRecordCount(rpp)
+      case (None, None) =>
+        defaultRecordsPerPartition match {
+          case Some(rpp) => PartitionInfo.PerRecordCount(rpp)
+          case None => PartitionInfo.Default
+        }
     }
   }
 

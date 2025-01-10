@@ -58,7 +58,7 @@ class HiveHelperSuite extends AnyWordSpec with SparkTestBase {
 
       val hiveDefaultConfig = HiveDefaultConfig.getNullConfig
 
-      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, hiveDefaultConfig, DataFormat.Parquet("Dummy", None))
+      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, hiveDefaultConfig, DataFormat.Parquet("Dummy"))
 
       val hiveHelper = HiveHelper.fromHiveConfig(hiveConfig).asInstanceOf[HiveHelperSql]
 

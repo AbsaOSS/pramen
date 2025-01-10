@@ -287,7 +287,6 @@ object MetastoreImpl {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   val METASTORE_KEY = "pramen.metastore.tables"
-  val DEFAULT_RECORDS_PER_PARTITION = 500000
 
   def fromConfig(conf: Config,
                  runtimeConfig: RuntimeConfig,

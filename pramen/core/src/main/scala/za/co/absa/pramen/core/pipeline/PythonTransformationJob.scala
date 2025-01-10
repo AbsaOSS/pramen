@@ -19,13 +19,12 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
-import za.co.absa.pramen.api.{DataFormat, Reason}
+import za.co.absa.pramen.api.{DataFormat, PartitionInfo, Reason}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.databricks.{DatabricksClient, PramenPyJobTemplate}
 import za.co.absa.pramen.core.exceptions.ProcessFailedException
 import za.co.absa.pramen.core.metastore.Metastore
-import za.co.absa.pramen.core.metastore.MetastoreImpl.DEFAULT_RECORDS_PER_PARTITION
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.PythonTransformationJob._
 import za.co.absa.pramen.core.process.ProcessRunner
@@ -250,8 +249,8 @@ class PythonTransformationJob(operationDef: OperationDef,
     def getTable(mt: MetaTable): String = {
       val description = if (mt.description.isEmpty) "" else s"\n  description: ${escapeString(mt.description)}"
       val recordsPerPartition = mt.format match {
-        case f: DataFormat.Parquet => s"\n  records_per_partition: ${f.recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION)}"
-        case f: DataFormat.Delta => s"\n  records_per_partition: ${f.recordsPerPartition.getOrElse(DEFAULT_RECORDS_PER_PARTITION)}"
+        case f: DataFormat.Parquet => getPartitionJaml(f.partitionInfo)
+        case f: DataFormat.Delta => getPartitionJaml(f.partitionInfo)
         case _ => ""
       }
 
@@ -280,6 +279,17 @@ class PythonTransformationJob(operationDef: OperationDef,
     sb.append(addMetastore())
 
     sb.toString
+  }
+
+  private[core] def getPartitionJaml(partitionInfo: PartitionInfo): String = {
+    partitionInfo match {
+      case PartitionInfo.Default =>
+        ""
+      case PartitionInfo.Explicit(npp) =>
+        s"\n  number_of_partitions: $npp"
+      case PartitionInfo.PerRecordCount(rpp) =>
+        s"\n  records_per_partition: $rpp"
+    }
   }
 
   private[core] def getTemporaryPathForYamlConfig(conf: Config) = {

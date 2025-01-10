@@ -142,7 +142,7 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
     val sourceTable = SourceTableFactory.getDummySourceTable()
 
     val table1Path = new Path(tempDir, "table1")
-    val table1Format = DataFormat.Parquet(table1Path.toString, None)
+    val table1Format = DataFormat.Parquet(table1Path.toString)
 
     val metaTable = MetaTableFactory.getDummyMetaTable(name = "table1", format = table1Format)
 

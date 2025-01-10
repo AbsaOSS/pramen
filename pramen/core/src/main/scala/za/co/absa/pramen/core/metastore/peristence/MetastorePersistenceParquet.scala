@@ -20,6 +20,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.PartitionInfo
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
@@ -38,11 +39,13 @@ class MetastorePersistenceParquet(path: String,
                                   infoDateFormat: String,
                                   batchIdColumn: String,
                                   batchId: Long,
-                                  recordsPerPartition: Option[Long],
+                                  partitionInfo: PartitionInfo,
                                   saveModeOpt: Option[SaveMode],
                                   readOptions: Map[String, String],
                                   writeOptions: Map[String, String]
                                  )(implicit spark: SparkSession) extends MetastorePersistence {
+
+  import MetastorePersistenceParquet._
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
@@ -83,16 +86,7 @@ class MetastorePersistenceParquet(path: String,
       df
     }
 
-    val dfRepartitioned = if (recordsPerPartition.nonEmpty) {
-      val recordCount = numberOfRecordsEstimate match {
-        case Some(count) => count
-        case None => dfIn.count()
-      }
-
-      applyRepartitioning(dfIn, recordCount)
-    } else {
-      dfIn
-    }
+    val dfRepartitioned = applyPartitioning(dfIn, partitionInfo, numberOfRecordsEstimate)
 
     writeAndCleanOnFailure(dfRepartitioned, outputDirStr, fsUtils, saveMode)
 
@@ -191,15 +185,6 @@ class MetastorePersistenceParquet(path: String,
     }
   }
 
-  def applyRepartitioning(dfIn: DataFrame, recordCount: Long): DataFrame = {
-    recordsPerPartition match {
-      case None      => dfIn
-      case Some(rpp) =>
-        val numPartitions = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
-        dfIn.repartition(numPartitions)
-    }
-  }
-
   private[core] def writeAndCleanOnFailure(df: DataFrame,
                                            outputDirStr: String,
                                            fsUtils: FsUtils,
@@ -228,6 +213,20 @@ class MetastorePersistenceParquet(path: String,
         }
 
         throw ex
+    }
+  }
+}
+
+object MetastorePersistenceParquet {
+  def applyPartitioning(dfIn: DataFrame, partitionInfo: PartitionInfo, recordCountEstimate: Option[Long]): DataFrame = {
+    partitionInfo match {
+      case PartitionInfo.Default => dfIn
+      case PartitionInfo.Explicit(nop) =>
+        dfIn.coalesce(nop)
+      case PartitionInfo.PerRecordCount(rpp) =>
+        val recordCount = recordCountEstimate.getOrElse(dfIn.count())
+        val numPartitions = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
+        dfIn.repartition(numPartitions)
     }
   }
 }

@@ -28,7 +28,7 @@ sealed trait DataFormat {
 }
 
 object DataFormat {
-  case class Parquet(path: String, recordsPerPartition: Option[Long]) extends DataFormat {
+  case class Parquet(path: String, partitionInfo: PartitionInfo = PartitionInfo.Default) extends DataFormat {
     override def name: String = "parquet"
 
     override val isTransient: Boolean = false
@@ -38,7 +38,7 @@ object DataFormat {
     override val isRaw: Boolean = false
   }
 
-  case class Delta(query: Query, recordsPerPartition: Option[Long]) extends DataFormat {
+  case class Delta(query: Query, partitionInfo: PartitionInfo = PartitionInfo.Default) extends DataFormat {
     override def name: String = "delta"
 
     override val isTransient: Boolean = false

@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SaveMode
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat.Parquet
+import za.co.absa.pramen.api.PartitionInfo
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
@@ -247,7 +248,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop")
       assert(metaTable.hiveConfig.ignoreFailures)
       assert(metaTable.format.name == "parquet")
-      assert(metaTable.format.asInstanceOf[Parquet].recordsPerPartition.contains(100))
+      assert(metaTable.format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100))
       assert(metaTable.hiveTable.contains("my_hive_table"))
       assert(metaTable.hivePath.contains("/d/e/f"))
       assert(!metaTable.hivePreferAddPartition)

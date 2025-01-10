@@ -21,8 +21,8 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.catalyst.analysis.NoSuchDatabaseException
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.Reason
 import za.co.absa.pramen.api.status.TaskRunReason
+import za.co.absa.pramen.api.{DataFormat, PartitionInfo, Reason}
 import za.co.absa.pramen.core.OperationDefFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.exceptions.ProcessFailedException
@@ -368,7 +368,6 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
         |  description: description
         |  format: parquet
         |  path: /tmp/dummy
-        |  records_per_partition: 500000
         |  info_date_settings:
         |    column: INFO_DATE
         |    format: yyyy-MM-dd
@@ -379,7 +378,6 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
         |  description: description
         |  format: parquet
         |  path: /tmp/dummy
-        |  records_per_partition: 500000
         |  info_date_settings:
         |    column: INFO_DATE
         |    format: yyyy-MM-dd
@@ -413,7 +411,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  description: description
           |  format: parquet
           |  path: /tmp/dummy
-          |  records_per_partition: 500000
+          |  records_per_partition: 100000
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -424,7 +422,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  description: description
           |  format: parquet
           |  path: /tmp/dummy
-          |  records_per_partition: 500000
+          |  records_per_partition: 100000
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -433,7 +431,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  writer_options: {}
           |""".stripMargin
 
-      val (job, _, _, _) = getUseCase()
+      val (job, _, _, _) = getUseCase(partitionInfo = PartitionInfo.PerRecordCount(100000L))
 
       val actual = job.getYamlConfig(infoDate)
 
@@ -457,7 +455,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  description: description
           |  format: parquet
           |  path: /tmp/dummy
-          |  records_per_partition: 500000
+          |  number_of_partitions: 10
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -468,7 +466,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  description: description
           |  format: parquet
           |  path: /tmp/dummy
-          |  records_per_partition: 500000
+          |  number_of_partitions: 10
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -478,6 +476,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |""".stripMargin
 
       val (job, _, _, _) = getUseCase(
+        partitionInfo = PartitionInfo.Explicit(10),
         sparkConfig = Map[String, String](
           "spark.driver.host" -> "127.0.0.1",
           "spark.executor.instances" -> "1",
@@ -507,7 +506,6 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  description: description
           |  format: parquet
           |  path: /tmp/dummy
-          |  records_per_partition: 500000
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -520,7 +518,6 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  description: description
           |  format: parquet
           |  path: /tmp/dummy
-          |  records_per_partition: 500000
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -569,6 +566,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
                  tableException: Throwable = null,
                  stats: MetaTableStats = null,
                  statsException: Throwable = null,
+                 partitionInfo: PartitionInfo = PartitionInfo.Default,
                  sparkConfig: Map[String, String] = Map.empty[String, String],
                  extraOptions: Map[String, String] = Map.empty[String, String],
                  readOptions: Map[String, String] = Map.empty[String, String],
@@ -576,6 +574,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
     val bk = new SyncBookkeeperMock
     val metastore = new MetastoreSpy(
       tableDf = tableDf,
+      dataFormat = DataFormat.Parquet("/tmp/dummy", partitionInfo),
       tableException = tableException,
       stats = stats,
       statsException = statsException,

@@ -20,7 +20,7 @@ import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import za.co.absa.pramen.api.offset.DataOffset
 import za.co.absa.pramen.api.status.TaskRunReason
-import za.co.absa.pramen.api.{MetaTableDef, MetaTableRunInfo, MetadataManager, MetastoreReader}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental, TableNotConfigured}
@@ -33,6 +33,7 @@ import scala.collection.mutable.ListBuffer
 
 class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    availableDates: Seq[LocalDate] = Seq(LocalDate.of(2022, 2, 17)),
+                   dataFormat: DataFormat = DataFormat.Parquet("/tmp/dummy"),
                    tableDf: DataFrame = null,
                    tableException: Throwable = null,
                    stats: MetaTableStats = MetaTableStats(Some(0), None, None),
@@ -52,7 +53,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   override def getRegisteredTables: Seq[String] = registeredTables
 
   override def getRegisteredMetaTables: Seq[MetaTable] = registeredTables
-    .map(t => MetaTableFactory.getDummyMetaTable(t, readOptions = readOptions, writeOptions = writeOptions))
+    .map(t => MetaTableFactory.getDummyMetaTable(t, format = dataFormat, readOptions = readOptions, writeOptions = writeOptions))
 
   override def isTableAvailable(tableName: String, infoDate: LocalDate): Boolean = registeredTables.contains(tableName) && availableDates.contains(infoDate)
 
@@ -63,7 +64,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
       isTableAvailable
   }
 
-  override def getTableDef(tableName: String): MetaTable = MetaTableFactory.getDummyMetaTable(name = tableName, trackDays = trackDays)
+  override def getTableDef(tableName: String): MetaTable = MetaTableFactory.getDummyMetaTable(name = tableName, trackDays = trackDays, format = dataFormat)
 
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     if (tableException != null)
