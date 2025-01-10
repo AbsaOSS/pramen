@@ -19,7 +19,8 @@ package za.co.absa.pramen.core.tests.notify
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.notify.{HyperdriveNotificationTarget, NotificationTargetManager}
+import za.co.absa.pramen.core.mocks.notify.NotificationTargetMock
+import za.co.absa.pramen.core.notify.NotificationTargetManager
 
 class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
   private val conf: Config = ConfigFactory.parseString(
@@ -27,7 +28,7 @@ class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
        | pramen.notification.targets = [
        |    {
        |      name = "hyperdrive1"
-       |      factory.class = "za.co.absa.pramen.core.notify.HyperdriveNotificationTarget"
+       |      factory.class = "za.co.absa.pramen.core.mocks.notify.NotificationTargetMock"
        |
        |      kafka.topic = "mytopic"
        |
@@ -48,7 +49,7 @@ class NotificationTargetManagerSuite extends AnyWordSpec with SparkTestBase {
     "return a notification target" in {
       val nt = NotificationTargetManager.getByName("hyperdrive1", conf, None)
 
-      assert(nt.isInstanceOf[HyperdriveNotificationTarget])
+      assert(nt.isInstanceOf[NotificationTargetMock])
     }
 
     "throw an exception if the notification target does not exist" in {

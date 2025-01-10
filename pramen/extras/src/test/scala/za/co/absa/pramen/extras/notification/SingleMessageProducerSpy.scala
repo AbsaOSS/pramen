@@ -14,12 +14,24 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify.mq
+package za.co.absa.pramen.extras.notification
 
-trait SingleMessageProducer {
-  def send(topic: String, message: String, numberOrRetries: Int = 3): Unit
+import za.co.absa.pramen.extras.notification.mq.SingleMessageProducer
 
-  def connect(): Unit
+class SingleMessageProducerSpy extends SingleMessageProducer {
+  var connectInvoked = 0
+  var sendInvoked = 0
+  var closeInvoked = 0
+  var lastTopicName = ""
+  var lastMessage = ""
 
-  def close(): Unit
+  override def send(topic: String, message: String, numberOrRetries: Int): Unit = {
+    lastTopicName = topic
+    lastMessage = message
+    sendInvoked += 1
+  }
+
+  override def connect(): Unit = connectInvoked += 1
+
+  override def close(): Unit = closeInvoked += 1
 }

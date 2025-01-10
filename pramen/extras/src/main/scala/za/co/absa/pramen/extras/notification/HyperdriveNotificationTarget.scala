@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify
+package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.api.{ExternalChannelFactory, NotificationTarget, PipelineInfo}
-import za.co.absa.pramen.core.notify.mq.{SingleMessageProducer, SingleMessageProducerKafka}
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji._
+import za.co.absa.pramen.extras.notification.mq.{SingleMessageProducer, SingleMessageProducerKafka}
 
 class HyperdriveNotificationTarget(conf: Config,
                                    producer: SingleMessageProducer,

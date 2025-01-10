@@ -93,6 +93,17 @@ object Versions {
     }
   }
 
+  def getKafkaClientsDependency(sparkVersion: String): ModuleID = {
+    val kafkaClientsVersion = sparkVersion match {
+      case version if version.startsWith("2.4.") => "2.5.1"
+      case _ => "3.9.0"
+    }
+
+    println(s"Using 'kafla-clients' version $kafkaClientsVersion")
+
+    "org.apache.kafka" % "kafka-clients" % kafkaClientsVersion
+  }
+
   def getAbrisDependency(sparkVersion: String): ModuleID = {
     // According to this: https://github.com/AbsaOSS/ABRiS?tab=readme-ov-file#supported-versions
     val abrisVersion = sparkVersion match {
