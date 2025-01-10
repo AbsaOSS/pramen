@@ -67,7 +67,7 @@ Pramen provides the ability to ingest and manage data pipelines en-masse from so
 Pramen assists with simplifying the efforts of ingestion and orchestration to a "no/low-code" level:
  - Automatic data loading and recovery (including missed and late data sources)
  - Automatic data reloading (partial or incorrect data load)
- - Automatic orchestration and coordination of dependant jobs (re-run downstream Pramen jobs automatically when upstream jobs are re-executed)
+ - Automatic orchestration and coordination of dependent jobs (re-run downstream Pramen jobs automatically when upstream jobs are re-executed)
 
 In addition to basic error notification, typical operational warnings are generated through email notifications such as:
  - Changes to upstream schema (unexpected changes to source data schemas) 
@@ -192,7 +192,7 @@ The following Scala and Spark combinations are supported:
 |     2.12      | 3.0 and above |
 |     2.13      | 3.2 and above |
 
-Pramen for Python transformers ia available in PyPi: [![PyPI](https://badge.fury.io/py/pramen-py.svg)](https://badge.fury.io/py/pramen-py)
+Pramen for Python transformers is available in PyPi: [![PyPI](https://badge.fury.io/py/pramen-py.svg)](https://badge.fury.io/py/pramen-py)
 
 ## Getting Pramen runner for your environment
 
@@ -418,7 +418,7 @@ Metastore table options:
 | `format`                           | Storage format (`parquet`, `delta`, `raw` [files], `transient` [do not persist between runs])                                                                            |
 | `path`                             | Path to the data in the metastore.                                                                                                                                       |
 | `table`                            | Delta Lake table name (if Delta Lake tables are the underlying storage).                                                                                                 |
-| `cache.ploicy`                     | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.---- |
+| `cache.policy`                     | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.---- |
 | `records.per.partition`            | Number of records per partition (in order to avoid small files problem).                                                                                                 |
 | `information.date.partition.by`    | If `true` (default) the table will be partitioned by the information date. If `false`, the table won't be partitioned (supported for `delta` format only).               |
 | `information.date.column`          | Name of the column that contains the information date. *                                                                                                                 |
@@ -570,7 +570,7 @@ is determined by the pipeline configuration.
       # The connection URL 
       url = "jdbc:postgresql://example1.com:5432/test_db"
       
-      # Optional fallback URLs to try in case of a failure of the promary URL
+      # Optional fallback URLs to try in case of a failure of the primary URL
       fallback.url.1 = "jdbc:postgresql://example2.com:5432/test_db"
       fallback.url.2 = "jdbc:postgresql://example3.com:5432/test_db"
       
@@ -599,7 +599,7 @@ is determined by the pipeline configuration.
 
     # Any option passed as '.option' here will be passed to the Spark reader as options. For example,
     # the following options increase the number of records Spark is going to fetch per batch increasing
-    # the throughut of the sourcing.
+    # the throughput of the sourcing.
     option.fetchsize = 50000
     option.batchsize = 50000
   
@@ -761,7 +761,7 @@ pramen.operations = [
 ```
 
 #### Spark source (catalog example)
-You can use `SparkSiurce` to ingest data available in Spark Catalog (Hive/Glue/etc).
+You can use `SparkSource` to ingest data available in Spark Catalog (Hive/Glue/etc).
 
 You can ingest tables and run queries to get the data you want. `input.table` will be read using `spark.table()`, 
 `input.sql` will be read using `spark.sql()`. Here is an example:
@@ -1270,7 +1270,7 @@ Here is an example of a Spark sink definition:
     ## Only one of these following two options should be specified
     # Optionally repartition the dataframe according to the specified number of partitions
     number.of.partitions = 10
-    # Optionally repartition te dataframe according to the number of records per partition
+    # Optionally repartition the dataframe according to the number of records per partition
     records.per.partition = 1000000
     
     # If true (default), the data will be saved even if it does not contain any records. If false, the saving will be skipped
@@ -2076,7 +2076,7 @@ Here is an example configuration for a JDBC source:
 
       # [Optional] You can specify the maximum about the job should take.
       # This is the hard timeout. The job will be killed if the timeout is breached
-      # The timeouut restriction applies to the full wall time of the task: validation and running.
+      # The timeout restriction applies to the full wall time of the task: validation and running.
       kill.maximum.execution.time.seconds = 7200
 
       # You can override any of source settings here 
@@ -2177,7 +2177,7 @@ of the transformer.
 Here is a example:
 ```hocon
 {
-  name = "My Scala Transformarion"
+  name = "My Scala Transformation"
   type = "transformer"
   class = "com.example.MyTransformer"
   
@@ -2359,7 +2359,7 @@ You specify:
 
 Let's take a look at an example based on the Enceladus sink.
 
-## Bookeeping
+## Bookkeeping
 
 In order to support auto-recovery from failures, schema tracking and all other nice features, Pramen requires to use a database
 or a storage for keeping the state of the pipeline.
@@ -2422,7 +2422,7 @@ or a set of managed tables:
 pramen.bookkeeping {
   enabled = "true"
   hadoop.format = "delta"
-  delta.database = "my_db"  # Optional. 'default' will be used if not speified
+  delta.database = "my_db"  # Optional. 'default' will be used if not specified
   delta.table.prefix = "bk_"
 }
 ```
@@ -2597,7 +2597,7 @@ Startup and shutdown hooks allow running custom code before and after the pipeli
 
 - The startup hook runs before the pipeline starts, but after the Spark session is available. You can use it
   to initialize custom resources needed for the pipeline.
-- The shutdown hook runs before sending the notification email, but after all jobs have finished (suceeded or failed).
+- The shutdown hook runs before sending the notification email, but after all jobs have finished (succeeded or failed).
   So you can add more notification items in the shutdown hook.
 
 Here is how you can configure the hooks in the config file:
@@ -2782,7 +2782,7 @@ pramen.operations = [
 
 ### Custom information in email notifications
 
-You can include additional information to email notification from custom components, like transformers, dources and sinks.
+You can include additional information to email notification from custom components, like transformers, sources and sinks.
 In order to do this, use Pramen client:
 ```scala
 import za.co.absa.pramen.api.Pramen
@@ -2951,7 +2951,7 @@ when the operation or job completes. Usually it is used to send an event to trig
 
 Pramen currently support [Hyperdrive Kafka notification topic](https://github.com/AbsaOSS/HyperDrive) target. Basically,
 you can define a string message to be sent to a Kafka topic on success of any job. The message is called a notification
-token. Each token corresponds to a workflow in Hyperdrive which can be triggerred when this token is received.
+token. Each token corresponds to a workflow in Hyperdrive which can be triggered when this token is received.
 
 Here is an example notification target:
 <details>
@@ -3409,7 +3409,7 @@ When an expression is expected you can use variables available depending on cont
 - `@infoDate` - for determining date ranges from the information date.
 - `@dateFrom`, `@dateto` - for referencing date ranges in custom SQL queries.
 
-You can use date literals in the format `yyyy-MM-dd` as single quited strings, e.g. `'2022-12-27'`.
+You can use date literals in the format `yyyy-MM-dd` as single quoted strings, e.g. `'2022-12-27'`.
 
 You can use days arithmetic, e.g. `'2020-12-27' + 1` will produce `'2020-12-28'`.
 
