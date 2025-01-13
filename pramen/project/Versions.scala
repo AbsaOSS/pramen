@@ -19,7 +19,7 @@ import sbt.*
 object Versions {
   val defaultSparkVersionForScala211 = "2.4.8"
   val defaultSparkVersionForScala212 = "3.3.4"
-  val defaultSparkVersionForScala213 = "3.4.2"
+  val defaultSparkVersionForScala213 = "3.4.4"
 
   val typesafeConfigVersion = "1.4.0"
   val postgreSqlDriverVersion = "42.7.3"
@@ -30,7 +30,6 @@ object Versions {
   val scoptVersion = "3.7.1"
   val channelVersion = "0.2.1"
   val requestsVersion = "0.8.0"
-  val kafkaClientVersion = "2.5.1"
   val javaXMailVersion = "1.6.2"
   val embeddedMongoDbVersion = "2.2.0"
   val scalatestVersion = "3.2.14"
