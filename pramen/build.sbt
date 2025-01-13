@@ -21,7 +21,7 @@ import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
 val scala212 = "2.12.20"
-val scala213 = "2.13.14"
+val scala213 = "2.13.15"
 
 ThisBuild / organization := "za.co.absa.pramen"
 

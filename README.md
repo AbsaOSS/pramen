@@ -85,7 +85,7 @@ In addition to basic error notification, typical operational warnings are genera
    ```sh
    git clone https://github.com/AbsaOSS/pramen
    cd pramen
-   sbt -DSPARK_VERSION="3.3.2" ++2.12.18 assembly 
+   sbt -DSPARK_VERSION="3.3.4" ++2.12.18 assembly 
    ```
    (You need JDK 1.8 installed to run this)
  
@@ -207,7 +207,7 @@ Creating an uber jar for Pramen is very easy. Just clone the repository and run 
 ```sh
 sbt ++2.11.12 assembly 
 sbt ++2.12.20 assembly
-sbt ++2.13.14 assembly
+sbt ++2.13.15 assembly
 ```
 
 You can collect the uber jar of Pramen either at
@@ -220,7 +220,7 @@ in your bundle, use one of example commands specifying your Spark version:
 ```sh
 sbt -DSPARK_VERSION="2.4.8" -Dassembly.features="includeDelta" ++2.11.12 assembly 
 sbt -DSPARK_VERSION="3.3.4" -Dassembly.features="includeDelta" ++2.12.20 assembly
-sbt -DSPARK_VERSION="3.5.2" -Dassembly.features="includeDelta" ++2.13.14 assembly
+sbt -DSPARK_VERSION="3.5.2" -Dassembly.features="includeDelta" ++2.13.15 assembly
 ```
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
