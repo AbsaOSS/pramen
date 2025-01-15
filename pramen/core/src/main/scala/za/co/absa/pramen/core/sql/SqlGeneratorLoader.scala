@@ -53,6 +53,7 @@ object SqlGeneratorLoader {
       case "com.simba.spark.jdbc.Driver"                  => new SqlGeneratorHive(sqlConfig)
       case "org.hsqldb.jdbc.JDBCDriver"                   => new SqlGeneratorHsqlDb(sqlConfig)
       case "com.ibm.db2.jcc.DB2Driver"                    => new SqlGeneratorDb2(sqlConfig)
+      case "com.databricks.client.jdbc.Driver"            => new SqlGeneratorDatabricks(sqlConfig)
       case d                                              =>
         log.warn(s"Unsupported JDBC driver: '$d'. Trying to use a generic SQL generator.")
         new SqlGeneratorGeneric(sqlConfig)
