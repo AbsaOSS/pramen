@@ -21,7 +21,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{PartitionInfo, Query}
+import za.co.absa.pramen.api.{PartitionInfo, PartitionScheme, Query}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceParquet.applyPartitioning
@@ -38,7 +38,7 @@ class MetastorePersistenceDelta(query: Query,
                                 infoDateFormat: String,
                                 batchIdColumn: String,
                                 batchId: Long,
-                                partitionByInfoDate: Boolean,
+                                partitionScheme: PartitionScheme,
                                 partitionInfo: PartitionInfo,
                                 saveModeOpt: Option[SaveMode],
                                 readOptions: Map[String, String],
@@ -68,7 +68,7 @@ class MetastorePersistenceDelta(query: Query,
 
     val whereCondition = s"$infoDateColumn='$infoDateStr'"
 
-    val dfRepartitioned = if (partitionByInfoDate) {
+    val dfRepartitioned = if (partitionScheme == PartitionScheme.PartitionByDay) {
       applyPartitioning(df, partitionInfo, numberOfRecordsEstimate)
     } else {
       df
@@ -87,7 +87,7 @@ class MetastorePersistenceDelta(query: Query,
       log.debug(s"Info date: $infoDateStr")
     }
 
-    val writer = if (partitionByInfoDate) {
+    val writer = if (partitionScheme == PartitionScheme.PartitionByDay) {
       val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
 
       dfIn
@@ -154,7 +154,7 @@ class MetastorePersistenceDelta(query: Query,
     val df = loadTable(Option(infoDate), Option(infoDate))
 
     val sizeOpt = query match {
-      case Query.Path(path) if partitionByInfoDate  =>
+      case Query.Path(path) if partitionScheme == PartitionScheme.PartitionByDay =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
         val size = Try {
           // When 0 records is saved to a Delta directory, the directory is not created.

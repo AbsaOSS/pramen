@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.{SinkTable, SourceTable, TransferTable}
-import za.co.absa.pramen.api.{DataFormat, Query}
+import za.co.absa.pramen.api.{DataFormat, PartitionScheme, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
@@ -152,7 +152,7 @@ object TransferTableParser {
       DataFormat.Null(),
       "",
       "",
-      partitionByInfoDate = false,
+      partitionScheme = PartitionScheme.NotPartitioned,
       "",
       HiveConfig.getNullConfig,
       None,

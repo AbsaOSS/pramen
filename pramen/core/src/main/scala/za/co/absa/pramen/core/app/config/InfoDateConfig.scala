@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.PartitionScheme
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 
@@ -26,7 +27,7 @@ import java.time.format.DateTimeFormatter
 case class InfoDateConfig(
                            columnName: String,
                            dateFormat: String,
-                           partitionByInfoDate: Boolean,
+                           partitionScheme: PartitionScheme,
                            startDate: LocalDate,
                            defaultTrackDays: Int,
                            defaultDelayDays: Int,
@@ -66,6 +67,7 @@ object InfoDateConfig {
   def fromConfig(conf: Config): InfoDateConfig = {
     val dateFormat = conf.getString(INFORMATION_DATE_FORMAT_KEY)
     val partitionByInfoDate = conf.getBoolean(INFORMATION_DATE_PARTITION_BY_KEY)
+    val partitionScheme = if (partitionByInfoDate) PartitionScheme.PartitionByDay else PartitionScheme.NotPartitioned
 
     val columnName = conf.getString(INFORMATION_DATE_COLUMN_KEY)
     val expressionDaily = conf.getString(INFORMATION_DATE_EXPRESSION_DAILY_KEY)
@@ -96,7 +98,7 @@ object InfoDateConfig {
 
     InfoDateConfig(columnName,
       dateFormat,
-      partitionByInfoDate,
+      partitionScheme,
       startDate,
       defaultTrackDays,
       defaultDelayDays,

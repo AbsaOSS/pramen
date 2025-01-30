@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.PartitionScheme
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -32,7 +33,7 @@ import java.time.LocalDate
 class PipelineDefSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val defaults = InfoDateConfig("INFO_DATE",
     "yyyy-MM-dd",
-    partitionByInfoDate = true,
+    partitionScheme = PartitionScheme.PartitionByDay,
     LocalDate.of(2022, 1, 1),
     4,
     0,

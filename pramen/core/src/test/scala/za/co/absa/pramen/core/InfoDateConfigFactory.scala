@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core
 
+import za.co.absa.pramen.api.PartitionScheme
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 
 import java.time.LocalDate
@@ -23,7 +24,7 @@ import java.time.LocalDate
 object InfoDateConfigFactory {
   def getDummyInfoDateConfig(columnName: String = "pramen_info_date",
                              dateFormat: String = "yyyy-MM-dd",
-                             partitionByInfoDate: Boolean = true,
+                             partitionScheme: PartitionScheme = PartitionScheme.PartitionByDay,
                              startDate: LocalDate = LocalDate.parse("2010-01-01"),
                              defaultTrackDays: Int = 0,
                              defaultDelayDays: Int = 0,
@@ -36,7 +37,7 @@ object InfoDateConfigFactory {
     InfoDateConfig(
       columnName,
       dateFormat,
-      partitionByInfoDate,
+      partitionScheme,
       startDate,
       defaultTrackDays,
       defaultDelayDays,
