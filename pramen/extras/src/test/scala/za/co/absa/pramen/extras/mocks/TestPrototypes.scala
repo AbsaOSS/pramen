@@ -19,7 +19,7 @@ package za.co.absa.pramen.extras.mocks
 import com.typesafe.config.ConfigFactory
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{JobType, RunInfo, RunStatus, TaskDef, TaskResult, TaskRunReason}
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, status}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, PartitionScheme, status}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpResponse
 
 import java.time.{Instant, LocalDate}
@@ -35,7 +35,7 @@ object TestPrototypes {
     DataFormat.Null(),
     "pramen_info_date",
     "yyyy-MM-dd",
-    partitionByInfoDate = true,
+    partitionScheme = PartitionScheme.PartitionByDay,
     "pramen_batchid",
     None,
     None,

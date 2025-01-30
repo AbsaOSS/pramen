@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks
 
 import org.apache.spark.sql.SaveMode
-import za.co.absa.pramen.api.DataFormat
+import za.co.absa.pramen.api.{DataFormat, PartitionScheme}
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 
 import java.time.LocalDate
@@ -28,7 +28,7 @@ object MetaTableFactory {
                         format: DataFormat = DataFormat.Parquet("/tmp/dummy"),
                         infoDateColumn: String = "INFO_DATE",
                         infoDateFormat: String = "yyyy-MM-dd",
-                        partitionByInfoDate: Boolean = true,
+                        partitionScheme: PartitionScheme = PartitionScheme.PartitionByDay,
                         batchIdColumn: String = "pramen_batchid",
                         hiveConfig: HiveConfig = HiveConfig.getNullConfig,
                         hiveTable: Option[String] = None,
@@ -48,7 +48,7 @@ object MetaTableFactory {
       format,
       infoDateColumn,
       infoDateFormat,
-      partitionByInfoDate,
+      partitionScheme,
       batchIdColumn,
       hiveConfig,
       hiveTable,

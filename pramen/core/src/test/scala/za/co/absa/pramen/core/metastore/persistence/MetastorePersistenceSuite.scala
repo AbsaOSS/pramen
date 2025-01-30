@@ -21,7 +21,7 @@ import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode}
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.{CachePolicy, DataFormat, PartitionInfo, Query}
+import za.co.absa.pramen.api.{CachePolicy, DataFormat, PartitionInfo, PartitionScheme, Query}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet, MetastorePersistenceTransientEager}
@@ -500,7 +500,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "load non-partitioned table periods" in {
         if (spark.version.split('.').head.toInt >= 3) {
           withTempDirectory("mt_persist") { tempDir =>
-            testLoadTablePeriods(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+            testLoadTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
           }
         }
       }
@@ -512,7 +512,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "load empty table if wrong period non partitioned" in {
         if (spark.version.split('.').head.toInt >= 3) {
           withTempDirectory("mt_persist") { tempDir =>
-            testLoadEmptyTable(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+            testLoadEmptyTable(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
           }
         }
       }
@@ -533,7 +533,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "supports fixing the existing info date column not partitioned" in {
         if (spark.version.split('.').head.toInt >= 3) {
           withTempDirectory("mt_persist") { tempDir =>
-            testInfoDateExists(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+            testInfoDateExists(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
           }
         }
       }
@@ -547,7 +547,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "support partition overwrites not partitioned" in {
         if (spark.version.split('.').head.toInt >= 3) {
           withTempDirectory("mt_persist") { tempDir =>
-            testOverwritePartition(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+            testOverwritePartition(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
           }
         }
       }
@@ -561,7 +561,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "support partition appends not partitioned" in {
         if (spark.version.split('.').head.toInt >= 3) {
           withTempDirectory("mt_persist") { tempDir =>
-            testAppendPartition(getDeltaMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append), partitionByInfoDate = false))
+            testAppendPartition(getDeltaMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append), partitionScheme = PartitionScheme.NotPartitioned))
           }
         }
       }
@@ -599,7 +599,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "supports schema merges not partitioned" in {
         if (spark.version.split('.').head.toInt >= 3) {
           withTempDirectory("mt_persist") { tempDir =>
-            testSchemaMerge(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+            testSchemaMerge(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
           }
         }
       }
@@ -633,7 +633,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "get stats after a save not partitioned" in {
         if (spark.version.split('.').head.toInt >= 3) {
           withTempDirectory("mt_persist") { tempDir =>
-            testStatsEmptyForNonPartitionedTables(getDeltaMtPersistence(tempDir, partitionByInfoDate = false))
+            testStatsEmptyForNonPartitionedTables(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
           }
         }
       }
@@ -678,14 +678,14 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
   }
 
   def getDeltaMtPersistence(tempDir: String,
-                            partitionByInfoDate: Boolean = true,
+                            partitionScheme: PartitionScheme = PartitionScheme.PartitionByDay,
                             partitionInfo: PartitionInfo = PartitionInfo.Default,
                             pathSuffix: String = "delta",
                             saveModeOpt: Option[SaveMode] = None,
                             writeOptions: Map[String, String] = Map.empty[String, String]): MetastorePersistence = {
     val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
       format = DataFormat.Delta(Query.Path(s"$tempDir/$pathSuffix"), partitionInfo),
-      partitionByInfoDate = partitionByInfoDate,
+      partitionScheme = partitionScheme,
       infoDateColumn = infoDateColumn,
       infoDateFormat = infoDateFormat,
       saveModeOpt = saveModeOpt,

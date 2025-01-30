@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.config
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.api.PartitionScheme
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -25,7 +26,7 @@ import java.time.LocalDate
 case class InfoDateOverride(
                              columnName: Option[String],
                              dateFormat: Option[String],
-                             partitionByInfoDate: Option[Boolean],
+                             partitionScheme: Option[PartitionScheme],
                              expression: Option[String],
                              startDate: Option[LocalDate]
                            )
@@ -43,6 +44,7 @@ object InfoDateOverride {
     val dateFormatOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_FORMAT_KEY)
     val infoDatePartitionByOpt = ConfigUtils.getOptionBoolean(conf, INFORMATION_DATE_PARTITION_BY_KEY)
     val expressionOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_EXPRESSION_KEY)
+    val partitionSchemeOpt = infoDatePartitionByOpt.map(if (_) PartitionScheme.PartitionByDay else PartitionScheme.NotPartitioned)
 
     val startDateOpt = ConfigUtils.getDateOpt(conf, INFORMATION_DATE_START_KEY, DEFAULT_DATE_FORMAT)
     val startMaxDaysOpt = ConfigUtils.getOptionInt(conf, INFORMATION_DATE_MAX_DAYS_BEHIND_KEY)
@@ -59,6 +61,6 @@ object InfoDateOverride {
         None
     }
 
-    InfoDateOverride(columnNameOpt, dateFormatOpt, infoDatePartitionByOpt, expressionOpt, startDate)
+    InfoDateOverride(columnNameOpt, dateFormatOpt, partitionSchemeOpt, expressionOpt, startDate)
   }
 }

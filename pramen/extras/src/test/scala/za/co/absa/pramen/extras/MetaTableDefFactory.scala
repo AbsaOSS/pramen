@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.extras
 
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, PartitionScheme}
 
 import java.time.LocalDate
 
@@ -28,7 +28,7 @@ object MetaTableDefFactory {
                             format: DataFormat = DataFormat.Null(),
                             infoDateColumn: String = "info_date",
                             infoDateFormat: String = "yyyy-MM-dd",
-                            partitionByInfoDate: Boolean = true,
+                            partitionScheme: PartitionScheme = PartitionScheme.PartitionByDay,
                             batchIdColumn: String = "pramen_batchid",
                             hiveTable: Option[String] = None,
                             hivePath: Option[String] = None,
@@ -42,7 +42,7 @@ object MetaTableDefFactory {
       format,
       infoDateColumn,
       infoDateFormat,
-      partitionByInfoDate,
+      partitionScheme,
       batchIdColumn,
       hiveTable,
       hivePath,
