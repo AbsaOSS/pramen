@@ -32,9 +32,9 @@ case class InfoDateOverride(
                            )
 
 object InfoDateOverride {
+  val INFORMATION_DATE_PREFIX_KEY = "information.date"
   val INFORMATION_DATE_COLUMN_KEY = "information.date.column"
   val INFORMATION_DATE_FORMAT_KEY = "information.date.format"
-  val INFORMATION_DATE_PARTITION_BY_KEY = "information.date.partition.by"
   val INFORMATION_DATE_EXPRESSION_KEY = "information.date.expression"
   val INFORMATION_DATE_START_KEY = "information.date.start"
   val INFORMATION_DATE_MAX_DAYS_BEHIND_KEY = "information.date.max.days.behind"
@@ -42,9 +42,11 @@ object InfoDateOverride {
   def fromConfig(conf: Config): InfoDateOverride = {
     val columnNameOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN_KEY)
     val dateFormatOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_FORMAT_KEY)
-    val infoDatePartitionByOpt = ConfigUtils.getOptionBoolean(conf, INFORMATION_DATE_PARTITION_BY_KEY)
     val expressionOpt = ConfigUtils.getOptionString(conf, INFORMATION_DATE_EXPRESSION_KEY)
-    val partitionSchemeOpt = infoDatePartitionByOpt.map(if (_) PartitionScheme.PartitionByDay else PartitionScheme.NotPartitioned)
+    val partitionSchemeOpt = if (conf.hasPath(INFORMATION_DATE_PREFIX_KEY))
+      PartitionSchemeParser.fromConfig(conf.getConfig(INFORMATION_DATE_PREFIX_KEY), INFORMATION_DATE_PREFIX_KEY)
+    else
+      None
 
     val startDateOpt = ConfigUtils.getDateOpt(conf, INFORMATION_DATE_START_KEY, DEFAULT_DATE_FORMAT)
     val startMaxDaysOpt = ConfigUtils.getOptionInt(conf, INFORMATION_DATE_MAX_DAYS_BEHIND_KEY)
