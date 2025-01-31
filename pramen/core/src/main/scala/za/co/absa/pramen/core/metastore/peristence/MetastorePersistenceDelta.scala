@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.DateType
+import org.apache.spark.sql.types.{DataType, DateType, IntegerType, MetadataBuilder, StringType}
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{PartitionInfo, PartitionScheme, Query}
@@ -44,6 +44,8 @@ class MetastorePersistenceDelta(query: Query,
                                 readOptions: Map[String, String],
                                 writeOptions: Map[String, String]
                                  )(implicit spark: SparkSession) extends MetastorePersistence {
+
+  import MetastorePersistenceDelta._
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
@@ -87,24 +89,38 @@ class MetastorePersistenceDelta(query: Query,
       log.debug(s"Info date: $infoDateStr")
     }
 
-    val writer = if (partitionScheme == PartitionScheme.PartitionByDay) {
-      val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
+    val (dfPartitioned, partitionColumns) = partitionScheme match {
+      case PartitionScheme.PartitionByDay =>
+        (dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType)), Seq(infoDateColumn))
+      case PartitionScheme.PartitionByMonth(monthColumn, yearColumn) =>
+        val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
+        val dfNew = addGeneratedColumn(
+          addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR($infoDateColumn)"),
+          monthColumn, IntegerType, s"MONTH($infoDateColumn)"
+        )
+        (dfNew, Seq(yearColumn, monthColumn))
+      case PartitionScheme.PartitionByYear(yearColumn) =>
+        val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
+        val dfNew = addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR($infoDateColumn)")
+        (dfNew, Seq(yearColumn))
+      case PartitionScheme.NotPartitioned =>
+        // Move the date column to the front so that Z-ORDER index is possible for this field
+        val dfIn = dfRepartitioned.drop(infoDateColumn)
+        val dfNew = dfIn.select(lit(infoDateStr).cast(DateType).as(infoDateColumn) +: dfIn.columns.map(col): _*)
+        (dfNew, Seq.empty)
+    }
 
-      dfIn
+    val writer = if (partitionScheme != PartitionScheme.NotPartitioned) {
+      dfPartitioned
         .write
         .format("delta")
         .mode(saveMode)
-        .partitionBy(infoDateColumn)
+        .partitionBy(partitionColumns: _*)
         .option("mergeSchema", "true")
         .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
         .options(writeOptions)
     } else {
-      val dfIn = dfRepartitioned.drop(infoDateColumn)
-
-      dfIn.select(
-          lit(infoDateStr).cast(DateType).as(infoDateColumn) +: dfIn.columns.map(col): _*
-        )
-        .withColumn(infoDateColumn, col(infoDateColumn)) // Move the column to the front for index purposes
+      dfPartitioned
         .write
         .format("delta")
         .mode(saveMode)
@@ -208,3 +224,11 @@ class MetastorePersistenceDelta(query: Query,
   }
 }
 
+object MetastorePersistenceDelta {
+  def addGeneratedColumn(df: DataFrame, generatedColumn: String, dataType: DataType, expression: String): DataFrame = {
+    val metadata = new MetadataBuilder().putString("delta.generationExpression", expression).build()
+
+    df.drop(generatedColumn)
+      .withColumn(generatedColumn, expr(expression).cast(dataType).as(generatedColumn, metadata))
+  }
+}

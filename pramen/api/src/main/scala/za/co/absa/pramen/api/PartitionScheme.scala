@@ -21,9 +21,9 @@ sealed trait PartitionScheme
 object PartitionScheme {
   case object PartitionByDay extends PartitionScheme
 
-  case class PartitionByMonth(generatedColumn: String) extends PartitionScheme
+  case class PartitionByMonth(generatedMonthColumn: String, generatedYearColumn: String) extends PartitionScheme
 
-  case class PartitionByYear(generatedColumn: String) extends PartitionScheme
+  case class PartitionByYear(generatedYearColumn: String) extends PartitionScheme
 
   case object NotPartitioned extends PartitionScheme
 }
