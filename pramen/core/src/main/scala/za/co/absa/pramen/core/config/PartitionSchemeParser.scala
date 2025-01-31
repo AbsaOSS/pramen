@@ -23,7 +23,8 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 object PartitionSchemeParser {
   val PARTITION_BY_KEY = "partition.by"
   val PARTITION_PERIOD_KEY = "partition.period"
-  val PARTITION_COLUMN_KEY = "partition.column"
+  val PARTITION_YEAR_COLUMN_KEY = "partition.year.column"
+  val PARTITION_MONTH_COLUMN_KEY = "partition.month.column"
 
   val PARTITION_PERIOD_DAY = "day"
   val PARTITION_PERIOD_MONTH = "month"
@@ -32,19 +33,18 @@ object PartitionSchemeParser {
   def fromConfig(conf: Config, infoDateColumn: String): Option[PartitionScheme] = {
     val partitionByOpt = ConfigUtils.getOptionBoolean(conf, PARTITION_BY_KEY)
     val partitionPeriodOpt = ConfigUtils.getOptionString(conf, PARTITION_PERIOD_KEY).map(_.trim.toLowerCase)
-    val partitionColumnOpt = ConfigUtils.getOptionString(conf, PARTITION_COLUMN_KEY)
+    val partitionYearColumn = ConfigUtils.getOptionString(conf, PARTITION_YEAR_COLUMN_KEY).getOrElse(s"${infoDateColumn}_year")
+    val partitionMonthColumn = ConfigUtils.getOptionString(conf, PARTITION_MONTH_COLUMN_KEY).getOrElse(s"${infoDateColumn}_month")
 
-    (partitionByOpt, partitionPeriodOpt, partitionColumnOpt) match {
-      case (Some(false), _, _) => Some(PartitionScheme.NotPartitioned)
-      case (_, Some(PARTITION_PERIOD_DAY), _) => Some(PartitionScheme.PartitionByDay)
-      case (_, Some(PARTITION_PERIOD_MONTH), Some(column)) => Some(PartitionScheme.PartitionByMonth(column))
-      case (_, Some(PARTITION_PERIOD_MONTH), None) => Some(PartitionScheme.PartitionByMonth(s"${infoDateColumn}_month"))
-      case (_, Some(PARTITION_PERIOD_YEAR), Some(column)) => Some(PartitionScheme.PartitionByYear(column))
-      case (_, Some(PARTITION_PERIOD_YEAR), None) => Some(PartitionScheme.PartitionByYear(s"${infoDateColumn}_year"))
-      case (_, Some(period), _) if !Seq(PARTITION_PERIOD_DAY, PARTITION_PERIOD_MONTH, PARTITION_PERIOD_YEAR).contains(period) =>
+    (partitionByOpt, partitionPeriodOpt) match {
+      case (Some(false), _) => Some(PartitionScheme.NotPartitioned)
+      case (_, Some(PARTITION_PERIOD_DAY)) => Some(PartitionScheme.PartitionByDay)
+      case (_, Some(PARTITION_PERIOD_MONTH)) => Some(PartitionScheme.PartitionByMonth(partitionMonthColumn, partitionYearColumn))
+      case (_, Some(PARTITION_PERIOD_YEAR)) => Some(PartitionScheme.PartitionByYear(partitionYearColumn))
+      case (_, Some(period)) if !Seq(PARTITION_PERIOD_DAY, PARTITION_PERIOD_MONTH, PARTITION_PERIOD_YEAR).contains(period) =>
         throw new IllegalArgumentException(s"Invalid value '$period' of '$PARTITION_PERIOD_KEY'. " +
           s"Valid values are: $PARTITION_PERIOD_DAY, $PARTITION_PERIOD_MONTH, $PARTITION_PERIOD_YEAR.")
-      case (None, None, _) => None
+      case (None, None) => None
     }
   }
 

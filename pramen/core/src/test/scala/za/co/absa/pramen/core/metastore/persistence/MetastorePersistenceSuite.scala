@@ -164,6 +164,244 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
     compareText(actual4, expected4)
   }
 
+  def testLoadMonthlyTablePeriods(mtp: MetastorePersistence): Assertion = {
+    val expected1 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |} ]""".stripMargin
+    val expected2 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_month" : 10
+        |} ]""".stripMargin
+    val expected3 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |} ]""".stripMargin
+    val expected4 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_month" : 10
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_month" : 10
+        |} ]""".stripMargin
+
+    mtp.saveTable(infoDate, getDf.withColumn("p", lit(1)), None)
+    mtp.saveTable(infoDate.plusDays(1), getDf.withColumn("p", lit(2)), None)
+
+    val df1 = mtp.loadTable(Some(infoDate), Some(infoDate)).select("a", "b", "p", "info_date", "info_month")
+    val df2 = mtp.loadTable(Some(infoDate.plusDays(1)), None).select("a", "b", "p", "info_date", "info_month")
+    val df3 = mtp.loadTable(None, Some(infoDate)).select("a", "b", "p", "info_date", "info_month")
+    val df4 = mtp.loadTable(None, None).select("a", "b", "p", "info_date", "info_month")
+
+    val actual1 = SparkUtils.dataFrameToJson(df1.orderBy("a"))
+    val actual2 = SparkUtils.dataFrameToJson(df2.orderBy("a"))
+    val actual3 = SparkUtils.dataFrameToJson(df3.orderBy("a"))
+    val actual4 = SparkUtils.dataFrameToJson(df4.orderBy("a", "p"))
+
+    compareText(actual1, expected1)
+    compareText(actual2, expected2)
+    compareText(actual3, expected3)
+    compareText(actual4, expected4)
+  }
+
+  def testLoadYearlyTablePeriods(mtp: MetastorePersistence): Assertion = {
+    val expected1 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |} ]""".stripMargin
+    val expected2 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_year" : 2021
+        |} ]""".stripMargin
+    val expected3 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |} ]""".stripMargin
+    val expected4 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12",
+        |  "info_year" : 2021
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13",
+        |  "info_year" : 2021
+        |} ]""".stripMargin
+
+    mtp.saveTable(infoDate, getDf.withColumn("p", lit(1)), None)
+    mtp.saveTable(infoDate.plusDays(1), getDf.withColumn("p", lit(2)), None)
+
+    val df1 = mtp.loadTable(Some(infoDate), Some(infoDate)).select("a", "b", "p", "info_date", "info_year")
+    val df2 = mtp.loadTable(Some(infoDate.plusDays(1)), None).select("a", "b", "p", "info_date", "info_year")
+    val df3 = mtp.loadTable(None, Some(infoDate)).select("a", "b", "p", "info_date", "info_year")
+    val df4 = mtp.loadTable(None, None).select("a", "b", "p", "info_date", "info_year")
+
+    val actual1 = SparkUtils.dataFrameToJson(df1.orderBy("a"))
+    val actual2 = SparkUtils.dataFrameToJson(df2.orderBy("a"))
+    val actual3 = SparkUtils.dataFrameToJson(df3.orderBy("a"))
+    val actual4 = SparkUtils.dataFrameToJson(df4.orderBy("a", "p"))
+
+    compareText(actual1, expected1)
+    compareText(actual2, expected2)
+    compareText(actual3, expected3)
+    compareText(actual4, expected4)
+  }
+
   def testLoadEmptyTable(mtp: MetastorePersistence): Assertion = {
     mtp.saveTable(infoDate, getDf, None)
 
@@ -497,11 +735,27 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
           testLoadTablePeriods(getDeltaMtPersistence(tempDir))
         }
       }
+      "load monthly-partitioned table periods" in {
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testLoadMonthlyTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.PartitionByMonth("info_month", "info_year")))
+          val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir, "delta", "info_year=2021"), "*", includeDirs = true)
+          assert(files.exists(_.toString.contains("/info_year=2021/info_month=10")))
+        }
+
+      }
+      "load yearly-partitioned table periods" in {
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testLoadYearlyTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.PartitionByYear("info_year")))
+          val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir, "delta"), "*", includeDirs = true)
+          assert(files.exists(_.toString.contains("/info_year=2021")))
+        }
+      }
       "load non-partitioned table periods" in {
-        if (spark.version.split('.').head.toInt >= 3) {
-          withTempDirectory("mt_persist") { tempDir =>
-            testLoadTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
-          }
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testLoadTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
         }
       }
       "load empty table if wrong period partitioned" in {
@@ -510,10 +764,9 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
         }
       }
       "load empty table if wrong period non partitioned" in {
-        if (spark.version.split('.').head.toInt >= 3) {
-          withTempDirectory("mt_persist") { tempDir =>
-            testLoadEmptyTable(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
-          }
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testLoadEmptyTable(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
         }
       }
       "throw an exception is the folder does not exist" in {
@@ -531,10 +784,9 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "supports fixing the existing info date column not partitioned" in {
-        if (spark.version.split('.').head.toInt >= 3) {
-          withTempDirectory("mt_persist") { tempDir =>
-            testInfoDateExists(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
-          }
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testInfoDateExists(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
         }
       }
 
@@ -545,10 +797,9 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "support partition overwrites not partitioned" in {
-        if (spark.version.split('.').head.toInt >= 3) {
-          withTempDirectory("mt_persist") { tempDir =>
-            testOverwritePartition(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
-          }
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testOverwritePartition(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
         }
       }
 
@@ -559,10 +810,9 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "support partition appends not partitioned" in {
-        if (spark.version.split('.').head.toInt >= 3) {
-          withTempDirectory("mt_persist") { tempDir =>
-            testAppendPartition(getDeltaMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append), partitionScheme = PartitionScheme.NotPartitioned))
-          }
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testAppendPartition(getDeltaMtPersistence(tempDir, saveModeOpt = Some(SaveMode.Append), partitionScheme = PartitionScheme.NotPartitioned))
         }
       }
 
@@ -597,10 +847,9 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "supports schema merges not partitioned" in {
-        if (spark.version.split('.').head.toInt >= 3) {
-          withTempDirectory("mt_persist") { tempDir =>
-            testSchemaMerge(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
-          }
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testSchemaMerge(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
         }
       }
 
@@ -631,10 +880,9 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       }
 
       "get stats after a save not partitioned" in {
-        if (spark.version.split('.').head.toInt >= 3) {
-          withTempDirectory("mt_persist") { tempDir =>
-            testStatsEmptyForNonPartitionedTables(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
-          }
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testStatsEmptyForNonPartitionedTables(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
         }
       }
 
