@@ -28,6 +28,7 @@ object PartitionSchemeParser {
 
   val PARTITION_PERIOD_DAY = "day"
   val PARTITION_PERIOD_MONTH = "month"
+  val PARTITION_PERIOD_YEAR_MONTH = "year_month"
   val PARTITION_PERIOD_YEAR = "year"
 
   def fromConfig(conf: Config, infoDateColumn: String): Option[PartitionScheme] = {
@@ -40,10 +41,11 @@ object PartitionSchemeParser {
       case (Some(false), _) => Some(PartitionScheme.NotPartitioned)
       case (_, Some(PARTITION_PERIOD_DAY)) => Some(PartitionScheme.PartitionByDay)
       case (_, Some(PARTITION_PERIOD_MONTH)) => Some(PartitionScheme.PartitionByMonth(partitionMonthColumn, partitionYearColumn))
+      case (_, Some(PARTITION_PERIOD_YEAR_MONTH)) => Some(PartitionScheme.PartitionByYearMonth(partitionMonthColumn))
       case (_, Some(PARTITION_PERIOD_YEAR)) => Some(PartitionScheme.PartitionByYear(partitionYearColumn))
       case (_, Some(period)) if !Seq(PARTITION_PERIOD_DAY, PARTITION_PERIOD_MONTH, PARTITION_PERIOD_YEAR).contains(period) =>
         throw new IllegalArgumentException(s"Invalid value '$period' of '$PARTITION_PERIOD_KEY'. " +
-          s"Valid values are: $PARTITION_PERIOD_DAY, $PARTITION_PERIOD_MONTH, $PARTITION_PERIOD_YEAR.")
+          s"Valid values are: $PARTITION_PERIOD_DAY, $PARTITION_PERIOD_MONTH, $PARTITION_PERIOD_YEAR_MONTH, $PARTITION_PERIOD_YEAR.")
       case (None, None) => None
     }
   }

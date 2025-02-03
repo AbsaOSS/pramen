@@ -18,18 +18,20 @@ package za.co.absa.pramen.core.metastore.persistence
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
-import org.apache.spark.sql.functions.{col, lit, month, year}
-import org.apache.spark.sql.types.DateType
+import org.apache.spark.sql.functions.{col, date_format, lit, month, year}
+import org.apache.spark.sql.types.{DateType, IntegerType, StringType}
 import org.scalatest.{Assertion, BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{DataFormat, PartitionInfo, PartitionScheme, Query}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
+import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceDelta.addGeneratedColumn
 import za.co.absa.pramen.core.mocks.MetaTableFactory
-import za.co.absa.pramen.core.utils.LocalFsUtils
+import za.co.absa.pramen.core.utils.{LocalFsUtils, TimeUtils}
 
 import java.nio.file.Paths
+import java.sql.Date
 import java.time.LocalDate
 
 class MetastorePartitionSchemeSuite extends AnyWordSpec
@@ -61,7 +63,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
       df3.withColumn("info_date", lit(infoDate2.toString).cast(DateType))
         .write
         .format("delta")
-        .mode(SaveMode.Append).save(new Path(tempDir).toString)
+        .mode(SaveMode.Append).save(tempDir)
 
       assert(mt.loadTable(None, None).count() == 6)
     }
@@ -78,8 +80,8 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
           assert(df.schema.fields.length == 3)
 
           val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir), "*", includeDirs = true)
-          assert(files.exists(_.toString.contains("/info_date=2021-02-18")))
-          assert(files.exists(_.toString.contains("/info_date=2022-03-19")))
+          assert(files.exists(_.toString.endsWith("/info_date=2021-02-18")))
+          assert(files.exists(_.toString.endsWith("/info_date=2022-03-19")))
         }
       }
 
@@ -98,10 +100,30 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
           assert(df.filter(col("info_month") === month(col("info_date"))).count() == 6)
 
           val filesOuter = LocalFsUtils.getListOfFiles(Paths.get(tempDir), "*", includeDirs = true)
-          assert(filesOuter.exists(_.toString.contains("/info_year=2021")))
-          assert(filesOuter.exists(_.toString.contains("/info_year=2022")))
+          assert(filesOuter.exists(_.toString.endsWith("/info_year=2021")))
+          assert(filesOuter.exists(_.toString.endsWith("/info_year=2022")))
           val filesInner = LocalFsUtils.getListOfFiles(Paths.get(tempDir, "info_year=2021"), "*", includeDirs = true)
           assert(filesInner.head.toString.contains("/info_year=2021/info_month=2"))
+        }
+      }
+
+      "create, read, and append year-month partitions" in {
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+
+        withTempDirectory("mt_delta_part") { tempDir =>
+          val mt = getDeltaMtPersistence(tempDir, PartitionScheme.PartitionByYearMonth("info_month"))
+
+          runBasicTests(mt, tempDir)
+
+          val df = mt.loadTable(None, None)
+          assert(df.schema.fields.length == 4)
+
+          assert(df.filter(col("info_month") === date_format(col("info_date"), "yyyy-MM")).count() == 6)
+
+          val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir), "*", includeDirs = true)
+          files.foreach(println)
+          assert(files.exists(_.toString.endsWith("info_month=2021-02")))
+          assert(files.exists(_.toString.endsWith("info_month=2022-03")))
         }
       }
 
@@ -118,8 +140,8 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
           assert(df.filter(col("info_year") === year(col("info_date"))).count() == 6)
 
           val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir), "*", includeDirs = true)
-          assert(files.exists(_.toString.contains("/info_year=2021")))
-          assert(files.exists(_.toString.contains("/info_year=2022")))
+          assert(files.exists(_.toString.endsWith("/info_year=2021")))
+          assert(files.exists(_.toString.endsWith("/info_year=2022")))
           val filesInner = LocalFsUtils.getListOfFiles(Paths.get(tempDir, "info_year=2021"), "*", includeDirs = true)
           filesInner.exists(_.toString.endsWith(".parquet"))
         }
@@ -150,6 +172,11 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
       }
 
       "create, read, and append monthly partitions" in {
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+
+      }
+
+      "create, read, and append year-month partitions" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
       }

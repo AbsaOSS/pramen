@@ -95,13 +95,17 @@ class MetastorePersistenceDelta(query: Query,
       case PartitionScheme.PartitionByMonth(monthColumn, yearColumn) =>
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
         val dfNew = addGeneratedColumn(
-          addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR($infoDateColumn)"),
-          monthColumn, IntegerType, s"MONTH($infoDateColumn)"
+          addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR(`$infoDateColumn`)"),
+          monthColumn, IntegerType, s"MONTH(`$infoDateColumn`)"
         )
         (dfNew, Seq(yearColumn, monthColumn))
+      case PartitionScheme.PartitionByYearMonth(monthColumn) =>
+        val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
+        val dfNew = addGeneratedColumn(dfIn, monthColumn, StringType, s"DATE_FORMAT(`$infoDateColumn`, 'yyyy-MM')")
+        (dfNew, Seq(monthColumn))
       case PartitionScheme.PartitionByYear(yearColumn) =>
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
-        val dfNew = addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR($infoDateColumn)")
+        val dfNew = addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR(`$infoDateColumn`)")
         (dfNew, Seq(yearColumn))
       case PartitionScheme.NotPartitioned =>
         // Move the date column to the front so that Z-ORDER index is possible for this field
