@@ -23,6 +23,8 @@ object PartitionScheme {
 
   case class PartitionByMonth(generatedMonthColumn: String, generatedYearColumn: String) extends PartitionScheme
 
+  case class PartitionByYearMonth(generatedMonthYearColumn: String) extends PartitionScheme
+
   case class PartitionByYear(generatedYearColumn: String) extends PartitionScheme
 
   case object NotPartitioned extends PartitionScheme

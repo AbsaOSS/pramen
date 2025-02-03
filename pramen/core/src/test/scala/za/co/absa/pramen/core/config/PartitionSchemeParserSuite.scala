@@ -61,6 +61,22 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
       assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByMonth("aaa", "bbb")))
     }
 
+    "return year-month with a standard column name when specified" in {
+      val conf = ConfigFactory.parseString("partition.period = year_month")
+
+      val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
+
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYearMonth("info_date_month")))
+    }
+
+    "return year-month with a custom column name when specified" in {
+      val conf = ConfigFactory.parseString("partition.period = year_month\npartition.month.column=aaa")
+
+      val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
+
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYearMonth("aaa")))
+    }
+
     "return yearly with a standard column name when specified" in {
       val conf = ConfigFactory.parseString("partition.period = year")
 
@@ -87,7 +103,7 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
         PartitionSchemeParser.fromConfig(conf, "info_date")
       }
 
-      assert(ex.getMessage == "Invalid value 'week' of 'partition.period'. Valid values are: day, month, year.")
+      assert(ex.getMessage == "Invalid value 'week' of 'partition.period'. Valid values are: day, month, year_month, year.")
     }
   }
 }
