@@ -388,9 +388,18 @@ pramen.metastore {
       # Supported: overwrite (default), append
       #save.mode = append
 
-      information.date.partition.by = true
       information.date.column = "INFORMATION_DATE"
       information.date.format = "yyyy-MM-dd"
+      
+      # This is partitioning by generated columns. For monthly partitions 2 columns are going to be created:
+      # /path/dataset/pramen_year=2024/pramen_month=12/*.parquet
+      # /path/dataset/pramen_year=2025/pramen_month=1/*.parquet
+      # /path/dataset/pramen_year=2025/pramen_month=2/*.parquet
+      # This is supported only for Delta Lake format (format="delta").
+      information.date.partition.by = true
+      information.date.partition.period = "month" # Can be "day", "month", "year_month", "year"
+      information.date.partition.year.column = "pramen_year"
+      information.date.partition.month.column = "pramen_month"
 
       # You can set the start date beyond which Pramen won't allow writes:
       information.date.start = "2022-01-01"
@@ -412,22 +421,25 @@ pramen.metastore {
 
 Metastore table options:
 
-| Name                               | Description                                                                                                                                                              |
-|------------------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `name`                             | Name of the metastore table                                                                                                                                              |
-| `format`                           | Storage format (`parquet`, `delta`, `raw` [files], `transient` [do not persist between runs])                                                                            |
-| `path`                             | Path to the data in the metastore.                                                                                                                                       |
-| `table`                            | Delta Lake table name (if Delta Lake tables are the underlying storage).                                                                                                 |
-| `cache.policy`                     | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.---- |
-| `records.per.partition`            | Number of records per partition (in order to avoid small files problem).                                                                                                 |
-| `information.date.partition.by`    | If `true` (default) the table will be partitioned by the information date. If `false`, the table won't be partitioned (supported for `delta` format only).               |
-| `information.date.column`          | Name of the column that contains the information date. *                                                                                                                 |
-| `information.date.format`          | Format of the information date used for partitioning (in Java format notation). *                                                                                        |
-| `information.date.start`           | The earliest date the table contains data for. *                                                                                                                         |
-| `information.date.max.days.behind` | The time window in days from the current system date when it is allowed to write/rerun. Useful if the underlying storage archives data automatically.                    |
-| `save.moden`                       | (experimental) Save mode to use when writing partitions. Supported: `overwrite` (default), `append`.                                                                     |
-| `read.option`                      | Arbitrary read options to pass to the Spark reader when reading the table.                                                                                               |
-| `write.option`                     | Arbitrary write options to pass to the Spark reader when reading the table.                                                                                              |
+| Name                                      | Description                                                                                                                                                                               |
+|-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `name`                                    | Name of the metastore table                                                                                                                                                               |
+| `format`                                  | Storage format (`parquet`, `delta`, `raw` [files], `transient` [do not persist between runs])                                                                                             |
+| `path`                                    | Path to the data in the metastore.                                                                                                                                                        |
+| `table`                                   | Delta Lake table name (if Delta Lake tables are the underlying storage).                                                                                                                  |
+| `cache.policy`                            | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.----                  |
+| `records.per.partition`                   | Number of records per partition (in order to avoid small files problem).                                                                                                                  |
+| `information.date.column`                 | Name of the column that contains the information date. *                                                                                                                                  |
+| `information.date.format`                 | Format of the information date used for partitioning (in Java format notation). *                                                                                                         |
+| `information.date.start`                  | The earliest date the table contains data for. *                                                                                                                                          |
+| `information.date.max.days.behind`        | The time window in days from the current system date when it is allowed to write/rerun. Useful if the underlying storage archives data automatically.                                     |
+| `information.date.partition.by`           | If `true` (default) the table will be partitioned by the information date. If `false`, the table won't be partitioned (supported for `delta` format only).                                |
+| `information.date.partition.period`       | Can be `day` (default), `month`, `year_month`, `year`. Specifies partition period. If not `day`, the table will be partitioned by a generated column (supported for `delta` format only). |
+| `information.date.partition.year.column`  | The name of generated column when `information.date.partition.period` is `month` or `year`.                                                                                               |
+| `information.date.partition.month.column` | The name of generated column when `information.date.partition.period` is `month` or `year_month`.                                                                                         |
+| `save.moden`                              | (experimental) Save mode to use when writing partitions. Supported: `overwrite` (default), `append`.                                                                                      |
+| `read.option`                             | Arbitrary read options to pass to the Spark reader when reading the table.                                                                                                                |
+| `write.option`                            | Arbitrary write options to pass to the Spark reader when reading the table.                                                                                                               |
 
 `*` - It is recommended to standardize information date column used for partitioning folders in the metastore. You can
 define default values for the information date column at the top of configuration and it will be used by default if not
@@ -443,39 +455,46 @@ Default information date settings can be set using the following configuration k
 
 Storage type examples:
 
-<details>
-  <summary>Click to expand</summary>
+A config for a Parquet folder example:
+```hocon
+{
+  name = "table_name"
+  format = "parquet"
+  path = "hdfs://cluster/path/to/parquet/folder"
+  records.per.partition = 1000000
+}
+```
 
-  A config for a Parquet folder example:
-  ```hocon
-  {
-    name = "table_name"
-    format = "parquet"
-    path = "hdfs://cluster/path/to/parquet/folder"
-    records.per.partition = 1000000
-  }
-  ```
-  
-  A config for a Delta folder example:
-  ```hocon
-  {
-    name = "table_name"
-    format = "delta"
-    path = "s3://cluster/path/to/delta/folder"
-    records.per.partition = 1000000
-  }
-  ```
-  
-  A config for a Delta Lake table example:
-  ```hocon
-  {
-    name = "table_name"
-    format = "delta"
-    table = "delta_lake_table_name"
-    records.per.partition = 1000000
-  }
-  ```
-</details>
+A config for an non-partitioned Delta folder example:
+```hocon
+{
+  name = "table_name"
+  format = "delta"
+  path = "s3://cluster/path/to/delta/folder"
+  information.date.partition.by = false
+}
+```
+
+A config for a Delta Lake table example with a partitioning by a generated column:
+```hocon
+{
+  name = "table_name"
+  format = "delta"
+  path = "s3://cluster/path/to/delta/folder"
+  information.date.partition.by = false
+  information.date.partition.period = "year_month"
+  information.date.partition.month.column = "pramen_year_month" // s3://cluster/path/to/delta/folder/pramen_year_month=2025-02
+}
+```
+
+A config for a Delta Lake table example with default daily partitioning:
+```hocon
+{
+  name = "table_name"
+  format = "delta"
+  table = "delta_lake_table_name"
+}
+```
 
 ### Sources
 
