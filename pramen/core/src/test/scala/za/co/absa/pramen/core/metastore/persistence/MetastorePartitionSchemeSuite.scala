@@ -16,23 +16,22 @@
 
 package za.co.absa.pramen.core.metastore.persistence
 
-import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
-import org.apache.spark.sql.functions.{col, date_format, lit, month, year}
-import org.apache.spark.sql.types.{DateType, IntegerType, StringType}
-import org.scalatest.{Assertion, BeforeAndAfter, BeforeAndAfterAll, BeforeAndAfterEach}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DateType
+import org.scalatest.Assertion
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.{DataFormat, PartitionInfo, PartitionScheme, Query}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
-import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceDelta.addGeneratedColumn
 import za.co.absa.pramen.core.mocks.MetaTableFactory
-import za.co.absa.pramen.core.utils.{LocalFsUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.LocalFsUtils
 
 import java.nio.file.Paths
-import java.sql.Date
 import java.time.LocalDate
+import scala.collection.mutable
+import scala.util.Random
 
 class MetastorePartitionSchemeSuite extends AnyWordSpec
   with SparkTestBase
@@ -49,7 +48,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
     val infoDate1 = LocalDate.parse("2021-02-18")
     val infoDate2 = LocalDate.parse("2022-03-19")
 
-    def runBasicTests(mt: MetastorePersistence, tempDir: String): Assertion = {
+    def runBasicTests(mt: MetastorePersistence, query: Query): Assertion = {
       // double write should not duplicate partitions
       mt.saveTable(infoDate1, df1, None)
       mt.saveTable(infoDate1, df1, None)
@@ -60,10 +59,18 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
 
       assert(mt.loadTable(None, None).count() == 4)
 
-      df3.withColumn("info_date", lit(infoDate2.toString).cast(DateType))
-        .write
-        .format("delta")
-        .mode(SaveMode.Append).save(tempDir)
+      query match {
+        case Query.Path(path) =>
+          df3.withColumn("info_date", lit(infoDate2.toString).cast(DateType))
+            .write
+            .format("delta")
+            .mode(SaveMode.Append).save(path)
+        case Query.Table(table) =>
+          df3.withColumn("info_date", lit(infoDate2.toString).cast(DateType))
+            .write
+            .format("delta")
+            .mode(SaveMode.Append).saveAsTable(table)
+      }
 
       assert(mt.loadTable(None, None).count() == 6)
     }
@@ -73,9 +80,9 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(tempDir, PartitionScheme.PartitionByDay)
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByDay)
 
-          runBasicTests(mt, tempDir)
+          runBasicTests(mt, Query.Path(tempDir))
           val df = mt.loadTable(None, None)
           assert(df.schema.fields.length == 3)
 
@@ -89,9 +96,9 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(tempDir, PartitionScheme.PartitionByMonth("info_month", "info_year"))
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByMonth("info_month", "info_year"))
 
-          runBasicTests(mt, tempDir)
+          runBasicTests(mt, Query.Path(tempDir))
 
           val df = mt.loadTable(None, None)
           assert(df.schema.fields.length == 5)
@@ -111,9 +118,9 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(tempDir, PartitionScheme.PartitionByYearMonth("info_month"))
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByYearMonth("info_month"))
 
-          runBasicTests(mt, tempDir)
+          runBasicTests(mt, Query.Path(tempDir))
 
           val df = mt.loadTable(None, None)
           assert(df.schema.fields.length == 4)
@@ -131,9 +138,9 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(tempDir, PartitionScheme.PartitionByYear("info_year"))
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByYear("info_year"))
 
-          runBasicTests(mt, tempDir)
+          runBasicTests(mt, Query.Path(tempDir))
 
           val df = mt.loadTable(None, None)
           assert(df.schema.fields.length == 4)
@@ -151,9 +158,9 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(tempDir, PartitionScheme.NotPartitioned)
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.NotPartitioned)
 
-          runBasicTests(mt, tempDir)
+          runBasicTests(mt, Query.Path(tempDir))
 
           val df = mt.loadTable(None, None)
 
@@ -169,37 +176,125 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
       "create, read, and append daily partitions" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
+        val tableName = "mt_delta_part_table1" + Math.abs(Random.nextInt()).toString
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByDay)
+
+        runBasicTests(mt, Query.Table(tableName))
+
+        val df = mt.loadTable(None, None)
+        assert(df.schema.fields.length == 3)
+
+        val partitionColumns = getTablePartitions(tableName)
+
+        assert(partitionColumns.length == 1)
+        assert(partitionColumns.head == "info_date")
+
+        spark.sql(s"DELETE FROM $tableName").count()
+        spark.sql(s"DROP TABLE IF EXISTS $tableName").count()
       }
 
       "create, read, and append monthly partitions" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
+        val tableName = "mt_delta_part_table2" + Math.abs(Random.nextInt()).toString
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByMonth("info_month", "info_year"))
+
+        runBasicTests(mt, Query.Table(tableName))
+
+        val df = mt.loadTable(None, None)
+        assert(df.schema.fields.length == 5)
+
+        val partitionColumns = getTablePartitions(tableName)
+
+        assert(partitionColumns.length == 2)
+        assert(partitionColumns.head == "info_year")
+        assert(partitionColumns(1) == "info_month")
+
+        spark.sql(s"DELETE FROM $tableName").count()
+        spark.sql(s"DROP TABLE IF EXISTS $tableName").count()
       }
 
       "create, read, and append year-month partitions" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
+        val tableName = "mt_delta_part_table3" + Math.abs(Random.nextInt()).toString
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYearMonth("info_month"))
+
+        runBasicTests(mt, Query.Table(tableName))
+
+        val df = mt.loadTable(None, None)
+        assert(df.schema.fields.length == 4)
+
+        val partitionColumns = getTablePartitions(tableName)
+
+        assert(partitionColumns.length == 1)
+        assert(partitionColumns.head == "info_month")
+
+        spark.sql(s"DELETE FROM $tableName").count()
+        spark.sql(s"DROP TABLE IF EXISTS $tableName").count()
       }
 
       "create, read, and append yearly partitions" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
+        val tableName = "mt_delta_part_table4" + Math.abs(Random.nextInt()).toString
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYear("info_year"))
+
+        runBasicTests(mt, Query.Table(tableName))
+
+        val df = mt.loadTable(None, None)
+        assert(df.schema.fields.length == 4)
+
+        val partitionColumns = getTablePartitions(tableName)
+
+        assert(partitionColumns.length == 1)
+        assert(partitionColumns.head == "info_year")
+
+        spark.sql(s"DELETE FROM $tableName").count()
+        spark.sql(s"DROP TABLE IF EXISTS $tableName").count()
       }
 
       "create, read, and append non-partitioned tables" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
+        val tableName = "mt_delta_part_table5" + Math.abs(Random.nextInt()).toString
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.NotPartitioned)
+
+        runBasicTests(mt, Query.Table(tableName))
+
+        val df = mt.loadTable(None, None)
+        assert(df.schema.fields.length == 3)
+
+        val partitionColumns = getTablePartitions(tableName)
+
+        assert(partitionColumns.isEmpty)
+
+        spark.sql(s"DELETE FROM $tableName").count()
+        spark.sql(s"DROP TABLE IF EXISTS $tableName").count()
       }
     }
   }
 
-  def getDeltaMtPersistence(tempDir: String,
+  def getTablePartitions(tableName: String): Seq[String] = {
+    spark.sql(s"DESCRIBE DETAIL $tableName")
+      .select("partitionColumns")
+      .collect()(0)(0)
+      .asInstanceOf[mutable.WrappedArray[Any]]
+      .toSeq.map(_.toString)
+  }
+
+  def getDeltaMtPersistence(query: Query,
                             partitionScheme: PartitionScheme = PartitionScheme.PartitionByDay): MetastorePersistence = {
     val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
-      format = DataFormat.Delta(Query.Path(tempDir), PartitionInfo.Default),
+      format = DataFormat.Delta(query, PartitionInfo.Default),
       partitionScheme = partitionScheme,
       infoDateColumn = "info_date"
     )
+
+    query match {
+      case Query.Table(table) => spark.sql(s"DROP TABLE IF EXISTS $table").count()
+      case _ => // Nothing to do
+    }
 
     MetastorePersistence.fromMetaTable(mt, null, batchId = 0)
   }
