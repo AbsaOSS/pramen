@@ -81,7 +81,6 @@ trait TempDirFixture {
     */
   def createTextFile(path: String, fileName: String, contents: String): Unit = {
     val out = new PrintWriter(Paths.get(path, fileName).toAbsolutePath.toString)
-    out.println(contents)
     out.close()
   }
 

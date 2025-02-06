@@ -128,7 +128,6 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
           assert(df.filter(col("info_month") === date_format(col("info_date"), "yyyy-MM")).count() == 6)
 
           val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir), "*", includeDirs = true)
-          files.foreach(println)
           assert(files.exists(_.toString.endsWith("info_month=2021-02")))
           assert(files.exists(_.toString.endsWith("info_month=2022-03")))
         }
