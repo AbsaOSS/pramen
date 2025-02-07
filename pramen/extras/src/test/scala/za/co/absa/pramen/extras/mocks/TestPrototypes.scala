@@ -41,6 +41,7 @@ object TestPrototypes {
     None,
     LocalDate.MIN,
     Map.empty,
+    Map.empty,
     Map.empty)
 
   val taskStatus: RunStatus = RunStatus.Succeeded(None, Some(100), None, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
