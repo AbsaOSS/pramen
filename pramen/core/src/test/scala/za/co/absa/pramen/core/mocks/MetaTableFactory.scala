@@ -39,6 +39,7 @@ object MetaTableFactory {
                         trackDays: Int = 0,
                         trackDaysExplicitlySet: Boolean = false,
                         saveModeOpt: Option[SaveMode] = None,
+                        tableProperties: Map[String, String] = Map.empty[String, String],
                         readOptions: Map[String, String] = Map.empty[String, String],
                         writeOptions: Map[String, String] = Map.empty[String, String],
                         sparkConfig: Map[String, String] = Map.empty[String, String]
@@ -59,6 +60,7 @@ object MetaTableFactory {
       trackDays,
       trackDaysExplicitlySet,
       saveModeOpt,
+      tableProperties,
       readOptions,
       writeOptions,
       sparkConfig)

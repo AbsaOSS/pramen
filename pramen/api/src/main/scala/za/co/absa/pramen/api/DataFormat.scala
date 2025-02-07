@@ -48,6 +48,18 @@ object DataFormat {
     override val isRaw: Boolean = false
   }
 
+  case class Iceberg(table: CatalogTable,
+                     location: Option[String] = None,
+                     partitionInfo: PartitionInfo = PartitionInfo.Default) extends DataFormat {
+    override def name: String = "iceberg"
+
+    override val isTransient: Boolean = false
+
+    override val isLazy: Boolean = false
+
+    override val isRaw: Boolean = false
+  }
+
   // This format is used for metatables which are just files and can only be used for further sourcing
   case class Raw(path: String) extends DataFormat {
     override def name: String = "raw"

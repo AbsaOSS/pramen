@@ -163,6 +163,7 @@ object TransferTableParser {
       transferTable.trackDays,
       trackDaysExplicitlySet = transferTable.trackDaysExplicitlySet,
       None,
+      Map.empty,
       transferTable.readOptions,
       transferTable.writeOptions,
       transferTable.sparkConfig

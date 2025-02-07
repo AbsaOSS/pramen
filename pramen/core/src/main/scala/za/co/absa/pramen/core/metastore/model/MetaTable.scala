@@ -67,6 +67,7 @@ case class MetaTable(
                       trackDays: Int,
                       trackDaysExplicitlySet: Boolean,
                       saveModeOpt: Option[SaveMode],
+                      tableProperties: Map[String, String],
                       readOptions: Map[String, String],
                       writeOptions: Map[String, String],
                       sparkConfig: Map[String, String]
@@ -82,6 +83,7 @@ object MetaTable {
   val HIVE_PREFER_ADD_PARTITION_KEY = "hive.prefer.add.partition"
   val TRACK_DAYS_KEY = "track.days"
   val SAVE_MODE_OPTION_KEY = "save.mode"
+  val TABLE_PROPERTIES_KEY = "table.properties"
   val READ_OPTION_KEY = "read.option"
   val WRITE_OPTION_KEY = "write.option"
   val TABLE_HIVE_CONFIG_PREFIX = "hive"
@@ -163,6 +165,7 @@ object MetaTable {
     }
 
     val saveModeOpt = ConfigUtils.getOptionString(conf, SAVE_MODE_OPTION_KEY).map(getSaveMode(_, name))
+    val tableProperties = ConfigUtils.getExtraOptions(conf, TABLE_PROPERTIES_KEY)
     val readOptions = ConfigUtils.getExtraOptions(conf, READ_OPTION_KEY)
     val writeOptions = ConfigUtils.getExtraOptions(conf, WRITE_OPTION_KEY)
     val sparkConfig = ConfigUtils.getExtraOptions(conf, SPARK_CONFIG_PREFIX)
@@ -183,6 +186,7 @@ object MetaTable {
       trackDays,
       trackDaysExplicitlySet,
       saveModeOpt,
+      tableProperties,
       readOptions,
       writeOptions,
       sparkConfig)
@@ -200,6 +204,7 @@ object MetaTable {
       table.hiveTable,
       table.hivePath,
       table.infoDateStart,
+      table.tableProperties,
       table.readOptions,
       table.writeOptions
     )

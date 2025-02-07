@@ -31,6 +31,7 @@ import java.time.LocalDate
   * @param hiveTable           The name of the Hive table.
   * @param hivePath            The path of the Hive table (if it differs from the path in the underlying format).
   * @param infoDateStart       The start date of the information date.
+  * @param tableProperties     Configured table properties. Only used for table creation.
   * @param readOptions         The read options for the table.
   * @param writeOptions        The write options for the table.
   */
@@ -45,6 +46,7 @@ case class MetaTableDef(
                          hiveTable: Option[String],
                          hivePath: Option[String],
                          infoDateStart: LocalDate,
+                         tableProperties: Map[String, String],
                          readOptions: Map[String, String],
                          writeOptions: Map[String, String]
                        )
