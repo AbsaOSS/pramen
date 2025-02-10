@@ -49,8 +49,7 @@ object DataFormat {
   }
 
   case class Iceberg(table: CatalogTable,
-                     location: Option[String] = None,
-                     partitionInfo: PartitionInfo = PartitionInfo.Default) extends DataFormat {
+                     location: Option[String] = None) extends DataFormat {
     override def name: String = "iceberg"
 
     override val isTransient: Boolean = false
