@@ -92,18 +92,18 @@ class MetastorePersistenceDelta(query: Query,
     val (dfPartitioned, partitionColumns) = partitionScheme match {
       case PartitionScheme.PartitionByDay =>
         (dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType)), Seq(infoDateColumn))
-      case PartitionScheme.PartitionByMonth(monthColumn, yearColumn) =>
+      case PartitionScheme.PartitionByMonth(monthColumn, yearColumn, _) =>
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
         val dfNew = addGeneratedColumn(
           addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR(`$infoDateColumn`)"),
           monthColumn, IntegerType, s"MONTH(`$infoDateColumn`)"
         )
         (dfNew, Seq(yearColumn, monthColumn))
-      case PartitionScheme.PartitionByYearMonth(monthColumn) =>
+      case PartitionScheme.PartitionByYearMonth(monthColumn, _) =>
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
         val dfNew = addGeneratedColumn(dfIn, monthColumn, StringType, s"DATE_FORMAT(`$infoDateColumn`, 'yyyy-MM')")
         (dfNew, Seq(monthColumn))
-      case PartitionScheme.PartitionByYear(yearColumn) =>
+      case PartitionScheme.PartitionByYear(yearColumn, _) =>
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
         val dfNew = addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR(`$infoDateColumn`)")
         (dfNew, Seq(yearColumn))

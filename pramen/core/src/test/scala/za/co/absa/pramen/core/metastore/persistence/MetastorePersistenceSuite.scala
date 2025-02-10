@@ -738,7 +738,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "load monthly-partitioned table periods" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
         withTempDirectory("mt_persist") { tempDir =>
-          testLoadMonthlyTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.PartitionByMonth("info_month", "info_year")))
+          testLoadMonthlyTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.PartitionByMonth("info_month", "info_year", isVisible = true)))
           val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir, "delta", "info_year=2021"), "*", includeDirs = true)
           assert(files.exists(_.toString.contains("/info_year=2021/info_month=10")))
         }
@@ -747,7 +747,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
       "load yearly-partitioned table periods" in {
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
         withTempDirectory("mt_persist") { tempDir =>
-          testLoadYearlyTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.PartitionByYear("info_year")))
+          testLoadYearlyTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.PartitionByYear("info_year", isVisible = true)))
           val files = LocalFsUtils.getListOfFiles(Paths.get(tempDir, "delta"), "*", includeDirs = true)
           assert(files.exists(_.toString.contains("/info_year=2021")))
         }

@@ -55,9 +55,9 @@ object MetastorePersistence {
         new MetastorePersistenceDelta(
           query, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, metaTable.partitionScheme, partitionInfo, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
-      case DataFormat.Iceberg(table, location, partitionInfo) =>
+      case DataFormat.Iceberg(table, location) =>
         new MetastorePersistenceIceberg(
-          table, location, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, metaTable.partitionScheme, partitionInfo, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          table, location, metaTable.description, metaTable.infoDateColumn, metaTable.batchIdColumn, batchId, metaTable.partitionScheme, saveModeOpt, metaTable.writeOptions, metaTable.tableProperties
         )
       case DataFormat.Raw(path)                          =>
         new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, saveModeOpt)

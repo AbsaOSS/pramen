@@ -25,6 +25,7 @@ object PartitionSchemeParser {
   val PARTITION_PERIOD_KEY = "partition.period"
   val PARTITION_YEAR_COLUMN_KEY = "partition.year.column"
   val PARTITION_MONTH_COLUMN_KEY = "partition.month.column"
+  val PARTITION_COLUMN_VISIBLE_KEY = "partition.column.visible"
 
   val PARTITION_PERIOD_DAY = "day"
   val PARTITION_PERIOD_MONTH = "month"
@@ -36,13 +37,14 @@ object PartitionSchemeParser {
     val partitionPeriodOpt = ConfigUtils.getOptionString(conf, PARTITION_PERIOD_KEY).map(_.trim.toLowerCase)
     val partitionYearColumn = ConfigUtils.getOptionString(conf, PARTITION_YEAR_COLUMN_KEY).getOrElse(s"${infoDateColumn}_year")
     val partitionMonthColumn = ConfigUtils.getOptionString(conf, PARTITION_MONTH_COLUMN_KEY).getOrElse(s"${infoDateColumn}_month")
+    val partitionColumnVisible = ConfigUtils.getOptionBoolean(conf, PARTITION_COLUMN_VISIBLE_KEY).getOrElse(true)
 
     (partitionByOpt, partitionPeriodOpt) match {
       case (Some(false), _) => Some(PartitionScheme.NotPartitioned)
       case (_, Some(PARTITION_PERIOD_DAY)) => Some(PartitionScheme.PartitionByDay)
-      case (_, Some(PARTITION_PERIOD_MONTH)) => Some(PartitionScheme.PartitionByMonth(partitionMonthColumn, partitionYearColumn))
-      case (_, Some(PARTITION_PERIOD_YEAR_MONTH)) => Some(PartitionScheme.PartitionByYearMonth(partitionMonthColumn))
-      case (_, Some(PARTITION_PERIOD_YEAR)) => Some(PartitionScheme.PartitionByYear(partitionYearColumn))
+      case (_, Some(PARTITION_PERIOD_MONTH)) => Some(PartitionScheme.PartitionByMonth(partitionMonthColumn, partitionYearColumn, partitionColumnVisible))
+      case (_, Some(PARTITION_PERIOD_YEAR_MONTH)) => Some(PartitionScheme.PartitionByYearMonth(partitionMonthColumn, partitionColumnVisible))
+      case (_, Some(PARTITION_PERIOD_YEAR)) => Some(PartitionScheme.PartitionByYear(partitionYearColumn, partitionColumnVisible))
       case (_, Some(period)) if !Seq(PARTITION_PERIOD_DAY, PARTITION_PERIOD_MONTH, PARTITION_PERIOD_YEAR).contains(period) =>
         throw new IllegalArgumentException(s"Invalid value '$period' of '$PARTITION_PERIOD_KEY'. " +
           s"Valid values are: $PARTITION_PERIOD_DAY, $PARTITION_PERIOD_MONTH, $PARTITION_PERIOD_YEAR_MONTH, $PARTITION_PERIOD_YEAR.")
