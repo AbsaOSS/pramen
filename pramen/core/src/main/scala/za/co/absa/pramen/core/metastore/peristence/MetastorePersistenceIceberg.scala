@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
 import java.sql.Date
 import java.time.LocalDate
+import scala.util.Try
 
 class MetastorePersistenceIceberg(table: CatalogTable,
                                   location: Option[String],
@@ -57,7 +58,9 @@ class MetastorePersistenceIceberg(table: CatalogTable,
       case _ => (false, "Writing to")
     }
 
-    if (spark.catalog.tableExists(table.getFullTableName)) {
+    val tableExists = doesTableExist(table)
+
+    if (tableExists) {
       log.info(s"$operationStr to table $fullTableName...")
       if (isAppend) {
         appendToTable(dfToSave, fullTableName, writeOptions)
@@ -100,6 +103,27 @@ class MetastorePersistenceIceberg(table: CatalogTable,
     throw new UnsupportedOperationException("Iceberg only operates on tables in a catalog. Separate Hive options are not supported.")
   }
 
+  def doesTableExist(catalogTable: CatalogTable)(implicit spark: SparkSession): Boolean = {
+    Try {
+      spark.sql(s"SELECT * FROM ${catalogTable.getFullTableName} WHERE 0=1").count()
+    }.isSuccess
+
+    // For some reason tables are not refreshed in the catalog when they are created from Spark V2 API
+    /*table.catalog match {
+      case Some(_) =>
+        Try {
+          spark.sql(s"SELECT * FROM ${catalogTable.getFullTableName} WHERE 0=1").count()
+        }.isSuccess
+      case None =>
+        table.database match {
+          case Some(db) =>
+            spark.catalog.tableExists(db, table.table)
+          case None =>
+            spark.catalog.tableExists(table.table)
+        }
+    }*/
+  }
+
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
     (infoDateFrom, infoDateTo) match {
       case (None, None) => log.warn(s"Reading '${table.getFullTableName}' without filters. This can have performance impact."); lit(true)
@@ -138,24 +162,15 @@ object MetastorePersistenceIceberg {
                                         infoDateColumn: String,
                                         partitionScheme: PartitionScheme): Seq[String] = {
     partitionScheme match {
-      case PartitionScheme.PartitionByMonth(monthColumn, yearColumn, true) =>
+      case PartitionScheme.PartitionByMonth(_, _) =>
         Seq(
-          s"""ALTER TABLE $table ADD PARTITION FIELD year($infoDateColumn) AS $yearColumn""",
-          s"""ALTER TABLE $table ADD PARTITION FIELD month($infoDateColumn) AS $monthColumn"""
+          s"""ALTER TABLE $table ADD PARTITION FIELD year($infoDateColumn)""",
+          s"""ALTER TABLE $table ADD PARTITION FIELD month($infoDateColumn)"""
         )
-      case PartitionScheme.PartitionByMonth(_, _, _) =>
-        Seq(
-          s"""ALTER TABLE $table ADD PARTITION FIELD years($infoDateColumn)""",
-          s"""ALTER TABLE $table ADD PARTITION FIELD months($infoDateColumn)"""
-        )
-      case PartitionScheme.PartitionByYearMonth(yearMonthColumn, true) =>
-        Seq(s"""ALTER TABLE $table ADD PARTITION FIELD concat(year($infoDateColumn), '_', lpad(month($infoDateColumn), 2, '0')) AS $yearMonthColumn""")
-      case PartitionScheme.PartitionByYearMonth(_, _) =>
-        Seq(s"""ALTER TABLE $table ADD PARTITION FIELD concat(year($infoDateColumn), '_', lpad(month($infoDateColumn), 2, '0'))""")
-      case PartitionScheme.PartitionByYear(yearColumn, true) =>
-        Seq(s"""ALTER TABLE $table ADD PARTITION FIELD year($infoDateColumn) AS $yearColumn""")
-      case PartitionScheme.PartitionByYear(_, _) =>
-        Seq(s"""ALTER TABLE $table ADD PARTITION FIELD years($infoDateColumn)""")
+      case PartitionScheme.PartitionByYearMonth(_) =>
+        throw new UnsupportedOperationException(s"Partition scheme $partitionScheme is not supported by Iceberg.")
+      case PartitionScheme.PartitionByYear(_) =>
+        Seq(s"""ALTER TABLE $table ADD PARTITION FIELD year($infoDateColumn)""")
       case _ =>
         throw new UnsupportedOperationException(s"Partition scheme $partitionScheme is not supported for adding generated columns.")
     }

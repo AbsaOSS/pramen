@@ -96,7 +96,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByMonth("info_month", "info_year", isVisible = true))
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByMonth("info_month", "info_year"))
 
           runBasicTests(mt, Query.Path(tempDir))
 
@@ -118,7 +118,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByYearMonth("info_month", isVisible = true))
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByYearMonth("info_month"))
 
           runBasicTests(mt, Query.Path(tempDir))
 
@@ -137,7 +137,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         withTempDirectory("mt_delta_part") { tempDir =>
-          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByYear("info_year", isVisible = true))
+          val mt = getDeltaMtPersistence(Query.Path(tempDir), PartitionScheme.PartitionByYear("info_year"))
 
           runBasicTests(mt, Query.Path(tempDir))
 
@@ -196,7 +196,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         val tableName = "mt_delta_part_table2" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByMonth("info_month", "info_year", isVisible = true))
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByMonth("info_month", "info_year"))
 
         runBasicTests(mt, Query.Table(tableName))
 
@@ -217,7 +217,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         val tableName = "mt_delta_part_table3" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYearMonth("info_month", isVisible = true))
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYearMonth("info_month"))
 
         runBasicTests(mt, Query.Table(tableName))
 
@@ -237,7 +237,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
 
         val tableName = "mt_delta_part_table4" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYear("info_year", isVisible = true))
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYear("info_year"))
 
         runBasicTests(mt, Query.Table(tableName))
 

@@ -68,11 +68,11 @@ object MetastorePersistenceIcebergOps {
 
     partitionScheme match {
       case PartitionScheme.NotPartitioned =>
-        partitionedWriter.createOrReplace()
+        partitionedWriter.create()
       case PartitionScheme.PartitionByDay =>
-        partitionedWriter.createOrReplace()
+        partitionedWriter.create()
       case _ =>
-        partitionedWriter.createOrReplace()
+        partitionedWriter.create()
 
         MetastorePersistenceIceberg.addGeneratedColumnPartition(table, infoDateColumn, partitionScheme)
 

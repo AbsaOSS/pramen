@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.base
 import org.apache.log4j.{Level, Logger}
 import org.apache.spark.sql.SparkSession
 
-trait SparkTestBase {
+trait SparkTestIcebergBase {
   // Turn off as much as possible Spark logging in tests
   Logger.getLogger("org").setLevel(Level.ERROR)
   Logger.getLogger("akka").setLevel(Level.ERROR)
@@ -36,8 +36,11 @@ trait SparkTestBase {
       .config("spark.driver.bindAddress", "127.0.0.1")
       .config("spark.driver.host", "127.0.0.1")
       .config("spark.sql.session.timeZone", "Africa/Johannesburg")
-      .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
-      .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
+      .config("spark.sql.extensions", "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions")
+      .config("spark.sql.catalog.spark_catalog", "org.apache.iceberg.spark.SparkCatalog")
+      .config("spark.sql.catalog.spark_catalog.type", "hadoop")
+      .config("spark.sql.catalog.spark_catalog.warehouse", s"$hadoopTempDir/pramen/iceberg_catalog")
+      .config("spark.sql.catalog.spark_catalog.io-impl", "org.apache.iceberg.hadoop.HadoopFileIO")
       .config("spark.sql.legacy.timeParserPolicy", "CORRECTED")
       .config("spark.sql.shuffle.partitions", "1")
       .getOrCreate()
