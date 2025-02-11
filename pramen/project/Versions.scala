@@ -32,6 +32,7 @@ object Versions {
   val requestsVersion = "0.8.0"
   val javaXMailVersion = "1.6.2"
   val embeddedMongoDbVersion = "2.2.0"
+  val scalaCompatColsVersion = "2.12.0"
   val scalatestVersion = "3.2.14"
   val mockitoVersion = "2.28.2"
   val httpClientVersion = "4.5.14"
@@ -89,6 +90,22 @@ object Versions {
         println(s"Using Delta version $deltaArtifact:$deltaVersion (provided)")
         "io.delta" %% deltaArtifact % deltaVersion % Provided
       }
+    }
+  }
+
+  def getIcebergDependency(sparkVersion: String): ModuleID = {
+    if (sparkVersion.startsWith("2.")) {
+      // Spark runtime 2.4 does not include Scala version as part of the name of the artifact
+      "org.apache.iceberg" % s"iceberg-spark-runtime-2.4" % "1.2.1" % Test
+    } else {
+      val (icebergVersion, sparkCompatVersion) = sparkVersion match {
+        case version if version.startsWith("3.3.") => ("1.6.1", "3.3")
+        case version if version.startsWith("3.4.") => ("1.6.1", "3.4")
+        case version if version.startsWith("3.5.") => ("1.6.1", "3.5")
+        case _ => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
+      }
+
+      "org.apache.iceberg" %% s"iceberg-spark-runtime-${sparkCompatVersion}" % icebergVersion % Test
     }
   }
 
