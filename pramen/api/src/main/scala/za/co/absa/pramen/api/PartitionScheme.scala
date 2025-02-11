@@ -21,11 +21,11 @@ sealed trait PartitionScheme
 object PartitionScheme {
   case object PartitionByDay extends PartitionScheme
 
-  case class PartitionByMonth(generatedMonthColumn: String, generatedYearColumn: String, isVisible: Boolean) extends PartitionScheme
+  case class PartitionByMonth(generatedMonthColumn: String, generatedYearColumn: String) extends PartitionScheme
 
-  case class PartitionByYearMonth(generatedMonthYearColumn: String, isVisible: Boolean) extends PartitionScheme
+  case class PartitionByYearMonth(generatedMonthYearColumn: String) extends PartitionScheme
 
-  case class PartitionByYear(generatedYearColumn: String, isVisible: Boolean) extends PartitionScheme
+  case class PartitionByYear(generatedYearColumn: String) extends PartitionScheme
 
   case object NotPartitioned extends PartitionScheme
 }

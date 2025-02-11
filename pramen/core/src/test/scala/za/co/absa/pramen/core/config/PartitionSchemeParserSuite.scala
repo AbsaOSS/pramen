@@ -50,7 +50,7 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
 
       val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
 
-      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByMonth("info_date_month", "info_date_year", isVisible = true)))
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByMonth("info_date_month", "info_date_year")))
     }
 
     "return monthly with a custom column name when specified" in {
@@ -58,7 +58,7 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
 
       val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
 
-      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByMonth("aaa", "bbb", isVisible = true)))
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByMonth("aaa", "bbb")))
     }
 
     "return year-month with a standard column name when specified" in {
@@ -66,7 +66,7 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
 
       val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
 
-      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYearMonth("info_date_month", isVisible = true)))
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYearMonth("info_date_month")))
     }
 
     "return year-month with a custom column name when specified" in {
@@ -74,7 +74,7 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
 
       val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
 
-      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYearMonth("aaa", isVisible = true)))
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYearMonth("aaa")))
     }
 
     "return yearly with a standard column name when specified" in {
@@ -82,7 +82,7 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
 
       val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
 
-      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYear("info_date_year", isVisible = true)))
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYear("info_date_year")))
     }
 
     "return yearly with a custom column name when specified" in {
@@ -90,7 +90,7 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
 
       val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
 
-      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYear("aaa", isVisible = true)))
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByYear("aaa")))
     }
 
     "fail on incompatible options" in {
