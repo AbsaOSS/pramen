@@ -27,7 +27,12 @@ trait SparkTestIcebergBase {
   val hadoopTempDir: String = System.getProperty("java.io.tmpdir")
 
   implicit val spark: SparkSession = {
-    SparkSession.getActiveSession.foreach(_.stop())
+    SparkSession.getActiveSession.foreach { spark =>
+      // Stopping the existing Spark session if it is not Iceberg-enabled
+      if (spark.conf.get("spark.sql.extensions") != "org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions") {
+        spark.stop()
+      }
+    }
 
     SparkSession.builder()
       .master("local[2]")
@@ -44,11 +49,5 @@ trait SparkTestIcebergBase {
       .config("spark.sql.legacy.timeParserPolicy", "CORRECTED")
       .config("spark.sql.shuffle.partitions", "1")
       .getOrCreate()
-  }
-
-
-  def stripLineEndings(str: String): String = {
-    //make testing compatible for windows
-    str.stripMargin.linesIterator.mkString("").trim
   }
 }

@@ -29,6 +29,7 @@ import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.samples.SampleCaseClass2
 import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
+import za.co.absa.pramen.core.utils.StringUtils.stripLineEndings
 
 import java.time.LocalDate
 

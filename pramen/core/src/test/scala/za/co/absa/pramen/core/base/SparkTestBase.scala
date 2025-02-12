@@ -24,10 +24,13 @@ trait SparkTestBase {
   Logger.getLogger("org").setLevel(Level.ERROR)
   Logger.getLogger("akka").setLevel(Level.ERROR)
 
-  val hadoopTempDir: String = System.getProperty("java.io.tmpdir")
-
   implicit val spark: SparkSession = {
-    SparkSession.getActiveSession.foreach(_.stop())
+    SparkSession.getActiveSession.foreach { spark =>
+      // Stopping the existing Spark session if it is not Delta-enabled
+      if (spark.conf.get("spark.sql.extensions") != "io.delta.sql.DeltaSparkSessionExtension") {
+        spark.stop()
+      }
+    }
 
     SparkSession.builder()
       .master("local[2]")
@@ -41,11 +44,5 @@ trait SparkTestBase {
       .config("spark.sql.legacy.timeParserPolicy", "CORRECTED")
       .config("spark.sql.shuffle.partitions", "1")
       .getOrCreate()
-  }
-
-
-  def stripLineEndings(str: String): String = {
-    //make testing compatible for windows
-    str.stripMargin.linesIterator.mkString("").trim
   }
 }
