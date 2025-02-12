@@ -28,6 +28,11 @@ import scala.util.control.NonFatal
 
 object StringUtils {
 
+  /** This is in order to make testing compatible for windows */
+  def stripLineEndings(str: String): String = {
+    str.stripMargin.linesIterator.mkString("").trim
+  }
+
   /**
     * Substitutes variables in form of \${var} with values in a given string.
     *

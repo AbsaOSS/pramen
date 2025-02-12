@@ -24,6 +24,7 @@ import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixtu
 import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.SparkUtils
+import za.co.absa.pramen.core.utils.StringUtils.stripLineEndings
 
 import java.time.LocalDate
 

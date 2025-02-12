@@ -70,6 +70,7 @@ class MetastorePartitionSchemeSuite extends AnyWordSpec
             .write
             .format("delta")
             .mode(SaveMode.Append).saveAsTable(table)
+        case _ => throw new IllegalArgumentException("Unsupported query type")
       }
 
       assert(mt.loadTable(None, None).count() == 6)
