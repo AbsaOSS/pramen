@@ -33,7 +33,7 @@ import java.time.LocalDate
 import scala.collection.mutable
 import scala.util.Random
 
-class MetastorePartitionSchemeSuite extends AnyWordSpec
+class MetastorePartitionSchemeLongSuite extends AnyWordSpec
   with SparkTestBase
   with TempDirFixture
   with TextComparisonFixture {

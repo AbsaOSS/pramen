@@ -30,7 +30,7 @@ import java.time.LocalDate
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class MetastorePersistenceIcebergSuite extends AnyWordSpec
+class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
   with SparkTestIcebergBase
   with TempDirFixture
   with TextComparisonFixture {
