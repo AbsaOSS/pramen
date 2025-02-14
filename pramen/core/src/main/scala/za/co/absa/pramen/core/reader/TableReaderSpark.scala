@@ -82,19 +82,19 @@ class TableReaderSpark(formatOpt: Option[String],
         (offsetFromOpt, offsetToOpt) match {
           case (Some(offsetFrom), Some(offsetTo)) =>
             log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} >= ${offsetFrom.valueString} AND ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
-            getData(query, fromIsoStrToDate(offsetFrom.valueString), fromIsoStrToDate(offsetTo.valueString), columns)
+            getData(query, infoDate, infoDate, columns)
               .filter(offsetCol >= offsetFrom.getSparkLit && offsetCol <= offsetTo.getSparkLit)
           case (Some(offsetFrom), None) =>
             log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} > ${offsetFrom.valueString}")
-            getData(query, fromIsoStrToDate(offsetFrom.valueString), fromIsoStrToDate(offsetFrom.valueString), columns)
+            getData(query, infoDate, infoDate, columns)
               .filter(offsetCol > offsetFrom.getSparkLit)
           case (None, Some(offsetTo)) =>
             log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate' AND ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
-            getData(query, fromIsoStrToDate(offsetTo.valueString), fromIsoStrToDate(offsetTo.valueString), columns)
+            getData(query, infoDate, infoDate, columns)
               .filter(offsetCol <= offsetTo.getSparkLit)
           case (None, None) =>
             log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='$infoDate'")
-            getData(query, LocalDate.now(), LocalDate.now() columns)
+            getData(query, infoDate, infoDate, columns)
         }
       case _ =>
         (offsetFromOpt, offsetToOpt) match {
