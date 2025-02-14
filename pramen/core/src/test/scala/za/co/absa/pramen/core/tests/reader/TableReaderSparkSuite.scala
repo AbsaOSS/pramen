@@ -311,7 +311,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
     "return pure query expretion with parsed date expration" in {
       case class TestCase(queryExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, expected: String)
 
-      private val testCases = Seq(
+      val testCases = Seq(
         TestCase("SELECT * FROM table_@infoDate%yyyyMMdd%", infoDate1, infoDate1, "SELECT * FROM table_20220805"),
         TestCase("table1_@infoDate%yyyyMMdd%", infoDate1, infoDate1, "table1_20220805"),
         TestCase("/some/path-@infoDate%yyyy-MM-dd%/", infoDate1, infoDate1, "/some/path-2022-08-05/"),
