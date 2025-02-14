@@ -280,7 +280,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
       val query = Query.Custom(Map.empty)
 
       val ex = intercept[IllegalArgumentException] {
-        reader.getBaseDataFrame(query)
+        reader.getBaseDataFrame(query, infoDate1, infoDate1)
       }
 
       assert(ex.getMessage.contains("'custom' is not supported by the Spark reader"))
