@@ -327,7 +327,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
 
           assert(filteredQuery == testCase.expected)
         }
-      })
+      )
     }
   }
 
