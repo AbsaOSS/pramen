@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.types.{IntegerType, MetadataBuilder, StringType, StructField, StructType}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -151,6 +152,24 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       hiveHelper.addPartition(Some("db"), "tbl", Seq("info_date"), Seq("2024-04-24"), "s3://bucket/table/info_date=2024-04-24")
 
       val actual = qe.queries.mkString("\n")
+
+      compareText(actual, expected)
+    }
+  }
+
+  "getTableDDL()" should {
+    "work with columns with descriptions with line ending characters (regression)" in {
+      val schema = StructType(Seq(
+        StructField("a", StringType, nullable = true, new MetadataBuilder().putString("comment", "line1'?'\nline2?").build()),
+        StructField("b", IntegerType, nullable = true, new MetadataBuilder().putString("comment", "line1'?'\nline2?").build())
+      ))
+
+      val expected = "`a` STRING COMMENT 'line1\\'?\\' line2?'"
+
+      val qe = new QueryExecutorMock(tableExists = true)
+      val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+
+      val actual = hiveHelper.getTableDDL(schema, Seq("b"))
 
       compareText(actual, expected)
     }

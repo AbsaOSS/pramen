@@ -41,6 +41,9 @@ object SparkUtils {
   val MAX_LENGTH_METADATA_KEY = "maxLength"
   val COMMENT_METADATA_KEY = "comment"
 
+  // This seems to be limitation for multiple catalogs, like Glue and Hive.
+  val MAX_COMMENT_LENGTH = 255
+
   /** Get Spark StructType from a case class. */
   def getStructType[T: TypeTag]: StructType = ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
 
@@ -223,10 +226,21 @@ object SparkUtils {
     */
   def transformSchemaForCatalog(schema: StructType): StructType = {
     def transformField(field: StructField): StructField = {
+      val metadata = if (field.metadata.contains("comment")) {
+        val comment = field.metadata.getString("comment")
+        val fixedComment = sanitizeCommentForHiveDDL(comment)
+        new MetadataBuilder()
+          .withMetadata(field.metadata)
+          .putString("comment", fixedComment)
+          .build()
+      } else {
+        field.metadata
+      }
+
       field.dataType match {
-        case struct: StructType =>  StructField(field.name, transformStruct(struct), nullable = true, field.metadata)
-        case arr: ArrayType     =>  StructField(field.name, transformArray(arr, field), nullable = true, field.metadata)
-        case dataType: DataType =>  StructField(field.name, transformPrimitive(dataType, field), nullable = true, field.metadata)
+        case struct: StructType => StructField(field.name, transformStruct(struct), nullable = true, metadata)
+        case arr: ArrayType => StructField(field.name, transformArray(arr, field), nullable = true, metadata)
+        case dataType: DataType => StructField(field.name, transformPrimitive(dataType, field), nullable = true, metadata)
       }
     }
 
@@ -274,6 +288,27 @@ object SparkUtils {
       try2.getOrElse(None)
     } else {
       None
+    }
+  }
+
+  /**
+    * Sanitizes a comment for Hive DDL. Ideally this should be done by Spark, but because there are meny versions
+    * of Hive and other catalogs, it is sometimes hard to have an general solution.
+    *
+    * These transformations are tested for Hive 1.0.
+    *
+    * @param comment The comment (description) of a column or a table.
+    * @return
+    */
+  def sanitizeCommentForHiveDDL(comment: String): String = {
+    val escapedComment = comment
+      .replace("\n", " ") // This breaks DBeaver (shows no columns)
+      .replace("\\n", " ") // This breaks DBeaver (shows no columns)
+
+    if (escapedComment.length > MAX_COMMENT_LENGTH) {
+      s"${escapedComment.take(MAX_COMMENT_LENGTH - 3)}..."
+    } else {
+      escapedComment
     }
   }
 

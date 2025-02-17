@@ -114,7 +114,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     queryExecutor.execute(sqlHiveRepair)
   }
 
-  private def getTableDDL(schema: StructType, partitionBy: Seq[String]): String = {
+  private[core] def getTableDDL(schema: StructType, partitionBy: Seq[String]): String = {
     val partitionColsLower = partitionBy.map(_.toLowerCase())
 
     val nonPartitionFields = SparkUtils.transformSchemaForCatalog(schema)
@@ -128,7 +128,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
-  private def getPartitionDDL(schema: StructType, partitionBy: Seq[String]): String = {
+  private[core] def getPartitionDDL(schema: StructType, partitionBy: Seq[String]): String = {
     if (partitionBy.isEmpty) {
       ""
     } else {
