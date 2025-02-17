@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.SqlGeneratorDummy
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc}
+import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql.SqlGeneratorHsqlDb
 import za.co.absa.pramen.core.utils.SparkUtils.{COMMENT_METADATA_KEY, MAX_LENGTH_METADATA_KEY}
@@ -368,7 +368,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
         val testConfig = conf
         val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
 
-        val sql = reader.getCountSqlQuery("SELECT * FROM COMPANY", infoDate, infoDate)
+        val sql = reader.getCountSqlQuery("SELECT * FROM COMPANY")
 
         assert(sql == "SELECT COUNT(*) FROM (SELECT * FROM COMPANY)")
       }
@@ -382,7 +382,9 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
         val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
-        val sql = reader.getCountSqlQuery("SELECT * FROM COMPANY WHERE info_date BETWEEN '@dateFrom' AND '@dateTo'", infoDate, infoDate)
+        val sqlTemplate = "SELECT * FROM COMPANY WHERE info_date BETWEEN '@dateFrom' AND '@dateTo'"
+        val sqlIn = TableReaderJdbcNative.applyInfoDateExpressionToString(sqlTemplate, infoDate, infoDate)
+        val sql = reader.getCountSqlQuery(sqlIn)
 
         assert(sql == "SELECT COUNT(*) FROM (SELECT * FROM COMPANY WHERE info_date BETWEEN '2022-02-18' AND '2022-02-18')")
       }
@@ -397,7 +399,9 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
 
         val reader = TableReaderJdbc(testConfig, testConfig, "reader")
 
-        val sql = reader.getCountSqlQuery("SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('@infoDate' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)", infoDate, infoDate)
+        val sqlTemplate = "SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('@infoDate' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)"
+        val sqlIn = TableReaderJdbcNative.applyInfoDateExpressionToString(sqlTemplate, infoDate, infoDate)
+        val sql = reader.getCountSqlQuery(sqlIn)
 
         assert(sql == "SELECT COUNT(*) FROM (SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('2022-02-18' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)) AS query")
       }

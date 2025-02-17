@@ -319,7 +319,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
       )
 
       testCases.foreach { testCase =>
-        val filteredQuery = TableReaderJdbcNative.getFilteredQuery(
+        val filteredQuery = TableReaderJdbcNative.applyInfoDateExpressionToString(
           testCase.queryExpression, testCase.infoDateBegin, testCase.infoDateEnd
         )
         assert(filteredQuery == testCase.expected)

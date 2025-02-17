@@ -46,8 +46,15 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val transformedQuery = TableReaderJdbcNative.applyInfoDateExpressionToQuery(query, infoDateBegin, infoDateEnd)
+
     val start = Instant.now()
-    val sql = getFilteredQuery(getSqlExpression(query), infoDateBegin, infoDateEnd)
+    val sql = transformedQuery match {
+      case Query.Sql(sql)     => sql
+      case Query.Table(table) => getSqlDataQuery(table, infoDateBegin, infoDateEnd, Seq.empty)
+      case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
+    }
+
     log.info(s"JDBC Native count of: $sql")
     val count = JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
     val finish = Instant.now()
@@ -57,9 +64,11 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
-    log.info(s"JDBC Native data of: $query")
-    query match {
-      case Query.Sql(sql)     => getDataFrame(getFilteredQuery(sql, infoDateBegin, infoDateEnd), None)
+    val transformedQuery = TableReaderJdbcNative.applyInfoDateExpressionToQuery(query, infoDateBegin, infoDateEnd)
+
+    log.info(s"JDBC Native data of: $transformedQuery")
+    transformedQuery match {
+      case Query.Sql(sql)     => getDataFrame(sql, None)
       case Query.Table(table) => getDataFrame(getSqlDataQuery(table, infoDateBegin, infoDateEnd, columns), Option(table))
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
     }
@@ -170,7 +179,16 @@ object TableReaderJdbcNative {
     }
   }
 
-  def getFilteredQuery(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
+  def applyInfoDateExpressionToQuery(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Query = {
+    query match {
+      case Query.Path(path) => Query.Path(applyInfoDateExpressionToString(path, infoDateBegin, infoDateEnd))
+      case Query.Table(table) => Query.Table(applyInfoDateExpressionToString(table, infoDateBegin, infoDateEnd))
+      case Query.Sql(sql) => Query.Sql(applyInfoDateExpressionToString(sql, infoDateBegin, infoDateEnd))
+      case other => other
+    }
+  }
+
+  def applyInfoDateExpressionToString(queryStr: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val expr = new DateExprEvaluator()
 
     expr.setValue("dateFrom", infoDateBegin)
@@ -180,6 +198,6 @@ object TableReaderJdbcNative {
     expr.setValue("infoDateEnd", infoDateEnd)
     expr.setValue("infoDate", infoDateEnd)
 
-    StringUtils.replaceFormattedDateExpression(sqlExpression, expr)
+    StringUtils.replaceFormattedDateExpression(queryStr, expr)
   }
 }
