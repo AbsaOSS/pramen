@@ -38,12 +38,13 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   logConfiguration()
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val transformedQuery = TableReaderJdbcNative.applyInfoDateExpressionToQuery(query, infoDateBegin, infoDateEnd)
     val start = Instant.now
-    val count = query match {
+    val count = transformedQuery match {
       case Query.Table(tableName) =>
         getCountForTable(tableName, infoDateBegin, infoDateEnd)
       case Query.Sql(sql) =>
-        getCountForSql(sql, infoDateBegin, infoDateEnd)
+        getCountForSql(sql)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
@@ -55,11 +56,12 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
-    query match {
+    val transformedQuery = TableReaderJdbcNative.applyInfoDateExpressionToQuery(query, infoDateBegin, infoDateEnd)
+    transformedQuery match {
       case Query.Table(tableName) =>
         getDataForTable(tableName, infoDateBegin, infoDateEnd, columns)
       case Query.Sql(sql) =>
-        getDataForSql(sql, infoDateBegin, infoDateEnd, columns)
+        getDataForSql(sql, columns)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
@@ -114,14 +116,12 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     )
   }
 
-  private[core] def getCountSqlQuery(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
-    val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd)
-
-    sqlGen.getCountQueryForSql(filteredSql)
+  private[core] def getCountSqlQuery(sql: String): String = {
+    sqlGen.getCountQueryForSql(sql)
   }
 
-  private[core] def getCountForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    val countSql = getCountSqlQuery(sql, infoDateBegin, infoDateEnd)
+  private[core] def getCountForSql(sql: String): Long = {
+    val countSql = getCountSqlQuery(sql)
     var count = 0L
 
     log.info(s"Executing: $countSql")
@@ -171,9 +171,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     df
   }
 
-  private[core] def getDataForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
-    val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd)
-    getWithRetry[DataFrame](filteredSql, isDataQuery = true, jdbcRetries, None)(df => filterDfColumns(df, columns))
+  private[core] def getDataForSql(sql: String, columns: Seq[String]): DataFrame = {
+    getWithRetry[DataFrame](sql, isDataQuery = true, jdbcRetries, None)(df => filterDfColumns(df, columns))
   }
 
   private[core] def getDataFrame(sql: String, isDataQuery: Boolean, tableOpt: Option[String]): DataFrame = {

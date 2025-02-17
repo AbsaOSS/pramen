@@ -24,6 +24,9 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlColumnType
 import za.co.absa.pramen.api.{Query, TableReader}
+import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.utils.DateUtils.fromIsoStrToDate
+import za.co.absa.pramen.core.utils.StringUtils
 
 import java.sql.Date
 import java.time.LocalDate
@@ -43,30 +46,32 @@ class TableReaderSpark(formatOpt: Option[String],
   private val dateFormatter = DateTimeFormatter.ofPattern(infoDateFormat)
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val transformedQuery =  TableReaderJdbcNative.applyInfoDateExpressionToQuery(query, infoDateBegin, infoDateEnd)
     if (hasInfoDateColumn) {
       if (infoDateBegin.equals(infoDateEnd)) {
-        log.info(s"Reading COUNT(*) FROM ${query.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateBegin)}'")
-        getDailyDataFrame(query, infoDateBegin).count()
+        log.info(s"Reading COUNT(*) FROM ${transformedQuery.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateBegin)}'")
+        getDailyDataFrame(transformedQuery, infoDateBegin).count()
       } else {
-        log.info(s"Reading COUNT(*) FROM ${query.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
-        getFilteredDataFrame(query, infoDateBegin, infoDateEnd).count()
+        log.info(s"Reading COUNT(*) FROM ${transformedQuery.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
+        getFilteredDataFrame(transformedQuery, infoDateBegin, infoDateEnd).count()
       }
     } else {
-      getBaseDataFrame(query).count()
+      getBaseDataFrame(transformedQuery).count()
     }
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
+    val transformedQuery =  TableReaderJdbcNative.applyInfoDateExpressionToQuery(query, infoDateBegin, infoDateEnd)
     if (hasInfoDateColumn) {
       if (infoDateBegin.equals(infoDateEnd)) {
-        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateEnd)}'")
-        getDailyDataFrame(query, infoDateEnd)
+        log.info(s"Reading * FROM ${transformedQuery.query} WHERE $infoDateColumn='${dateFormatter.format(infoDateEnd)}'")
+        getDailyDataFrame(transformedQuery, infoDateEnd)
       } else {
-        log.info(s"Reading * FROM ${query.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
-        getFilteredDataFrame(query, infoDateBegin, infoDateEnd)
+        log.info(s"Reading * FROM ${transformedQuery.query} WHERE $infoDateColumn BETWEEN '${dateFormatter.format(infoDateBegin)}' AND '${dateFormatter.format(infoDateEnd)}'")
+        getFilteredDataFrame(transformedQuery, infoDateBegin, infoDateEnd)
       }
     } else {
-      getBaseDataFrame(query)
+      getBaseDataFrame(transformedQuery)
     }
   }
 

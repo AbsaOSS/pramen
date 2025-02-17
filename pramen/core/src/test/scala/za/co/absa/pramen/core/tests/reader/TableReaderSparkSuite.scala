@@ -26,7 +26,7 @@ import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.mocks.reader.TableReaderSparkFactory
-import za.co.absa.pramen.core.reader.TableReaderSpark
+import za.co.absa.pramen.core.reader.{TableReaderJdbcNative, TableReaderSpark}
 import za.co.absa.pramen.core.utils.FsUtils
 
 import java.time.LocalDate
@@ -304,6 +304,26 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
       }
 
       assert(ex.getMessage.contains("Spark source input.path == '/dummy/path' requires 'format' to be specified at the source"))
+    }
+  }
+
+  "getFilteredQuery()" should {
+    "return pure query expretion with parsed date expration" in {
+      case class TestCase(queryExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, expected: String)
+
+      val testCases = Seq(
+        TestCase("SELECT * FROM table_@infoDate%yyyyMMdd%", infoDate1, infoDate1, "SELECT * FROM table_20220805"),
+        TestCase("table1_@infoDate%yyyyMMdd%", infoDate1, infoDate1, "table1_20220805"),
+        TestCase("/some/path-@infoDate%yyyy-MM-dd%/", infoDate1, infoDate1, "/some/path-2022-08-05/"),
+        TestCase("/some/path-@{plusMonths(@infoDate, 1)}%yyyy-MM-dd%/", infoDate1, infoDate1, "/some/path-2022-09-05/")
+      )
+
+      testCases.foreach { testCase =>
+        val filteredQuery = TableReaderJdbcNative.applyInfoDateExpressionToString(
+          testCase.queryExpression, testCase.infoDateBegin, testCase.infoDateEnd
+        )
+        assert(filteredQuery == testCase.expected)
+      }
     }
   }
 
