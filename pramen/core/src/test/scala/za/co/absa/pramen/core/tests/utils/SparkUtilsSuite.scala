@@ -442,6 +442,25 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "sanitizeCommentForHiveDDL" should {
+    "replace line ending characters" in {
+      val comment = "line1\nline2\\nline3"
+
+      val actual = sanitizeCommentForHiveDDL(comment)
+
+      assert(actual == "line1 line2 line3")
+    }
+
+    "truncate long comments" in {
+      val comment = "a" * 500
+
+      val actual = sanitizeCommentForHiveDDL(comment)
+
+      assert(actual.length == 255)
+      assert(actual.endsWith("a..."))
+    }
+  }
+
   "getLengthFromMetadata" should {
     "return length for long type" in {
       val metadata = new MetadataBuilder
