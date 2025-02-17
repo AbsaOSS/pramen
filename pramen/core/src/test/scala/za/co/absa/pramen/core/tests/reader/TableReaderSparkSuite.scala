@@ -26,7 +26,7 @@ import za.co.absa.pramen.api.{Query, TableReader}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.mocks.reader.TableReaderSparkFactory
-import za.co.absa.pramen.core.reader.TableReaderSpark
+import za.co.absa.pramen.core.reader.{TableReaderJdbcNative, TableReaderSpark}
 import za.co.absa.pramen.core.utils.FsUtils
 
 import java.time.LocalDate
@@ -280,7 +280,7 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
       val query = Query.Custom(Map.empty)
 
       val ex = intercept[IllegalArgumentException] {
-        reader.getBaseDataFrame(query, infoDate1, infoDate1)
+        reader.getBaseDataFrame(query)
       }
 
       assert(ex.getMessage.contains("'custom' is not supported by the Spark reader"))
@@ -317,17 +317,13 @@ class TableReaderSparkSuite extends AnyWordSpec with SparkTestBase with TempDirF
         TestCase("/some/path-@infoDate%yyyy-MM-dd%/", infoDate1, infoDate1, "/some/path-2022-08-05/"),
         TestCase("/some/path-@{plusMonths(@infoDate, 1)}%yyyy-MM-dd%/", infoDate1, infoDate1, "/some/path-2022-09-05/")
       )
-      val reader = TableReaderSparkFactory.getDummyReader()
 
-      testCases.foreach(testCase => {
-
-          val filteredQuery = reader.getFilteredQuery(
-            testCase.queryExpression, testCase.infoDateBegin, testCase.infoDateEnd
-          )
-
-          assert(filteredQuery == testCase.expected)
-        }
-      )
+      testCases.foreach { testCase =>
+        val filteredQuery = TableReaderJdbcNative.getFilteredQuery(
+          testCase.queryExpression, testCase.infoDateBegin, testCase.infoDateEnd
+        )
+        assert(filteredQuery == testCase.expected)
+      }
     }
   }
 

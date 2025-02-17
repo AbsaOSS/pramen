@@ -47,7 +47,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val start = Instant.now()
-    val sql = getFilteredSql(getSqlExpression(query), infoDateBegin, infoDateEnd)
+    val sql = getFilteredQuery(getSqlExpression(query), infoDateBegin, infoDateEnd)
     log.info(s"JDBC Native count of: $sql")
     val count = JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
     val finish = Instant.now()
@@ -59,7 +59,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
     log.info(s"JDBC Native data of: $query")
     query match {
-      case Query.Sql(sql)     => getDataFrame(getFilteredSql(sql, infoDateBegin, infoDateEnd), None)
+      case Query.Sql(sql)     => getDataFrame(getFilteredQuery(sql, infoDateBegin, infoDateEnd), None)
       case Query.Table(table) => getDataFrame(getSqlDataQuery(table, infoDateBegin, infoDateEnd, columns), Option(table))
       case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
     }
@@ -170,7 +170,7 @@ object TableReaderJdbcNative {
     }
   }
 
-  def getFilteredSql(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
+  def getFilteredQuery(sqlExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val expr = new DateExprEvaluator()
 
     expr.setValue("dateFrom", infoDateBegin)

@@ -115,7 +115,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   private[core] def getCountSqlQuery(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
-    val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd)
+    val filteredSql = TableReaderJdbcNative.getFilteredQuery(sql, infoDateBegin, infoDateEnd)
 
     sqlGen.getCountQueryForSql(filteredSql)
   }
@@ -172,7 +172,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
   }
 
   private[core] def getDataForSql(sql: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
-    val filteredSql = TableReaderJdbcNative.getFilteredSql(sql, infoDateBegin, infoDateEnd)
+    val filteredSql = TableReaderJdbcNative.getFilteredQuery(sql, infoDateBegin, infoDateEnd)
     getWithRetry[DataFrame](filteredSql, isDataQuery = true, jdbcRetries, None)(df => filterDfColumns(df, columns))
   }
 

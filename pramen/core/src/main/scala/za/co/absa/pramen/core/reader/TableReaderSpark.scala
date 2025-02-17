@@ -55,7 +55,7 @@ class TableReaderSpark(formatOpt: Option[String],
         getFilteredDataFrame(query, infoDateBegin, infoDateEnd).count()
       }
     } else {
-      getBaseDataFrame(query, infoDateBegin, infoDateEnd).count()
+      getBaseDataFrame(query).count()
     }
   }
 
@@ -69,7 +69,7 @@ class TableReaderSpark(formatOpt: Option[String],
         getFilteredDataFrame(query, infoDateBegin, infoDateEnd)
       }
     } else {
-      getBaseDataFrame(query, infoDateBegin, infoDateEnd)
+      getBaseDataFrame(query)
     }
   }
 
@@ -100,19 +100,19 @@ class TableReaderSpark(formatOpt: Option[String],
         (offsetFromOpt, offsetToOpt) match {
           case (Some(offsetFrom), Some(offsetTo)) =>
             log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} >= ${offsetFrom.valueString} AND ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
-            getBaseDataFrame(query, fromIsoStrToDate(offsetFrom.valueString), fromIsoStrToDate(offsetTo.valueString))
+            getBaseDataFrame(query)
               .filter(offsetCol >= offsetFrom.getSparkLit && offsetCol <= offsetTo.getSparkLit)
           case (Some(offsetFrom), None) =>
             log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} > ${offsetFrom.valueString}")
-            getBaseDataFrame(query, fromIsoStrToDate(offsetFrom.valueString), fromIsoStrToDate(offsetFrom.valueString))
+            getBaseDataFrame(query)
               .filter(offsetCol > offsetFrom.getSparkLit)
           case (None, Some(offsetTo)) =>
             log.info(s"Reading * FROM ${query.query} WHERE ${offsetInfo.offsetColumn} <= ${offsetTo.valueString}")
-            getBaseDataFrame(query, fromIsoStrToDate(offsetTo.valueString), fromIsoStrToDate(offsetTo.valueString))
+            getBaseDataFrame(query)
               .filter(offsetCol <= offsetTo.getSparkLit)
           case (None, None) =>
             log.info(s"Reading * FROM ${query.query}")
-            getBaseDataFrame(query, LocalDate.now(), LocalDate.now())
+            getBaseDataFrame(query)
         }
     }
   }
@@ -155,10 +155,10 @@ class TableReaderSpark(formatOpt: Option[String],
     infoDateDataType match {
       case SqlColumnType.DATETIME =>
         if (infoDateBegin.equals(infoDateEnd)) {
-          getBaseDataFrame(query, infoDateEnd, infoDateEnd)
+          getBaseDataFrame(query)
             .filter(col(infoDateColumn).cast(DateType) === lit(Date.valueOf(infoDateBegin)))
         } else {
-          getBaseDataFrame(query, infoDateBegin, infoDateEnd)
+          getBaseDataFrame(query)
             .filter(col(infoDateColumn).cast(DateType) >= lit(Date.valueOf(infoDateBegin)) && col(infoDateColumn).cast(DateType) <= lit(Date.valueOf(infoDateEnd)))
         }
       case _ =>
@@ -166,10 +166,10 @@ class TableReaderSpark(formatOpt: Option[String],
         val infoDateEndStr = dateFormatter.format(infoDateEnd)
 
         if (infoDateBegin.equals(infoDateEnd)) {
-          getBaseDataFrame(query, infoDateEnd, infoDateEnd)
+          getBaseDataFrame(query)
             .filter(col(infoDateColumn) === lit(infoDateBeginStr))
         } else {
-          getBaseDataFrame(query, infoDateBegin, infoDateEnd)
+          getBaseDataFrame(query)
             .filter(col(infoDateColumn) >= lit(infoDateBeginStr) && col(infoDateColumn) <= lit(infoDateEndStr))
         }
     }
@@ -186,24 +186,24 @@ class TableReaderSpark(formatOpt: Option[String],
     hasPartition
   }
 
-  private[core] def getBaseDataFrame(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): DataFrame = {
+  private[core] def getBaseDataFrame(query: Query): DataFrame = {
     query match {
       case Query.Sql(sql)   =>
-        spark.sql(getFilteredQuery(sql, infoDateBegin, infoDateEnd))
+        spark.sql(sql)
       case Query.Path(path) =>
         schemaOpt match {
           case Some(schema) =>
             getFormattedReader(query)
               .schema(schema)
               .options(options)
-              .load(getFilteredQuery(path, infoDateBegin, infoDateEnd))
+              .load(path)
           case None         =>
             getFormattedReader(query)
               .options(options)
-              .load(getFilteredQuery(path, infoDateBegin, infoDateEnd))
+              .load(path)
         }
       case Query.Table(table) =>
-        spark.table(getFilteredQuery(table, infoDateBegin, infoDateEnd))
+        spark.table(table)
       case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark reader. Use 'path', 'table' or 'sql' instead.")
     }
   }
@@ -230,18 +230,5 @@ class TableReaderSpark(formatOpt: Option[String],
   private[core] def getPartitionPath(path: String, infoDate: LocalDate): Path = {
     val partition = s"$infoDateColumn=${dateFormatter.format(infoDate)}"
     new Path(path, partition)
-  }
-
-  private[core] def getFilteredQuery(queryExpression: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
-    val expr = new DateExprEvaluator()
-
-    expr.setValue("dateFrom", infoDateBegin)
-    expr.setValue("dateTo", infoDateEnd)
-    expr.setValue("date", infoDateEnd)
-    expr.setValue("infoDateBegin", infoDateBegin)
-    expr.setValue("infoDateEnd", infoDateEnd)
-    expr.setValue("infoDate", infoDateEnd)
-
-    StringUtils.replaceFormattedDateExpression(queryExpression, expr)
   }
 }
