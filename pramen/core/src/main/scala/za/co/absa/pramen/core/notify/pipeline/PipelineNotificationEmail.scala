@@ -19,13 +19,15 @@ package za.co.absa.pramen.core.notify.pipeline
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification.NotificationEntry
+import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.notify.Sendable
 import za.co.absa.pramen.core.utils.{ConfigUtils, Emoji}
 
 import scala.collection.mutable.ListBuffer
 
-class PipelineNotificationEmail(notification: PipelineNotification)
+class PipelineNotificationEmail(notification: PipelineNotification,
+                                runtimeConfig: RuntimeConfig)
                                (implicit conf: Config) extends Sendable {
 
   import PipelineNotificationEmail._
@@ -59,7 +61,7 @@ class PipelineNotificationEmail(notification: PipelineNotification)
   private lazy val notificationBuilder = {
     val builder = new PipelineNotificationBuilderHtml
 
-    PipelineNotificationDirector.build(builder, notification, validatedEmails)
+    PipelineNotificationDirector.build(builder, notification, validatedEmails, Option(runtimeConfig))
     builder
   }
 

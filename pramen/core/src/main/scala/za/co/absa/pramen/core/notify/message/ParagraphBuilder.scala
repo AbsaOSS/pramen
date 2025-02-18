@@ -28,6 +28,11 @@ class ParagraphBuilder {
     this
   }
 
+  def withParagraph(paragraph: Seq[TextElement]): ParagraphBuilder = {
+    textElements ++= paragraph
+    this
+  }
+
   def paragraph: Seq[TextElement] = textElements.toSeq
 }
 

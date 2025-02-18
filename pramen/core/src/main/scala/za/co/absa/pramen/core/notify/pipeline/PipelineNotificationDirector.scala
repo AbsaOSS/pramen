@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.notify.pipeline
 
 import com.typesafe.config.Config
+import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, UNDERCOVER}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -28,7 +29,8 @@ object PipelineNotificationDirector {
     */
   def build(notificationBuilder: PipelineNotificationBuilder,
             notification: PipelineNotification,
-            validatedEmails: ValidatedEmails)
+            validatedEmails: ValidatedEmails,
+            runtimeConfig: Option[RuntimeConfig])
            (implicit conf: Config): PipelineNotificationBuilder = {
     val minRps = conf.getInt(Keys.WARN_THROUGHPUT_RPS)
     val goodRps = conf.getInt(Keys.GOOD_THROUGHPUT_RPS)
@@ -37,6 +39,7 @@ object PipelineNotificationDirector {
 
     notificationBuilder.addAppName(notification.pipelineName)
     notificationBuilder.addEnvironmentName(notification.environmentName)
+    runtimeConfig.foreach(c => notificationBuilder.addRuntimeConfig(c))
     notification.sparkAppId.foreach(id => notificationBuilder.addSparkAppId(id))
     notificationBuilder.addAppDuration(notification.started, notification.finished)
     notificationBuilder.addDryRun(dryRun)

@@ -22,7 +22,7 @@ import sun.misc.Signal
 import za.co.absa.pramen.api.status.RunStatus.NotRan
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget}
-import za.co.absa.pramen.core.app.config.HookConfig
+import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
 import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
@@ -42,6 +42,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   // Config
+  private val runtimeConfig = RuntimeConfig.fromConfig(conf)
   private val pipelineId = java.util.UUID.randomUUID.toString
   private val pipelineName = conf.getString(PIPELINE_NAME_KEY)
   private val environmentName = conf.getString(ENVIRONMENT_NAME)
@@ -274,7 +275,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         customEntries.toList,
         customSignature.toList)
       if (realTaskResults.nonEmpty || sendEmailIfNoNewData || failureException.nonEmpty) {
-        val email = new PipelineNotificationEmail(notification)
+        val email = new PipelineNotificationEmail(notification, runtimeConfig)
         email.send()
       } else {
         log.info("No tasks were ran. The empty notification email won't be sent.")
