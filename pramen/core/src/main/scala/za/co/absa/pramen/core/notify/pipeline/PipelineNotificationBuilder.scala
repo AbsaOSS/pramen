@@ -18,10 +18,13 @@ package za.co.absa.pramen.core.notify.pipeline
 
 import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.api.status.{PipelineNotificationFailure, TaskResult}
+import za.co.absa.pramen.core.app.config.RuntimeConfig
 
 import java.time.Instant
 
 trait PipelineNotificationBuilder {
+  def addRuntimeConfig(runtimeConfig: RuntimeConfig): Unit
+
   def addFailureException(ex: Throwable): Unit
 
   def addWarningFlag(warningFlag: Boolean): Unit

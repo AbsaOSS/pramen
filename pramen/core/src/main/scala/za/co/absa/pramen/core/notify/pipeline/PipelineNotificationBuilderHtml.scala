@@ -22,6 +22,7 @@ import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.api.status.RunStatus._
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
+import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
@@ -61,6 +62,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY)
   private val strictFailures = ConfigUtils.getOptionBoolean(conf, NOTIFICATION_STRICT_FAILURES_KEY).getOrElse(true)
 
+  var runtimeConfig: Option[RuntimeConfig] = None
   var appException: Option[Throwable] = None
   var warningFlag: Boolean = false
   var appName: String = "Unspecified Job"
@@ -76,6 +78,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   val completedTasks = new ListBuffer[TaskResult]
   val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
   val customEntries = new ListBuffer[NotificationEntry]
+
+  override def addRuntimeConfig(runtimeConfigIn: RuntimeConfig): Unit = {
+    runtimeConfig = Option(runtimeConfigIn)
+  }
 
   override def addFailureException(ex: Throwable): Unit = {
     appException = Option(ex)
@@ -237,6 +243,19 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     val jobFinishedStr = ZonedDateTime.ofInstant(appFinished, zoneId).format(timestampFmt)
     val jobDurationMillis = Duration.between(appStarted, appFinished).toMillis
 
+    val executionInfoParagraph = runtimeConfig match {
+      case Some(c) =>
+        renderExecutionInfo(c.runDate, c.runDateTo, c.isRerun, c.checkOnlyNewData, c.checkOnlyLateData)
+          .withText(".")
+          .paragraph
+      case None =>
+        Seq.empty
+    }
+
+    introParagraph
+      .withText(" ")
+      .withParagraph(executionInfoParagraph)
+
     val jobDurationParagraph = ParagraphBuilder()
       .withText("Job started at ")
       .withText(jobStartedStr, Style.Bold)
@@ -298,6 +317,23 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case Some(tz) => ZoneId.of(tz)
       case None     => ZoneId.systemDefault()
     }
+  }
+
+  private[core] def renderExecutionInfo(runDateFrom: LocalDate,
+                                        runDateTo: Option[LocalDate],
+                                        isRerun: Boolean,
+                                        isNewOnly: Boolean,
+                                        isLateOnly: Boolean): ParagraphBuilder = {
+    val executionStr = if (isRerun) "Re-run execution" else "Execution"
+    val datesStr = runDateTo match {
+      case Some(dateTo) => s"the period from <b>$runDateFrom</b> to <b>$dateTo</b>"
+      case None => s"the run date <b>$runDateFrom</b>"
+    }
+
+    ParagraphBuilder()
+      .withText(executionStr)
+      .withText(" for ")
+      .withText(datesStr)
   }
 
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {

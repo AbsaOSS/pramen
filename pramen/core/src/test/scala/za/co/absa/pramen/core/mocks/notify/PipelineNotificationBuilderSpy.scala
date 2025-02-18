@@ -18,11 +18,13 @@ package za.co.absa.pramen.core.mocks.notify
 
 import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.api.status.{PipelineNotificationFailure, TaskResult}
+import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotificationBuilder, ValidatedEmails}
 
 import java.time.Instant
 
 class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
+  var runtimeConfig: Option[RuntimeConfig] = None
   var failureException: Option[Throwable] = None
   var warningFlag: Boolean = false
   var appName = ""
@@ -40,6 +42,8 @@ class PipelineNotificationBuilderSpy extends PipelineNotificationBuilder {
   var addCompletedTaskCalled = 0
   var addPipelineNotificationFailure = 0
   var addCustomEntriesCalled = 0
+
+  override def addRuntimeConfig(runtimeConfigIn: RuntimeConfig): Unit = runtimeConfig = Option(runtimeConfigIn)
 
   override def addFailureException(ex: Throwable): Unit = failureException = Option(ex)
 

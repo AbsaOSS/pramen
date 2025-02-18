@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.notify
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.RuntimeConfigFactory
 import za.co.absa.pramen.core.mocks.PipelineNotificationFactory
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationEmail
 
@@ -250,6 +251,6 @@ class PipelineNotificationEmailSuite extends AnyWordSpec {
          |""".stripMargin
     ).withFallback(ConfigFactory.load())
 
-    new PipelineNotificationEmail(notification)
+    new PipelineNotificationEmail(notification, RuntimeConfigFactory.getDummyRuntimeConfig())
   }
 }
