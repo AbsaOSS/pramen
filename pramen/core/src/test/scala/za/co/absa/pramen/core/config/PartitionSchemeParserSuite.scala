@@ -29,6 +29,13 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
       assert(partitionSchemeOpt.isEmpty)
     }
 
+    "return None for partition by day by default" in {
+      val conf = ConfigFactory.parseString("partition.by = true")
+      val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
+
+      assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByDay))
+    }
+
     "return non-partitioned when specified" in {
       val conf = ConfigFactory.parseString("partition.by = false")
 

@@ -38,6 +38,7 @@ object PartitionSchemeParser {
     val partitionMonthColumn = ConfigUtils.getOptionString(conf, PARTITION_MONTH_COLUMN_KEY).getOrElse(s"${infoDateColumn}_month")
 
     (partitionByOpt, partitionPeriodOpt) match {
+      case (Some(true), None) => Some(PartitionScheme.PartitionByDay)
       case (Some(false), _) => Some(PartitionScheme.NotPartitioned)
       case (_, Some(PARTITION_PERIOD_DAY)) => Some(PartitionScheme.PartitionByDay)
       case (_, Some(PARTITION_PERIOD_MONTH)) => Some(PartitionScheme.PartitionByMonth(partitionMonthColumn, partitionYearColumn))
@@ -46,7 +47,7 @@ object PartitionSchemeParser {
       case (_, Some(period)) if !Seq(PARTITION_PERIOD_DAY, PARTITION_PERIOD_MONTH, PARTITION_PERIOD_YEAR).contains(period) =>
         throw new IllegalArgumentException(s"Invalid value '$period' of '$PARTITION_PERIOD_KEY'. " +
           s"Valid values are: $PARTITION_PERIOD_DAY, $PARTITION_PERIOD_MONTH, $PARTITION_PERIOD_YEAR_MONTH, $PARTITION_PERIOD_YEAR.")
-      case (None, None) => None
+      case _ => None
     }
   }
 
