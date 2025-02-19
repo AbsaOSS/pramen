@@ -226,7 +226,15 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case PipelineStatus.Failure        => introParagraph.withText("FAILED", Style.Error)
     }
 
-    introParagraph.withText(".")
+    introParagraph.withText(". ")
+
+    runtimeConfig.foreach { c =>
+      val executionInfoParagraph = renderExecutionInfo(c.runDate, c.runDateTo, c.isRerun, c.checkOnlyNewData, c.checkOnlyLateData)
+        .withText(". ")
+        .paragraph
+      introParagraph
+        .withParagraph(executionInfoParagraph)
+    }
 
     val applicationIds = getSparkApplicationIds
 
@@ -234,7 +242,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     // When Pramen support runners that run tasks in different Spark Sessions (via Yarn, Glue etc APIs), this will need
     // to be revisited with adding application_id to the table of task results.
     if (applicationIds.length == 1) {
-         introParagraph.withText(" Application ID: ")
+      introParagraph.withText("Application ID: ")
         .withText(applicationIds.head, Style.Bold)
         .withText(".")
     }
@@ -242,19 +250,6 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     val jobStartedStr = ZonedDateTime.ofInstant(appStarted, zoneId).format(timestampFmt)
     val jobFinishedStr = ZonedDateTime.ofInstant(appFinished, zoneId).format(timestampFmt)
     val jobDurationMillis = Duration.between(appStarted, appFinished).toMillis
-
-    val executionInfoParagraph = runtimeConfig match {
-      case Some(c) =>
-        renderExecutionInfo(c.runDate, c.runDateTo, c.isRerun, c.checkOnlyNewData, c.checkOnlyLateData)
-          .withText(".")
-          .paragraph
-      case None =>
-        Seq.empty
-    }
-
-    introParagraph
-      .withText(" ")
-      .withParagraph(executionInfoParagraph)
 
     val jobDurationParagraph = ParagraphBuilder()
       .withText("Job started at ")
@@ -330,10 +325,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case None => s"the run date <b>$runDateFrom</b>"
     }
 
+    val newOnlyDescription = if (isNewOnly) " (only new data)" else ""
+    val lateOnlyDescription = if (isLateOnly) " (only late data)" else ""
+
     ParagraphBuilder()
       .withText(executionStr)
       .withText(" for ")
-      .withText(datesStr)
+      .withText(datesStr + newOnlyDescription + lateOnlyDescription)
   }
 
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
