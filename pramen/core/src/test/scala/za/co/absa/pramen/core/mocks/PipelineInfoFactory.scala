@@ -19,18 +19,20 @@ package za.co.absa.pramen.core.mocks
 import za.co.absa.pramen.api.PipelineInfo
 import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RuntimeInfo}
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 object PipelineInfoFactory {
   def getDummyPipelineInfo(pipelineName: String = "Dummy Pipeline",
                            environment: String = "DEV",
-                           runtimeInfo: RuntimeInfo = RuntimeInfo(),
+                           runtimeInfo: RuntimeInfo = RuntimeInfo(LocalDate.parse("2022-02-18")),
                            startedAt: Instant = Instant.ofEpochSecond(1718609409),
                            finishedAt: Option[Instant] = None,
+                           warningFlag: Boolean = false,
                            sparkApplicationId: Option[String] = Some("testid-12345"),
                            failureException: Option[Throwable] = None,
                            pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty,
+                           pipelineId: String = "dummy_pipeline_id",
                            tenant:  Option[String] = Some("Dummy tenant")): PipelineInfo = {
-    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, sparkApplicationId, failureException, pipelineNotificationFailures, java.util.UUID.randomUUID().toString,tenant)
+    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, warningFlag, sparkApplicationId, failureException, pipelineNotificationFailures, pipelineId, tenant)
   }
 }

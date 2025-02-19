@@ -62,7 +62,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   private val maxExceptionLength = ConfigUtils.getOptionInt(conf, NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY)
   private val strictFailures = ConfigUtils.getOptionBoolean(conf, NOTIFICATION_STRICT_FAILURES_KEY).getOrElse(true)
 
-  var runtimeConfig: Option[RuntimeConfig] = None
+  var runtimeInfo: Option[RuntimeInfo] = None
   var appException: Option[Throwable] = None
   var warningFlag: Boolean = false
   var appName: String = "Unspecified Job"
@@ -79,8 +79,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
   val customEntries = new ListBuffer[NotificationEntry]
 
-  override def addRuntimeConfig(runtimeConfigIn: RuntimeConfig): Unit = {
-    runtimeConfig = Option(runtimeConfigIn)
+  override def addRuntimeInfo(runtimeInfoIn: RuntimeInfo): Unit = {
+    runtimeInfo = Option(runtimeInfoIn)
   }
 
   override def addFailureException(ex: Throwable): Unit = {
@@ -228,8 +228,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     introParagraph.withText(". ")
 
-    runtimeConfig.foreach { c =>
-      val executionInfoParagraph = renderExecutionInfo(c.runDate, c.runDateTo, c.isRerun, c.checkOnlyNewData, c.checkOnlyLateData)
+    runtimeInfo.foreach { c =>
+      val executionInfoParagraph = renderExecutionInfo(c.runDateFrom, c.runDateTo, c.isRerun, c.isNewOnly, c.isLateOnly)
         .withText(". ")
         .paragraph
       introParagraph

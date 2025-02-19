@@ -17,11 +17,11 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
-import za.co.absa.pramen.api.status.{PipelineNotificationFailure, TaskResult}
+import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RuntimeInfo, TaskResult}
 import za.co.absa.pramen.core.notify.pipeline
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotification
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 object PipelineNotificationFactory {
   def getDummyNotification(exception: Option[Throwable] = None,
@@ -37,15 +37,17 @@ object PipelineNotificationFactory {
                            customSignature: List[TextElement] = List.empty[TextElement]
                           ): PipelineNotification = {
     pipeline.PipelineNotification(
-      exception,
-      warningFlag,
-      pipelineName,
-      environmentName,
-      sparkAppId,
-      started,
-      finished,
+      PipelineInfoFactory.getDummyPipelineInfo(pipelineName = pipelineName,
+        failureException = exception,
+        warningFlag = warningFlag,
+        environment = environmentName,
+        sparkApplicationId = sparkAppId,
+        startedAt = started,
+        finishedAt = Some(finished),
+        runtimeInfo = RuntimeInfo(LocalDate.parse("2022-02-18")),
+        pipelineNotificationFailures = pipelineNotificationFailures
+      ),
       tasksCompleted,
-      pipelineNotificationFailures,
       customEntries,
       customSignature
     )

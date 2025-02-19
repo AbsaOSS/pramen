@@ -17,10 +17,11 @@
 package za.co.absa.pramen.core.tests.runner.splitter
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.bookkeeper.BookkeeperNull
-import za.co.absa.pramen.core.runner.splitter.{RunMode, ScheduleParams, ScheduleStrategyIncremental}
+import za.co.absa.pramen.core.runner.splitter.{ScheduleParams, ScheduleStrategyIncremental}
 
 import java.time.LocalDate
 

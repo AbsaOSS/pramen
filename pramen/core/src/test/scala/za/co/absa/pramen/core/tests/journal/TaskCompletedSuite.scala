@@ -22,6 +22,7 @@ import za.co.absa.pramen.api.PipelineInfo
 import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RunInfo, RunStatus, RuntimeInfo, TaskResult, TaskRunReason}
 import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.mocks.PipelineInfoFactory
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.pipeline.Task
 
@@ -29,17 +30,18 @@ import java.time.{Instant, LocalDate}
 
 class TaskCompletedSuite extends AnyWordSpec {
   private val infoDate = LocalDate.of(2022, 1, 18)
-  private val pipelineInfo = PipelineInfo(
+  private val pipelineInfo = PipelineInfoFactory.getDummyPipelineInfo(
     pipelineName = "test_pipeline",
     environment = "TEST",
-    runtimeInfo = RuntimeInfo(),
+    runtimeInfo = RuntimeInfo(infoDate),
     startedAt = Instant.now(),
     finishedAt = Some(Instant.now()),
     sparkApplicationId = Some("app_123"),
     failureException = None,
     pipelineNotificationFailures = Seq.empty,
     pipelineId = "test_pipeline_id",
-    tenant = Some("test_tenant"))
+    tenant = Some("test_tenant")
+  )
 
   "fromTaskResult" should {
     "create a TaskCompleted from a TaskResult for a successful task" in {

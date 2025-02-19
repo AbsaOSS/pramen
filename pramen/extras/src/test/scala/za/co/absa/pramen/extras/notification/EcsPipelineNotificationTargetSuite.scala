@@ -25,7 +25,7 @@ import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
 import za.co.absa.pramen.extras.notification.EcsPipelineNotificationTarget.{ECS_API_SECRET_KEY, ECS_API_TRUST_SSL_KEY, ECS_API_URL_KEY}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpClient
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 
 class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
   private val conf = ConfigFactory.parseString(
@@ -62,7 +62,7 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
       val task3 = TestPrototypes.taskNotification.copy(taskDef = taskDef3)
 
       notificationTarget.sendNotification(
-        PipelineInfo("Dummy", "DEV", RuntimeInfo(), Instant.now, None, None, None, Seq.empty, "pid_123", None),
+        PipelineInfo("Dummy", "DEV", RuntimeInfo(LocalDate.parse("2022-02-18")), Instant.now, None, warningFlag = false, None, None, Seq.empty, "pid_123", None),
         Seq(task1, task2, task3),
         CustomNotification(Seq.empty, Seq.empty)
       )

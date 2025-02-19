@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.runner.splitter
 
+import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 
 import java.time.LocalDate

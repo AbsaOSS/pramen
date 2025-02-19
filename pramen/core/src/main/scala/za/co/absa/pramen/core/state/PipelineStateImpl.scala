@@ -82,49 +82,59 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   override def getState: PipelineStateSnapshot = synchronized {
-    val appException =  if (!exitedNormally && failureException.isEmpty && signalException.isDefined) {
-      signalException
-    } else
-      failureException
-
     val notificationBuilderImpl = notificationBuilder.asInstanceOf[NotificationBuilderImpl]
     val customNotification = CustomNotification (
       notificationBuilderImpl.entries,
       notificationBuilderImpl.signature
     )
 
-    val minRps = ConfigUtils.getOptionInt(conf, WARN_THROUGHPUT_RPS).getOrElse(0)
-    val goodRps = ConfigUtils.getOptionInt(conf, GOOD_THROUGHPUT_RPS).getOrElse(0)
-    val dryRun = ConfigUtils.getOptionBoolean(conf, DRY_RUN).getOrElse(false)
-    val undercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
-
     PipelineStateSnapshot(
-      PipelineInfo(
-        pipelineName,
-        environmentName,
-        RuntimeInfo(
-          dryRun,
-          undercover,
-          minRps,
-          goodRps
-        ),
-        startedInstant,
-        finishedInstant,
-        sparkAppId,
-        appException,
-        pipelineNotificationFailures.toSeq,
-        pipelineId,
-        tenant
-      ),
+      getPipelineInfo,
       batchId,
       isFinished,
-      warningFlag,
       exitedNormally,
       exitCode,
       customShutdownHookCanRun,
       taskResults.toList,
       pipelineNotificationFailures.toList,
       customNotification
+    )
+  }
+
+  def getPipelineInfo: PipelineInfo = synchronized {
+    val appException = if (!exitedNormally && failureException.isEmpty && signalException.isDefined) {
+      signalException
+    } else
+      failureException
+
+    val minRps = ConfigUtils.getOptionInt(conf, WARN_THROUGHPUT_RPS).getOrElse(0)
+    val goodRps = ConfigUtils.getOptionInt(conf, GOOD_THROUGHPUT_RPS).getOrElse(0)
+    val dryRun = ConfigUtils.getOptionBoolean(conf, DRY_RUN).getOrElse(false)
+    val undercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
+
+    PipelineInfo(
+      pipelineName,
+      environmentName,
+      RuntimeInfo(
+        runtimeConfig.runDate,
+        runtimeConfig.runDateTo,
+        runtimeConfig.runDateTo.map(_ => runtimeConfig.historicalRunMode),
+        runtimeConfig.isRerun,
+        dryRun,
+        undercover,
+        runtimeConfig.checkOnlyNewData,
+        runtimeConfig.checkOnlyLateData,
+        minRps,
+        goodRps
+      ),
+      startedInstant,
+      finishedInstant,
+      warningFlag,
+      sparkAppId,
+      appException,
+      pipelineNotificationFailures.toSeq,
+      pipelineId,
+      tenant
     )
   }
 
@@ -263,19 +273,17 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       val customEntries = notificationBuilderImpl.entries
       val customSignature = notificationBuilderImpl.signature
 
-      val notification = PipelineNotification(failureException,
-        warningFlag,
-        pipelineName,
-        environmentName,
-        sparkAppId,
-        startedInstant,
-        finishedInstant.getOrElse(Instant.now()),
+      val pipelineInfo = getPipelineInfo
+      val finishedAt = pipelineInfo.finishedAt.getOrElse(Instant.now())
+      val finishedPipelineInfo = pipelineInfo.copy(finishedAt = Option(finishedAt))
+
+      val notification = PipelineNotification(
+        finishedPipelineInfo,
         realTaskResults.toList,
-        pipelineNotificationFailures.toList,
         customEntries.toList,
         customSignature.toList)
       if (realTaskResults.nonEmpty || sendEmailIfNoNewData || failureException.nonEmpty) {
-        val email = new PipelineNotificationEmail(notification, runtimeConfig)
+        val email = new PipelineNotificationEmail(notification)
         email.send()
       } else {
         log.info("No tasks were ran. The empty notification email won't be sent.")

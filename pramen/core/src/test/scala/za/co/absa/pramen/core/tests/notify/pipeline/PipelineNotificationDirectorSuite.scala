@@ -56,7 +56,7 @@ class PipelineNotificationDirectorSuite extends AnyWordSpec {
 
       val builderSpy = new PipelineNotificationBuilderSpy
 
-      PipelineNotificationDirector.build(builderSpy, notification, ValidatedEmails(Seq("test@example.com"), Seq.empty, Seq.empty), None)
+      PipelineNotificationDirector.build(builderSpy, notification, ValidatedEmails(Seq("test@example.com"), Seq.empty, Seq.empty))
 
       assert(builderSpy.appName == "DummyPipeline")
       assert(builderSpy.environmentName == "DummyEnvironment")

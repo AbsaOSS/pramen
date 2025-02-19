@@ -16,21 +16,15 @@
 
 package za.co.absa.pramen.core.notify.pipeline
 
+import za.co.absa.pramen.api.PipelineInfo
 import za.co.absa.pramen.api.notification.{NotificationEntry, TextElement}
 import za.co.absa.pramen.api.status.{PipelineNotificationFailure, TaskResult}
 
 import java.time.Instant
 
 case class PipelineNotification(
-                                 exception: Option[Throwable],
-                                 warningFlag: Boolean,
-                                 pipelineName: String,
-                                 environmentName: String,
-                                 sparkAppId: Option[String],
-                                 started: Instant,
-                                 finished: Instant,
+                                 pipelineInfo: PipelineInfo,
                                  tasksCompleted: List[TaskResult],
-                                 pipelineNotificationFailures: List[PipelineNotificationFailure],
                                  customEntries: List[NotificationEntry],
                                  customSignature: List[TextElement]
                                )

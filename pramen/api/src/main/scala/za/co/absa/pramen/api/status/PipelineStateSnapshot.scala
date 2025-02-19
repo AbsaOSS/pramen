@@ -22,7 +22,6 @@ case class PipelineStateSnapshot(
                                   pipelineInfo: PipelineInfo,
                                   batchId: Long,
                                   isFinished: Boolean,
-                                  warningFlag: Boolean,
                                   exitedNormally: Boolean,
                                   exitCode: Int,
                                   customShutdownHookCanRun: Boolean,

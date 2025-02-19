@@ -29,24 +29,24 @@ object PipelineNotificationDirector {
     */
   def build(notificationBuilder: PipelineNotificationBuilder,
             notification: PipelineNotification,
-            validatedEmails: ValidatedEmails,
-            runtimeConfig: Option[RuntimeConfig])
+            validatedEmails: ValidatedEmails)
            (implicit conf: Config): PipelineNotificationBuilder = {
     val minRps = conf.getInt(Keys.WARN_THROUGHPUT_RPS)
     val goodRps = conf.getInt(Keys.GOOD_THROUGHPUT_RPS)
     val dryRun = conf.getBoolean(DRY_RUN)
     val undercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
+    val finishedAt = notification.pipelineInfo.finishedAt.getOrElse(notification.pipelineInfo.startedAt)
 
-    notificationBuilder.addAppName(notification.pipelineName)
-    notificationBuilder.addEnvironmentName(notification.environmentName)
-    runtimeConfig.foreach(c => notificationBuilder.addRuntimeConfig(c))
-    notification.sparkAppId.foreach(id => notificationBuilder.addSparkAppId(id))
-    notificationBuilder.addAppDuration(notification.started, notification.finished)
+    notificationBuilder.addAppName(notification.pipelineInfo.pipelineName)
+    notificationBuilder.addEnvironmentName(notification.pipelineInfo.environment)
+    notificationBuilder.addRuntimeInfo(notification.pipelineInfo.runtimeInfo)
+    notification.pipelineInfo.sparkApplicationId.foreach(id => notificationBuilder.addSparkAppId(id))
+    notificationBuilder.addAppDuration(notification.pipelineInfo.startedAt, finishedAt)
     notificationBuilder.addDryRun(dryRun)
     notificationBuilder.addUndercover(undercover)
 
-    notification.exception.foreach(notificationBuilder.addFailureException)
-    notificationBuilder.addWarningFlag(notification.warningFlag)
+    notification.pipelineInfo.failureException.foreach(notificationBuilder.addFailureException)
+    notificationBuilder.addWarningFlag(notification.pipelineInfo.warningFlag)
 
     notificationBuilder.addRpsMetrics(minRps, goodRps)
 
@@ -54,7 +54,7 @@ object PipelineNotificationDirector {
       .tasksCompleted
       .foreach(notificationBuilder.addCompletedTask)
 
-    notification.pipelineNotificationFailures.foreach(pipelineNotificationFailure =>
+    notification.pipelineInfo.pipelineNotificationFailures.foreach(pipelineNotificationFailure =>
       notificationBuilder.addPipelineNotificationFailure(pipelineNotificationFailure)
     )
 
