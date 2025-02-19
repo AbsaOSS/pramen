@@ -26,6 +26,7 @@ case class PipelineInfo(
                          runtimeInfo: RuntimeInfo,
                          startedAt: Instant,
                          finishedAt: Option[Instant],
+                         warningFlag: Boolean,
                          sparkApplicationId: Option[String],
                          failureException: Option[Throwable],
                          pipelineNotificationFailures: Seq[PipelineNotificationFailure],

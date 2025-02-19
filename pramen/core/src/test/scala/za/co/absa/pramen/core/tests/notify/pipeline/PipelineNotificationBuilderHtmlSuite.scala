@@ -133,6 +133,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
         runStatus = TestPrototypes.runStatusWarning,
         schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil)
       )
+      builder.addRuntimeInfo(RuntimeInfo(LocalDate.parse("2022-02-18")))
 
       builder.addCustomEntries(Seq(
         NotificationEntry.Paragraph(TextElement("Custom text 1") :: TextElement("Custom text 2", Style.Error) :: Nil),

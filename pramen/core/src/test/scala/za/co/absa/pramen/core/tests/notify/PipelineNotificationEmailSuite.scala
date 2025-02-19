@@ -251,6 +251,6 @@ class PipelineNotificationEmailSuite extends AnyWordSpec {
          |""".stripMargin
     ).withFallback(ConfigFactory.load())
 
-    new PipelineNotificationEmail(notification, RuntimeConfigFactory.getDummyRuntimeConfig())
+    new PipelineNotificationEmail(notification)
   }
 }

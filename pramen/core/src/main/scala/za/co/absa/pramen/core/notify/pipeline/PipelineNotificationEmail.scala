@@ -26,8 +26,7 @@ import za.co.absa.pramen.core.utils.{ConfigUtils, Emoji}
 
 import scala.collection.mutable.ListBuffer
 
-class PipelineNotificationEmail(notification: PipelineNotification,
-                                runtimeConfig: RuntimeConfig)
+class PipelineNotificationEmail(notification: PipelineNotification)
                                (implicit conf: Config) extends Sendable {
 
   import PipelineNotificationEmail._
@@ -61,7 +60,7 @@ class PipelineNotificationEmail(notification: PipelineNotification,
   private lazy val notificationBuilder = {
     val builder = new PipelineNotificationBuilderHtml
 
-    PipelineNotificationDirector.build(builder, notification, validatedEmails, Option(runtimeConfig))
+    PipelineNotificationDirector.build(builder, notification, validatedEmails)
     builder
   }
 
@@ -90,7 +89,7 @@ class PipelineNotificationEmail(notification: PipelineNotification,
 
   private[core] def getEmailRecipients: String = {
     if (conf.hasPath(Keys.MAIL_FAILURES_TO)) {
-      if (notification.exception.isDefined || notification.tasksCompleted.exists(t => t.runStatus.isFailure)) {
+      if (notification.pipelineInfo.failureException.isDefined || notification.tasksCompleted.exists(t => t.runStatus.isFailure)) {
         val to = conf.getString(Keys.MAIL_FAILURES_TO)
         log.warn(s"Sending failures to the special mail list: $to")
         to

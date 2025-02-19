@@ -18,10 +18,10 @@ package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.core.app.config.BookkeeperConfig.BOOKKEEPING_ENABLED
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.runner.splitter.RunMode
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.DateUtils.convertStrToDate
 

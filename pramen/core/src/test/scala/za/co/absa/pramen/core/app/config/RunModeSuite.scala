@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.app.config
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.runner.splitter.RunMode
+import za.co.absa.pramen.api.RunMode
 
 class RunModeSuite extends AnyWordSpec {
   "RunMode.fromString()" should {

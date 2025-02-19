@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.runner.splitter
+package za.co.absa.pramen.api
 
 trait RunMode
 
