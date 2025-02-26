@@ -102,6 +102,54 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.Explicit(10))
     }
 
+    "use 'iceberg' with table" in {
+      val conf = ConfigFactory.parseString(
+        """format = iceberg
+          |table = mydb.mytable
+          |""".stripMargin)
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "iceberg")
+      assert(!format.isTransient)
+      assert(format.isInstanceOf[Iceberg])
+      assert(format.asInstanceOf[Iceberg].table.table == "mytable")
+      assert(format.asInstanceOf[Iceberg].table.database.contains("mydb"))
+      assert(format.asInstanceOf[Iceberg].table.catalog.isEmpty)
+      assert(format.asInstanceOf[Iceberg].location.isEmpty)
+    }
+
+    "use 'iceberg' with table and path" in {
+      val conf = ConfigFactory.parseString(
+        """format = iceberg
+          |table = mytable
+          |path = /a/b/c
+          |""".stripMargin)
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "iceberg")
+      assert(!format.isTransient)
+      assert(format.isInstanceOf[Iceberg])
+      assert(format.asInstanceOf[Iceberg].table.table == "mytable")
+      assert(format.asInstanceOf[Iceberg].table.database.isEmpty)
+      assert(format.asInstanceOf[Iceberg].table.catalog.isEmpty)
+      assert(format.asInstanceOf[Iceberg].location.contains("/a/b/c"))
+    }
+
+    "throw an exception on 'iceberg' without a table name" in {
+      val conf = ConfigFactory.parseString(
+        """format = iceberg
+          |path = /a/b/c
+          |""".stripMargin)
+
+      val ex = intercept[IllegalArgumentException] {
+        DataFormatParser.fromConfig(conf, conf)
+      }
+
+      assert(ex.getMessage.contains("Mandatory option for a metastore table having 'iceberg' format: table"))
+    }
+
     "use 'raw' when specified explicitly" in {
       val conf = ConfigFactory.parseString(
         """format = raw
@@ -188,13 +236,13 @@ class DataFormatSuite extends AnyWordSpec {
     }
 
     "throw an exception on unknown format" in {
-      val conf = ConfigFactory.parseString("format = iceberg")
+      val conf = ConfigFactory.parseString("format = no_such_format")
 
       val ex = intercept[IllegalArgumentException] {
         DataFormatParser.fromConfig(conf, conf)
       }
 
-      assert(ex.getMessage.contains("Unknown format: iceberg"))
+      assert(ex.getMessage.contains("Unknown format: no_such_format"))
     }
 
     "throw an exception on mandatory options missing" in {

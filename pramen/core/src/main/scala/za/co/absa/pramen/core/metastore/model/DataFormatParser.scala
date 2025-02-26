@@ -17,12 +17,13 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{CachePolicy, DataFormat, PartitionInfo, Query}
+import za.co.absa.pramen.api.{CachePolicy, CatalogTable, DataFormat, PartitionInfo, Query}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 object DataFormatParser {
   val FORMAT_PARQUET = "parquet"
   val FORMAT_DELTA = "delta"
+  val FORMAT_ICEBERG = "iceberg"
   val FORMAT_RAW = "raw"
   val FORMAT_TRANSIENT_EAGER = "transient_eager"
   val FORMAT_TRANSIENT = "transient"
@@ -51,6 +52,12 @@ object DataFormatParser {
         val query = getQuery(conf)
         val partitionInfo = getPartitionInfo(conf, defaultRecordsPerPartition)
         DataFormat.Delta(query, partitionInfo)
+      case FORMAT_ICEBERG =>
+        if (!conf.hasPath(TABLE_KEY)) throw new IllegalArgumentException(s"Mandatory option for a metastore table having 'iceberg' format: $TABLE_KEY")
+        val tableStr = conf.getString(TABLE_KEY).toLowerCase // Iceberg allows only lowercase table names
+        val locationOpt = ConfigUtils.getOptionString(conf, PATH_KEY)
+        val catalogTable = CatalogTable.fromFullTableName(tableStr)
+        DataFormat.Iceberg(catalogTable, locationOpt)
       case FORMAT_RAW =>
         if (!conf.hasPath(PATH_KEY)) throw new IllegalArgumentException(s"Mandatory option for a metastore table having 'raw' format: $PATH_KEY")
         val path = Query.Path(conf.getString(PATH_KEY)).path
