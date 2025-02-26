@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.PartitionScheme
 
 import java.sql.Date
@@ -25,6 +26,8 @@ import java.time.LocalDate
 import scala.collection.mutable
 
 object MetastorePersistenceIcebergOps {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   def createIcebergTable(df: DataFrame,
                          table: String,
                          infoDateColumn: String,
@@ -38,7 +41,7 @@ object MetastorePersistenceIcebergOps {
     val properties = new mutable.HashMap[String, String]
     properties ++= tableProperties
 
-    location.foreach(path => properties + ("location" -> path))
+    location.foreach(path => properties += ("location" -> path))
     if (description.nonEmpty) properties += ("comment" -> description)
 
     val dfIn = partitionScheme match {
@@ -53,9 +56,11 @@ object MetastorePersistenceIcebergOps {
       .tableProperty("format-version", "2")
       .options(writerOptions)
 
-    val writerWithProperties = tableProperties.foldLeft(writer) { (w, item) =>
+    val writerWithProperties = properties.foldLeft(writer) { (w, item) =>
       item match {
-        case (k, v) => w.tableProperty(k, v)
+        case (k, v) =>
+          log.info(s"Iceberg table property: $k = $v")
+          w.tableProperty(k, v)
       }
     }
 
