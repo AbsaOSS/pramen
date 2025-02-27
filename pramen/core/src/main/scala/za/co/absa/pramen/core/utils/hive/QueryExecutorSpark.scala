@@ -23,28 +23,33 @@ class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
+    val fullTableName = HiveHelper.getFullTable(dbName, tableName)
     val (database, table) = splitTableDatabase(dbName, tableName)
 
-    val exists = database match {
-      case Some(db) =>
-        if (spark.catalog.databaseExists(db)) {
-          spark.catalog.tableExists(db, table)
-        } else {
-          throw new IllegalArgumentException(s"Database '$db' not found")
-        }
-      case None     =>
-        spark.catalog.tableExists(tableName)
-    }
-
-    val dbStr = database match {
-      case Some(db) => s"$db."
-      case None => ""
+    val exists = try {
+      database match {
+        case Some(db) =>
+          if (spark.catalog.databaseExists(db)) {
+            spark.catalog.tableExists(db, table)
+          } else {
+            throw new IllegalArgumentException(s"Database '$db' not found")
+          }
+        case None =>
+          spark.catalog.tableExists(tableName)
+      }
+    } catch {
+      case _: AnalysisException =>
+        // Workaround for Iceberg tables stored in Glue
+        // The error is:
+        //   Caused by org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch table my_test_table
+        // Don't forget that Iceberg requires lowercase names as well.
+        !spark.sql(s"DESCRIBE $fullTableName").isEmpty
     }
 
     if (exists)
-      log.info(s"Table $dbStr$table exists.")
+      log.info(s"Table $fullTableName exists.")
     else
-      log.info(s"Table $dbStr$table does not exist.")
+      log.info(s"Table $fullTableName does not exist.")
 
     exists
   }

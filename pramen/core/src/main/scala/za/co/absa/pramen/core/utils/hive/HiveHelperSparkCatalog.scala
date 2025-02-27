@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
@@ -33,7 +33,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
                                        tableName: String): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
-    if (spark.catalog.tableExists(fullTableName)) {
+    if (doesTableExist(databaseName, tableName)) {
       log.info(s"Table $fullTableName already exists. Dropping it...")
       dropCatalogTable(fullTableName)
     }
@@ -44,7 +44,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
       repairHiveTable(databaseName, tableName, format)
     }
 
-    if (!spark.catalog.tableExists(fullTableName)) {
+    if (!doesTableExist(databaseName, tableName)) {
       throw new IllegalStateException(s"Unable to create Spark Catalog table: $fullTableName")
     }
   }
@@ -78,7 +78,19 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     spark.sql(s"DROP TABLE $fullTableName").collect()
   }
 
-  override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = spark.catalog.tableExists(HiveHelper.getFullTable(databaseName, tableName))
+  override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+    try {
+      spark.catalog.tableExists(fullTableName)
+    } catch {
+      case _: AnalysisException =>
+        // Workaround for Iceberg tables stored in Glue
+        // The error is:
+        //   Caused by org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch table my_test_table
+        // Don't forget that Iceberg requires lowercase names as well.
+        !spark.sql(s"DESCRIBE $fullTableName").isEmpty
+    }
+  }
 
   override def dropTable(databaseName: Option[String],
                          tableName: String): Unit = {
