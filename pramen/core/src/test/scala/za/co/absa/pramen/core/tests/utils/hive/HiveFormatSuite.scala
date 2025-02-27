@@ -25,12 +25,21 @@ class HiveFormatSuite extends AnyWordSpec {
       val actual = HiveFormat.fromString("Parquet")
 
       assert(actual == HiveFormat.Parquet)
+      assert(actual.repairPartitionsRequired)
     }
 
     "work with Delta" in {
       val actual = HiveFormat.fromString("delta")
 
       assert(actual == HiveFormat.Delta)
+      assert(!actual.repairPartitionsRequired)
+    }
+
+    "work with Iceberg" in {
+      val actual = HiveFormat.fromString("iceberg")
+
+      assert(actual == HiveFormat.Iceberg)
+      assert(!actual.repairPartitionsRequired)
     }
 
     "throw an exception with an unsupported format" in {
