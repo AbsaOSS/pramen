@@ -26,19 +26,26 @@ object HiveFormat {
   case object Parquet extends HiveFormat {
     override val name: String = "parquet"
 
-    override def repairPartitionsRequired: Boolean = true
+    override val repairPartitionsRequired: Boolean = true
   }
 
   case object Delta extends HiveFormat {
     override val name: String = "delta"
 
-    override def repairPartitionsRequired: Boolean = false
+    override val repairPartitionsRequired: Boolean = false
+  }
+
+  case object Iceberg extends HiveFormat {
+    override val name: String = "iceberg"
+
+    override val repairPartitionsRequired: Boolean = false
   }
 
   def fromString(format: String): HiveFormat = {
     format.toLowerCase match {
       case Parquet.name => Parquet
       case Delta.name => Delta
+      case Iceberg.name => Iceberg
       case _ => throw new IllegalArgumentException(s"Unsupported Hive format: $format")
     }
   }

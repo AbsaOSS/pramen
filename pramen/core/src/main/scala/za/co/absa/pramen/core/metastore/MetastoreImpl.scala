@@ -173,6 +173,7 @@ class MetastoreImpl(appConfig: Config,
     val format: HiveFormat = mt.format match {
       case _: DataFormat.Delta   => HiveFormat.Delta
       case _: DataFormat.Parquet => HiveFormat.Parquet
+      case _: DataFormat.Iceberg => HiveFormat.Iceberg
       case _                     => throw new IllegalArgumentException(s"Hive tables are not supported for metastore tables that are not backed by storage.")
     }
 
@@ -187,7 +188,7 @@ class MetastoreImpl(appConfig: Config,
         if (mt.hivePreferAddPartition && mt.format.isInstanceOf[DataFormat.Parquet]) {
           val location = new Path(effectivePath, s"${mt.infoDateColumn}=${infoDate}")
           log.info(s"The table '$fullTableName' exists. Adding partition '$location'...")
-          hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
+          hiveHelper.addPartition(mt.hiveConfig.database, hiveTable, Seq(mt.infoDateColumn), Seq(infoDate.toString), location.toString)
         } else {
           log.info(s"The table '$fullTableName' exists. Repairing it.")
           hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
