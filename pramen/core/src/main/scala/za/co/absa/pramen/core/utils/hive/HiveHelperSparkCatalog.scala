@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.slf4j.LoggerFactory
 
 import scala.util.control.NonFatal
@@ -88,7 +88,13 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
         // The error is:
         //   Caused by org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch table my_test_table
         // Don't forget that Iceberg requires lowercase names as well.
-        !spark.sql(s"DESCRIBE $fullTableName").isEmpty
+        try {
+          spark.read.table(fullTableName)
+          true
+        } catch {
+          // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
+          case _: AnalysisException => false
+        }
     }
   }
 
@@ -100,9 +106,9 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
   }
 
   private def createCatalogTable(fullTableName: String,
-                              path: String,
-                              format: HiveFormat
-                             ): Unit = {
+                                 path: String,
+                                 format: HiveFormat
+                                ): Unit = {
 
     log.info(s"Creating Spark Catalog table: $fullTableName (format = ${format.name}, path=${path})...")
 

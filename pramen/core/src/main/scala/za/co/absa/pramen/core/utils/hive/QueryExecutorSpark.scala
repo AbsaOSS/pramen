@@ -43,7 +43,13 @@ class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
         // The error is:
         //   Caused by org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch table my_test_table
         // Don't forget that Iceberg requires lowercase names as well.
-        !spark.sql(s"DESCRIBE $fullTableName").isEmpty
+        try {
+          spark.read.table(fullTableName)
+          true
+        } catch {
+          // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
+          case _: AnalysisException => false
+        }
     }
 
     if (exists)

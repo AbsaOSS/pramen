@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
+import org.apache.spark.sql._
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{CatalogTable, PartitionScheme}
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -26,7 +26,6 @@ import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
 import java.sql.Date
 import java.time.LocalDate
-import scala.util.Try
 
 class MetastorePersistenceIceberg(table: CatalogTable,
                                   location: Option[String],
@@ -104,24 +103,13 @@ class MetastorePersistenceIceberg(table: CatalogTable,
   }
 
   def doesTableExist(catalogTable: CatalogTable)(implicit spark: SparkSession): Boolean = {
-    Try {
-      spark.sql(s"SELECT * FROM ${catalogTable.getFullTableName} WHERE 0=1").count()
-    }.isSuccess
-
-    // For some reason tables are not refreshed in the catalog when they are created from Spark V2 API
-    /*table.catalog match {
-      case Some(_) =>
-        Try {
-          spark.sql(s"SELECT * FROM ${catalogTable.getFullTableName} WHERE 0=1").count()
-        }.isSuccess
-      case None =>
-        table.database match {
-          case Some(db) =>
-            spark.catalog.tableExists(db, table.table)
-          case None =>
-            spark.catalog.tableExists(table.table)
-        }
-    }*/
+    try {
+      spark.read.table(catalogTable.getFullTableName)
+      true
+    } catch {
+      // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
+      case _: AnalysisException => false
+    }
   }
 
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
