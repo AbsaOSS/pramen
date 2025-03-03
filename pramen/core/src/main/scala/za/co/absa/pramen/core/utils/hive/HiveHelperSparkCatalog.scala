@@ -16,9 +16,11 @@
 
 package za.co.absa.pramen.core.utils.hive
 
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
-import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.CatalogTable
+import za.co.absa.pramen.core.utils.SparkUtils
 
 import scala.util.control.NonFatal
 
@@ -79,23 +81,15 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
   }
 
   override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = {
-    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
-    try {
-      spark.catalog.tableExists(fullTableName)
-    } catch {
-      case _: AnalysisException =>
-        // Workaround for Iceberg tables stored in Glue
-        // The error is:
-        //   Caused by org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch table my_test_table
-        // Don't forget that Iceberg requires lowercase names as well.
-        try {
-          spark.read.table(fullTableName)
-          true
-        } catch {
-          // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
-          case _: AnalysisException => false
-        }
-    }
+    val catalogTable = CatalogTable.fromComponents(None, databaseName, tableName)
+    val exists = SparkUtils.doesCatalogTableExist(catalogTable)(spark)
+
+    if (exists)
+      log.info(s"Table ${catalogTable.getFullTableName} exists.")
+    else
+      log.info(s"Table ${catalogTable.getFullTableName} does not exist.")
+
+    exists
   }
 
   override def dropTable(databaseName: Option[String],

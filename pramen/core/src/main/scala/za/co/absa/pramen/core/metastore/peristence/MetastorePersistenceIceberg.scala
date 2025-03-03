@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions._
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{CatalogTable, PartitionScheme}
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -107,8 +107,13 @@ class MetastorePersistenceIceberg(table: CatalogTable,
       spark.read.table(catalogTable.getFullTableName)
       true
     } catch {
-      // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
-      case _: AnalysisException => false
+      // This is a common error
+      case ex: AnalysisException if ex.getMessage().contains("Table or view not found") || ex.getMessage().contains("TABLE_OR_VIEW_NOT_FOUND") => false
+      // This is the exception, needs to be re-thrown.
+      case ex: AnalysisException if ex.getMessage().contains("TableType cannot be null for table:") =>
+        throw new IllegalArgumentException("Attempt to use a catalog not supported by the file format. " +
+          "Ensure you are using the iceberg catalog and/or it is set as the default catalog with (spark.sql.defaultCatalog) " +
+          "or the catalog is specified explicitly as the table name.", ex)
     }
   }
 
