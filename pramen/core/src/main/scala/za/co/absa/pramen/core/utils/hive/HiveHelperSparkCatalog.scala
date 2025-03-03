@@ -92,8 +92,12 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
           spark.read.table(fullTableName)
           true
         } catch {
+          // This is a common error
+          case ex: AnalysisException if ex.getMessage().contains("Table or view not found") => false
+          // This is the exception, needs to be re-thrown.
+          case ex: AnalysisException if ex.getMessage().contains("TableType cannot be null for table:") => throw ex
           // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
-          case _: AnalysisException => false
+          //case _: AnalysisException => false
         }
     }
   }
