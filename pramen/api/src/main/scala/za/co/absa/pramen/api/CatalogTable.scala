@@ -44,4 +44,13 @@ object CatalogTable {
       case _ => throw new IllegalArgumentException(s"Too many components of the table name: '$fullTableName'. It should be 'catalog.database.table'.")
     }
   }
+
+  def fromComponents(catalog: Option[String], database: Option[String], table: String): CatalogTable = {
+    (catalog, database) match {
+      case (Some(c), Some(d)) => CatalogTable(Some(c.stripPrefix(escapeCharacter).stripSuffix(escapeCharacter)), Some(d.stripPrefix(escapeCharacter).stripSuffix(escapeCharacter)), table.stripPrefix(escapeCharacter).stripSuffix(escapeCharacter))
+      case (Some(c), None) => CatalogTable(Some(c.stripPrefix(escapeCharacter).stripSuffix(escapeCharacter)), None, table.stripPrefix(escapeCharacter).stripSuffix(escapeCharacter))
+      case (None, Some(d)) => CatalogTable(None, Some(d.stripPrefix(escapeCharacter).stripSuffix(escapeCharacter)), table.stripPrefix(escapeCharacter).stripSuffix(escapeCharacter))
+      case (None, None) => CatalogTable(None, None, table)
+    }
+  }
 }

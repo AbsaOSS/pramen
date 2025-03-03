@@ -18,48 +18,20 @@ package za.co.absa.pramen.core.utils.hive
 
 import org.apache.spark.sql.{AnalysisException, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.CatalogTable
+import za.co.absa.pramen.core.utils.SparkUtils
 
 class QueryExecutorSpark(implicit spark: SparkSession)  extends QueryExecutor {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
-    val fullTableName = HiveHelper.getFullTable(dbName, tableName)
-    val (database, table) = splitTableDatabase(dbName, tableName)
-
-    val exists = try {
-      database match {
-        case Some(db) =>
-          if (spark.catalog.databaseExists(db)) {
-            spark.catalog.tableExists(db, table)
-          } else {
-            throw new IllegalArgumentException(s"Database '$db' not found")
-          }
-        case None =>
-          spark.catalog.tableExists(tableName)
-      }
-    } catch {
-      case _: AnalysisException =>
-        // Workaround for Iceberg tables stored in Glue
-        // The error is:
-        //   Caused by org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch table my_test_table
-        // Don't forget that Iceberg requires lowercase names as well.
-        try {
-          spark.read.table(fullTableName)
-          true
-        } catch {
-          // This is a common error
-          case ex: AnalysisException if ex.getMessage().contains("Table or view not found") => false
-          // This is the exception, needs to be re-thrown.
-          case ex: AnalysisException if ex.getMessage().contains("TableType cannot be null for table:") => throw ex
-          // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
-          //case _: AnalysisException => false
-        }
-    }
+    val catalogTable = CatalogTable.fromComponents(None, dbName, tableName)
+    val exists = SparkUtils.doesCatalogTableExist(catalogTable)(spark)
 
     if (exists)
-      log.info(s"Table $fullTableName exists.")
+      log.info(s"Table ${catalogTable.getFullTableName} exists.")
     else
-      log.info(s"Table $fullTableName does not exist.")
+      log.info(s"Table ${catalogTable.getFullTableName} does not exist.")
 
     exists
   }

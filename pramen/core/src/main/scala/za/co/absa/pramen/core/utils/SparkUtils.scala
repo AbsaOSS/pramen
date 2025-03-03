@@ -22,10 +22,10 @@ import org.apache.spark.sql.catalyst.ScalaReflection
 import org.apache.spark.sql.expressions.UserDefinedFunction
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.FieldChange
 import za.co.absa.pramen.api.jobdef.TransformExpression
+import za.co.absa.pramen.api.{CatalogTable, FieldChange}
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 
 import java.io.ByteArrayOutputStream
@@ -566,6 +566,43 @@ object SparkUtils {
       output.append(token.toString())
     }
     output.toString()
+  }
+
+  def doesCatalogTableExist(table: CatalogTable)(implicit spark: SparkSession): Boolean = {
+    try {
+      table.database match {
+        case Some(_) if table.catalog.nonEmpty =>
+          spark.catalog.tableExists(table.getFullTableName)
+        case Some(db) =>
+          if (spark.catalog.databaseExists(db)) {
+            spark.catalog.tableExists(db, table.table)
+          } else {
+            throw new IllegalArgumentException(s"Database '$db' not found")
+          }
+        case None =>
+          spark.catalog.tableExists(table.table)
+      }
+    } catch {
+      case _: AnalysisException =>
+        // Workaround for Iceberg tables stored in Glue
+        // The error is:
+        //   Caused by org.apache.spark.sql.AnalysisException: org.apache.hadoop.hive.ql.metadata.HiveException: Unable to fetch table my_test_table
+        // Don't forget that Iceberg requires lowercase names as well.
+        try {
+          spark.read.table(table.getFullTableName)
+          true
+        } catch {
+          // This is a common error
+          case ex: AnalysisException if ex.getMessage().contains("Table or view not found") || ex.getMessage().contains("TABLE_OR_VIEW_NOT_FOUND") => false
+          // This is the exception, needs to be re-thrown.
+          case ex: AnalysisException if ex.getMessage().contains("TableType cannot be null for table:") =>
+            throw new IllegalArgumentException("Attempt to use a catalog not supported by the file format. " +
+              "Ensure you are using the iceberg/delta catalog and/or it is set as the default catalog with (spark.sql.defaultCatalog) " +
+              "or the catalog is specified explicitly as the table name.", ex)
+          // If the exception is not AnalysisException, something is wrong so the original exception is thrown.
+          //case _: AnalysisException => false
+        }
+    }
   }
 
   private def getActualProcessingTimeUdf: UserDefinedFunction = {
