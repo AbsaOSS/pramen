@@ -48,6 +48,7 @@ object SqlGeneratorLoader {
       case "com.microsoft.sqlserver.jdbc.SQLServerDriver" => new SqlGeneratorMicrosoft(sqlConfig)
       case "com.denodo.vdp.jdbc.Driver"                   => new SqlGeneratorDenodo(sqlConfig)
       case "com.sas.rio.MVADriver"                        => new SqlGeneratorSas(sqlConfig)
+      case "org.apache.hive.jdbc.HiveDriver" => new SqlGeneratorHive(sqlConfig)
       case "com.cloudera.hive.jdbc.HS2Driver"             => new SqlGeneratorHive(sqlConfig)
       case "com.cloudera.hive.jdbc41.HS2Driver"           => new SqlGeneratorHive(sqlConfig)
       case "com.simba.hive.jdbc41.HS2Driver"              => new SqlGeneratorHive(sqlConfig)

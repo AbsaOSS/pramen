@@ -20,6 +20,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
+import za.co.absa.pramen.core.sql.SqlGeneratorHive
 
 import java.time.{Instant, LocalDate}
 
@@ -45,6 +46,38 @@ class SqlGeneratorHiveSuite extends AnyWordSpec {
   val genDateTime: SqlGenerator = getSqlGenerator(driver, sqlConfigDateTime)
   val genEscaped: SqlGenerator = getSqlGenerator(driver, sqlConfigEscape)
   val genEscaped2: SqlGenerator = getSqlGenerator(driver, DummySqlConfigFactory.getDummyConfig(infoDateColumn = "`Info date`", identifierQuotingPolicy = QuotingPolicy.Auto))
+
+  "return Hive driver" when {
+    "the driver class is Apache Hive" in {
+      val g = getSqlGenerator("org.apache.hive.jdbc.HiveDriver", sqlConfigDate)
+
+      assert(g.isInstanceOf[SqlGeneratorHive])
+    }
+
+    "the driver class is Simba Hive" in {
+      val g = getSqlGenerator("com.simba.hive.jdbc41.HS2Driver", sqlConfigDate)
+
+      assert(g.isInstanceOf[SqlGeneratorHive])
+    }
+
+    "the driver class is Cloudera (old)" in {
+      val g = getSqlGenerator("com.cloudera.hive.jdbc41.HS2Driver", sqlConfigDate)
+
+      assert(g.isInstanceOf[SqlGeneratorHive])
+    }
+
+    "the driver class is Cloudera (new)" in {
+      val g = getSqlGenerator("com.cloudera.hive.jdbc.HS2Driver", sqlConfigDate)
+
+      assert(g.isInstanceOf[SqlGeneratorHive])
+    }
+
+    "the driver class is Spark" in {
+      val g = getSqlGenerator("com.simba.spark.jdbc.Driver", sqlConfigDate)
+
+      assert(g.isInstanceOf[SqlGeneratorHive])
+    }
+  }
 
   "generate count queries without date ranges" in {
     assert(gen.getCountQuery("A") == "SELECT COUNT(*) FROM A")
