@@ -45,7 +45,8 @@ object Keys {
 
   val TIMEZONE = "pramen.timezone"
 
-  val SPECIAL_CHARACTERS_IN_COLUMN_NAMES = "pramen.special.characters.in.column.names"
+  val SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES = "special.characters.in.column.names"
+  val SPECIAL_CHARACTERS_IN_COLUMN_NAMES = s"pramen.$SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES"
 
   val LOG_EXECUTOR_NODES = "pramen.log.executor.nodes"
   val LOG_EFFECTIVE_CONFIG = "pramen.log.effective.config"

@@ -645,6 +645,10 @@ is determined by the pipeline configuration.
     # Keep in mind that quoted identifiers are case sensitive in most relational databases.
     identifier.quoting.policy = "auto"
 
+    # (Optional) Specifies which special characters need to be replaced with '_' character in encountered in colum names.
+    # If not specified, the global default defined at 'pramen.special.characters.in.column.names' is going to be used.
+    #special.characters.in.column.names = "' :+-=<>()[]{}*?/\\\""
+
     # Specifies if tables of the data source have an information date colunn
     has.information.date.column = true
     
