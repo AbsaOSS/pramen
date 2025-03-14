@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.jobdef.{Schedule, SinkTable, SourceTable, TransferT
 import za.co.absa.pramen.api.{DataFormat, Transformer}
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
+import za.co.absa.pramen.core.config.Keys.{SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES, SPECIAL_CHARACTERS_IN_COLUMN_NAMES}
 import za.co.absa.pramen.core.databricks.DatabricksClient
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.notify.NotificationTargetManager
@@ -54,11 +54,13 @@ class OperationSplitter(conf: Config,
   def createIngestion(operationDef: OperationDef,
                       sourceName: String,
                       sourceTables: Seq[SourceTable])(implicit spark: SparkSession): Seq[Job] = {
-    val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
+    val globalSpecialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
 
     sourceTables.map(sourceTable => {
       val source = SourceManager.getSourceByName(sourceName, conf, sourceTable.overrideConf)
+
+      val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
 
       val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)

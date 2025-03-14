@@ -54,6 +54,7 @@ class JdbcNativeTableLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
         val resultDf = spark.read.parquet(table1Path.toString)
 
         assert(resultDf.count() == 4)
+        assert(resultDf.schema.fields(1).name.equalsIgnoreCase("N_ME"))
       }
     }
   }
