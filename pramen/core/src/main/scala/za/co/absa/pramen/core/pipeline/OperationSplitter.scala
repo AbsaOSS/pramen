@@ -62,6 +62,9 @@ class OperationSplitter(conf: Config,
 
       val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
 
+      if (specialCharacters != globalSpecialCharacters)
+        log.error(s"Effective special characters: '$specialCharacters'")
+
       val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
@@ -81,12 +84,16 @@ class OperationSplitter(conf: Config,
                      sourceName: String,
                      sinkName: String,
                      tables: Seq[TransferTable])(implicit spark: SparkSession): Seq[Job] = {
-    val specialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
+    val globalSpecialCharacters = conf.getString(SPECIAL_CHARACTERS_IN_COLUMN_NAMES)
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
 
     tables.map(transferTable => {
       val source = SourceManager.getSourceByName(sourceName, conf, transferTable.sourceOverrideConf)
       val sink = SinkManager.getSinkByName(sinkName, conf, transferTable.sinkOverrideConf)
+      val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
+
+      if (specialCharacters != globalSpecialCharacters)
+        log.info(s"Effective special characters: '$specialCharacters'")
 
       val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = TransferTableParser.getMetaTable(transferTable)
