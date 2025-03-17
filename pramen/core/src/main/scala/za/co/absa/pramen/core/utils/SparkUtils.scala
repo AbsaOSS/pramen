@@ -84,7 +84,6 @@ object SparkUtils {
     * @param characters A set of characters considered special
     */
   def sanitizeDfColumns(df: DataFrame, characters: String): DataFrame = {
-
     def replaceSpecialChars(s: String): String = {
       s.map(c => if (characters.contains(c)) '_' else c)
     }
@@ -108,7 +107,10 @@ object SparkUtils {
       }
     })
 
-    df.select(fieldsToSelect: _*)
+    if (characters.isEmpty)
+      df
+    else
+      df.select(fieldsToSelect: _*)
   }
 
   /**

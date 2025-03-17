@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.OffsetInfo
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType}
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.config.Keys.SPECIAL_CHARACTERS_IN_COLUMN_NAMES
+import za.co.absa.pramen.core.config.Keys.{SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES, SPECIAL_CHARACTERS_IN_COLUMN_NAMES}
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.ZoneId
@@ -100,7 +100,11 @@ object TableReaderJdbcConfig {
       .map(s => QuotingPolicy.fromString(s))
       .getOrElse(QuotingPolicy.Auto)
 
-    val specialCharacters = ConfigUtils.getOptionString(workflowConf, SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(" ")
+    val globalSpecialCharacters = ConfigUtils.getOptionString(workflowConf, SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(" ")
+    val specialCharacters = ConfigUtils.getOptionString(conf, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
+
+    if (specialCharacters != globalSpecialCharacters)
+      log.info(s"Effective special characters: '$specialCharacters'")
 
     TableReaderJdbcConfig(
       jdbcConfig = JdbcConfig.load(conf, parent),
