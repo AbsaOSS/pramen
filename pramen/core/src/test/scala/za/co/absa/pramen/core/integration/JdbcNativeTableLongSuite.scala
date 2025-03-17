@@ -44,7 +44,7 @@ class JdbcNativeTableLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
   "JDBC native pipeline" should {
     "support input.table setting" in {
-      withTempDirectory("postgre_inf") { tempDir =>
+      withTempDirectory("jdbc_native_test") { tempDir =>
         val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
 
         val conf = getConfig(tempDir)
@@ -59,7 +59,24 @@ class JdbcNativeTableLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
     }
   }
 
-  def getConfig(basePath: String): Config = {
+  "JDBC pipeline" should {
+    "support input.table setting" in {
+      withTempDirectory("jdbc_native_test") { tempDir =>
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+
+        val conf = getConfig(tempDir, useJdbsNative = false)
+        val exitCode = AppRunner.runPipeline(conf)
+        assert(exitCode == 0)
+
+        val resultDf = spark.read.parquet(table1Path.toString)
+
+        assert(resultDf.count() == 4)
+        assert(resultDf.schema.fields(1).name.equalsIgnoreCase("N_ME"))
+      }
+    }
+  }
+
+  def getConfig(basePath: String, useJdbsNative: Boolean = true): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/integration_ingestion_native.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
 
@@ -70,6 +87,7 @@ class JdbcNativeTableLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
          |jdbc.url="$url"
          |jdbc.user="$user"
          |jdbc.password="$password"
+         |jdbc.native=$useJdbsNative
          |
          |$configContents
          |""".stripMargin
