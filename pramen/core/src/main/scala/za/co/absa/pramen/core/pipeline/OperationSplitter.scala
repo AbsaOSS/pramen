@@ -63,7 +63,7 @@ class OperationSplitter(conf: Config,
       val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
 
       if (specialCharacters != globalSpecialCharacters)
-        log.error(s"Effective special characters: '$specialCharacters'")
+        log.info(s"Effective special characters: '$specialCharacters'")
 
       val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
       val outputTable = metastore.getTableDef(sourceTable.metaTableName)
