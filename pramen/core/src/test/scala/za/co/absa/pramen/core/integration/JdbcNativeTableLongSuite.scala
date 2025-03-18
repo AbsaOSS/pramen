@@ -57,6 +57,17 @@ class JdbcNativeTableLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
         assert(resultDf.schema.fields(1).name.equalsIgnoreCase("N_ME"))
       }
     }
+
+    "handle no data when query count is disabled" in {
+      withTempDirectory("jdbc_native_test") { tempDir =>
+        val noDataInfoDate = infoDate.plusDays(1)
+
+        val conf = getConfig(tempDir, hasInfoDate = true, infoDateIn = noDataInfoDate, disableCountQuery = true)
+
+        val exitCode = AppRunner.runPipeline(conf)
+        assert(exitCode == 2)
+      }
+    }
   }
 
   "JDBC pipeline" should {
@@ -76,18 +87,20 @@ class JdbcNativeTableLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
     }
   }
 
-  def getConfig(basePath: String, useJdbsNative: Boolean = true): Config = {
+  def getConfig(basePath: String, hasInfoDate: Boolean = false, infoDateIn: LocalDate = infoDate, useJdbsNative: Boolean = true, disableCountQuery: Boolean = false): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/integration_ingestion_native.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
 
     val conf = ConfigFactory.parseString(
       s"""base.path = "$basePathEscaped"
          |pramen.runtime.is.rerun = true
-         |pramen.current.date = "$infoDate"
+         |pramen.current.date = "$infoDateIn"
          |jdbc.url="$url"
          |jdbc.user="$user"
          |jdbc.password="$password"
          |jdbc.native=$useJdbsNative
+         |jdbc.disable.count.query=$disableCountQuery
+         |jdbc.has.info.date=$hasInfoDate
          |
          |$configContents
          |""".stripMargin
