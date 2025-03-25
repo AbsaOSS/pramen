@@ -241,9 +241,32 @@ object SparkSink extends ExternalChannelFactory[SparkSink] {
   val FILE_FORMATS: Seq[String] = Seq("csv", "json", "parquet", "avro", "orc", "xml")
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): SparkSink = {
+    val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
+
+    val format = ConfigUtils.getOptionString(conf, FORMAT_KEY).getOrElse(DEFAULT_FORMAT)
+
+    if (format.equalsIgnoreCase("jdbc")) {
+      // Initialize JDBC driver
+      if (extraOptions.contains("driver")) {
+        val driver = extraOptions("driver")
+        try {
+          log.info(s"Initializing JDBC driver: $driver")
+          Class.forName(driver)
+        } catch {
+          case ex: Throwable => log.warn(s"Unable to initialize the JDBC driver: '$driver'. Still trying using Spark...", ex)
+        }
+      } else {
+        throw new IllegalArgumentException(s"Mandatory SparkSink JDBC option 'option.driver' is not defined at '$parentPath'.")
+      }
+
+      if (!extraOptions.contains("url")) {
+        throw new IllegalArgumentException(s"Mandatory SparkSink JDBC option 'option.url' is not defined at '$parentPath'.")
+      }
+    }
+
     new SparkSink(
-      ConfigUtils.getOptionString(conf, FORMAT_KEY).getOrElse(DEFAULT_FORMAT),
-      ConfigUtils.getExtraOptions(conf, "option"),
+      format,
+      extraOptions,
       ConfigUtils.getOptionString(conf, MODE_KEY).getOrElse(DEFAULT_MODE),
       ConfigUtils.getOptListStrings(conf, PARTITION_BY_KEY),
       ConfigUtils.getOptionInt(conf, NUMBER_OF_PARTITIONS_KEY),

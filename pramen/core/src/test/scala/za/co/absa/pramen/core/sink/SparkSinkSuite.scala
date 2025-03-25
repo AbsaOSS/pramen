@@ -47,7 +47,7 @@ class SparkSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixture 
           |  partition.by = [ info_date ]
           |  save.empty = false
           |
-          |  options {
+          |  option {
           |    compression = gzip
           |  }
           |""".stripMargin
@@ -55,6 +55,60 @@ class SparkSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFixture 
       val sink = SparkSink(conf, "parent", spark)
 
       assert(sink.isInstanceOf[SparkSink])
+    }
+
+    "construct a JDBC sink from config" in {
+      val conf = ConfigFactory.parseString(
+        """  format = "jdbc"
+          |  mode = "overwrite"
+          |  records.per.partition = 1
+          |
+          |  option {
+          |    driver = "org.hsqldb.jdbc.JDBCDriver"
+          |    url = "jdbc:hsqldb:mem:mydb;sql.enforce_size=false"
+          |  }
+          |""".stripMargin
+      )
+
+      val sink = SparkSink(conf, "parent", spark)
+
+      assert(sink.isInstanceOf[SparkSink])
+    }
+
+    "throw an exception if mandatory driver option is missing" in {
+      val conf = ConfigFactory.parseString(
+        """  format = "jdbc"
+          |  mode = "overwrite"
+          |  records.per.partition = 1
+          |
+          |  option {
+          |    url = "jdbc:hsqldb:mem:mydb;sql.enforce_size=false"
+          |  }
+          |""".stripMargin
+      )
+      val ex = intercept[IllegalArgumentException] {
+        SparkSink(conf, "parent", spark)
+      }
+
+      assert(ex.getMessage == "Mandatory SparkSink JDBC option 'option.driver' is not defined at 'parent'.")
+    }
+
+    "throw an exception if mandatory url option is missing" in {
+      val conf = ConfigFactory.parseString(
+        """  format = "jdbc"
+          |  mode = "overwrite"
+          |  records.per.partition = 1
+          |
+          |  option {
+          |    driver = "org.hsqldb.jdbc.JDBCDriver"
+          |  }
+          |""".stripMargin
+      )
+      val ex = intercept[IllegalArgumentException] {
+        SparkSink(conf, "parent", spark)
+      }
+
+      assert(ex.getMessage == "Mandatory SparkSink JDBC option 'option.url' is not defined at 'parent'.")
     }
   }
 
