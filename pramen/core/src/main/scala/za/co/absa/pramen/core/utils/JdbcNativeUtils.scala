@@ -158,7 +158,14 @@ object JdbcNativeUtils {
     val connection = getJdbcConnection(jdbcConfig, url)
 
     val statement = try {
-      connection.setAutoCommit(jdbcConfig.autoCommit)
+      try {
+        connection.setAutoCommit(jdbcConfig.autoCommit)
+        log.info(s"setAutoCommit(${jdbcConfig.autoCommit})'")
+      } catch {
+        case _: Throwable =>
+          // Some drivers, like Datbricks JDBC driver throw an exception on setAutoCommit(false)
+          log.info(s"The JDBC driver does not support 'setAutoCommit(${jdbcConfig.autoCommit})'")
+      }
 
       if (jdbcConfig.driver == "org.postgresql.Driver")
         // Special handling of PostgreSQL driver that loads.
