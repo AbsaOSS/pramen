@@ -187,7 +187,11 @@ object JdbcSparkUtils {
                       (action: (Connection, ResultSetMetaData) => Unit): Unit = {
     val (_, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
 
-    connection.setAutoCommit(false)
+    try {
+      connection.setAutoCommit(false)
+    } catch {
+      case _: Throwable => log.warn("The JDBC driver does not support 'setAutoCommit()'")
+    }
 
     log.info(s"Getting metadata for: $schemaQuery")
 
