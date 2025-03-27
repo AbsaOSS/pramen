@@ -108,7 +108,11 @@ object JdbcNativeUtils {
     val (connection, _) = jdbcUrlSelector.getWorkingConnection(retries)
 
     try {
-      connection.setAutoCommit(false)
+      try {
+        connection.setAutoCommit(false)
+      } catch {
+        case _: Throwable => log.warn("The JDBC driver does not support 'setAutoCommit()'")
+      }
 
       val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
