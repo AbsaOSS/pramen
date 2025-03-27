@@ -109,9 +109,10 @@ object JdbcNativeUtils {
 
     try {
       try {
+        // When autoCommit is true, PostgreSQL retrieves all query results at once, which can cause memory issues for large datasets.
         connection.setAutoCommit(false)
       } catch {
-        case _: Throwable => log.warn("The JDBC driver does not support 'setAutoCommit()'")
+        case _: Throwable => log.info("The JDBC driver does not support 'setAutoCommit(false)'")
       }
 
       val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)

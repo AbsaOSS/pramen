@@ -188,9 +188,10 @@ object JdbcSparkUtils {
     val (_, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
 
     try {
+      // When autoCommit is true, PostgreSQL retrieves all query results at once, which can cause memory issues for large datasets.
       connection.setAutoCommit(false)
     } catch {
-      case _: Throwable => log.warn("The JDBC driver does not support 'setAutoCommit()'")
+      case _: Throwable => log.info("The JDBC driver does not support 'setAutoCommit(false)'")
     }
 
     log.info(s"Getting metadata for: $schemaQuery")
