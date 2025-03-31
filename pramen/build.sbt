@@ -94,7 +94,7 @@ lazy val pramen = (project in file("."))
       commitReleaseVersion,
       tagRelease,
       releaseStepCommandAndRemaining("+publishSigned"),
-      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
+      releaseStepCommandAndRemaining("sonatypeReleaseAll"),
       setNextVersion,
       commitNextVersion,
       pushChanges
