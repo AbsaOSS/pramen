@@ -79,6 +79,7 @@ lazy val pramen = (project in file("."))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
     name := "pramen",
+    sonatypeProfileName := "za.co.absa",
 
     // No need to publish the aggregation [empty] artifact
     publishArtifact := false,
