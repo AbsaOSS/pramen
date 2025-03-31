@@ -17,6 +17,7 @@
 import Dependencies._
 import Versions._
 import BuildInfoTemplateSettings._
+import ReleaseTransformations._
 import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
@@ -104,7 +105,21 @@ lazy val api = (project in file("api"))
     (Test / testOptions) := Seq(Tests.Filter(allFilter)),
     (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value
+    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    releaseProcess := Seq(
+      checkSnapshotDependencies,
+      inquireVersions,
+      releaseStepCommandAndRemaining("+clean"),
+      //releaseStepCommandAndRemaining("+test"),
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      releaseStepCommandAndRemaining("+publishSigned"),
+      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
+      setNextVersion,
+      commitNextVersion,
+      pushChanges
+    )
   )
   .enablePlugins(AutomateHeaderPlugin)
 
@@ -140,6 +155,20 @@ lazy val core = (project in file("core"))
     Test / fork := true,
     populateBuildInfoTemplate,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    releaseProcess := Seq(
+      checkSnapshotDependencies,
+      inquireVersions,
+      releaseStepCommandAndRemaining("+clean"),
+      //releaseStepCommandAndRemaining("+test"),
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      releaseStepCommandAndRemaining("+publishSigned"),
+      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
+      setNextVersion,
+      commitNextVersion,
+      pushChanges
+    ),
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
     jacocoExcludes := commonJacocoExcludes,
     assemblySettingsRunner
@@ -170,6 +199,20 @@ lazy val extras = (project in file("extras"))
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     releasePublishArtifactsAction := PgpKeys.publishSigned.value,
+    releaseProcess := Seq(
+      checkSnapshotDependencies,
+      inquireVersions,
+      releaseStepCommandAndRemaining("+clean"),
+      //releaseStepCommandAndRemaining("+test"),
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      releaseStepCommandAndRemaining("+publishSigned"),
+      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
+      setNextVersion,
+      commitNextVersion,
+      pushChanges
+    ),
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
     jacocoExcludes := commonJacocoExcludes,
     assemblySettingsExtras

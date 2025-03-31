@@ -15,7 +15,8 @@
  */
 
 addSbtPlugin("com.github.sbt"    % "sbt-pgp"       % "2.2.1")
-addSbtPlugin("com.github.sbt"    % "sbt-release"   % "1.1.0")
+addSbtPlugin("com.github.sbt"    % "sbt-release"   % "1.4.0")
+addSbtPlugin("org.xerial.sbt"    % "sbt-sonatype"  % "3.12.2")
 addSbtPlugin("de.heikoseeberger" % "sbt-header"    % "5.7.0")
 addSbtPlugin("com.eed3si9n"      % "sbt-assembly"  % "0.15.0")
 
