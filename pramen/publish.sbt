@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import ReleaseTransformations._
-
 ThisBuild / organizationName := "ABSA Group Limited"
 ThisBuild / organizationHomepage := Some(url("https://www.absa.africa"))
 ThisBuild / scmInfo := Some(
@@ -68,18 +66,3 @@ ThisBuild / publishTo := {
   }
 }
 ThisBuild / publishMavenStyle := true
-
-ThisBuild / releaseProcess := Seq(
-  checkSnapshotDependencies,
-  inquireVersions,
-  releaseStepCommandAndRemaining("+clean"),
-  //releaseStepCommandAndRemaining("+test"),
-  setReleaseVersion,
-  commitReleaseVersion,
-  tagRelease,
-  releaseStepCommandAndRemaining("+publishSigned"),
-  releaseStepCommandAndRemaining("sonatypeBundleRelease"),
-  setNextVersion,
-  commitNextVersion,
-  pushChanges
-)

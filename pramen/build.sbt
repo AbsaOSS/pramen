@@ -83,7 +83,21 @@ lazy val pramen = (project in file("."))
     // No need to publish the aggregation [empty] artifact
     publishArtifact := false,
     publish := {},
-    publishLocal := {}
+    publishLocal := {},
+    releaseProcess := Seq(
+      checkSnapshotDependencies,
+      inquireVersions,
+      releaseStepCommandAndRemaining("+clean"),
+      //releaseStepCommandAndRemaining("+test"),
+      setReleaseVersion,
+      commitReleaseVersion,
+      tagRelease,
+      releaseStepCommandAndRemaining("+publishSigned"),
+      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
+      setNextVersion,
+      commitNextVersion,
+      pushChanges
+    )
   )
   .aggregate(api, core, extras)
 
