@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.lock
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.utils.{FsUtils, StringUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, JvmUtils, StringUtils}
 
 import java.time.Instant
 
@@ -60,7 +60,7 @@ class TokenLockHadoopPath(token: String,
     if (lockAcquired) {
       lockAcquired = false
       releaseGuardLock()
-      Runtime.getRuntime.removeShutdownHook(shutdownHook)
+      JvmUtils.safeRemoveShutdownHook(shutdownHook)
       log.info(s"Lock released: '${fileGuard.get}'.")
       fileGuard = None
     }

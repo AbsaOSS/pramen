@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, Transie
 import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
 import za.co.absa.pramen.core.pipeline.PipelineDef._
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.{ConfigUtils, JvmUtils}
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer
@@ -299,10 +299,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   }
 
   override def close(): Unit = {
-    Try {
-      // Ignore runtime exceptions, including "java.lang.IllegalStateException: Shutdown in progress"
-      Runtime.getRuntime.removeShutdownHook(shutdownHook)
-    }
+    JvmUtils.safeRemoveShutdownHook(shutdownHook)
   }
 
   private def setSignalHandler(signal: Signal, signalName: String): Unit = {
