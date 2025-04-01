@@ -67,7 +67,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLock {
     if (lockAcquired) {
       lockAcquired = false
       releaseGuardLock(owner)
-      Runtime.getRuntime.removeShutdownHook(shutdownHook)
+      JvmUtils.safeRemoveShutdownHook(shutdownHook)
       log.info(s"Lock released: '$escapedToken'.")
     }
   }

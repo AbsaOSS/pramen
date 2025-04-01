@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.utils
 
 import java.lang.management.ManagementFactory
+import scala.util.Try
 
 object JvmUtils {
   // Caching JVM name. In some cases this method can take some time to complete.
@@ -32,6 +33,13 @@ object JvmUtils {
       } else {
         s"${ex.getMessage} (${cause.getMessage} caused by ${cause.getCause.getMessage})"
       }
+    }
+  }
+
+  def safeRemoveShutdownHook(hook: Thread): Unit = {
+    Try {
+      // Ignore runtime exceptions, including "java.lang.IllegalStateException: Shutdown in progress"
+      Runtime.getRuntime.removeShutdownHook(hook)
     }
   }
 }

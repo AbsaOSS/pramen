@@ -90,7 +90,7 @@ class TokenLockMongoDb(token: String,
     if (lockAcquired) {
       lockAcquired = false
       releaseGuardLock()
-      Runtime.getRuntime.removeShutdownHook(shutdownHook)
+      JvmUtils.safeRemoveShutdownHook(shutdownHook)
       log.info(s"Lock released: '$escapedToken'.")
     }
   }
