@@ -18,10 +18,9 @@ package za.co.absa.pramen.core.state
 
 import org.slf4j.LoggerFactory
 import sun.misc.{Signal, SignalHandler}
-import za.co.absa.pramen.core.exceptions.{OsSignalException, ThreadStackTrace}
+import za.co.absa.pramen.core.exceptions.OsSignalException
 import za.co.absa.pramen.core.state.PipelineStateImpl.EXIT_CODE_SIGNAL_RECEIVED
-
-import scala.collection.JavaConverters._
+import za.co.absa.pramen.core.utils.JvmUtils
 
 class PramenSignalHandler(signal: Signal, signalName: String, pipelineState: PipelineStateImpl) extends SignalHandler {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -29,15 +28,7 @@ class PramenSignalHandler(signal: Signal, signalName: String, pipelineState: Pip
   var oldHandler: Option[SignalHandler] = None
 
   override def handle(sig: Signal): Unit = {
-    val stackTraces = Thread.getAllStackTraces.asScala
-
-    val nonDaemonStackTraces = stackTraces.flatMap { case (t: Thread, s: Array[StackTraceElement]) =>
-      if (t.isDaemon) {
-        None
-      } else {
-        Option(ThreadStackTrace(t.getName, s))
-      }
-    }.toSeq
+    val nonDaemonStackTraces = JvmUtils.getStackTraces
 
     val ex = OsSignalException(signalName, nonDaemonStackTraces)
     pipelineState.setSignalException(ex)

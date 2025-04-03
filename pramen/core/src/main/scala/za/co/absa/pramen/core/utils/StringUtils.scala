@@ -20,7 +20,6 @@ import za.co.absa.pramen.core.exceptions.ThreadStackTrace
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
 
-import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.{Base64, StringTokenizer}
 import scala.compat.Platform.EOL
@@ -192,17 +191,8 @@ object StringUtils {
   }
 
   def renderThreadDumps(threadStackTraces: Seq[ThreadStackTrace]): String = {
-    val threadTitlePadding = "  "
-    val stackTracePadding = "    "
     val base = s"""Stack trace of threads at the moment of the interruption:\n"""
-
-    val details = threadStackTraces.zipWithIndex.map {
-      case (threadStackTrace, index) =>
-        val threadTitle = s"${threadTitlePadding}Thread $index (${threadStackTrace.threadName}): \n"
-        val stackTrace = threadStackTrace.stackTrace
-        val stackTraceStr = s"""${stackTrace.map(s => s"$stackTracePadding$s").mkString("", EOL, EOL)}""".stripMargin
-        threadTitle + stackTraceStr
-    }.mkString("\n")
+    val details = JvmUtils.renderStackTraces(threadStackTraces)
 
     base + details
   }
