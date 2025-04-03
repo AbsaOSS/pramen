@@ -43,7 +43,7 @@ object ThreadUtils {
 
     val handler = new UncaughtExceptionHandler {
       override def uncaughtException(t: Thread, ex: Throwable): Unit = {
-        thread.asInstanceOf[ThreadWithException].setException(ex)
+        thread.setException(ex)
       }
     }
 
