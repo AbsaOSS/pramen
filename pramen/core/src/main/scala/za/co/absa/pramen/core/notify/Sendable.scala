@@ -20,16 +20,19 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.utils.ConfigUtils
+import za.co.absa.pramen.core.utils.{ConfigUtils, ThreadUtils}
 import za.co.absa.pramen.core.utils.Emoji._
 
 import java.util.Properties
+import java.util.concurrent.TimeUnit
 import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
 import javax.mail.{Message, Session, Transport}
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.util.control.NonFatal
 
 object Sendable {
   val MAIL_DEBUG_KEY = "mail.debug"
+  val SEND_TIMEOUT_SECONDS: Duration = Duration(5, TimeUnit.MINUTES)
 }
 
 trait Sendable {
@@ -81,8 +84,10 @@ trait Sendable {
 
     // Send it
     try {
-      Transport.send(message)
-      log.info(s"$VOLTAGE An email has been sent successfully.")
+      ThreadUtils.runWithTimeout(SEND_TIMEOUT_SECONDS) {
+        Transport.send(message)
+        log.info(s"$VOLTAGE An email has been sent successfully.")
+      }
     } catch {
       case NonFatal(ex) => log.error(s"$FAILURE Failed to send an email.", ex)
     }
