@@ -16,7 +16,11 @@
 
 package za.co.absa.pramen.core.utils
 
+import za.co.absa.pramen.core.exceptions.ThreadStackTrace
+
 import java.lang.management.ManagementFactory
+import scala.collection.JavaConverters._
+import scala.compat.Platform.EOL
 import scala.util.Try
 
 object JvmUtils {
@@ -41,5 +45,30 @@ object JvmUtils {
       // Ignore runtime exceptions, including "java.lang.IllegalStateException: Shutdown in progress"
       Runtime.getRuntime.removeShutdownHook(hook)
     }
+  }
+
+  def getStackTraces: Seq[ThreadStackTrace] = {
+    val stackTraces = Thread.getAllStackTraces.asScala
+
+    stackTraces.flatMap { case (t: Thread, s: Array[StackTraceElement]) =>
+      if (t.isDaemon) {
+        None
+      } else {
+        Option(ThreadStackTrace(t.getName, s))
+      }
+    }.toSeq
+  }
+
+  def renderStackTraces(stackTraces: Seq[ThreadStackTrace]): String = {
+    val threadTitlePadding = "  "
+    val stackTracePadding = "    "
+
+    stackTraces.zipWithIndex.map {
+      case (threadStackTrace, index) =>
+        val threadTitle = s"${threadTitlePadding}Thread $index (${threadStackTrace.threadName}): \n"
+        val stackTrace = threadStackTrace.stackTrace
+        val stackTraceStr = s"""${stackTrace.map(s => s"$stackTracePadding$s").mkString("", EOL, EOL)}""".stripMargin
+        threadTitle + stackTraceStr
+    }.mkString("\n")
   }
 }
