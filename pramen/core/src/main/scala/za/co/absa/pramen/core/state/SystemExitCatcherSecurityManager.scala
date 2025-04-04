@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.utils.impl
+package za.co.absa.pramen.core.state
 
 import za.co.absa.pramen.core.exceptions.OsSignalException
-import za.co.absa.pramen.core.state.PipelineStateImpl
 import za.co.absa.pramen.core.utils.JvmUtils
 
 import java.security.Permission
