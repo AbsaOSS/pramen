@@ -31,6 +31,7 @@ import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl}
 import za.co.absa.pramen.core.utils.Emoji._
+import za.co.absa.pramen.core.utils.impl.SystemExitCatcherSecurityManager
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ResourceUtils}
 
 import scala.util.{Failure, Success, Try}
@@ -51,6 +52,10 @@ object AppRunner {
       case Failure(ex)  =>
         log.error(s"An error has occurred before notification configuration is available. No notifications will be sent.", ex)
         return ERROR_CODE_MAJOR_FAILURE
+    }
+
+    Try {
+      System.setSecurityManager(new SystemExitCatcherSecurityManager(state.asInstanceOf[PipelineStateImpl]))
     }
 
     val exitCodeTry = for {
@@ -327,6 +332,10 @@ object AppRunner {
   }
 
   private[core] def resetState(state: PipelineState): Unit = {
+    Try {
+      System.setSecurityManager(null)
+    }
+
     // Neither of these should throw any exceptions.
     // The handling of exceptions is added as a precaution.
     runIgnoringExceptions {
