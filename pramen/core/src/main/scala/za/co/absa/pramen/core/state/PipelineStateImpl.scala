@@ -315,7 +315,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     signalHandlers.append(newHandler)
   }
 
-  private[core] def setFailureException(ex: Throwable): Unit = {
+  private[state] def setFailureException(ex: Throwable): Unit = {
     if (failureException.isEmpty) {
       failureException = Option(ex)
     }
@@ -323,7 +323,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   private[state] def getFailureException: Option[Throwable] = failureException
 
-  private[core] def setSignalException(ex: Throwable): Unit = {
+  private[state] def setSignalException(ex: Throwable): Unit = {
     if (signalException.isEmpty) {
       signalException = Option(ex)
     }

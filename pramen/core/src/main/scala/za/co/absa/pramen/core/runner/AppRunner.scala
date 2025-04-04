@@ -29,9 +29,8 @@ import za.co.absa.pramen.core.pipeline.{Job, OperationDef, OperationSplitter, Pi
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
-import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl}
+import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl, SystemExitCatcherSecurityManager}
 import za.co.absa.pramen.core.utils.Emoji._
-import za.co.absa.pramen.core.utils.impl.SystemExitCatcherSecurityManager
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ResourceUtils}
 
 import scala.util.{Failure, Success, Try}
@@ -55,6 +54,8 @@ object AppRunner {
     }
 
     Try {
+      // Setting the security manager that catches all System.exit() calls and records stack traces.
+      // In case this fails, just ignore the feature.
       System.setSecurityManager(new SystemExitCatcherSecurityManager(state.asInstanceOf[PipelineStateImpl]))
     }
 
