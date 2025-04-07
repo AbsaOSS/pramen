@@ -272,7 +272,7 @@ lazy val assemblySettingsCommon = Seq(
       }
     case _ => MergeStrategy.deduplicate
   },
-  assembly / assemblyOption:= (assembly / assemblyOption).value.copy(includeScala = false),
+  assembly / assemblyOption ~= { _.withIncludeScala(false) },
   assembly / assemblyJarName := s"${runnerAssemblyName(name.value)}_${scalaBinaryVersion.value}${runnerSparkVersionSuffix(name.value, scalaVersion.value, assemblyFeatures.value.contains("includeDelta"))}-${version.value}.jar",
   assembly / logLevel := Level.Info,
   assembly / test := {}
