@@ -47,11 +47,19 @@ object JvmUtils {
     }
   }
 
+  /**
+    * Returns stack traces of all current non-daemon threads of the JVM.
+    *
+    * Includes the stack trace that called this method even if it is inside a daemon thread.
+    * @return Stack traces of all threads in the JVM.
+    */
   def getStackTraces: Seq[ThreadStackTrace] = {
     val stackTraces = Thread.getAllStackTraces.asScala
 
     stackTraces.flatMap { case (t: Thread, s: Array[StackTraceElement]) =>
-      if (t.isDaemon) {
+      val containsSignalSource = s.exists(e => e.toString.contains("za.co.absa.pramen.core.utils.JvmUtils$.getStackTraces"))
+
+      if (!containsSignalSource && t.isDaemon) {
         None
       } else {
         Option(ThreadStackTrace(t.getName, s))

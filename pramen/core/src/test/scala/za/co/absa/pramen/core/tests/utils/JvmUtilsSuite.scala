@@ -17,7 +17,10 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.exceptions.ThreadStackTrace
 import za.co.absa.pramen.core.utils.JvmUtils
+
+import java.util.concurrent.locks.ReentrantLock
 
 class JvmUtilsSuite extends AnyWordSpec {
   "getShortExceptionDescription()" should {
@@ -37,6 +40,38 @@ class JvmUtilsSuite extends AnyWordSpec {
       val actual = JvmUtils.getShortExceptionDescription(new RuntimeException("Dummy1", new RuntimeException("Dummy2", new RuntimeException("Dummy3"))))
 
       assert(actual == "Dummy1 (Dummy2 caused by Dummy3)")
+    }
+  }
+
+  "getStackTraces" should {
+    "return all threads stack traces" in {
+      val stackTraces = JvmUtils.getStackTraces
+
+      val stackTracesStr = JvmUtils.renderStackTraces(stackTraces)
+
+      assert(stackTracesStr.contains("za.co.absa.pramen.core.utils.JvmUtils$.getStackTraces"))
+    }
+
+    "include the daemon thread of the caller class" in {
+      val lock = new ReentrantLock()
+      var stackTraces: Seq[ThreadStackTrace] = null
+      val daemonThread = new Thread("daemon-thread") {
+        override def run(): Unit = {
+          lock.lock()
+          stackTraces = JvmUtils.getStackTraces
+          lock.unlock()
+        }
+      }
+      daemonThread.setDaemon(true)
+      daemonThread.start()
+      daemonThread.join()
+
+      assert(!daemonThread.isAlive)
+
+      val stackTracesStr = JvmUtils.renderStackTraces(stackTraces)
+
+      assert(stackTracesStr.contains("za.co.absa.pramen.core.utils.JvmUtils$.getStackTraces"))
+      assert(stackTracesStr.contains("(daemon-thread)"))
     }
   }
 }
