@@ -51,16 +51,16 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
   }
 
   override def getCountQuery(tableName: String): String = {
-    s"SELECT ${getAliasExpression("COUNT(*)", "CNT")} FROM ${escape(tableName)} WITH (NOLOCK)"
+    s"SELECT ${getAliasExpression("COUNT_BIG(*)", "CNT")} FROM ${escape(tableName)} WITH (NOLOCK)"
   }
 
   override def getCountQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
-    s"SELECT ${getAliasExpression("COUNT(*)", "CNT")} FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
+    s"SELECT ${getAliasExpression("COUNT_BIG(*)", "CNT")} FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
   override def getCountQueryForSql(filteredSql: String): String = {
-    s"SELECT COUNT(*) FROM ($filteredSql) AS query"
+    s"SELECT COUNT_BIG(*) FROM ($filteredSql) AS query"
   }
 
   override def getDataQuery(tableName: String, columns: Seq[String], limit: Option[Int]): String = {

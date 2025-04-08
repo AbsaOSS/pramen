@@ -57,7 +57,7 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
   }
 
   "generate count queries without date ranges" in {
-    assert(genDate.getCountQuery("A") == "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK)")
+    assert(genDate.getCountQuery("A") == "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK)")
   }
 
   "generate data queries without date ranges" in {
@@ -83,52 +83,52 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
   "generate ranged count queries" when {
     "date is in DATE format" in {
       assert(genDate.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23)")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE D = CONVERT(DATE, '2020-08-17', 23)")
       assert(genDate.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17', 23) AND D <= CONVERT(DATE, '2020-08-30', 23)")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= CONVERT(DATE, '2020-08-17', 23) AND D <= CONVERT(DATE, '2020-08-30', 23)")
     }
 
     "date is in DATETIME format" in {
       assert(genDateTime.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
       assert(genDateTime.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) AND CONVERT(DATE, D, 23) <= CONVERT(DATE, '2020-08-30', 23)")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) AND CONVERT(DATE, D, 23) <= CONVERT(DATE, '2020-08-30', 23)")
     }
 
     "date is in STRING ISO format" in {
       assert(genStr.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) = CONVERT(DATE, '2020-08-17', 23)")
       assert(genStr.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) " +
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE TRY_CONVERT(DATE, D, 23) >= CONVERT(DATE, '2020-08-17', 23) " +
           "AND TRY_CONVERT(DATE, D, 23) <= CONVERT(DATE, '2020-08-30', 23)")
     }
 
     "date is in STRING non ISO format" in {
       assert(genStr2.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D = '20200817'")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE D = '20200817'")
       assert(genStr2.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= '20200817' AND D <= '20200830'")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= '20200817' AND D <= '20200830'")
     }
 
     "date is in NUMBER format" in {
       assert(genNum.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D = 20200817")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE D = 20200817")
       assert(genNum.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= 20200817 AND D <= 20200830")
+        "SELECT COUNT_BIG(*) AS CNT FROM A WITH (NOLOCK) WHERE D >= 20200817 AND D <= 20200830")
     }
 
     "the table name and column name need to be escaped" in {
       assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
-        "SELECT COUNT(*) AS [CNT] FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
+        "SELECT COUNT_BIG(*) AS [CNT] FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
       assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
-        "SELECT COUNT(*) AS [CNT] FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
+        "SELECT COUNT_BIG(*) AS [CNT] FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
     }
 
     "the table name and column name already escaped" in {
       assert(genEscaped2.getCountQuery("Input Table", date1, date1) ==
-        "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
+        "SELECT COUNT_BIG(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] = CONVERT(DATE, '2020-08-17', 23)")
       assert(genEscaped2.getCountQuery("Input Table", date1, date2) ==
-        "SELECT COUNT(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
+        "SELECT COUNT_BIG(*) AS CNT FROM [Input Table] WITH (NOLOCK) WHERE [Info date] >= CONVERT(DATE, '2020-08-17', 23) AND [Info date] <= CONVERT(DATE, '2020-08-30', 23)")
     }
   }
 
@@ -179,7 +179,7 @@ class SqlGeneratorMicrosoftSuite extends AnyWordSpec {
 
   "getCountQueryForSql" should {
     "generate count queries for an SQL subquery" in {
-      assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
+      assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT_BIG(*) FROM (SELECT A FROM B) AS query")
     }
   }
 
