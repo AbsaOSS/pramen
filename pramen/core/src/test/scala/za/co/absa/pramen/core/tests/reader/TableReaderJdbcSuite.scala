@@ -403,7 +403,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
         val sqlIn = TableReaderJdbcNative.applyInfoDateExpressionToString(sqlTemplate, infoDate, infoDate)
         val sql = reader.getCountSqlQuery(sqlIn)
 
-        assert(sql == "SELECT COUNT(*) FROM (SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('2022-02-18' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)) AS query")
+        assert(sql == "SELECT COUNT_BIG(*) FROM (SELECT * FROM my_db.my_table WHERE info_date = CAST(REPLACE(CAST(CAST('2022-02-18' AS DATE) AS VARCHAR(10)), '-', '') AS INTEGER)) AS query")
       }
     }
 

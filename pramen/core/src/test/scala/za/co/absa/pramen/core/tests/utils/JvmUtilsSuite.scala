@@ -64,6 +64,9 @@ class JvmUtilsSuite extends AnyWordSpec {
       }
       daemonThread.setDaemon(true)
       daemonThread.start()
+
+      assert(daemonThread.isDaemon)
+
       daemonThread.join()
 
       assert(!daemonThread.isAlive)
