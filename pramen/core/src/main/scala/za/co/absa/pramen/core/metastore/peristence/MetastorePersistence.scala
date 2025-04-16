@@ -66,7 +66,7 @@ object MetastorePersistence {
       case DataFormat.Transient(cachePolicy) =>
         new MetastorePersistenceTransient(TransientTableManager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Null() =>
-        throw new UnsupportedOperationException(s"The metatable '${metaTable.name}' does not support writes.")
+        new MetastorePersistenceNull()
     }
   }
 }

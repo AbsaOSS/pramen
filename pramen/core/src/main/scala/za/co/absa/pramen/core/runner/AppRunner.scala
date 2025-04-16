@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
 import za.co.absa.pramen.core.exceptions.ValidationException
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
-import za.co.absa.pramen.core.pipeline.{Job, OperationDef, OperationSplitter, PipelineDef}
+import za.co.absa.pramen.core.pipeline.{Job, OperationDef, OperationSplitter, OperationType, PipelineDef}
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
@@ -67,6 +67,7 @@ object AppRunner {
       appContext <- createAppContext(conf, state, spark)
       taskRunner <- createTaskRunner(conf, state, appContext, spark.sparkContext.applicationId)
       pipeline   <- getPipelineDef(conf, state, appContext)
+      _          <- addSinkTables(state, pipeline, appContext)
       jobsOrig   <- splitJobs(conf, pipeline, state, appContext, spark)
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
       _          <- runStartupHook(state, appContext.appConfig.hookConfig)
@@ -182,6 +183,26 @@ object AppRunner {
     handleFailure(Try {
       PipelineDef.fromConfig(conf, appContext.appConfig.infoDateDefaults)
     }, state, "reading of the pipeline configuration")
+  }
+
+  private[core] def addSinkTables(implicit state: PipelineState, pipelineDef: PipelineDef, appContext: AppContext): Try[Unit] = {
+    handleFailure(Try {
+      val sinkTables = pipelineDef.operations.flatMap { op =>
+        op.operationType match {
+          case sink: OperationType.Sink =>
+            sink.sinkTables.map { sinkTable =>
+              sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->${sink.sinkName}")
+            }
+          case transfer: OperationType.Transfer =>
+            transfer.tables.map { table =>
+              table.jobMetaTableName
+            }
+          case _ =>
+            Seq.empty[String]
+        }
+      }
+      appContext.metastore.addSinkTables(sinkTables)
+    }, state, "adding sink ")
   }
 
   private[core] def splitJobs(implicit conf: Config,

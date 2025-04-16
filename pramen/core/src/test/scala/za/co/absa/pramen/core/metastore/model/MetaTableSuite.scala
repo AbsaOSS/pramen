@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.SaveMode
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat.Parquet
-import za.co.absa.pramen.api.{PartitionInfo, PartitionScheme}
+import za.co.absa.pramen.api.{DataFormat, PartitionInfo, PartitionScheme}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
@@ -386,6 +386,18 @@ class MetaTableSuite extends AnyWordSpec {
       }
 
       assert(ex.getMessage.contains("Invalid or unsupported save mode: 'test' for table 'table1'."))
+    }
+  }
+
+  "getNullTable" should {
+    "return a null table with the specified name" in {
+      val tableName = "my_table"
+      val metaTable = MetaTable.getNullTable(tableName)
+
+      assert(metaTable.name == tableName)
+      assert(metaTable.format == DataFormat.Null())
+      assert(metaTable.hiveTable.isEmpty)
+      assert(metaTable.hivePath.isEmpty)
     }
   }
 

@@ -32,6 +32,7 @@ import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManagerUtils}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
+import za.co.absa.pramen.core.pipeline.OperationDef
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 
@@ -39,7 +40,7 @@ import java.time.{Instant, LocalDate}
 import scala.collection.mutable.ListBuffer
 
 class MetastoreImpl(appConfig: Config,
-                    tableDefs: Seq[MetaTable],
+                    tableDefsIn: Seq[MetaTable],
                     bookkeeper: Bookkeeper,
                     metadata: MetadataManager,
                     batchId: Long,
@@ -50,6 +51,8 @@ class MetastoreImpl(appConfig: Config,
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val globalTrackingTables = new ListBuffer[TrackingTable]
+
+  private var tableDefs: Seq[MetaTable] = tableDefsIn
 
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
 
@@ -227,6 +230,20 @@ class MetastoreImpl(appConfig: Config,
 
   override def addTrackingTables(trackingTables: Seq[TrackingTable]): Unit = synchronized {
     globalTrackingTables ++= trackingTables
+  }
+
+  override def addSinkTables(sinkTables: Seq[String]): Unit = synchronized {
+    val existingTables = tableDefs.map(_.name.toLowerCase).toSet
+
+    val newMetaTables = sinkTables.map { table =>
+      if (existingTables.contains(table.toLowerCase)) {
+        throw new IllegalArgumentException(s"Table '$table' is already registered in the metastore. Can't use it in a sink.")
+      } else {
+        MetaTable.getNullTable(table)
+      }
+    }
+
+    tableDefs ++= newMetaTables
   }
 
   private[core] def prepareHiveSchema(schema: StructType, mt: MetaTable): StructType = {
