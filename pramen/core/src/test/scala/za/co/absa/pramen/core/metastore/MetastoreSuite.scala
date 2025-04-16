@@ -504,6 +504,33 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     }
   }
 
+  "addSinkTables" should {
+    "add new tables" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        m.addSinkTables(Seq("tableA", "tableB"))
+
+        val tables = m.getRegisteredTables
+
+        assert(tables.contains("tableA"))
+        assert(tables.contains("tableB"))
+      }
+    }
+
+    "throw an exception if a table already exists" in {
+      withTempDirectory("metastore_test") { tempDir =>
+        val (m, _) = getTestCase(tempDir)
+
+        val ex = intercept[RuntimeException] {
+          m.addSinkTables(Seq("table1"))
+        }
+
+        assert(ex.getMessage == "Table 'table1' is already registered in the metastore. Can't use it in a sink.")
+      }
+    }
+  }
+
   def getDf: DataFrame = {
     import spark.implicits._
 

@@ -181,6 +181,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
   override def addTrackingTables(trackingTables: Seq[TrackingTable]): Unit = {}
 
+  override def addSinkTables(sinkTables: Seq[String]): Unit = {}
+
   override def commitIncrementalTables(): Unit = {}
 
   override def rollbackIncrementalTables(): Unit = {}

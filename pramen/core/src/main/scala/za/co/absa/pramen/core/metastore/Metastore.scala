@@ -58,6 +58,8 @@ trait Metastore {
 
   def addTrackingTables(trackingTables: Seq[TrackingTable])
 
+  def addSinkTables(sinkTables: Seq[String]): Unit
+
   def commitIncrementalTables(): Unit
 
   def rollbackIncrementalTables(): Unit

@@ -192,6 +192,31 @@ object MetaTable {
       sparkConfig)
   }
 
+  def getNullTable(table: String): MetaTable = {
+    MetaTable(
+      name = table,
+      description = "",
+      format = DataFormat.Null(),
+      infoDateColumn = "",
+      infoDateFormat = "",
+      partitionScheme = PartitionScheme.NotPartitioned,
+      batchIdColumn = "",
+      hiveConfig = HiveConfig.getNullConfig,
+      hiveTable = None,
+      hivePath = None,
+      hivePreferAddPartition = false,
+      infoDateExpression = None,
+      infoDateStart = LocalDate.of(1970, 1, 1),
+      trackDays = 0,
+      trackDaysExplicitlySet = false,
+      saveModeOpt = None,
+      tableProperties = Map.empty,
+      readOptions = Map.empty,
+      writeOptions = Map.empty,
+      sparkConfig = Map.empty
+    )
+  }
+
   def getMetaTableDef(table: MetaTable): MetaTableDef = {
     MetaTableDef(
       table.name,

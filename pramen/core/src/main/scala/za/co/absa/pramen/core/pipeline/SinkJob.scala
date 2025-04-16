@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.jobdef.SinkTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
-import za.co.absa.pramen.api.{MetastoreReader, Reason, Sink}
+import za.co.absa.pramen.api.{DataFormat, MetastoreReader, Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental}
@@ -74,6 +74,7 @@ class SinkJob(operationDef: OperationDef,
 
     val readerMode = if (isIncremental) ReaderMode.IncrementalValidation else ReaderMode.Batch
     val metastoreReader = metastore.getMetastoreReader(List(sinkTable.metaTableName) ++ inputTables, outputTable.name, infoDate, runReason, readerMode)
+    val isInputTableNull = metastore.getTableDef(sinkTable.metaTableName).format == DataFormat.Null()
 
     val df = getDataDf(infoDate, metastoreReader)
 
@@ -87,7 +88,7 @@ class SinkJob(operationDef: OperationDef,
           Reason.NotReady(s"Not enough records to send. Got $inputRecordCount, expected at least $min records.")
         }
       case None      =>
-        if (inputRecordCount > 0) {
+        if (inputRecordCount > 0 || isInputTableNull) {
           Reason.Ready
         } else {
           Reason.Skip("No records to send")
