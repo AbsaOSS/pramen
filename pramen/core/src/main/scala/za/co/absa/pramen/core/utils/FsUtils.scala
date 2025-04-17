@@ -506,8 +506,18 @@ class FsUtils(conf: Configuration, pathBase: String) {
     */
   def deleteDirectoryRecursively(path: Path): Boolean = {
     if (fs.exists(path)) {
+      val isS3 = isObjectStorage(path)
       log.info(s"Deleting recursively '$path'...")
-      fs.delete(path, true)
+      val status = fs.delete(path, true)
+
+      if (isS3) {
+        val s3SpecialPath = new Path(path + "_$folder$")
+        if (fs.exists(s3SpecialPath)){
+          log.info(s"Deleting '$s3SpecialPath'...")
+          fs.delete(s3SpecialPath, false)
+        }
+      }
+      status
     } else {
       false
     }
