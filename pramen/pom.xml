@@ -108,7 +108,7 @@
         <!--        <delta.version>2.0.0</delta.version>-->
         <!--        <abris.version>5.1.1</abris.version>-->
 
-        <scala.version>2.12.19</scala.version>
+        <scala.version>2.12.20</scala.version>
         <scala.compat.version>2.12</scala.compat.version>
         <spark.version>3.2.4</spark.version>
         <hadoop.version>3.2.1</hadoop.version>
