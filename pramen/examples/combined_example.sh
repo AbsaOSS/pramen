@@ -3,7 +3,7 @@
 # Prerequisites:
 # 1. Download Spark 3.4.1 (Scala 2.12) and install it in /opt/spark/spark-3.4.1 or some other directory
 # 2. At repo_root/pramen, run
-#    sbt -DSPARK_VERSION="3.4.1" ++2.12.19 assembly
+#    sbt -DSPARK_VERSION="3.4.1" ++2.12.20 assembly
 # 3. Run
 #    ./examples/combined_example.sh
 
