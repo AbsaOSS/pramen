@@ -28,7 +28,8 @@ case class BookkeeperConfig(
                               bookkeepingDbName: Option[String],
                               bookkeepingJdbcConfig: Option[JdbcConfig],
                               deltaDatabase: Option[String],
-                              deltaTablePrefix: Option[String]
+                              deltaTablePrefix: Option[String],
+                              tempDirectory: Option[String]
                             )
 
 object BookkeeperConfig {
@@ -40,6 +41,7 @@ object BookkeeperConfig {
   val BOOKKEEPING_DB_NAME = "pramen.bookkeeping.mongodb.database"
   val BOOKKEEPING_DELTA_DB_NAME = "pramen.bookkeeping.delta.database"
   val BOOKKEEPING_DELTA_TABLE_PREFIX = "pramen.bookkeeping.delta.table.prefix"
+  val BOOKKEEPING_TEMPORARY_DIRECTORY_KEY = "pramen.temporary.directory"
 
   def fromConfig(conf: Config): BookkeeperConfig = {
     val bookkeepingEnabled = conf.getBoolean(BOOKKEEPING_ENABLED)
@@ -48,6 +50,7 @@ object BookkeeperConfig {
     val bookkeepingConnectionString = ConfigUtils.getOptionString(conf, BOOKKEEPING_CONNECTION_STRING)
     val bookkeepingDbName = ConfigUtils.getOptionString(conf, BOOKKEEPING_DB_NAME)
     val bookkeepingJdbcConfig = JdbcConfig.loadOption(conf.getConfig(BOOKKEEPING_PARENT), BOOKKEEPING_PARENT)
+    val temporaryDirectory = ConfigUtils.getOptionString(conf, BOOKKEEPING_TEMPORARY_DIRECTORY_KEY)
     val deltaDatabase = ConfigUtils.getOptionString(conf, BOOKKEEPING_DELTA_DB_NAME)
     val deltaTablePrefix = ConfigUtils.getOptionString(conf, BOOKKEEPING_DELTA_TABLE_PREFIX)
 
@@ -75,7 +78,8 @@ object BookkeeperConfig {
       bookkeepingDbName,
       bookkeepingJdbcConfig,
       deltaDatabase,
-      deltaTablePrefix
+      deltaTablePrefix,
+      temporaryDirectory
     )
   }
 }

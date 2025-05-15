@@ -101,6 +101,10 @@ object Bookkeeper {
             }
         }
       }
+    } else if (runtimeConfig.useLocks && bookkeepingConfig.tempDirectory.isDefined) {
+      val path = bookkeepingConfig.tempDirectory.get
+      log.info(s"Using HadoopFS for lock management at $path/locks")
+      new TokenLockFactoryHadoopPath(spark.sparkContext.hadoopConfiguration, path + "/locks")
     } else {
       log.warn(s"Locking is DISABLED.")
       new TokenLockFactoryAllow

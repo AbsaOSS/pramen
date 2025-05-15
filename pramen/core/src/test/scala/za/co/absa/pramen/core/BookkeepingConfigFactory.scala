@@ -27,7 +27,8 @@ object BookkeepingConfigFactory {
                                 bookkeepingDbName: Option[String] = None,
                                 bookkeepingJdbcConfig: Option[JdbcConfig] = None,
                                 deltaDatabase: Option[String] = None,
-                                deltaTablePrefix: Option[String] = None): BookkeeperConfig = {
+                                deltaTablePrefix: Option[String] = None,
+                                temporaryDirectory: Option[String] = None): BookkeeperConfig = {
     BookkeeperConfig(
       bookkeepingEnabled,
       bookkeepingLocation,
@@ -36,7 +37,8 @@ object BookkeepingConfigFactory {
       bookkeepingDbName,
       bookkeepingJdbcConfig,
       deltaDatabase,
-      deltaTablePrefix
+      deltaTablePrefix,
+      temporaryDirectory
     )
   }
 
