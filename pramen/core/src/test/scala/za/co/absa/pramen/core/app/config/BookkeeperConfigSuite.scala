@@ -35,6 +35,7 @@ class BookkeeperConfigSuite extends AnyWordSpec {
       val bookkeeperConfig = BookkeeperConfig.fromConfig(config)
 
       assert(!bookkeeperConfig.bookkeepingEnabled)
+      assert(bookkeeperConfig.tempDirectory.isEmpty)
     }
 
     "deserialize the config properly for JDBC" in {
@@ -90,6 +91,7 @@ class BookkeeperConfigSuite extends AnyWordSpec {
            |  bookkeeping.enabled = true
            |  bookkeeping.location = "hdfs://dummy_path"
            |  bookkeeping.hadoop.format = "delta"
+           |  temporary.directory = "/dummy/dir"
            |}
            |""".stripMargin
 
@@ -102,6 +104,8 @@ class BookkeeperConfigSuite extends AnyWordSpec {
       assert(bookkeeperConfig.bookkeepingEnabled)
       assert(bookkeeperConfig.bookkeepingLocation.contains("hdfs://dummy_path"))
       assert(bookkeeperConfig.bookkeepingHadoopFormat == HadoopFormat.Delta)
+      assert(bookkeeperConfig.tempDirectory.isDefined)
+      assert(bookkeeperConfig.tempDirectory.contains("/dummy/dir"))
     }
 
     "deserialize the config properly for Hadoop Delta Table" in {
