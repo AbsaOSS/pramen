@@ -114,6 +114,7 @@ class BookkeeperConfigSuite extends AnyWordSpec {
            |  bookkeeping.enabled = true
            |  bookkeeping.hadoop.format = "delta"
            |  bookkeeping.delta.table.prefix = "tbl_"
+           |  temporary.directory = "/dummy/dir"
            |}
            |""".stripMargin
 
@@ -127,6 +128,7 @@ class BookkeeperConfigSuite extends AnyWordSpec {
       assert(bookkeeperConfig.bookkeepingLocation.isEmpty)
       assert(bookkeeperConfig.bookkeepingHadoopFormat == HadoopFormat.Delta)
       assert(bookkeeperConfig.deltaTablePrefix.contains("tbl_"))
+      assert(bookkeeperConfig.tempDirectory.contains("/dummy/dir"))
     }
 
     "deserialize the config properly for MongoDB" in {
