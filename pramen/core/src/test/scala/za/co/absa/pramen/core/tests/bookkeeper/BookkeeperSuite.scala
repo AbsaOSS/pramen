@@ -167,7 +167,7 @@ class BookkeeperSuite extends AnyWordSpec
         val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
           bookkeepingEnabled = true,
           deltaDatabase = None,
-          deltaTablePrefix = Some("my_tbl1"),
+          deltaTablePrefix = Some("my_tbl2"),
           bookkeepingLocation = Some(tempDir),
           bookkeepingHadoopFormat = HadoopFormat.Delta
         )
@@ -193,7 +193,7 @@ class BookkeeperSuite extends AnyWordSpec
         val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
           bookkeepingEnabled = true,
           deltaDatabase = None,
-          deltaTablePrefix = Some("my_tbl2"),
+          deltaTablePrefix = Some("my_tbl3"),
           temporaryDirectory = Some(tempDir),
           bookkeepingHadoopFormat = HadoopFormat.Delta
         )
