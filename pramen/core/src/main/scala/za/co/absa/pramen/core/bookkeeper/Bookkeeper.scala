@@ -91,7 +91,7 @@ object Bookkeeper {
             log.info(s"Using MongoDB for lock management.")
             new TokenLockFactoryMongoDb(connection)
           case None =>
-            val path = bookkeepingConfig.bookkeepingLocation.orElse(bookkeepingConfig.tempDirectory)
+            val path = bookkeepingConfig.bookkeepingLocation.orElse(bookkeepingConfig.temporaryDirectory)
             path match {
               case Some(path) =>
                 log.info(s"Using HadoopFS for lock management at $path/locks")
