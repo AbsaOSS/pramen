@@ -21,15 +21,15 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class BookkeeperConfig(
-                              bookkeepingEnabled: Boolean,
-                              bookkeepingLocation: Option[String],
-                              bookkeepingHadoopFormat: HadoopFormat,
-                              bookkeepingConnectionString: Option[String],
-                              bookkeepingDbName: Option[String],
-                              bookkeepingJdbcConfig: Option[JdbcConfig],
-                              deltaDatabase: Option[String],
-                              deltaTablePrefix: Option[String],
-                              tempDirectory: Option[String]
+                             bookkeepingEnabled: Boolean,
+                             bookkeepingLocation: Option[String],
+                             bookkeepingHadoopFormat: HadoopFormat,
+                             bookkeepingConnectionString: Option[String],
+                             bookkeepingDbName: Option[String],
+                             bookkeepingJdbcConfig: Option[JdbcConfig],
+                             deltaDatabase: Option[String],
+                             deltaTablePrefix: Option[String],
+                             temporaryDirectory: Option[String]
                             )
 
 object BookkeeperConfig {
