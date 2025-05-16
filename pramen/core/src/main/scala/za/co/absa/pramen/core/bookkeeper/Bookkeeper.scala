@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
+import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
@@ -94,8 +95,9 @@ object Bookkeeper {
             val path = bookkeepingConfig.bookkeepingLocation.orElse(bookkeepingConfig.temporaryDirectory)
             path match {
               case Some(path) =>
-                log.info(s"Using HadoopFS for lock management at $path/locks")
-                new TokenLockFactoryHadoopPath(spark.sparkContext.hadoopConfiguration, path + "/locks")
+                val lockPath = new Path(path, "locks")
+                log.info(s"Using HadoopFS for lock management at $lockPath")
+                new TokenLockFactoryHadoopPath(spark.sparkContext.hadoopConfiguration, lockPath.toString)
               case None =>
                 log.warn(s"Locking is DISABLED.")
                 new TokenLockFactoryAllow
