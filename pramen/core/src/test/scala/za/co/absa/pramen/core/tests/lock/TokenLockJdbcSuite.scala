@@ -76,7 +76,7 @@ class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with Befor
 
     "lock pramen should constantly update lock ticket" in {
       val lock1 = new TokenLockJdbc("token1", pramenDb.slickDb) {
-        override val TOKEN_EXPIRES_SECONDS = 2L
+        override val tokenExpiresSeconds = 2L
       }
       val lock2 = new TokenLockJdbc("token1", pramenDb.slickDb)
       assert(lock1.tryAcquire())
@@ -91,5 +91,4 @@ class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with Befor
   private def getLock(token: String): TokenLock = {
     new TokenLockJdbc(token, pramenDb.slickDb)
   }
-
 }
