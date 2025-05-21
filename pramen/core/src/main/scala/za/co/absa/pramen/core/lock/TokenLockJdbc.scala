@@ -19,63 +19,21 @@ package za.co.absa.pramen.core.lock
 import org.slf4j.LoggerFactory
 import slick.jdbc.H2Profile.api._
 import za.co.absa.pramen.core.lock.model.{LockTicket, LockTickets}
-import za.co.absa.pramen.core.utils.{JvmUtils, SlickUtils, StringUtils}
+import za.co.absa.pramen.core.utils.SlickUtils
 
 import java.sql.SQLIntegrityConstraintViolationException
 import java.time.Instant
 import scala.util.control.NonFatal
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
-class TokenLockJdbc(token: String, db: Database) extends TokenLock {
+class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
-  protected val TOKEN_EXPIRES_SECONDS: Long = 10L * 60L
-
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val escapedToken = StringUtils.escapeNonAlphanumerics(token)
-
-  // State
-  private val owner: String = JvmUtils.jvmName + "_" + Random.nextInt().toString
-  private var lockAcquired = false
-
-  private val shutdownHook = new Thread() {
-    override def run(): Unit = {
-      if (lockAcquired) {
-        releaseGuardLock(owner)
-      }
-    }
-  }
-
-  override def tryAcquire(): Boolean = synchronized {
-    if (lockAcquired) {
-      false
-    } else {
-      if (tryAcquireGuardLock()) {
-        lockAcquired = true
-        Runtime.getRuntime.addShutdownHook(shutdownHook)
-        startWatcherThread()
-        log.info(s"Lock '$token' lock acquired: '$escapedToken'.")
-        true
-      } else {
-        log.warn(s"Lock '$token' is acquired by another job.")
-        false
-      }
-    }
-  }
-
-  override def release(): Unit = synchronized {
-    if (lockAcquired) {
-      lockAcquired = false
-      releaseGuardLock(owner)
-      JvmUtils.safeRemoveShutdownHook(shutdownHook)
-      log.info(s"Lock released: '$escapedToken'.")
-    }
-  }
 
   override def close(): Unit = {}
 
-  private def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = synchronized {
-
+  override def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = synchronized {
     def tryAcquireExistingTicket(): Boolean = {
       val ticket = getTicket
 
@@ -117,14 +75,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLock {
     }
   }
 
-  private def getTicket: Option[LockTicket] = {
-    val ticket = SlickUtils.executeQuery(db,
-      LockTickets.lockTickets
-      .filter(_.token === escapedToken))
-    ticket.headOption
-  }
-
-  private def releaseGuardLock(owner: String): Unit = synchronized {
+  override def releaseGuardLock(owner: String): Unit = synchronized {
     try {
       db.run(LockTickets.lockTickets
         .filter(ticket => ticket.token === escapedToken && ticket.owner === owner)
@@ -135,22 +86,16 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLock {
     }
   }
 
-  private def acquireGuardLock(): Unit = synchronized {
-    db.run(DBIO.seq(
-      LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket)
-    )).execute()
-  }
-
-  private def updateTicket(): Unit = {
+  override def updateTicket(): Unit = {
     val newTicket = getNewTicket
 
     try {
       log.debug(s"Update $escapedToken to $newTicket")
 
       db.run(LockTickets.lockTickets
-        .filter(_.token === escapedToken)
-        .map(_.expires)
-        .update(newTicket))
+          .filter(_.token === escapedToken)
+          .map(_.expires)
+          .update(newTicket))
         .execute()
 
     } catch {
@@ -158,39 +103,16 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLock {
     }
   }
 
-  private def getNewTicket: Long = {
-    val now = Instant.now.getEpochSecond
-    now + TOKEN_EXPIRES_SECONDS
+  private def getTicket: Option[LockTicket] = {
+    val ticket = SlickUtils.executeQuery(db,
+      LockTickets.lockTickets
+        .filter(_.token === escapedToken))
+    ticket.headOption
   }
 
-
-  private def isAcquired: Boolean = synchronized {
-    lockAcquired
-  }
-
-
-  private def startWatcherThread(): Thread = {
-    val thread = new Thread {
-      override def run(): Unit = {
-        lockWatcher()
-      }
-    }
-    thread.start()
-    thread
-  }
-
-  private def lockWatcher(): Unit = {
-    var lastUpdateTime = Instant.now
-    while (isAcquired) {
-      Thread.sleep(1000)
-      if (Instant.now().isAfter(lastUpdateTime.plusMillis((TOKEN_EXPIRES_SECONDS * 1000) / 5))) {
-        this.synchronized {
-          if (isAcquired) {
-            updateTicket()
-            lastUpdateTime = Instant.now
-          }
-        }
-      }
-    }
+  private def acquireGuardLock(): Unit = synchronized {
+    db.run(DBIO.seq(
+      LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket)
+    )).execute()
   }
 }
