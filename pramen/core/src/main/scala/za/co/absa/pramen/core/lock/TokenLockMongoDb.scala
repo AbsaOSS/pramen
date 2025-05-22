@@ -41,63 +41,20 @@ object TokenLockMongoDb {
 }
 
 class TokenLockMongoDb(token: String,
-                       mongoDbConnection: MongoDbConnection) extends TokenLock {
+                       mongoDbConnection: MongoDbConnection) extends TokenLockBase(token) {
 
   import ScalaMongoImplicits._
   import TokenLockMongoDb._
 
-  protected val TOKEN_EXPIRES_SECONDS: Long = 10L * 60L
-
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val escapedToken = StringUtils.escapeNonAlphanumerics(token)
 
   // MongoDB
   private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[LockTicket]), DEFAULT_CODEC_REGISTRY)
   private val db = mongoDbConnection.getDatabase
 
-  // State
-  private val owner: String = JvmUtils.jvmName + "_" + Random.nextInt().toString
-  private var lockAcquired = false
-
   initCollection()
 
-  private val shutdownHook = new Thread() {
-    override def run(): Unit = {
-      if (lockAcquired) {
-        releaseGuardLock()
-      }
-    }
-  }
-
-  override def tryAcquire(): Boolean = synchronized {
-    if (lockAcquired) {
-      false
-    } else {
-      if (tryAcquireGuardLock()) {
-        lockAcquired = true
-        Runtime.getRuntime.addShutdownHook(shutdownHook)
-        startWatcherThread()
-        log.info(s"Lock '$token' lock acquired: '$escapedToken'.")
-        true
-      } else {
-        log.warn(s"Lock '$token' is acquired by another job.")
-        false
-      }
-    }
-  }
-
-  override def release(): Unit = synchronized {
-    if (lockAcquired) {
-      lockAcquired = false
-      releaseGuardLock()
-      JvmUtils.safeRemoveShutdownHook(shutdownHook)
-      log.info(s"Lock released: '$escapedToken'.")
-    }
-  }
-
-  override def close(): Unit = {}
-
-  private def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = synchronized {
+  override def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean = {
     val c = getCollection
 
     def tryAcquireExistingTicket(): Boolean = {
@@ -111,7 +68,7 @@ class TokenLockMongoDb(token: String,
         val now = Instant.now().getEpochSecond
         if (expires < now) {
           log.warn(s"Taking over expired ticket $escapedToken ($expires < $now)")
-          releaseGuardLock()
+          releaseGuardLock(owner)
           tryAcquireGuardLock(retries - 1, thisTry + 1)
           true
         } else {
@@ -137,7 +94,7 @@ class TokenLockMongoDb(token: String,
     }
   }
 
-  private def releaseGuardLock(): Unit = synchronized {
+  override def releaseGuardLock(owner: String): Unit = {
     try {
       val c = getCollection
       log.debug(s"Delete token $escapedToken")
@@ -148,8 +105,17 @@ class TokenLockMongoDb(token: String,
     }
   }
 
-  private def isAcquired: Boolean = synchronized {
-    lockAcquired
+  override def updateTicket(): Unit = {
+    val newTicket = getNewTicket
+
+    try {
+      log.debug(s"Update $escapedToken to $newTicket")
+      val c = getCollection
+      c.updateOne(getFilter,
+        Updates.set("expires", newTicket)).execute()
+    } catch {
+      case NonFatal(ex) => log.error(s"An error occurred when trying to update the lock: $escapedToken.", ex)
+    }
   }
 
   private def initCollection(): Unit = synchronized {
@@ -164,52 +130,8 @@ class TokenLockMongoDb(token: String,
     }
   }
 
-  private def startWatcherThread(): Thread = {
-    val thread = new Thread {
-      override def run(): Unit = {
-        lockWatcher()
-      }
-    }
-    thread.start()
-    thread
-  }
-
-  private def lockWatcher(): Unit = {
-    var lastUpdateTime = Instant.now
-    while (isAcquired) {
-      Thread.sleep(1000)
-      if (Instant.now().isAfter(lastUpdateTime.plusMillis((TOKEN_EXPIRES_SECONDS * 1000) / 5))) {
-        this.synchronized {
-          if (isAcquired) {
-            updateTicket()
-            lastUpdateTime = Instant.now
-          }
-        }
-      }
-    }
-  }
-
-  private def updateTicket(): Unit = {
-    val newTicket = getNewTicket
-
-    try {
-      log.debug(s"Update $escapedToken to $newTicket")
-      val c = getCollection
-      c.updateOne(getFilter,
-        Updates.set("expires", newTicket)).execute()
-    } catch {
-      case NonFatal(ex) => log.error(s"An error occurred when trying to update the lock: $escapedToken.", ex)
-    }
-  }
-
-  private def getNewTicket: Long = {
-    val now = Instant.now.getEpochSecond
-    now + TOKEN_EXPIRES_SECONDS
-  }
-
   private def getCollection: MongoCollection[LockTicket] =
     db.getCollection[LockTicket](collectionName).withCodecRegistry(codecRegistry)
 
   private def getFilter: Bson = Filters.eq("token", escapedToken)
-
 }
