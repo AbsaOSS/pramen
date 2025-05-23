@@ -68,7 +68,7 @@ class TokenLockMongoDb(token: String,
         val now = Instant.now().getEpochSecond
         if (expires < now) {
           log.warn(s"Taking over expired ticket $escapedToken ($expires < $now)")
-          releaseGuardLock(owner)
+          releaseGuardLock()
           tryAcquireGuardLock(retries - 1, thisTry + 1)
           true
         } else {
@@ -94,7 +94,7 @@ class TokenLockMongoDb(token: String,
     }
   }
 
-  override def releaseGuardLock(owner: String): Unit = {
+  override def releaseGuardLock(): Unit = {
     try {
       val c = getCollection
       log.debug(s"Delete token $escapedToken")

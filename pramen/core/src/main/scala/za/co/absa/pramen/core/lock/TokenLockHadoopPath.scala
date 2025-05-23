@@ -34,7 +34,7 @@ class TokenLockHadoopPath(token: String,
     fsUtils.isFileGuardOwned(fileGuard.get, tokenExpiresSeconds)
   }
 
-  override def releaseGuardLock(owner: String): Unit = {
+  override def releaseGuardLock(): Unit = {
     if (fileGuard.isDefined) {
       fsUtils.deleteFile(fileGuard.get)
       fileGuard = None

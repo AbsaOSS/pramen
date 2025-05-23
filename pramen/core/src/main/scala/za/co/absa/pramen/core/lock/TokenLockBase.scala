@@ -38,7 +38,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
 
   def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean
 
-  def releaseGuardLock(owner: String): Unit
+  def releaseGuardLock(): Unit
 
   def updateTicket(): Unit
 
@@ -62,7 +62,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
   override def release(): Unit = synchronized {
     if (lockAcquired) {
       lockAcquired = false
-      releaseGuardLock(owner)
+      releaseGuardLock()
       JvmUtils.safeRemoveShutdownHook(shutdownHook)
       log.info(s"Lock released: '$escapedToken'.")
     }
@@ -82,7 +82,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
   private val shutdownHook = new Thread() {
     override def run(): Unit = {
       if (lockAcquired) {
-        releaseGuardLock(owner)
+        releaseGuardLock()
       }
     }
   }

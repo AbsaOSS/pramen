@@ -45,9 +45,8 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
         val now = Instant.now().getEpochSecond
         if (expires < now) {
           log.warn(s"Taking over expired ticket $escapedToken ($expires < $now)")
-          releaseGuardLock(ticket.get.owner)
+          releaseGuardLock()
           tryAcquireGuardLock(retries - 1, thisTry + 1)
-          true
         } else {
           false
         }
@@ -75,7 +74,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
     }
   }
 
-  override def releaseGuardLock(owner: String): Unit = synchronized {
+  override def releaseGuardLock(): Unit = synchronized {
     try {
       db.run(LockTickets.lockTickets
         .filter(ticket => ticket.token === escapedToken && ticket.owner === owner)
