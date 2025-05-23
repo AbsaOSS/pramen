@@ -18,105 +18,32 @@ package za.co.absa.pramen.core.lock
 
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
-import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.utils.{FsUtils, JvmUtils, StringUtils}
-
-import java.time.Instant
+import za.co.absa.pramen.core.utils.FsUtils
 
 class TokenLockHadoopPath(token: String,
                           hadoopConf: Configuration,
-                          locksPath: String,
-                          tokenExpireTimeSeconds: Long = 10L * 60L) extends TokenLock {
-  // Dependencies
-  private val log = LoggerFactory.getLogger(this.getClass)
+                          locksPath: String) extends TokenLockBase(token) {
   private val fsUtils = new FsUtils(hadoopConf, locksPath)
-
-  // Configuration
   private var fileGuard: Option[Path] = None
-  private val escapedToken = StringUtils.escapeNonAlphanumerics(token)
-
-  // State
-  private var lockAcquired = false
 
   init()
 
-  override def tryAcquire(): Boolean = synchronized {
-    if (lockAcquired) {
-      false
-    } else {
-      if (tryAcquireGuardLock(escapedToken)) {
-        lockAcquired = true
-        Runtime.getRuntime.addShutdownHook(shutdownHook)
-        log.info(s"Lock '$token' lock acquired: '$fileGuard'.")
-        true
-      } else {
-        log.warn(s"Lock '$token' is acquired by another job.")
-        false
-      }
-    }
+  override def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean = {
+    fileGuard = Some(new Path(locksPath, s"$token.lock"))
+
+    fsUtils.isFileGuardOwned(fileGuard.get, tokenExpiresSeconds)
   }
 
-  override def release(): Unit = synchronized {
-    if (lockAcquired) {
-      lockAcquired = false
-      releaseGuardLock()
-      JvmUtils.safeRemoveShutdownHook(shutdownHook)
-      log.info(s"Lock released: '${fileGuard.get}'.")
+  override def releaseGuardLock(owner: String): Unit = {
+    if (fileGuard.isDefined) {
+      fsUtils.deleteFile(fileGuard.get)
       fileGuard = None
     }
   }
 
-  override def close(): Unit = {}
-
-  private val shutdownHook = new Thread() {
-    override def run(): Unit = {
-      if (lockAcquired) {
-        releaseGuardLock()
-      }
-    }
-  }
-
-  private def tryAcquireGuardLock(token: String): Boolean = synchronized {
-    fileGuard = Some(new Path(locksPath, s"$token.lock"))
-
-    if (fsUtils.isFileGuardOwned(fileGuard.get, tokenExpireTimeSeconds)) {
-      startWatcherThread()
-      true
-    } else {
-      false
-    }
-  }
-
-  private def releaseGuardLock(): Unit = synchronized {
-    fsUtils.deleteFile(fileGuard.get)
-  }
-
-  private def isAcquired: Boolean = synchronized {
-    lockAcquired
-  }
-
-  private def startWatcherThread(): Thread = {
-    val thread = new Thread {
-      override def run(): Unit = {
-        lockWatcher()
-      }
-    }
-    thread.start()
-    thread
-  }
-
-  private def lockWatcher(): Unit = {
-    var lastUpdateTime = Instant.now
-    while (isAcquired) {
-      Thread.sleep(1000)
-      if (Instant.now().isAfter(lastUpdateTime.plusMillis((tokenExpireTimeSeconds * 1000) / 5))) {
-        this.synchronized {
-          if (isAcquired && fileGuard.isDefined) {
-            fsUtils.updateFileGuard(fileGuard.get, tokenExpireTimeSeconds)
-            lastUpdateTime = Instant.now
-          }
-        }
-      }
+  override def updateTicket(): Unit = {
+    if (fileGuard.isDefined) {
+      fsUtils.updateFileGuard(fileGuard.get, tokenExpiresSeconds)
     }
   }
 

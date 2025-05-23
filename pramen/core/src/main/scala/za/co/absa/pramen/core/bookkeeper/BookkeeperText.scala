@@ -118,8 +118,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
   private def getLock: TokenLockHadoopPath = {
     val lock = new TokenLockHadoopPath("bookkeeping",
       spark.sparkContext.hadoopConfiguration,
-      locksPath.toUri.toString,
-      30L)
+      locksPath.toUri.toString)
 
     while (!lock.tryAcquire()) {
       val randomWait = Random.nextInt(1000) + 1000
