@@ -349,14 +349,14 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * If the specified file is present and the expiration time is not reached a new
     * instance of the application won't be allowed to run.
     *
-    * If the guard ticket is expired a new ticket is created and the application is allowed to run.
+    * If the guard ticket is expired, a new ticket is created and the application is allowed to run.
     *
-    * If the guard file does not exist, the application created that file and puts the expiration time there,
+    * If the guard file does not exist, the application creates that file and puts the expiration time there,
     * effectively claiming the guard lock.
     *
     * @param filePath      a file name on HDFS to use as a guard lock.
     * @param expireSeconds The number of seconds before the lock is expired.
-    * @return true if the file already exists
+    * @return true if successfully acquired ownership of the guard file.
     */
   def isFileGuardOwned(filePath: Path, expireSeconds: Long): Boolean = {
     def createFileGuard(): Boolean = {
