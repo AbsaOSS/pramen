@@ -40,7 +40,7 @@ class TokenLockHadoopPath(token: String,
 
   override def releaseGuardLock(): Unit = {
     fileGuardOpt.foreach { fileGuard =>
-      fsUtils.deleteFile(fileGuardOpt.get)
+      fsUtils.deleteFile(fileGuard)
       fileGuardOpt = None
     }
   }
