@@ -24,26 +24,30 @@ class TokenLockHadoopPath(token: String,
                           hadoopConf: Configuration,
                           locksPath: String) extends TokenLockBase(token) {
   private val fsUtils = new FsUtils(hadoopConf, locksPath)
-  private var fileGuard: Option[Path] = None
+  private var fileGuardOpt: Option[Path] = None
 
   init()
 
   override def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean = {
-    fileGuard = Some(new Path(locksPath, s"$token.lock"))
+    val fileGuard = new Path(locksPath, s"$token.lock")
 
-    fsUtils.isFileGuardOwned(fileGuard.get, tokenExpiresSeconds)
+    val lockAcquired = fsUtils.isFileGuardOwned(fileGuard, tokenExpiresSeconds)
+    if (lockAcquired) {
+      fileGuardOpt = Some(fileGuard)
+    }
+    lockAcquired
   }
 
   override def releaseGuardLock(): Unit = {
-    if (fileGuard.isDefined) {
-      fsUtils.deleteFile(fileGuard.get)
-      fileGuard = None
+    fileGuardOpt.foreach { fileGuard =>
+      fsUtils.deleteFile(fileGuardOpt.get)
+      fileGuardOpt = None
     }
   }
 
   override def updateTicket(): Unit = {
-    if (fileGuard.isDefined) {
-      fsUtils.updateFileGuard(fileGuard.get, tokenExpiresSeconds)
+    fileGuardOpt.foreach { fileGuard =>
+      fsUtils.updateFileGuard(fileGuard, tokenExpiresSeconds)
     }
   }
 

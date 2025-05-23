@@ -42,6 +42,16 @@ abstract class TokenLockBase(token: String) extends TokenLock {
 
   def updateTicket(): Unit
 
+  /**
+    * Attempts to acquire the lock for a specific token. If the lock is already acquired,
+    * the method returns false. Otherwise, it tries to acquire the guard lock with a specified
+    * number of retries, logs the acquisition, initializes the necessary resources, and returns true
+    * if successful.
+    *
+    * This operation is thread-safe.
+    *
+    * @return true if the lock is successfully acquired; false if the lock is already held by this or another job.
+    */
   override def tryAcquire(): Boolean = synchronized {
     if (lockAcquired) {
       false
