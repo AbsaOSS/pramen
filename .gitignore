@@ -29,9 +29,9 @@ build.log
 sbt.json
 
 # output not in target directory
-build.log
 .cache*
 dependency-reduced-pom.xml
+spark-warehouse
 
 # Environment-specific configuration
 application.conf

@@ -67,7 +67,9 @@ class TokenLockHadoopPathSuite extends AnyWordSpec with SparkTestBase with TempD
 
     "lock pramen should constantly update lock ticket" ignore {
       withTempDirectory("simpleLock") { tempDir =>
-        val lock1 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir, 3L)
+        val lock1 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir) {
+          override val tokenExpiresSeconds: Long = 3L
+        }
         val lock2 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir)
         assert(lock1.tryAcquire())
         Thread.sleep(4000)

@@ -23,7 +23,6 @@ import za.co.absa.pramen.core.lock.TokenLockMongoDb
 import za.co.absa.pramen.core.lock.TokenLockMongoDb.collectionName
 
 class TokenLockMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAndAfter {
-
   before {
     if (db != null) {
       if (db.doesCollectionExists(collectionName)) {
@@ -32,61 +31,59 @@ class TokenLockMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeA
     }
   }
 
+  "Token Lock" should {
+    "be able to acquire and release locks" in {
+      assume(db != null)
 
-  if (db != null) {
-    "Token Lock" should {
-      "be able to acquire and release locks" in {
-        val lock1 = new TokenLockMongoDb("token1", connection)
+      val lock1 = new TokenLockMongoDb("token1", connection)
 
-        assert(lock1.tryAcquire())
-        assert(!lock1.tryAcquire())
+      assert(lock1.tryAcquire())
+      assert(!lock1.tryAcquire())
 
-        val lock2 = new TokenLockMongoDb("token1", connection)
-        assert(!lock2.tryAcquire())
+      val lock2 = new TokenLockMongoDb("token1", connection)
+      assert(!lock2.tryAcquire())
 
-        lock1.release()
+      lock1.release()
 
-        assert(lock2.tryAcquire())
-        assert(!lock2.tryAcquire())
+      assert(lock2.tryAcquire())
+      assert(!lock2.tryAcquire())
 
-        lock2.release()
-      }
-
-      "multiple token locks should not affect each other" in {
-        val lock1 = new TokenLockMongoDb("token1", connection)
-        val lock2 = new TokenLockMongoDb("token2", connection)
-
-        assert(lock1.tryAcquire())
-        assert(lock2.tryAcquire())
-
-        assert(!lock1.tryAcquire())
-        assert(!lock2.tryAcquire())
-
-        lock1.release()
-
-        assert(lock1.tryAcquire())
-        assert(!lock2.tryAcquire())
-
-        lock1.release()
-        lock2.release()
-      }
-
-      "lock pramen should constantly update lock ticket" in {
-        val lock1 = new TokenLockMongoDb("token1", connection) {
-          override val TOKEN_EXPIRES_SECONDS = 3L
-        }
-        val lock2 = new TokenLockMongoDb("token1", connection)
-        assert(lock1.tryAcquire())
-        Thread.sleep(4000)
-        assert(!lock2.tryAcquire())
-        assert(!lock1.tryAcquire())
-        lock1.release()
-      }
+      lock2.release()
     }
-  } else {
-    "Token Lock" ignore {
-      // Skip incompatible platform
+
+    "multiple token locks should not affect each other" in {
+      assume(db != null)
+
+      val lock1 = new TokenLockMongoDb("token1", connection)
+      val lock2 = new TokenLockMongoDb("token2", connection)
+
+      assert(lock1.tryAcquire())
+      assert(lock2.tryAcquire())
+
+      assert(!lock1.tryAcquire())
+      assert(!lock2.tryAcquire())
+
+      lock1.release()
+
+      assert(lock1.tryAcquire())
+      assert(!lock2.tryAcquire())
+
+      lock1.release()
+      lock2.release()
+    }
+
+    "lock pramen should constantly update lock ticket" in {
+      assume(db != null)
+
+      val lock1 = new TokenLockMongoDb("token1", connection) {
+        override val tokenExpiresSeconds = 3L
+      }
+      val lock2 = new TokenLockMongoDb("token1", connection)
+      assert(lock1.tryAcquire())
+      Thread.sleep(4000)
+      assert(!lock2.tryAcquire())
+      assert(!lock1.tryAcquire())
+      lock1.release()
     }
   }
-
 }
