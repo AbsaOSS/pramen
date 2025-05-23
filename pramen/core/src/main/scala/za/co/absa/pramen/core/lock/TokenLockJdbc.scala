@@ -31,8 +31,6 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  override def close(): Unit = {}
-
   override def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = synchronized {
     def tryAcquireExistingTicket(): Boolean = {
       val ticket = getTicket

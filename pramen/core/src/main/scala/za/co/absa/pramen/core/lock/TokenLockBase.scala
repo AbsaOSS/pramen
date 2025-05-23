@@ -78,7 +78,9 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     }
   }
 
-  override def close(): Unit = {}
+  override def close(): Unit = {
+    release()
+  }
 
   protected def isAcquired: Boolean = synchronized {
     lockAcquired
@@ -98,11 +100,12 @@ abstract class TokenLockBase(token: String) extends TokenLock {
   }
 
   private def startWatcherThread(): Thread = {
-    val thread = new Thread {
+    val thread = new Thread(s"TokenLockWatcher-$escapedToken") {
       override def run(): Unit = {
         lockWatcher()
       }
     }
+    thread.setDaemon(true)
     thread.start()
     thread
   }
@@ -110,7 +113,13 @@ abstract class TokenLockBase(token: String) extends TokenLock {
   private def lockWatcher(): Unit = {
     var lastUpdateTime = Instant.now
     while (isAcquired) {
-      Thread.sleep(1000)
+      try {
+        Thread.sleep(1000)
+      } catch {
+        case _: InterruptedException =>
+          Thread.currentThread().interrupt()
+          return
+      }
       if (Instant.now().isAfter(lastUpdateTime.plusMillis((tokenExpiresSeconds * 1000) / 5))) {
         this.synchronized {
           if (isAcquired) {

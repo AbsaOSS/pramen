@@ -29,7 +29,7 @@ class TokenLockHadoopPath(token: String,
   init()
 
   override def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean = {
-    val fileGuard = new Path(locksPath, s"$token.lock")
+    val fileGuard = new Path(locksPath, s"$escapedToken.lock")
 
     val lockAcquired = fsUtils.isFileGuardOwned(fileGuard, tokenExpiresSeconds)
     if (lockAcquired) {
