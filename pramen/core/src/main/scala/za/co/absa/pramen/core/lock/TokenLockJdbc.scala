@@ -31,7 +31,8 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  override def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = synchronized {
+  /** Invoked from a synchronized block. */
+  override def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = {
     def tryAcquireExistingTicket(): Boolean = {
       val ticket = getTicket
 
@@ -72,7 +73,8 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
     }
   }
 
-  override def releaseGuardLock(): Unit = synchronized {
+  /** Invoked from a synchronized block. */
+  override def releaseGuardLock(): Unit = {
     try {
       db.run(LockTickets.lockTickets
         .filter(ticket => ticket.token === escapedToken && ticket.owner === owner)
@@ -83,6 +85,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
     }
   }
 
+  /** Invoked from a synchronized block. */
   override def updateTicket(): Unit = {
     val newTicket = getNewTicket
 
@@ -100,6 +103,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
     }
   }
 
+  /** Invoked from a synchronized block. */
   private def getTicket: Option[LockTicket] = {
     val ticket = SlickUtils.executeQuery(db,
       LockTickets.lockTickets
@@ -107,7 +111,8 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
     ticket.headOption
   }
 
-  private def acquireGuardLock(): Unit = synchronized {
+  /** Invoked from a synchronized block. */
+  private def acquireGuardLock(): Unit = {
     db.run(DBIO.seq(
       LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket)
     )).execute()

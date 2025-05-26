@@ -17,10 +17,13 @@
 package za.co.absa.pramen.core.tests.lock
 
 import org.scalatest.BeforeAndAfter
+import org.scalatest.concurrent.Eventually.{eventually, interval, timeout}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.MongoDbFixture
 import za.co.absa.pramen.core.lock.TokenLockMongoDb
 import za.co.absa.pramen.core.lock.TokenLockMongoDb.collectionName
+import scala.concurrent.duration._
+import org.scalatest.concurrent.Eventually._
 
 class TokenLockMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAndAfter {
   before {
@@ -80,10 +83,15 @@ class TokenLockMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeA
       }
       val lock2 = new TokenLockMongoDb("token1", connection)
       assert(lock1.tryAcquire())
-      Thread.sleep(4000)
-      assert(!lock2.tryAcquire())
-      assert(!lock1.tryAcquire())
-      lock1.release()
+
+      try {
+        eventually(timeout(5.seconds), interval(200.millis)) {
+          assert(!lock2.tryAcquire())
+          assert(!lock1.tryAcquire())
+        }
+      } finally {
+        lock1.release()
+      }
     }
   }
 }

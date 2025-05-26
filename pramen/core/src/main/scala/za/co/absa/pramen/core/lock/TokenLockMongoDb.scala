@@ -16,8 +16,6 @@
 
 package za.co.absa.pramen.core.lock
 
-import java.time.Instant
-
 import com.mongodb.MongoWriteException
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.bson.codecs.configuration.CodecRegistry
@@ -31,10 +29,10 @@ import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
 import za.co.absa.pramen.core.dao.{MongoDb, ScalaMongoImplicits}
 import za.co.absa.pramen.core.lock.model.LockTicket
 import za.co.absa.pramen.core.mongo.MongoDbConnection
-import za.co.absa.pramen.core.utils.{JvmUtils, StringUtils}
 
+import java.time.Instant
 import scala.util.control.NonFatal
-import scala.util.{Failure, Random, Success, Try}
+import scala.util.{Failure, Success, Try}
 
 object TokenLockMongoDb {
   val collectionName = "locks"
@@ -54,6 +52,7 @@ class TokenLockMongoDb(token: String,
 
   initCollection()
 
+  /** Invoked from a synchronized block. */
   override def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean = {
     val c = getCollection
 
@@ -94,6 +93,7 @@ class TokenLockMongoDb(token: String,
     }
   }
 
+  /** Invoked from a synchronized block. */
   override def releaseGuardLock(): Unit = {
     try {
       val c = getCollection
@@ -105,6 +105,7 @@ class TokenLockMongoDb(token: String,
     }
   }
 
+  /** Invoked from a synchronized block. */
   override def updateTicket(): Unit = {
     val newTicket = getNewTicket
 
