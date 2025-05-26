@@ -21,7 +21,16 @@ import za.co.absa.pramen.core.utils.{JvmUtils, StringUtils}
 
 import java.time.Instant
 import scala.util.Random
+import scala.util.control.NonFatal
 
+/**
+  * This is an abstract base class for token-based locks.
+  *
+  * The lock behavior is defined here. The actual storage used for the distributed locking is implemented in
+  * subclasses.
+  *
+  * @param token the unique identifier for the lock (across multiple JVM processes and Spark jobs).
+  */
 abstract class TokenLockBase(token: String) extends TokenLock {
   import TokenLockBase._
 
@@ -35,6 +44,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
 
   // State
   private var lockAcquired = false
+  private var watcherThreadOpt: Option[Thread] = None
 
   def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean
 
@@ -51,6 +61,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     * This operation is thread-safe.
     *
     * @return true if the lock is successfully acquired; false if the lock is already held by this or another job.
+    *         Note: Unlike standard lock implementations, this returns false even when the current instance already owns the lock.
     */
   override def tryAcquire(): Boolean = synchronized {
     if (lockAcquired) {
@@ -72,6 +83,8 @@ abstract class TokenLockBase(token: String) extends TokenLock {
   override def release(): Unit = synchronized {
     if (lockAcquired) {
       lockAcquired = false
+      watcherThreadOpt.foreach(_.interrupt())
+      watcherThreadOpt = None
       releaseGuardLock()
       JvmUtils.safeRemoveShutdownHook(shutdownHook)
       log.info(s"Lock released: '$escapedToken'.")
@@ -93,12 +106,23 @@ abstract class TokenLockBase(token: String) extends TokenLock {
 
   private val shutdownHook = new Thread() {
     override def run(): Unit = {
-      if (lockAcquired) {
+      // Same logic as for release() but without removal of the shutdown hook - too late for that.
+      var isAcquired = false
+      this.synchronized {
+        isAcquired = lockAcquired
+        if (lockAcquired) {
+          lockAcquired = false
+        }
+      }
+      if (isAcquired) {
+        watcherThreadOpt.foreach(_.interrupt())
+        watcherThreadOpt = None
         releaseGuardLock()
       }
     }
   }
 
+  /** This method starts a watcher thread that ensures locked token expiration time is updated. Invoke only from synchronized methods. */
   private def startWatcherThread(): Thread = {
     val thread = new Thread(s"TokenLockWatcher-$escapedToken") {
       override def run(): Unit = {
@@ -107,26 +131,33 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     }
     thread.setDaemon(true)
     thread.start()
+    watcherThreadOpt = Some(thread)
     thread
   }
 
+  /** This method runs in a separate thread and periodically updates the expiration time of the lock being held. */
   private def lockWatcher(): Unit = {
     var lastUpdateTime = Instant.now
+    val waitMs = tokenExpiresSeconds * 200 // Convert to milliseconds, and divide by 5
     while (isAcquired) {
       try {
-        Thread.sleep(1000)
+        Thread.sleep(waitMs)
+
+        this.synchronized {
+          if (isAcquired) {
+            try {
+              updateTicket()
+            } catch {
+              case NonFatal(ex) =>
+                log.error(s"An error occurred when trying to update the lock: '$escapedToken'. Will be re-tried.", ex)
+            }
+            lastUpdateTime = Instant.now
+          }
+        }
       } catch {
         case _: InterruptedException =>
           Thread.currentThread().interrupt()
           return
-      }
-      if (Instant.now().isAfter(lastUpdateTime.plusMillis((tokenExpiresSeconds * 1000) / 5))) {
-        this.synchronized {
-          if (isAcquired) {
-            updateTicket()
-            lastUpdateTime = Instant.now
-          }
-        }
       }
     }
   }
