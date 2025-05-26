@@ -28,6 +28,7 @@ class TokenLockHadoopPath(token: String,
 
   init()
 
+  /** Invoked from a synchronized block. */
   override def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean = {
     val fileGuard = new Path(locksPath, s"$escapedToken.lock")
 
@@ -38,6 +39,7 @@ class TokenLockHadoopPath(token: String,
     lockAcquired
   }
 
+  /** Invoked from a synchronized block. */
   override def releaseGuardLock(): Unit = {
     fileGuardOpt.foreach { fileGuard =>
       fsUtils.deleteFile(fileGuard)
@@ -45,6 +47,7 @@ class TokenLockHadoopPath(token: String,
     }
   }
 
+  /** Invoked from a synchronized block. */
   override def updateTicket(): Unit = {
     fileGuardOpt.foreach { fileGuard =>
       fsUtils.updateFileGuard(fileGuard, tokenExpiresSeconds)

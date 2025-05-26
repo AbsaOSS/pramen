@@ -20,6 +20,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.lock.TokenLockHadoopPath
+import scala.concurrent.duration._
+import org.scalatest.concurrent.Eventually._
 
 class TokenLockHadoopPathSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   private val hdfsConfig = spark.sparkContext.hadoopConfiguration
@@ -72,10 +74,15 @@ class TokenLockHadoopPathSuite extends AnyWordSpec with SparkTestBase with TempD
         }
         val lock2 = new TokenLockHadoopPath("token1", hdfsConfig, tempDir)
         assert(lock1.tryAcquire())
-        Thread.sleep(4000)
-        assert(!lock2.tryAcquire())
-        assert(!lock1.tryAcquire())
-        lock1.release()
+
+        try {
+          eventually(timeout(5.seconds), interval(200.millis)) {
+            assert(!lock2.tryAcquire())
+            assert(!lock1.tryAcquire())
+          }
+        } finally {
+          lock1.release()
+        }
       }
     }
   }

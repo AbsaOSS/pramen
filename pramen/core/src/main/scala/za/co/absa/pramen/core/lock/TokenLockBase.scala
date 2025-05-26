@@ -40,17 +40,17 @@ abstract class TokenLockBase(token: String) extends TokenLock {
   protected val lockAcquireRetries: Int = LOCK_ACQUIRE_RETRIES
 
   val escapedToken: String = StringUtils.escapeNonAlphanumerics(token)
-  val owner: String = JvmUtils.jvmName + "_" + Random.nextInt().toString
+  val owner: String = s"${JvmUtils.jvmName}_${Math.abs(Random.nextInt())}"
 
   // State
   private var lockAcquired = false
   private var watcherThreadOpt: Option[Thread] = None
 
-  def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean
+  protected def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean
 
-  def releaseGuardLock(): Unit
+  protected def releaseGuardLock(): Unit
 
-  def updateTicket(): Unit
+  protected def updateTicket(): Unit
 
   /**
     * Attempts to acquire the lock for a specific token. If the lock is already acquired,

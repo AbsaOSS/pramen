@@ -22,6 +22,8 @@ import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.lock.{TokenLock, TokenLockJdbc}
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import scala.concurrent.duration._
+import org.scalatest.concurrent.Eventually._
 
 class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
@@ -80,11 +82,15 @@ class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with Befor
       }
       val lock2 = new TokenLockJdbc("token1", pramenDb.slickDb)
       assert(lock1.tryAcquire())
-      // Give it enough time to update
-      Thread.sleep(3000)
-      assert(!lock2.tryAcquire())
-      assert(!lock1.tryAcquire())
-      lock1.release()
+
+      try {
+        eventually(timeout(4.seconds), interval(200.millis)) {
+          assert(!lock2.tryAcquire())
+          assert(!lock1.tryAcquire())
+        }
+      } finally {
+        lock1.release()
+      }
     }
   }
 
