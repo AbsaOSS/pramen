@@ -25,7 +25,6 @@ import za.co.absa.pramen.core.config.Keys.LOG_EFFECTIVE_CONFIG
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 class CmdLineConfigSuite extends AnyWordSpec {
-
   private val emptyConfig = ConfigFactory.empty
   private val populatedConfig = ConfigFactory.parseString(
     s"""$DRY_RUN = false
@@ -288,6 +287,24 @@ class CmdLineConfigSuite extends AnyWordSpec {
       assert(config.hasPath(USE_LOCK))
 
       assert(!config.getBoolean(USE_LOCK))
+    }
+
+    "return the modified config if skipLocked = true" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--skip-locked", "true"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(SKIP_LOCKED))
+
+      assert(config.getBoolean(SKIP_LOCKED))
+    }
+
+    "return the modified config if skipLocked = false" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--skip-locked", "false"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(SKIP_LOCKED))
+
+      assert(!config.getBoolean(SKIP_LOCKED))
     }
 
     "return the original config if undercover is not specified" in {
