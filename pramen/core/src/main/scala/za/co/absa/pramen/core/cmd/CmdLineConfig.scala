@@ -38,6 +38,7 @@ case class CmdLineConfig(
                           parallelTasks: Option[Int] = None,
                           dryRun: Option[Boolean] = None,
                           useLock: Option[Boolean] = None,
+                          skipLocked: Option[Boolean] = None,
                           undercover: Option[Boolean] = None,
                           dateFrom: Option[LocalDate] = None,
                           dateTo: Option[LocalDate] = None,
@@ -109,6 +110,9 @@ object CmdLineConfig {
 
     for (useLock <- cmd.useLock)
       accumulatedConfig = accumulatedConfig.withValue(USE_LOCK, ConfigValueFactory.fromAnyRef(useLock))
+
+    for (skipLocked <- cmd.skipLocked)
+      accumulatedConfig = accumulatedConfig.withValue(SKIP_LOCKED, ConfigValueFactory.fromAnyRef(skipLocked))
 
     for (inverseOrder <- cmd.inverseOrder)
       accumulatedConfig = accumulatedConfig.withValue(IS_INVERSE_ORDER, ConfigValueFactory.fromAnyRef(inverseOrder))
@@ -205,6 +209,10 @@ object CmdLineConfig {
     opt[Boolean]("use-lock").optional().action((value, config) =>
       config.copy(useLock = Option(value)))
       .text("If true (default) a lock is used when writing to a table")
+
+    opt[Boolean]("skip-locked").optional().action((value, config) =>
+        config.copy(skipLocked = Option(value)))
+      .text("If true Pramen will skip jobs that are already running (locked) and won't consider it an error.")
 
     opt[Unit]("undercover").optional().action((_, config) =>
       config.copy(undercover = Some(true)))

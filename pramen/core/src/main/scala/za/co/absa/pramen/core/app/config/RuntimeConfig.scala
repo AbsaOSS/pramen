@@ -33,6 +33,7 @@ case class RuntimeConfig(
                           runTables: Seq[String], // Specifies which operations (identified by output table names) to run
                           isUndercover: Boolean, // If true, no bookkeeping will be done for the job
                           useLocks: Boolean, // If true, the pipeline will acquire locks before writing to a metastore table
+                          skipLocked: Boolean, // If true, jobs that are already running and holding a lock will be skipped instead of throwing an error
                           checkOnlyLateData: Boolean,
                           checkOnlyNewData: Boolean,
                           emailIfNoChanges: Boolean,
@@ -59,6 +60,7 @@ object RuntimeConfig {
   val RUN_TABLES = "pramen.runtime.run.tables"
   val UNDERCOVER = "pramen.undercover"
   val USE_LOCK = "pramen.use.lock"
+  val SKIP_LOCKED = "pramen.runtime.skip.locked"
   val CHECK_ONLY_LATE_DATA = "pramen.check.only.late.data"
   val CHECK_ONLY_NEW_DATA = "pramen.check.only.new.data"
   val EMAIL_IF_NO_CHANGES = "pramen.email.if.no.changes"
@@ -141,6 +143,7 @@ object RuntimeConfig {
       runTables = ConfigUtils.getOptListStrings(conf, RUN_TABLES),
       isUndercover = isUndercover,
       useLocks = conf.getBoolean(USE_LOCK),
+      skipLocked = conf.getBoolean(SKIP_LOCKED),
       checkOnlyLateData = checkOnlyLateData,
       checkOnlyNewData = checkOnlyNewData,
       emailIfNoChanges = conf.getBoolean(EMAIL_IF_NO_CHANGES),
@@ -163,6 +166,7 @@ object RuntimeConfig {
       runTables = Seq.empty,
       isUndercover = false,
       useLocks = true,
+      skipLocked = false,
       checkOnlyLateData = false,
       checkOnlyNewData = true,
       emailIfNoChanges = false,
