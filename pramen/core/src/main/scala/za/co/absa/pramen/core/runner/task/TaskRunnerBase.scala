@@ -333,9 +333,14 @@ abstract class TaskRunnerBase(conf: Config,
 
     val attempt = try {
       Try {
-        if (!isTransient) {
-          if (runtimeConfig.useLocks && !lock.tryAcquire())
-            throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+        if (!isTransient && runtimeConfig.useLocks) {
+          if (!lock.tryAcquire()) {
+            if (runtimeConfig.skipLocked) {
+              throw new AlreadyRunningSkipException()
+            } else {
+              throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+            }
+          }
         }
 
         val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
@@ -442,6 +447,17 @@ abstract class TaskRunnerBase(conf: Config,
     attempt match {
       case Success(result) =>
         result
+      case Failure(ex) if ex.isInstanceOf[AlreadyRunningSkipException] =>
+        TaskResult(task.job.taskDef,
+          RunStatus.Skipped("Another instance is already running", isWarning = true),
+          getRunInfo(task.infoDate, started),
+          applicationId,
+          isTransient,
+          isRawFileBased,
+          Nil,
+          validationResult.dependencyWarnings,
+          Seq.empty,
+          task.job.operation.extraOptions)
       case Failure(ex) =>
         TaskResult(task.job.taskDef,
           RunStatus.Failed(ex),

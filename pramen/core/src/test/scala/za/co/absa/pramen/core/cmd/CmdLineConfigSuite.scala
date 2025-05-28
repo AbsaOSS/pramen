@@ -289,8 +289,8 @@ class CmdLineConfigSuite extends AnyWordSpec {
       assert(!config.getBoolean(USE_LOCK))
     }
 
-    "return the modified config if skipLocked = true" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--skip-locked", "true"))
+    "return the modified config if skipLocked is specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--skip-locked"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
       assert(config.hasPath(SKIP_LOCKED))
@@ -298,13 +298,11 @@ class CmdLineConfigSuite extends AnyWordSpec {
       assert(config.getBoolean(SKIP_LOCKED))
     }
 
-    "return the modified config if skipLocked = false" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--skip-locked", "false"))
+    "return the modified config if skipLocked is not specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
 
-      assert(config.hasPath(SKIP_LOCKED))
-
-      assert(!config.getBoolean(SKIP_LOCKED))
+      assert(!config.hasPath(SKIP_LOCKED))
     }
 
     "return the original config if undercover is not specified" in {
