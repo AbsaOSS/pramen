@@ -3394,6 +3394,8 @@ Execution options:
 | --check-late-only    | `--check-late-only`         | If specified, Pramen will do only late data checks and checks for retrospective updates. It won't run jobs that are not yet late. Useful for catch-up job schedules.                                                |
 | --check-new-only     | `--check-new-only`          | If specified, Pramen will not check for late and updated data and will run only jobs scheduled for the current date.                                                                                                |
 | --undercover         | `--undercover`              | If specified, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
+| --use-lock           | `--use-lock true`           | If true (default) a lock will be used to protect against parallel writes to the same partition. Bookkeeping storage or database will be used for locking across pipelines.                                          |
+| --skip-locked        | `--skip-locked`             | If specified, jobs that are already running (holding a lock) will be skipped. Otherwise, an error will be thrown.                                                                                                   |
 
 ### Command line examples
 

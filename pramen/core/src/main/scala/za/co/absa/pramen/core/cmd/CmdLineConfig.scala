@@ -210,8 +210,8 @@ object CmdLineConfig {
       config.copy(useLock = Option(value)))
       .text("If true (default) a lock is used when writing to a table")
 
-    opt[Boolean]("skip-locked").optional().action((value, config) =>
-        config.copy(skipLocked = Option(value)))
+    opt[Unit]("skip-locked").optional().action((value, config) =>
+        config.copy(skipLocked = Some(true)))
       .text("If true Pramen will skip jobs that are already running (locked) and won't consider it an error.")
 
     opt[Unit]("undercover").optional().action((_, config) =>
