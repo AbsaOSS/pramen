@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
-import za.co.absa.pramen.core.lock.TokenLockFactory
+import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
@@ -136,7 +136,7 @@ abstract class TaskRunnerBase(conf: Config,
         try {
           ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
             log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
-            runStatus = doValidateAndRunTask(task)
+            runStatus = doValidateOrSkipTask(task)
           }
           runStatus
         } catch {
@@ -145,24 +145,44 @@ abstract class TaskRunnerBase(conf: Config,
         }
       case Some(timeout) =>
         log.error(s"Incorrect timeout for the task: ${task.job.name}. Should be bigger than zero, got: $timeout.")
-        doValidateAndRunTask(task)
+        doValidateOrSkipTask(task)
       case None =>
-        doValidateAndRunTask(task)
+        doValidateOrSkipTask(task)
     }
   }
 
-  protected def doValidateAndRunTask(task: Task): RunStatus = {
+  protected def doValidateOrSkipTask(task: Task): RunStatus = {
     val started = Instant.now()
+
     task.reason match {
       case TaskRunReason.Skip(reason) =>
         // This skips tasks that were skipped based on strong date constraints (e.g. attempt to run before the minimum date)
         skipTask(task, reason, isWarning = true)
-      case _ =>
-        val result: TaskResult = validate(task, started) match {
-          case Left(failedResult) => failedResult
-          case Right(validationResult) => run(task, started, validationResult)
+      case _ => doValidateAndRunTask(task, started)
+    }
+  }
+
+  private def doValidateAndRunTask(task: Task, started: Instant): RunStatus = {
+    val isTransient = task.job.outputTable.format.isTransient
+    val taskLockFactory = if (isTransient) new TokenLockFactoryAllow else lockFactory
+    val lock = taskLockFactory.getLock(getTokenName(task))
+
+    try {
+      if (!lock.tryAcquire()) {
+        if (runtimeConfig.skipLocked) {
+          return skipTask(task, "Another instance is already running", isWarning = true)
+        } else {
+          throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
         }
-        onTaskCompletion(task, result, isLazy = false)
+      }
+
+      val result: TaskResult = validate(task, started) match {
+        case Left(failedResult) => failedResult
+        case Right(validationResult) => run(task, started, validationResult)
+      }
+      onTaskCompletion(task, result, isLazy = false)
+    } finally {
+      lock.release()
     }
   }
 
@@ -329,20 +349,9 @@ abstract class TaskRunnerBase(conf: Config,
   private[core] def run(task: Task, started: Instant, validationResult: JobPreRunResult): TaskResult = {
     val isTransient = task.job.outputTable.format.isTransient
     val isRawFileBased = task.job.outputTable.format.isRaw
-    val lock = lockFactory.getLock(getTokenName(task))
 
     val attempt = try {
       Try {
-        if (!isTransient && runtimeConfig.useLocks) {
-          if (!lock.tryAcquire()) {
-            if (runtimeConfig.skipLocked) {
-              throw new AlreadyRunningSkipException()
-            } else {
-              throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
-            }
-          }
-        }
-
         val recordCountOldOpt = bookkeeper.getLatestDataChunk(task.job.outputTable.name, task.infoDate, task.infoDate).map(_.outputRecordCount)
 
         val runResult = task.job.run(task.infoDate, task.reason, conf)
@@ -440,24 +449,12 @@ abstract class TaskRunnerBase(conf: Config,
     } finally {
       if (!isTransient) {
         task.job.metastore.rollbackIncrementalTables()
-        lock.release()
       }
     }
 
     attempt match {
       case Success(result) =>
         result
-      case Failure(ex) if ex.isInstanceOf[AlreadyRunningSkipException] =>
-        TaskResult(task.job.taskDef,
-          RunStatus.Skipped("Another instance is already running", isWarning = true),
-          getRunInfo(task.infoDate, started),
-          applicationId,
-          isTransient,
-          isRawFileBased,
-          Nil,
-          validationResult.dependencyWarnings,
-          Seq.empty,
-          task.job.operation.extraOptions)
       case Failure(ex) =>
         TaskResult(task.job.taskDef,
           RunStatus.Failed(ex),
