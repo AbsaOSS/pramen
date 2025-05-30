@@ -314,8 +314,9 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * @return contents of the file as string.
     */
   def readFile(filePath: Path): String = {
+    val size = fs.getFileStatus(filePath).getLen.toInt
     val in = fs.open(filePath)
-    val content = Array.fill(in.available())(0.toByte)
+    val content = Array.fill(size)(0.toByte)
     in.readFully(content)
     in.close()
     new String(content, "UTF-8")
