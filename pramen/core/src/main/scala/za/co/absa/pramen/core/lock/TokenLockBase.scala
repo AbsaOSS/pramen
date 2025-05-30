@@ -80,9 +80,17 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     }
   }
 
-  override def release(): Unit = synchronized {
-    if (lockAcquired) {
-      lockAcquired = false
+  override def release(): Unit = {
+    var wasAcquired = false
+
+    this.synchronized {
+      wasAcquired = lockAcquired
+      if (lockAcquired) {
+        lockAcquired = false
+      }
+    }
+
+    if (wasAcquired) {
       watcherThreadOpt.foreach(_.interrupt())
       watcherThreadOpt = None
       releaseGuardLock()
@@ -107,14 +115,14 @@ abstract class TokenLockBase(token: String) extends TokenLock {
   private val shutdownHook = new Thread() {
     override def run(): Unit = {
       // Same logic as for release() but without removal of the shutdown hook - too late for that.
-      var isAcquired = false
+      var wasAcquired = false
       this.synchronized {
-        isAcquired = lockAcquired
+        wasAcquired = lockAcquired
         if (lockAcquired) {
           lockAcquired = false
         }
       }
-      if (isAcquired) {
+      if (wasAcquired) {
         watcherThreadOpt.foreach(_.interrupt())
         watcherThreadOpt = None
         releaseGuardLock()

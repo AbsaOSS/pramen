@@ -226,9 +226,10 @@ class FsUtils(conf: Configuration, pathBase: String) {
     *
     * @param filePath a path to a file.
     * @param content  content to write.
+    * @param overwrite whether to overwrite the file if it exists.
     */
-  def writeFile(filePath: Path, content: String): Unit = {
-    val out = fs.create(filePath)
+  def writeFile(filePath: Path, content: String, overwrite: Boolean = false): Unit = {
+    val out = fs.create(filePath, overwrite)
     out.write(content.getBytes())
     out.close()
   }
@@ -302,7 +303,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
     */
   def safeWriteFile(filePath: Path, content: String): Unit = {
     val tmpPath = new Path(s"${filePath.toUri}.tmp")
-    writeFile(tmpPath, content)
+    writeFile(tmpPath, content, overwrite = false)
     renamePath(tmpPath, filePath)
   }
 
@@ -377,13 +378,21 @@ class FsUtils(conf: Configuration, pathBase: String) {
 
     def overwriteIfExpired(): Boolean = {
       val now = Instant.now.getEpochSecond
-      val ticketExpires = Try(readFile(filePath).toLong).getOrElse(0L)
+      val ticketExpires = Try {
+        readFile(filePath).toLong
+      } match {
+        case Success(v) => v
+        case Failure(ex) =>
+          log.error(s"Error reading lock file: $filePath", ex)
+          0
+      }
+
       if (now <= ticketExpires) {
         log.warn(s"Lock '$filePath' is acquired by another process. The ticket is not expired yet.")
         false
       } else {
         val newTicket = now + expireSeconds
-        writeFile(filePath, newTicket.toString)
+        writeFile(filePath, newTicket.toString, overwrite = true)
         log.warn(s"Successfully acquired the expired lock '$filePath'.")
         true
       }
@@ -410,7 +419,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
   def updateFileGuard(filePath: Path, expireSeconds: Long): Unit = {
     val now = Instant.now.getEpochSecond
     val newTicket = now + expireSeconds
-    writeFile(filePath, newTicket.toString)
+    writeFile(filePath, newTicket.toString, overwrite = true)
     log.info(s"Successfully updated lock '$filePath'")
   }
 

@@ -138,7 +138,7 @@ class JournalHadoopCsv(journalPath: String)
 
     // Create CSV headers
     if (!fsUtils.exists(journalFilePath)) {
-      fsUtils.writeFile(journalFilePath, s"$headers\n")
+      fsUtils.writeFile(journalFilePath, s"$headers\n", overwrite = false)
     }
   }
 
