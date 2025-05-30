@@ -130,7 +130,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
   private def initDirectoryWithFile(path: Path, fileName: String): Unit = {
     if (!fsUtils.exists(path)) {
       fsUtils.createDirectoryRecursive(path)
-      fsUtils.writeFile(new Path(path, fileName), "", overwrite = false)
+      fsUtils.writeFile(new Path(path, fileName), "")
     }
   }
 

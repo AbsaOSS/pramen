@@ -228,7 +228,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * @param content  content to write.
     * @param overwrite whether to overwrite the file if it exists.
     */
-  def writeFile(filePath: Path, content: String, overwrite: Boolean = false): Unit = {
+  def writeFile(filePath: Path, content: String, overwrite: Boolean = true): Unit = {
     val out = fs.create(filePath, overwrite)
     out.write(content.getBytes())
     out.close()
@@ -303,7 +303,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
     */
   def safeWriteFile(filePath: Path, content: String): Unit = {
     val tmpPath = new Path(s"${filePath.toUri}.tmp")
-    writeFile(tmpPath, content, overwrite = false)
+    writeFile(tmpPath, content)
     renamePath(tmpPath, filePath)
   }
 
@@ -314,9 +314,13 @@ class FsUtils(conf: Configuration, pathBase: String) {
     * @return contents of the file as string.
     */
   def readFile(filePath: Path): String = {
-    val size = fs.getFileStatus(filePath).getLen.toInt
+    val sizeLong = fs.getFileStatus(filePath).getLen
+    val size = if (sizeLong > 2147483647L)
+      throw new IllegalArgumentException(s"File $filePath is too large to read as a string: $sizeLong bytes.")
+    else
+      sizeLong.toInt
     val in = fs.open(filePath)
-    val content = Array.fill(size)(0.toByte)
+    val content = new Array[Byte](size)
     in.readFully(content)
     in.close()
     new String(content, "UTF-8")
@@ -393,7 +397,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
         false
       } else {
         val newTicket = now + expireSeconds
-        writeFile(filePath, newTicket.toString, overwrite = true)
+        writeFile(filePath, newTicket.toString)
         log.warn(s"Successfully acquired the expired lock '$filePath'.")
         true
       }
@@ -420,7 +424,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
   def updateFileGuard(filePath: Path, expireSeconds: Long): Unit = {
     val now = Instant.now.getEpochSecond
     val newTicket = now + expireSeconds
-    writeFile(filePath, newTicket.toString, overwrite = true)
+    writeFile(filePath, newTicket.toString)
     log.info(s"Successfully updated lock '$filePath'")
   }
 

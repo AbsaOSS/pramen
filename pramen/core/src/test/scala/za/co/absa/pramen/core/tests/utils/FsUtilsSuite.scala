@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.utils
 
 import org.apache.hadoop.fs.{FSDataOutputStream, FileSystem, Path}
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers.{any, anyBoolean}
 import org.mockito.Mockito._
 import org.scalatest.wordspec.AnyWordSpec
 import org.slf4j.{Logger, LoggerFactory}
@@ -324,7 +324,7 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
       val fsMock = mock(classOf[FileSystem])
 
       when(fsMock.append(basePath)) thenThrow new IllegalArgumentException
-      when(fsMock.create(any())) thenThrow new IllegalArgumentException
+      when(fsMock.create(any(), anyBoolean())) thenThrow new IllegalArgumentException
 
       val fsUtilsMock = getFsUtilsMock(fsMock)
 
