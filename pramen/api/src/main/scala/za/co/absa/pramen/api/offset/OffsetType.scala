@@ -29,9 +29,8 @@ sealed trait OffsetType {
 object OffsetType {
   val DATETIME_TYPE_STR = "datetime"
   val INTEGRAL_TYPE_STR = "integral"
+  val INTEGRAL_TYPE_ALT_STR = "number"  // Alternative name for 'integral' purely for compatibility with SqlColumnType
   val STRING_TYPE_STR = "string"
-
-  val MINIMUM_TIMESTAMP_EPOCH_MILLI: Long = -62135596800000L
 
   case object DateTimeType extends OffsetType {
     override val dataTypeString: String = DATETIME_TYPE_STR
@@ -54,6 +53,7 @@ object OffsetType {
   def fromString(dataType: String): OffsetType = dataType match {
     case DATETIME_TYPE_STR => DateTimeType
     case INTEGRAL_TYPE_STR => IntegralType
+    case INTEGRAL_TYPE_ALT_STR => IntegralType
     case STRING_TYPE_STR => StringType
     case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
   }

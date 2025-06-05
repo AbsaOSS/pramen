@@ -52,6 +52,11 @@ class OffsetTypeSuite extends AnyWordSpec {
       assert(offsetValue.dataTypeString == "integral")
     }
 
+    "be able to create a IntegralType instance from an alternative string" in {
+      val offsetValue = OffsetType.fromString("number")
+      assert(offsetValue.dataTypeString == "integral")
+    }
+
     "be able to create a StringType instance from a string" in {
       val offsetValue = OffsetType.fromString("string")
       assert(offsetValue.dataTypeString == "string")
