@@ -218,6 +218,28 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(!jdbc.hasInfoDate)
     }
 
+    "ensure isNative is true for the DBR driver" in {
+      val testConfig = ConfigFactory.parseString(
+        s"""reader {
+           |  jdbc {
+           |    driver = "com.databricks.client.jdbc.Driver"
+           |    connection.string = "$url"
+           |    user = "$user"
+           |    password = "$password"
+           |  }
+           |
+           |  use.jdbc.native = false
+           |  has.information.date.column = false
+           |  information.date.column = "INFO_DATE"
+           |  information.date.type = "wrong"
+           |}""".stripMargin)
+      val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
+
+      val jdbc = reader.getJdbcConfig
+
+      assert(jdbc.useJdbcNative)
+    }
+
     "ensure jdbc minimal event configuration works" in {
       val testConfig = ConfigFactory.parseString(
         s"""reader {
