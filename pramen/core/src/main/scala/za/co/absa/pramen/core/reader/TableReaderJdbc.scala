@@ -128,6 +128,8 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       if (!rs.next())
         throw new IllegalStateException(s"No rows returned by the count query: $countSql")
       else {
+        if (rs.getObject(1) == null)
+          throw new IllegalStateException(s"NULL returned by count query: $countSql")
         count = rs.getLong(1)
       }
     }

@@ -98,7 +98,7 @@ object JdbcConfig {
     }
   }
 
-  def isDriverSupportBySpark(driverClass: String): Boolean = {
+  def isDriverSupportedBySpark(driverClass: String): Boolean = {
     !DRIVERS_NOT_SUPPORTED_BY_SPARK.contains(driverClass)
   }
 

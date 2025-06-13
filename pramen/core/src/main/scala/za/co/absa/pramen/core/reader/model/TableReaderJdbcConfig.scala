@@ -109,7 +109,7 @@ object TableReaderJdbcConfig {
     val jdbcConfig = JdbcConfig.load(conf, parent)
 
     val useJdbcNativeFromConfig = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false)
-    val useJdbcNative = if (!useJdbcNativeFromConfig && !JdbcConfig.isDriverSupportBySpark(jdbcConfig.driver)) {
+    val useJdbcNative = if (!useJdbcNativeFromConfig && !JdbcConfig.isDriverSupportedBySpark(jdbcConfig.driver)) {
       log.warn(s"Forced '$USE_JDBC_NATIVE = true' for the driver: ${jdbcConfig.driver}")
       true
     } else {
@@ -117,7 +117,7 @@ object TableReaderJdbcConfig {
     }
 
     TableReaderJdbcConfig(
-      jdbcConfig = JdbcConfig.load(conf, parent),
+      jdbcConfig = jdbcConfig,
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
       infoDateColumn = ConfigUtils.getOptionString(conf, INFORMATION_DATE_COLUMN).getOrElse(""),
       infoDateType = infoDateType,
