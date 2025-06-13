@@ -83,14 +83,14 @@ class TaskRunnerMultithreaded(conf: Config,
 
   override def runParallel(tasks: Seq[Task]): Seq[Future[RunStatus]] = {
     tasks.map(task => Future {
-      log.warn(s"${Emoji.PARALLEL}The task has requested ${task.job.operation.consumeThreads} threads...")
+      log.info(s"${Emoji.PARALLEL}The task has requested ${task.job.operation.consumeThreads} threads...")
 
       // We cannot use 'Try' here, need to use 'try' to catch fatal errors.
       // Fatal errors, if occurred will be wrapped into a custom exception which will propagate to the bottom og the
       // run stack, and trigger the pipeline shutdown.
       try {
         whenEnoughResourcesAreAvailable(task.job.operation.consumeThreads) {
-          log.warn(s"${Emoji.PARALLEL}Running task for the table: '${task.job.outputTable.name}' for '${task.infoDate}'...")
+          log.info(s"${Emoji.PARALLEL}Running task for the table: '${task.job.outputTable.name}' for '${task.infoDate}'...")
           runTask(task)
         }
       } catch {

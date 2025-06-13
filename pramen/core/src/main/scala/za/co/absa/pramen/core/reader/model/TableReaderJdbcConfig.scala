@@ -106,6 +106,16 @@ object TableReaderJdbcConfig {
     if (specialCharacters != globalSpecialCharacters)
       log.info(s"Effective special characters: '$specialCharacters'")
 
+    val jdbcConfig = JdbcConfig.load(conf, parent)
+
+    val useJdbcNativeFromConfig = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false)
+    val useJdbcNative = if (!useJdbcNativeFromConfig && !JdbcConfig.isDriverSupportBySpark(jdbcConfig.driver)) {
+      log.warn(s"Forced '$USE_JDBC_NATIVE = true' for the driver: ${jdbcConfig.driver}")
+      true
+    } else {
+      useJdbcNativeFromConfig
+    }
+
     TableReaderJdbcConfig(
       jdbcConfig = JdbcConfig.load(conf, parent),
       hasInfoDate = conf.getBoolean(HAS_INFO_DATE),
@@ -118,7 +128,7 @@ object TableReaderJdbcConfig {
       correctDecimalsInSchema = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_IN_SCHEMA).getOrElse(false),
       correctDecimalsFixPrecision = ConfigUtils.getOptionBoolean(conf, CORRECT_DECIMALS_FIX_PRECISION).getOrElse(false),
       enableSchemaMetadata = ConfigUtils.getOptionBoolean(conf, ENABLE_SCHEMA_METADATA_KEY).getOrElse(false),
-      useJdbcNative = ConfigUtils.getOptionBoolean(conf, USE_JDBC_NATIVE).getOrElse(false),
+      useJdbcNative = useJdbcNative,
       specialCharacters,
       serverTimezone,
       identifierQuotingPolicy = identifierQuotingPolicy,

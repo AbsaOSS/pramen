@@ -54,6 +54,8 @@ object JdbcConfig {
   val JDBC_INCORRECT_PRECISION_AS_STRING = "jdbc.incorrect.precision.as.string"
   val JDBC_EXTRA_OPTIONS_PREFIX = "jdbc.option"
 
+  val DRIVERS_NOT_SUPPORTED_BY_SPARK: Set[String] = Set("com.databricks.client.jdbc.Driver")
+
   def load(conf: Config, parent: String = ""): JdbcConfig = {
     validateConf(conf, parent)
 
@@ -94,6 +96,10 @@ object JdbcConfig {
     } else {
       None
     }
+  }
+
+  def isDriverSupportBySpark(driverClass: String): Boolean = {
+    !DRIVERS_NOT_SUPPORTED_BY_SPARK.contains(driverClass)
   }
 
   private def validateConf(conf: Config, parent: String): Unit = {

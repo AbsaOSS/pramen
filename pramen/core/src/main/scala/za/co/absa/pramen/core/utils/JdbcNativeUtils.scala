@@ -28,18 +28,18 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 /**
-  * Utils that help fetching data from arbitrary JDBC queries (not just SELECT) using Spark.
+  * Utils that help to fetch data from arbitrary JDBC queries (not just SELECT) using Spark.
   *
   * Pros:
-  * - Allows to execute arbitrary queries (e.g. stored procedures).
+  * - Allows executing arbitrary queries (e.g. stored procedures).
   * - Results can be arbitrarily large.
   *
   * Cons:
-  * - Only limited set of data types supported.
+  * - Only a limited set of data types supported.
   * - Can be much slower than Spark's JDBC, especially for result sets that don't support scrollable cursors.
   * - Partitioned read (by specifying partitioning column and range) is not supported.
   * - It executes a given query at least 2 times. So, please, do not use it for queries that
-  * changes state of the database and is not idempotent (inserts, updates, deletes).
+  *  change the state of the database and is not idempotent (inserts, updates, deletes).
   */
 object JdbcNativeUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -75,8 +75,7 @@ object JdbcNativeUtils {
   /** Gets the number of records returned by a given query. */
   def getJdbcNativeRecordCount(jdbcConfig: JdbcConfig,
                                url: String,
-                               query: String)
-                              (implicit spark: SparkSession): Long = {
+                               query: String): Long = {
     val resultSet = getResultSet(jdbcConfig, url, query)
     getResultSetCount(resultSet)
   }
