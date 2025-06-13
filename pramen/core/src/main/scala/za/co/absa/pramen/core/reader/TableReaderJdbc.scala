@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
+import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.utils._
 
 import java.time.{Instant, LocalDate}
@@ -42,7 +42,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     val start = Instant.now
     val count = transformedQuery match {
       case Query.Table(tableName) =>
-        getCountForTable(tableName, infoDateBegin, infoDateEnd)
+        getCountForTableNatively(tableName, infoDateBegin, infoDateEnd)
       case Query.Sql(sql) =>
         getCountForSql(sql)
       case other =>
@@ -102,28 +102,26 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
     }
   }
 
-  private[core] def getCountForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    val sql = if (jdbcReaderConfig.hasInfoDate) {
-      sqlGen.getCountQuery(tableName, infoDateBegin, infoDateEnd)
-    } else {
-      sqlGen.getCountQuery(tableName)
-    }
-
-    getWithRetry[Long](sql, isDataQuery = false, jdbcRetries, None)(df =>
-      // Take first column of the first row, use BigDecimal as the most generic numbers parser,
-      // and then convert to Long. This is a safe way if the output is like "0E-11".
-      BigDecimal(df.collect()(0)(0).toString).toLong
-    )
-  }
-
   private[core] def getCountSqlQuery(sql: String): String = {
     sqlGen.getCountQueryForSql(sql)
   }
 
-  private[core] def getCountForSql(sql: String): Long = {
-    val countSql = getCountSqlQuery(sql)
-    var count = 0L
+  private[core] def getCountForTableNatively(table: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val query = if (jdbcReaderConfig.hasInfoDate) {
+      sqlGen.getCountQuery(table, infoDateBegin, infoDateEnd)
+    } else {
+      sqlGen.getCountQuery(table)
+    }
 
+    getCountForCountSql(query)
+  }
+
+  private[core] def getCountForSql(sql: String): Long = {
+    getCountForCountSql(getCountSqlQuery(sql))
+  }
+
+  private[core] def getCountForCountSql(countSql: String): Long = {
+    var count = 0L
     log.info(s"Executing: $countSql")
 
     JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql, jdbcRetries) { rs =>
