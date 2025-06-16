@@ -51,7 +51,7 @@ class IngestionJob(operationDef: OperationDef,
 
   override val jobType: JobType = JobType.Ingestion(sourceName, sourceTable, source.config)
 
-  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing
+  override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing(source.hasInfoDateColumn(sourceTable.query))
 
   override def trackDays: Int = {
     val hasInfoDate = try {

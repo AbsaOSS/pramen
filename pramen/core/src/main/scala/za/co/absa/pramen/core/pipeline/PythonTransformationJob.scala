@@ -75,7 +75,7 @@ class PythonTransformationJob(operationDef: OperationDef,
     if (isIncremental)
       new ScheduleStrategyIncremental(latestInfoDate, true)
     else
-      new ScheduleStrategySourcing
+      new ScheduleStrategySourcing(true)
   }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
