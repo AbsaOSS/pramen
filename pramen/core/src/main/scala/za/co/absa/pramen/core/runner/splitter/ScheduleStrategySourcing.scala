@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 
 import java.time.LocalDate
 
-class ScheduleStrategySourcing extends ScheduleStrategy {
+class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrategy {
   private val log = org.slf4j.LoggerFactory.getLogger(this.getClass)
 
   override def getDaysToRun(
@@ -52,12 +52,6 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
         val lastProcessedDate = bookkeeper.getLatestProcessedDate(outputTable, Option(infoDate))
         lastProcessedDate.foreach(d => log.info(s"Last processed info date: $d"))
 
-        val lateDays = if (!newOnly) {
-          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, lastProcessedDate)
-        } else {
-          Nil
-        }
-
         val newDaysOrig = if (!lateOnly) {
           getNew(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression).toList
         } else {
@@ -67,6 +61,22 @@ class ScheduleStrategySourcing extends ScheduleStrategy {
         val newDays = lastProcessedDate match {
           case Some(date) if trackDays <= 0 => newDaysOrig.filter(task => task.infoDate.isAfter(date))
           case _                            => newDaysOrig
+        }
+
+        val lateDaysOrig = if (!newOnly) {
+          getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, lastProcessedDate)
+        } else {
+          Nil
+        }
+
+        val lateDays = if (hasInfoDateColumn) {
+          lateDaysOrig
+        } else {
+          if (newDays.isEmpty) {
+            Seq(lateDaysOrig.last)
+          } else {
+            Nil
+          }
         }
 
         log.info(s"Tracked days: ${trackedDays.map(_.infoDate).mkString(", ")}")

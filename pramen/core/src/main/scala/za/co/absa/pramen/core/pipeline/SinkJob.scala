@@ -53,7 +53,7 @@ class SinkJob(operationDef: OperationDef,
     if (isIncremental)
       new ScheduleStrategyIncremental(None, true)
     else
-      new ScheduleStrategySourcing
+      new ScheduleStrategySourcing(true)
   }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
