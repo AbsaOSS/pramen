@@ -26,15 +26,10 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.runner.splitter.{ScheduleParams, ScheduleStrategySourcing}
 
-import java.time.format.DateTimeFormatter
 import java.time.{DayOfWeek, LocalDate}
 import scala.language.implicitConversions
 
 class ScheduleStrategySuite extends AnyWordSpec {
-  implicit private def toDate(str: String): LocalDate = {
-    LocalDate.parse(str, DateTimeFormatter.ISO_LOCAL_DATE)
-  }
-
   "ScheduleStrategySourcing" when {
     val outputTable = "output_table"
     val dependencies = Seq.empty[MetastoreDependency]

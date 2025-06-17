@@ -25,6 +25,15 @@ import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 
 import java.time.LocalDate
 
+/**
+  * The scheduling strategy for Pramen jobs.
+  *
+  * Given scheduling and runtime parameters, this strategy returns a list of potential information dates to run.
+  * These dates don't guarantee job execution. Jobs may be skipped for specific information dates if
+  * dependencies are not met or validation fails.
+  *
+  * @param hasInfoDateColumn If true, the output table has an info date column and is treated as a table containing immutable events.
+  */
 class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrategy {
   private val log = org.slf4j.LoggerFactory.getLogger(this.getClass)
 
@@ -73,7 +82,7 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
           lateDaysOrig
         } else {
           if (newDays.isEmpty) {
-            Seq(lateDaysOrig.last)
+            lateDaysOrig.lastOption.toSeq
           } else {
             Nil
           }
