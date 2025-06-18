@@ -146,7 +146,6 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case PipelineStatus.Success        => s"${dryRunStr}Notification of SUCCESS for $appName at $timeCreatedStr"
       case PipelineStatus.Warning        => s"${dryRunStr}Notification of WARNING for $appName at $timeCreatedStr"
       case PipelineStatus.PartialSuccess => s"${dryRunStr}Notification of PARTIAL SUCCESS for $appName at $timeCreatedStr"
-      case PipelineStatus.PartialSuccess => s"${dryRunStr}Notification of PARTIAL SUCCESS for $appName at $timeCreatedStr"
       case PipelineStatus.Failure        => s"${dryRunStr}Notification of FAILURE for $appName at $timeCreatedStr"
     }
   }
