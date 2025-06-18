@@ -64,7 +64,7 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
           |date.from = "2020-01-01"
           |""".stripMargin
       )
-      val dep1 = MetastoreDependencyFactory.fromConfig(conf, "")
+      val dep1 = MetastoreDependencyFactory.fromConfig(conf, "", strictDependencyManagement = false)
       val dep2 = dep1.copy(isOptional = true)
       val dep3 = dep1.copy(isPassive = true)
       val op = OperationDefFactory.getDummyOperationDef(dependencies = Seq(dep1, dep2, dep3))

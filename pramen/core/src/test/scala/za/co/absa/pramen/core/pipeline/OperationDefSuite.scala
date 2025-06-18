@@ -152,8 +152,10 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.dependencies.head.dateFromExpr.contains("@infoDate - 1"))
       assert(op.dependencies.head.dateUntilExpr.contains("@infoDate"))
       assert(op.dependencies.head.triggerUpdates)
+      assert(!op.dependencies.head.isPassive)
       assert(op.dependencies(1).tables.contains("table2"))
       assert(!op.dependencies(1).triggerUpdates)
+      assert(!op.dependencies(1).isPassive)
       assert(op.warnMaxExecutionTimeSeconds.contains(50))
       assert(op.killMaxExecutionTimeSeconds.contains(100))
       assert(op.schemaTransformations.length == 4)
@@ -172,6 +174,51 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.filters.length == 2)
       assert(op.filters.head == "A > 0")
       assert(op.consumeThreads == 1)
+    }
+
+    "be able to serialize a transformation with strict dependency management" in {
+      val confApp = ConfigFactory.parseString(
+        """pramen.parallel.tasks = 4
+          |pramen.strict.dependency.management = true""".stripMargin
+      )
+
+      val conf = ConfigFactory.parseString(
+        s"""name = "dummy_transformation"
+           |type = "transformer"
+           |schedule.type = "daily"
+           |class = "myclass"
+           |output.table = "dummy_table"
+           |
+           |dependencies = [
+           |  {
+           |    tables = [table1]
+           |    date.from = "@infoDate - 1"
+           |    date.to = "@infoDate"
+           |    trigger.updates = true
+           |  },
+           |  {
+           |    tables = [table2, table3]
+           |    date.from = "@infoDate"
+           |  }
+           |]
+           |""".stripMargin
+      )
+
+      val op = OperationDef.fromConfig(conf, confApp, defaults, "path", 0).get
+
+      assert(op.name == "dummy_transformation")
+      assert(op.schedule.isInstanceOf[Schedule.EveryDay])
+      assert(op.outputInfoDateExpression == "@date")
+      assert(op.operationType.asInstanceOf[Transformation].clazz == "myclass")
+      assert(op.dependencies.length == 2)
+      assert(op.dependencies.head.tables.contains("table1"))
+      assert(op.dependencies.head.dateFromExpr.contains("@infoDate - 1"))
+      assert(op.dependencies.head.dateUntilExpr.contains("@infoDate"))
+      assert(op.dependencies.head.triggerUpdates)
+      assert(op.dependencies.head.isPassive)
+      assert(op.dependencies(1).tables.contains("table2"))
+      assert(!op.dependencies(1).triggerUpdates)
+      assert(op.dependencies(1).isPassive)
     }
 
     "be able to serialize an sink operation" in {

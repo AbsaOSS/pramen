@@ -26,12 +26,12 @@ import scala.util.Try
 object MetastoreDependencyFactory {
   val TABLES_KEY = "tables"
   val DATE_FROM_EXPR_KEY = "date.from"
-  val DATE_UNTIL_EXPR_KEY = "date.to"
+  val DATE_TO_EXPR_KEY = "date.to"
   val TRIGGER_UPDATES_KEY = "trigger.updates"
   val OPTIONAL_KEY = "optional"
   val PASSIVE_KEY = "passive"
 
-  def fromConfig(conf: Config, path: String): MetastoreDependency = {
+  def fromConfig(conf: Config, path: String, strictDependencyManagement: Boolean): MetastoreDependency = {
     if (!conf.hasPath(TABLES_KEY)) {
       throw new IllegalArgumentException(s"Missing required key '$path.$TABLES_KEY' in config.")
     }
@@ -43,17 +43,22 @@ object MetastoreDependencyFactory {
     val dateFromExpr = conf.getString(DATE_FROM_EXPR_KEY)
     val triggerUpdates = Try(conf.getBoolean(TRIGGER_UPDATES_KEY)).getOrElse(false)
     val isOptional = Try(conf.getBoolean(OPTIONAL_KEY)).getOrElse(false)
-    val isPassive = ConfigUtils.getOptionBoolean(conf, PASSIVE_KEY).getOrElse(false)
+    val isPassive = ConfigUtils.getOptionBoolean(conf, PASSIVE_KEY).getOrElse(strictDependencyManagement)
 
     if (isOptional && isPassive) {
       throw new IllegalArgumentException(s"Dependency '$path' cannot be both optional and passive.")
     }
 
-    val dateUntilExpr = Try {
-      conf.getString(DATE_UNTIL_EXPR_KEY)
-    }.toOption
+    val dateToExprOpt = ConfigUtils.getOptionString(conf, DATE_TO_EXPR_KEY)
 
-    MetastoreDependency(tables, dateFromExpr, dateUntilExpr, triggerUpdates, isOptional, isPassive)
+    val dateToExpr = if (strictDependencyManagement && dateToExprOpt.isEmpty) {
+      Option(dateFromExpr)
+    } else {
+      dateToExprOpt
+    }
+
+
+    MetastoreDependency(tables, dateFromExpr, dateToExpr, triggerUpdates, isOptional, isPassive)
   }
 }
 
