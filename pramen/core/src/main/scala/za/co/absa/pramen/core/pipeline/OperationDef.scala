@@ -64,6 +64,7 @@ object OperationDef {
   val ALWAYS_ATTEMPT_KEY = "always.attempt"
   val CONSUME_THREADS_KEY = "consume.threads"
   val DEPENDENCIES_KEY = "dependencies"
+  val STRICT_DEPENDENCY_MANAGEMENT_KEY = "pramen.strict.dependency.management"
   val OUTPUT_INFO_DATE_EXPRESSION_KEY = "info.date.expr"
   val INITIAL_SOURCING_DATE_EXPR = "initial.sourcing.date.expr"
   val PROCESSING_TIMESTAMP_COLUMN_KEY = "processing.timestamp.column"
@@ -90,12 +91,14 @@ object OperationDef {
     }
 
     val operationType = OperationType.fromConfig(conf, appConfig, infoDateConfig, parent)
+
+    val strictDependencyManagement = ConfigUtils.getOptionBoolean(appConfig, STRICT_DEPENDENCY_MANAGEMENT_KEY).getOrElse(false)
     val schedule = ScheduleParser.fromConfig(conf)
     val expectedDelayDays = ConfigUtils.getOptionInt(conf, EXPECTED_DELAY_DAYS_KEY).getOrElse(defaultDelayDays)
     val consumeThreads = getThreadsToConsume(name, conf, appConfig)
     val allowParallel = ConfigUtils.getOptionBoolean(conf, ALLOW_PARALLEL_KEY).getOrElse(true)
     val alwaysAttempt = ConfigUtils.getOptionBoolean(conf, ALWAYS_ATTEMPT_KEY).getOrElse(false)
-    val dependencies = getDependencies(conf, parent)
+    val dependencies = getDependencies(conf, parent, strictDependencyManagement)
     val outputInfoDateExpressionOpt = ConfigUtils.getOptionString(conf, OUTPUT_INFO_DATE_EXPRESSION_KEY)
     val initialSourcingDateExpressionOpt = ConfigUtils.getOptionString(conf, INITIAL_SOURCING_DATE_EXPR)
     val processingTimestampColumn = ConfigUtils.getOptionString(conf, PROCESSING_TIMESTAMP_COLUMN_KEY)
@@ -170,12 +173,12 @@ object OperationDef {
     }
   }
 
-  private def getDependencies(conf: Config, parent: String): Seq[MetastoreDependency] = {
+  private def getDependencies(conf: Config, parent: String, strictDependencyManagement: Boolean): Seq[MetastoreDependency] = {
     if (conf.hasPath(DEPENDENCIES_KEY)) {
       val dependencyConfigs = conf.getConfigList(DEPENDENCIES_KEY)
       dependencyConfigs.asScala
         .zipWithIndex
-        .map { case (c, i) => MetastoreDependencyFactory.fromConfig(c, s"$parent[$i]") }
+        .map { case (c, i) => MetastoreDependencyFactory.fromConfig(c, s"$parent[$i]", strictDependencyManagement) }
         .toSeq
     } else {
       Seq.empty[MetastoreDependency]

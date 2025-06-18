@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.mocks
 
 import za.co.absa.pramen.api.PipelineInfo
-import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RuntimeInfo}
+import za.co.absa.pramen.api.status.{PipelineNotificationFailure, PipelineStatus, RuntimeInfo}
 
 import java.time.{Instant, LocalDate}
 
@@ -29,10 +29,11 @@ object PipelineInfoFactory {
                            finishedAt: Option[Instant] = None,
                            warningFlag: Boolean = false,
                            sparkApplicationId: Option[String] = Some("testid-12345"),
+                           pipelineStatus: PipelineStatus = PipelineStatus.Success,
                            failureException: Option[Throwable] = None,
                            pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty,
                            pipelineId: String = "dummy_pipeline_id",
                            tenant:  Option[String] = Some("Dummy tenant")): PipelineInfo = {
-    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, warningFlag, sparkApplicationId, failureException, pipelineNotificationFailures, pipelineId, tenant)
+    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, warningFlag, sparkApplicationId, pipelineStatus, failureException, pipelineNotificationFailures, pipelineId, tenant)
   }
 }

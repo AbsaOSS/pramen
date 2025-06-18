@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.state
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
-import za.co.absa.pramen.api.status.RunStatus.NotRan
+import za.co.absa.pramen.api.status.RunStatus.{NotRan, Succeeded}
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget}
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
@@ -51,6 +51,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val hookConfig = HookConfig.fromConfig(conf)
   private var pipelineNotificationTargets: Seq[PipelineNotificationTarget] = Seq.empty
   private val batchId = Instant.now().toEpochMilli
+  private val strictFailures = ConfigUtils.getOptionBoolean(conf, NOTIFICATION_STRICT_FAILURES_KEY).getOrElse(true)
 
   // State
   private val startedInstant = Instant.now
@@ -111,6 +112,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     val goodRps = ConfigUtils.getOptionInt(conf, GOOD_THROUGHPUT_RPS).getOrElse(0)
     val dryRun = ConfigUtils.getOptionBoolean(conf, DRY_RUN).getOrElse(false)
     val undercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
+    val pipelineStatus = PipelineStateImpl.pipelineStatus(appException, taskResults.toSeq, pipelineNotificationFailures.toSeq, warningFlag, strictFailures)
 
     PipelineInfo(
       pipelineName,
@@ -131,6 +133,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       finishedInstant,
       warningFlag,
       sparkAppId,
+      pipelineStatus,
       appException,
       pipelineNotificationFailures.toSeq,
       pipelineId,
@@ -333,8 +336,58 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 }
 
 object PipelineStateImpl {
+  val NOTIFICATION_STRICT_FAILURES_KEY = "pramen.notifications.strict.failures"
+  val SUPPRESS_WARNING_STARTING_WITH = "Based on outdated tables: "
+
   val EXIT_CODE_SUCCESS = 0
   val EXIT_CODE_APP_FAILED = 1
   val EXIT_CODE_JOB_FAILED = 2
   val EXIT_CODE_SIGNAL_RECEIVED = 4
+
+  def pipelineStatus(appException: Option[Throwable], taskResults: Seq[TaskResult], pipelineNotificationFailures: Seq[PipelineNotificationFailure], warningFlag: Boolean, strictFailures: Boolean): PipelineStatus = {
+    val isCertainFailure = appException.nonEmpty
+    val (someTasksSucceeded, someTasksFailed) = getSuccessFlags(appException, taskResults)
+
+    val warningState = warningFlag || hasWarnings(taskResults, pipelineNotificationFailures)
+
+    if (isCertainFailure) {
+      PipelineStatus.Failure
+    } else if (!someTasksFailed && !warningState) {
+      PipelineStatus.Success
+    } else if (someTasksSucceeded && someTasksFailed && !strictFailures) {
+      PipelineStatus.PartialSuccess
+    } else if (someTasksSucceeded && !someTasksFailed && warningState) {
+      PipelineStatus.Warning
+    } else {
+      PipelineStatus.Failure
+    }
+  }
+
+  private def getSuccessFlags(appException: Option[Throwable], taskResults: Seq[TaskResult]): (Boolean, Boolean) = {
+    val hasNotificationFailures = taskResults.exists(t => t.notificationTargetErrors.nonEmpty)
+    val someTasksSucceeded = taskResults.exists(_.runStatus.isInstanceOf[Succeeded]) && appException.isEmpty
+    val someTasksFailed = taskResults.exists(t => t.runStatus.isFailure) || hasNotificationFailures || appException.nonEmpty
+    (someTasksSucceeded, someTasksFailed)
+  }
+
+  private def hasWarnings(taskResults: Seq[TaskResult], pipelineNotificationFailures: Seq[PipelineNotificationFailure]): Boolean = {
+    taskResults.exists{task =>
+      val hasTaskWarnings = task.runStatus match {
+        case succeeded: Succeeded =>
+          val warnings = succeeded.warnings
+            .filterNot(_.startsWith(SUPPRESS_WARNING_STARTING_WITH))
+          warnings.nonEmpty
+        case _ =>
+          false
+      }
+
+      val hasDependencyWarnings = task.dependencyWarnings.nonEmpty
+      val hasNotificationErrors = task.notificationTargetErrors.nonEmpty
+      val hasSkippedWithWarnings = task.runStatus.isInstanceOf[RunStatus.Skipped] && task.runStatus.asInstanceOf[RunStatus.Skipped].isWarning
+      val hasSchemaChanges = task.schemaChanges.nonEmpty
+      val hasPipelineNotificationFailures = pipelineNotificationFailures.nonEmpty
+
+      hasDependencyWarnings || hasNotificationErrors || hasTaskWarnings || hasSkippedWithWarnings || hasSchemaChanges || hasPipelineNotificationFailures
+    }
+  }
 }

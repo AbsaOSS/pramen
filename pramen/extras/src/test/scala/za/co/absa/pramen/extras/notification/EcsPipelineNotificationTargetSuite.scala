@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.notification
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.status.{CustomNotification, RuntimeInfo}
+import za.co.absa.pramen.api.status.{CustomNotification, PipelineStatus, RuntimeInfo}
 import za.co.absa.pramen.api.{DataFormat, PipelineInfo, Query}
 import za.co.absa.pramen.extras.TaskDefFactory
 import za.co.absa.pramen.extras.mocks.{SimpleHttpClientSpy, TestPrototypes}
@@ -62,7 +62,7 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
       val task3 = TestPrototypes.taskNotification.copy(taskDef = taskDef3)
 
       notificationTarget.sendNotification(
-        PipelineInfo("Dummy", "DEV", RuntimeInfo(LocalDate.parse("2022-02-18")), Instant.now, None, warningFlag = false, None, None, Seq.empty, "pid_123", None),
+        PipelineInfo("Dummy", "DEV", RuntimeInfo(LocalDate.parse("2022-02-18")), Instant.now, None, warningFlag = false, None, PipelineStatus.Success, None, Seq.empty, "pid_123", None),
         Seq(task1, task2, task3),
         CustomNotification(Seq.empty, Seq.empty)
       )

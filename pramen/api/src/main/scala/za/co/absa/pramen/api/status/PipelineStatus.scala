@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.notify.pipeline
+package za.co.absa.pramen.api.status
 
 sealed trait PipelineStatus
 

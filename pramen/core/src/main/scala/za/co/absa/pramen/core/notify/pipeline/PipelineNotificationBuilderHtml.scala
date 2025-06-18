@@ -26,6 +26,8 @@ import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
+import za.co.absa.pramen.core.state.PipelineStateImpl
+import za.co.absa.pramen.core.state.PipelineStateImpl.NOTIFICATION_STRICT_FAILURES_KEY
 import za.co.absa.pramen.core.utils.JvmUtils.getShortExceptionDescription
 import za.co.absa.pramen.core.utils.StringUtils.renderThrowable
 import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ConfigUtils, StringUtils, TimeUtils}
@@ -40,8 +42,6 @@ object PipelineNotificationBuilderHtml {
   val MIN_MEGABYTES = 10
   val NOTIFICATION_REASON_MAX_LENGTH_KEY = "pramen.notifications.reason.max.length"
   val NOTIFICATION_EXCEPTION_MAX_LENGTH_KEY = "pramen.notifications.exception.max.length"
-  val NOTIFICATION_STRICT_FAILURES_KEY = "pramen.notifications.strict.failures"
-  val SUPPRESS_WARNING_STARTING_WITH = "Based on outdated tables: "
 }
 
 class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNotificationBuilder {
@@ -140,9 +140,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     val dryRunStr = if (isDryRun) "(DRY RUN) " else ""
 
+    val pipelineStatus = PipelineStateImpl.pipelineStatus(appException, completedTasks.toSeq, pipelineNotificationFailures.toSeq, hasAtLeastOneWarning, strictFailures)
+
     pipelineStatus match {
       case PipelineStatus.Success        => s"${dryRunStr}Notification of SUCCESS for $appName at $timeCreatedStr"
       case PipelineStatus.Warning        => s"${dryRunStr}Notification of WARNING for $appName at $timeCreatedStr"
+      case PipelineStatus.PartialSuccess => s"${dryRunStr}Notification of PARTIAL SUCCESS for $appName at $timeCreatedStr"
       case PipelineStatus.PartialSuccess => s"${dryRunStr}Notification of PARTIAL SUCCESS for $appName at $timeCreatedStr"
       case PipelineStatus.Failure        => s"${dryRunStr}Notification of FAILURE for $appName at $timeCreatedStr"
     }
@@ -187,25 +190,6 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     builder.renderBody
   }
 
-  def pipelineStatus: PipelineStatus = {
-    val isCertainFailure = appException.nonEmpty
-    val (someTasksSucceeded, someTasksFailed) = getSuccessFlags
-    val hasInvalidEmails = validatedEmailsOpt.exists(v => v.invalidDomainEmails.nonEmpty || v.invalidFormatEmails.nonEmpty)
-    val hasAtLeastOneWarning = warningFlag || hasWarnings || hasInvalidEmails
-
-    if (isCertainFailure) {
-      PipelineStatus.Failure
-    } else if (!someTasksFailed && !hasAtLeastOneWarning) {
-      PipelineStatus.Success
-    } else if (someTasksSucceeded && someTasksFailed && !strictFailures) {
-      PipelineStatus.PartialSuccess
-    } else if (someTasksSucceeded && !someTasksFailed && hasAtLeastOneWarning) {
-      PipelineStatus.Warning
-    } else {
-      PipelineStatus.Failure
-    }
-  }
-
   private[core] def renderHeader(builder: MessageBuilder): MessageBuilder = {
     val introParagraph = ParagraphBuilder()
 
@@ -218,6 +202,8 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       .withText(" on ")
       .withText(envName, Style.Bold)
       .withText(". The job has ")
+
+    val pipelineStatus = PipelineStateImpl.pipelineStatus(appException, completedTasks.toSeq, pipelineNotificationFailures.toSeq, hasAtLeastOneWarning, strictFailures)
 
     pipelineStatus match {
       case PipelineStatus.Success        => introParagraph.withText("succeeded", Style.Success)
@@ -276,34 +262,6 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     sparkAppId match {
       case Some(appId) => (appId +: completedTasks.map(_.applicationId.trim).filter(_.nonEmpty)).distinct.toSeq
       case None => completedTasks.map(_.applicationId.trim).filter(_.nonEmpty).distinct.toSeq
-    }
-  }
-
-  private[core] def getSuccessFlags: (Boolean, Boolean) = {
-    val hasNotificationFailures = completedTasks.exists(t => t.notificationTargetErrors.nonEmpty)
-    val someTasksSucceeded = completedTasks.exists(_.runStatus.isInstanceOf[Succeeded]) && appException.isEmpty
-    val someTasksFailed = completedTasks.exists(t => t.runStatus.isFailure) || hasNotificationFailures || appException.nonEmpty
-    (someTasksSucceeded, someTasksFailed)
-  }
-
-  private[core] def hasWarnings: Boolean = {
-    completedTasks.exists{task =>
-      val hasTaskWarnings = task.runStatus match {
-        case succeeded: Succeeded =>
-          val warnings = succeeded.warnings
-            .filterNot(_.startsWith(SUPPRESS_WARNING_STARTING_WITH))
-          warnings.nonEmpty
-        case _ =>
-          false
-      }
-
-      val hasDependencyWarnings = task.dependencyWarnings.nonEmpty
-      val hasNotificationErrors = task.notificationTargetErrors.nonEmpty
-      val hasSkippedWithWarnings = task.runStatus.isInstanceOf[RunStatus.Skipped] && task.runStatus.asInstanceOf[RunStatus.Skipped].isWarning
-      val hasSchemaChanges = task.schemaChanges.nonEmpty
-      val hasPipelineNotificationFailures = pipelineNotificationFailures.nonEmpty
-
-      hasDependencyWarnings || hasNotificationErrors || hasTaskWarnings || hasSkippedWithWarnings || hasSchemaChanges || hasPipelineNotificationFailures
     }
   }
 
@@ -816,6 +774,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case _: NotificationEntry.AttachedFile       => // Skipping... This is going to be added elsewhere.
       case c                                       => log.error(s"Notification entry ${c.getClass} is not supported. Maybe this is related to Pramen runtime version mismatch.")
     }
+  }
+
+  private def hasAtLeastOneWarning: Boolean = {
+    val hasInvalidEmails = validatedEmailsOpt.exists(v => v.invalidDomainEmails.nonEmpty || v.invalidFormatEmails.nonEmpty)
+    warningFlag || hasInvalidEmails
   }
 
   private def renderValidatedEmails(builder: MessageBuilderHtml): Unit = {
