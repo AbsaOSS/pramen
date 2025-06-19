@@ -2593,6 +2593,18 @@ You can use any source/sink combination in transfer jobs.
 
 We describe here a more complicated use cases.
 
+### New dependency management mode
+The new mode is set with
+```hocon
+strict.dependency.management = true
+```
+If true,
+- all dependencies defined for transformations and sinks are set for the specified information date
+  if not redefined by the dependency date range
+- all dependencies are passive by default for transformations and sinks maening that dependency check failures
+  won't cause dependent jobs to fail automatically.
+
+
 ### Dynamically changing Spark Application description
 You can set up a template for Spark Application, and it will be set dynamically each time a new job is executing.
 
