@@ -16,13 +16,14 @@
 
 package za.co.absa.pramen.core.metadata
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{MetadataManager, MetadataValue}
 
 import java.time.{Instant, LocalDate}
 import scala.collection.mutable
-import scala.util.Try
 
 abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends MetadataManager {
+  private val log = LoggerFactory.getLogger(this.getClass)
   private val metadataLocalStore = new mutable.HashMap[MetadataTableKey, mutable.HashMap[String, MetadataValue]]()
 
   def getMetadataFromStorage(tableName: String, infoDate: LocalDate, key: String): Option[MetadataValue]
@@ -57,6 +58,7 @@ abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends Metada
     val metadataValue = MetadataValue(value, Instant.now())
     val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
+      log.info(s"Metadata SET ($tableLowerCase, $infoDate, $key) = '$metadataValue'")
       setMetadataToStorage(tableLowerCase, infoDate, key, metadataValue)
     } else {
       this.synchronized {
@@ -69,6 +71,7 @@ abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends Metada
   final override def deleteMetadata(tableName: String, infoDate: LocalDate, key: String): Unit = {
     val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
+      log.info(s"Metadata DELETE ($tableLowerCase, $infoDate, $key)")
       deleteMetadataFromStorage(tableLowerCase, infoDate, key)
     } else {
       this.synchronized {
@@ -80,6 +83,7 @@ abstract class MetadataManagerBase(isPersistenceEnabled: Boolean) extends Metada
   final override def deleteMetadata(tableName: String, infoDate: LocalDate): Unit = {
     val tableLowerCase = tableName.toLowerCase
     if (isPersistent) {
+      log.info(s"Metadata DELETE ($tableLowerCase, $infoDate, *)")
       deleteMetadataFromStorage(tableLowerCase, infoDate)
     } else {
       this.synchronized {
