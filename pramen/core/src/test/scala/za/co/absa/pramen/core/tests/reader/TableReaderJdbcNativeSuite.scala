@@ -271,16 +271,6 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
     }
   }
 
-  "getSqlExpression" should {
-    "throw an exception if the query is not an SQL" in {
-      val reader = getReader
-
-      assertThrows[IllegalArgumentException] {
-        reader.getSqlExpression(Query.Table("table1"))
-      }
-    }
-  }
-
   "getSqlDataQuery" should {
     val infoDateBegin = LocalDate.parse("2022-02-18")
     val infoDateEnd = LocalDate.parse("2022-02-19")

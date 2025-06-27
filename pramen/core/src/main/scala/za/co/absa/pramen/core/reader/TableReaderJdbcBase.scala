@@ -19,12 +19,13 @@ package za.co.absa.pramen.core.reader
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
-import za.co.absa.pramen.api.offset.OffsetInfo
-import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig}
+import za.co.absa.pramen.api.sql.SqlConfig
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.sql.SqlGeneratorLoader
-import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
+import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils}
+
+import java.time.LocalDate
 
 abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
                                    jdbcUrlSelector: JdbcUrlSelector,
@@ -72,5 +73,40 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
 
     log.info("Extra JDBC reader Spark options:")
     ConfigUtils.renderExtraOptions(extraOptions, JDBC_WORDS_TO_REDACT)(s => log.info(s))
+  }
+
+  private[core] def getCountSqlQuery(sql: String): String = {
+    sqlGen.getCountQueryForSql(sql)
+  }
+
+  private[core] def getCountForTableNatively(table: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val query = if (jdbcReaderConfig.hasInfoDate) {
+      sqlGen.getCountQuery(table, infoDateBegin, infoDateEnd)
+    } else {
+      sqlGen.getCountQuery(table)
+    }
+
+    getCountForCountSql(query)
+  }
+
+  private[core] def getCountForSql(sql: String): Long = {
+    getCountForCountSql(getCountSqlQuery(sql))
+  }
+
+  private[core] def getCountForCountSql(countSql: String): Long = {
+    var count = 0L
+    log.info(s"Executing: $countSql")
+
+    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql, jdbcRetries) { rs =>
+      if (!rs.next())
+        throw new IllegalStateException(s"No rows returned by the count query: $countSql")
+      else {
+        if (rs.getObject(1) == null)
+          throw new IllegalStateException(s"NULL returned by count query: $countSql")
+        count = rs.getLong(1)
+      }
+    }
+
+    count
   }
 }

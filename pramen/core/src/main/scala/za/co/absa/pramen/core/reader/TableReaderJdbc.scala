@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
+import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.utils._
 
 import java.time.{Instant, LocalDate}
@@ -100,41 +100,6 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
           throw ex
         }
     }
-  }
-
-  private[core] def getCountSqlQuery(sql: String): String = {
-    sqlGen.getCountQueryForSql(sql)
-  }
-
-  private[core] def getCountForTableNatively(table: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    val query = if (jdbcReaderConfig.hasInfoDate) {
-      sqlGen.getCountQuery(table, infoDateBegin, infoDateEnd)
-    } else {
-      sqlGen.getCountQuery(table)
-    }
-
-    getCountForCountSql(query)
-  }
-
-  private[core] def getCountForSql(sql: String): Long = {
-    getCountForCountSql(getCountSqlQuery(sql))
-  }
-
-  private[core] def getCountForCountSql(countSql: String): Long = {
-    var count = 0L
-    log.info(s"Executing: $countSql")
-
-    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql, jdbcRetries) { rs =>
-      if (!rs.next())
-        throw new IllegalStateException(s"No rows returned by the count query: $countSql")
-      else {
-        if (rs.getObject(1) == null)
-          throw new IllegalStateException(s"NULL returned by count query: $countSql")
-        count = rs.getLong(1)
-      }
-    }
-
-    count
   }
 
   private[core] def getDataForTable(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame = {
