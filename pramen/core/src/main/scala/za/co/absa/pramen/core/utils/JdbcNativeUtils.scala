@@ -22,7 +22,7 @@ import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 
-import java.sql.{Connection, DriverManager, ResultSet}
+import java.sql._
 import java.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -117,7 +117,7 @@ object JdbcNativeUtils {
       val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
       try {
-        val resultSet = statement.executeQuery(query)
+        val resultSet = executeQuery(statement, query, retries)
         try {
           action(resultSet)
         } finally {
@@ -128,6 +128,20 @@ object JdbcNativeUtils {
       }
     } finally {
       connection.close()
+    }
+  }
+
+  private[core] def executeQuery(statement: Statement, query: String, retriesLeft: Int): ResultSet = {
+    try {
+      statement.executeQuery(query)
+    } catch {
+      // This is a workaround for an intermittent issue with the Hive JDBC driver that occasionally throws an index-related exception.
+      // Retrying the query has proven to resolve the issue.
+      case ex: SQLException if retriesLeft > 0 && ex.getMessage.contains("Index: 1, Size: 1") =>
+        log.error(s"Error executing query. Retries left = $retriesLeft. Retrying...", ex)
+        executeQuery(statement, query, retriesLeft - 1)
+      case ex =>
+        throw ex
     }
   }
 

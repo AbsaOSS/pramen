@@ -49,14 +49,18 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     val transformedQuery = TableReaderJdbcNative.applyInfoDateExpressionToQuery(query, infoDateBegin, infoDateEnd)
 
     val start = Instant.now()
-    val sql = transformedQuery match {
-      case Query.Sql(sql)     => sql
-      case Query.Table(table) => getSqlDataQuery(table, infoDateBegin, infoDateEnd, Seq.empty)
-      case other              => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' or 'table' instead.")
+    val count = transformedQuery match {
+      case Query.Table(tableName) =>
+        getCountForTableNatively(tableName, infoDateBegin, infoDateEnd)
+      case Query.Sql(sql) if sql.toLowerCase.trim.startsWith("select") =>
+        getCountForSql(sql)
+      case Query.Sql(sql) =>
+        log.info(s"JDBC Native count of a non-SELECT SQL statement: $sql")
+        JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
+      case other =>
+        throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
 
-    log.info(s"JDBC Native count of: $sql")
-    val count = JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
     val finish = Instant.now()
 
     log.info(s"Record count: $count. Query elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
@@ -80,13 +84,6 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
         getDataForTableIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' incremental ingestion is not supported by the JDBC Native reader. Use 'table' instead.")
-    }
-  }
-
-  private[core] def getSqlExpression(query: Query): String = {
-    query match {
-      case Query.Sql(sql) => sql
-      case other          => throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC Native reader. Use 'sql' instead.")
     }
   }
 
