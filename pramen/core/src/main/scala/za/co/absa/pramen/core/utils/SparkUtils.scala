@@ -76,7 +76,7 @@ object SparkUtils {
   }
 
   /**
-    * Renames space characters in column names.
+    * Renames space characters in column names and removes uniform table prefix from all columns.
     *
     * This can be potentially improved by adding support for other special characters
     *
@@ -96,14 +96,22 @@ object SparkUtils {
       }
     }
 
+    def hasUniformTablePrefix(fields: Array[StructField]): Boolean = {
+      fields.map {
+        field => field.name.split('.').head
+      }.distinct.length == 1
+    }
+
+    val hasTablePrefix = hasUniformTablePrefix(df.schema.fields)
+
     val fieldsToSelect = df.schema.fields.map(field => {
       val srcName = field.name
-      val trgName = replaceSpecialChars(removeTablePrefix(srcName))
+      val trgName = replaceSpecialChars(if(hasTablePrefix) removeTablePrefix(srcName) else srcName)
       if (srcName != trgName) {
         log.info(s"Renamed column: $srcName -> $trgName")
         col(s"`$srcName`").as(trgName)
       } else {
-        col(srcName)
+        col(s"`$srcName`")
       }
     })
 
