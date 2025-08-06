@@ -163,6 +163,19 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(stripLineEndings(actual) == stripLineEndings(expected))
     }
 
+    "do not remove table from column name if there is no uniform table name" in {
+      val expected =
+        """[ {  "tbl_a.a_a" : "A",  "tbl_b.b" : 1,  "c" : 4}, {  "tbl_a.a_a" : "B",  "tbl_b.b" : 2,  "c" : 5}, {  "tbl_a.a_a" : "C",  "tbl_b.b" : 3,  "c" : 6} ]"""
+
+      val df = List(("A", 1, 4), ("B", 2, 5), ("C", 3, 6)).toDF("tbl_a.a a", "tbl b.b", "c")
+
+      val actualDf = sanitizeDfColumns(df, " ")
+
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+    }
+
     "convert schema from Spark to Json and back should produce the same schema" in {
       val testCaseSchema = StructType(
         Array(
