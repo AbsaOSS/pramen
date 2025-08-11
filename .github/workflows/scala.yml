@@ -8,13 +8,13 @@ on:
     paths:
       - "pramen/**"
       - ".github/workflows/scala.yml"
-  pull_request:
-    branches:
-      - "main"
-      - "support/*"
-    paths:
-      - "pramen/**"
-      - ".github/workflows/scala.yml"
+  #pull_request:
+  #  branches:
+  #    - "main"
+  #    - "support/*"
+  #  paths:
+  #    - "pramen/**"
+  #    - ".github/workflows/scala.yml"
 
 jobs:
   build-sbt:

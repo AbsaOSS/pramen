@@ -16,8 +16,24 @@
 
 name: Release2
 
+#on:
+#  workflow_dispatch:
+
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - "main"
+      - "support/*"
+    paths:
+      - "pramen/**"
+      - ".github/workflows/scala.yml"
+  pull_request:
+    branches:
+      - "main"
+      - "support/*"
+    paths:
+      - "pramen/**"
+      - ".github/workflows/scala.yml"
 
 defaults:
   run:
@@ -25,7 +41,7 @@ defaults:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +52,7 @@ jobs:
           java-version: 8
           cache: sbt
       - name: Build and release to Sonatype and Maven Central
+        working-directory: "./pramen"
         run: sbt ci-release
         env:
           PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
