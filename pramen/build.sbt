@@ -17,7 +17,6 @@
 import Dependencies._
 import Versions._
 import BuildInfoTemplateSettings._
-import ReleaseTransformations._
 import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
@@ -79,26 +78,13 @@ lazy val pramen = (project in file("."))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
     name := "pramen",
-    sonatypeProfileName := "za.co.absa",
+    crossScalaVersions := List(scala211, scala212, scala213),
 
     // No need to publish the aggregation [empty] artifact
     publishArtifact := false,
+    publish / skip := true,
     publish := {},
     publishLocal := {},
-    releaseProcess := Seq(
-      checkSnapshotDependencies,
-      inquireVersions,
-      releaseStepCommandAndRemaining("+clean"),
-      //releaseStepCommandAndRemaining("+test"),
-      setReleaseVersion,
-      commitReleaseVersion,
-      tagRelease,
-      releaseStepCommandAndRemaining("+publishSigned"),
-      releaseStepCommandAndRemaining("sonatypeReleaseAll"),
-      setNextVersion,
-      commitNextVersion,
-      pushChanges
-    )
   )
   .aggregate(api, core, extras)
 
@@ -110,6 +96,7 @@ lazy val api = (project in file("api"))
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-api",
+    crossScalaVersions := List(scala211, scala212, scala213),
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
@@ -120,21 +107,6 @@ lazy val api = (project in file("api"))
     (Test / testOptions) := Seq(Tests.Filter(allFilter)),
     (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    releaseProcess := Seq(
-      checkSnapshotDependencies,
-      inquireVersions,
-      releaseStepCommandAndRemaining("+clean"),
-      //releaseStepCommandAndRemaining("+test"),
-      setReleaseVersion,
-      commitReleaseVersion,
-      tagRelease,
-      releaseStepCommandAndRemaining("+publishSigned"),
-      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
-      setNextVersion,
-      commitNextVersion,
-      pushChanges
-    )
   )
   .enablePlugins(AutomateHeaderPlugin)
 
@@ -145,6 +117,7 @@ lazy val core = (project in file("core"))
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-core",
+    crossScalaVersions := List(scala211, scala212, scala213),
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
@@ -169,21 +142,7 @@ lazy val core = (project in file("core"))
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     populateBuildInfoTemplate,
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    releaseProcess := Seq(
-      checkSnapshotDependencies,
-      inquireVersions,
-      releaseStepCommandAndRemaining("+clean"),
-      //releaseStepCommandAndRemaining("+test"),
-      setReleaseVersion,
-      commitReleaseVersion,
-      tagRelease,
-      releaseStepCommandAndRemaining("+publishSigned"),
-      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
-      setNextVersion,
-      commitNextVersion,
-      pushChanges
-    ),
+    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
     jacocoExcludes := commonJacocoExcludes,
     assemblySettingsRunner
@@ -198,6 +157,7 @@ lazy val extras = (project in file("extras"))
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-extras",
+    crossScalaVersions := List(scala211, scala212, scala213),
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
@@ -213,30 +173,12 @@ lazy val extras = (project in file("extras"))
     (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
-    releasePublishArtifactsAction := PgpKeys.publishSigned.value,
-    releaseProcess := Seq(
-      checkSnapshotDependencies,
-      inquireVersions,
-      releaseStepCommandAndRemaining("+clean"),
-      //releaseStepCommandAndRemaining("+test"),
-      setReleaseVersion,
-      commitReleaseVersion,
-      tagRelease,
-      releaseStepCommandAndRemaining("+publishSigned"),
-      releaseStepCommandAndRemaining("sonatypeBundleRelease"),
-      setNextVersion,
-      commitNextVersion,
-      pushChanges
-    ),
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
     jacocoExcludes := commonJacocoExcludes,
     assemblySettingsExtras
   )
   .dependsOn(core)
   .enablePlugins(AutomateHeaderPlugin)
-
-// release settings
-releaseCrossBuild := true
 
 def isFiltered(fileName: String): Boolean = {
   val filteredExtensions = ".a" :: ".dll" :: ".dylib" :: ".py" :: ".so" :: ".st" :: ".stg" :: Nil
