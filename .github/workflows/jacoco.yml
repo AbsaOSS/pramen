@@ -17,12 +17,12 @@
 name: JaCoCo
 
 on:
-  #pull_request:
-  #  branches: [ main ]
-  #  paths:
-  #    - "pramen/**"
-  #    - ".github/workflows/scala.yml"
-  #    - ".github/workflows/jacoco.yml"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "pramen/**"
+      - ".github/workflows/scala.yml"
+      - ".github/workflows/jacoco.yml"
 
 jobs:
   coverage:
