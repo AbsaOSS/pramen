@@ -55,11 +55,3 @@ ThisBuild / homepage := Some(url("https://github.com/AbsaOSS/pramen"))
 ThisBuild / description := "Batch data pipeline management tool"
 ThisBuild / startYear := Some(2022)
 ThisBuild / licenses += "Apache-2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt")
-
-ThisBuild / pomIncludeRepository := { _ => false }
-ThisBuild / publishTo := {
-  val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
-  if (isSnapshot.value) Some("central-snapshots" at centralSnapshots)
-  else localStaging.value
-}
-ThisBuild / publishMavenStyle := true
