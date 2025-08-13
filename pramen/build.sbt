@@ -143,7 +143,6 @@ lazy val core = (project in file("core"))
     Test / fork := true,
     populateBuildInfoTemplate,
     jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
-    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
     jacocoExcludes := commonJacocoExcludes,
     assemblySettingsRunner
   )
