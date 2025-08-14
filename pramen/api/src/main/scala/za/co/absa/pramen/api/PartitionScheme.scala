@@ -27,5 +27,9 @@ object PartitionScheme {
 
   case class PartitionByYear(generatedYearColumn: String) extends PartitionScheme
 
+  /** Tables are not partitioned, but the information date column is present and all updates are scoped within an information date day. */
   case object NotPartitioned extends PartitionScheme
+
+  /** The table is always overwritten with the latest data. No information date column is present.*/
+  case object Overwrite extends PartitionScheme
 }

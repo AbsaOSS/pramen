@@ -30,14 +30,22 @@ object PartitionSchemeParser {
   val PARTITION_PERIOD_MONTH = "month"
   val PARTITION_PERIOD_YEAR_MONTH = "year_month"
   val PARTITION_PERIOD_YEAR = "year"
+  val PARTITION_EXPRESSION_OVERWRITE = "overwrite"
 
   def fromConfig(conf: Config, infoDateColumn: String): Option[PartitionScheme] = {
+    val partitionByStrOpt = ConfigUtils.getOptionString(conf, PARTITION_BY_KEY)
+
+    if (partitionByStrOpt.map(_.toLowerCase.trim).contains(PARTITION_EXPRESSION_OVERWRITE)) {
+      return Some(PartitionScheme.Overwrite)
+    }
+
     val partitionByOpt = ConfigUtils.getOptionBoolean(conf, PARTITION_BY_KEY)
     val partitionPeriodOpt = ConfigUtils.getOptionString(conf, PARTITION_PERIOD_KEY).map(_.trim.toLowerCase)
     val partitionYearColumn = ConfigUtils.getOptionString(conf, PARTITION_YEAR_COLUMN_KEY).getOrElse(s"${infoDateColumn}_year")
     val partitionMonthColumn = ConfigUtils.getOptionString(conf, PARTITION_MONTH_COLUMN_KEY).getOrElse(s"${infoDateColumn}_month")
 
     (partitionByOpt, partitionPeriodOpt) match {
+      case (_, Some(PARTITION_EXPRESSION_OVERWRITE)) => Some(PartitionScheme.Overwrite)
       case (Some(true), None) => Some(PartitionScheme.PartitionByDay)
       case (Some(false), _) => Some(PartitionScheme.NotPartitioned)
       case (_, Some(PARTITION_PERIOD_DAY)) => Some(PartitionScheme.PartitionByDay)

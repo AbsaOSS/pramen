@@ -36,6 +36,14 @@ class PartitionSchemeParserSuite extends AnyWordSpec {
       assert(partitionSchemeOpt.contains(PartitionScheme.PartitionByDay))
     }
 
+    "return overwrite when specified" in {
+      val conf = ConfigFactory.parseString("partition.by = overwrite")
+
+      val partitionSchemeOpt = PartitionSchemeParser.fromConfig(conf, "info_date")
+
+      assert(partitionSchemeOpt.contains(PartitionScheme.Overwrite))
+    }
+
     "return non-partitioned when specified" in {
       val conf = ConfigFactory.parseString("partition.by = false")
 
