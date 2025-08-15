@@ -64,7 +64,11 @@ class MetastorePersistenceIceberg(table: CatalogTable,
       if (isAppend) {
         appendToTable(dfToSave, fullTableName, writeOptions)
       } else {
-        overwriteDailyPartition(infoDate, dfToSave, fullTableName, infoDateColumn, writeOptions)
+        if (partitionScheme == PartitionScheme.Overwrite) {
+          overwriteFullTable(dfToSave, fullTableName, writeOptions)
+        } else {
+          overwriteDailyPartition(infoDate, dfToSave, fullTableName, infoDateColumn, writeOptions)
+        }
       }
     } else {
       log.info(s"Creating Iceberg table ${table.getFullTableName}...")
@@ -118,11 +122,18 @@ class MetastorePersistenceIceberg(table: CatalogTable,
   }
 
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
-    (infoDateFrom, infoDateTo) match {
-      case (None, None) => log.warn(s"Reading '${table.getFullTableName}' without filters. This can have performance impact."); lit(true)
-      case (Some(from), None) => col(infoDateColumn) >= lit(Date.valueOf(from))
-      case (None, Some(to)) => col(infoDateColumn) <= lit(Date.valueOf(to))
-      case (Some(from), Some(to)) => col(infoDateColumn) >= Date.valueOf(from) && col(infoDateColumn) <= lit(Date.valueOf(to))
+    if (partitionScheme == PartitionScheme.Overwrite) {
+      if (infoDateFrom.isDefined || infoDateTo.isDefined) {
+        log.warn(s"Date filter is ignored when the partition scheme is 'Overwrite' for '${table.getFullTableName}'.")
+      }
+      lit(true)
+    } else {
+      (infoDateFrom, infoDateTo) match {
+        case (None, None) => log.warn(s"Reading '${table.getFullTableName}' without filters. This can have performance impact."); lit(true)
+        case (Some(from), None) => col(infoDateColumn) >= lit(Date.valueOf(from))
+        case (None, Some(to)) => col(infoDateColumn) <= lit(Date.valueOf(to))
+        case (Some(from), Some(to)) => col(infoDateColumn) >= Date.valueOf(from) && col(infoDateColumn) <= lit(Date.valueOf(to))
+      }
     }
   }
 

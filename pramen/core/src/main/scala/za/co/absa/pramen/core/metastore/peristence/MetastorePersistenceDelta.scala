@@ -90,7 +90,7 @@ class MetastorePersistenceDelta(query: Query,
     }
 
     val (dfPartitioned, partitionColumns) = partitionScheme match {
-      case PartitionScheme.PartitionByDay =>
+      case PartitionScheme.PartitionByDay | PartitionScheme.Overwrite =>
         (dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType)), Seq(infoDateColumn))
       case PartitionScheme.PartitionByMonth(monthColumn, yearColumn) =>
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
@@ -107,30 +107,40 @@ class MetastorePersistenceDelta(query: Query,
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
         val dfNew = addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR(`$infoDateColumn`)")
         (dfNew, Seq(yearColumn))
-      case PartitionScheme.NotPartitioned =>
+      case PartitionScheme.NotPartitioned | PartitionScheme.Overwrite  =>
         // Move the date column to the front so that Z-ORDER index is possible for this field
         val dfIn = dfRepartitioned.drop(infoDateColumn)
         val dfNew = dfIn.select(lit(infoDateStr).cast(DateType).as(infoDateColumn) +: dfIn.columns.map(col): _*)
         (dfNew, Seq.empty)
     }
 
-    val writer = if (partitionScheme != PartitionScheme.NotPartitioned) {
+    val writer = if (partitionScheme == PartitionScheme.Overwrite) {
       dfPartitioned
         .write
         .format("delta")
         .mode(saveMode)
         .partitionBy(partitionColumns: _*)
         .option("mergeSchema", "true")
-        .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
         .options(writeOptions)
     } else {
-      dfPartitioned
-        .write
-        .format("delta")
-        .mode(saveMode)
-        .option("mergeSchema", "true")
-        .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
-        .options(writeOptions)
+      if (partitionScheme != PartitionScheme.NotPartitioned) {
+        dfPartitioned
+          .write
+          .format("delta")
+          .mode(saveMode)
+          .partitionBy(partitionColumns: _*)
+          .option("mergeSchema", "true")
+          .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
+          .options(writeOptions)
+      } else {
+        dfPartitioned
+          .write
+          .format("delta")
+          .mode(saveMode)
+          .option("mergeSchema", "true")
+          .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
+          .options(writeOptions)
+      }
     }
 
     query match {
@@ -214,11 +224,18 @@ class MetastorePersistenceDelta(query: Query,
   }
 
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
-    (infoDateFrom, infoDateTo) match {
-      case (None, None)           => log.warn(s"Reading '${query.query}' without filters. This can have performance impact."); lit(true)
-      case (Some(from), None)     => col(infoDateColumn) >= lit(dateFormatter.format(from))
-      case (None, Some(to))       => col(infoDateColumn) <= lit(dateFormatter.format(to))
-      case (Some(from), Some(to)) => col(infoDateColumn) >= lit(dateFormatter.format(from)) && col(infoDateColumn) <= lit(dateFormatter.format(to))
+    if (partitionScheme == PartitionScheme.Overwrite) {
+      if (infoDateFrom.isDefined || infoDateTo.isDefined) {
+        log.warn(s"Date filter is ignored when the partition scheme is 'Overwrite' for '${query.query}'.")
+      }
+      lit(true)
+    } else {
+      (infoDateFrom, infoDateTo) match {
+        case (None, None)           => log.warn(s"Reading '${query.query}' without filters. This can have performance impact."); lit(true)
+        case (Some(from), None)     => col(infoDateColumn) >= lit(dateFormatter.format(from))
+        case (None, Some(to))       => col(infoDateColumn) <= lit(dateFormatter.format(to))
+        case (Some(from), Some(to)) => col(infoDateColumn) >= lit(dateFormatter.format(from)) && col(infoDateColumn) <= lit(dateFormatter.format(to))
+      }
     }
   }
 

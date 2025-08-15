@@ -164,6 +164,64 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
     compareText(actual4, expected4)
   }
 
+  def testLoadOverwritingTable(mtp: MetastorePersistence): Assertion = {
+    val expected1 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12"
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12"
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 1,
+        |  "info_date" : "2021-10-12"
+        |} ]""".stripMargin
+    val expected2 =
+      """[ {
+        |  "a" : "A",
+        |  "b" : 1,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13"
+        |}, {
+        |  "a" : "B",
+        |  "b" : 2,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13"
+        |}, {
+        |  "a" : "C",
+        |  "b" : 3,
+        |  "p" : 2,
+        |  "info_date" : "2021-10-13"
+        |} ]""".stripMargin
+
+    mtp.saveTable(infoDate, getDf.withColumn("p", lit(1)), None)
+
+    val df1 = mtp.loadTable(Some(infoDate), Some(infoDate)).select("a", "b", "p", "info_date")
+    val actual1 = SparkUtils.dataFrameToJson(df1.orderBy("a"))
+
+    mtp.saveTable(infoDate.plusDays(1), getDf.withColumn("p", lit(2)), None)
+
+    val df2 = mtp.loadTable(Some(infoDate.plusDays(1)), None).select("a", "b", "p", "info_date")
+    val df3 = mtp.loadTable(None, Some(infoDate)).select("a", "b", "p", "info_date")
+    val df4 = mtp.loadTable(None, None).select("a", "b", "p", "info_date")
+
+
+    val actual2 = SparkUtils.dataFrameToJson(df2.orderBy("a"))
+    val actual3 = SparkUtils.dataFrameToJson(df3.orderBy("a"))
+    val actual4 = SparkUtils.dataFrameToJson(df4.orderBy("a", "p"))
+
+    compareText(actual1, expected1)
+    compareText(actual2, expected2)
+    compareText(actual3, expected2)
+    compareText(actual4, expected2)
+  }
+
   def testLoadMonthlyTablePeriods(mtp: MetastorePersistence): Assertion = {
     val expected1 =
       """[ {
@@ -756,6 +814,12 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
         withTempDirectory("mt_persist") { tempDir =>
           testLoadTablePeriods(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.NotPartitioned))
+        }
+      }
+      "load overwriting table" in {
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        withTempDirectory("mt_persist") { tempDir =>
+          testLoadOverwritingTable(getDeltaMtPersistence(tempDir, partitionScheme = PartitionScheme.Overwrite))
         }
       }
       "load empty table if wrong period partitioned" in {
