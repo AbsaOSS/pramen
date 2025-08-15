@@ -93,6 +93,11 @@ class MetastoreImpl(appConfig: Config,
     val mt = getTableDef(tableName)
     val effectiveBatchId = batchIdOpt.getOrElse(batchId)
 
+    if (mt.partitionScheme == PartitionScheme.Overwrite) {
+      throw new IllegalArgumentException(s"Cannot get a batch from a table '$tableName' with partition scheme 'overwrite'. " +
+        s"Use 'getTable()' or 'getLatest()' method to get the data.")
+    }
+
     val df = MetastorePersistence.fromMetaTable(mt, appConfig, batchId = effectiveBatchId).loadTable(Option(infoDate), Option(infoDate))
 
     if (df.schema.fields.exists(_.name.equalsIgnoreCase(mt.batchIdColumn))) {
@@ -105,7 +110,8 @@ class MetastoreImpl(appConfig: Config,
   override def getLatest(tableName: String, until: Option[LocalDate]): DataFrame = {
     val mt = getTableDef(tableName)
     val isLazy = mt.format.isLazy
-    if (isLazy) {
+    val isOverwriting = mt.partitionScheme == PartitionScheme.Overwrite
+    if (isLazy || isOverwriting) {
       MetastorePersistence.fromMetaTable(mt, appConfig, batchId = batchId).loadTable(None, until)
     } else {
       bookkeeper.getLatestProcessedDate(tableName, until) match {

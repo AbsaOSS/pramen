@@ -44,7 +44,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
     val infoDate1 = LocalDate.parse("2021-02-18")
     val infoDate2 = LocalDate.parse("2022-03-19")
 
-    def runBasicTests(mt: MetastorePersistence, query: Query): Assertion = {
+    def runBasicTests(mt: MetastorePersistence): Assertion = {
       // double write should not duplicate partitions
       mt.saveTable(infoDate1, df1, None)
       mt.saveTable(infoDate1, df1, None)
@@ -56,14 +56,27 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
       assert(mt.loadTable(None, None).count() == 4)
     }
 
+    def runOverwritingTests(mt: MetastorePersistence): Assertion = {
+      // double write should not duplicate partitions
+      mt.saveTable(infoDate1, df1, None)
+      mt.saveTable(infoDate1, df1, None)
+
+      assert(mt.loadTable(Some(infoDate1), Some(infoDate2)).count() == 3)
+
+      mt.saveTable(infoDate2, df2, None)
+
+      assert(mt.loadTable(None, None).count() == 3)
+      assert(mt.loadTable(Some(infoDate1.plusDays(1)), Some(infoDate2.plusDays(2))).count() == 3)
+    }
+
     "table targets" should {
       "create, read, and append daily partitions" in {
-        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table1" + Math.abs(Random.nextInt()).toString
         val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByDay)
 
-        runBasicTests(mt, Query.Table(tableName))
+        runBasicTests(mt)
 
         val df = mt.loadTable(None, None)
         assert(df.schema.fields.length == 3)
@@ -78,12 +91,12 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
       }
 
       "create, read, and append monthly partitions" in {
-        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table2" + Math.abs(Random.nextInt()).toString
         val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByMonth("info_month", "info_year"))
 
-        runBasicTests(mt, Query.Table(tableName))
+        runBasicTests(mt)
 
         val df = mt.loadTable(None, None)
         assert(df.schema.fields.length == 3)
@@ -99,23 +112,23 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
       }
 
       "create, read, and append year-month partitions" in {
-        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table3" + Math.abs(Random.nextInt()).toString
         val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYearMonth("info_month"))
 
         assertThrows[UnsupportedOperationException] {
-          runBasicTests(mt, Query.Table(tableName))
+          runBasicTests(mt)
         }
       }
 
       "create, read, and append yearly partitions" in {
-        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table4" + Math.abs(Random.nextInt()).toString
         val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYear("info_year"))
 
-        runBasicTests(mt, Query.Table(tableName))
+        runBasicTests(mt)
 
         val df = mt.loadTable(None, None)
         assert(df.schema.fields.length == 3)
@@ -130,12 +143,31 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
       }
 
       "create, read, and append non-partitioned tables" in {
-        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table5" + Math.abs(Random.nextInt()).toString
         val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.NotPartitioned)
 
-        runBasicTests(mt, Query.Table(tableName))
+        runBasicTests(mt)
+
+        val df = mt.loadTable(None, None)
+        assert(df.schema.fields.length == 3)
+
+        val partitionColumns = getTablePartitions(tableName)
+
+        assert(partitionColumns.isEmpty)
+
+        spark.sql(s"DELETE FROM $tableName").count()
+        spark.sql(s"DROP TABLE IF EXISTS $tableName").count()
+      }
+
+      "create, read, and overwrite overwriting tables" in {
+        assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
+
+        val tableName = "mt_iceberg_part_table6" + Math.abs(Random.nextInt()).toString
+        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.Overwrite)
+
+        runOverwritingTests(mt)
 
         val df = mt.loadTable(None, None)
         assert(df.schema.fields.length == 3)

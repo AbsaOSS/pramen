@@ -45,7 +45,7 @@ object MetastorePersistenceIcebergOps {
     if (description.nonEmpty) properties += ("comment" -> description)
 
     val dfIn = partitionScheme match {
-      case PartitionScheme.PartitionByDay | PartitionScheme.NotPartitioned =>
+      case PartitionScheme.PartitionByDay | PartitionScheme.NotPartitioned | PartitionScheme.Overwrite =>
         df
       case _ =>
         df.filter(lit(false))
@@ -72,6 +72,8 @@ object MetastorePersistenceIcebergOps {
     }
 
     partitionScheme match {
+      case PartitionScheme.Overwrite =>
+        partitionedWriter.createOrReplace()
       case PartitionScheme.NotPartitioned =>
         partitionedWriter.create()
       case PartitionScheme.PartitionByDay =>
@@ -93,6 +95,11 @@ object MetastorePersistenceIcebergOps {
     df.writeTo(table)
       .options(writerOptions)
       .overwrite(col(infoDateColumn) === Date.valueOf(infoDate))
+  }
+
+  def overwriteFullTable(df: DataFrame, table: String, writerOptions: Map[String, String]): Unit = {
+    df.writeTo(table)
+      .options(writerOptions)
   }
 
   def appendToTable(df: DataFrame,
