@@ -68,7 +68,7 @@ class OverwritingMetadataLongSuite extends AnyWordSpec with SparkTestBase with T
 
         assert(!fs.exists(table2PartitionPath))
 
-        val df1 = spark.read.parquet(table2Path.toString)
+        val df1 = spark.read.format("delta").load(table2Path.toString)
         val actual1 = df1.orderBy("id").toJSON.collect().mkString("\n")
 
         compareText(actual1, expected1)

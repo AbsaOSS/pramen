@@ -68,8 +68,6 @@ class MetastorePersistenceDelta(query: Query,
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
     val infoDateStr = dateFormatter.format(infoDate)
 
-    val whereCondition = s"$infoDateColumn='$infoDateStr'"
-
     val dfRepartitioned = if (partitionScheme == PartitionScheme.PartitionByDay) {
       applyPartitioning(df, partitionInfo, numberOfRecordsEstimate)
     } else {
@@ -107,7 +105,7 @@ class MetastorePersistenceDelta(query: Query,
         val dfIn = dfRepartitioned.withColumn(infoDateColumn, lit(infoDateStr).cast(DateType))
         val dfNew = addGeneratedColumn(dfIn, yearColumn, IntegerType, s"YEAR(`$infoDateColumn`)")
         (dfNew, Seq(yearColumn))
-      case PartitionScheme.NotPartitioned | PartitionScheme.Overwrite  =>
+      case PartitionScheme.NotPartitioned =>
         // Move the date column to the front so that Z-ORDER index is possible for this field
         val dfIn = dfRepartitioned.drop(infoDateColumn)
         val dfNew = dfIn.select(lit(infoDateStr).cast(DateType).as(infoDateColumn) +: dfIn.columns.map(col): _*)
@@ -142,15 +140,18 @@ class MetastorePersistenceDelta(query: Query,
       }
     }
 
+    val whereCondition = s"$infoDateColumn='$infoDateStr'"
+    val logWhere = if (partitionScheme == PartitionScheme.Overwrite) "" else s" WHERE $whereCondition"
+
     query match {
       case Query.Path(path)   =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
         fsUtils.createDirectoryRecursive(new Path(path))
-        log.info(s"$operationStr to path '$path' WHERE $whereCondition...")
+        log.info(s"$operationStr to path '$path'$logWhere...")
         writer.save(path)
       case Query.Table(table) =>
         writer.saveAsTable(table)
-        log.info(s"$operationStr to table '$table' WHERE $whereCondition...")
+        log.info(s"$operationStr to table '$table'$logWhere...")
       case q =>
         throw new IllegalStateException(s"The '${q.name}' option is not supported as a write target for Delta.")
     }

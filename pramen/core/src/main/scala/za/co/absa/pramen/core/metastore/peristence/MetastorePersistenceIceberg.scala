@@ -132,7 +132,7 @@ class MetastorePersistenceIceberg(table: CatalogTable,
         case (None, None) => log.warn(s"Reading '${table.getFullTableName}' without filters. This can have performance impact."); lit(true)
         case (Some(from), None) => col(infoDateColumn) >= lit(Date.valueOf(from))
         case (None, Some(to)) => col(infoDateColumn) <= lit(Date.valueOf(to))
-        case (Some(from), Some(to)) => col(infoDateColumn) >= Date.valueOf(from) && col(infoDateColumn) <= lit(Date.valueOf(to))
+        case (Some(from), Some(to)) => col(infoDateColumn) >= lit(Date.valueOf(from)) && col(infoDateColumn) <= lit(Date.valueOf(to))
       }
     }
   }
