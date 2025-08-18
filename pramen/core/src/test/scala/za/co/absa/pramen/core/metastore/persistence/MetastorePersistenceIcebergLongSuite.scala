@@ -61,12 +61,14 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
       mt.saveTable(infoDate1, df1, None)
       mt.saveTable(infoDate1, df1, None)
 
+      assert(mt.loadTable(None, None).count() == 3)
       assert(mt.loadTable(Some(infoDate1), Some(infoDate2)).count() == 3)
+      assert(mt.loadTable(Some(infoDate1.plusDays(1)), Some(infoDate2.plusDays(2))).count() == 3)
 
       mt.saveTable(infoDate2, df2, None)
 
-      assert(mt.loadTable(None, None).count() == 3)
-      assert(mt.loadTable(Some(infoDate1.plusDays(1)), Some(infoDate2.plusDays(2))).count() == 3)
+      assert(mt.loadTable(None, None).count() == 1)
+      assert(mt.loadTable(Some(infoDate1.plusDays(1)), Some(infoDate2.plusDays(2))).count() == 1)
     }
 
     "table targets" should {
