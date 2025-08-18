@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.PartitionScheme
@@ -100,6 +100,7 @@ object MetastorePersistenceIcebergOps {
   def overwriteFullTable(df: DataFrame, table: String, writerOptions: Map[String, String]): Unit = {
     df.writeTo(table)
       .options(writerOptions)
+      .overwrite(lit(true))
   }
 
   def appendToTable(df: DataFrame,

@@ -46,6 +46,12 @@ object MetastorePersistenceIcebergOps {
     throw new UnsupportedOperationException(s"Iceberg format is not supported in Scala 2.11")
   }
 
+  def overwriteFullTable(df: DataFrame,
+                         table: String,
+                         writerOptions: Map[String, String]): Unit = {
+    throw new UnsupportedOperationException(s"Iceberg format is not supported in Scala 2.11")
+  }
+
   def appendToTable(df: DataFrame,
                     table: String,
                     writerOptions: Map[String, String]): Unit = {

@@ -119,7 +119,6 @@ class MetastorePersistenceDelta(query: Query,
         .write
         .format("delta")
         .mode(saveMode)
-        .partitionBy(partitionColumns: _*)
         .option("mergeSchema", "true")
         .options(writeOptions)
     } else {
