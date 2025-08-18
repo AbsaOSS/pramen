@@ -45,7 +45,6 @@ object PartitionSchemeParser {
     val partitionMonthColumn = ConfigUtils.getOptionString(conf, PARTITION_MONTH_COLUMN_KEY).getOrElse(s"${infoDateColumn}_month")
 
     (partitionByOpt, partitionPeriodOpt) match {
-      case (_, Some(PARTITION_EXPRESSION_OVERWRITE)) => Some(PartitionScheme.Overwrite)
       case (Some(true), None) => Some(PartitionScheme.PartitionByDay)
       case (Some(false), _) => Some(PartitionScheme.NotPartitioned)
       case (_, Some(PARTITION_PERIOD_DAY)) => Some(PartitionScheme.PartitionByDay)
