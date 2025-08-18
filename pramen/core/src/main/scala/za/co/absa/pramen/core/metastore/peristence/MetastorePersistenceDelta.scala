@@ -112,32 +112,23 @@ class MetastorePersistenceDelta(query: Query,
         (dfNew, Seq.empty)
     }
 
-    val writer = if (partitionScheme == PartitionScheme.Overwrite) {
-      dfPartitioned
-        .write
-        .format("delta")
-        .mode(saveMode)
-        .option("mergeSchema", "true")
-        .options(writeOptions)
+    val writer1 = dfPartitioned
+      .write
+      .format("delta")
+      .mode(saveMode)
+      .option("mergeSchema", "true")
+      .options(writeOptions)
+
+    val writer2 = if (partitionScheme == PartitionScheme.NotPartitioned || partitionScheme == PartitionScheme.Overwrite) {
+      writer1
     } else {
-      if (partitionScheme != PartitionScheme.NotPartitioned) {
-        dfPartitioned
-          .write
-          .format("delta")
-          .mode(saveMode)
-          .partitionBy(partitionColumns: _*)
-          .option("mergeSchema", "true")
-          .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
-          .options(writeOptions)
-      } else {
-        dfPartitioned
-          .write
-          .format("delta")
-          .mode(saveMode)
-          .option("mergeSchema", "true")
-          .option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
-          .options(writeOptions)
-      }
+      writer1.partitionBy(partitionColumns: _*)
+    }
+
+    val writerFinal = if (saveMode == SaveMode.Overwrite) {
+      writer2.option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
+    } else {
+      writer2
     }
 
     val whereCondition = s"$infoDateColumn='$infoDateStr'"
@@ -148,9 +139,10 @@ class MetastorePersistenceDelta(query: Query,
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
         fsUtils.createDirectoryRecursive(new Path(path))
         log.info(s"$operationStr to path '$path'$logWhere...")
-        writer.save(path)
+        writerFinal.save(path)
       case Query.Table(table) =>
-        writer.saveAsTable(table)
+        writerFinal
+          .saveAsTable(table)
         log.info(s"$operationStr to table '$table'$logWhere...")
       case q =>
         throw new IllegalStateException(s"The '${q.name}' option is not supported as a write target for Delta.")
