@@ -125,7 +125,7 @@ class MetastorePersistenceDelta(query: Query,
       writer1.partitionBy(partitionColumns: _*)
     }
 
-    val writerFinal = if (saveMode == SaveMode.Overwrite) {
+    val writerFinal = if (saveMode == SaveMode.Overwrite && partitionScheme != PartitionScheme.Overwrite) {
       writer2.option("replaceWhere", s"$infoDateColumn='$infoDateStr'")
     } else {
       writer2

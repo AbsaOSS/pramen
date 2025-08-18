@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.metastore.peristence
 
-import org.apache.spark.sql.{AnalysisException, DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.PartitionScheme
 
