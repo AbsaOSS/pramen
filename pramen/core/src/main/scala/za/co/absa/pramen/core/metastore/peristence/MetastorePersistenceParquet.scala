@@ -20,7 +20,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.PartitionInfo
+import za.co.absa.pramen.api.{PartitionInfo, PartitionScheme}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
@@ -40,6 +40,7 @@ class MetastorePersistenceParquet(path: String,
                                   batchIdColumn: String,
                                   batchId: Long,
                                   partitionInfo: PartitionInfo,
+                                  partitionScheme: PartitionScheme,
                                   saveModeOpt: Option[SaveMode],
                                   readOptions: Map[String, String],
                                   writeOptions: Map[String, String]
@@ -62,7 +63,10 @@ class MetastorePersistenceParquet(path: String,
   }
 
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
-    val outputDir = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
+    val outputDir = if (partitionScheme == PartitionScheme.Overwrite)
+      new Path(path)
+    else
+      SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
     val outputDirStr = outputDir.toUri.toString
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
@@ -80,7 +84,7 @@ class MetastorePersistenceParquet(path: String,
         false
     }
 
-    val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn))) {
+    val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn)) && partitionScheme != PartitionScheme.Overwrite) {
       df.drop(infoDateColumn)
     } else {
       df
@@ -177,11 +181,18 @@ class MetastorePersistenceParquet(path: String,
   }
 
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
-    (infoDateFrom, infoDateTo) match {
-      case (None, None)           => log.warn(s"Reading '$path' without filters. This can have performance impact."); lit(true)
-      case (Some(from), None)     => col(infoDateColumn) >= lit(dateFormatter.format(from))
-      case (None, Some(to))       => col(infoDateColumn) <= lit(dateFormatter.format(to))
-      case (Some(from), Some(to)) => col(infoDateColumn) >= lit(dateFormatter.format(from)) && col(infoDateColumn) <= lit(dateFormatter.format(to))
+    if (partitionScheme == PartitionScheme.Overwrite) {
+      if (infoDateFrom.isDefined || infoDateTo.isDefined) {
+        log.warn(s"Date filter is ignored when the partition scheme is 'Overwrite' for '$path'")
+      }
+      lit(true)
+    } else {
+      (infoDateFrom, infoDateTo) match {
+        case (None, None) => log.warn(s"Reading '$path' without filters. This can have performance impact."); lit(true)
+        case (Some(from), None) => col(infoDateColumn) >= lit(dateFormatter.format(from))
+        case (None, Some(to)) => col(infoDateColumn) <= lit(dateFormatter.format(to))
+        case (Some(from), Some(to)) => col(infoDateColumn) >= lit(dateFormatter.format(from)) && col(infoDateColumn) <= lit(dateFormatter.format(to))
+      }
     }
   }
 

@@ -20,6 +20,7 @@ import org.apache.hadoop.fs.{FileStatus, Path}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.PartitionScheme
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
@@ -31,6 +32,7 @@ import scala.collection.mutable
 class MetastorePersistenceRaw(path: String,
                               infoDateColumn: String,
                               infoDateFormat: String,
+                              partitionScheme: PartitionScheme,
                               saveModeOpt: Option[SaveMode])
                              (implicit spark: SparkSession) extends MetastorePersistence {
 
@@ -41,6 +43,8 @@ class MetastorePersistenceRaw(path: String,
 
   override def loadTable(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     (infoDateFrom, infoDateTo) match {
+      case _ if partitionScheme == PartitionScheme.Overwrite =>
+        listOfPathsToDf(getListOfFiles)
       case (Some(from), Some(to)) if from.isEqual(to) =>
         listOfPathsToDf(getListOfFiles(from))
       case (Some(from), Some(to)) =>
@@ -57,7 +61,11 @@ class MetastorePersistenceRaw(path: String,
 
     val files = df.select(RAW_PATH_FIELD_KEY).collect().map(_.getString(0))
 
-    val outputDir = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
+    val outputDir = if (partitionScheme == PartitionScheme.Overwrite)
+      new Path(path)
+    else
+      SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
+
 
     val fsUtilsTrg = new FsUtils(spark.sparkContext.hadoopConfiguration, outputDir.toString)
 
@@ -166,6 +174,17 @@ class MetastorePersistenceRaw(path: String,
         d = d.plusDays(1)
       }
       files.toSeq
+    }
+  }
+
+  private def getListOfFiles: Seq[FileStatus] = {
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+    val hadoopPath = new Path(path)
+
+    if (!fsUtils.exists(hadoopPath)) {
+      Seq.empty[FileStatus]
+    } else {
+      fsUtils.getHadoopFiles(hadoopPath).toSeq
     }
   }
 

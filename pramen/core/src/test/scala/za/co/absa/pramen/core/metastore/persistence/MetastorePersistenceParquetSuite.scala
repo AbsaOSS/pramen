@@ -20,7 +20,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.PartitionInfo
+import za.co.absa.pramen.api.{PartitionInfo, PartitionScheme}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceParquet
@@ -40,7 +40,7 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
       withTempDirectory("metastore_parquet") { tempDir =>
         val outputPath = new Path(tempDir, "partition=10")
 
-        val persistence = new MetastorePersistenceParquet(tempDir, "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, None, Map.empty, Map.empty)
+        val persistence = new MetastorePersistenceParquet(tempDir, "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, PartitionScheme.PartitionByDay, None, Map.empty, Map.empty)
 
         persistence.writeAndCleanOnFailure(exampleDf, outputPath.toString, fsUtils, SaveMode.Overwrite)
 
@@ -53,7 +53,7 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
       withTempDirectory("metastore_parquet") { tempDir =>
         val outputPath = new Path(tempDir, "partition=10")
 
-        val persistence = new MetastorePersistenceParquet(tempDir, "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, Some(SaveMode.Append), Map.empty, Map.empty)
+        val persistence = new MetastorePersistenceParquet(tempDir, "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, PartitionScheme.PartitionByDay, Some(SaveMode.Append), Map.empty, Map.empty)
 
         persistence.writeAndCleanOnFailure(exampleDf, outputPath.toString, fsUtils, SaveMode.Append)
         persistence.writeAndCleanOnFailure(exampleDf, outputPath.toString, fsUtils, SaveMode.Append)
@@ -72,7 +72,7 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
 
       when(df.write).thenThrow(new RuntimeException("test exception"))
 
-      val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, None, Map.empty, Map.empty)
+      val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, PartitionScheme.PartitionByDay, None, Map.empty, Map.empty)
 
       assertThrows[RuntimeException] {
         persistence.writeAndCleanOnFailure(df, "dummy", fsUtils, SaveMode.Overwrite)
@@ -89,7 +89,7 @@ class MetastorePersistenceParquetSuite extends AnyWordSpec with SparkTestBase wi
 
         fsUtils.createDirectoryRecursive(outputPath)
 
-        val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, None, Map.empty, Map.empty)
+        val persistence = new MetastorePersistenceParquet("dummy", "ignore", "yyyy-MM-dd", "batchid", 0, PartitionInfo.Default, PartitionScheme.PartitionByDay, None, Map.empty, Map.empty)
 
         val ex = intercept[RuntimeException] {
           persistence.writeAndCleanOnFailure(df, outputPath.toString, fsUtils, SaveMode.Overwrite)
