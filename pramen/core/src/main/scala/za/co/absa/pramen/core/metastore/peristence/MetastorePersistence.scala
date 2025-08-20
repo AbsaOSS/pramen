@@ -49,7 +49,7 @@ object MetastorePersistence {
     metaTable.format match {
       case DataFormat.Parquet(path, partitionInfo) =>
         new MetastorePersistenceParquet(
-          path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, partitionInfo, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
+          path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.batchIdColumn, batchId, partitionInfo, metaTable.partitionScheme, saveModeOpt, metaTable.readOptions, metaTable.writeOptions
         )
       case DataFormat.Delta(query, partitionInfo) =>
         new MetastorePersistenceDelta(
@@ -60,7 +60,7 @@ object MetastorePersistence {
           table, location, metaTable.description, metaTable.infoDateColumn, metaTable.batchIdColumn, batchId, metaTable.partitionScheme, saveModeOpt, metaTable.writeOptions, metaTable.tableProperties
         )
       case DataFormat.Raw(path)                          =>
-        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, saveModeOpt)
+        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.partitionScheme, saveModeOpt)
       case DataFormat.TransientEager(cachePolicy)             =>
         new MetastorePersistenceTransientEager(TransientTableManager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Transient(cachePolicy) =>
