@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.transformers
 
 import org.apache.spark.sql.DataFrame
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{DataFormat, MetastoreReader, Reason, Transformer}
+import za.co.absa.pramen.api.{DataFormat, MetastoreReader, PartitionScheme, Reason, Transformer}
 import za.co.absa.pramen.core.utils.SparkUtils.getPartitionPath
 
 import java.time.LocalDate
@@ -156,7 +156,11 @@ class ConversionTransformer extends Transformer {
 
       val metaTable = metastore.getTableDef(inputTable)
       val path = metaTable.format.asInstanceOf[DataFormat.Raw].path
-      val partitionPath = getPartitionPath(infoDate, metaTable.infoDateColumn, metaTable.infoDateFormat, path).toString
+      val partitionPath = if (metaTable.partitionScheme == PartitionScheme.Overwrite) {
+        path
+      } else {
+        getPartitionPath(infoDate, metaTable.infoDateColumn, metaTable.infoDateFormat, path).toString
+      }
 
       spark.read
         .format(inputFormat)
