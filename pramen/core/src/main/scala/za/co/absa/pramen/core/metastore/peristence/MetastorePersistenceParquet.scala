@@ -84,10 +84,10 @@ class MetastorePersistenceParquet(path: String,
         false
     }
 
-    val dfIn = if (df.schema.exists(_.name.equalsIgnoreCase(infoDateColumn)) && partitionScheme != PartitionScheme.Overwrite) {
+    val dfIn = if (partitionScheme != PartitionScheme.Overwrite) {
       df.drop(infoDateColumn)
     } else {
-      df
+      df.withColumn(infoDateColumn, lit(Date.valueOf(infoDate)))
     }
 
     val dfRepartitioned = applyPartitioning(dfIn, partitionInfo, numberOfRecordsEstimate)
@@ -109,7 +109,10 @@ class MetastorePersistenceParquet(path: String,
   }
 
   override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
-    val outputDirStr = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path).toUri.toString
+    val outputDirStr = if (partitionScheme == PartitionScheme.Overwrite)
+      path
+    else
+      SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path).toUri.toString
 
     val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
 
@@ -214,10 +217,10 @@ class MetastorePersistenceParquet(path: String,
     } catch {
       case NonFatal(ex) =>
         // Failure to date the dataframe here creates an empty directory, which is not a valid partition.
-        // We need to delete it to avoid the an attempt to read it in the future.
+        // We need to delete it to avoid an attempt to read it in the future.
         Try {
           val partitionPath = new Path(outputDirStr)
-          if (fsUtils.exists(partitionPath) && saveMode == SaveMode.Overwrite) {
+          if (fsUtils.exists(partitionPath) && saveMode == SaveMode.Overwrite && partitionScheme != PartitionScheme.Overwrite) {
             log.warn(s"The write failed. Deleting the empty directory: $partitionPath")
             fsUtils.deleteDirectoryRecursively(partitionPath)
           }
