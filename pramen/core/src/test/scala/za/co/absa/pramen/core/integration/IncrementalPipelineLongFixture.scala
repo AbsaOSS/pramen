@@ -1282,7 +1282,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   def getConfig(basePath: String,
                 metastoreFormat: String,
                 isRerun: Boolean = false,
-                useDataFrame: Boolean = false,
+                useFileList: Boolean = false,
                 isTransformerIncremental: Boolean = true,
                 isTransformerDisabled: Boolean = false,
                 isHistoricalRun: Boolean = false,
@@ -1306,7 +1306,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
     val conf = ConfigFactory.parseString(
         s"""base.path = "$basePathEscaped"
-           |use.dataframe = $useDataFrame
+           |use.file.list = $useFileList
            |pramen.runtime.is.rerun = $isRerun
            |pramen.current.date = "$useInfoDate"
            |transformer.schedule = "$transformerSchedule"

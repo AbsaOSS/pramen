@@ -216,7 +216,7 @@ class MetastorePersistenceParquet(path: String,
         .save(outputDirStr)
     } catch {
       case NonFatal(ex) =>
-        // Failure to date the dataframe here creates an empty directory, which is not a valid partition.
+        // Failure to save the dataframe here creates an empty directory, which is not a valid partition.
         // We need to delete it to avoid an attempt to read it in the future.
         Try {
           val partitionPath = new Path(outputDirStr)
