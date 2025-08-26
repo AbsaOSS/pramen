@@ -68,7 +68,7 @@ class FileSourcingSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
         fsUtils.writeFile(new Path(tempDir, "landing_file1.csv"), "id,name\n1,John\n2,Jack\n3,Jill\n")
         fsUtils.writeFile(new Path(tempDir, "landing_file2.csv"), "id,name\n4,Mary\n5,Jane\n6,Kate\n")
 
-        val conf = getConfig(tempDir, useDataFrame = true)
+        val conf = getConfig(tempDir, useFileList = true)
 
         val exitCode = AppRunner.runPipeline(conf)
 
@@ -84,13 +84,13 @@ class FileSourcingSuite extends AnyWordSpec with SparkTestBase with TempDirFixtu
     }
   }
 
-  def getConfig(basePath: String, useDataFrame: Boolean = false): Config = {
+  def getConfig(basePath: String, useFileList: Boolean = false): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/integration_file_based_source.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
 
     val conf = ConfigFactory.parseString(
       s"""base.path = "$basePathEscaped"
-         |use.dataframe = $useDataFrame
+         |use.file.list = $useFileList
          |pramen.runtime.is.rerun = true
          |pramen.current.date = "$infoDate"
          |$configContents
