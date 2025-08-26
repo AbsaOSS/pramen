@@ -84,22 +84,28 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
   }
 
   private[core] def getStructField(columnIndex: Int): StructField = {
-    val columnName = rs.getMetaData.getColumnName(columnIndex)
-    val dataType = rs.getMetaData.getColumnType(columnIndex)
+    val metadata = rs.getMetaData
+    val columnName = metadata.getColumnName(columnIndex)
+    val dataType = metadata.getColumnType(columnIndex)
+    val size = metadata.getPrecision(columnIndex)
 
     dataType match {
-      case BIT | BOOLEAN => StructField(columnName, BooleanType)
-      case TINYINT       => StructField(columnName, ByteType)
-      case SMALLINT      => StructField(columnName, ShortType)
-      case INTEGER       => StructField(columnName, IntegerType)
-      case BIGINT        => StructField(columnName, LongType)
-      case FLOAT         => StructField(columnName, FloatType)
-      case DOUBLE        => StructField(columnName, DoubleType)
-      case REAL          => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
-      case NUMERIC       => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
-      case DATE          => StructField(columnName, DateType)
-      case TIMESTAMP     => StructField(columnName, TimestampType)
-      case _             => StructField(columnName, StringType)
+      case BIT if size > 1 => StructField(columnName, BinaryType)
+      case BIT | BOOLEAN   => StructField(columnName, BooleanType)
+      case BLOB            => StructField(columnName, BinaryType)
+      case VARBINARY       => StructField(columnName, BinaryType)
+      case LONGVARBINARY   => StructField(columnName, BinaryType)
+      case TINYINT         => StructField(columnName, ByteType)
+      case SMALLINT        => StructField(columnName, ShortType)
+      case INTEGER         => StructField(columnName, IntegerType)
+      case BIGINT          => StructField(columnName, LongType)
+      case FLOAT           => StructField(columnName, FloatType)
+      case DOUBLE          => StructField(columnName, DoubleType)
+      case REAL            => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
+      case NUMERIC         => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
+      case DATE            => StructField(columnName, DateType)
+      case TIMESTAMP       => StructField(columnName, TimestampType)
+      case _               => StructField(columnName, StringType)
     }
   }
 
@@ -112,6 +118,12 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 
     // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
     dataType match {
+      case BIT if size > 1 =>
+        val v = rs.getBytes(columnIndex)
+        if (rs.wasNull()) null else v
+      case BLOB | VARBINARY| LONGVARBINARY =>
+        val v = rs.getBytes(columnIndex)
+        if (rs.wasNull()) null else v
       case BIT | BOOLEAN =>
         val v = rs.getBoolean(columnIndex)
         if (rs.wasNull()) null else v
@@ -159,18 +171,23 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 
       // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
       val actualDataType = dataType match {
-        case BIT | BOOLEAN => BOOLEAN
-        case TINYINT       => TINYINT
-        case SMALLINT      => SMALLINT
-        case INTEGER       => INTEGER
-        case BIGINT        => BIGINT
-        case FLOAT         => FLOAT
-        case DOUBLE        => DOUBLE
-        case REAL          => getDecimalDataType(i)
-        case NUMERIC       => getDecimalDataType(i)
-        case DATE          => DATE
-        case TIMESTAMP     => TIMESTAMP
-        case _             => VARCHAR
+        case BIT if size > 1 => BLOB
+        case BIT | BOOLEAN   => BOOLEAN
+        case BLOB            => BLOB
+        case VARBINARY       => BLOB
+        case LONGVARBINARY   => BLOB
+        case BIT | BOOLEAN   => BOOLEAN
+        case TINYINT         => TINYINT
+        case SMALLINT        => SMALLINT
+        case INTEGER         => INTEGER
+        case BIGINT          => BIGINT
+        case FLOAT           => FLOAT
+        case DOUBLE          => DOUBLE
+        case REAL            => getDecimalDataType(i)
+        case NUMERIC         => getDecimalDataType(i)
+        case DATE            => DATE
+        case TIMESTAMP       => TIMESTAMP
+        case _               => VARCHAR
       }
 
       columnIndexToTypeMap += i -> actualDataType
