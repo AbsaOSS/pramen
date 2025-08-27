@@ -68,7 +68,18 @@ class JdbcNativeArrayLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
           |  "TS_ARRAY" : [ null, "2025-06-01T12:30:00.000+02:00" ],
           |  "BIN_ARRAY" : [ "AavNIw==", null ]
           |}, {
-          |  "ID" : 2
+          |  "ID" : 2,
+          |  "STR_ARRAY" : [ ],
+          |  "BOOL_ARRAY" : [ ],
+          |  "SHORT_ARRAY" : [ ],
+          |  "INT_ARRAY" : [ ],
+          |  "LONG_ARRAY" : [ ],
+          |  "DEC_ARRAY" : [ ],
+          |  "DATE_ARRAY" : [ ],
+          |  "TS_ARRAY" : [ ],
+          |  "BIN_ARRAY" : [ ]
+          |}, {
+          |  "ID" : 3
           |} ]""".stripMargin
       withTempDirectory("jdbc_native_array") { tempDir =>
         val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
@@ -79,7 +90,7 @@ class JdbcNativeArrayLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
         val resultDf = spark.read.parquet(table1Path.toString)
 
-        assert(resultDf.count() == 3)
+        assert(resultDf.count() == 4)
 
         val actualData = SparkUtils.convertDataFrameToPrettyJSON(resultDf.orderBy("id"))
 
@@ -88,7 +99,7 @@ class JdbcNativeArrayLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
     }
   }
 
-  def getConfig(basePath: String, useJdbsNative: Boolean = true): Config = {
+  def getConfig(basePath: String, useJdbcNative: Boolean = true): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/integration_ingestion_native_array.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
 
@@ -99,7 +110,7 @@ class JdbcNativeArrayLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
          |jdbc.url="$url"
          |jdbc.user="$user"
          |jdbc.password="$password"
-         |jdbc.native=$useJdbsNative
+         |jdbc.native=$useJdbcNative
          |
          |$configContents
          |""".stripMargin
