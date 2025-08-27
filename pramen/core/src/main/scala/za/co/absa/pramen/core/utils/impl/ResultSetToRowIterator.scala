@@ -267,7 +267,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 
     val columnTypeOpt = fixedTypeName match {
       case "bool" | "boolean"                              => Some(BooleanType)
-      case "bit" | "varbinary"                             => Some(BinaryType)
+      case "bit" | "varbinary" | "bytea"                   => Some(BinaryType)
       case "int2" | "smallint"                             => Some(ShortType)
       case "int4" | "integer"                              => Some(IntegerType)
       case "int8" | "oid" | "bigint"                       => Some(LongType)
@@ -276,9 +276,8 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       case "text" | "varchar" | "char" | "bpchar" | "cidr" | "inet" |
            "json" | "jsonb" | "uuid" | "xml" | "macaddr" | "macaddr8" |
            "txid_snapshot" | "path" | "varbit" |
-           "interval"                                      => Some(StringType)
-      case "bytea"                                         => Some(BinaryType)
-      case "timestamp" | "timestamptz" | "time" | "timetz" => Some(TimestampType)
+           "interval" | "time" | "timetz"                  => Some(StringType)
+      case "timestamp" | "timestamptz"                     => Some(TimestampType)
       case "date"                                          => Some(DateType)
       case "numeric" | "decimal"                           => Option(getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
       case _                                               => None
