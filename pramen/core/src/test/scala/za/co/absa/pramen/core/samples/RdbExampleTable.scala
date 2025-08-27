@@ -136,25 +136,25 @@ object RdbExampleTable {
 
     val comments: Seq[String] = Seq(
       s"COMMENT ON COLUMN $tableName.id IS 'This is the record id'",
-      s"COMMENT ON COLUMN $tableName.bool_array IS 'This a flags array'"
+      s"COMMENT ON COLUMN $tableName.bool_array IS 'This is a flags array'"
     )
 
     val inserts: Seq[String] = Seq(
       s"""INSERT INTO $tableName (
-        |    str_array, bool_array, short_array, int_array, long_array,
-        |    dec_array, date_array, ts_array, bin_array
-        |)
-        |VALUES (
-        |    ARRAY['String1','String2'],
-        |    ARRAY[TRUE, FALSE, TRUE],
-        |    ARRAY[10, 20, 30],
-        |    ARRAY[100, 200, 300],
-        |    ARRAY[10000000000, 20000000000],
-        |    ARRAY[123.45, 678.90],
-        |    ARRAY[DATE '2025-01-01', DATE '2025-12-31'],
-        |    ARRAY[TIMESTAMP '2025-01-01 10:00:00', TIMESTAMP '2025-06-01 12:30:00'],
-        |    ARRAY[X'DEADBEEF', X'010203']
-        |);""".stripMargin,
+         |    str_array, bool_array, short_array, int_array, long_array,
+         |    dec_array, date_array, ts_array, bin_array
+         |)
+         |VALUES (
+         |    ARRAY['String1','String2'],
+         |    ARRAY[TRUE, FALSE, TRUE],
+         |    ARRAY[10, 20, 30],
+         |    ARRAY[100, 200, 300],
+         |    ARRAY[10000000000, 20000000000],
+         |    ARRAY[123.45, 678.90],
+         |    ARRAY[DATE '2025-01-01', DATE '2025-12-31'],
+         |    ARRAY[TIMESTAMP '2025-01-01 10:00:00', TIMESTAMP '2025-06-01 12:30:00'],
+         |    ARRAY[X'DEADBEEF', X'010203']
+         |);""".stripMargin,
       s"""INSERT INTO $tableName (
          |    str_array, bool_array, short_array, int_array, long_array,
          |    dec_array, date_array, ts_array, bin_array
@@ -169,6 +169,14 @@ object RdbExampleTable {
          |    ARRAY[DATE '2025-01-01', null],
          |    ARRAY[null, TIMESTAMP '2025-06-01 12:30:00'],
          |    ARRAY[X'01ABCD23', null]
+         |);""".stripMargin,
+      s"""INSERT INTO $tableName (
+         |    str_array, bool_array, short_array, int_array, long_array,
+         |    dec_array, date_array, ts_array, bin_array
+         |)
+         |VALUES (
+         |    ARRAY[], ARRAY[], ARRAY[], ARRAY[], ARRAY[],
+         |    ARRAY[], ARRAY[], ARRAY[], ARRAY[]
          |);""".stripMargin,
       s"""INSERT INTO $tableName (
          |    str_array, bool_array, short_array, int_array, long_array,
