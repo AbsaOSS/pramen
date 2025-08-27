@@ -101,7 +101,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       case BIGINT          => StructField(columnName, LongType)
       case FLOAT           => StructField(columnName, FloatType)
       case DOUBLE          => StructField(columnName, DoubleType)
-      case REAL            => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
+      case REAL            => StructField(columnName, DoubleType)
       case NUMERIC         => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
       case DATE            => StructField(columnName, DateType)
       case TIMESTAMP       => StructField(columnName, TimestampType)
@@ -119,9 +119,6 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 
     // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
     dataType match {
-      case BIT if size > 1                  =>
-        val v = rs.getBytes(columnIndex)
-        if (rs.wasNull()) null else v
       case BLOB | VARBINARY | LONGVARBINARY =>
         val v = rs.getBytes(columnIndex)
         if (rs.wasNull()) null else v
@@ -147,7 +144,8 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
         val v = rs.getDouble(columnIndex)
         if (rs.wasNull()) null else v
       case REAL                             =>
-        rs.getBigDecimal(columnIndex)
+        val v = rs.getDouble(columnIndex)
+        if (rs.wasNull()) null else v
       case NUMERIC                          =>
         rs.getBigDecimal(columnIndex)
       case DATE                             =>
@@ -212,6 +210,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
   private[core] def setupColumnTypes(): Unit = {
     for (i <- 1 to columnCount) {
       val dataType = rs.getMetaData.getColumnType(i)
+      val size = rs.getMetaData.getPrecision(i)
 
       // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
       val actualDataType = dataType match {
@@ -220,14 +219,13 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
         case BLOB            => BLOB
         case VARBINARY       => BLOB
         case LONGVARBINARY   => BLOB
-        case BIT | BOOLEAN   => BOOLEAN
         case TINYINT         => TINYINT
         case SMALLINT        => SMALLINT
         case INTEGER         => INTEGER
         case BIGINT          => BIGINT
         case FLOAT           => FLOAT
         case DOUBLE          => DOUBLE
-        case REAL            => getDecimalDataType(i)
+        case REAL            => DOUBLE
         case NUMERIC         => getDecimalDataType(i)
         case DATE            => DATE
         case TIMESTAMP       => TIMESTAMP
@@ -274,7 +272,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       case "int4" | "integer"                              => Some(IntegerType)
       case "int8" | "oid" | "bigint"                       => Some(LongType)
       case "float4"                                        => Some(FloatType)
-      case "float8"                                        => Some(DoubleType)
+      case "float8" | "real"                               => Some(DoubleType)
       case "text" | "varchar" | "char" | "bpchar" | "cidr" | "inet" |
            "json" | "jsonb" | "uuid" | "xml" | "macaddr" | "macaddr8" |
            "txid_snapshot" | "path" | "varbit" |
@@ -306,7 +304,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
           case LongType       => ARRAY_LONG
           case FloatType      => ARRAY_FLOAT
           case DoubleType     => ARRAY_DOUBLE
-          case d: DecimalType => ARRAY_DECIMAL
+          case _: DecimalType => ARRAY_DECIMAL
           case DateType       => ARRAY_DATE
           case TimestampType  => ARRAY_TIMESTAMP
           case _              => ARRAY_STRING

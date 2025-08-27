@@ -81,7 +81,7 @@ class JdbcNativeArrayLongSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
         assert(resultDf.count() == 3)
 
-        val actualData = SparkUtils.convertDataFrameToPrettyJSON(resultDf)
+        val actualData = SparkUtils.convertDataFrameToPrettyJSON(resultDf.orderBy("id"))
 
         compareTextVertical(actualData, expectedData)
       }
