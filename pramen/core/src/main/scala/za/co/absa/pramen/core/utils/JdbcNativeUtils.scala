@@ -89,7 +89,6 @@ object JdbcNativeUtils {
 
     // Executing the query
     val arraysSupported = DRIVERS_SUPPORT_ARRAYS.contains(jdbcConfig.driver)
-    println(arraysSupported)
     val rs = getResultSet(jdbcConfig, url, query)
     val driverIterator = new ResultSetToRowIterator(rs, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
     val schema = JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
