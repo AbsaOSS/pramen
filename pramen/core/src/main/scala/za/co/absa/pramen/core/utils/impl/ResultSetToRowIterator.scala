@@ -105,6 +105,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       case NUMERIC         => StructField(columnName, getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
       case DATE            => StructField(columnName, DateType)
       case TIMESTAMP       => StructField(columnName, TimestampType)
+      case ARRAY           => StructField(columnName, getArrayDataType(columnIndex))
       case _               => StructField(columnName, StringType)
     }
   }
@@ -118,38 +119,65 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 
     // WARNING. Do not forget that `null` is a valid value returned by RecordSet methods that return a reference type objects.
     dataType match {
-      case BIT if size > 1 =>
+      case BIT if size > 1                  =>
         val v = rs.getBytes(columnIndex)
         if (rs.wasNull()) null else v
-      case BLOB | VARBINARY| LONGVARBINARY =>
+      case BLOB | VARBINARY | LONGVARBINARY =>
         val v = rs.getBytes(columnIndex)
         if (rs.wasNull()) null else v
-      case BIT | BOOLEAN =>
+      case BIT | BOOLEAN                    =>
         val v = rs.getBoolean(columnIndex)
         if (rs.wasNull()) null else v
-      case TINYINT       =>
+      case TINYINT                          =>
         val v = rs.getByte(columnIndex)
         if (rs.wasNull()) null else v
-      case SMALLINT      =>
+      case SMALLINT                         =>
         val v = rs.getShort(columnIndex)
         if (rs.wasNull()) null else v
-      case INTEGER       =>
+      case INTEGER                          =>
         val v = rs.getInt(columnIndex)
         if (rs.wasNull()) null else v
-      case BIGINT        =>
+      case BIGINT                           =>
         val v = rs.getLong(columnIndex)
         if (rs.wasNull()) null else v
-      case FLOAT         =>
+      case FLOAT                            =>
         val v = rs.getFloat(columnIndex)
         if (rs.wasNull()) null else v
-      case DOUBLE        =>
+      case DOUBLE                           =>
         val v = rs.getDouble(columnIndex)
         if (rs.wasNull()) null else v
-      case REAL          => rs.getBigDecimal(columnIndex)
-      case NUMERIC       => rs.getBigDecimal(columnIndex)
-      case DATE          => sanitizeDate(rs.getDate(columnIndex))
-      case TIMESTAMP     => sanitizeTimestamp(rs.getTimestamp(columnIndex))
-      case _             => rs.getString(columnIndex)
+      case REAL                             =>
+        rs.getBigDecimal(columnIndex)
+      case NUMERIC                          =>
+        rs.getBigDecimal(columnIndex)
+      case DATE                             =>
+        sanitizeDate(rs.getDate(columnIndex))
+      case TIMESTAMP                        =>
+        sanitizeTimestamp(rs.getTimestamp(columnIndex))
+      case ARRAY_STRING                     =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[String]]
+      case ARRAY_BINARY                     =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[Array[Byte]]]
+      case ARRAY_BOOL                       =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Boolean]]
+      case ARRAY_SHORT                      =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Short]]
+      case ARRAY_INT                        =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Integer]]
+      case ARRAY_LONG                       =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Long]]
+      case ARRAY_FLOAT                      =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Float]]
+      case ARRAY_DOUBLE                     =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Double]]
+      case ARRAY_DECIMAL                    =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[java.math.BigDecimal]]
+      case ARRAY_DATE                       =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[Date]]
+      case ARRAY_TIMESTAMP                  =>
+        getJdbcArray(columnIndex).asInstanceOf[Array[Timestamp]]
+      case _                                =>
+        rs.getString(columnIndex)
     }
   }
 
@@ -187,6 +215,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
         case NUMERIC         => getDecimalDataType(i)
         case DATE            => DATE
         case TIMESTAMP       => TIMESTAMP
+        case ARRAY           => getArrayJdbcDataType(i)
         case _               => VARCHAR
       }
 
@@ -206,6 +235,68 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       }
     } else {
       NUMERIC
+    }
+  }
+
+  private[core] def getArrayDataType(columnIndex: Int): DataType = {
+    val metadata = rs.getMetaData
+    val typeName = metadata.getColumnTypeName(columnIndex)
+
+    // Some drivers, like PostgreSQL adds '_' to array data type names.
+    val fixedTypeName = if (typeName.startsWith("_")) typeName.drop(1) else typeName
+
+    val columnTypeOpt = fixedTypeName match {
+      case "bool"                                          => Some(BooleanType)
+      case "bit"                                           => Some(BinaryType)
+      case "int2"                                          => Some(ShortType)
+      case "int4"                                          => Some(IntegerType)
+      case "int8" | "oid"                                  => Some(LongType)
+      case "float4"                                        => Some(FloatType)
+      case "float8"                                        => Some(DoubleType)
+      case "text" | "varchar" | "char" | "bpchar" | "cidr" | "inet" |
+           "json" | "jsonb" | "uuid" | "xml" | "macaddr" | "macaddr8" |
+           "txid_snapshot" | "path" | "varbit" |
+           "interval"                                      => Some(StringType)
+      case "bytea"                                         => Some(BinaryType)
+      case "timestamp" | "timestamptz" | "time" | "timetz" => Some(TimestampType)
+      case "date"                                          => Some(DateType)
+      case "numeric" | "decimal"                           => Option(getDecimalSparkSchema(rs.getMetaData.getPrecision(columnIndex), rs.getMetaData.getScale(columnIndex)))
+      case _                                               => None
+    }
+
+    columnTypeOpt match {
+      case Some(dt) => ArrayType(dt)
+      case None     => StringType // Make the driver stringify the array.
+    }
+  }
+
+  private[core] def getArrayJdbcDataType(columnIndex: Int): Int = {
+    val sparkType = getArrayDataType(columnIndex)
+
+    sparkType match {
+      case arrayType: ArrayType =>
+        arrayType.elementType match {
+          case StringType     => ARRAY_STRING
+          case BooleanType    => ARRAY_BOOL
+          case BinaryType     => ARRAY_BINARY
+          case IntegerType    => ARRAY_INT
+          case LongType       => ARRAY_LONG
+          case FloatType      => ARRAY_FLOAT
+          case DoubleType     => ARRAY_DOUBLE
+          case d: DecimalType => ARRAY_DECIMAL
+          case DateType       => ARRAY_DATE
+          case TimestampType  => ARRAY_TIMESTAMP
+          case _              => ARRAY_STRING
+        }
+      case _                    =>
+        VARCHAR
+    }
+  }
+
+  private[core] def getJdbcArray(columnIndex: Int): AnyRef = {
+    val v = rs.getArray(columnIndex)
+    if (rs.wasNull()) null else {
+      v.getArray
     }
   }
 
@@ -241,6 +332,19 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 }
 
 object ResultSetToRowIterator {
+  // Special data types
+  val ARRAY_STRING = 10000
+  val ARRAY_BINARY = 10001
+  val ARRAY_BOOL = 10002
+  val ARRAY_SHORT = 10003
+  val ARRAY_INT = 10004
+  val ARRAY_LONG = 10005
+  val ARRAY_FLOAT = 10006
+  val ARRAY_DOUBLE = 10007
+  val ARRAY_DECIMAL = 10008
+  val ARRAY_DATE = 10009
+  val ARRAY_TIMESTAMP = 10010
+
   // Constants are aligned with Spark implementation
   val MAX_SAFE_DATE_MILLI: Long = LocalDateTime.of(9999, 12, 31, 0, 0, 0).toInstant(ZoneOffset.UTC).toEpochMilli
   val MAX_SAFE_DATE = new Date(MAX_SAFE_DATE_MILLI)
