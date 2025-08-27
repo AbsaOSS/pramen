@@ -25,7 +25,7 @@ import java.sql.{Date, ResultSet, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
 import scala.collection.mutable
 
-class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrectDecimalsAsString: Boolean) extends Iterator[Row] {
+class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrectDecimalsAsString: Boolean, arraysSupported: Boolean) extends Iterator[Row] {
   import ResultSetToRowIterator._
 
   private var didHasNext = false
@@ -155,29 +155,45 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       case TIMESTAMP                        =>
         sanitizeTimestamp(rs.getTimestamp(columnIndex))
       case ARRAY_STRING                     =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[String]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.toString)
       case ARRAY_BINARY                     =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[Array[Byte]]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[Array[Byte]])
       case ARRAY_BOOL                       =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Boolean]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[java.lang.Boolean])
       case ARRAY_SHORT                      =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Short]]
+        nullSafeMap(getJdbcArray(columnIndex)) {
+          case v: java.lang.Integer => new java.lang.Short(v.toShort)
+          case v: java.lang.Short   => v
+        }
       case ARRAY_INT                        =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Integer]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[java.lang.Integer])
       case ARRAY_LONG                       =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Long]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[java.lang.Long])
       case ARRAY_FLOAT                      =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Float]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[java.lang.Float])
       case ARRAY_DOUBLE                     =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[java.lang.Double]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[java.lang.Double])
       case ARRAY_DECIMAL                    =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[java.math.BigDecimal]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[java.math.BigDecimal])
       case ARRAY_DATE                       =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[Date]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[Date])
       case ARRAY_TIMESTAMP                  =>
-        getJdbcArray(columnIndex).asInstanceOf[Array[Timestamp]]
+        nullSafeMap(getJdbcArray(columnIndex))(_.asInstanceOf[Timestamp])
       case _                                =>
         rs.getString(columnIndex)
+    }
+  }
+
+  private[core] def nullSafeMap[T](arr: Array[T])(f: T => T): Array[T] = {
+    if (arr == null) {
+      null
+    } else {
+      arr.map { v =>
+        if (v == null)
+          null
+        else
+          f(v)
+      }.asInstanceOf[Array[T]]
     }
   }
 
@@ -239,18 +255,24 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
   }
 
   private[core] def getArrayDataType(columnIndex: Int): DataType = {
-    val metadata = rs.getMetaData
-    val typeName = metadata.getColumnTypeName(columnIndex)
+    if (!arraysSupported)
+      return StringType
 
-    // Some drivers, like PostgreSQL adds '_' to array data type names.
-    val fixedTypeName = if (typeName.startsWith("_")) typeName.drop(1) else typeName
+    val metadata = rs.getMetaData
+    val typeName = metadata.getColumnTypeName(columnIndex).toLowerCase
+
+    // PostgreSQL adds '_' to array data type names.
+    val fixedTypeName1 = if (typeName.startsWith("_")) typeName.drop(1) else typeName
+
+    // HSQLDB adds ' ARRAY' to array data type names.
+    val fixedTypeName = if (typeName.endsWith(" array")) typeName.dropRight(6) else fixedTypeName1
 
     val columnTypeOpt = fixedTypeName match {
-      case "bool"                                          => Some(BooleanType)
-      case "bit"                                           => Some(BinaryType)
-      case "int2"                                          => Some(ShortType)
-      case "int4"                                          => Some(IntegerType)
-      case "int8" | "oid"                                  => Some(LongType)
+      case "bool" | "boolean"                              => Some(BooleanType)
+      case "bit" | "varbinary"                             => Some(BinaryType)
+      case "int2" | "smallint"                             => Some(ShortType)
+      case "int4" | "integer"                              => Some(IntegerType)
+      case "int8" | "oid" | "bigint"                       => Some(LongType)
       case "float4"                                        => Some(FloatType)
       case "float8"                                        => Some(DoubleType)
       case "text" | "varchar" | "char" | "bpchar" | "cidr" | "inet" |
@@ -279,6 +301,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
           case StringType     => ARRAY_STRING
           case BooleanType    => ARRAY_BOOL
           case BinaryType     => ARRAY_BINARY
+          case ShortType      => ARRAY_SHORT
           case IntegerType    => ARRAY_INT
           case LongType       => ARRAY_LONG
           case FloatType      => ARRAY_FLOAT
@@ -293,10 +316,10 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
     }
   }
 
-  private[core] def getJdbcArray(columnIndex: Int): AnyRef = {
+  private[core] def getJdbcArray(columnIndex: Int): Array[Object] = {
     val v = rs.getArray(columnIndex)
     if (rs.wasNull()) null else {
-      v.getArray
+      v.getArray.asInstanceOf[Array[Object]]
     }
   }
 

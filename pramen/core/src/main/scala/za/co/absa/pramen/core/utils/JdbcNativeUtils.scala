@@ -46,6 +46,7 @@ object JdbcNativeUtils {
 
   final val DEFAULT_CONNECTION_TIMEOUT_SECONDS = 60
   final val JDBC_WORDS_TO_REDACT = Set("password", "secret", "pwd", "token", "key", "api_key")
+  final val DRIVERS_SUPPORT_ARRAYS = Set("org.postgresql.Driver", "org.hsqldb.jdbc.JDBCDriver")
 
   /** Returns a JDBC URL and connection by a config. */
   def getConnection(jdbcConfig: JdbcConfig): (String, Connection) = {
@@ -87,14 +88,16 @@ object JdbcNativeUtils {
                             (implicit spark: SparkSession): DataFrame = {
 
     // Executing the query
+    val arraysSupported = DRIVERS_SUPPORT_ARRAYS.contains(jdbcConfig.driver)
+    println(arraysSupported)
     val rs = getResultSet(jdbcConfig, url, query)
-    val driverIterator = new ResultSetToRowIterator(rs, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString)
+    val driverIterator = new ResultSetToRowIterator(rs, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
     val schema = JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
 
     driverIterator.close()
 
     val rdd = spark.sparkContext.parallelize(Seq(query)).flatMap(q => {
-      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q), jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString)
+      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q), jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
     })
 
     spark.createDataFrame(rdd, schema)
