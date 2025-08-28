@@ -18,6 +18,7 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
@@ -30,6 +31,7 @@ import za.co.absa.pramen.extras.query.{QueryExecutor => EnceladusQueryExecutor, 
 import za.co.absa.pramen.extras.sink.EnceladusConfig.DEFAULT_PUBLISH_PARTITION_TEMPLATE
 import za.co.absa.pramen.extras.utils.{FsUtils, MainRunner, PartitionUtils}
 
+import java.sql.Date
 import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -432,9 +434,20 @@ class EnceladusSink(sinkConfig: Config,
       }
     } else {
       log.info(s"Table '${getHiveTableFullName(hiveTable)}' does not exist. Creating...")
-      val df = spark.read.option("mergeSchema", "true").parquet(publishBase)
 
-      val schema = df.schema
+      val dfForHiveSchema = try {
+        spark.read.option("mergeSchema", "true").parquet(publishBase)
+      } catch {
+        case NonFatal(ex) =>
+          val outputPublishPath = getPublishPartitionPath(new Path(publishBase), infoDate, infoVersion)
+          log.warn(s"Publish base schema read failed (treated as a warning) for '$publishBase'. " +
+            s"Falling back to latest partition '$outputPublishPath'.", ex)
+          spark.read.parquet(outputPublishPath.toUri.toString)
+            .withColumn("enceladus_info_date", lit(Date.valueOf(infoDate)))
+            .withColumn("enceladus_info_version", lit(infoVersion))
+      }
+
+      val schema = dfForHiveSchema.schema
 
       hiveHelper.createOrUpdateHiveTable(publishBase, HiveFormat.Parquet, schema, Seq("enceladus_info_date", "enceladus_info_version"), enceladusConfig.hiveDatabase, hiveTable)
     }
