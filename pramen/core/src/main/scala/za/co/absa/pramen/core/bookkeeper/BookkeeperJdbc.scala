@@ -43,12 +43,12 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
         val endDateStr = DataChunk.dateFormatter.format(endDate)
         BookkeepingRecords.records
           .filter(r => r.pramenTableName === table && r.infoDate <= endDateStr)
-          .sortBy(_.infoDate.desc)
+          .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
       case None          =>
         BookkeepingRecords.records
           .filter(r => r.pramenTableName === table)
-          .sortBy(_.infoDate.desc)
+          .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
     }
 
