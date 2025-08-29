@@ -43,9 +43,13 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
         val endDateStr = DataChunk.dateFormatter.format(endDate)
         BookkeepingRecords.records
           .filter(r => r.pramenTableName === table && r.infoDate <= endDateStr)
+          .sortBy(_.infoDate.desc)
+          .take(1)
       case None          =>
         BookkeepingRecords.records
           .filter(r => r.pramenTableName === table)
+          .sortBy(_.infoDate.desc)
+          .take(1)
     }
 
     val chunks = try {
@@ -64,7 +68,21 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
   }
 
   override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunksFromStorage(table, dateBegin, dateEnd).lastOption
+    val query = getFilter(table, Option(dateBegin), Option(dateEnd))
+      .sortBy(r => r.jobFinished.desc)
+      .take(1)
+
+    try {
+      val records = SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
+        .map(toChunk)
+        .toArray[DataChunk]
+
+      if (records.length > 1)
+        throw new IllegalStateException(s"More than one record was returned when only one was expected. Table: $table, dateBegin: $dateBegin, dateEnd: $dateEnd")
+      records.headOption
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
+    }
   }
 
   override def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
@@ -162,6 +180,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
     val infoDateStr = infoDate.toString
     val query = SchemaRecords.records.filter(t => t.pramenTableName === table && t.infoDate <= infoDateStr)
       .sortBy(t => t.infoDate.desc)
+      .take(1)
 
     SlickUtils.executeQuery[SchemaRecords, SchemaRecord](db, query)
       .map(schemaRecord => TableSchema(schemaRecord.pramenTableName, schemaRecord.infoDate, schemaRecord.schemaJson))
