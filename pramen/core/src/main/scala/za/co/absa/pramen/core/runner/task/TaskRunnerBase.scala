@@ -199,6 +199,7 @@ abstract class TaskRunnerBase(conf: Config,
       applicationId,
       isTransient,
       isRawFilesJob = false,
+      newSchemaRegistered = false,
       Nil,
       Nil,
       Nil,
@@ -221,6 +222,7 @@ abstract class TaskRunnerBase(conf: Config,
       applicationId,
       isTransient,
       isRawFilesJob = task.job.outputTable.format.isRaw,
+      newSchemaRegistered = false,
       Nil,
       Nil,
       Nil,
@@ -258,23 +260,23 @@ abstract class TaskRunnerBase(conf: Config,
             Right(validationResult)
           case NoData(isFailure) =>
             log.info(s"NO DATA available for the task: $outputTableName for date: ${task.infoDate}.")
-            Left(TaskResult(task.job.taskDef, RunStatus.NoData(isFailure), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil, options))
+            Left(TaskResult(task.job.taskDef, RunStatus.NoData(isFailure), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
           case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTableName for date: ${task.infoDate}. Expected = $expected, actual = $actual")
-            Left(TaskResult(task.job.taskDef, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil, options))
+            Left(TaskResult(task.job.taskDef, RunStatus.InsufficientData(actual, expected, oldRecordCount), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
           case AlreadyRan =>
             if (runtimeConfig.isRerun) {
               log.info(s"RE-RUNNING the task: $outputTableName for date: ${task.infoDate}.")
               Right(validationResult)
             } else {
               log.info(s"SKIPPING already ran job: $outputTableName for date: ${task.infoDate}.")
-              Left(TaskResult(task.job.taskDef, RunStatus.NotRan, getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil, options))
+              Left(TaskResult(task.job.taskDef, RunStatus.NotRan, getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
             }
           case Skip(msg) =>
             log.info(s"SKIPPING job: $outputTableName for date: ${task.infoDate}. Reason: msg")
-            Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, validationResult.dependencyWarnings, Nil, options))
+            Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
           case FailedDependencies(isFailure, failures) =>
-            Left(TaskResult(task.job.taskDef, RunStatus.FailedDependencies(isFailure, failures), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, Nil, Nil, options))
+            Left(TaskResult(task.job.taskDef, RunStatus.FailedDependencies(isFailure, failures), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, Nil, Nil, options))
         }
         if (validationResult.dependencyWarnings.nonEmpty) {
           log.warn(s"$WARNING Validation of the task: $outputTableName for date: ${task.infoDate} has " +
@@ -282,7 +284,7 @@ abstract class TaskRunnerBase(conf: Config,
         }
         resultToReturn
       case Failure(ex) =>
-        Left(TaskResult(task.job.taskDef, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, Nil, Nil, options))
+        Left(TaskResult(task.job.taskDef, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, Nil, Nil, options))
     }
   }
 
@@ -319,20 +321,20 @@ abstract class TaskRunnerBase(conf: Config,
                 Right(status.copy(warnings = reason.warnings))
               case Reason.NotReady(msg) =>
                 log.info(s"NOT READY validation failure for the task: $outputTableName for date: ${task.infoDate}. Reason: $msg")
-                Left(TaskResult(task.job.taskDef, RunStatus.ValidationFailed(new ReasonException(Reason.NotReady(msg), msg)), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil, Map.empty))
+                Left(TaskResult(task.job.taskDef, RunStatus.ValidationFailed(new ReasonException(Reason.NotReady(msg), msg)), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, status.dependencyWarnings, Nil, Map.empty))
               case Reason.Skip(msg) =>
                 log.info(s"SKIP validation failure for the task: $outputTableName for date: ${task.infoDate}. Reason: $msg")
                 if (bookkeeper.getLatestDataChunk(outputTableName, task.infoDate, task.infoDate).isEmpty) {
                   val isTransient = task.job.outputTable.format.isTransient
                   bookkeeper.setRecordCount(outputTableName, task.infoDate, task.infoDate, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
                 }
-                Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil, options))
+                Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, status.dependencyWarnings, Nil, options))
               case Reason.SkipOnce(msg) =>
                 log.info(s"SKIP today validation failure for the task: $outputTableName for date: ${task.infoDate}. Reason: $msg")
-                Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil, options))
+                Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, status.dependencyWarnings, Nil, options))
             }
           case Failure(ex) =>
-            Left(TaskResult(task.job.taskDef, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, Nil, status.dependencyWarnings, Nil, options))
+            Left(TaskResult(task.job.taskDef, RunStatus.ValidationFailed(ex), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, status.dependencyWarnings, Nil, options))
         }
     }
   }
@@ -356,7 +358,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         val runResult = task.job.run(task.infoDate, task.reason, conf)
 
-        val schemaChangesBeforeTransform = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
+        val (newSchemaRegistered, schemaChangesBeforeTransform) = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
 
         val dfWithTimestamp = task.job.operation.processingTimestampColumn match {
           case Some(timestampCol) => addProcessingTimestamp(runResult.data, timestampCol)
@@ -388,11 +390,11 @@ abstract class TaskRunnerBase(conf: Config,
           task.infoDate
         )
 
-        val schemaChangesAfterTransform = if (task.job.operation.schemaTransformations.nonEmpty) {
+        val (newSchemaRegisteredAfterTransform, schemaChangesAfterTransform) = if (task.job.operation.schemaTransformations.nonEmpty) {
           val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")
           handleSchemaChange(dfTransformed, transformedTable, task.infoDate)
         } else {
-          Nil
+          (false, Nil)
         }
 
         val saveResult = if (runtimeConfig.isDryRun) {
@@ -439,6 +441,7 @@ abstract class TaskRunnerBase(conf: Config,
           applicationId,
           isTransient,
           isRawFileBased,
+          newSchemaRegistered || newSchemaRegisteredAfterTransform,
           schemaChangesBeforeTransform ::: schemaChangesAfterTransform,
           validationResult.dependencyWarnings,
           Seq.empty,
@@ -462,6 +465,7 @@ abstract class TaskRunnerBase(conf: Config,
           applicationId,
           isTransient,
           isRawFileBased,
+          newSchemaRegistered = false,
           Nil,
           validationResult.dependencyWarnings,
           Nil,
@@ -538,6 +542,7 @@ abstract class TaskRunnerBase(conf: Config,
         result.applicationId,
         result.isTransient,
         result.isRawFilesJob,
+        result.newSchemaRegistered,
         result.schemaChanges,
         result.dependencyWarnings,
         Seq.empty,
@@ -564,10 +569,10 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
-  private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, infoDate: LocalDate): List[SchemaDifference] = {
+  private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, infoDate: LocalDate): (Boolean, List[SchemaDifference]) = {
     if (table.format.isRaw) {
       // Raw tables do need schema check
-      return List.empty[SchemaDifference]
+      return (false, List.empty[SchemaDifference])
     }
 
     val lastSchema = bookkeeper.getLatestSchema(table.name, infoDate)
@@ -578,13 +583,14 @@ abstract class TaskRunnerBase(conf: Config,
         if (diff.nonEmpty) {
           log.warn(s"$WARNING SCHEMA CHANGE for $table from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
           bookkeeper.saveSchema(table.name, infoDate, df.schema)
-          SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil
+          (true, SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil)
         } else {
-          Nil
+          (false, Nil)
         }
       case None =>
         bookkeeper.saveSchema(table.name, infoDate, df.schema)
-        Nil
+        log.info(s"New schema detected for $table at $infoDate.")
+        (true, Nil)
     }
   }
 

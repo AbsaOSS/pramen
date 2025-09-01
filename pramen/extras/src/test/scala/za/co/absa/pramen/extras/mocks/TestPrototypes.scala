@@ -59,6 +59,7 @@ object TestPrototypes {
     "test-1234",
     isTransient = false,
     isRawFilesJob = false,
+    newSchemaRegistered = false,
     Seq.empty,
     Seq.empty,
     Seq.empty,
