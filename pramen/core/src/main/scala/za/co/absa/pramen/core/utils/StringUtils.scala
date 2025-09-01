@@ -178,11 +178,19 @@ object StringUtils {
     val prefix = " " * (level * 2)
     val errMsg = if (escapeHTML) StringUtils.escapeHTML(ex.toString) else ex.toString
     val base = s"""$errMsg\n${ex.getStackTrace.map(s => s"$prefix$s").mkString("", EOL, EOL)}"""
+
+    val suppressed =
+      if (ex.getSuppressed.nonEmpty && level < 6)
+        ex.getSuppressed.map(s => s"\n${prefix}Suppressed: " + renderThrowable(s, level + 1)).mkString
+      else
+        ""
+
     val cause = Option(ex.getCause) match {
       case Some(c) if level < 6 => s"\n${prefix}Caused by " + renderThrowable(c, level + 1)
-      case _                    => ""
+      case _ => ""
     }
-    val fullText = base + cause
+
+    val fullText = base + suppressed + cause
 
     maximumLength match {
       case Some(len) if fullText.length > len => fullText.substring(0, len) + "..."
