@@ -19,7 +19,7 @@ package za.co.absa.pramen.extras.mocks
 import com.typesafe.config.ConfigFactory
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{JobType, RunInfo, RunStatus, TaskDef, TaskResult, TaskRunReason}
-import za.co.absa.pramen.api.{DataFormat, MetaTableDef, PartitionScheme, status}
+import za.co.absa.pramen.api.{DataFormat, MetaTableDef, PartitionScheme}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpResponse
 
 import java.time.{Instant, LocalDate}
@@ -46,7 +46,7 @@ object TestPrototypes {
 
   val taskStatus: RunStatus = RunStatus.Succeeded(None, Some(100), None, None, TaskRunReason.New, Seq.empty, Seq.empty, Seq.empty, Seq.empty)
 
-  val taskNotification: TaskResult = status.TaskResult(
+  val taskNotification: TaskResult = TaskResult(
     TaskDef(
       "Dummy Job",
       JobType.Transformation("dummy_class"),
