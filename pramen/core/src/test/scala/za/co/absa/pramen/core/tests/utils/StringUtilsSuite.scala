@@ -214,6 +214,26 @@ class StringUtilsSuite extends AnyWordSpec {
       assert(s.contains("  Caused by java.lang.RuntimeException: cause"))
       assert(s.contains("    Caused by java.lang.RuntimeException: nested"))
     }
+
+    "render a throwable with a nested cause and suppressed" in {
+      val ex1 = new RuntimeException("nested")
+      ex1.addSuppressed(new IllegalStateException("suppress_nested1", new IllegalArgumentException("cause of the suppressed exception")))
+      val ex2 = new RuntimeException("cause", ex1)
+      ex2.addSuppressed(new IllegalStateException("suppress_nested2"))
+      val ex = new RuntimeException("test", ex2)
+      ex.addSuppressed(new IllegalStateException("suppress_root"))
+      val s = renderThrowable(ex)
+
+      println(s)
+
+      assert(s.contains("java.lang.RuntimeException: test"))
+      assert(s.contains("  Suppressed: java.lang.IllegalStateException: suppress_root"))
+      assert(s.contains("  Caused by java.lang.RuntimeException: cause"))
+      assert(s.contains("    Suppressed: java.lang.IllegalStateException: suppress_nested2"))
+      assert(s.contains("    Caused by java.lang.RuntimeException: nested"))
+      assert(s.contains("      Suppressed: java.lang.IllegalStateException: suppress_nested1"))
+      assert(s.contains("        Caused by java.lang.IllegalArgumentException: cause of the suppressed exception"))
+    }
   }
 
   "renderMultiStack" should {
