@@ -131,6 +131,7 @@ class OrchestratorImpl extends Orchestrator {
         applicationId,
         isTransient,
         job.outputTable.format.isRaw,
+        newSchemaRegistered = false,
         Nil,
         Nil,
         Nil,
