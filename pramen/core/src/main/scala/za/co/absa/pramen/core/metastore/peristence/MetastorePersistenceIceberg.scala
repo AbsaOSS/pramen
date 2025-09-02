@@ -107,12 +107,16 @@ class MetastorePersistenceIceberg(table: CatalogTable,
   }
 
   def doesTableExist(catalogTable: CatalogTable)(implicit spark: SparkSession): Boolean = {
+    getExistingTable(catalogTable).isDefined
+  }
+
+  def getExistingTable(catalogTable: CatalogTable)(implicit spark: SparkSession): Option[DataFrame] = {
     try {
-      spark.read.table(catalogTable.getFullTableName)
-      true
+      Option(spark.read.table(catalogTable.getFullTableName))
     } catch {
       // This is a common error
-      case ex: AnalysisException if ex.getMessage().contains("Table or view not found") || ex.getMessage().contains("TABLE_OR_VIEW_NOT_FOUND") => false
+      case ex: AnalysisException if ex.getMessage().contains("Table or view not found") || ex.getMessage().contains("TABLE_OR_VIEW_NOT_FOUND") =>
+        None
       // This is the exception, needs to be re-thrown.
       case ex: AnalysisException if ex.getMessage().contains("TableType cannot be null for table:") =>
         throw new IllegalArgumentException("Attempt to use a catalog not supported by the file format. " +

@@ -54,6 +54,9 @@ object MetastorePersistenceIcebergOps {
     val writer = dfIn.writeTo(table)
       .using("iceberg")
       .tableProperty("format-version", "2")
+      .tableProperty("write.spark.accept-any-schema", "true")
+      .option("mergeSchema", "true")
+      .option("check-ordering", "false")
       .options(writerOptions)
 
     val writerWithProperties = properties.foldLeft(writer) { (w, item) =>
@@ -93,12 +96,16 @@ object MetastorePersistenceIcebergOps {
                               infoDateColumn: String,
                               writerOptions: Map[String, String]): Unit = {
     df.writeTo(table)
+      .option("mergeSchema", "true")
+      .option("check-ordering", "false")
       .options(writerOptions)
       .overwrite(col(infoDateColumn) === Date.valueOf(infoDate))
   }
 
   def overwriteFullTable(df: DataFrame, table: String, writerOptions: Map[String, String]): Unit = {
     df.writeTo(table)
+      .option("mergeSchema", "true")
+      .option("check-ordering", "false")
       .options(writerOptions)
       .overwrite(lit(true))
   }
@@ -107,6 +114,8 @@ object MetastorePersistenceIcebergOps {
                     table: String,
                     writerOptions: Map[String, String]): Unit = {
     df.writeTo(table)
+      .option("mergeSchema", "true")
+      .option("check-ordering", "false")
       .options(writerOptions)
       .append()
   }

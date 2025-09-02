@@ -581,7 +581,7 @@ abstract class TaskRunnerBase(conf: Config,
       case Some((oldSchema, oldInfoDate)) =>
         val diff = compareSchemas(oldSchema, df.schema)
         if (diff.nonEmpty) {
-          log.warn(s"$WARNING SCHEMA CHANGE for $table from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
+          log.warn(s"$WARNING SCHEMA CHANGE for ${table.name} from $oldInfoDate to $infoDate: ${diff.map(_.toString).mkString("; ")}")
           bookkeeper.saveSchema(table.name, infoDate, df.schema)
           (true, SchemaDifference(table.name, oldInfoDate, infoDate, diff) :: Nil)
         } else {
@@ -589,7 +589,7 @@ abstract class TaskRunnerBase(conf: Config,
         }
       case None =>
         bookkeeper.saveSchema(table.name, infoDate, df.schema)
-        log.info(s"New schema detected for $table at $infoDate.")
+        log.info(s"New schema detected for ${table.name} at $infoDate.")
         (true, Nil)
     }
   }
