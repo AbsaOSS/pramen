@@ -224,8 +224,6 @@ class StringUtilsSuite extends AnyWordSpec {
       ex.addSuppressed(new IllegalStateException("suppress_root"))
       val s = renderThrowable(ex)
 
-      println(s)
-
       assert(s.contains("java.lang.RuntimeException: test"))
       assert(s.contains("  Suppressed: java.lang.IllegalStateException: suppress_root"))
       assert(s.contains("  Caused by java.lang.RuntimeException: cause"))
