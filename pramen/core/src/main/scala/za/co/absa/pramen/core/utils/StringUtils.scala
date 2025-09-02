@@ -174,19 +174,31 @@ object StringUtils {
   }
 
   /** Renders an exception as a string */
-  def renderThrowable(ex: Throwable, level: Int = 1, maximumLength: Option[Int] = None, escapeHTML: Boolean = false): String = {
+  def renderThrowable(ex: Throwable, level: Int = 1, maximumLength: Option[Int] = None, escapeHTML: Boolean = false, maxStackDepth: Int = 256): String = {
     val prefix = " " * (level * 2)
+
+    def renderStack(stack: Array[StackTraceElement]): String = {
+      if (stack.length > maxStackDepth) {
+        val stackSte = stack.take(maxStackDepth).map(s => s"$prefix$s").mkString("", EOL, EOL)
+        val more = stack.length - maxStackDepth
+        s"$stackSte$prefix... $more more\n"
+
+      } else {
+        stack.map(s => s"$prefix$s").mkString("", EOL, EOL)
+      }
+    }
+
     val errMsg = if (escapeHTML) StringUtils.escapeHTML(ex.toString) else ex.toString
-    val base = s"""$errMsg\n${ex.getStackTrace.map(s => s"$prefix$s").mkString("", EOL, EOL)}"""
+    val base = s"""$errMsg\n${renderStack(ex.getStackTrace)}"""
 
     val suppressed =
       if (ex.getSuppressed.nonEmpty && level < 6)
-        ex.getSuppressed.map(s => s"\n${prefix}Suppressed: " + renderThrowable(s, level + 1)).mkString
+        ex.getSuppressed.map(s => s"\n${prefix}Suppressed: " + renderThrowable(s, level + 1, maxStackDepth = 5)).mkString
       else
         ""
 
     val cause = Option(ex.getCause) match {
-      case Some(c) if level < 6 => s"\n${prefix}Caused by " + renderThrowable(c, level + 1)
+      case Some(c) if level < 6 => s"\n${prefix}Caused by " + renderThrowable(c, level + 1, None, escapeHTML = false, maxStackDepth)
       case _ => ""
     }
 

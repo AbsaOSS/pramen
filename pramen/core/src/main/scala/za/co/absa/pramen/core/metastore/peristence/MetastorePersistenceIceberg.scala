@@ -112,7 +112,11 @@ class MetastorePersistenceIceberg(table: CatalogTable,
 
   def getExistingTable(catalogTable: CatalogTable)(implicit spark: SparkSession): Option[DataFrame] = {
     try {
-      Option(spark.read.table(catalogTable.getFullTableName))
+      val df = spark.table(catalogTable.getFullTableName)
+      // Force analysis to surface TABLE_OR_VIEW_NOT_FOUND at this point.
+      // Technically, not needed, but Spark can potentially skip analysis until the schema is requested.
+      val _ = df.schema
+      Some(df)
     } catch {
       // This is a common error
       case ex: AnalysisException if ex.getMessage().contains("Table or view not found") || ex.getMessage().contains("TABLE_OR_VIEW_NOT_FOUND") =>
