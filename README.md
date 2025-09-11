@@ -2,7 +2,7 @@
 [![ScalaCI](https://github.com/AbsaOSS/pramen/workflows/ScalaCI/badge.svg)](https://github.com/AbsaOSS/pramen/actions)
 [![PythonCI](https://github.com/AbsaOSS/pramen/workflows/python_ci/badge.svg)](https://github.com/AbsaOSS/pramen/actions)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen.svg?type=shield)](https://app.fossa.com/projects/custom%2B24661%2Fgithub.com%2FAbsaOSS%2Fpramen)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.12/badge.svg)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api)
+[![Maven Central](https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-api_2.12)](https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api)
 [![PyPI](https://badge.fury.io/py/pramen-py.svg)](https://badge.fury.io/py/pramen-py)
 
 
