@@ -45,10 +45,6 @@ object MetastoreDependencyFactory {
     val isOptional = Try(conf.getBoolean(OPTIONAL_KEY)).getOrElse(false)
     val isPassive = ConfigUtils.getOptionBoolean(conf, PASSIVE_KEY).getOrElse(strictDependencyManagement)
 
-    if (isOptional && isPassive) {
-      throw new IllegalArgumentException(s"Dependency '$path' cannot be both optional and passive.")
-    }
-
     val dateToExprOpt = ConfigUtils.getOptionString(conf, DATE_TO_EXPR_KEY).filter(_.nonEmpty)
 
     val dateToExpr = if (strictDependencyManagement && dateToExprOpt.isEmpty) {
