@@ -100,9 +100,9 @@ class OrchestratorImpl extends Orchestrator {
         state.addTaskCompletion(taskResults)
 
         if (hasFatalErrors) {
-          // In case of a fatal error we either need to interrupt running threads, or wait for them to return.
+          // In case of a fatal error, we either need to interrupt running threads, or wait for them to return.
           // In the current implementation we wait for threads to finish, but not start new jobs in running threads.
-          // This can be also reconsidered, if there are issues with the current solutions observed.
+          // This can be also reconsidered if there are issues with the current solutions observed.
           if (runningJobs.isEmpty) {
             runJobChannel.close()
           }
