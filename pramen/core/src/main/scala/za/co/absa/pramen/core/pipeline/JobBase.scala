@@ -78,7 +78,7 @@ abstract class JobBase(operationDef: OperationDef,
 
     if (dependencyErrors.nonEmpty) {
       log.warn(s"Job for table ${outputTableDef.name} at $infoDate has validation failures.")
-      val isFailure = dependencyErrors.exists(!_.dep.isPassive)
+      val isFailure = dependencyErrors.exists(err => !err.dep.isPassive && !err.dep.isOptional)
       JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure, dependencyErrors), None, dependencyWarnings, Seq.empty[String])
     } else {
       if (dependencyWarnings.nonEmpty) {
@@ -146,7 +146,7 @@ abstract class JobBase(operationDef: OperationDef,
 
   private def getOutdatedTables(infoDate: LocalDate, targetJobFinishedSeconds: Long): Seq[String] = {
     operationDef.dependencies
-      .filter(d => !d.isOptional && !d.isPassive)
+      .filter(d => !d.isOptional)
       .flatMap(_.tables)
       .distinct
       .filter { table =>
