@@ -31,9 +31,9 @@ class DependencyResolverSuite extends AnyWordSpec {
 
     "do nothing if a job has the same table as an input table and output table" in {
       val testCase = new DependencyResolverImpl(Seq(
-        JobDependency(Nil, "table1"),
-        JobDependency(Seq("table2", "table10"), "table2"),
-        JobDependency(Seq("table11"), "table4")
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Seq("table2", "table10"), "table2", isPassive = false),
+        JobDependency(Seq("table11"), "table4", isPassive = false)
       ), enableMultipleJobsPerTable = false)
 
       testCase.validate()
@@ -41,10 +41,10 @@ class DependencyResolverSuite extends AnyWordSpec {
 
     "do nothing if there are 2 jobs outputting the same table and it is allowed" in {
       val faultyCase = new DependencyResolverImpl(Seq(
-        JobDependency(Nil, "table1"),
-        JobDependency(Nil, "table2"),
-        JobDependency(Seq("table1", "table10"), "table2"),
-        JobDependency(Seq("table11"), "table4")
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Nil, "table2", isPassive = false),
+        JobDependency(Seq("table1", "table10"), "table2", isPassive = false),
+        JobDependency(Seq("table11"), "table4", isPassive = false)
       ), enableMultipleJobsPerTable = true)
 
       faultyCase.validate()
@@ -52,10 +52,10 @@ class DependencyResolverSuite extends AnyWordSpec {
 
     "throw an exception if there are 2 jobs outputting the same table" in {
       val faultyCase = new DependencyResolverImpl(Seq(
-        JobDependency(Nil, "table1"),
-        JobDependency(Nil, "table2"),
-        JobDependency(Seq("table1", "table10"), "table2"),
-        JobDependency(Seq("table11"), "table4")
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Nil, "table2", isPassive = false),
+        JobDependency(Seq("table1", "table10"), "table2", isPassive = false),
+        JobDependency(Seq("table11"), "table4", isPassive = false)
       ), enableMultipleJobsPerTable = false)
 
       val ex  = intercept[IllegalArgumentException] {
@@ -67,10 +67,10 @@ class DependencyResolverSuite extends AnyWordSpec {
 
     "throw an exception if there is a cycle" in {
       val faultyCase = new DependencyResolverImpl(Seq(
-        JobDependency(Nil, "table1"),
-        JobDependency(Nil, "table2"),
-        JobDependency(Seq("table1", "table4"), "table3"),
-        JobDependency(Seq("table3"), "table4")
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Nil, "table2", isPassive = false),
+        JobDependency(Seq("table1", "table4"), "table3", isPassive = false),
+        JobDependency(Seq("table3"), "table4", isPassive = false)
       ), enableMultipleJobsPerTable = false)
 
       val ex  = intercept[IllegalArgumentException] {
@@ -185,8 +185,8 @@ class DependencyResolverSuite extends AnyWordSpec {
 
     "if an output table depends on itself, return a list of tables without this recursive dependency" in {
       val resolver = new DependencyResolverImpl(Seq(
-        JobDependency(Nil, "table10"),
-        JobDependency(Seq("table3", "table10"), "table3")
+        JobDependency(Nil, "table10", isPassive = false),
+        JobDependency(Seq("table3", "table10"), "table3", isPassive = false)
       ), enableMultipleJobsPerTable = false)
 
       assert(resolver.getMissingDependencies("table3") == Seq("table10"))
@@ -214,7 +214,7 @@ class DependencyResolverSuite extends AnyWordSpec {
 
     "if an output table depends on itself, not include this dependency in the visualized graph" in {
       val testCase = new DependencyResolverImpl(Seq(
-        JobDependency(Seq("table1", "table2"), "table1")
+        JobDependency(Seq("table1", "table2"), "table1", isPassive = false)
       ), enableMultipleJobsPerTable = false)
 
       val graph = testCase.getDag("table1" :: Nil)
@@ -225,10 +225,10 @@ class DependencyResolverSuite extends AnyWordSpec {
 
   def getTestCase: DependencyResolver = {
     new DependencyResolverImpl(Seq(
-      JobDependency(Nil, "table1"),
-      JobDependency(Nil, "table2"),
-      JobDependency(Seq("table1", "table10"), "table3"),
-      JobDependency(Seq("table11"), "table4")
+      JobDependency(Nil, "table1", isPassive = false),
+      JobDependency(Nil, "table2", isPassive = false),
+      JobDependency(Seq("table1", "table10"), "table3", isPassive = false),
+      JobDependency(Seq("table11"), "table4", isPassive = false)
     ), enableMultipleJobsPerTable = false)
   }
 }
