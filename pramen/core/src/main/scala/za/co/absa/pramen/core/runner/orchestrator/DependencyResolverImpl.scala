@@ -56,20 +56,29 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
   }
 
   override def canRun(outputTable: String, alwaysAttempt: Boolean): Boolean = {
-    val relevantTables = getRelevantTables(outputTable)
-
     if (alwaysAttempt) {
       // Always attempt flag means always try running the job, even if dependent jobs failed
       // But we still need to enforce order, so allow running the job only if all dependent tables
       // were processed, either successfully or with a failure.
+      val relevantTables = getRelevantAllTables(outputTable)
+
       relevantTables.forall(t => availableTables.contains(t) || unavailableTables.contains(t))
     } else {
-      relevantTables.forall(t => availableTables.contains(t))
+      // Passive dependencies work the same was as 'alwaysAttempt' above.
+      // Non-passive dependencies are 'job breaking' in the sense that if the job fails for any reason, dependent
+      // jobs won't even be attempted to run for any information date.
+      val passiveTables =  getRelevantTables(outputTable, isPassive = true)
+      val jobBreakingTables =  getRelevantTables(outputTable, isPassive = false)
+
+      // For non-passive dependencies all input tables should have succeeded/available.
+      // For passive and optional dependencies we just ensure the jobs are going to be run in the proper order.
+      jobBreakingTables.forall(t => availableTables.contains(t)) &&
+        passiveTables.forall(t => availableTables.contains(t) || unavailableTables.contains(t))
     }
   }
 
   override def getMissingDependencies(outputTable: String):Seq[String] = {
-    val relevantTables = getRelevantTables(outputTable)
+    val relevantTables = getRelevantTables(outputTable, isPassive = false)
 
     relevantTables.diff(availableTables).toArray.sortBy(a => a)
   }
@@ -86,9 +95,18 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
     dags.map(renderDag).mkString("\n")
   }
 
-  private def getRelevantTables(outputTable: String): Set[String] = {
+  private def getRelevantAllTables(outputTable: String): Set[String] = {
     val dependentInputTables = deps
       .filter(_.outputTable == outputTable)
+      .flatMap(_.nonRecursiveInputTables)
+      .toSet
+
+    dependentTables.intersect(dependentInputTables)
+  }
+
+  private def getRelevantTables(outputTable: String, isPassive: Boolean): Set[String] = {
+    val dependentInputTables = deps
+      .filter(d => d.outputTable == outputTable && d.isPassive == isPassive)
       .flatMap(_.nonRecursiveInputTables)
       .toSet
 
