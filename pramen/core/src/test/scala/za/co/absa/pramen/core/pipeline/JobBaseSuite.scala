@@ -151,7 +151,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       assert(actual.status.isInstanceOf[FailedDependencies])
       assert(actual.status.asInstanceOf[FailedDependencies].failures.head.emptyTables.isEmpty)
       assert(actual.status.asInstanceOf[FailedDependencies].failures.head.failedTables.head == "table1")
-      assert(!actual.status.asInstanceOf[FailedDependencies].isFailure)
+      assert(actual.status.asInstanceOf[FailedDependencies].isFailure)
     }
 
     "return failure on empty tables" in {

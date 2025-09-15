@@ -78,7 +78,7 @@ abstract class JobBase(operationDef: OperationDef,
 
     if (dependencyErrors.nonEmpty) {
       log.warn(s"Job for table ${outputTableDef.name} at $infoDate has validation failures.")
-      val isFailure = dependencyErrors.exists(err => !err.dep.isPassive && !err.dep.isOptional)
+      val isFailure = dependencyErrors.exists(!_.dep.isOptional)
       JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure, dependencyErrors), None, dependencyWarnings, Seq.empty[String])
     } else {
       if (dependencyWarnings.nonEmpty) {
