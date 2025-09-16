@@ -25,13 +25,13 @@ import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
 import za.co.absa.pramen.core.config.Keys.LOG_EXECUTOR_NODES
 import za.co.absa.pramen.core.exceptions.ValidationException
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
-import za.co.absa.pramen.core.pipeline.{Job, OperationDef, OperationSplitter, OperationType, PipelineDef}
+import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl, SystemExitCatcherSecurityManager}
 import za.co.absa.pramen.core.utils.Emoji._
-import za.co.absa.pramen.core.utils.{BuildPropertyUtils, ResourceUtils}
+import za.co.absa.pramen.core.utils.{BuildPropertyUtils, JvmUtils, ResourceUtils}
 
 import scala.util.{Failure, Success, Try}
 
@@ -56,7 +56,11 @@ object AppRunner {
     Try {
       // Setting the security manager that catches all System.exit() calls and records stack traces.
       // In case this fails, just ignore the feature.
-      System.setSecurityManager(new SystemExitCatcherSecurityManager(state.asInstanceOf[PipelineStateImpl]))
+      if (JvmUtils.jvmMajorVersion < 17) {
+        System.setSecurityManager(new SystemExitCatcherSecurityManager(state.asInstanceOf[PipelineStateImpl]))
+      } else {
+        log.warn("JVM has deprecated SecurityManager since JVM 17. Intercepting System.exit() called from libraries is disabled.")
+      }
     }
 
     val exitCodeTry = for {
@@ -355,7 +359,9 @@ object AppRunner {
 
   private[core] def resetState(state: PipelineState): Unit = {
     Try {
-      System.setSecurityManager(null)
+      if (JvmUtils.jvmMajorVersion < 17) {
+        System.setSecurityManager(null)
+      }
     }
 
     // Neither of these should throw any exceptions.

@@ -77,4 +77,10 @@ class JvmUtilsSuite extends AnyWordSpec {
       assert(stackTracesStr.contains("(daemon-thread)"))
     }
   }
+
+  "jvmMajorVersion" in {
+    val majorVersion = JvmUtils.jvmMajorVersion
+
+    assert(majorVersion > 5)
+  }
 }
