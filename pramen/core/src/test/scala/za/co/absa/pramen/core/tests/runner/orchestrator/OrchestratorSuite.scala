@@ -126,6 +126,99 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
         assert(task2Status.runStatus.isInstanceOf[Succeeded])
       }
     }
+
+    "do not ignore failures of non-passive non-optional dependencies" in {
+      val job1 = new JobSpy("Job1", "table1")
+      val job2 = new JobSpy("Job2", "table2")
+      val job3 = new JobSpy("Job3", "table3")
+      val job4 = new JobSpy("Job4", "table4",
+        operationDef = getOperation(Seq(
+          MetastoreDependency(Seq("table1", "table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = false))))
+
+      withAppContext(spark) { appContext =>
+        val conf = ConfigFactory.empty()
+
+        val orchestrator = new OrchestratorImpl()
+        val runner = new ConcurrentJobRunnerSpy(includeFails = true)
+        val state = new PipelineStateSpy()
+
+        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, spark)
+
+        assert(state.completedStatuses.length == 4)
+
+        val task1Status = state.completedStatuses.head
+        val task2Status = state.completedStatuses(1)
+        val task3Status = state.completedStatuses(2)
+        val task4Status = state.completedStatuses(3)
+
+        assert(task1Status.runStatus.isInstanceOf[Succeeded])
+        assert(task2Status.runStatus.isInstanceOf[Failed])
+        assert(task3Status.runStatus.isInstanceOf[NoData])
+        assert(task4Status.runStatus.isInstanceOf[MissingDependencies])
+      }
+    }
+
+    "ignore failures of passive dependencies" in {
+      val job1 = new JobSpy("Job1", "table1")
+      val job2 = new JobSpy("Job2", "table2")
+      val job3 = new JobSpy("Job3", "table3")
+      val job4 = new JobSpy("Job4", "table4",
+        operationDef = getOperation(Seq(
+          MetastoreDependency(Seq("table1", "table2"), "@infoDate", None, triggerUpdates = false, isOptional = false, isPassive = true))))
+
+      withAppContext(spark) { appContext =>
+        val conf = ConfigFactory.empty()
+
+        val orchestrator = new OrchestratorImpl()
+        val runner = new ConcurrentJobRunnerSpy(includeFails = true)
+        val state = new PipelineStateSpy()
+
+        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, spark)
+
+        assert(state.completedStatuses.length == 4)
+
+        val task1Status = state.completedStatuses.head
+        val task2Status = state.completedStatuses(1)
+        val task3Status = state.completedStatuses(2)
+        val task4Status = state.completedStatuses(3)
+
+        assert(task1Status.runStatus.isInstanceOf[Succeeded])
+        assert(task2Status.runStatus.isInstanceOf[Failed])
+        assert(task3Status.runStatus.isInstanceOf[NoData])
+        assert(task4Status.runStatus.isInstanceOf[Succeeded])
+      }
+    }
+
+    "ignore failures of optional dependencies" in {
+      val job1 = new JobSpy("Job1", "table1")
+      val job2 = new JobSpy("Job2", "table2")
+      val job3 = new JobSpy("Job3", "table3")
+      val job4 = new JobSpy("Job4", "table4",
+        operationDef = getOperation(Seq(
+          MetastoreDependency(Seq("table1", "table2"), "@infoDate", None, triggerUpdates = false, isOptional = true, isPassive = false))))
+
+      withAppContext(spark) { appContext =>
+        val conf = ConfigFactory.empty()
+
+        val orchestrator = new OrchestratorImpl()
+        val runner = new ConcurrentJobRunnerSpy(includeFails = true)
+        val state = new PipelineStateSpy()
+
+        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, spark)
+
+        assert(state.completedStatuses.length == 4)
+
+        val task1Status = state.completedStatuses.head
+        val task2Status = state.completedStatuses(1)
+        val task3Status = state.completedStatuses(2)
+        val task4Status = state.completedStatuses(3)
+
+        assert(task1Status.runStatus.isInstanceOf[Succeeded])
+        assert(task2Status.runStatus.isInstanceOf[Failed])
+        assert(task3Status.runStatus.isInstanceOf[NoData])
+        assert(task4Status.runStatus.isInstanceOf[Succeeded])
+      }
+    }
   }
 
   private def getOperation(dependencies: Seq[MetastoreDependency]): OperationDef = {

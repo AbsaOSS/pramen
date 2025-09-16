@@ -155,6 +155,32 @@ class DependencyResolverSuite extends AnyWordSpec {
 
       assert(!resolver.canRun("table3", alwaysAttempt = false))
     }
+
+    "return true when a passive dependency succeeded" in {
+      val resolver = getTestCase
+
+      resolver.setAvailableTable("table1")
+      resolver.setAvailableTable("table2")
+
+      assert(resolver.canRun("table5", alwaysAttempt = false))
+    }
+
+    "return true when a passive dependency failed" in {
+      val resolver = getTestCase
+
+      resolver.setAvailableTable("table1")
+      resolver.setFailedTable("table2")
+
+      assert(resolver.canRun("table5", alwaysAttempt = false))
+    }
+
+    "return false when a passive dependency not ran" in {
+      val resolver = getTestCase
+
+      resolver.setAvailableTable("table1")
+
+      assert(!resolver.canRun("table5", alwaysAttempt = false))
+    }
   }
 
   "getMissingDependencies" should {
@@ -228,7 +254,8 @@ class DependencyResolverSuite extends AnyWordSpec {
       JobDependency(Nil, "table1", isPassive = false),
       JobDependency(Nil, "table2", isPassive = false),
       JobDependency(Seq("table1", "table10"), "table3", isPassive = false),
-      JobDependency(Seq("table11"), "table4", isPassive = false)
+      JobDependency(Seq("table11"), "table4", isPassive = false),
+      JobDependency(Seq("table2"), "table5", isPassive = true)
     ), enableMultipleJobsPerTable = false)
   }
 }
