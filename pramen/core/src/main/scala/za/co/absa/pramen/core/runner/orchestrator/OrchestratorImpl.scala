@@ -187,11 +187,15 @@ class OrchestratorImpl extends Orchestrator {
       val inputTables = job.operation.dependencies
         .flatMap(_.tables)
         .distinct
+
+      val operationDependencies = Seq(JobDependency(inputTables, job.outputTable.name))
+
       job.operation.operationType match {
         case s: OperationType.Sink =>
-          s.sinkTables.map(table => JobDependency(Seq(table.metaTableName), table.outputTableName.getOrElse(s"${table.metaTableName}->${s.sinkName}")))
-        case _ =>
-          Seq(JobDependency(inputTables, job.outputTable.name))
+          operationDependencies ++
+            s.sinkTables.map(table => JobDependency(Seq(table.metaTableName), table.outputTableName.getOrElse(s"${table.metaTableName}->${s.sinkName}")))
+        case _                     =>
+          operationDependencies
       }
     })
   }
