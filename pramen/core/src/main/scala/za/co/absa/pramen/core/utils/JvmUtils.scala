@@ -67,6 +67,16 @@ object JvmUtils {
     }.toSeq
   }
 
+  /**
+    * Renders stack traces of multiple threads into a readable string format.
+    *
+    * Each stack trace is prefixed with the thread index and thread name, and formatted
+    * with appropriate indentation for improved readability.
+    *
+    * @param stackTraces A sequence of `ThreadStackTrace` instances, where each instance
+    *                    contains the thread name and its corresponding stack trace.
+    * @return A formatted string representation of the provided stack traces.
+    */
   def renderStackTraces(stackTraces: Seq[ThreadStackTrace]): String = {
     val threadTitlePadding = "  "
     val stackTracePadding = "    "
@@ -78,5 +88,25 @@ object JvmUtils {
         val stackTraceStr = s"""${stackTrace.map(s => s"$stackTracePadding$s").mkString("", EOL, EOL)}""".stripMargin
         threadTitle + stackTraceStr
     }.mkString("\n")
+  }
+
+  /**
+    * Determines the major version of the JVM currently in use.
+    *
+    * The major version is derived from the JVM's system property "java.version".
+    * For Java 8 and earlier, the version format follows the "1.x" scheme (e.g., "1.8").
+    * For Java 9 and later, the version directly reflects the major version (e.g., "9", "11").
+    *
+    * @return The major version of the JVM as a number.
+    */
+  def jvmMajorVersion: Int = {
+    val version = sys.props.getOrElse("java.version", "5")
+    if (version.startsWith("1.")) {
+      // For Java 8 and earlier: 1.8.x
+      version.drop(2).takeWhile(_.isDigit).toInt
+    } else {
+      // For Java 9 and later: 9.x, 11.x, etc.
+      version.takeWhile(_.isDigit).toInt
+    }
   }
 }
