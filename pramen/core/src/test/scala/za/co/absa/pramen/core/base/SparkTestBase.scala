@@ -42,6 +42,7 @@ trait SparkTestBase {
       .config("spark.sql.extensions", "io.delta.sql.DeltaSparkSessionExtension")
       .config("spark.sql.catalog.spark_catalog", "org.apache.spark.sql.delta.catalog.DeltaCatalog")
       .config("spark.sql.legacy.timeParserPolicy", "CORRECTED")
+      .config("spark.sql.parquet.int96RebaseModeInWrite", "CORRECTED")
       .config("spark.sql.shuffle.partitions", "1")
       .getOrCreate()
   }

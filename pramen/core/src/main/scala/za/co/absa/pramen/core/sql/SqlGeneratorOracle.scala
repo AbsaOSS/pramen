@@ -61,11 +61,11 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
 
-    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
+    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME, SqlColumnType.DATE)
 
     val infoDateColumnAdjusted =
       if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"TO_DATE($infoDateColumn, 'YYYY-MM-DD')"
+        s"TRUNC($infoDateColumn)"
       } else {
         infoDateColumn
       }
