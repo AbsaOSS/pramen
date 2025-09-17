@@ -100,13 +100,11 @@ object JvmUtils {
     * @return The major version of the JVM as a number.
     */
   lazy val jvmMajorVersion: Int = {
-    val version = sys.props.getOrElse("java.version", "5")
-    if (version.startsWith("1.")) {
-      // For Java 8 and earlier: 1.8.x
-      version.drop(2).takeWhile(_.isDigit).toInt
-    } else {
-      // For Java 9 and later: 9.x, 11.x, etc.
-      version.takeWhile(_.isDigit).toInt
-    }
+    val raw = sys.props.get("java.specification.version")
+      .orElse(sys.props.get("java.version"))
+      .getOrElse("5")
+    val majorPortion = if (raw.startsWith("1.")) raw.drop(2) else raw
+    val digits = majorPortion.takeWhile(_.isDigit)
+    if (digits.nonEmpty) digits.toInt else 5
   }
 }

@@ -58,6 +58,8 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
+    require(!dateEnd.isBefore(dateBegin), s"infoDateEnd [$dateEnd] must be >= infoDateBegin [$dateBegin]")
+
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd.plusDays(1))
 
