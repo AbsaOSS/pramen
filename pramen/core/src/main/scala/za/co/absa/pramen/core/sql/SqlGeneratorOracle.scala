@@ -59,22 +59,9 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
-    val dateEndLit = getDateLiteral(dateEnd)
+    val dateEndLit = getDateLiteral(dateEnd.plusDays(1))
 
-    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME, SqlColumnType.DATE)
-
-    val infoDateColumnAdjusted =
-      if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"TRUNC($infoDateColumn)"
-      } else {
-        infoDateColumn
-      }
-
-    if (dateBeginLit == dateEndLit) {
-      s"$infoDateColumnAdjusted = $dateBeginLit"
-    } else {
-      s"$infoDateColumnAdjusted >= $dateBeginLit AND $infoDateColumnAdjusted <= $dateEndLit"
-    }
+    s"$infoDateColumn >= $dateBeginLit AND $infoDateColumn < $dateEndLit"
   }
 
   override def getAliasExpression(expression: String, alias: String): String = {

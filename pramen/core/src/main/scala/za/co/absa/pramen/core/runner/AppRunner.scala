@@ -59,7 +59,7 @@ object AppRunner {
       if (JvmUtils.jvmMajorVersion < 17) {
         System.setSecurityManager(new SystemExitCatcherSecurityManager(state.asInstanceOf[PipelineStateImpl]))
       } else {
-        log.warn("JVM has deprecated SecurityManager since JVM 17. Intercepting System.exit() called from libraries is disabled.")
+        log.warn("SecurityManager is deprecated in Java 17+. Intercepting System.exit() called from libraries is disabled.")
       }
     }
 
