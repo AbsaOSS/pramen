@@ -99,7 +99,7 @@ object JvmUtils {
     *
     * @return The major version of the JVM as a number.
     */
-  def jvmMajorVersion: Int = {
+  lazy val jvmMajorVersion: Int = {
     val version = sys.props.getOrElse("java.version", "5")
     if (version.startsWith("1.")) {
       // For Java 8 and earlier: 1.8.x

@@ -64,67 +64,67 @@ class SqlGeneratorOracleSuite extends AnyWordSpec {
   "generate ranged count queries" when {
     "date is in DATE format" in {
       assert(gen.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE TRUNC(D) = date'2020-08-17'")
+        "SELECT COUNT(*) FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-18'")
       assert(gen.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE TRUNC(D) >= date'2020-08-17' AND TRUNC(D) <= date'2020-08-30'")
+        "SELECT COUNT(*) FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-31'")
     }
 
     "date is in STRING format" in {
       assert(genStr.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE D = '2020-08-17'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D < '2020-08-18'")
       assert(genStr.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D < '2020-08-31'")
     }
 
     "date is in NUMBER format" in {
       assert(genNum.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE D = 20200817")
+        "SELECT COUNT(*) FROM A WHERE D >= 20200817 AND D < 20200818")
       assert(genNum.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE D >= 20200817 AND D <= 20200830")
+        "SELECT COUNT(*) FROM A WHERE D >= 20200817 AND D < 20200831")
     }
 
     "the table name and column name need to be escaped" in {
       assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
-        "SELECT COUNT(*) FROM \"Input Table\" WHERE TRUNC(\"Info date\") = date'2020-08-17'")
+        "SELECT COUNT(*) FROM \"Input Table\" WHERE \"Info date\" >= date'2020-08-17' AND \"Info date\" < date'2020-08-18'")
       assert(genEscaped.getCountQuery("Input Table", date1, date2) ==
-        "SELECT COUNT(*) FROM \"Input Table\" WHERE TRUNC(\"Info date\") >= date'2020-08-17' AND TRUNC(\"Info date\") <= date'2020-08-30'")
+        "SELECT COUNT(*) FROM \"Input Table\" WHERE \"Info date\" >= date'2020-08-17' AND \"Info date\" < date'2020-08-31'")
     }
   }
 
   "generate ranged data queries" when {
     "date is in DATE format" in {
       assert(gen.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE TRUNC(D) = date'2020-08-17'")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-18'")
       assert(gen.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE TRUNC(D) >= date'2020-08-17' AND TRUNC(D) <= date'2020-08-30'")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-31'")
     }
 
     "date is in STRING format" in {
       assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE D = '2020-08-17'")
+        "SELECT * FROM A WHERE D >= '2020-08-17' AND D < '2020-08-18'")
       assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
+        "SELECT * FROM A WHERE D >= '2020-08-17' AND D < '2020-08-31'")
     }
 
     "date is in NUMBER format" in {
       assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE D = 20200817")
+        "SELECT * FROM A WHERE D >= 20200817 AND D < 20200818")
       assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
+        "SELECT * FROM A WHERE D >= 20200817 AND D < 20200831")
     }
 
     "date is in DATETIME format" in {
       assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE TRUNC(D) = date'2020-08-17'")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-18'")
       assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE TRUNC(D) >= date'2020-08-17' AND TRUNC(D) <= date'2020-08-30'")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-31'")
     }
 
     "with limit records" in {
       assert(gen.getDataQuery("A", date1, date1, Nil, Some(100)) ==
-        "SELECT * FROM A WHERE TRUNC(D) = date'2020-08-17' AND ROWNUM <= 100")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-18' AND ROWNUM <= 100")
       assert(gen.getDataQuery("A", date1, date2, Nil, Some(100)) ==
-        "SELECT * FROM A WHERE TRUNC(D) >= date'2020-08-17' AND TRUNC(D) <= date'2020-08-30' AND ROWNUM <= 100")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-31' AND ROWNUM <= 100")
     }
   }
 
