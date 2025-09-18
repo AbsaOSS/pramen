@@ -184,19 +184,27 @@ class OrchestratorImpl extends Orchestrator {
 
   def getDependencies(jobs: Seq[Job]): Seq[JobDependency] = {
     jobs.flatMap(job => {
-      val depsInput = job.operation.dependencies
-        .map(d => JobDependency(d.tables, job.outputTable.name, d.isPassive || d.isOptional))
+      val inputDependencies = job.operation.dependencies.map { d =>
+        JobDependency(d.tables, job.outputTable.name, d.isPassive || d.isOptional)
+      }
 
       job.operation.operationType match {
-        case s: OperationType.Sink =>
-          depsInput ++ s.sinkTables.map(table => JobDependency(Seq(table.metaTableName), table.outputTableName.getOrElse(s"${table.metaTableName}->${s.sinkName}"), isPassive = true))
+        case sink: OperationType.Sink =>
+          val sinkDependencies = sink.sinkTables.map { table =>
+            JobDependency(
+              Seq(table.metaTableName),
+              table.outputTableName.getOrElse(s"${table.metaTableName}->${sink.sinkName}"),
+              isPassive = false
+            )
+          }
+          inputDependencies ++ sinkDependencies
         case _                     =>
           // If there are no dependencies, adding a dependency for the output table not depending on any input tables.
           // This is the requirement for the orchestrator.
-          if (depsInput.isEmpty)
+          if (inputDependencies.isEmpty)
             Seq(JobDependency(Seq.empty, job.outputTable.name, isPassive = false))
           else
-            depsInput
+            inputDependencies
       }
     })
   }
