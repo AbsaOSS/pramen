@@ -21,7 +21,6 @@ import za.co.absa.pramen.api.status.MetastoreDependency
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.collection.JavaConverters._
-import scala.util.Try
 
 object MetastoreDependencyFactory {
   val TABLES_KEY = "tables"
@@ -41,8 +40,8 @@ object MetastoreDependencyFactory {
 
     val tables = conf.getStringList(TABLES_KEY).asScala.toSeq
     val dateFromExpr = conf.getString(DATE_FROM_EXPR_KEY)
-    val isOptional = Try(conf.getBoolean(OPTIONAL_KEY)).getOrElse(false)
-    val triggerUpdates = Try(conf.getBoolean(TRIGGER_UPDATES_KEY)).getOrElse(!isOptional)
+    val isOptional = ConfigUtils.getOptionBoolean(conf, OPTIONAL_KEY).getOrElse(false)
+    val triggerUpdates = ConfigUtils.getOptionBoolean(conf, TRIGGER_UPDATES_KEY).getOrElse(!isOptional)
     val isPassive = ConfigUtils.getOptionBoolean(conf, PASSIVE_KEY).getOrElse(strictDependencyManagement)
 
     val dateToExprOpt = ConfigUtils.getOptionString(conf, DATE_TO_EXPR_KEY).filter(_.nonEmpty)
