@@ -32,7 +32,7 @@ class MetastoreDependencyFactorySuite extends AnyWordSpec {
       assert(dependency.tables == Seq("table1", "table2"))
       assert(dependency.dateFromExpr == "@infoDate")
       assert(dependency.dateUntilExpr.isEmpty)
-      assert(!dependency.triggerUpdates)
+      assert(dependency.triggerUpdates)
       assert(!dependency.isOptional)
       assert(!dependency.isPassive)
     }
@@ -48,7 +48,7 @@ class MetastoreDependencyFactorySuite extends AnyWordSpec {
       assert(dependency.tables == Seq("table1", "table2"))
       assert(dependency.dateFromExpr == "@infoDate - 1")
       assert(dependency.dateUntilExpr.contains("@infoDate - 1"))
-      assert(!dependency.triggerUpdates)
+      assert(dependency.triggerUpdates)
       assert(!dependency.isOptional)
       assert(dependency.isPassive)
     }

@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.runner.splitter
 
 import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
-import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.pipeline
@@ -187,46 +187,6 @@ object ScheduleStrategyUtils {
       } else {
         taskPreDef.copy(reason = TaskRunReason.Skip(s"The task date '${taskPreDef.infoDate}' is older than the minimum date '$dayBeforeMinimum'."))
       }
-    }
-  }
-
-  private[core] def anyDependencyUpdatedRetrospectively(outputTable: String,
-                                                        infoDate: LocalDate,
-                                                        dependencies: Seq[MetastoreDependency],
-                                                        bookkeeper: Bookkeeper): Boolean = {
-    dependencies.exists(dependency => isDependencyUpdatedRetrospectively(outputTable, infoDate, dependency, bookkeeper))
-  }
-
-  private[core] def isDependencyUpdatedRetrospectively(outputTable: String,
-                                                       infoDate: LocalDate,
-                                                       dependency: MetastoreDependency,
-                                                       bookkeeper: Bookkeeper): Boolean = {
-    if (!dependency.triggerUpdates) {
-      return false
-    }
-
-    val lastUpdatedOpt = bookkeeper.getLatestDataChunk(outputTable, infoDate, infoDate)
-
-    val dateFrom = evaluateFromInfoDate(infoDate, dependency.dateFromExpr)
-    val dateTo = evaluateFromInfoDate(infoDate, dependency.dateUntilExpr.orNull)
-
-    lastUpdatedOpt match {
-      case Some(lastUpdated) =>
-        dependency.tables.foldLeft(false)((acc, table) => {
-          bookkeeper.getLatestDataChunk(table, dateFrom, dateTo) match {
-            case Some(dependencyUpdated) =>
-              val isUpdatedRetrospectively = dependencyUpdated.jobFinished >= lastUpdated.jobFinished
-              if (isUpdatedRetrospectively) {
-                log.warn(s"Input table '$table' has updated retrospectively${renderPeriod(Option(dateFrom), Option(dateTo))}. " +
-                  s"Adding '$outputTable' to rerun for $infoDate.")
-              }
-              acc || isUpdatedRetrospectively
-            case None                    =>
-              acc
-          }
-        })
-      case None              =>
-        false
     }
   }
 

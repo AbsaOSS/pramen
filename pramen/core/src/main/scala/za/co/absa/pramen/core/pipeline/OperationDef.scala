@@ -58,6 +58,7 @@ object OperationDef {
   val NAME_KEY = "name"
   val TYPE_KEY = "type"
   val DISABLED_KEY = "disabled"
+  val DISABLE_KEY = "disable"
   val SCHEDULE_KEY = "schedule"
   val EXPECTED_DELAY_DAYS_KEY = "expected.delay.days"
   val ALLOW_PARALLEL_KEY = "parallel"
@@ -83,7 +84,9 @@ object OperationDef {
     ConfigUtils.validatePathsExistence(conf, parent, Seq(NAME_KEY, TYPE_KEY, SCHEDULE_KEY))
 
     val name = conf.getString(NAME_KEY)
-    val disabled = ConfigUtils.getOptionBoolean(conf, DISABLED_KEY).getOrElse(false)
+    val disabled = ConfigUtils.getOptionBoolean(conf, DISABLED_KEY).orElse(
+        ConfigUtils.getOptionBoolean(conf, DISABLE_KEY)
+    ).getOrElse(false)
 
     if (disabled) {
       log.warn(s"Operation '$name' is DISABLED.")

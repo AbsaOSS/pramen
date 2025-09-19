@@ -20,10 +20,9 @@ import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
-import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
+import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.exceptions.SyntaxErrorException
-import za.co.absa.pramen.core.model.DataChunk
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 
@@ -144,116 +143,6 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
         val actual = getHistorical("table", date, date.plusDays(5), schedule, RunMode.CheckUpdates, "@runDate", date.minusDays(3), inverseDateOrder = true, bk)
 
         assert(actual == expected)
-      }
-    }
-
-    "anyDependencyUpdatedRetrospectively" should {
-      "return false if no dependencies are specified" in {
-        assert(!anyDependencyUpdatedRetrospectively("table2", date, Nil, null))
-      }
-
-      "return false if a dependency is specified that has no retrospective updates" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestDataChunk("table2", date, date))
-          .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
-
-        when(bk.getLatestDataChunk("table1", date.minusDays(7), date))
-          .thenReturn(Some(DataChunk("table1", date.toString, date.toString, date.toString, 100, 100, 10000, 11000)))
-
-        assert(!anyDependencyUpdatedRetrospectively("table2", date, dep :: Nil, bk))
-      }
-
-      "return true if a dependency is specified that has retrospective updates" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestDataChunk("table2", date, date))
-          .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
-
-        when(bk.getLatestDataChunk("table1", date.minusDays(7), date))
-          .thenReturn(Some(DataChunk("table1", date.toString, date.toString, date.toString, 100, 100, 30000, 31000)))
-
-        assert(anyDependencyUpdatedRetrospectively("table2", date, dep :: Nil, bk))
-      }
-
-      "return true if 2 dependency is a retrospective update, and other is not" in {
-        val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestDataChunk("table3", date, date))
-          .thenReturn(Some(DataChunk("table3", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
-
-        when(bk.getLatestDataChunk("table1", date.minusDays(7), date))
-          .thenReturn(Some(DataChunk("table1", date.toString, date.toString, date.toString, 100, 100, 10000, 11000)))
-
-        when(bk.getLatestDataChunk("table2", date, date))
-          .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 30000, 31000)))
-
-        assert(anyDependencyUpdatedRetrospectively("table3", date, dep1 :: dep2 :: Nil, bk))
-      }
-
-      "return false if the dependency that has retrospective updates is not tracked" in {
-        val dep1 = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val dep2 = MetastoreDependency("table2" :: Nil, "@infoDate", Some("@infoDate"), triggerUpdates = false, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestDataChunk("table3", date, date))
-          .thenReturn(Some(DataChunk("table3", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
-
-        when(bk.getLatestDataChunk("table1", date.minusDays(7), date))
-          .thenReturn(Some(DataChunk("table1", date.toString, date.toString, date.toString, 100, 100, 10000, 11000)))
-
-        assert(!anyDependencyUpdatedRetrospectively("table3", date, dep1 :: dep2 :: Nil, bk))
-      }
-    }
-
-    "isDependencyUpdatedRetrospectively" should {
-      "return false if the dependency if the job hasn't been ran" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestDataChunk("table2", date, date)).thenReturn(None)
-
-        when(bk.getLatestDataChunk("table1", date.minusDays(7), date))
-          .thenReturn(Some(DataChunk("table1", date.toString, date.toString, date.toString, 100, 100, 10000, 11000)))
-
-        assert(!isDependencyUpdatedRetrospectively("table2", date, dep, bk))
-      }
-
-      "return false if the dependency if the output table is not updated retrospectively" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestDataChunk("table2", date, date))
-          .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
-
-        when(bk.getLatestDataChunk("table1", date.minusDays(7), date))
-          .thenReturn(Some(DataChunk("table1", date.toString, date.toString, date.toString, 100, 100, 10000, 11000)))
-
-        assert(!isDependencyUpdatedRetrospectively("table2", date, dep, bk))
-      }
-
-      "return true if the dependency if the output table is updated retrospectively" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = true, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        when(bk.getLatestDataChunk("table2", date, date))
-          .thenReturn(Some(DataChunk("table2", date.toString, date.toString, date.toString, 100, 100, 20000, 21000)))
-
-        when(bk.getLatestDataChunk("table1", date.minusDays(7), date))
-          .thenReturn(Some(DataChunk("table1", date.toString, date.toString, date.toString, 100, 100, 30000, 31000)))
-
-        assert(isDependencyUpdatedRetrospectively("table2", date, dep, bk))
-      }
-
-      "return false if tracking updates is disabled for the dependency" in {
-        val dep = MetastoreDependency("table1" :: Nil, "@infoDate - 7", Some("@infoDate"), triggerUpdates = false, isOptional = false, isPassive = false)
-        val bk = mock(classOf[Bookkeeper])
-
-        assert(!isDependencyUpdatedRetrospectively("table2", date, dep, bk))
       }
     }
 

@@ -62,6 +62,21 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.isEmpty)
     }
 
+    "return None for the disabled operation v2" in {
+      val conf = ConfigFactory.parseString(
+        s"""name = "dummy_name"
+           |type = "transformation"
+           |schedule.type = "daily"
+           |
+           |disable = "true"
+           |""".stripMargin
+      )
+
+      val op = OperationDef.fromConfig(conf, appConfig, defaults, "path", 0)
+
+      assert(op.isEmpty)
+    }
+
     "be able to serialize an ingestion operation" in {
       val conf = ConfigFactory.parseString(
         s"""name = "dummy_name"
@@ -154,7 +169,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.dependencies.head.triggerUpdates)
       assert(!op.dependencies.head.isPassive)
       assert(op.dependencies(1).tables.contains("table2"))
-      assert(!op.dependencies(1).triggerUpdates)
+      assert(op.dependencies(1).triggerUpdates)
       assert(!op.dependencies(1).isPassive)
       assert(op.warnMaxExecutionTimeSeconds.contains(50))
       assert(op.killMaxExecutionTimeSeconds.contains(100))
@@ -194,11 +209,12 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |    tables = [table1]
            |    date.from = "@infoDate - 1"
            |    date.to = "@infoDate"
-           |    trigger.updates = true
+           |    trigger.updates = false
            |  },
            |  {
            |    tables = [table2, table3]
            |    date.from = "@infoDate"
+           |    optional = true
            |  }
            |]
            |""".stripMargin
@@ -214,7 +230,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.dependencies.head.tables.contains("table1"))
       assert(op.dependencies.head.dateFromExpr.contains("@infoDate - 1"))
       assert(op.dependencies.head.dateUntilExpr.contains("@infoDate"))
-      assert(op.dependencies.head.triggerUpdates)
+      assert(!op.dependencies.head.triggerUpdates)
       assert(op.dependencies.head.isPassive)
       assert(op.dependencies(1).tables.contains("table2"))
       assert(!op.dependencies(1).triggerUpdates)
