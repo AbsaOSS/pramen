@@ -73,6 +73,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |    connection.string = "$url"
          |    user = "$user"
          |    password = "$password"
+         |    autocommit = true
          |  }
          |
          |  has.information.date.column = true
@@ -94,7 +95,18 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
          |
          |  information.date.column = "INFO_DATE"
          |  information.date.type = "number"
-         |}""".stripMargin)
+         |}
+         |reader_postgresql {
+         |  jdbc {
+         |    driver = "org.postgresql.Driver"
+         |    connection.string = "jdbc:postgresql://host:5433/pramen"
+         |    user = "dummy"
+         |    password = "dummy"
+         |  }
+         |
+         |  has.information.date.column = false
+         |}
+         |""".stripMargin)
 
     "be able to be constructed properly from config" in {
       val reader = TableReaderJdbc(conf.getConfig("reader"), conf.getConfig("reader"), "reader")
@@ -106,6 +118,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.primaryUrl.get == url)
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
+      assert(jdbc.jdbcConfig.autoCommit.isEmpty)
       assert(jdbc.offsetInfoOpt.nonEmpty)
       assert(jdbc.offsetInfoOpt.get.offsetColumn == "ts")
       assert(jdbc.offsetInfoOpt.get.offsetType.dataTypeString == "datetime")
@@ -125,6 +138,7 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(jdbc.jdbcConfig.primaryUrl.get == url)
       assert(jdbc.jdbcConfig.user.contains(user))
       assert(jdbc.jdbcConfig.password.contains(password))
+      assert(jdbc.jdbcConfig.autoCommit.contains(true))
       assert(jdbc.infoDateColumn == "INFO_DATE")
       assert(jdbc.infoDateType == SqlColumnType.DATE)
       assert(jdbc.infoDateFormat == "YYYY-MM-dd")
@@ -152,6 +166,17 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
       assert(!jdbc.saveTimestampsAsDates)
       assert(jdbc.identifierQuotingPolicy == QuotingPolicy.Auto)
       assert(jdbc.sqlGeneratorClass.isEmpty)
+      assert(jdbc.jdbcConfig.autoCommit.isEmpty)
+    }
+
+    "be able to be constructed properly from PostgreSQL config" in {
+      val reader = TableReaderJdbc(conf.getConfig("reader_postgresql"), conf.getConfig("reader_postgresql"), "reader_postgresql")
+
+      val jdbc = reader.getJdbcConfig
+
+      assert(jdbc.jdbcConfig.database.isEmpty)
+      assert(jdbc.jdbcConfig.driver == "org.postgresql.Driver")
+      assert(jdbc.jdbcConfig.autoCommit.contains(false))
     }
 
     "ensure sql query generator is properly selected 1" in {

@@ -38,7 +38,6 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |    connection.string = "$url"
        |    user = "$user"
        |    password = "$password"
-       |    autocommit = true
        |  }
        |
        |  has.information.date.column = true
@@ -81,6 +80,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |    connection.string = "$url"
        |    user = "$user"
        |    password = "$password"
+       |    autocommit = false
        |  }
        |
        |  has.information.date.column = false
@@ -105,7 +105,7 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       val reader = getReader
       assert(reader != null)
       assert(reader.getJdbcReaderConfig.infoDateFormat == "YYYY-MM-dd")
-      assert(reader.getJdbcReaderConfig.jdbcConfig.autoCommit)
+      assert(reader.getJdbcReaderConfig.jdbcConfig.autoCommit.isEmpty)
       assert(reader.getJdbcReaderConfig.jdbcConfig.fetchSize.get == 1000)
     }
 
@@ -119,8 +119,18 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
       val reader = TableReaderJdbcNative(conf.getConfig("reader_minimal"), conf.getConfig("reader_minimal"), "reader_minimal")
       assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-dd")
       assert(reader.getJdbcReaderConfig.jdbcConfig.sanitizeDateTime)
-      assert(!reader.getJdbcReaderConfig.jdbcConfig.autoCommit)
+      assert(reader.getJdbcReaderConfig.jdbcConfig.autoCommit.isEmpty)
       assert(reader.getJdbcReaderConfig.jdbcConfig.fetchSize.isEmpty)
+      assert(reader.getJdbcReaderConfig.limitRecords.isEmpty)
+    }
+
+    "work with config with limits" in {
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_limit"), conf.getConfig("reader_limit"), "reader_limit")
+      assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-dd")
+      assert(reader.getJdbcReaderConfig.jdbcConfig.sanitizeDateTime)
+      assert(reader.getJdbcReaderConfig.jdbcConfig.autoCommit.contains(false))
+      assert(reader.getJdbcReaderConfig.jdbcConfig.fetchSize.isEmpty)
+      assert(reader.getJdbcReaderConfig.limitRecords.contains(100))
     }
 
     "throw an exception if config is missing" in {
