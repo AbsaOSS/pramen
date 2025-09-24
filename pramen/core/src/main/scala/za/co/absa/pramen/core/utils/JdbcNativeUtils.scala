@@ -109,13 +109,6 @@ object JdbcNativeUtils {
     val (connection, _) = jdbcUrlSelector.getWorkingConnection(retries)
 
     try {
-      try {
-        // When autoCommit is true, PostgreSQL retrieves all query results at once, which can cause memory issues for large datasets.
-        connection.setAutoCommit(false)
-      } catch {
-        case _: Throwable => log.info("The JDBC driver does not support 'setAutoCommit(false)'")
-      }
-
       val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
       try {
@@ -173,15 +166,6 @@ object JdbcNativeUtils {
     val connection = getJdbcConnection(jdbcConfig, url)
 
     val statement = try {
-      try {
-        connection.setAutoCommit(jdbcConfig.autoCommit)
-        log.info(s"setAutoCommit(${jdbcConfig.autoCommit})'")
-      } catch {
-        case _: Throwable =>
-          // Some drivers, like Datbricks JDBC driver throw an exception on setAutoCommit(false)
-          log.info(s"The JDBC driver does not support 'setAutoCommit(${jdbcConfig.autoCommit})'")
-      }
-
       if (jdbcConfig.driver == "org.postgresql.Driver")
         // Special handling of PostgreSQL driver that loads.
         // PostgreSQL loads full query results info memory ignoring fetch sizes and other driver options by default.
@@ -206,8 +190,9 @@ object JdbcNativeUtils {
     statement.executeQuery(query)
   }
 
-  private def getJdbcConnection(jdbcConfig: JdbcConfig, url: String): Connection = {
+  private[core] def getJdbcConnection(jdbcConfig: JdbcConfig, url: String): Connection = {
     Class.forName(jdbcConfig.driver)
+
     val properties = new Properties()
     properties.put("driver", jdbcConfig.driver)
     jdbcConfig.user.foreach(db => properties.put("user", db))
@@ -219,6 +204,18 @@ object JdbcNativeUtils {
     }
 
     DriverManager.setLoginTimeout(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))
-    DriverManager.getConnection(url, properties)
+
+    val connection = DriverManager.getConnection(url, properties)
+
+    jdbcConfig.autoCommit.foreach { autoCommit =>
+      try {
+        log.info(s"setAutoCommit($autoCommit)")
+        connection.setAutoCommit(autoCommit)
+      } catch {
+        // Some drivers, like Databricks JDBC driver throw an exception on setAutoCommit(false)
+        case _: Throwable => log.info(s"The JDBC driver does not support 'setAutoCommit($autoCommit)'")
+      }
+    }
+    connection
   }
 }

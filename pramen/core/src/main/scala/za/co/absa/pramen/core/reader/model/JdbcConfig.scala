@@ -30,7 +30,7 @@ case class JdbcConfig(
                        password: Option[String] = None,
                        retries: Option[Int] = None,
                        fetchSize: Option[Int] = None,
-                       autoCommit: Boolean = false,
+                       autoCommit: Option[Boolean] = None,
                        connectionTimeoutSeconds: Option[Int] = None,
                        sanitizeDateTime: Boolean = true,
                        incorrectDecimalsAsString: Boolean = false,
@@ -73,8 +73,17 @@ object JdbcConfig {
       throw new IllegalArgumentException(s"Please, define either $JDBC_CONNECTION_STRING, $JDBC_CONNECTION_PRIMARY_URL or $JDBC_CONNECTION_PRIMARY_URL_SHORT")
     }
 
+    val driver = conf.getString(JDBC_CONNECTION_DRIVER)
+
+    // For PostgreSQL databases, set `autocommit` to false by default. Otherwise, the driver attempts to
+    // load the entire query result set into memory.
+    val defaultAutoCommit = driver match {
+      case "org.postgresql.Driver" => Some(false)
+      case _ => None
+    }
+
     JdbcConfig(
-      driver = conf.getString(JDBC_CONNECTION_DRIVER),
+      driver = driver,
       primaryUrl = primaryUrl,
       ConfigUtils.getListStringsByPrefix(conf, JDBC_FALLBACK_URL_PREFIX),
       database = ConfigUtils.getOptionString(conf, JDBC_DATABASE),
@@ -82,7 +91,7 @@ object JdbcConfig {
       password = ConfigUtils.getOptionString(conf, JDBC_PASSWORD),
       retries = ConfigUtils.getOptionInt(conf, JDBC_RETRIES),
       fetchSize = ConfigUtils.getOptionInt(conf, JDBC_FETCH_SIZE),
-      autoCommit = ConfigUtils.getOptionBoolean(conf, JDBC_AUTOCOMMIT).getOrElse(false),
+      autoCommit = ConfigUtils.getOptionBoolean(conf, JDBC_AUTOCOMMIT).orElse(defaultAutoCommit),
       connectionTimeoutSeconds = ConfigUtils.getOptionInt(conf, JDBC_CONNECTION_TIMEOUT),
       sanitizeDateTime = ConfigUtils.getOptionBoolean(conf, JDBC_SANITIZE_DATETIME).getOrElse(true),
       incorrectDecimalsAsString = ConfigUtils.getOptionBoolean(conf, JDBC_INCORRECT_PRECISION_AS_STRING).getOrElse(false),

@@ -18,10 +18,10 @@ package za.co.absa.pramen.core.reader
 
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.utils.JdbcNativeUtils.{DEFAULT_CONNECTION_TIMEOUT_SECONDS, JDBC_WORDS_TO_REDACT}
+import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
+import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils}
 
-import java.sql.{Connection, DriverManager, SQLException}
+import java.sql.{Connection, SQLException}
 import java.util.Properties
 import scala.util.{Failure, Random, Success, Try}
 
@@ -104,12 +104,7 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
     val currentUrl = getUrl
 
     Try {
-      Class.forName(jdbcConfig.driver)
-
-      val properties = getProperties
-
-      DriverManager.setLoginTimeout(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))
-      DriverManager.getConnection(currentUrl, properties)
+      JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl)
     } match {
       case Success(connection) => (connection, currentUrl)
       case Failure(ex)         =>
