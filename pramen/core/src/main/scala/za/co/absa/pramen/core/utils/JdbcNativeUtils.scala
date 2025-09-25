@@ -162,7 +162,6 @@ object JdbcNativeUtils {
   private def getResultSet(jdbcConfig: JdbcConfig,
                            url: String,
                            query: String): ResultSet = {
-    Class.forName(jdbcConfig.driver)
     val connection = getJdbcConnection(jdbcConfig, url)
 
     val statement = try {
