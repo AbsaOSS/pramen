@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.reader.model
 
 import com.typesafe.config.Config
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 import scala.util.Try
@@ -56,6 +57,8 @@ object JdbcConfig {
 
   val DRIVERS_NOT_SUPPORTED_BY_SPARK: Set[String] = Set("com.databricks.client.jdbc.Driver")
 
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   def load(conf: Config, parent: String = ""): JdbcConfig = {
     validateConf(conf, parent)
 
@@ -82,6 +85,13 @@ object JdbcConfig {
       case _ => None
     }
 
+    val explicitAutoCommit = ConfigUtils.getOptionBoolean(conf, JDBC_AUTOCOMMIT)
+    val autoCommitOpt = explicitAutoCommit.orElse(defaultAutoCommit)
+
+    if (explicitAutoCommit.isDefined && defaultAutoCommit.isDefined && explicitAutoCommit.get != defaultAutoCommit.get) {
+      log.warn(s"The JDBC driver is known to work poorly with 'autocommit=${explicitAutoCommit.get}'. The recommended value is '${defaultAutoCommit.get}'.")
+    }
+
     JdbcConfig(
       driver = driver,
       primaryUrl = primaryUrl,
@@ -91,7 +101,7 @@ object JdbcConfig {
       password = ConfigUtils.getOptionString(conf, JDBC_PASSWORD),
       retries = ConfigUtils.getOptionInt(conf, JDBC_RETRIES),
       fetchSize = ConfigUtils.getOptionInt(conf, JDBC_FETCH_SIZE),
-      autoCommit = ConfigUtils.getOptionBoolean(conf, JDBC_AUTOCOMMIT).orElse(defaultAutoCommit),
+      autoCommit = autoCommitOpt,
       connectionTimeoutSeconds = ConfigUtils.getOptionInt(conf, JDBC_CONNECTION_TIMEOUT),
       sanitizeDateTime = ConfigUtils.getOptionBoolean(conf, JDBC_SANITIZE_DATETIME).getOrElse(true),
       incorrectDecimalsAsString = ConfigUtils.getOptionBoolean(conf, JDBC_INCORRECT_PRECISION_AS_STRING).getOrElse(false),
