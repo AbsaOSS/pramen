@@ -89,7 +89,11 @@ object JdbcConfig {
     val autoCommitOpt = explicitAutoCommit.orElse(defaultAutoCommit)
 
     if (explicitAutoCommit.isDefined && defaultAutoCommit.isDefined && explicitAutoCommit.get != defaultAutoCommit.get) {
-      log.warn(s"The JDBC driver is known to work poorly with 'autocommit=${explicitAutoCommit.get}'. The recommended value is '${defaultAutoCommit.get}'.")
+      log.warn(s"[$driver] JDBC driver is known to work poorly with 'autocommit=${explicitAutoCommit.get}'. The recommended value is '${defaultAutoCommit.get}'. Override acknowledged.")
+    }
+
+    if (driver == "com.ibm.db2.jcc.DB2Driver" && explicitAutoCommit.contains(false)) {
+      log.warn(s"[$driver] JDBC driver is known to work poorly with 'autocommit=false'. The recommended value is 'true' or not specified. Override acknowledged.")
     }
 
     JdbcConfig(
