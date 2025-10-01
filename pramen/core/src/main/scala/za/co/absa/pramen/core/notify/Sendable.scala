@@ -20,14 +20,14 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification.NotificationEntry
 import za.co.absa.pramen.core.config.Keys
-import za.co.absa.pramen.core.utils.{ConfigUtils, ThreadUtils}
 import za.co.absa.pramen.core.utils.Emoji._
+import za.co.absa.pramen.core.utils.{ConfigUtils, ThreadUtils}
 
 import java.util.Properties
 import java.util.concurrent.TimeUnit
 import javax.mail.internet.{InternetAddress, MimeBodyPart, MimeMessage, MimeMultipart}
 import javax.mail.{Message, Session, Transport}
-import scala.concurrent.duration.{Duration, FiniteDuration}
+import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
 object Sendable {
@@ -89,7 +89,9 @@ trait Sendable {
         log.info(s"$VOLTAGE An email has been sent successfully.")
       }
     } catch {
-      case NonFatal(ex) => log.error(s"$FAILURE Failed to send an email.", ex)
+      case NonFatal(ex) =>
+        log.error(s"$FAILURE Failed to send an email.", ex)
+        log.error(getBody)
     }
   }
 
