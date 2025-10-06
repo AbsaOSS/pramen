@@ -41,7 +41,7 @@ class JobSpy(jobName: String = "Dummy Job",
              runFunction: () => RunResult = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing(true),
              allowParallel: Boolean = true,
-             saveStats: MetaTableStats = MetaTableStats(Some(0), None, None),
+             saveStats: MetaTableStats = MetaTableStats(Some(0)),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty,
              jobTrackDays: Int = 0
             ) extends Job {

@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.metastore
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.{col, lit}
-import org.apache.spark.sql.types.{DateType, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
@@ -32,7 +32,6 @@ import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManagerUtils}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
-import za.co.absa.pramen.core.pipeline.OperationDef
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 
@@ -126,7 +125,7 @@ class MetastoreImpl(appConfig: Config,
     val isTransient = mt.format.isTransient
     val start = Instant.now.getEpochSecond
 
-    var stats = MetaTableStats(Some(0), None, None)
+    var stats = MetaTableStats(Some(0))
 
     withSparkConfig(mt.sparkConfig) {
       stats = MetastorePersistence.fromMetaTable(mt, appConfig, batchId, saveModeOverride).saveTable(infoDate, df, inputRecordCount)

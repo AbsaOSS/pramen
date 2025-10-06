@@ -186,7 +186,8 @@ class IngestionJob(operationDef: OperationDef,
     val jobFinished = Instant.now
     val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, sourceTable.warnMaxExecutionTimeSeconds)
 
-    SaveResult(stats, warnings = tooLongWarnings)
+    val warnings = stats.warnings ++ tooLongWarnings
+    SaveResult(stats, warnings = warnings)
   }
 
   private def supportsTrackDays(hasInfoDate: Boolean): Boolean = {

@@ -18,9 +18,9 @@ package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.DataOffset
 import za.co.absa.pramen.api.status.TaskRunReason
-import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental, TableNotConfigured}
@@ -36,7 +36,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    dataFormat: DataFormat = DataFormat.Parquet("/tmp/dummy"),
                    tableDf: DataFrame = null,
                    tableException: Throwable = null,
-                   stats: MetaTableStats = MetaTableStats(Some(0), None, None),
+                   stats: MetaTableStats = MetaTableStats(Some(0)),
                    statsException: Throwable = null,
                    isTableAvailable: Boolean = true,
                    isTableEmpty: Boolean = false,
@@ -80,7 +80,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
   override def saveTable(tableName: String, infoDate: LocalDate, df: DataFrame, inputRecordCount: Option[Long], saveModeOverride: Option[SaveMode]): MetaTableStats = {
     saveTableInvocations.append((tableName, infoDate, df))
-    MetaTableStats(Option(df.count()), None, None)
+    MetaTableStats(Option(df.count()))
   }
 
   def getHiveHelper(tableName: String): HiveHelper = {

@@ -85,10 +85,12 @@ class TransformationJob(operationDef: OperationDef,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
-    val saveResults = if (isIncremental && runReason != TaskRunReason.Rerun)
-      SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None, saveModeOverride = Some(SaveMode.Append)))
+    val stats = if (isIncremental && runReason != TaskRunReason.Rerun)
+      metastore.saveTable(outputTable.name, infoDate, df, None, saveModeOverride = Some(SaveMode.Append))
     else
-      SaveResult(metastore.saveTable(outputTable.name, infoDate, df, None))
+      metastore.saveTable(outputTable.name, infoDate, df, None)
+
+    val saveResults = SaveResult(stats, warnings = stats.warnings)
 
     val readerMode = if (isIncremental) ReaderMode.IncrementalPostProcessing else ReaderMode.Batch
     val metastoreReaderPostProcess = metastore.getMetastoreReader(inputTables :+ outputTable.name, outputTable.name, infoDate, runReason, readerMode)
@@ -105,7 +107,8 @@ class TransformationJob(operationDef: OperationDef,
 
     val jobFinished = Instant.now
     val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, None)
+    val saveWarnings = saveResults.warnings ++ tooLongWarnings
 
-    saveResults.copy(warnings = saveResults.warnings ++ tooLongWarnings)
+    saveResults.copy(warnings = saveWarnings)
   }
 }

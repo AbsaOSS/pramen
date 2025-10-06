@@ -85,11 +85,11 @@ class MetastorePersistenceIceberg(table: CatalogTable,
       val batchCount = df.filter(col(batchIdColumn) === batchId).count()
       val countAll = df.count()
 
-      MetaTableStats(Option(countAll), Option(batchCount), None)
+      MetaTableStats(Option(countAll), Option(batchCount))
     } else {
       val countAll = df.count()
 
-      MetaTableStats(Option(countAll), None, None)
+      MetaTableStats(Option(countAll))
     }
   }
 

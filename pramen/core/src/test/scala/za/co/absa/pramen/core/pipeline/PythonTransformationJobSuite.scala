@@ -38,7 +38,6 @@ import java.nio.file.{Files, Paths}
 import java.time.{Instant, LocalDate}
 
 class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll with SparkTestBase with TempDirFixture with TextComparisonFixture {
-
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
@@ -220,7 +219,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
 
   "save" should {
     "update the bookkeeper" in {
-      val statsIn = MetaTableStats(Some(100), None, None)
+      val statsIn = MetaTableStats(Some(100))
 
       val (job, _, _, _) = getUseCase(stats = statsIn)
 
@@ -244,7 +243,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
     }
 
     "allow no records in the output table" in {
-      val statsIn = MetaTableStats(Some(0), None, None)
+      val statsIn = MetaTableStats(Some(0))
 
       val (job, _, _, _) = getUseCase(stats = statsIn)
 
@@ -256,7 +255,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
     }
 
     "throw an exception if no records in the output table" in {
-      val statsIn = MetaTableStats(Some(0), None, None)
+      val statsIn = MetaTableStats(Some(0))
 
       val (job, _, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "1"))
 
@@ -270,7 +269,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
     }
 
     "throw an exception if the number of records is less then expected" in {
-      val statsIn = MetaTableStats(Some(9), None, None)
+      val statsIn = MetaTableStats(Some(9))
 
       val (job, _, _, _) = getUseCase(stats = statsIn, extraOptions = Map("minimum.records" -> "10"))
 
