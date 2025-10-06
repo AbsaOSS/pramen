@@ -428,18 +428,42 @@ class FsUtils(conf: Configuration, pathBase: String) {
     log.info(s"Successfully updated lock '$filePath'")
   }
 
-    /**
+  /**
     * Copies a file.
     *
     * @param srcFile   source file.
     * @param dstFile   destination file.
-    * @param overwrite overwrite the target file is exists.
-    * @return true if the rename succeeded.
+    * @param overwrite overwrite the target file exists.
     */
   def copyFile(srcFile: Path, dstFile: Path, overwrite: Boolean = true): Unit = {
     val fs1 = srcFile.getFileSystem(conf)
     val fs2 = dstFile.getFileSystem(conf)
     FileUtil.copy(fs1, srcFile, fs2, dstFile, false, overwrite, conf)
+  }
+
+  /**
+    * Copies a file with retries.
+    *
+    * @param srcFile   source file.
+    * @param dstFile   destination file.
+    * @param overwrite overwrite the target file exists.
+    * @return a throwable, if happened, but mitigated by a retry.
+    */
+  def copyFileWithRetry(srcFile: Path, dstFile: Path, overwrite: Boolean = true, numberOfAttempts: Int = 3, backoffTimeSeconds: Int = 10): Option[Throwable] = {
+    try {
+      copyFile(srcFile, dstFile, overwrite)
+      None
+    } catch {
+      case ex: IOException if ex.getMessage.contains("multipart upload") =>
+        if (numberOfAttempts > 1) {
+          log.warn(s"Failed to copy $srcFile to $dstFile due to multipart upload issue. Retrying in $backoffTimeSeconds seconds...", ex)
+          Thread.sleep(backoffTimeSeconds * 1000)
+          copyFileWithRetry(srcFile, dstFile, overwrite, numberOfAttempts - 1, backoffTimeSeconds)
+          Option(ex)
+        } else {
+          throw ex
+        }
+    }
   }
 
   def copyToLocal(srcFile: Path, targetFile: Path, overwrite: Boolean = false): Unit = {

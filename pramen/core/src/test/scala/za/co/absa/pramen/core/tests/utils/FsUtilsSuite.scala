@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.{DateUtils, FsUtils}
 
-import java.io.{File, IOException}
+import java.io.{File, FileNotFoundException, IOException}
 import java.nio.file.Paths
 import java.time.{Instant, ZoneId}
 
@@ -446,6 +446,34 @@ class FsUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
 
         assert(fsUtils.exists(pathSrc))
         assert(fsUtils.exists(pathDst))
+      }
+    }
+  }
+
+  "copyFileWithRetry" should {
+    "copy a file when there is no issues" in {
+      withTempDirectory("FsUtilsSuite") { tempDir =>
+        createBinFile(tempDir, "data1.bin", 100)
+
+        val pathSrc = new Path(tempDir, "data1.bin")
+        val pathDst = new Path(tempDir, "data2.bin")
+
+        val exOpt = fsUtils.copyFileWithRetry(pathSrc, pathDst)
+
+        assert(exOpt.isEmpty)
+        assert(fsUtils.exists(pathSrc))
+        assert(fsUtils.exists(pathDst))
+      }
+    }
+
+    "re-throw an exception which is not an IOException" in {
+      withTempDirectory("FsUtilsSuite") { tempDir =>
+        val pathSrc = new Path(tempDir, "data1.bin")
+        val pathDst = new Path(tempDir, "data2.bin")
+
+        assertThrows[FileNotFoundException] {
+          fsUtils.copyFileWithRetry(pathSrc, pathDst)
+        }
       }
     }
   }

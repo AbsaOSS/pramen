@@ -29,11 +29,11 @@ class MetastorePersistenceNull(implicit spark: SparkSession) extends MetastorePe
   }
 
   override def saveTable(infoDate: LocalDate, df: DataFrame, numberOfRecordsEstimate: Option[Long]): MetaTableStats = {
-    MetaTableStats(Some(0), None, None)
+    MetaTableStats(Some(0))
   }
 
   override def getStats(infoDate: LocalDate, onlyForCurrentBatchId: Boolean): MetaTableStats = {
-    MetaTableStats(Some(0), None, None)
+    MetaTableStats(Some(0))
   }
 
   override def createOrUpdateHiveTable(infoDate: LocalDate,

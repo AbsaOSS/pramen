@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.{FileStatus, Path}
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, Row, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.PartitionScheme
@@ -82,10 +82,11 @@ class MetastorePersistenceRaw(path: String,
 
     var copiedSize = 0L
 
-    if (files.isEmpty) {
-      log.info("Nohting to save")
+    val warnings: Seq[String] = if (files.isEmpty) {
+      log.info("Nothing to save")
+      Seq.empty[String]
     } else {
-      files.foreach(file => {
+      files.flatMap { file =>
         val srcPath = new Path(file)
         val trgPath = new Path(outputDir, srcPath.getName)
         val fsSrc = srcPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
@@ -93,8 +94,11 @@ class MetastorePersistenceRaw(path: String,
         log.info(s"Copying file from $srcPath to $trgPath")
 
         copiedSize += fsSrc.getContentSummary(srcPath).getLength
-        fsUtilsTrg.copyFile(srcPath, trgPath)
-      })
+        fsUtilsTrg.copyFileWithRetry(srcPath, trgPath) match {
+          case None => Seq.empty[String]
+          case Some(ex) => Seq(ex.getMessage)
+        }
+      }
     }
 
     val stats = if (saveModeOpt.contains(SaveMode.Append)) {
@@ -103,21 +107,24 @@ class MetastorePersistenceRaw(path: String,
         MetaTableStats(
           Option(copiedSize),
           None,
-          Some(copiedSize)
+          Some(copiedSize),
+          warnings
         )
       } else {
         val totalSize = list.map(_.getLen).sum
         MetaTableStats(
           Option(totalSize),
           Some(copiedSize),
-          Some(totalSize)
+          Some(totalSize),
+          warnings
         )
       }
     } else {
       MetaTableStats(
         Option(copiedSize),
         None,
-        Some(copiedSize)
+        Some(copiedSize),
+        warnings
       )
     }
 

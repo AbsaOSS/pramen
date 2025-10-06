@@ -181,8 +181,9 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
     val jobFinished = Instant.now
     val tooLongWarnings = getTookTooLongWarnings(jobStarted, jobFinished, sourceTable.warnMaxExecutionTimeSeconds)
+    val warnings = stats.warnings ++ tooLongWarnings
 
-    SaveResult(stats, warnings = tooLongWarnings)
+    SaveResult(stats, warnings = warnings)
   }
 
   private[core] def validateReadiness(infoDate: LocalDate, om: OffsetManager, hasInfoDate: Boolean, isRerun: Boolean): Reason = {
