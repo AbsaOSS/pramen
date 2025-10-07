@@ -454,7 +454,7 @@ class FsUtils(conf: Configuration, pathBase: String) {
       copyFile(srcFile, dstFile, overwrite)
       None
     } catch {
-      case ex: IOException if ex.getMessage.contains("multipart upload") =>
+      case ex: IOException if Option(ex.getMessage).exists(_.toLowerCase.contains("multipart upload")) =>
         if (numberOfAttempts > 1) {
           log.warn(s"Failed to copy $srcFile to $dstFile due to multipart upload issue. Retrying in $backoffTimeSeconds seconds...", ex)
           Thread.sleep(backoffTimeSeconds * 1000)
