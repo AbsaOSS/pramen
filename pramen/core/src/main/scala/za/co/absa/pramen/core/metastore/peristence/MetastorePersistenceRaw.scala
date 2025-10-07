@@ -96,7 +96,7 @@ class MetastorePersistenceRaw(path: String,
         copiedSize += fsSrc.getContentSummary(srcPath).getLength
         fsUtilsTrg.copyFileWithRetry(srcPath, trgPath) match {
           case None => Seq.empty[String]
-          case Some(ex) => Seq(ex.getMessage)
+          case Some(ex) if ex.getMessage != null => Seq(ex.getMessage)
         }
       }
     }
