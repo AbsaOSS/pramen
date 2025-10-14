@@ -25,12 +25,12 @@ import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
 import za.co.absa.abris.config.{AbrisConfig, ToAvroConfig}
 import za.co.absa.pramen.extras.avro.AvroUtils.{convertSparkToAvroSchema, fixNullableFields}
 import za.co.absa.pramen.extras.utils.ConfigUtils
-import za.co.absa.pramen.extras.writer.model.{KafkaWriterConfig, NamingStrategy}
+import za.co.absa.pramen.extras.writer.model.{KafkaConfig, NamingStrategy}
 
 import java.time.LocalDate
 
 class TableWriterKafka(topicName: String,
-                       kafkaConfig: KafkaWriterConfig,
+                       kafkaConfig: KafkaConfig,
                        extraOptions: Map[String, String])
                       (implicit spark: SparkSession) extends TableWriter {
 
@@ -137,14 +137,14 @@ object TableWriterKafka {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   def apply(topicName: String, conf: Config)(implicit spark: SparkSession): TableWriterKafka = {
-    val kafkaConfig = KafkaWriterConfig.fromConfig(conf)
+    val kafkaConfig = KafkaConfig.fromConfig(conf, isWriter = true)
 
     new TableWriterKafka(topicName, kafkaConfig, getExtraOptions(conf))
   }
 
   private[pramen] def getExtraOptions(conf: Config): Map[String, String] = {
     val extraOptions: Map[String, String] =
-      ConfigUtils.getExtraOptions(conf, KafkaWriterConfig.KAFKA_WRITER_PREFIX + ".option")
+      ConfigUtils.getExtraOptions(conf, KafkaConfig.KAFKA_WRITER_PREFIX + ".option")
 
     val parsedExtraOptions = extraOptions.map { case (k, v) => s"$k = $v" }
     log.debug(s"Extra options: \n${parsedExtraOptions.mkString("\n")}")
