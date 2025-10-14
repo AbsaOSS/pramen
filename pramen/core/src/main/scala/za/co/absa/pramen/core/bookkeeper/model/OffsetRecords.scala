@@ -22,10 +22,8 @@ class OffsetRecords(tag: Tag) extends Table[OffsetRecord](tag, "offsets") {
   def pramenTableName = column[String]("table_name", O.Length(256))
   def infoDate = column[String]("info_date", O.Length(20))
   def dataType = column[String]("data_type", O.Length(20))
-
-  def minOffset = column[String]("min_offset", O.Length(128))
-
-  def maxOffset = column[String]("max_offset", O.Length(128))
+  def minOffset = column[String]("min_offset")
+  def maxOffset = column[String]("max_offset")
   def batchId = column[Long]("batch_id")
   def createdAt = column[Long]("created_at")
   def committedAt = column[Option[Long]]("committed_at")

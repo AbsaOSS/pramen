@@ -216,7 +216,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
 }
 
 object SqlGeneratorBase {
-  val MAX_STRING_OFFSET_CHARACTERS = 128
+  val MAX_STRING_OFFSET_CHARACTERS = 512
 
   val forbiddenCharacters = ";'\\"
   val normalCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_."
