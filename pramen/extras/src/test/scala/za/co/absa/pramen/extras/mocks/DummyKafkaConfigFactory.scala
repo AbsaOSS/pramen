@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.extras.mocks
 
-import za.co.absa.pramen.extras.writer.model.{KafkaWriterConfig, NamingStrategy}
+import za.co.absa.pramen.extras.writer.model.{KafkaConfig, NamingStrategy}
 
 object DummyKafkaConfigFactory {
   def getDummyKafkaWriterConfig(brokers: String = "localhost:9092",
@@ -29,8 +29,8 @@ object DummyKafkaConfigFactory {
                                 recordsLimit: Option[Int] = None,
                                 extraOptions: Map[String, String] = Map(),
                                 schemaRegistryExtraOptions: Map[String, String] = Map()
-                               ): KafkaWriterConfig = {
-    KafkaWriterConfig(brokers = brokers,
+                               ): KafkaConfig = {
+    KafkaConfig(brokers = brokers,
       schemaRegistryUrl = schemaRegistryUrl,
       keyColumns = keyColumns,
       keyNamingStrategy = keyNamingStrategy,
