@@ -33,70 +33,57 @@ case class KafkaConfig(
                       )
 
 object KafkaConfig {
-  val KAFKA_WRITER_PREFIX = "writer.kafka"
-  val KAFKA_READER_PREFIX = "reader.kafka"
+  val KAFKA_BROKERS_KEY = "kafka.bootstrap.servers"
 
-  def KAFKA_WRITER_BROKERS_KEY(prefix: String) = s"$prefix.brokers"
+  // Schema registry options
+  val SCHEMA_REGISTRY_URL = "schema.registry.url"
+  val SCHEMA_REGISTRY_KEY_PREFIX = "schema.registry.key"
+  val SCHEMA_REGISTRY_VALUE_PREFIX = "schema.registry.value"
+  val SCHEMA_REGISTRY_KEY_SCHEMA_ID = "schema.registry.key.schema.id"
+  val SCHEMA_REGISTRY_VALUE_SCHEMA_ID = "schema.registry.value.schema.id"
+  val SCHEMA_EXTRA_OPTIONS = "schema.registry"
 
-  def KAFKA_WRITER_SCHEMA_REGISTRY_URL(prefix: String) = s"$prefix.schema.registry.url"
+  // Pramen-specific options
+  val KAFKA_KEY_COLUMN_NAMES = "key.column.names"
+  val KAFKA_LIMIT_RECORDS = "limit.records"
+  val KAFKA_EXTRA_OPTIONS = "kafka"
 
-  def KAFKA_WRITER_KEY_COLUMN_NAMES(prefix: String) = s"$prefix.key.column.names"
-
-  def KAFKA_WRITER_LIMIT_RECORDS(prefix: String) = s"$prefix.limit.records"
-
-  def KAFKA_WRITER_EXTRA_OPTIONS(prefix: String) = s"$prefix.option"
-
-  def SCHEMA_REGISTRY_EXTRA_OPTIONS(prefix: String) = s"$prefix.schema.registry.option"
-
-  def SCHEMA_REGISTRY_KEY_PREFIX(prefix: String) = s"$prefix.schema.registry.key"
-
-  def SCHEMA_REGISTRY_VALUE_PREFIX(prefix: String) = s"$prefix.schema.registry.value"
-
-  def KAFKA_WRITER_KEY_SCHEMA_ID(prefix: String) = s"$prefix.schema.registry.key.schema.id"
-
-  def KAFKA_WRITER_KEY_VALUE_ID(prefix: String) = s"$prefix.schema.registry.value.schema.id"
 
   def fromConfig(conf: Config, isWriter: Boolean): KafkaConfig = {
-    val prefix = if (isWriter) {
-      KAFKA_WRITER_PREFIX
-    } else {
-      KAFKA_READER_PREFIX
-    }
-    val keyNamingStrategy = if (conf.hasPath(SCHEMA_REGISTRY_KEY_PREFIX(prefix))) {
-      NamingStrategy.fromConfigOpt(conf.getConfig(SCHEMA_REGISTRY_KEY_PREFIX(prefix)))
+    val keyNamingStrategy = if (conf.hasPath(SCHEMA_REGISTRY_KEY_PREFIX)) {
+      NamingStrategy.fromConfigOpt(conf.getConfig(SCHEMA_REGISTRY_KEY_PREFIX))
     } else {
       None
     }
 
-    if (keyNamingStrategy.nonEmpty && !conf.hasPath(KAFKA_WRITER_KEY_COLUMN_NAMES(prefix))) {
+    if (keyNamingStrategy.nonEmpty && !conf.hasPath(KAFKA_KEY_COLUMN_NAMES)) {
       throw new IllegalArgumentException(s"If key strategy is defined, column names must be define too. " +
-        s"Please, define '<job>.$KAFKA_WRITER_PREFIX.key.column.names'")
+        s"Please, define '<job>.key.column.names'")
     }
 
-    if (keyNamingStrategy.isEmpty && conf.hasPath(KAFKA_WRITER_KEY_COLUMN_NAMES(prefix))) {
+    if (keyNamingStrategy.isEmpty && conf.hasPath(KAFKA_KEY_COLUMN_NAMES)) {
       throw new IllegalArgumentException(s"If key columns are defined, naming strategy for keys need to be defined too. " +
-        s"Please, define '<job>.$KAFKA_WRITER_PREFIX.schema.registry.key.naming.strategy'")
+        s"Please, define '<job>.schema.registry.key.naming.strategy'")
     }
 
-    val valueNamingStrategy = NamingStrategy.fromConfigOpt(conf.getConfig(SCHEMA_REGISTRY_VALUE_PREFIX(prefix)))
+    val valueNamingStrategy = NamingStrategy.fromConfigOpt(conf.getConfig(SCHEMA_REGISTRY_VALUE_PREFIX))
 
     if (valueNamingStrategy.isEmpty) {
       throw new IllegalArgumentException(s"Value naming strategy is not defined. " +
-        s"Please, define '<job>.$KAFKA_WRITER_PREFIX.schema.registry.value.naming.strategy'")
+        s"Please, define '<job>.schema.registry.value.naming.strategy'")
     }
 
     KafkaConfig(
-      brokers = conf.getString(KAFKA_WRITER_BROKERS_KEY(prefix)),
-      schemaRegistryUrl = conf.getString(KAFKA_WRITER_SCHEMA_REGISTRY_URL(prefix)),
-      keyColumns = ConfigUtils.getOptListStrings(conf, KAFKA_WRITER_KEY_COLUMN_NAMES(prefix)),
+      brokers = conf.getString(KAFKA_BROKERS_KEY),
+      schemaRegistryUrl = conf.getString(SCHEMA_REGISTRY_URL),
+      keyColumns = ConfigUtils.getOptListStrings(conf, KAFKA_KEY_COLUMN_NAMES),
       keyNamingStrategy = keyNamingStrategy,
       valueNamingStrategy = valueNamingStrategy.get,
-      keySchemaId = ConfigUtils.getOptionInt(conf, KAFKA_WRITER_KEY_SCHEMA_ID(prefix)),
-      valueSchemaId = ConfigUtils.getOptionInt(conf, KAFKA_WRITER_KEY_VALUE_ID(prefix)),
-      recordsLimit = ConfigUtils.getOptionInt(conf, KAFKA_WRITER_LIMIT_RECORDS(prefix)),
-      ConfigUtils.getExtraOptions(conf, KAFKA_WRITER_EXTRA_OPTIONS(prefix)),
-      ConfigUtils.getExtraOptions(conf, SCHEMA_REGISTRY_EXTRA_OPTIONS(prefix))
+      keySchemaId = ConfigUtils.getOptionInt(conf, SCHEMA_REGISTRY_KEY_SCHEMA_ID),
+      valueSchemaId = ConfigUtils.getOptionInt(conf, SCHEMA_REGISTRY_VALUE_SCHEMA_ID),
+      recordsLimit = ConfigUtils.getOptionInt(conf, KAFKA_LIMIT_RECORDS),
+      ConfigUtils.getExtraOptions(conf, KAFKA_EXTRA_OPTIONS),
+      ConfigUtils.getExtraOptions(conf, SCHEMA_EXTRA_OPTIONS)
     )
   }
-
 }

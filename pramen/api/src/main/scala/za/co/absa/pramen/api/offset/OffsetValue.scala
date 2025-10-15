@@ -21,6 +21,7 @@ import org.apache.spark.sql.functions._
 import za.co.absa.pramen.api.offset.OffsetType.{DATETIME_TYPE_STR, INTEGRAL_TYPE_STR, KAFKA_TYPE_STR, STRING_TYPE_STR}
 
 import java.time.Instant
+import scala.util.control.NonFatal
 
 sealed trait OffsetValue extends Comparable[OffsetValue] {
   def dataType: OffsetType
@@ -31,6 +32,9 @@ sealed trait OffsetValue extends Comparable[OffsetValue] {
 }
 
 object OffsetValue {
+  val KAFKA_PARTITION_FIELD = "kafka_partition"
+  val KAFKA_OFFSET_FIELD = "kafka_offset"
+
   case class DateTimeValue(t: Instant) extends OffsetValue {
     override val dataType: OffsetType = OffsetType.DateTimeType
 
@@ -117,6 +121,10 @@ object OffsetValue {
         case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${other.dataType.dataTypeString}")
       }
     }
+
+    def increment: OffsetValue = {
+      KafkaValue(value.map(p => p.copy(offset = p.offset + 1)))
+    }
   }
 
 
@@ -129,16 +137,20 @@ object OffsetValue {
         case INTEGRAL_TYPE_STR => Some(IntegralValue(value.toLong))
         case STRING_TYPE_STR => Some(StringValue(value))
         case KAFKA_TYPE_STR =>
-          Some(KafkaValue(
-            value
-              .replaceAll("[{}\"]", "")
-              .split(",")
-              .filter(_.nonEmpty)
-              .map { part =>
-                val Array(partStr, offsetStr) = part.split(":")
-                KafkaPartition(partStr.toInt, offsetStr.toLong)
-              }.toSeq
-          ))
+          try {
+            Some(KafkaValue(
+              value
+                .replaceAll("[{}\"]", "")
+                .split(",")
+                .filter(_.nonEmpty)
+                .map { part =>
+                  val Array(partStr, offsetStr) = part.split(":")
+                  KafkaPartition(partStr.toInt, offsetStr.toLong)
+                }.toSeq
+            ))
+          } catch {
+            case NonFatal(ex) => throw new IllegalArgumentException(s"Unexpected Kafka offset: '$value'. Expected a JSON mapping from partition to offset.", ex)
+          }
         case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
       }
   }

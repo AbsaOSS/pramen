@@ -21,22 +21,21 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.col
 import za.co.absa.abris.avro.functions.from_avro
 import za.co.absa.abris.config.AbrisConfig
+import za.co.absa.pramen.api.offset.OffsetValue.{KAFKA_OFFSET_FIELD, KAFKA_PARTITION_FIELD, KafkaValue}
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.{ExternalChannelFactoryV2, Query, Source, SourceResult}
-import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.writer.model.KafkaConfig
 
 import java.time.LocalDate
 
 class KafkaAvroSource(sourceConfig: Config,
                       workflowConfig: Config,
-                      val kafkaConfig: KafkaConfig,
-                      val kafkaOptions: Map[String, String])
+                      val kafkaConfig: KafkaConfig)
                      (implicit spark: SparkSession) extends Source {
   override def hasInfoDateColumn(query: Query): Boolean = false
 
   override def getOffsetInfo: Option[OffsetInfo] = {
-    Some(OffsetInfo("kafka_offset", OffsetType.IntegralType))
+    Some(OffsetInfo("kafka_offset", OffsetType.KafkaType))
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
@@ -57,31 +56,34 @@ class KafkaAvroSource(sourceConfig: Config,
 
     val topic = query match {
       case t: Query.Table => t.dbTable
-      case q: Query => throw new IllegalArgumentException(s"KafkaAvroSource supports only 'table', got ${q.name}")
+      case q: Query       => throw new IllegalArgumentException(s"KafkaAvroSource supports only 'table', got ${q.name}")
     }
 
     val q = "\""
+
     val startingOffsets = offsetFromOpt match {
       case Some(offset) =>
-        //if (offset.dataType != OffsetType.StringType)
-        //  throw new IllegalArgumentException(s"KafkaAvroSource supports only 'string' offsets, got ${offset.dataType.dataTypeString}")
-        //Map("startingOffsets" -> offset.valueString)
-        //Map("startingOffsets" -> "earliest")
-        val value = offset match {
-          case OffsetValue.IntegralValue(n) => n
-          case _ => 0
-        }
-        Map("startingOffsets" -> s"{$q$topic$q: {${q}0$q:${value + 1}}}")
-      case None => Map("startingOffsets" -> "earliest")
+        if (offset.dataType != OffsetType.KafkaType)
+          throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
+
+        // If 'to' part of the interval is defined, use the closed interval min <= offset <= max, otherwise min < offset.
+        val offsetFrom = if (offsetToOpt.isDefined)
+          offset
+        else
+          offset.asInstanceOf[KafkaValue].increment
+
+        Map("startingOffsets" -> s"{$q$topic$q: ${offsetFrom.valueString}}")
+      case None         =>
+        Map("startingOffsets" -> "earliest")
     }
 
     val endingOffsets = offsetToOpt match {
       case Some(offset) =>
-        //if (offset.dataType != OffsetType.StringType)
-        //  throw new IllegalArgumentException(s"KafkaAvroSource supports only 'string' offsets, got ${offset.dataType.dataTypeString}")
-        //Map("endingOffsets" -> offset.valueString)
+        if (offset.dataType != OffsetType.KafkaType)
+          throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
+        Map("endingOffsets" -> s"{$q$topic$q: ${offset.valueString}}")
+      case None         =>
         Map("endingOffsets" -> "latest")
-      case None => Map("endingOffsets" -> "latest")
     }
 
     val dfRaw = spark.read
@@ -107,11 +109,12 @@ class KafkaAvroSource(sourceConfig: Config,
     // Deserialize from Avro
     val df = dfRaw
       .withColumn("data", from_avro(col("value"), abrisConfig))
-      .withColumn("kafka_partition", col("partition"))
-      .withColumn("kafka_offset", col("offset"))
+      .withColumn(KAFKA_PARTITION_FIELD, col("partition"))
+      .withColumn(KAFKA_OFFSET_FIELD, col("offset"))
       .withColumn("kafka_timestamp", col("timestamp"))
       .withColumn("kafka_timestamp_type", col("timestampType"))
-      .select("kafka_partition", "kafka_offset", "kafka_timestamp", "kafka_timestamp_type", "data.*")
+      .withColumn("kafka_key", col("key"))
+      .select(KAFKA_PARTITION_FIELD, KAFKA_OFFSET_FIELD, "kafka_timestamp", "kafka_timestamp_type", "kafka_key", "data.*")
 
     df.printSchema()
 
@@ -126,7 +129,6 @@ object KafkaAvroSource extends ExternalChannelFactoryV2[KafkaAvroSource] {
 
   override def apply(conf: Config, workflowConfig: Config, parentPath: String, spark: SparkSession): KafkaAvroSource = {
     val kafkaReaderConfig = KafkaConfig.fromConfig(conf, isWriter = false)
-    val kafkaOptions = ConfigUtils.getExtraOptions(conf, KafkaConfig.KAFKA_READER_PREFIX + ".option")
-    new KafkaAvroSource(conf, workflowConfig, kafkaReaderConfig, kafkaOptions)(spark)
+    new KafkaAvroSource(conf, workflowConfig, kafkaReaderConfig)(spark)
   }
 }
