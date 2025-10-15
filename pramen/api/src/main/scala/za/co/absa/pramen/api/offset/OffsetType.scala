@@ -31,6 +31,7 @@ object OffsetType {
   val INTEGRAL_TYPE_STR = "integral"
   val INTEGRAL_TYPE_ALT_STR = "number"  // Alternative name for 'integral' purely for compatibility with SqlColumnType
   val STRING_TYPE_STR = "string"
+  val KAFKA_TYPE_STR = "kafka"
 
   case object DateTimeType extends OffsetType {
     override val dataTypeString: String = DATETIME_TYPE_STR
@@ -50,11 +51,17 @@ object OffsetType {
     override def getSparkCol(c: Column): Column = c.cast(SparkStringType)
   }
 
+  case object KafkaType extends OffsetType {
+    override val dataTypeString: String = KAFKA_TYPE_STR
+
+    override def getSparkCol(c: Column): Column = c
+  }
+
   def fromString(dataType: String): OffsetType = dataType match {
     case DATETIME_TYPE_STR => DateTimeType
     case INTEGRAL_TYPE_STR => IntegralType
     case INTEGRAL_TYPE_ALT_STR => IntegralType
-    case STRING_TYPE_STR => StringType
+    case KAFKA_TYPE_STR => KafkaType
     case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
   }
 }

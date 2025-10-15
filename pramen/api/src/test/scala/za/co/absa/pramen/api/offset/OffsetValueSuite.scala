@@ -47,6 +47,14 @@ class OffsetValueSuite extends AnyWordSpec {
       assert(offsetValue.getSparkLit == lit("foo"))
       assert(offsetValue.dataType.getSparkCol(col("a")) == col("a").cast(StringType))
     }
+
+    "be able to create a KafkaValue instance" in {
+      val offsetValue = OffsetValue.KafkaValue(Seq(KafkaPartition(0, 10), KafkaPartition(1, 20)))
+      assert(offsetValue.dataType == OffsetType.KafkaType)
+      assert(offsetValue.valueString == "{\"0\":10,\"1\":20}")
+      assert(offsetValue.getSparkLit == lit("{\"0\":10,\"1\":20}"))
+      assert(offsetValue.dataType.getSparkCol(col("a")) == col("a"))
+    }
   }
 
   "fromString" should {
@@ -71,6 +79,12 @@ class OffsetValueSuite extends AnyWordSpec {
       val offsetValue = OffsetValue.fromString("string", "foo")
       assert(offsetValue.get.dataType == OffsetType.StringType)
       assert(offsetValue.get.valueString == "foo")
+    }
+
+    "be able to create a KafkaType instance from a string" in {
+      val offsetValue = OffsetValue.fromString("kafka", "{\"0\":10,\"1\":20}")
+      assert(offsetValue.get.dataType == OffsetType.KafkaType)
+      assert(offsetValue.get.valueString == "{\"0\":10,\"1\":20}")
     }
 
     "throw an exception when trying to create an instance from a string with an unknown type" in {
@@ -124,6 +138,40 @@ class OffsetValueSuite extends AnyWordSpec {
       assert(offsetValue1.compareTo(offsetValue2) < 0)
       assert(offsetValue2.compareTo(offsetValue1) > 0)
       assert(offsetValue2.compareTo(offsetValue2) == 0)
+    }
+
+    "compare 2 kafka offset values" in {
+      val offsetValue0 = OffsetValue.KafkaValue(Seq.empty)
+      val offsetValue1 = OffsetValue.KafkaValue(Seq(KafkaPartition(0, 10), KafkaPartition(1, 20)))
+      val offsetValue2 = OffsetValue.KafkaValue(Seq(KafkaPartition(0, 10), KafkaPartition(1, 21)))
+      val offsetValue3 = OffsetValue.KafkaValue(Seq(KafkaPartition(0, 11), KafkaPartition(1, 20)))
+      val offsetValue4 = OffsetValue.KafkaValue(Seq(KafkaPartition(1, 20), KafkaPartition(2, 40)))
+
+      assert(offsetValue1.compareTo(offsetValue2) < 0)
+      assert(offsetValue1.compareTo(offsetValue3) < 0)
+      assert(offsetValue2.compareTo(offsetValue1) > 0)
+      assert(offsetValue3.compareTo(offsetValue1) > 0)
+      assert(offsetValue0.compareTo(offsetValue0) == 0)
+      assert(offsetValue1.compareTo(offsetValue1) == 0)
+      assert(offsetValue2.compareTo(offsetValue2) == 0)
+
+      val ex1 = intercept[IllegalArgumentException] {
+        offsetValue0.compareTo(offsetValue1)
+      }
+
+      assert(ex1.getMessage == """Cannot compare Kafka offsets with different number of partitions: 0 and 2 ({} vs {"0":10,"1":20}).""")
+
+      val ex2 = intercept[IllegalArgumentException] {
+        offsetValue1.compareTo(offsetValue4)
+      }
+
+      assert(ex2.getMessage == """Cannot compare Kafka offsets with different partition numbers: 0 and 1 ({"0":10,"1":20} vs {"1":20,"2":40}).""")
+
+      val ex3 = intercept[IllegalArgumentException] {
+        offsetValue2.compareTo(offsetValue3)
+      }
+
+      assert(ex3.getMessage == """Some offsets are bigger, some are smaller when comparing partitions: {"0":10,"1":21} vs {"0":11,"1":20}.""")
     }
 
     "throw an exception when attempting to compare a string value with value of some other type" in {
