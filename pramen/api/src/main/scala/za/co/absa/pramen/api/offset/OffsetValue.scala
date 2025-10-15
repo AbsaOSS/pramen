@@ -18,7 +18,7 @@ package za.co.absa.pramen.api.offset
 
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions._
-import za.co.absa.pramen.api.offset.OffsetType.{DATETIME_TYPE_STR, INTEGRAL_TYPE_STR, STRING_TYPE_STR}
+import za.co.absa.pramen.api.offset.OffsetType.{DATETIME_TYPE_STR, INTEGRAL_TYPE_STR, KAFKA_TYPE_STR, STRING_TYPE_STR}
 
 import java.time.Instant
 
@@ -76,6 +76,50 @@ object OffsetValue {
     }
   }
 
+  case class KafkaValue(value: Seq[KafkaPartition]) extends OffsetValue {
+    override val dataType: OffsetType = OffsetType.KafkaType
+
+    override def valueString: String = {
+      val q = "\""
+      value.sortBy(_.partition)
+        .map(p => s"$q${p.partition}$q:${p.offset}")
+        .mkString("{", ",", "}")
+    }
+
+    override def getSparkLit: Column = lit(valueString)
+
+    override def compareTo(other: OffsetValue): Int = {
+      other match {
+        case otherKafka@KafkaValue(otherValue) =>
+          if (value.length != otherValue.length) {
+            throw new IllegalArgumentException(s"Cannot compare Kafka offsets with different number of partitions: ${value.length} and ${otherValue.length} ($valueString vs ${otherKafka.valueString}).")
+          } else {
+            val comparisons = value.sortBy(_.partition).zip(otherValue.sortBy(_.partition)).map { case (v1, v2) =>
+              if (v1.partition != v2.partition) {
+                throw new IllegalArgumentException(s"Cannot compare Kafka offsets with different partition numbers: ${v1.partition} and ${v2.partition} ($valueString vs ${otherKafka.valueString}).")
+              } else {
+                v1.offset.compareTo(v2.offset)
+              }
+            }
+            val existPositive = comparisons.exists(_ > 0)
+            val existNegative = comparisons.exists(_ < 0)
+
+            if (existPositive && existNegative) {
+              throw new IllegalArgumentException(s"Some offsets are bigger, some are smaller when comparing partitions: $valueString vs ${otherKafka.valueString}.")
+            } else if (existPositive) {
+              1
+            } else if (existNegative) {
+              -1
+            } else {
+              0
+            }
+          }
+        case _ => throw new IllegalArgumentException(s"Cannot compare ${dataType.dataTypeString} with ${other.dataType.dataTypeString}")
+      }
+    }
+  }
+
+
   def fromString(dataType: String, value: String): Option[OffsetValue] = {
     if (value == null || value.isEmpty) {
       None
@@ -84,6 +128,17 @@ object OffsetValue {
         case DATETIME_TYPE_STR => Some(DateTimeValue(Instant.ofEpochMilli(value.toLong)))
         case INTEGRAL_TYPE_STR => Some(IntegralValue(value.toLong))
         case STRING_TYPE_STR => Some(StringValue(value))
+        case KAFKA_TYPE_STR =>
+          Some(KafkaValue(
+            value
+              .replaceAll("[{}\"]", "")
+              .split(",")
+              .filter(_.nonEmpty)
+              .map { part =>
+                val Array(partStr, offsetStr) = part.split(":")
+                KafkaPartition(partStr.toInt, offsetStr.toLong)
+              }.toSeq
+          ))
         case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
       }
   }
