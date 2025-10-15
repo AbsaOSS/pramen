@@ -22,6 +22,7 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
+import za.co.absa.pramen.api.offset.OffsetValue.{KAFKA_OFFSET_FIELD, KAFKA_PARTITION_FIELD}
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Source}
@@ -300,10 +301,23 @@ class IncrementalIngestionJob(operationDef: OperationDef,
           throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' has type '${field.dataType}'. " +
             s"But only integral types are supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
-      case OffsetType.StringType =>
+      case OffsetType.StringType   =>
         if (!field.dataType.isInstanceOf[StringType]) {
           throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' has type '${field.dataType}'. " +
             s"But only string type is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
+        }
+      case OffsetType.KafkaType    =>
+        val offsetField = df.schema(KAFKA_OFFSET_FIELD)
+        val partitionField = df.schema(KAFKA_PARTITION_FIELD)
+
+        if (offsetField.dataType != LongType) {
+          throw new IllegalArgumentException(s"Kafka offset column '$KAFKA_OFFSET_FIELD' has type '${offsetField.dataType}'. " +
+            s"But only '${LongType.typeName}' is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
+        }
+
+        if (partitionField.dataType != IntegerType) {
+          throw new IllegalArgumentException(s"Kafka partition column '$KAFKA_PARTITION_FIELD' has type '${partitionField.dataType}'. " +
+            s"But only '${IntegerType.typeName}' is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
     }
   }

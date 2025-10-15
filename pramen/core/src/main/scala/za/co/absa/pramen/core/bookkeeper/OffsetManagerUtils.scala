@@ -19,7 +19,8 @@ package za.co.absa.pramen.core.bookkeeper
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, max, min}
 import org.apache.spark.sql.types.StringType
-import za.co.absa.pramen.api.offset.{OffsetType, OffsetValue}
+import za.co.absa.pramen.api.offset.OffsetValue.{KAFKA_OFFSET_FIELD, KAFKA_PARTITION_FIELD}
+import za.co.absa.pramen.api.offset.{KafkaPartition, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlGeneratorBase
 
 object OffsetManagerUtils {
@@ -27,17 +28,30 @@ object OffsetManagerUtils {
     if (df.isEmpty) {
       None
     } else {
-      val row = df.agg(min(offsetType.getSparkCol(col(offsetColumn)).cast(StringType)),
-          max(offsetType.getSparkCol(col(offsetColumn))).cast(StringType))
-        .collect()(0)
+      if (offsetType == OffsetType.KafkaType) {
+        val aggregatedDf = df.groupBy(col(KAFKA_PARTITION_FIELD))
+          .agg(
+            min(col(KAFKA_OFFSET_FIELD)).as("min_offset"),
+            max(col(KAFKA_OFFSET_FIELD)).as("max_offset")
+          ).orderBy(KAFKA_PARTITION_FIELD)
 
-      val minValue = OffsetValue.fromString(offsetType.dataTypeString, row(0).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(0)}"))
-      val maxValue = OffsetValue.fromString(offsetType.dataTypeString, row(1).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(1)}"))
+        val minValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](1))).toSeq)
+        val maxValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](2))).toSeq)
 
-      SqlGeneratorBase.validateOffsetValue(minValue)
-      SqlGeneratorBase.validateOffsetValue(maxValue)
+        Some(minValue, maxValue)
+      } else {
+        val row = df.agg(min(offsetType.getSparkCol(col(offsetColumn)).cast(StringType)),
+            max(offsetType.getSparkCol(col(offsetColumn))).cast(StringType))
+          .collect()(0)
 
-      Some(minValue, maxValue)
+        val minValue = OffsetValue.fromString(offsetType.dataTypeString, row(0).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(0)}"))
+        val maxValue = OffsetValue.fromString(offsetType.dataTypeString, row(1).asInstanceOf[String]).getOrElse(throw new IllegalArgumentException(s"Can't parse offset: ${row(1)}"))
+
+        SqlGeneratorBase.validateOffsetValue(minValue)
+        SqlGeneratorBase.validateOffsetValue(maxValue)
+
+        Some(minValue, maxValue)
+      }
     }
   }
 }

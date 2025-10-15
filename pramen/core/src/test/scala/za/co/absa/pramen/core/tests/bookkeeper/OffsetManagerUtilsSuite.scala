@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types.TimestampType
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.offset.{OffsetType, OffsetValue}
+import za.co.absa.pramen.api.offset.{KafkaPartition, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.OffsetManagerUtils
 
@@ -46,6 +46,23 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
 
       assert(minValue == OffsetValue.StringValue("A"))
       assert(maxValue == OffsetValue.StringValue("C"))
+    }
+
+    "work for an kafka data type" in {
+      val df = List(
+        (0, 1L, "a"),
+        (0, 2L, "b"),
+        (1, 3L, "c"),
+        (1, 4L, "d"),
+        (2, 1L, "e"),
+        (2, 2L, "f"),
+        (2, 3L, "g")
+      ).toDF("kafka_partition", "kafka_offset", "field")
+
+      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "kafka_offset", OffsetType.KafkaType).get
+
+      assert(minValue == OffsetValue.KafkaValue(Seq(KafkaPartition(0, 1), KafkaPartition(1, 3), KafkaPartition(2, 1))))
+      assert(maxValue == OffsetValue.KafkaValue(Seq(KafkaPartition(0, 2), KafkaPartition(1, 4), KafkaPartition(2, 3))))
     }
 
     "work for an datetime data type" in {

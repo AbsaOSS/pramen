@@ -30,8 +30,7 @@ import za.co.absa.pramen.extras.writer.model.{KafkaConfig, NamingStrategy}
 import java.time.LocalDate
 
 class TableWriterKafka(topicName: String,
-                       kafkaConfig: KafkaConfig,
-                       extraOptions: Map[String, String])
+                       kafkaConfig: KafkaConfig)
                       (implicit spark: SparkSession) extends TableWriter {
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -48,7 +47,7 @@ class TableWriterKafka(topicName: String,
         .format("kafka")
         .option("topic", topicName)
         .option("kafka.bootstrap.servers", kafkaConfig.brokers)
-        .options(extraOptions)
+        .options(kafkaConfig.extraOptions)
         .save()
 
       count
@@ -58,7 +57,7 @@ class TableWriterKafka(topicName: String,
     }
   }
 
-  private[pramen] def getExtraOptions = extraOptions
+  private[pramen] def getExtraOptions = kafkaConfig.extraOptions
 
   private[pramen] def getOutputDataFrame(df: DataFrame): DataFrame = {
     val dfOut = kafkaConfig.keyNamingStrategy match {
@@ -139,15 +138,6 @@ object TableWriterKafka {
   def apply(topicName: String, conf: Config)(implicit spark: SparkSession): TableWriterKafka = {
     val kafkaConfig = KafkaConfig.fromConfig(conf, isWriter = true)
 
-    new TableWriterKafka(topicName, kafkaConfig, getExtraOptions(conf))
-  }
-
-  private[pramen] def getExtraOptions(conf: Config): Map[String, String] = {
-    val extraOptions: Map[String, String] =
-      ConfigUtils.getExtraOptions(conf, KafkaConfig.KAFKA_WRITER_PREFIX + ".option")
-
-    val parsedExtraOptions = extraOptions.map { case (k, v) => s"$k = $v" }
-    log.debug(s"Extra options: \n${parsedExtraOptions.mkString("\n")}")
-    extraOptions
+    new TableWriterKafka(topicName, kafkaConfig)
   }
 }

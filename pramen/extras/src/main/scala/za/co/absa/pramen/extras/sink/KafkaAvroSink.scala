@@ -37,27 +37,30 @@ import java.time.LocalDate
   *    name = "kafka_avro"
   *    factory.class = "za.co.absa.pramen.extras.sink.KafkaAvroSink"
   *
-  *    writer.kafka {
-  *      brokers = "mybroker1:9092,mybroker2:9092"
-  *      schema.registry.url = "https://my.schema.regictry:8081"
-  *
-  *      # Can be one of: topic.name, record.name, topic.record.name
-  *      schema.registry.value.naming.strategy = "topic.name"
+  *    kafka {
+  *      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
   *
   *      # Arbitrary options for creating a Kafka Producer
-  *      option {
-  *        kafka.sasl.jaas.config = "..."
-  *        kafka.sasl.mechanism = "..."
-  *        kafka.security.protocol = "..."
-  *        # ...
-  *      }
+  *      # sasl.jaas.config = "..."
+  *      # sasl.mechanism = "..."
+  *      # security.protocol = "..."
+  *      # ...
+  *    }
   *
-  *      # Arbitrary options for Schema registry
-  *      schema.registry.option {
-  *        basic.auth.credentials.source = "..."
-  *        basic.auth.user.info = "..."
-  *        # ...
-  *      }
+  *    schema.registry {
+  *      url = "https://my.schema.regictry:8081"
+  *
+  *      # Can be one of: topic.name, record.name, topic.record.name
+  *      value.naming.strategy = "topic.name"
+  *
+  *      # If you want to force the specific schema id. Otherwise, the latest schema id will be used.
+  *      # key.schema.id =
+  *      # value.schema.id =
+  *
+  *      # Arbitrary options for the schema registry
+  *      #  basic.auth.credentials.source = "..."
+  *      #  basic.auth.user.info = "..."
+  *      # ...
   *    }
   *  }
   * }}}
@@ -127,7 +130,7 @@ class KafkaAvroSink(sinkConfig: Config,
     }
     val topicName = options(TOPIC_NAME_KEY)
 
-    val writer = new TableWriterKafka(topicName, kafkaWriterConfig, kafkaWriterConfig.extraOptions ++ options)
+    val writer = new TableWriterKafka(topicName, kafkaWriterConfig)
 
     SinkResult(writer.write(df, infoDate, None))
   }
