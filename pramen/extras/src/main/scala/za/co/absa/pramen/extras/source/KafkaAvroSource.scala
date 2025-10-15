@@ -21,22 +21,30 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.col
 import za.co.absa.abris.avro.functions.from_avro
 import za.co.absa.abris.config.AbrisConfig
-import za.co.absa.pramen.api.offset.{OffsetType, OffsetValue}
+import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.{ExternalChannelFactoryV2, Query, Source, SourceResult}
+import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.writer.model.KafkaConfig
 
 import java.time.LocalDate
 
 class KafkaAvroSource(sourceConfig: Config,
                       workflowConfig: Config,
-                      val kafkaConfig: KafkaConfig)
+                      val kafkaConfig: KafkaConfig,
+                      val kafkaOptions: Map[String, String])
                      (implicit spark: SparkSession) extends Source {
+  override def hasInfoDateColumn(query: Query): Boolean = false
+
+  override def getOffsetInfo: Option[OffsetInfo] = {
+    Some(OffsetInfo("kafka_offset", OffsetType.IntegralType))
+  }
+
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     throw new IllegalArgumentException("KafkaAvroSource does not support batch jobs. Only incremental jobs are supported.")
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
-    throw new IllegalArgumentException("KafkaAvroSource does not support batch jobs. Only incremental jobs are supported.")
+    getDataIncremental(query, None, None, None, Seq.empty)
   }
 
   override def getDataIncremental(query: Query,
@@ -52,44 +60,60 @@ class KafkaAvroSource(sourceConfig: Config,
       case q: Query => throw new IllegalArgumentException(s"KafkaAvroSource supports only 'table', got ${q.name}")
     }
 
+    val q = "\""
     val startingOffsets = offsetFromOpt match {
       case Some(offset) =>
-        if (offset.dataType != OffsetType.StringType)
-          throw new IllegalArgumentException(s"KafkaAvroSource supports only 'string' offsets, got ${offset.dataType.dataTypeString}")
-        Map("startingOffsets" -> offset.valueString)
+        //if (offset.dataType != OffsetType.StringType)
+        //  throw new IllegalArgumentException(s"KafkaAvroSource supports only 'string' offsets, got ${offset.dataType.dataTypeString}")
+        //Map("startingOffsets" -> offset.valueString)
+        //Map("startingOffsets" -> "earliest")
+        val value = offset match {
+          case OffsetValue.IntegralValue(n) => n
+          case _ => 0
+        }
+        Map("startingOffsets" -> s"{$q$topic$q: {${q}0$q:${value + 1}}}")
       case None => Map("startingOffsets" -> "earliest")
     }
 
     val endingOffsets = offsetToOpt match {
       case Some(offset) =>
-        if (offset.dataType != OffsetType.StringType)
-          throw new IllegalArgumentException(s"KafkaAvroSource supports only 'string' offsets, got ${offset.dataType.dataTypeString}")
-        Map("endingOffsets" -> offset.valueString)
+        //if (offset.dataType != OffsetType.StringType)
+        //  throw new IllegalArgumentException(s"KafkaAvroSource supports only 'string' offsets, got ${offset.dataType.dataTypeString}")
+        //Map("endingOffsets" -> offset.valueString)
+        Map("endingOffsets" -> "latest")
       case None => Map("endingOffsets" -> "latest")
     }
 
     val dfRaw = spark.read
       .format("kafka")
       .options(kafkaConfig.extraOptions)
+      .option("kafka.bootstrap.servers", kafkaConfig.brokers)
       .option("subscribe", topic)
       .options(startingOffsets)
       .options(endingOffsets)
       .load()
 
+    val schemaRegistryClientConfig = Map(
+      AbrisConfig.SCHEMA_REGISTRY_URL -> kafkaConfig.schemaRegistryUrl
+    ) ++ kafkaConfig.schemaRegistryExtraOptions
+
+    // ToDo Add support for other naming strategy and for key deserialization
     val abrisConfig = AbrisConfig
       .fromConfluentAvro
       .downloadReaderSchemaByLatestVersion
       .andTopicNameStrategy(topic, isKey = false)
-      .usingSchemaRegistry(kafkaConfig.schemaRegistryExtraOptions)
+      .usingSchemaRegistry(schemaRegistryClientConfig)
 
     // Deserialize from Avro
     val df = dfRaw
       .withColumn("data", from_avro(col("value"), abrisConfig))
       .withColumn("kafka_partition", col("partition"))
-      .withColumn("kafka_offset", col("kafka_partition"))
+      .withColumn("kafka_offset", col("offset"))
       .withColumn("kafka_timestamp", col("timestamp"))
       .withColumn("kafka_timestamp_type", col("timestampType"))
       .select("kafka_partition", "kafka_offset", "kafka_timestamp", "kafka_timestamp_type", "data.*")
+
+    df.printSchema()
 
     SourceResult(df)
   }
@@ -102,6 +126,7 @@ object KafkaAvroSource extends ExternalChannelFactoryV2[KafkaAvroSource] {
 
   override def apply(conf: Config, workflowConfig: Config, parentPath: String, spark: SparkSession): KafkaAvroSource = {
     val kafkaReaderConfig = KafkaConfig.fromConfig(conf, isWriter = false)
-    new KafkaAvroSource(conf, workflowConfig, kafkaReaderConfig)(spark)
+    val kafkaOptions = ConfigUtils.getExtraOptions(conf, KafkaConfig.KAFKA_READER_PREFIX + ".option")
+    new KafkaAvroSource(conf, workflowConfig, kafkaReaderConfig, kafkaOptions)(spark)
   }
 }

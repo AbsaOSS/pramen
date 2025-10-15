@@ -79,11 +79,13 @@
             <groupId>net.sourceforge.jtds</groupId>
             <artifactId>jtds</artifactId>
         </dependency>
-        <!--        <dependency>-->
-        <!--            <groupId>com.microsoft.sqlserver</groupId>-->
-        <!--            <artifactId>mssql-jdbc</artifactId>-->
-        <!--            <version>12.6.0.jre8</version>-->
-        <!--        </dependency>-->
+
+        <dependency>
+            <groupId>org.hsqldb</groupId>
+            <artifactId>hsqldb</artifactId>
+            <classifier>jdk8</classifier>
+            <scope>test</scope>
+        </dependency>
 
         <!-- Kafka clients -->
         <dependency>
@@ -92,10 +94,6 @@
         </dependency>
 
         <!--ABRiS-->
-        <dependency>
-            <groupId>io.confluent</groupId>
-            <artifactId>kafka-avro-serializer</artifactId>
-        </dependency>
         <dependency>
             <groupId>za.co.absa</groupId>
             <artifactId>abris_${scala.compat.version}</artifactId>
