@@ -21,7 +21,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.extras.sink.KafkaAvroSink.TOPIC_NAME_KEY
 import za.co.absa.pramen.extras.writer.TableWriterKafka
-import za.co.absa.pramen.extras.writer.model.KafkaConfig
+import za.co.absa.pramen.extras.writer.model.KafkaAvroWriterConfig
 
 import java.time.LocalDate
 
@@ -113,7 +113,7 @@ import java.time.LocalDate
   *
   */
 class KafkaAvroSink(sinkConfig: Config,
-                    val kafkaWriterConfig: KafkaConfig) extends Sink {
+                    val kafkaWriterConfig: KafkaAvroWriterConfig) extends Sink {
 
   override val config: Config = sinkConfig
   override def connect(): Unit = {}
@@ -140,7 +140,7 @@ object KafkaAvroSink extends ExternalChannelFactory[KafkaAvroSink] {
   val TOPIC_NAME_KEY = "topic.name"
 
   override def apply(conf: Config, parentPath: String, spark: SparkSession): KafkaAvroSink = {
-    val kafkaWriterConfig = KafkaConfig.fromConfig(conf, isWriter = true)
+    val kafkaWriterConfig = KafkaAvroWriterConfig.fromConfig(conf)
     new KafkaAvroSink(conf, kafkaWriterConfig)
   }
 }

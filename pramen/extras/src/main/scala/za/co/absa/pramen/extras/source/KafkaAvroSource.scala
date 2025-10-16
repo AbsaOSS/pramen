@@ -24,13 +24,13 @@ import za.co.absa.abris.config.AbrisConfig
 import za.co.absa.pramen.api.offset.OffsetValue.{KAFKA_OFFSET_FIELD, KAFKA_PARTITION_FIELD, KafkaValue}
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.{ExternalChannelFactoryV2, Query, Source, SourceResult}
-import za.co.absa.pramen.extras.writer.model.KafkaConfig
+import za.co.absa.pramen.extras.writer.model.KafkaAvroConfig
 
 import java.time.LocalDate
 
 class KafkaAvroSource(sourceConfig: Config,
                       workflowConfig: Config,
-                      val kafkaConfig: KafkaConfig)
+                      val kafkaConfig: KafkaAvroConfig)
                      (implicit spark: SparkSession) extends Source {
   override def hasInfoDateColumn(query: Query): Boolean = false
 
@@ -128,7 +128,7 @@ object KafkaAvroSource extends ExternalChannelFactoryV2[KafkaAvroSource] {
   val TOPIC_NAME_KEY = "topic.name"
 
   override def apply(conf: Config, workflowConfig: Config, parentPath: String, spark: SparkSession): KafkaAvroSource = {
-    val kafkaReaderConfig = KafkaConfig.fromConfig(conf, isWriter = false)
+    val kafkaReaderConfig = KafkaAvroConfig.fromConfig(conf)
     new KafkaAvroSource(conf, workflowConfig, kafkaReaderConfig)(spark)
   }
 }
