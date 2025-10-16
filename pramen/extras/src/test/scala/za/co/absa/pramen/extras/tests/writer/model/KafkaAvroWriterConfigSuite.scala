@@ -19,15 +19,15 @@ package za.co.absa.pramen.extras.tests.writer.model
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.scalatest.wordspec.AnyWordSpec
 
-class KafkaWriterConfigSuite extends AnyWordSpec {
-  import za.co.absa.pramen.extras.writer.model.KafkaConfig._
+class KafkaAvroWriterConfigSuite extends AnyWordSpec {
+  import za.co.absa.pramen.extras.writer.model.KafkaAvroWriterConfig._
 
   private val conf = ConfigFactory.parseString(
-    """writer.kafka.brokers = "localhost:9092"
-      |writer.kafka.schema.registry.url = "localhost:8081"
-      |writer.kafka.schema.registry.value.naming.strategy = "topic.name"
-      |writer.kafka.schema.registry.key.naming.strategy = "topic.name"
-      |writer.kafka.key.column.names = [ a, b ]
+    """kafka.bootstrap.servers = "localhost:9092"
+      |schema.registry.url = "localhost:8081"
+      |schema.registry.value.naming.strategy = "topic.name"
+      |schema.registry.key.naming.strategy = "topic.name"
+      |key.column.names = [ a, b ]
       |""".stripMargin)
 
 
@@ -35,37 +35,38 @@ class KafkaWriterConfigSuite extends AnyWordSpec {
     "read a minimalistic config" in {
       val kafkaConfig = fromConfig(conf
         .withoutPath("writer.kafka.schema.registry.key.naming.strategy")
-      .withoutPath("writer.kafka.key.column.names"), isWriter = true)
+      .withoutPath("writer.kafka.key.column.names"))
 
-      assert(kafkaConfig.brokers == "localhost:9092")
-      assert(kafkaConfig.schemaRegistryUrl == "localhost:8081")
-      assert(kafkaConfig.valueNamingStrategy.namingStrategy == "topic.name")
+      assert(kafkaConfig.kafkaAvroConfig.brokers == "localhost:9092")
+      assert(kafkaConfig.kafkaAvroConfig.schemaRegistryUrl == "localhost:8081")
+      assert(kafkaConfig.kafkaAvroConfig.valueNamingStrategy.namingStrategy == "topic.name")
+      assert(kafkaConfig.keyColumns == Seq("a", "b"))
     }
 
     "read a minimalistic config with extra params" in {
       val kafkaConfig = fromConfig(conf
         .withoutPath("writer.kafka.schema.registry.key.naming.strategy")
         .withoutPath("writer.kafka.key.column.names")
-        .withValue("writer.kafka.schema.registry.key.naming", ConfigValueFactory.fromAnyRef("x")), isWriter = true)
+        .withValue("writer.kafka.schema.registry.key.naming", ConfigValueFactory.fromAnyRef("x")))
 
-      assert(kafkaConfig.brokers == "localhost:9092")
-      assert(kafkaConfig.schemaRegistryUrl == "localhost:8081")
-      assert(kafkaConfig.valueNamingStrategy.namingStrategy == "topic.name")
+      assert(kafkaConfig.kafkaAvroConfig.brokers == "localhost:9092")
+      assert(kafkaConfig.kafkaAvroConfig.schemaRegistryUrl == "localhost:8081")
+      assert(kafkaConfig.kafkaAvroConfig.valueNamingStrategy.namingStrategy == "topic.name")
     }
 
     "read a config with key schema strategy defined" when {
       "key column names are defined" in {
-        val kafkaConfig = fromConfig(conf, isWriter = true)
+        val kafkaConfig = fromConfig(conf)
 
-        assert(kafkaConfig.brokers == "localhost:9092")
-        assert(kafkaConfig.schemaRegistryUrl == "localhost:8081")
-        assert(kafkaConfig.valueNamingStrategy.namingStrategy == "topic.name")
-        assert(kafkaConfig.keyNamingStrategy.isDefined)
+        assert(kafkaConfig.kafkaAvroConfig.brokers == "localhost:9092")
+        assert(kafkaConfig.kafkaAvroConfig.schemaRegistryUrl == "localhost:8081")
+        assert(kafkaConfig.kafkaAvroConfig.valueNamingStrategy.namingStrategy == "topic.name")
+        assert(kafkaConfig.kafkaAvroConfig.keyNamingStrategy.isDefined)
       }
 
       "key column names are not defined" in {
         val ex = intercept[IllegalArgumentException] {
-          fromConfig(conf.withoutPath("writer.kafka.key.column.names"), isWriter = true)
+          fromConfig(conf.withoutPath("key.column.names"))
         }
 
         assert(ex.getMessage.contains("column names must be define too"))
@@ -74,7 +75,7 @@ class KafkaWriterConfigSuite extends AnyWordSpec {
 
     "throw an exception when key columns are defined without key naming strategy" in {
       val ex = intercept[IllegalArgumentException] {
-        fromConfig(conf.withoutPath("writer.kafka.schema.registry.key.naming.strategy"), isWriter = true)
+        fromConfig(conf.withoutPath("schema.registry.key.naming.strategy"))
       }
 
       assert(ex.getMessage.contains("naming strategy for keys need to be defined too"))

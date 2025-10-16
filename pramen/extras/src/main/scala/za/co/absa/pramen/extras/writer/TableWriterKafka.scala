@@ -25,12 +25,12 @@ import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
 import za.co.absa.abris.config.{AbrisConfig, ToAvroConfig}
 import za.co.absa.pramen.extras.avro.AvroUtils.{convertSparkToAvroSchema, fixNullableFields}
 import za.co.absa.pramen.extras.utils.ConfigUtils
-import za.co.absa.pramen.extras.writer.model.{KafkaConfig, NamingStrategy}
+import za.co.absa.pramen.extras.writer.model.{KafkaAvroWriterConfig, NamingStrategy}
 
 import java.time.LocalDate
 
 class TableWriterKafka(topicName: String,
-                       kafkaConfig: KafkaConfig)
+                       writerConf: KafkaAvroWriterConfig)
                       (implicit spark: SparkSession) extends TableWriter {
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -46,8 +46,8 @@ class TableWriterKafka(topicName: String,
       dfOut.write
         .format("kafka")
         .option("topic", topicName)
-        .option("kafka.bootstrap.servers", kafkaConfig.brokers)
-        .options(kafkaConfig.extraOptions)
+        .option("kafka.bootstrap.servers", writerConf.kafkaAvroConfig.brokers)
+        .options(writerConf.kafkaAvroConfig.extraOptions)
         .save()
 
       count
@@ -57,15 +57,15 @@ class TableWriterKafka(topicName: String,
     }
   }
 
-  private[pramen] def getExtraOptions = kafkaConfig.extraOptions
+  private[pramen] def getExtraOptions = writerConf.kafkaAvroConfig.extraOptions
 
   private[pramen] def getOutputDataFrame(df: DataFrame): DataFrame = {
-    val dfOut = kafkaConfig.keyNamingStrategy match {
+    val dfOut = writerConf.kafkaAvroConfig.keyNamingStrategy match {
       case Some(_) => getKeyValueDataFrame(df)
       case None    => getValueDataFrame(df)
     }
 
-    kafkaConfig.recordsLimit match {
+    writerConf.recordsLimit match {
       case Some(limit) => dfOut.limit(limit)
       case None        => dfOut
     }
@@ -74,17 +74,17 @@ class TableWriterKafka(topicName: String,
   private[pramen] def getValueDataFrame(df: DataFrame): DataFrame = {
     val allColumns = struct(df.columns.map(c => df(c)): _*)
 
-    val valueAvroConfig = getAvroConfig(allColumns, kafkaConfig.valueNamingStrategy, isKey = false, kafkaConfig.valueSchemaId)
+    val valueAvroConfig = getAvroConfig(allColumns, writerConf.kafkaAvroConfig.valueNamingStrategy, isKey = false, writerConf.valueSchemaId)
 
     df.select(to_avro(allColumns, valueAvroConfig) as 'value)
   }
 
   private[pramen] def getKeyValueDataFrame(df: DataFrame): DataFrame = {
-    val keyColumns = struct(kafkaConfig.keyColumns.map(c => df(c)): _*)
+    val keyColumns = struct(writerConf.keyColumns.map(c => df(c)): _*)
     val allColumns = struct(df.columns.map(c => df(c)): _*)
 
-    val keyAvroConfig = getAvroConfig(keyColumns, kafkaConfig.keyNamingStrategy.get, isKey = true, kafkaConfig.keySchemaId)
-    val valueAvroConfig = getAvroConfig(allColumns, kafkaConfig.valueNamingStrategy, isKey = false, kafkaConfig.valueSchemaId)
+    val keyAvroConfig = getAvroConfig(keyColumns, writerConf.kafkaAvroConfig.keyNamingStrategy.get, isKey = true, writerConf.keySchemaId)
+    val valueAvroConfig = getAvroConfig(allColumns, writerConf.kafkaAvroConfig.valueNamingStrategy, isKey = false, writerConf.valueSchemaId)
 
     df.select(
       to_avro(keyColumns, keyAvroConfig) as 'key,
@@ -116,8 +116,8 @@ class TableWriterKafka(topicName: String,
                                      isKey: Boolean,
                                      schemaIdOpt: Option[Int]): ToAvroConfig = {
     val schemaRegistryClientConfig = Map(
-      AbrisConfig.SCHEMA_REGISTRY_URL -> kafkaConfig.schemaRegistryUrl
-    ) ++ kafkaConfig.schemaRegistryExtraOptions
+      AbrisConfig.SCHEMA_REGISTRY_URL -> writerConf.kafkaAvroConfig.schemaRegistryUrl
+    ) ++ writerConf.kafkaAvroConfig.schemaRegistryExtraOptions
 
     ConfigUtils.logExtraOptions("Schema registry options", schemaRegistryClientConfig, Set("basic.auth.user.info"))
 
@@ -136,7 +136,7 @@ object TableWriterKafka {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   def apply(topicName: String, conf: Config)(implicit spark: SparkSession): TableWriterKafka = {
-    val kafkaConfig = KafkaConfig.fromConfig(conf, isWriter = true)
+    val kafkaConfig = KafkaAvroWriterConfig.fromConfig(conf)
 
     new TableWriterKafka(topicName, kafkaConfig)
   }

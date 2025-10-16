@@ -16,29 +16,37 @@
 
 package za.co.absa.pramen.extras.mocks
 
-import za.co.absa.pramen.extras.writer.model.{KafkaConfig, NamingStrategy}
+import za.co.absa.pramen.extras.writer.model.{KafkaAvroConfig, KafkaAvroWriterConfig, NamingStrategy}
 
 object DummyKafkaConfigFactory {
-  def getDummyKafkaWriterConfig(brokers: String = "localhost:9092",
-                                schemaRegistryUrl: String = "localhost:8081",
+  def getDummyKafkaAvroConfig(brokers: String = "localhost:9092",
+                              schemaRegistryUrl: String = "localhost:8081",
+                              keyNamingStrategy: Option[NamingStrategy] = None,
+                              valueNamingStrategy: NamingStrategy = DummyNamingStrategyFactory.getDummyNamingStrategy(),
+                              extraOptions: Map[String, String] = Map(),
+                              schemaRegistryExtraOptions: Map[String, String] = Map()): KafkaAvroConfig = {
+    KafkaAvroConfig(
+      brokers = brokers,
+      schemaRegistryUrl = schemaRegistryUrl,
+      keyNamingStrategy = keyNamingStrategy,
+      valueNamingStrategy = valueNamingStrategy,
+      extraOptions = extraOptions,
+      schemaRegistryExtraOptions
+    )
+  }
+
+  def getDummyKafkaWriterConfig(kafkaAvroConfig: KafkaAvroConfig = getDummyKafkaAvroConfig(),
                                 keyColumns: Seq[String] = Nil,
-                                keyNamingStrategy: Option[NamingStrategy] = None,
-                                valueNamingStrategy: NamingStrategy = DummyNamingStrategyFactory.getDummyNamingStrategy(),
                                 keySchemaId: Option[Int] = None,
                                 valueSchemaId: Option[Int] = None,
                                 recordsLimit: Option[Int] = None,
-                                extraOptions: Map[String, String] = Map(),
-                                schemaRegistryExtraOptions: Map[String, String] = Map()
-                               ): KafkaConfig = {
-    KafkaConfig(brokers = brokers,
-      schemaRegistryUrl = schemaRegistryUrl,
+                               ): KafkaAvroWriterConfig = {
+    KafkaAvroWriterConfig(
+      kafkaAvroConfig = kafkaAvroConfig,
       keyColumns = keyColumns,
-      keyNamingStrategy = keyNamingStrategy,
-      valueNamingStrategy = valueNamingStrategy,
-      keySchemaId,
-      valueSchemaId,
-      recordsLimit = recordsLimit,
-      extraOptions = extraOptions,
-      schemaRegistryExtraOptions)
+      keySchemaId = keySchemaId,
+      valueSchemaId = valueSchemaId,
+      recordsLimit = recordsLimit
+    )
   }
 }
