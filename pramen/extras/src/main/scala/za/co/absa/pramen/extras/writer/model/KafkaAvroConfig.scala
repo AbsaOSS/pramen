@@ -52,13 +52,23 @@ object KafkaAvroConfig {
         s"Please, define '<job>.schema.registry.value.naming.strategy'")
     }
 
+    val kafkaExtraProperties = ConfigUtils.getExtraOptions(conf, KAFKA_EXTRA_OPTIONS)
+      .map {
+        case (k, v) => (s"$KAFKA_EXTRA_OPTIONS.$k", v)
+      }
+
+    val schemaRegistryExtraProperties = ConfigUtils.getExtraOptions(conf, SCHEMA_EXTRA_OPTIONS)
+      .map {
+        case (k, v) => (s"$SCHEMA_EXTRA_OPTIONS.$k", v)
+      }
+
     KafkaAvroConfig(
       brokers = conf.getString(KAFKA_BROKERS_KEY),
       schemaRegistryUrl = conf.getString(SCHEMA_REGISTRY_URL),
       keyNamingStrategy = keyNamingStrategy,
       valueNamingStrategy = valueNamingStrategy.get,
-      ConfigUtils.getExtraOptions(conf, KAFKA_EXTRA_OPTIONS),
-      ConfigUtils.getExtraOptions(conf, SCHEMA_EXTRA_OPTIONS)
+      kafkaExtraProperties,
+      schemaRegistryExtraProperties
     )
   }
 }

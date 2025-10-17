@@ -80,6 +80,28 @@ class ConfigUtilsSuite extends AnyWordSpec with TempDirFixture with TextComparis
     }
   }
 
+  "renderExtraOptions()" should {
+    "be able to render extra options" in {
+      val rendered = ConfigUtils.renderExtraOptions(Map(
+        "option1" -> "value1",
+        "password" -> "pwd"))
+      val expected =
+        """option1 = "value1";password = "pwd"""".stripMargin
+
+      assert(rendered.mkString(";") == expected)
+    }
+
+    "should redact sensitive tokens" in {
+      val rendered = ConfigUtils.renderExtraOptions(Map(
+        "option1" -> "value1",
+        "some.password" -> "pwd"), Set("password"))
+      val expected =
+        """option1 = "value1";some.password = [redacted]""".stripMargin
+
+      assert(rendered.mkString(";") == expected)
+    }
+  }
+
   "getRedactedConfig()" should {
     "be able to redact input config" in {
       val redacted = ConfigUtils.getRedactedConfig(testConfig, keysToRedact)

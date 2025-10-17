@@ -24,6 +24,7 @@ import za.co.absa.abris.avro.functions.to_avro
 import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
 import za.co.absa.abris.config.{AbrisConfig, ToAvroConfig}
 import za.co.absa.pramen.extras.avro.AvroUtils.{convertSparkToAvroSchema, fixNullableFields}
+import za.co.absa.pramen.extras.source.KafkaAvroSource.KAFKA_TOKENS_TO_REDACT
 import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.writer.model.{KafkaAvroWriterConfig, NamingStrategy}
 
@@ -42,6 +43,11 @@ class TableWriterKafka(topicName: String,
 
     if (count > 0) {
       log.info(s"Writing $count records to '$topicName'...")
+
+      ConfigUtils.logExtraOptions("Options passed to the Kafka writer:",
+        writerConf.kafkaAvroConfig.extraOptions,
+        KAFKA_TOKENS_TO_REDACT
+      )
 
       dfOut.write
         .format("kafka")

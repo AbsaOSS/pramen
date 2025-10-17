@@ -19,11 +19,7 @@ package za.co.absa.pramen.extras.utils
 import com.typesafe.config._
 import org.slf4j.LoggerFactory
 
-import java.nio.file.{Files, Paths}
-import java.time.format.DateTimeFormatter
-import java.time.{DayOfWeek, LocalDate}
 import scala.collection.JavaConverters._
-import scala.collection.mutable.ListBuffer
 
 object ConfigUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -69,18 +65,46 @@ object ConfigUtils {
     }
   }
 
-  def logExtraOptions(description: String, extraOptions: Map[String, String], redactedKeys: Set[String] = Set.empty[String]): Unit = {
+  /**
+    * Logs the extra configuration options with the ability to redact sensitive keys.
+    * If the map of extra options is non-empty, it logs the provided description and
+    * iterates through the key-value pairs in the map to log each option. If a key
+    * contains any of the redacted tokens, its value is replaced with "[redacted]"
+    * in the logs.
+    *
+    * @param description    A description to log before the key-value pairs.
+    * @param extraOptions   A map containing the configuration key-value pairs to log.
+    * @param redactedTokens A set of tokens used to identify sensitive keys to redact. Should be lowercase.
+    */
+  def logExtraOptions(description: String,
+                      extraOptions: Map[String, String],
+                      redactedTokens: Set[String] = Set.empty[String]): Unit = {
     if (extraOptions.nonEmpty) {
-      val p = "\""
-      log.info(description)
-      extraOptions.foreach { case (key, value) =>
-        if (redactedKeys.contains(key.toLowerCase())) {
-          log.info(s"$key = [redacted]")
-        } else {
-          log.info(s"$key = $p$value$p")
-        }
-      }
+
+      val rendered = renderExtraOptions(extraOptions, redactedTokens)
+      log.info(s"$description\n${rendered.mkString("\n")}")
     }
+  }
+
+  /**
+    * Renders a sequence of strings representing key-value pairs from a map of extra options.
+    * If a key contains any of the redacted tokens, its value is replaced with "[redacted]".
+    *
+    * @param extraOptions   A map containing the configuration key-value pairs to render.
+    * @param redactedTokens A set of tokens used to identify sensitive keys to redact. Should be in lowercase.
+    * @return A sequence of strings formatted as "key = value", with sensitive values redacted.
+    */
+  def renderExtraOptions(extraOptions: Map[String, String],
+                         redactedTokens: Set[String] = Set.empty[String]): Seq[String] = {
+    val p = "\""
+    extraOptions.map { case (key, value) =>
+      val keyLowercase = key.toLowerCase()
+      if (redactedTokens.exists(token => keyLowercase.contains(token))) {
+        s"$key = [redacted]"
+      } else {
+        s"$key = $p$value$p"
+      }
+    }.toSeq
   }
 
   /**
