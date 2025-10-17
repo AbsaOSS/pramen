@@ -24,6 +24,7 @@ import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, Sin
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
 import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 import za.co.absa.pramen.core.sink.SparkSinkFormat.{ConnectionFormat, PathFormat, TableFormat}
+import za.co.absa.pramen.core.source.SparkSource.resolveQueryString
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils, FsUtils}
 
 import java.time.LocalDate
@@ -179,20 +180,17 @@ class SparkSink(format: String,
     AlgorithmUtils.actionWithRetry(retries, log) {
       outputFormat match {
         case PathFormat(path) =>
-          val effectivePath = resolveQuery(path.toUri.toString, infoDate)
+          val effectivePath = resolveQueryString(path.toUri.toString, infoDate, infoDate)
           val fsUtils = new FsUtils(df.sparkSession.sparkContext.hadoopConfiguration, effectivePath)
           fsUtils.createDirectoryRecursiveButLast(new Path(effectivePath))
           saver.save(effectivePath)
         case TableFormat(table) =>
-          saver.saveAsTable(resolveQuery(table, infoDate))
+          saver.saveAsTable(resolveQueryString(table, infoDate, infoDate))
         case _: ConnectionFormat =>
           saver.save()
       }
     }
   }
-
-  private def resolveQuery(q: String, infoDate: LocalDate): String =
-    TableReaderJdbcNative.applyInfoDateExpressionToString(q, infoDate, infoDate)
 
   private[core] def applyRepartitioning(df: DataFrame, recordCount: Long, tableName: String): DataFrame = {
     (numberOfPartitions, recordsPerPartition) match {
