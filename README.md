@@ -926,6 +926,66 @@ normal batch pipelines.
 - Reruns are possible for full days to remove duplicates. But for incremental sinks, such ask Kafka sink duplicates still 
   might happen.
 
+#### Kafka Avro source
+The Kafka Avro source allows getting data from Kafka. The source supports topics serialized as Avro records via
+Confluent libraries and Schema Registry. The source supports only incremental schedule.
+
+Here is an example of a Kafka Avro source definition:
+
+```hocon
+pramen.sources = [
+  {
+    # Define a name to reference from the pipeline:
+    name = "kafka_source"
+    factory.class = "za.co.absa.pramen.extras.source.KafkaAvroSource"
+
+
+    kafka {
+      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
+
+      # Arbitrary options for creating a Kafka Producer
+      sasl.jaas.config = "..."
+      sasl.mechanism = "..."
+      security.protocol = "..."
+    }
+
+    schema.registry {
+      url = "https://my.schema.regictry:8081"
+      value.naming.strategy = "topic.name"
+
+      # Arbitrary options for Schema registry
+      basic.auth.credentials.source = "..."
+      basic.auth.user.info = "..."
+      ssl.truststore.location = "..."
+      ssl.truststore.password = "..."
+      ssl.truststore.type = "..."
+    }
+  }
+]
+```
+
+The corresponding pipeline operation could look like this:
+```hocon
+pramen.operations = [
+  {
+    name = "Sourcing from a Kafka topic"
+    type = "ingestion"
+    schedule.type = "incremental"
+
+    source = "kafka_source"
+
+    info.date.expr = "@runDate"
+
+    tables = [
+      {
+        input.table = "my_kafka_topic1"
+        output.metastore.table = "table1"
+      }
+    ]
+  }
+]
+```
+
 ### Sinks
 Sinks define a way data needs to be sent to a target system. Built-in sinks include:
 - Kafka sink.
@@ -937,41 +997,41 @@ Sinks define a way data needs to be sent to a target system. Built-in sinks incl
 You can define your own sink by implementing `Sink` trait and providing the corresponding class name in pipeline configuration.
 
 #### Kafka sink
-A Kafka sink allows sending data from a metastore table to a Kafka topic in Avro format.
-You can define all endpoint and credential options in the sink definitions. The output topic
-name should be defined in the definition of the pipeline operation.
+A Kafka Avro sink allows sending data from a metastore table to a Kafka topic in Avro format and Cunfluent Schema registry
+integration. You can define all endpoint and credential options in the sink definitions. The output topic name should be defined 
+in the definition of the pipeline operation.
 
 Here is an example of a Kafka sink definition:
 
 ```hocon
-{
-  # Define a name to reference from the pipeline:
-  name = "kafka_avro"
-  factory.class = "za.co.absa.pramen.extras.sink.KafkaSink"
-  
-  writer.kafka {
-    brokers = "mybroker1:9092,mybroker2:9092"
-    schema.registry.url = "https://my.schema.regictry:8081"
-    
-    # Can be one of: topic.name, record.name, topic.record.name
-    schema.registry.value.naming.strategy = "topic.name"
-    
-    # Arbitrary options for creating a Kafka Producer
-    option {
-      kafka.sasl.jaas.config = "..."
-      kafka.sasl.mechanism = "..."
-      kafka.security.protocol = "..."
-      # ...
+pramen.sinks = [
+  {
+    # Define a name to reference from the pipeline:
+    name = "kafka_avro"
+    factory.class = "za.co.absa.pramen.extras.sink.KafkaAvroSink"
+
+    kafka {
+      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
+
+      # Arbitrary options for creating a Kafka Producer
+      sasl.jaas.config = "..."
+      sasl.mechanism = "..."
+      security.protocol = "..."
     }
-    
-    # Arbitrary options for Schema registry
-    schema.registry.option {
+
+    schema.registry {
+      url = "https://my.schema.regictry:8081"
+      value.naming.strategy = "topic.name"
+
+      # Arbitrary options for Schema registry
       basic.auth.credentials.source = "..."
       basic.auth.user.info = "..."
-      # ...
+      ssl.truststore.location = "..."
+      ssl.truststore.password = "..."
+      ssl.truststore.type = "..."
     }
   }
-}
+]
 ```
 
 The corresponding pipeline operation could look like this:
@@ -979,42 +1039,44 @@ The corresponding pipeline operation could look like this:
   <summary>Click to expand</summary>
 
 ```hocon
-{
-  name = "Kafka sink"
-  type = "sink"
-  sink = "kafka_avro"
-  schedule.type = "daily"
-  # Optional dependencies
-  dependencies = [
-    {
-      tables = [ dependent_table ]
-      date.from = "@infoDate"
-    }
-  ]
-  tables = [
-    {
-      input.metastore.table = metastore_table
-      output.topic.name = "my.topic"
-      
-      # All following settings are OPTIONAL
-      
-      # Date range to read the source table for. By default the job information date is used.
-      # But you can define an arbitrary expression based on the information date.
-      # More: see the section of documentation regarding date expressions, and the list of functions allowed.
-      date {
-        from = "@infoDate"
-        to = "@infoDate"
+pramen.operations = [
+  {
+    name = "Kafka sink"
+    type = "sink"
+    sink = "kafka_avro"
+    schedule.type = "daily"
+    # Optional dependencies
+    dependencies = [
+      {
+        tables = [dependent_table]
+        date.from = "@infoDate"
       }
-      transformations = [
-       { col = "col1", expr = "lower(some_string_column)" }
-      ],
-      filters = [
-        "some_numeric_column > 100"
-      ]
-      columns = [ "col1", "col2", "col2", "some_numeric_column" ]
-    }
-  ]
-}
+    ]
+    tables = [
+      {
+        input.metastore.table = "metastore_table"
+        output.topic.name = "my.topic"
+
+        # All following settings are OPTIONAL
+
+        # Date range to read the source table for. By default the job information date is used.
+        # But you can define an arbitrary expression based on the information date.
+        # More: see the section of documentation regarding date expressions, and the list of functions allowed.
+        date {
+          from = "@infoDate"
+          to = "@infoDate"
+        }
+        transformations = [
+          {col = "col1", expr = "lower(some_string_column)"}
+        ],
+        filters = [
+          "some_numeric_column > 100"
+        ]
+        columns = ["col1", "col2", "col2", "some_numeric_column"]
+      }
+    ]
+  }
+]
 ```
 </details>
 
