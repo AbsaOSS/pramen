@@ -40,6 +40,8 @@ class SparkSource(val format: Option[String],
                   val offsetInfo: Option[OffsetInfo],
                   val sourceConfig: Config,
                   val options: Map[String, String])(implicit spark: SparkSession) extends Source {
+  import SparkSource._
+
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override val config: Config = sourceConfig
@@ -121,12 +123,11 @@ class SparkSource(val format: Option[String],
       case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
   }
-
-  private def resolveQuery(q: Query, from: LocalDate, to: LocalDate): Query =
-    TableReaderJdbcNative.applyInfoDateExpressionToQuery(q, from, to)
 }
 
 object SparkSource extends ExternalChannelFactory[SparkSource] {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val FORMAT = "format"
   val SCHEMA = "schema"
 
@@ -148,5 +149,21 @@ object SparkSource extends ExternalChannelFactory[SparkSource] {
     val options = ConfigUtils.getExtraOptions(conf, "option")
 
     new SparkSource(format, schema, hasInfoDate, infoDateColumn, infoDateType, infoDateFormat, offsetInfoOpt, conf, options)(spark)
+  }
+
+  def resolveQuery(inputQuery: Query, from: LocalDate, to: LocalDate): Query = {
+    val query = TableReaderJdbcNative.applyInfoDateExpressionToQuery(inputQuery, from, to)
+    if (inputQuery.query != query.query) {
+      log.info(s"Query substituted: from '${inputQuery.query}' to '${query.query}'")
+    }
+    query
+  }
+
+  def resolveQueryString(inputQuery: String, from: LocalDate, to: LocalDate): String = {
+    val query = TableReaderJdbcNative.applyInfoDateExpressionToString(inputQuery, from, to)
+    if (inputQuery != query) {
+      log.info(s"Query substituted: from '$inputQuery' to '$query'")
+    }
+    query
   }
 }
