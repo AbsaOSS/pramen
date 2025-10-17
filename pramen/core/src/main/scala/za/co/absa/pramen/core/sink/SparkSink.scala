@@ -22,8 +22,9 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
+import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 import za.co.absa.pramen.core.sink.SparkSinkFormat.{ConnectionFormat, PathFormat, TableFormat}
-import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils, FsUtils}
 
 import java.time.LocalDate
 
@@ -159,7 +160,7 @@ class SparkSink(format: String,
       }
 
       val dfToWrite = applyRepartitioning(df, recordCount, tableName)
-      writeData(dfToWrite, outputFormat)
+      writeData(dfToWrite, infoDate, outputFormat)
     } else {
       log.info(s"Nothing to save to ${outputFormat.toString}")
     }
@@ -167,7 +168,7 @@ class SparkSink(format: String,
     SinkResult(recordCount)
   }
 
-  private[core] def writeData(df: DataFrame, outputFormat: SparkSinkFormat): Unit = {
+  private[core] def writeData(df: DataFrame, infoDate: LocalDate, outputFormat: SparkSinkFormat): Unit = {
     val saver = df
       .write
       .partitionBy(partitionBy: _*)
@@ -178,14 +179,20 @@ class SparkSink(format: String,
     AlgorithmUtils.actionWithRetry(retries, log) {
       outputFormat match {
         case PathFormat(path) =>
-          saver.save(path.toUri.toString)
+          val effectivePath = resolveQuery(path.toUri.toString, infoDate)
+          val fsUtils = new FsUtils(df.sparkSession.sparkContext.hadoopConfiguration, effectivePath)
+          fsUtils.createDirectoryRecursiveButLast(new Path(effectivePath))
+          saver.save(effectivePath)
         case TableFormat(table) =>
-          saver.saveAsTable(table)
+          saver.saveAsTable(resolveQuery(table, infoDate))
         case _: ConnectionFormat =>
           saver.save()
       }
     }
   }
+
+  private def resolveQuery(q: String, infoDate: LocalDate): String =
+    TableReaderJdbcNative.applyInfoDateExpressionToString(q, infoDate, infoDate)
 
   private[core] def applyRepartitioning(df: DataFrame, recordCount: Long, tableName: String): DataFrame = {
     (numberOfPartitions, recordsPerPartition) match {
