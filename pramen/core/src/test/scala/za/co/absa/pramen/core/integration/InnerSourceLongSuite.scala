@@ -40,7 +40,9 @@ class InnerSourceLongSuite extends AnyWordSpec with SparkTestBase with TempDirFi
       withTempDirectory("integration_inner_source") { tempDir =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
-        fsUtils.writeFile(new Path(tempDir, "landing_file1.csv"), "id,name\n1,John\n2,Jack\n3,Jill\n")
+        val landingPath = new Path(tempDir, s"$infoDate")
+
+        fsUtils.writeFile(new Path(landingPath, "landing_file1.csv"), "id,name\n1,John\n2,Jack\n3,Jill\n")
 
         val conf = getConfig(tempDir)
 

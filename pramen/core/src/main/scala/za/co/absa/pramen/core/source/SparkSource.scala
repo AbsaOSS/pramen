@@ -24,7 +24,7 @@ import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlColumnType
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
-import za.co.absa.pramen.core.reader.TableReaderSpark
+import za.co.absa.pramen.core.reader.{TableReaderJdbcNative, TableReaderSpark}
 import za.co.absa.pramen.core.reader.model.OffsetInfoParser
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig._
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
@@ -50,13 +50,16 @@ class SparkSource(val format: Option[String],
     offsetInfo
   }
 
-  override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+  override def getRecordCount(inputQuery: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
+    val query = TableReaderJdbcNative.applyInfoDateExpressionToQuery(inputQuery, infoDateBegin, infoDateEnd)
     val reader = getReader(query)
 
     reader.getRecordCount(query, infoDateBegin, infoDateEnd)
   }
 
-  override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
+  override def getData(inputQuery: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
+    val query = TableReaderJdbcNative.applyInfoDateExpressionToQuery(inputQuery, infoDateBegin, infoDateEnd)
+
     val reader = getReader(query)
 
     val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
@@ -89,7 +92,12 @@ class SparkSource(val format: Option[String],
     tableReader
   }
 
-  override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
+  override def getDataIncremental(inputQuery: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
+    val query = onlyForInfoDate match {
+      case Some(infoDate) => TableReaderJdbcNative.applyInfoDateExpressionToQuery(inputQuery, infoDate, infoDate)
+      case None => inputQuery
+    }
+
     val reader = getReader(query)
 
     val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
