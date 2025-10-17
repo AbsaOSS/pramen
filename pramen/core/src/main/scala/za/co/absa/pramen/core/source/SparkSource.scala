@@ -51,14 +51,14 @@ class SparkSource(val format: Option[String],
   }
 
   override def getRecordCount(inputQuery: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    val query = TableReaderJdbcNative.applyInfoDateExpressionToQuery(inputQuery, infoDateBegin, infoDateEnd)
+    val query = resolveQuery(inputQuery, infoDateBegin, infoDateEnd)
     val reader = getReader(query)
 
     reader.getRecordCount(query, infoDateBegin, infoDateEnd)
   }
 
   override def getData(inputQuery: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
-    val query = TableReaderJdbcNative.applyInfoDateExpressionToQuery(inputQuery, infoDateBegin, infoDateEnd)
+    val query = resolveQuery(inputQuery, infoDateBegin, infoDateEnd)
 
     val reader = getReader(query)
 
@@ -94,7 +94,7 @@ class SparkSource(val format: Option[String],
 
   override def getDataIncremental(inputQuery: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
     val query = onlyForInfoDate match {
-      case Some(infoDate) => TableReaderJdbcNative.applyInfoDateExpressionToQuery(inputQuery, infoDate, infoDate)
+      case Some(infoDate) => resolveQuery(inputQuery, infoDate, infoDate)
       case None => inputQuery
     }
 
@@ -117,6 +117,9 @@ class SparkSource(val format: Option[String],
       case other            => throw new IllegalArgumentException(s"'${other.name}' is not supported by the Spark source. Use 'path', 'table' or 'sql' instead.")
     }
   }
+
+  private def resolveQuery(q: Query, from: LocalDate, to: LocalDate): Query =
+    TableReaderJdbcNative.applyInfoDateExpressionToQuery(q, from, to)
 }
 
 object SparkSource extends ExternalChannelFactory[SparkSource] {
