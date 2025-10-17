@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 
 import java.time.LocalDate
 
@@ -29,14 +30,18 @@ class PostProcessingSink(sinkConfig: Config) extends Sink {
   override def send(df: DataFrame, tableName: String, metastore: MetastoreReader, infoDate: LocalDate, options: Map[String, String])(implicit spark: SparkSession): SinkResult = {
     log.info(s"Input df is empty = ${df.isEmpty}")
 
-    val path = options("path")
+    val path = resolveQuery(options("path"), infoDate)
 
+    log.info(s"Reading from $path...")
     val count = spark.read.parquet(path).count()
 
     SinkResult(count)
   }
 
   override def config: Config = sinkConfig
+
+  private def resolveQuery(q: String, infoDate: LocalDate): String =
+    TableReaderJdbcNative.applyInfoDateExpressionToString(q, infoDate, infoDate)
 }
 
 object PostProcessingSink extends ExternalChannelFactory[PostProcessingSink] {

@@ -43,7 +43,8 @@ class FileSourceSinkSuite extends AnyWordSpec with SparkTestBase with TempDirFix
 
         assert(exitCode == 0)
 
-        val sinkPath = new Path(tempDir, "sink")
+        val sinkBasePath = new Path(tempDir, "sink")
+        val sinkPath = new Path(sinkBasePath, s"$infoDate")
         val df = spark.read.parquet(sinkPath.toString)
 
         val actual = df.toJSON.collect()
