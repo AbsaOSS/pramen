@@ -98,6 +98,10 @@ class SparkSource(val format: Option[String],
       case None => inputQuery
     }
 
+    if (onlyForInfoDate.isEmpty && query.query.contains("@infoDate")) {
+      throw new IllegalArgumentException("SparkSource: '@infoDate' found in input path/query, but onlyForInfoDate was not provided; cannot substitute.")
+    }
+
     val reader = getReader(query)
 
     val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
