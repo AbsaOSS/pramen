@@ -97,7 +97,9 @@ object ConfigUtils {
   def renderExtraOptions(extraOptions: Map[String, String],
                          redactedTokens: Set[String] = Set.empty[String]): Seq[String] = {
     val p = "\""
-    extraOptions.map { case (key, value) =>
+    extraOptions.toArray
+      .sortBy(_._1)
+      .map { case (key, value) =>
       val keyLowercase = key.toLowerCase()
       if (redactedTokens.exists(token => keyLowercase.contains(token))) {
         s"$key = [redacted]"

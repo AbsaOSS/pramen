@@ -134,6 +134,7 @@ class KafkaAvroSource(sourceConfig: Config,
 
     val startingOffsets = offsetFromOpt match {
       case Some(offset) =>
+        // The starting offset is inclusive in Spark.
         if (offset.dataType != OffsetType.KafkaType)
           throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
 
@@ -150,25 +151,27 @@ class KafkaAvroSource(sourceConfig: Config,
 
     val endingOffsets = offsetToOpt match {
       case Some(offset) =>
+        // The ending offset is exclusive in Spark.
         if (offset.dataType != OffsetType.KafkaType)
           throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
-        Map("endingOffsets" -> s"{$q$topic$q: ${offset.valueString}}")
+        val offsetTo = offset.asInstanceOf[KafkaValue].increment
+        Map("endingOffsets" -> s"{$q$topic$q: ${offsetTo.valueString}}")
       case None         =>
         Map("endingOffsets" -> "latest")
     }
 
+    val kafkaOptions = kafkaAvroConfig.extraOptions ++ startingOffsets ++ endingOffsets +
+      ("kafka.bootstrap.servers" -> kafkaAvroConfig.brokers) +
+      ("subscribe" -> topic)
+
     ConfigUtils.logExtraOptions("Options passed to the Kafka reader:",
-      kafkaAvroConfig.extraOptions,
+      kafkaOptions,
       KAFKA_TOKENS_TO_REDACT
     )
 
     val dfRaw = spark.read
       .format("kafka")
-      .options(kafkaAvroConfig.extraOptions)
-      .option("kafka.bootstrap.servers", kafkaAvroConfig.brokers)
-      .option("subscribe", topic)
-      .options(startingOffsets)
-      .options(endingOffsets)
+      .options(kafkaOptions)
       .load()
 
     val schemaRegistryClientConfig = Map(
