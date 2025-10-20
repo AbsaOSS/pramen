@@ -408,4 +408,21 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     }
   }
 
+  "getMinMaxOffsets" should {
+    "be able to sort Kafka offsets properly" in {
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, 123L)
+
+      val offsets = Array(
+        OffsetRecordFactory.getOffsetRecord(dataType = "kafka", minOffset = """{"0":100,"1":120}""", maxOffset = """{"0":101,"1":121}"""),
+        OffsetRecordFactory.getOffsetRecord(dataType = "kafka", minOffset = """{"0":98,"1":100}""", maxOffset = """{"0":099,"1":01}"""),
+        OffsetRecordFactory.getOffsetRecord(dataType = "kafka", minOffset = """{"0":8,"1":8}""", maxOffset = """{"0":9,"1":9}""")
+      )
+
+      val (minValue, maxValue) = om.getMinMaxOffsets(offsets)
+
+      assert(minValue.valueString == """{"0":8,"1":8}""")
+      assert(maxValue.valueString == """{"0":101,"1":121}""")
+    }
+  }
+
 }

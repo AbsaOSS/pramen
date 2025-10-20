@@ -175,11 +175,17 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
     validateOffsets(table, infoDate, offsets)
 
+    val (minOffset, maxOffset) = getMinMaxOffsets(offsets)
+
+    Some(DataOffsetAggregated(table, infoDate, minOffset, maxOffset, offsets.map(OffsetRecordConverter.toDataOffset)))
+  }
+
+  private[core] def getMinMaxOffsets(offsets: Array[OffsetRecord]): (OffsetValue, OffsetValue) = {
     val offsetDataType =  offsets.head.dataType
     val minOffset = offsets.flatMap(or => OffsetValue.fromString(offsetDataType, or.minOffset)).min
     val maxOffset = offsets.flatMap(or => OffsetValue.fromString(offsetDataType, or.maxOffset)).max
 
-    Some(DataOffsetAggregated(table, infoDate, minOffset, maxOffset, offsets.map(OffsetRecordConverter.toDataOffset)))
+    (minOffset, maxOffset)
   }
 
   /**
