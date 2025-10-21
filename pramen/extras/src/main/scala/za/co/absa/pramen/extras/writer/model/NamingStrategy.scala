@@ -79,6 +79,7 @@ case class NamingStrategy(
     * @return A modified Abris configuration with the applied naming strategy.
     */
   def applyNamingStrategyToAbrisConfig(abrisConfig: FromStrategyConfigFragment, topicName: String, isKey: Boolean): FromSchemaDownloadingConfigFragment = {
+    val partStr = if (isKey) "key" else "value"
     namingStrategy match {
       case NAMING_STRATEGY_TOPIC_NAME =>
         abrisConfig.andTopicNameStrategy(topicName, isKey)
@@ -87,17 +88,17 @@ case class NamingStrategy(
           case (Some(name), Some(namespace)) =>
             abrisConfig.andRecordNameStrategy(name, namespace)
           case _ =>
-            throw new IllegalArgumentException(s"Record name and namespace must be defined for naming strategy '$NAMING_STRATEGY_RECORD_NAME'")
+            throw new IllegalArgumentException(s"Record name and namespace must be defined for $partStr naming strategy '$NAMING_STRATEGY_RECORD_NAME'")
         }
       case NAMING_STRATEGY_TOPIC_RECORD_NAME =>
         (recordName, recordNamespace) match {
           case (Some(name), Some(namespace)) =>
             abrisConfig.andTopicRecordNameStrategy(topicName, name, namespace)
           case _ =>
-            throw new IllegalArgumentException(s"Record name and namespace must be defined for naming strategy '$NAMING_STRATEGY_TOPIC_RECORD_NAME'")
+            throw new IllegalArgumentException(s"Record name and namespace must be defined for $partStr naming strategy '$NAMING_STRATEGY_TOPIC_RECORD_NAME'")
         }
       case other =>
-        throw new IllegalArgumentException(s"Unsupported value naming strategy: $other")
+        throw new IllegalArgumentException(s"Unsupported $partStr naming strategy: $other")
     }
   }
 
