@@ -950,7 +950,7 @@ pramen.sources = [
     }
 
     schema.registry {
-      url = "https://my.schema.regictry:8081"
+      url = "https://my.schema.registry:8081"
       value.naming.strategy = "topic.name"
 
       # Arbitrary options for Schema registry
@@ -997,7 +997,7 @@ Sinks define a way data needs to be sent to a target system. Built-in sinks incl
 You can define your own sink by implementing `Sink` trait and providing the corresponding class name in pipeline configuration.
 
 #### Kafka sink
-A Kafka Avro sink allows sending data from a metastore table to a Kafka topic in Avro format and Cunfluent Schema registry
+A Kafka Avro sink allows sending data from a metastore table to a Kafka topic in Avro format and Confluent Schema registry
 integration. You can define all endpoint and credential options in the sink definitions. The output topic name should be defined 
 in the definition of the pipeline operation.
 
@@ -1020,7 +1020,7 @@ pramen.sinks = [
     }
 
     schema.registry {
-      url = "https://my.schema.regictry:8081"
+      url = "https://my.schema.registry:8081"
       value.naming.strategy = "topic.name"
 
       # Arbitrary options for Schema registry

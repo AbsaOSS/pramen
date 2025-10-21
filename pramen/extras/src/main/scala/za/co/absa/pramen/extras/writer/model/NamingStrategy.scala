@@ -18,19 +18,32 @@ package za.co.absa.pramen.extras.writer.model
 
 import com.typesafe.config.Config
 import za.co.absa.abris.avro.registry.SchemaSubject
+import za.co.absa.abris.config.{FromSchemaDownloadingConfigFragment, FromStrategyConfigFragment}
 
 case class NamingStrategy(
-                         namingStrategy: String,
-                         recordName: Option[String],
-                         recordNamespace: Option[String]
+                           namingStrategy: String,
+                           recordName: Option[String],
+                           recordNamespace: Option[String]
                          ) {
+
   import NamingStrategy._
 
+  /**
+    * Determines whether the naming strategy requires the use of a record name for schema subject resolution.
+    */
   def needsRecordName: Boolean = {
     namingStrategy == NAMING_STRATEGY_RECORD_NAME ||
       namingStrategy == NAMING_STRATEGY_TOPIC_RECORD_NAME
   }
 
+  /**
+    * Determines the schema subject to use based on the specified topic name,
+    * whether the subject is for a key or value, and the naming strategy.
+    *
+    * @param topicName The name of the Kafka topic.
+    * @param isKey     A flag indicating whether the subject is for a key (true) or a value (false).
+    * @return A `SchemaSubject` instance derived according to the naming strategy and parameters.
+    */
   def getSubject(topicName: String, isKey: Boolean): SchemaSubject = {
     if (namingStrategy == NAMING_STRATEGY_TOPIC_NAME) {
       SchemaSubject.usingTopicNameStrategy(topicName, isKey)
@@ -42,12 +55,61 @@ case class NamingStrategy(
       throw new IllegalArgumentException(s"Unknown naming strategy: $namingStrategy")
     }
   }
+
+  /**
+    * Applies a naming strategy to the given Abris configuration, based on the specified topic name
+    * and key flag. Determines the appropriate naming strategy to use and modifies the configuration
+    * accordingly.
+    *
+    * Example:
+    * {{{
+    *   val abrisValueBase = AbrisConfig.fromConfluentAvro.downloadReaderSchemaByLatestVersion
+    *
+    *   val abrisValueConfig = kafkaAvroConfig.valueNamingStrategy
+    *     .applyNamingStrategyToAbrisConfig(abrisValueBase, topic, isKey = false)
+    *     .usingSchemaRegistry(schemaRegistryClientConfig)
+    * }}}
+    *
+    * @param abrisConfig The initial Abris configuration to which the naming strategy will be applied.
+    * @param topicName   The name of the topic for which the naming strategy is being applied.
+    * @param isKey       A flag indicating whether the naming strategy is for a key or a value.
+    * @return A modified Abris configuration with the applied naming strategy.
+    */
+  def applyNamingStrategyToAbrisConfig(abrisConfig: FromStrategyConfigFragment, topicName: String, isKey: Boolean): FromSchemaDownloadingConfigFragment = {
+    namingStrategy match {
+      case NAMING_STRATEGY_TOPIC_NAME =>
+        abrisConfig.andTopicNameStrategy(topicName, isKey = false)
+      case NAMING_STRATEGY_RECORD_NAME =>
+        (recordName, recordNamespace) match {
+          case (Some(name), Some(namespace)) =>
+            abrisConfig.andRecordNameStrategy(
+              recordName.get,
+              recordNamespace.get
+            )
+          case _ =>
+            throw new IllegalArgumentException(s"Record name and namespace must be defined for naming strategy '$NAMING_STRATEGY_RECORD_NAME'")
+        }
+      case NAMING_STRATEGY_TOPIC_RECORD_NAME =>
+        (recordName, recordNamespace) match {
+          case (Some(name), Some(namespace)) =>
+            abrisConfig.andTopicRecordNameStrategy(
+              topicName,
+              recordName.get,
+              recordNamespace.get
+            )
+          case _ =>
+            throw new IllegalArgumentException(s"Record name and namespace must be defined for naming strategy '$NAMING_STRATEGY_TOPIC_RECORD_NAME'")
+        }
+      case other =>
+        throw new IllegalArgumentException(s"Unsupported value naming strategy: $other")
+    }
+  }
 }
 
 object NamingStrategy {
-  private val NAMING_STRATEGY_TOPIC_NAME = "topic.name"
-  private val NAMING_STRATEGY_RECORD_NAME = "record.name"
-  private val NAMING_STRATEGY_TOPIC_RECORD_NAME = "topic.record.name"
+  val NAMING_STRATEGY_TOPIC_NAME = "topic.name"
+  val NAMING_STRATEGY_RECORD_NAME = "record.name"
+  val NAMING_STRATEGY_TOPIC_RECORD_NAME = "topic.record.name"
 
   val NAMING_STRATEGY = "naming.strategy"
   val SCHEMA_RECORD_NAME = "schema.record.name"

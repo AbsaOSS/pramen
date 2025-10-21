@@ -48,7 +48,7 @@ import java.time.LocalDate
   *    }
   *
   *    schema.registry {
-  *      url = "https://my.schema.regictry:8081"
+  *      url = "https://my.schema.registry:8081"
   *
   *      # Can be one of: topic.name, record.name, topic.record.name
   *      value.naming.strategy = "topic.name"
