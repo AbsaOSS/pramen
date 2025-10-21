@@ -29,12 +29,11 @@ class TableWriterKafkaSuite extends AnyWordSpec with SparkTestBase {
 
     "be able to construct a new writer from config" in {
       val conf = ConfigFactory.parseString(
-        s"""writer.kafka {
-          |  brokers = "host1:9092"
-          |  schema.registry.url = "localhost:8081"
-          |  schema.registry.value.naming.strategy = "topic.name"
-          |  schema.registry.value.schema.id = 2
-          |}""".stripMargin)
+        s"""kafka.bootstrap.servers = "host1:9092"
+          |schema.registry.url = "localhost:8081"
+          |schema.registry.value.naming.strategy = "topic.name"
+          |schema.registry.value.schema.id = 2
+          |""".stripMargin)
 
       val writer = TableWriterKafka("dummy_topic", conf)
 
@@ -47,15 +46,14 @@ class TableWriterKafkaSuite extends AnyWordSpec with SparkTestBase {
 
     "be able to construct Kafka writer that has keys and values" in {
       val conf = ConfigFactory.parseString(
-        """writer.kafka {
-          |  brokers = "host1:9092"
-          |  schema.registry.url = "host2:8081"
-          |  schema.registry.value.naming.strategy = "topic.name"
-          |  schema.registry.key.naming.strategy = "record.name"
-          |  schema.registry.key.schema.record.name = "record"
-          |  schema.registry.key.schema.record.namespace = "namespace"
-          |  key.column.names = [ a, b ]
-          |}""".stripMargin)
+        """kafka.bootstrap.servers = "host1:9092"
+          |schema.registry.url = "host2:8081"
+          |schema.registry.value.naming.strategy = "topic.name"
+          |schema.registry.key.naming.strategy = "record.name"
+          |schema.registry.key.schema.record.name = "record"
+          |schema.registry.key.schema.record.namespace = "namespace"
+          |key.column.names = [ a, b ]
+          |""".stripMargin)
 
       val writer = TableWriterKafka("dummy_topic", conf)
 
@@ -70,16 +68,15 @@ class TableWriterKafkaSuite extends AnyWordSpec with SparkTestBase {
 
     "be able to pass extra options" in {
       val conf = ConfigFactory.parseString(
-        """writer.kafka {
-          |  brokers = "host1:9092"
-          |  schema.registry.url = "host2:8081"
-          |  schema.registry.value.naming.strategy = "topic.name"
-          |  schema.registry.key.naming.strategy = "topic.name"
-          |  key.column.names = [ a, b ]
-          |  option.kafka.sasl.jaas.config = "some"
-          |  option.kafka.sasl.mechanism = "GSSAPI"
-          |  option.kafka.security.protocol = "SASL_PLAINTEXT"
-          |}""".stripMargin)
+        """kafka.bootstrap.servers = "host1:9092"
+          |schema.registry.url = "host2:8081"
+          |schema.registry.value.naming.strategy = "topic.name"
+          |schema.registry.key.naming.strategy = "topic.name"
+          |key.column.names = [ a, b ]
+          |kafka.sasl.jaas.config = "some"
+          |kafka.sasl.mechanism = "GSSAPI"
+          |kafka.security.protocol = "SASL_PLAINTEXT"
+          |""".stripMargin)
 
       val writer = TableWriterKafka("dummy_topic", conf)
 

@@ -61,6 +61,7 @@ object OffsetType {
     case DATETIME_TYPE_STR => DateTimeType
     case INTEGRAL_TYPE_STR => IntegralType
     case INTEGRAL_TYPE_ALT_STR => IntegralType
+    case STRING_TYPE_STR => StringType
     case KAFKA_TYPE_STR => KafkaType
     case _ => throw new IllegalArgumentException(s"Unknown offset data type: $dataType")
   }
