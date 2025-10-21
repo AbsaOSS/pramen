@@ -45,14 +45,17 @@ case class NamingStrategy(
     * @return A `SchemaSubject` instance derived according to the naming strategy and parameters.
     */
   def getSubject(topicName: String, isKey: Boolean): SchemaSubject = {
-    if (namingStrategy == NAMING_STRATEGY_TOPIC_NAME) {
-      SchemaSubject.usingTopicNameStrategy(topicName, isKey)
-    } else if (namingStrategy == NAMING_STRATEGY_RECORD_NAME) {
-      SchemaSubject.usingRecordNameStrategy(recordName.get, recordNamespace.get)
-    } else if (namingStrategy == NAMING_STRATEGY_TOPIC_RECORD_NAME) {
-      SchemaSubject.usingTopicRecordNameStrategy(topicName, recordName.get, recordNamespace.get)
-    } else {
-      throw new IllegalArgumentException(s"Unknown naming strategy: $namingStrategy")
+    namingStrategy match {
+      case NAMING_STRATEGY_TOPIC_NAME        =>
+        SchemaSubject.usingTopicNameStrategy(topicName, isKey)
+      case NAMING_STRATEGY_RECORD_NAME       =>
+        val (name, ns) = getNameAndNamespace(NAMING_STRATEGY_RECORD_NAME)
+        SchemaSubject.usingRecordNameStrategy(name, ns)
+      case NAMING_STRATEGY_TOPIC_RECORD_NAME =>
+        val (name, ns) = getNameAndNamespace(NAMING_STRATEGY_TOPIC_RECORD_NAME)
+        SchemaSubject.usingTopicRecordNameStrategy(topicName, name, ns)
+      case _                                 =>
+        throw new IllegalArgumentException(s"Unknown naming strategy: $namingStrategy")
     }
   }
 
@@ -78,31 +81,29 @@ case class NamingStrategy(
   def applyNamingStrategyToAbrisConfig(abrisConfig: FromStrategyConfigFragment, topicName: String, isKey: Boolean): FromSchemaDownloadingConfigFragment = {
     namingStrategy match {
       case NAMING_STRATEGY_TOPIC_NAME =>
-        abrisConfig.andTopicNameStrategy(topicName, isKey = false)
+        abrisConfig.andTopicNameStrategy(topicName, isKey)
       case NAMING_STRATEGY_RECORD_NAME =>
         (recordName, recordNamespace) match {
           case (Some(name), Some(namespace)) =>
-            abrisConfig.andRecordNameStrategy(
-              recordName.get,
-              recordNamespace.get
-            )
+            abrisConfig.andRecordNameStrategy(name, namespace)
           case _ =>
             throw new IllegalArgumentException(s"Record name and namespace must be defined for naming strategy '$NAMING_STRATEGY_RECORD_NAME'")
         }
       case NAMING_STRATEGY_TOPIC_RECORD_NAME =>
         (recordName, recordNamespace) match {
           case (Some(name), Some(namespace)) =>
-            abrisConfig.andTopicRecordNameStrategy(
-              topicName,
-              recordName.get,
-              recordNamespace.get
-            )
+            abrisConfig.andTopicRecordNameStrategy(topicName, name, namespace)
           case _ =>
             throw new IllegalArgumentException(s"Record name and namespace must be defined for naming strategy '$NAMING_STRATEGY_TOPIC_RECORD_NAME'")
         }
       case other =>
         throw new IllegalArgumentException(s"Unsupported value naming strategy: $other")
     }
+  }
+
+  private def getNameAndNamespace(strategy: String): (String, String) = {
+    (recordName.getOrElse(throw new IllegalArgumentException(s"Record name missing for the subject naming strategy '$strategy'.")),
+      recordNamespace.getOrElse(throw new IllegalArgumentException(s"Record namespace missing for the subject naming strategy '$strategy'.")))
   }
 }
 

@@ -40,7 +40,7 @@ import java.time.LocalDate
   *    kafka {
   *      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
   *
-  *      # Arbitrary options for creating a Kafka Producer
+  *      # Arbitrary Kafka Producer options used by the sink
   *      # sasl.jaas.config = "..."
   *      # sasl.mechanism = "..."
   *      # security.protocol = "..."

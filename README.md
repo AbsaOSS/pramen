@@ -943,7 +943,7 @@ pramen.sources = [
     kafka {
       bootstrap.servers = "mybroker1:9092,mybroker2:9092"
 
-      # Arbitrary options for creating a Kafka Producer
+      # Arbitrary options for the Kafka consumer/reader
       sasl.jaas.config = "..."
       sasl.mechanism = "..."
       security.protocol = "..."

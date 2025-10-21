@@ -49,7 +49,7 @@ import java.time.LocalDate
   *    kafka {
   *      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
   *
-  *      # Arbitrary options for creating a Kafka Producer
+  *      # Arbitrary options for the Kafka consumer/reader
   *      # sasl.jaas.config = "..."
   *      # sasl.mechanism = "..."
   *      # security.protocol = "..."
@@ -194,7 +194,7 @@ class KafkaAvroSource(sourceConfig: Config,
 
     val df2 = kafkaAvroConfig.keyNamingStrategy match {
       case Some(keyNamingStrategy) =>
-        val abrisKeyConfig = kafkaAvroConfig.valueNamingStrategy
+        val abrisKeyConfig = keyNamingStrategy
           .applyNamingStrategyToAbrisConfig(abrisValueBase, topic, isKey = true)
           .usingSchemaRegistry(schemaRegistryClientConfig)
         df1.withColumn("kafka_key", from_avro(col("key"), abrisKeyConfig))
