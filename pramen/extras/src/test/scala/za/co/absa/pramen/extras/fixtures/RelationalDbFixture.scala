@@ -44,7 +44,15 @@ trait RelationalDbFixture extends BeforeAndAfterAll {
 
   override protected def afterAll(): Unit = {
     val connection = getConnection
-    if (connection != null) connection.close()
+    if (connection != null) {
+      try {
+        connection.createStatement().execute("SHUTDOWN")
+      } catch {
+        case _: SQLException => // Already shutdown or in-memory DB
+      } finally {
+        connection.close()
+      }
+    }
     super.afterAll()
   }
 
