@@ -22,7 +22,6 @@ import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.api.status.RunStatus._
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
-import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
@@ -582,6 +581,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       task.runStatus match {
         case s: Succeeded        =>
           s.recordCount match {
+            case Some(recordCount) if task.taskDef.jobType.isInstanceOf[JobType.Sink] => renderDifference(recordCount, None, None)
             case Some(recordCount) => renderDifference(recordCount, s.recordCountOld, s.recordsAppended)
             case None => "-"
           }

@@ -178,26 +178,36 @@ class KafkaAvroSource(sourceConfig: Config,
       AbrisConfig.SCHEMA_REGISTRY_URL -> kafkaAvroConfig.schemaRegistryUrl
     ) ++ kafkaAvroConfig.schemaRegistryExtraOptions
 
-    // ToDo Add support for other naming strategy and for key deserialization
-    val abrisConfig = AbrisConfig
+    val abrisValueConfig = AbrisConfig
       .fromConfluentAvro
       .downloadReaderSchemaByLatestVersion
       .andTopicNameStrategy(topic, isKey = false)
       .usingSchemaRegistry(schemaRegistryClientConfig)
 
-    // Deserialize from Avro
-    val df = dfRaw
-      .withColumn("data", from_avro(col("value"), abrisConfig))
+    val df1 = dfRaw
+      .withColumn("data", from_avro(col("value"), abrisValueConfig))
       .withColumn(KAFKA_PARTITION_FIELD, col("partition"))
       .withColumn(KAFKA_OFFSET_FIELD, col("offset"))
       .withColumn("kafka_timestamp", col("timestamp"))
       .withColumn("kafka_timestamp_type", col("timestampType"))
-      .withColumn("kafka_key", col("key"))
+
+    val df2 = kafkaAvroConfig.keyNamingStrategy match {
+      case Some(keyNamingStrategy) =>
+        val abrisKeyConfig = AbrisConfig
+          .fromConfluentAvro
+          .downloadReaderSchemaByLatestVersion
+          .andTopicNameStrategy(topic, isKey = true)
+          .usingSchemaRegistry(schemaRegistryClientConfig)
+        df1.withColumn("kafka_key", from_avro(col("key"), abrisKeyConfig))
+      case None =>
+        df1.withColumn("kafka_key", col("key"))
+    }
+
+    // Put data fields to the root level of the schema:
+    val dfFinal = df2
       .select(KAFKA_PARTITION_FIELD, KAFKA_OFFSET_FIELD, "kafka_timestamp", "kafka_timestamp_type", "kafka_key", "data.*")
 
-    df.printSchema()
-
-    SourceResult(df)
+    SourceResult(dfFinal)
   }
 
   override def config: Config = sourceConfig
