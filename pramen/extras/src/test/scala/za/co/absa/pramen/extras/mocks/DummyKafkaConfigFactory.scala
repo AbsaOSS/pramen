@@ -39,8 +39,7 @@ object DummyKafkaConfigFactory {
                                 keyColumns: Seq[String] = Nil,
                                 keySchemaId: Option[Int] = None,
                                 valueSchemaId: Option[Int] = None,
-                                recordsLimit: Option[Int] = None,
-                               ): KafkaAvroWriterConfig = {
+                                recordsLimit: Option[Int] = None): KafkaAvroWriterConfig = {
     KafkaAvroWriterConfig(
       kafkaAvroConfig = kafkaAvroConfig,
       keyColumns = keyColumns,

@@ -57,7 +57,7 @@ import java.time.LocalDate
   *    }
   *
   *    schema.registry {
-  *      url = "https://my.schema.regictry:8081"
+  *      url = "https://my.schema.registry:8081"
   *
   *      # Can be one of: topic.name, record.name, topic.record.name
   *      value.naming.strategy = "topic.name"
@@ -178,10 +178,11 @@ class KafkaAvroSource(sourceConfig: Config,
       AbrisConfig.SCHEMA_REGISTRY_URL -> kafkaAvroConfig.schemaRegistryUrl
     ) ++ kafkaAvroConfig.schemaRegistryExtraOptions
 
-    val abrisValueConfig = AbrisConfig
-      .fromConfluentAvro
-      .downloadReaderSchemaByLatestVersion
-      .andTopicNameStrategy(topic, isKey = false)
+    val abrisValueBase = AbrisConfig
+      .fromConfluentAvro.downloadReaderSchemaByLatestVersion
+
+    val abrisValueConfig = kafkaAvroConfig.valueNamingStrategy
+      .applyNamingStrategyToAbrisConfig(abrisValueBase, topic, isKey = false)
       .usingSchemaRegistry(schemaRegistryClientConfig)
 
     val df1 = dfRaw
@@ -193,10 +194,8 @@ class KafkaAvroSource(sourceConfig: Config,
 
     val df2 = kafkaAvroConfig.keyNamingStrategy match {
       case Some(keyNamingStrategy) =>
-        val abrisKeyConfig = AbrisConfig
-          .fromConfluentAvro
-          .downloadReaderSchemaByLatestVersion
-          .andTopicNameStrategy(topic, isKey = true)
+        val abrisKeyConfig = kafkaAvroConfig.valueNamingStrategy
+          .applyNamingStrategyToAbrisConfig(abrisValueBase, topic, isKey = true)
           .usingSchemaRegistry(schemaRegistryClientConfig)
         df1.withColumn("kafka_key", from_avro(col("key"), abrisKeyConfig))
       case None =>

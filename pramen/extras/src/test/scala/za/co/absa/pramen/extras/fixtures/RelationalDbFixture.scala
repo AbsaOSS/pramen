@@ -48,7 +48,7 @@ trait RelationalDbFixture extends BeforeAndAfterAll {
     super.afterAll()
   }
 
-  /* HSQLDB specific way of getting the list if tables */
+  /* HSQLDB specific way of getting the list of tables */
   def getTables: Seq[String] = {
     val conn = getConnection
     val st: Statement = conn.createStatement()
