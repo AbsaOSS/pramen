@@ -19,6 +19,7 @@ package za.co.absa.pramen.extras.source
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.{col, struct}
+import org.slf4j.LoggerFactory
 import za.co.absa.abris.avro.functions.from_avro
 import za.co.absa.abris.config.AbrisConfig
 import za.co.absa.pramen.api.offset.OffsetValue.KafkaValue
@@ -108,6 +109,8 @@ class KafkaAvroSource(sourceConfig: Config,
                       val kafkaAvroConfig: KafkaAvroConfig)
                      (implicit spark: SparkSession) extends Source {
   import za.co.absa.pramen.extras.source.KafkaAvroSource._
+
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   private val kafkaColumnName = ConfigUtils.getOptionString(sourceConfig, CUSTOM_KAFKA_COLUMN_KEY).getOrElse("kafka")
   private val keyColumnName = ConfigUtils.getOptionString(sourceConfig, KEY_COLUMN_KEY).getOrElse("kafka_key")
@@ -211,6 +214,14 @@ class KafkaAvroSource(sourceConfig: Config,
         df1.withColumn("tmp_pramen_kafka_key", from_avro(col("key"), abrisKeyConfig))
       case None =>
         df1.withColumn("tmp_pramen_kafka_key", col("key"))
+    }
+
+    val payloadFields = df2.select("data.*").schema.fieldNames.toSet
+    if (payloadFields.contains(kafkaColumnName)) {
+      log.warn(s"Payload field '$kafkaColumnName' conflicts with Kafka metadata struct name and will be replaced.")
+    }
+    if (payloadFields.contains(keyColumnName)) {
+      log.warn(s"Payload field '$keyColumnName' conflicts with Kafka key column name and will be replaced.")
     }
 
     // Put data fields to the root level of the schema, and if data struct already has kafka_key and kafka fields,

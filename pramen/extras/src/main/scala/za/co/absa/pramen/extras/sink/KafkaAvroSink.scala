@@ -18,6 +18,7 @@ package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.extras.sink.KafkaAvroSink.TOPIC_NAME_KEY
 import za.co.absa.pramen.extras.source.KafkaAvroSource.CUSTOM_KAFKA_COLUMN_KEY
@@ -39,7 +40,7 @@ import java.time.LocalDate
   *    name = "kafka_avro"
   *    factory.class = "za.co.absa.pramen.extras.sink.KafkaAvroSink"
   *
-  *    # [Optional] Set name for the struct field that contains Kafka record metadata. This column will be dropped if It exists before sending data to Kafka.
+  *    # [Optional] Set name for the struct field that contains Kafka record metadata. This column will be dropped if it exists before sending data to Kafka.
   *    custom.kafka.column = "kafka"
   *
   *    kafka {
@@ -119,6 +120,7 @@ import java.time.LocalDate
   */
 class KafkaAvroSink(sinkConfig: Config,
                     val kafkaWriterConfig: KafkaAvroWriterConfig) extends Sink {
+  private val log = LoggerFactory.getLogger(this.getClass)
   private val kafkaColumnName = ConfigUtils.getOptionString(sinkConfig, CUSTOM_KAFKA_COLUMN_KEY).getOrElse("kafka")
 
   override val config: Config = sinkConfig
@@ -138,7 +140,12 @@ class KafkaAvroSink(sinkConfig: Config,
 
     val writer = new TableWriterKafka(topicName, kafkaWriterConfig)
 
-    val dfWithoutKafkaField = df.drop(kafkaColumnName)
+    val dfWithoutKafkaField = if (df.schema.fields.exists(_.name.equalsIgnoreCase(kafkaColumnName))) {
+      log.warn(s"Dropping '$kafkaColumnName' field from the input DataFrame before sending to Kafka because the output topic has its own metadata.")
+      df.drop(kafkaColumnName)
+    } else {
+      df
+    }
 
     SinkResult(writer.write(dfWithoutKafkaField, infoDate, None))
   }
