@@ -939,7 +939,7 @@ pramen.sources = [
     name = "kafka_source"
     factory.class = "za.co.absa.pramen.extras.source.KafkaAvroSource"
 
-    # [Optional] Set name for the struct field that Kafka record metadata
+    # [Optional] Set name for the struct field that contains Kafka record metadata
     #custom.kafka.column = "kafka"
     # [Optional] Set name for the Kafka key column
     #key.column.name = "kafka_key"
@@ -1014,7 +1014,7 @@ pramen.sinks = [
     name = "kafka_avro"
     factory.class = "za.co.absa.pramen.extras.sink.KafkaAvroSink"
 
-    # [Optional] Set name for the struct field that Kafka record metadata. This column will be dropped if exists before sending data to Kafka.
+    # [Optional] Set name for the struct field that contains Kafka record metadata. This column will be dropped if It exists before sending data to Kafka.
     #custom.kafka.column = "kafka"
 
     kafka {

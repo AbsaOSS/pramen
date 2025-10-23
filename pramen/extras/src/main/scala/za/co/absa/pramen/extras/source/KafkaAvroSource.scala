@@ -45,7 +45,7 @@ import java.time.LocalDate
   *    name = "kafka_avro"
   *    factory.class = "za.co.absa.pramen.extras.source.KafkaAvroSource"
   *
-  *    # [Optional] Set name for the struct field that Kafka record metadata
+  *    # [Optional] Set name for the struct field that contains Kafka record metadata
   *    custom.kafka.column = "kafka"
   *    # [Optional] Set name for the Kafka key column
   *    key.column.name = "kafka_key"
