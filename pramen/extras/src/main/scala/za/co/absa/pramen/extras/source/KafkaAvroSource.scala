@@ -18,13 +18,12 @@ package za.co.absa.pramen.extras.source
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, struct}
 import za.co.absa.abris.avro.functions.from_avro
 import za.co.absa.abris.config.AbrisConfig
-import za.co.absa.pramen.api.offset.OffsetValue.{KAFKA_OFFSET_FIELD, KAFKA_PARTITION_FIELD, KafkaValue}
+import za.co.absa.pramen.api.offset.OffsetValue.KafkaValue
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.{ExternalChannelFactoryV2, Query, Source, SourceResult}
-import za.co.absa.pramen.extras.source.KafkaAvroSource.KAFKA_TOKENS_TO_REDACT
 import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.writer.model.KafkaAvroConfig
 
@@ -45,6 +44,11 @@ import java.time.LocalDate
   *    # Define a name to reference from the pipeline:
   *    name = "kafka_avro"
   *    factory.class = "za.co.absa.pramen.extras.source.KafkaAvroSource"
+  *
+  *    # [Optional] Set name for the struct field that Kafka record metadata
+  *    custom.kafka.column = "kafka"
+  *    # [Optional] Set name for the Kafka key column
+  *    key.column.name = "kafka_key"
   *
   *    kafka {
   *      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
@@ -103,10 +107,15 @@ class KafkaAvroSource(sourceConfig: Config,
                       workflowConfig: Config,
                       val kafkaAvroConfig: KafkaAvroConfig)
                      (implicit spark: SparkSession) extends Source {
+  import za.co.absa.pramen.extras.source.KafkaAvroSource._
+
+  private val kafkaColumnName = ConfigUtils.getOptionString(sourceConfig, CUSTOM_KAFKA_COLUMN_KEY).getOrElse("kafka")
+  private val keyColumnName = ConfigUtils.getOptionString(sourceConfig, KEY_COLUMN_KEY).getOrElse("kafka_key")
+
   override def hasInfoDateColumn(query: Query): Boolean = false
 
   override def getOffsetInfo: Option[OffsetInfo] = {
-    Some(OffsetInfo("kafka_offset", OffsetType.KafkaType))
+    Some(OffsetInfo(kafkaColumnName, OffsetType.KafkaType))
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
@@ -187,24 +196,31 @@ class KafkaAvroSource(sourceConfig: Config,
 
     val df1 = dfRaw
       .withColumn("data", from_avro(col("value"), abrisValueConfig))
-      .withColumn(KAFKA_PARTITION_FIELD, col("partition"))
-      .withColumn(KAFKA_OFFSET_FIELD, col("offset"))
-      .withColumn("kafka_timestamp", col("timestamp"))
-      .withColumn("kafka_timestamp_type", col("timestampType"))
+      .withColumn("tmp_pramen_kafka", struct(
+        col("partition"),
+        col("offset"),
+        col("timestamp"),
+        col("timestampType").as("timestamp_type")
+      ))
 
     val df2 = kafkaAvroConfig.keyNamingStrategy match {
       case Some(keyNamingStrategy) =>
         val abrisKeyConfig = keyNamingStrategy
           .applyNamingStrategyToAbrisConfig(abrisValueBase, topic, isKey = true)
           .usingSchemaRegistry(schemaRegistryClientConfig)
-        df1.withColumn("kafka_key", from_avro(col("key"), abrisKeyConfig))
+        df1.withColumn("tmp_pramen_kafka_key", from_avro(col("key"), abrisKeyConfig))
       case None =>
-        df1.withColumn("kafka_key", col("key"))
+        df1.withColumn("tmp_pramen_kafka_key", col("key"))
     }
 
-    // Put data fields to the root level of the schema:
+    // Put data fields to the root level of the schema, and if data struct already has kafka_key and kafka fields,
+    // drop them
     val dfFinal = df2
-      .select(KAFKA_PARTITION_FIELD, KAFKA_OFFSET_FIELD, "kafka_timestamp", "kafka_timestamp_type", "kafka_key", "data.*")
+      .select("tmp_pramen_kafka_key", "data.*", "tmp_pramen_kafka")
+      .drop(kafkaColumnName)
+      .drop(keyColumnName)
+      .withColumnRenamed("tmp_pramen_kafka", kafkaColumnName)
+      .withColumnRenamed("tmp_pramen_kafka_key", keyColumnName)
 
     SourceResult(dfFinal)
   }
@@ -214,6 +230,8 @@ class KafkaAvroSource(sourceConfig: Config,
 
 object KafkaAvroSource extends ExternalChannelFactoryV2[KafkaAvroSource] {
   val TOPIC_NAME_KEY = "topic.name"
+  val CUSTOM_KAFKA_COLUMN_KEY = "custom.kafka.column"
+  val KEY_COLUMN_KEY = "key.column.name"
 
   val KAFKA_TOKENS_TO_REDACT = Set("password", "jaas.config", "auth.user.info")
 

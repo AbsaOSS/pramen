@@ -20,6 +20,8 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.extras.sink.KafkaAvroSink.TOPIC_NAME_KEY
+import za.co.absa.pramen.extras.source.KafkaAvroSource.CUSTOM_KAFKA_COLUMN_KEY
+import za.co.absa.pramen.extras.utils.ConfigUtils
 import za.co.absa.pramen.extras.writer.TableWriterKafka
 import za.co.absa.pramen.extras.writer.model.KafkaAvroWriterConfig
 
@@ -36,6 +38,9 @@ import java.time.LocalDate
   *    # Define a name to reference from the pipeline:
   *    name = "kafka_avro"
   *    factory.class = "za.co.absa.pramen.extras.sink.KafkaAvroSink"
+  *
+  *    # [Optional] Set name for the struct field that Kafka record metadata. This column will be dropped if exists before sending data to Kafka.
+  *    custom.kafka.column = "kafka"
   *
   *    kafka {
   *      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
@@ -114,6 +119,7 @@ import java.time.LocalDate
   */
 class KafkaAvroSink(sinkConfig: Config,
                     val kafkaWriterConfig: KafkaAvroWriterConfig) extends Sink {
+  private val kafkaColumnName = ConfigUtils.getOptionString(sinkConfig, CUSTOM_KAFKA_COLUMN_KEY).getOrElse("kafka")
 
   override val config: Config = sinkConfig
   override def connect(): Unit = {}
@@ -132,7 +138,9 @@ class KafkaAvroSink(sinkConfig: Config,
 
     val writer = new TableWriterKafka(topicName, kafkaWriterConfig)
 
-    SinkResult(writer.write(df, infoDate, None))
+    val dfWithoutKafkaField = df.drop(kafkaColumnName)
+
+    SinkResult(writer.write(dfWithoutKafkaField, infoDate, None))
   }
 }
 

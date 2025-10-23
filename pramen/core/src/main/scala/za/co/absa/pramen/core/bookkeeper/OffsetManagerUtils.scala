@@ -19,7 +19,6 @@ package za.co.absa.pramen.core.bookkeeper
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, max, min}
 import org.apache.spark.sql.types.StringType
-import za.co.absa.pramen.api.offset.OffsetValue.{KAFKA_OFFSET_FIELD, KAFKA_PARTITION_FIELD}
 import za.co.absa.pramen.api.offset.{KafkaPartition, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlGeneratorBase
 
@@ -28,12 +27,15 @@ object OffsetManagerUtils {
     if (df.isEmpty) {
       None
     } else {
+      val kafkaOffsetFieldName = s"$offsetColumn.offset"
+      val kafkaPartitionFieldName = s"$offsetColumn.partition"
+
       if (offsetType == OffsetType.KafkaType) {
-        val aggregatedDf = df.groupBy(col(KAFKA_PARTITION_FIELD))
+        val aggregatedDf = df.groupBy(col(kafkaPartitionFieldName))
           .agg(
-            min(col(KAFKA_OFFSET_FIELD)).as("min_offset"),
-            max(col(KAFKA_OFFSET_FIELD)).as("max_offset")
-          ).orderBy(KAFKA_PARTITION_FIELD)
+            min(col(kafkaOffsetFieldName)).as("min_offset"),
+            max(col(kafkaOffsetFieldName)).as("max_offset")
+          ).orderBy(kafkaPartitionFieldName)
 
         val minValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](1))).toSeq)
         val maxValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](2))).toSeq)

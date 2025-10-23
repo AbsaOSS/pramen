@@ -22,7 +22,6 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
-import za.co.absa.pramen.api.offset.OffsetValue.{KAFKA_OFFSET_FIELD, KAFKA_PARTITION_FIELD}
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Source}
@@ -31,6 +30,7 @@ import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager, OffsetManag
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategyIncremental}
+import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
@@ -307,16 +307,19 @@ class IncrementalIngestionJob(operationDef: OperationDef,
             s"But only string type is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
       case OffsetType.KafkaType    =>
-        val offsetField = df.schema(KAFKA_OFFSET_FIELD)
-        val partitionField = df.schema(KAFKA_PARTITION_FIELD)
+        val kafkaFieldName = field.name
+        val kafkaOffsetFieldName = s"$kafkaFieldName.offset"
+        val kafkaPartitionFieldName = s"$kafkaFieldName.partition"
+        val offsetField = SparkUtils.getNestedField(df.schema, kafkaOffsetFieldName)
+        val partitionField = SparkUtils.getNestedField(df.schema, kafkaPartitionFieldName)
 
         if (offsetField.dataType != LongType) {
-          throw new IllegalArgumentException(s"Kafka offset column '$KAFKA_OFFSET_FIELD' has type '${offsetField.dataType}'. " +
+          throw new IllegalArgumentException(s"Kafka offset column '$kafkaOffsetFieldName' has type '${offsetField.dataType}'. " +
             s"But only '${LongType.typeName}' is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
 
         if (partitionField.dataType != IntegerType) {
-          throw new IllegalArgumentException(s"Kafka partition column '$KAFKA_PARTITION_FIELD' has type '${partitionField.dataType}'. " +
+          throw new IllegalArgumentException(s"Kafka partition column '$kafkaPartitionFieldName' has type '${partitionField.dataType}'. " +
             s"But only '${IntegerType.typeName}' is supported for offset type '${offsetInfo.offsetType.dataTypeString}'.")
         }
     }
