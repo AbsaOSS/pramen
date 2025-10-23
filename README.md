@@ -939,6 +939,10 @@ pramen.sources = [
     name = "kafka_source"
     factory.class = "za.co.absa.pramen.extras.source.KafkaAvroSource"
 
+    # [Optional] Set name for the struct field that Kafka record metadata
+    #custom.kafka.column = "kafka"
+    # [Optional] Set name for the Kafka key column
+    #key.column.name = "kafka_key"
 
     kafka {
       bootstrap.servers = "mybroker1:9092,mybroker2:9092"
@@ -1009,6 +1013,9 @@ pramen.sinks = [
     # Define a name to reference from the pipeline:
     name = "kafka_avro"
     factory.class = "za.co.absa.pramen.extras.sink.KafkaAvroSink"
+
+    # [Optional] Set name for the struct field that Kafka record metadata. This column will be dropped if exists before sending data to Kafka.
+    #custom.kafka.column = "kafka"
 
     kafka {
       bootstrap.servers = "mybroker1:9092,mybroker2:9092"

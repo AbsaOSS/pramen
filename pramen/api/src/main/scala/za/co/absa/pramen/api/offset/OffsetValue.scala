@@ -32,9 +32,6 @@ sealed trait OffsetValue extends Comparable[OffsetValue] {
 }
 
 object OffsetValue {
-  val KAFKA_PARTITION_FIELD = "kafka_partition"
-  val KAFKA_OFFSET_FIELD = "kafka_offset"
-
   case class DateTimeValue(t: Instant) extends OffsetValue {
     override val dataType: OffsetType = OffsetType.DateTimeType
 

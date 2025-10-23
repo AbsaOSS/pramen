@@ -615,6 +615,38 @@ object SparkUtils {
     }
   }
 
+  def getNestedField(schema: StructType, fieldName: String): StructField = {
+    def getNestedFieldInArray(schema: StructType, fieldNames: Array[String]): StructField = {
+      val rootFieldName = fieldNames.head
+      val rootFieldOpt = schema.fields.find(_.name.equalsIgnoreCase(rootFieldName))
+
+      rootFieldOpt match {
+        case Some(field) =>
+          if (fieldNames.length == 1) {
+            field
+          } else {
+            field.dataType match {
+              case struct: StructType =>
+                getNestedFieldInArray(struct, fieldNames.drop(1))
+              case other =>
+                throw new IllegalArgumentException(s"Field '${field.name}' (of $fieldName) is of type '${other.typeName}', expected StructType.")
+            }
+          }
+        case None =>
+          val fields = schema.fields.map(_.name).mkString("[ ", ", ", " ]")
+          throw new IllegalArgumentException(s"Field $rootFieldName (of '$fieldName') not found in the schema. Available fields: $fields")
+      }
+    }
+
+    val fieldNames = fieldName.split('.')
+
+    if (fieldNames.length < 1) {
+      throw new IllegalArgumentException(s"Field name '$fieldName' is not valid.")
+    }
+
+    getNestedFieldInArray(schema, fieldNames)
+  }
+
   private def getActualProcessingTimeUdf: UserDefinedFunction = {
     udf((_: Long) => Instant.now().getEpochSecond)
   }

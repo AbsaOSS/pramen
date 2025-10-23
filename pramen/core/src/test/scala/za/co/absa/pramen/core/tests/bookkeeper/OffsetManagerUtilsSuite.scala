@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{col, struct}
 import org.apache.spark.sql.types.TimestampType
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.offset.{KafkaPartition, OffsetType, OffsetValue}
@@ -58,8 +58,12 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
         (2, 2L, "f"),
         (2, 3L, "g")
       ).toDF("kafka_partition", "kafka_offset", "field")
+        .withColumn("kafka", struct(
+          col("kafka_offset").as("offset"),
+          col("kafka_partition").as("partition")
+        ))
 
-      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "kafka_offset", OffsetType.KafkaType).get
+      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "kafka", OffsetType.KafkaType).get
 
       assert(minValue == OffsetValue.KafkaValue(Seq(KafkaPartition(0, 1), KafkaPartition(1, 3), KafkaPartition(2, 1))))
       assert(maxValue == OffsetValue.KafkaValue(Seq(KafkaPartition(0, 2), KafkaPartition(1, 4), KafkaPartition(2, 3))))
