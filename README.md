@@ -941,8 +941,14 @@ pramen.sources = [
 
     # [Optional] Set name for the struct field that contains Kafka record metadata
     #custom.kafka.column = "kafka"
+    
     # [Optional] Set name for the Kafka key column
     #key.column.name = "kafka_key"
+    
+    # The Kafka key serializer. Can be "none", "binary", "string", "avro".
+    # When "avro", "key.naming.strategy" should be deined at the "schema.registry" section.
+    # Default is "binary", but if "key.naming.strategy" is defined, "avro" is selected automatically.
+    #key.column.serializer = "none"
 
     kafka {
       bootstrap.servers = "mybroker1:9092,mybroker2:9092"
@@ -956,6 +962,7 @@ pramen.sources = [
     schema.registry {
       url = "https://my.schema.registry:8081"
       value.naming.strategy = "topic.name"
+      #key.naming.strategy = "topic.name"
 
       # Arbitrary options for Schema registry
       basic.auth.credentials.source = "..."

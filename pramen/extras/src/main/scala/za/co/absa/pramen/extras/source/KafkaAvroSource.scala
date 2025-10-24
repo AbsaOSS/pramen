@@ -19,6 +19,7 @@ package za.co.absa.pramen.extras.source
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions.{col, struct}
+import org.apache.spark.sql.types.StringType
 import org.slf4j.LoggerFactory
 import za.co.absa.abris.avro.functions.from_avro
 import za.co.absa.abris.config.AbrisConfig
@@ -48,8 +49,14 @@ import java.time.LocalDate
   *
   *    # [Optional] Set name for the struct field that contains Kafka record metadata
   *    custom.kafka.column = "kafka"
+  *
   *    # [Optional] Set name for the Kafka key column
   *    key.column.name = "kafka_key"
+  *
+  *    # The Kafka key serializer. Can be "none", "binary", "string", "avro".
+  *    # When "avro", "key.naming.strategy" should be deined at the "schema.registry" section.
+  *    # Default is "binary", but if "key.naming.strategy" is defined, "avro" is selected automatically.
+  *    #key.column.serializer = "none"
   *
   *    kafka {
   *      bootstrap.servers = "mybroker1:9092,mybroker2:9092"
@@ -66,6 +73,7 @@ import java.time.LocalDate
   *
   *      # Can be one of: topic.name, record.name, topic.record.name
   *      value.naming.strategy = "topic.name"
+  *      #key.naming.strategy = "topic.name"
   *
   *      # If you want to force the specific schema id. Otherwise, the latest schema id will be used.
   *      # key.schema.id =
@@ -114,6 +122,9 @@ class KafkaAvroSource(sourceConfig: Config,
 
   private val kafkaColumnName = ConfigUtils.getOptionString(sourceConfig, CUSTOM_KAFKA_COLUMN_KEY).getOrElse("kafka")
   private val keyColumnName = ConfigUtils.getOptionString(sourceConfig, KEY_COLUMN_KEY).getOrElse("kafka_key")
+  private val keyColumnSerializer = ConfigUtils.getOptionString(sourceConfig, KEY_COLUMN_SERIALIZER_KEY).getOrElse("binary").toLowerCase.trim
+  private val tempKafkaColumnName = "tmp_pramen_kafka"
+  private val tempKafkaKeyColumnName = "tmp_pramen_kafka_key"
 
   override def hasInfoDateColumn(query: Query): Boolean = false
 
@@ -206,14 +217,22 @@ class KafkaAvroSource(sourceConfig: Config,
         col("timestampType").as("timestamp_type")
       ))
 
+    val hasKey = keyColumnSerializer != "none"
+
     val df2 = kafkaAvroConfig.keyNamingStrategy match {
       case Some(keyNamingStrategy) =>
         val abrisKeyConfig = keyNamingStrategy
           .applyNamingStrategyToAbrisConfig(abrisValueBase, topic, isKey = true)
           .usingSchemaRegistry(schemaRegistryClientConfig)
-        df1.withColumn("tmp_pramen_kafka_key", from_avro(col("key"), abrisKeyConfig))
+        df1.withColumn(tempKafkaKeyColumnName, from_avro(col("key"), abrisKeyConfig))
       case None =>
-        df1.withColumn("tmp_pramen_kafka_key", col("key"))
+        keyColumnSerializer match {
+          case "none" => df1
+          case "binary" => df1.withColumn(tempKafkaKeyColumnName, col("key"))
+          case "string" => df1.withColumn(tempKafkaKeyColumnName, col("key").cast(StringType))
+          case "avro" => throw new IllegalArgumentException("For the 'avro' serializer of Kafka topic key, 'schema.registry.key.naming.strategy' needs to be set.")
+          case x => throw new IllegalArgumentException("Unknown Kafka key serializer. Can be one of: none, binary, long, string, avro.")
+        }
     }
 
     val payloadFields = df2.select("data.*").schema.fieldNames.toSet
@@ -226,12 +245,18 @@ class KafkaAvroSource(sourceConfig: Config,
 
     // Put data fields to the root level of the schema, and if data struct already has kafka_key and kafka fields,
     // drop them
-    val dfFinal = df2
-      .select("tmp_pramen_kafka_key", "data.*", "tmp_pramen_kafka")
-      .drop(kafkaColumnName)
-      .drop(keyColumnName)
-      .withColumnRenamed("tmp_pramen_kafka", kafkaColumnName)
-      .withColumnRenamed("tmp_pramen_kafka_key", keyColumnName)
+    val dfFinal = if (hasKey) {
+      df2.select(tempKafkaKeyColumnName, "data.*", tempKafkaColumnName)
+        .drop(kafkaColumnName)
+        .drop(keyColumnName)
+        .withColumnRenamed(tempKafkaColumnName, kafkaColumnName)
+        .withColumnRenamed(tempKafkaKeyColumnName, keyColumnName)
+    } else {
+      df2.select("data.*", tempKafkaColumnName)
+        .drop(kafkaColumnName)
+        .drop(keyColumnName)
+        .withColumnRenamed(tempKafkaColumnName, kafkaColumnName)
+    }
 
     SourceResult(dfFinal)
   }
@@ -243,6 +268,7 @@ object KafkaAvroSource extends ExternalChannelFactoryV2[KafkaAvroSource] {
   val TOPIC_NAME_KEY = "topic.name"
   val CUSTOM_KAFKA_COLUMN_KEY = "custom.kafka.column"
   val KEY_COLUMN_KEY = "key.column.name"
+  val KEY_COLUMN_SERIALIZER_KEY = "key.column.serializer"
 
   val KAFKA_TOKENS_TO_REDACT = Set("password", "jaas.config", "auth.user.info")
 
