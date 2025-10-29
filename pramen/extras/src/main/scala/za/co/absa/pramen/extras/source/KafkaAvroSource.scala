@@ -53,9 +53,9 @@ import java.time.LocalDate
   *    # [Optional] Set name for the Kafka key column
   *    key.column.name = "kafka_key"
   *
-  *    # The Kafka key serializer. Can be "none", "binary", "string", "avro".
-  *    # When "avro", "key.naming.strategy" should be deined at the "schema.registry" section.
-  *    # Default is "binary", but if "key.naming.strategy" is defined, "avro" is selected automatically.
+  *    # The Kafka key serializer when 'key.naming.strategy' is NOT defined. Can be "none", "binary", "string".
+  *    # When 'key.naming.strategy' IS defined in 'schema.registry', Avro deserialization is used automatically.
+  *    # Default is "binary".
   *    #key.column.serializer = "none"
   *
   *    kafka {
@@ -217,7 +217,7 @@ class KafkaAvroSource(sourceConfig: Config,
         col("timestampType").as("timestamp_type")
       ))
 
-    val hasKey = keyColumnSerializer != "none"
+    val hasKey = kafkaAvroConfig.keyNamingStrategy.isDefined || keyColumnSerializer != "none"
 
     val df2 = kafkaAvroConfig.keyNamingStrategy match {
       case Some(keyNamingStrategy) =>
@@ -231,16 +231,16 @@ class KafkaAvroSource(sourceConfig: Config,
           case "binary" => df1.withColumn(tempKafkaKeyColumnName, col("key"))
           case "string" => df1.withColumn(tempKafkaKeyColumnName, col("key").cast(StringType))
           case "avro" => throw new IllegalArgumentException("For the 'avro' serializer of Kafka topic key, 'schema.registry.key.naming.strategy' needs to be set.")
-          case x => throw new IllegalArgumentException("Unknown Kafka key serializer. Can be one of: none, binary, long, string, avro.")
+          case x => throw new IllegalArgumentException(s"Unknown Kafka key serializer '$x'. Can be one of: none, binary, string, avro.")
         }
     }
 
     val payloadFields = df2.select("data.*").schema.fieldNames.toSet
     if (payloadFields.contains(kafkaColumnName)) {
-      log.warn(s"Payload field '$kafkaColumnName' conflicts with Kafka metadata struct name and will be replaced.")
+      log.warn(s"Payload field '$kafkaColumnName' conflicts with reserved Kafka metadata struct name and will be replaced.")
     }
     if (payloadFields.contains(keyColumnName)) {
-      log.warn(s"Payload field '$keyColumnName' conflicts with Kafka key column name and will be replaced.")
+      log.warn(s"Payload field '$keyColumnName' conflicts with reserved Kafka key column name and will be removed.")
     }
 
     // Put data fields to the root level of the schema, and if data struct already has kafka_key and kafka fields,

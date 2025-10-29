@@ -945,9 +945,9 @@ pramen.sources = [
     # [Optional] Set name for the Kafka key column
     #key.column.name = "kafka_key"
     
-    # The Kafka key serializer. Can be "none", "binary", "string", "avro".
-    # When "avro", "key.naming.strategy" should be deined at the "schema.registry" section.
-    # Default is "binary", but if "key.naming.strategy" is defined, "avro" is selected automatically.
+    # The Kafka key serializer when key.naming.strategy is NOT defined. Can be "none", "binary", "string".
+    # When key.naming.strategy IS defined in schema.registry, Avro deserialization is used automatically.
+    # Default is "binary".
     #key.column.serializer = "none"
 
     kafka {
