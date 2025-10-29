@@ -55,7 +55,7 @@ class QueryBuilderSuite extends AnyWordSpec {
         QueryBuilder.fromConfig(conf, "", "")
       }
 
-      assert(exception.getMessage == "No options are specified for the query. Usually, it is one of: 'sql', 'path', 'table', 'db.table'.")
+      assert(exception.getMessage == "No options are specified for the query. Usually, it is one of: 'sql', 'path', 'table', 'db.table', 'topic'.")
     }
 
     "throw an exception when the prefix is empty" in {
@@ -65,7 +65,7 @@ class QueryBuilderSuite extends AnyWordSpec {
         QueryBuilder.fromConfig(conf, "input", "")
       }
 
-      assert(exception.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table'.")
+      assert(exception.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table', 'input.topic'.")
     }
 
     "throw an exception when the prefix is empty and parent is specified" in {
@@ -75,7 +75,7 @@ class QueryBuilderSuite extends AnyWordSpec {
         QueryBuilder.fromConfig(conf, "input", "my.parent")
       }
 
-      assert(exception.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table' at my.parent.")
+      assert(exception.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table', 'input.topic' at my.parent.")
     }
   }
 }

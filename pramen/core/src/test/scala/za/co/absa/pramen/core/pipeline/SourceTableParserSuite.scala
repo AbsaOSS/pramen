@@ -119,7 +119,7 @@ class SourceTableParserSuite extends AnyWordSpec {
         SourceTableParser.fromConfig(conf, "source.tables")
       }
 
-      assert(ex.getMessage.contains("No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table' at source.tables[0]."))
+      assert(ex.getMessage.contains("No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table', 'input.topic' at source.tables[0]."))
     }
 
     "throw an exception in case of duplicate entries" in {
