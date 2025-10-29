@@ -989,7 +989,7 @@ pramen.operations = [
 
     tables = [
       {
-        input.table = "my_kafka_topic1"
+        input.topic = "my_kafka_topic1"
         output.metastore.table = "table1"
       }
     ]

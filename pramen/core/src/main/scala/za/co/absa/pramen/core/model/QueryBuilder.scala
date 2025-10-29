@@ -25,19 +25,22 @@ object QueryBuilder {
   val PATH_KEY = "path"
   val TABLE_KEY = "table"
   val DB_TABLE_KEY = "db.table" // Same as table - for backwards compatibility and config readability
+  val TOPIC_KEY = "topic" // Same as table, only for sources for which topic name is more aligned to the terminology
 
   def fromConfig(conf: Config, prefix: String, parentPath: String): Query = {
     val p = if (prefix.isEmpty) "" else s"$prefix."
 
     val hasSql = conf.hasPath(s"$p$SQL_KEY")
     val hasPath = conf.hasPath(s"$p$PATH_KEY")
-    val hasDbTable = conf.hasPath(s"$p$TABLE_KEY") || conf.hasPath(s"$p$DB_TABLE_KEY")
+    val hasDbTable = conf.hasPath(s"$p$TABLE_KEY") || conf.hasPath(s"$p$DB_TABLE_KEY") || conf.hasPath(s"$p$TOPIC_KEY")
     val hesSomething = if (prefix.isEmpty) !conf.isEmpty else conf.hasPath(prefix)
 
     val tableDef = if (conf.hasPath(s"$p$TABLE_KEY")) {
       Some(conf.getString(s"$p$TABLE_KEY"))
     } else if (conf.hasPath(s"$p$DB_TABLE_KEY")) {
       Some(conf.getString(s"$p$DB_TABLE_KEY"))
+    } else if (conf.hasPath(s"$p$TOPIC_KEY")) {
+      Some(conf.getString(s"$p$TOPIC_KEY"))
     } else {
       None
     }

@@ -30,6 +30,8 @@ class QueryBuilderSuite extends AnyWordSpec {
     TestCase("", """data.file.1 = "/some/data/file"""", Query.Custom(Map("data.file.1" -> "/some/data/file"))),
     TestCase("input", """input.sql = "SELECT * FROM table"""", Query.Sql("SELECT * FROM table")),
     TestCase("input", """input.table = table1""", Query.Table("table1")),
+    TestCase("input", """input.db.table = table1""", Query.Table("table1")),
+    TestCase("input", """input.topic = topic1""", Query.Table("topic1")),
     TestCase("input", """input.path = /some/path""", Query.Path("/some/path")),
     TestCase("input", "input.data.file.1 = /some/data/file1\ninput.data.file.2 = /some/data/file2",
       Query.Custom(Map("data.file.1" -> "/some/data/file1", "data.file.2" -> "/some/data/file2")))
