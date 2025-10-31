@@ -22,7 +22,7 @@
 
     <groupId>za.co.absa.pramen</groupId>
     <artifactId>pramen</artifactId>
-    <version>1.12.8-SNAPSHOT</version>
+    <version>1.12.9-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Pramen</name>
