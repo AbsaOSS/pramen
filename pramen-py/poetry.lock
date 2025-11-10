@@ -920,13 +920,13 @@ tests = ["pexpect", "pytest", "pytest-coverage", "pytest-timeout"]
 
 [[package]]
 name = "pyspark"
-version = "3.5.7"
+version = "3.5.5"
 description = "Apache Spark Python API"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "pyspark-3.5.7.tar.gz", hash = "sha256:80e36514e0c5c126d35a26adf4f405cd4a69de96a8ea8a3c1e9a65fce2fb4eaa"},
+    {file = "pyspark-3.5.5.tar.gz", hash = "sha256:6effc9ce98edf231f4d683fd14f7270629bf8458c628d6a2620ded4bb34f3cb9"},
 ]
 
 [package.dependencies]
@@ -1306,4 +1306,4 @@ test = ["pytest"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.9,<4.0"
-content-hash = "ebfe0899e8655282ec78e8587ac7c89ec61f8c4025e837eea7ae398158d6056d"
+content-hash = "37b21a01d3e2f2f09dd8734c2cf0d204d140ede99272c5e876c967ed11973e92"
