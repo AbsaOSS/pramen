@@ -14,7 +14,7 @@
 
 [tool.black]
 line-length = 79
-target-version = ["py39"]
+target-version = ["py310"]
 
 [tool.isort]
 atomic = true
@@ -119,6 +119,12 @@ dependencies = [
     "cattrs>=22.1.0; python_version>='3.7'",
     "pyspark==3.5.7",
     "loguru>=0.6.0",
+    "typing-extensions>=4.1.1",
+    "pyhocon>=0.3.59"
+]
+
+[project.optional-dependencies]
+dev = [
     "pytest==6.2.5",
     "pytest-asyncio==0.16",
     "pytest-cov==2.12.1",
@@ -126,8 +132,6 @@ dependencies = [
     "chispa>=0.9.2",
     "pytest-sugar>=0.9.4",
     "pytest-mock==3.6.1",
-    "typing-extensions>=4.1.1",
-    "pyhocon>=0.3.59"
 ]
 
 [project.entry-points.pytest11]
