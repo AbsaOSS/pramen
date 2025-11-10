@@ -121,7 +121,14 @@ def coro(
         *args: object,
         **kwargs: object,
     ) -> OPS_RET:
-        loop = asyncio.get_event_loop()
+        try:
+            # Try to get the running event loop (Python 3.7+)
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop, create a new one
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
         return loop.run_until_complete(f(*args, **kwargs))
 
     return wrapper
@@ -151,7 +158,7 @@ def get_or_create_spark_session(
     if force_recreate:
         logger.info("Force recreating a spark session")
         spark = (
-            SparkSession.getActiveSession()
+            SparkSession.getActiveSession()  # type: ignore
             if callable(getattr(SparkSession, "getActiveSession", None))
             else SparkSession.getOrCreate()  # type: ignore
         )

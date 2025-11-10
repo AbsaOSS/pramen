@@ -21,7 +21,7 @@ endif
 install: .poetry_installed
 
 .poetry_installed:
-	poetry install
+	poetry install --with test
 	touch $@
 
 .env:
