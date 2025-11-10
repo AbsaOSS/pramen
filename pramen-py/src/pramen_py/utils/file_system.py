@@ -57,7 +57,7 @@ class FileSystemUtils:
         """
         return self.FileSystem.get(
             self.URI(self.ensure_proper_schema_for_local_fs(uri)),
-            self.spark.sparkContext._jsc.hadoopConfiguration(),
+            self.spark.sparkContext._jsc.hadoopConfiguration(),  # type: ignore
         )
 
     @staticmethod
