@@ -124,7 +124,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = [
+test = [
     "pytest==6.2.5",
     "pytest-asyncio==0.16",
     "pytest-cov==2.12.1",
@@ -146,6 +146,15 @@ packages = [
     { include = "pramen_py/py.typed", from = "src" },
     { include = "transformations" },
 ]
+
+[tool.poetry.group.test.dependencies]
+pytest = "^6.2.5"
+pytest-asyncio = "^0.16"
+pytest-cov = "^2.12.1"
+types-PyYAML = "^6.0.4"
+chispa = "^0.9.2"
+pytest-sugar = "^0.9.4"
+pytest-mock = "^3.6.1"
 
 [tool.poetry.group.dev.dependencies]
 neovim = "^0.3.1"
