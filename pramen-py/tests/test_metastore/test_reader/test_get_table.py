@@ -129,7 +129,7 @@ def test_read_delta_table_from_catalog(spark, test_dataframe):
         table="test_table",
         info_date_settings=InfoDateSettings(column="info_date"),
     )
-    test_dataframe.write.format("delta").mode("overwrite").saveAsTable(
+    test_dataframe.write.format("delta").option("replaceWhere", "true").mode("overwrite").saveAsTable(
         "test_table"
     )
 
