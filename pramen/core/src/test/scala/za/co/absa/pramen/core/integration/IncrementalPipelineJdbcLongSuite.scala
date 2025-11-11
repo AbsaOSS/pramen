@@ -42,7 +42,7 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   with TextComparisonFixture {
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   private val infoDate = LocalDate.of(2021, 2, 18)
 

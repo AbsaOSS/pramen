@@ -77,13 +77,12 @@
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient</artifactId>
-            <version>4.5.13</version>
         </dependency>
 
         <!-- Delta format -->
         <dependency>
             <groupId>io.delta</groupId>
-            <artifactId>delta-core_${scala.compat.version}</artifactId>
+            <artifactId>delta-spark_${scala.compat.version}</artifactId>
         </dependency>
 
         <!-- MongoDB driver -->
@@ -97,33 +96,25 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
+
         <dependency>
             <groupId>net.sourceforge.jtds</groupId>
             <artifactId>jtds</artifactId>
-            <version>1.3.1</version>
         </dependency>
         <dependency>
             <groupId>com.microsoft.sqlserver</groupId>
             <artifactId>mssql-jdbc</artifactId>
-            <!--            <version>12.8.1.jre8</version>-->
         </dependency>
 
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
-            <version>8.3.0</version>
         </dependency>
 
         <dependency>
             <groupId>com.typesafe.slick</groupId>
             <artifactId>slick_${scala.compat.version}</artifactId>
         </dependency>
-
-        <!--        <dependency>-->
-        <!--            <groupId>com.luckycatlabs</groupId>-->
-        <!--            <artifactId>SunriseSunsetCalculator</artifactId>-->
-        <!--            <version>1.2</version>-->
-        <!--        </dependency>-->
 
         <dependency>
             <groupId>com.typesafe.slick</groupId>

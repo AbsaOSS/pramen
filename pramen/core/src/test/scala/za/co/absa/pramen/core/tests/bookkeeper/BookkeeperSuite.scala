@@ -43,7 +43,7 @@ class BookkeeperSuite extends AnyWordSpec
   import za.co.absa.pramen.core.bookkeeper.BookkeeperMongoDb._
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
-  val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
     pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")

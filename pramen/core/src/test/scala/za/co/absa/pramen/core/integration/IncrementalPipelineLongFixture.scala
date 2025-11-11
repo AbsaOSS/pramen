@@ -46,7 +46,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   with TextComparisonFixture {
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
     pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")

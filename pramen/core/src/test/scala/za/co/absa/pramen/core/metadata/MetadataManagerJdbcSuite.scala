@@ -27,7 +27,7 @@ import java.time.{LocalDate, ZoneOffset}
 
 class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
   private val infoDate = LocalDate.of(2021, 2, 18)
   private val exampleInstant = infoDate.atStartOfDay().toInstant(ZoneOffset.UTC)
 

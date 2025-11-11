@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
     pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")

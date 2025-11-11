@@ -16,18 +16,19 @@
 
 package za.co.absa.pramen.core.tests.lock
 
+import org.scalatest.concurrent.Eventually._
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.lock.{TokenLock, TokenLockJdbc}
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+
 import scala.concurrent.duration._
-import org.scalatest.concurrent.Eventually._
 
 class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
-  val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
     pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")

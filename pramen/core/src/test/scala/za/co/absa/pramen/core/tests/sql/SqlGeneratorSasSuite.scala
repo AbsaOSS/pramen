@@ -42,7 +42,7 @@ class SqlGeneratorSasSuite extends AnyWordSpec with RelationalDbFixture {
 
   val driverSas = "com.sas.rio.MVADriver"
 
-  val connection: Connection = getConnection
+  lazy val connection: Connection = getConnection
 
   val gen: SqlGenerator = getSqlGenerator(driverSas, sqlConfigDate)
   val genStr: SqlGenerator = getSqlGenerator(driverSas, sqlConfigString)
