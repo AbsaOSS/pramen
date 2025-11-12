@@ -100,6 +100,8 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
         s"$column $condition $value"
       case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
+      case t =>
+        throw new IllegalArgumentException(s"Offset type [${t.dataType.dataTypeString}] is not supported in PostgreSQL query generator.")
     }
   }
 

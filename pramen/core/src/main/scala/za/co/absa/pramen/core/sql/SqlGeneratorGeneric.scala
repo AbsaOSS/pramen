@@ -104,6 +104,8 @@ class SqlGeneratorGeneric(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConf
         s"$column $condition $value"
       case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
+      case t =>
+        throw new IllegalArgumentException(s"Offset type [${t.dataType.dataTypeString}] is not supported in the generic SQL query generator.")
     }
   }
 
