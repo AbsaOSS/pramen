@@ -190,6 +190,8 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
         s"$column $condition $value"
       case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
+      case t =>
+        throw new IllegalArgumentException(s"Offset type [${t.dataType.dataTypeString}] is not supported in MS SQL Server query generator.")
     }
   }
 

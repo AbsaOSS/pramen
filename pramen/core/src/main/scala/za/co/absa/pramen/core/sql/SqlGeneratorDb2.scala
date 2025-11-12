@@ -104,6 +104,8 @@ class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
         s"$column $condition $value"
       case OffsetValue.StringValue(value) =>
         s"$column $condition '$value'"
+      case t =>
+        throw new IllegalArgumentException(s"Offset type [${t.dataType.dataTypeString}] is not supported in DB2 SQL query generator.")
     }
   }
 
