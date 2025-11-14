@@ -135,7 +135,11 @@ object Versions {
 
     "za.co.absa" %% "abris" % abrisVersion excludeAll(
       ExclusionRule(organization = "com.fasterxml.jackson.core"),
-      ExclusionRule(organization = "org.apache.avro")
+      ExclusionRule(organization = "org.apache.avro"),
+      // Exclude Spark to avoid conflicts with different Spark versions
+      // Please, include "org.apache.spark"` %% "spark-avro" % ${spark.version}}
+      // explicitly when needed.
+      ExclusionRule(organization = "org.apache.spark")
     )
   }
 

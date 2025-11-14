@@ -28,28 +28,30 @@ object Dependencies {
   )
 
   def CoreDependencies(scalaVersion: String, isDeltaCompile: Boolean): Seq[ModuleID] = Seq(
-    "org.apache.spark" %% "spark-sql" % sparkVersion(scalaVersion) % Provided,
-    "org.mongodb.scala" %% "mongo-scala-driver" % mongoDbScalaDriverVersion,
-    "com.typesafe.slick" %% "slick" % slickVersion,
-    "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
-    "org.postgresql" % "postgresql" % postgreSqlDriverVersion,
-    "com.github.scopt" %% "scopt" % scoptVersion,
-    "com.github.yruslan" %% "channel_scala" % channelVersion,
-    "com.sun.mail" % "javax.mail" % javaXMailVersion,
-    "com.lihaoyi" %% "requests" % requestsVersion,
-    "org.scala-lang.modules" %% "scala-collection-compat" % scalaCompatColsVersion % Test,
-    "org.scalatest" %% "scalatest" % scalatestVersion % Test,
-    "org.mockito" % "mockito-core" % mockitoVersion % Test,
-    "de.flapdoodle.embed" % "de.flapdoodle.embed.mongo" % embeddedMongoDbVersion % Test,
-    "org.hsqldb" % "hsqldb" % hsqlDbVersion % Test classifier "jdk8"
+    "org.apache.spark"       %% "spark-sql"                 % sparkVersion(scalaVersion) % Provided,
+    "org.mongodb.scala"      %% "mongo-scala-driver"        % mongoDbScalaDriverVersion,
+    "com.typesafe.slick"     %% "slick"                     % slickVersion,
+    "com.typesafe.slick"     %% "slick-hikaricp"            % slickVersion,
+    "org.postgresql"         %  "postgresql"                % postgreSqlDriverVersion,
+    "com.github.scopt"       %% "scopt"                     % scoptVersion,
+    "com.github.yruslan"     %% "channel_scala"             % channelVersion,
+    "com.sun.mail"           %  "javax.mail"                % javaXMailVersion,
+    "com.lihaoyi"            %% "requests"                  % requestsVersion,
+    "org.scala-lang.modules" %% "scala-collection-compat"   % scalaCompatColsVersion     % Test,
+    "org.scalatest"          %% "scalatest"                 % scalatestVersion           % Test,
+    "org.mockito"            %  "mockito-core"              % mockitoVersion             % Test,
+    "de.flapdoodle.embed"    %  "de.flapdoodle.embed.mongo" % embeddedMongoDbVersion     % Test,
+    "org.hsqldb"             %  "hsqldb"                    % hsqlDbVersion              % Test classifier "jdk8"
   ) :+ getDeltaDependency(sparkVersion(scalaVersion), isDeltaCompile, isTest = false) :+ getIcebergDependency(sparkVersion(scalaVersion))
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"          %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
     "net.sourceforge.jtds"      %  "jtds"                       % msSqlDriverVersion,
     "org.apache.httpcomponents" %  "httpclient"                 % httpClientVersion,
+    "org.apache.spark"          %% "spark-avro"                 % sparkVersion(scalaVersion),
     "org.scalatest"             %% "scalatest"                  % scalatestVersion           % Test,
-    "org.mockito"               %  "mockito-core"               % mockitoVersion             % Test
+    "org.mockito"               %  "mockito-core"               % mockitoVersion             % Test,
+    "org.hsqldb"                %  "hsqldb"                     % hsqlDbVersion              % Test classifier "jdk8"
   ) ++ Seq(
     getKafkaClientsDependency(sparkVersion(scalaVersion)),
     getAbrisDependency(sparkVersion(scalaVersion)),

@@ -113,11 +113,6 @@
 
         <dependency>
             <groupId>com.typesafe.slick</groupId>
-            <artifactId>slick_${scala.compat.version}</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>com.typesafe.slick</groupId>
             <artifactId>slick-hikaricp_${scala.compat.version}</artifactId>
         </dependency>
 
@@ -156,14 +151,6 @@
             <groupId>de.flapdoodle.embed</groupId>
             <artifactId>de.flapdoodle.embed.mongo</artifactId>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-1.2-api</artifactId>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/org.hsqldb/hsqldb -->

@@ -86,14 +86,6 @@
             <classifier>jdk8</classifier>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-1.2-api</artifactId>
-        </dependency>
 
         <!-- Kafka clients -->
         <dependency>
@@ -105,6 +97,11 @@
         <dependency>
             <groupId>za.co.absa</groupId>
             <artifactId>abris_${scala.compat.version}</artifactId>
+        </dependency>
+        <!-- Avro library compatible with the POM version of Spark -->
+        <dependency>
+            <groupId>org.apache.spark</groupId>
+            <artifactId>spark-avro_${scala.compat.version}</artifactId>
         </dependency>
 
         <!--Kafka-->

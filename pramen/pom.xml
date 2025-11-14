@@ -139,7 +139,6 @@
         <scala_logging.version>3.7.2</scala_logging.version>
         <scodec_bits.version>1.1.4</scodec_bits.version>
         <scodec_core.version>1.10.3</scodec_core.version>
-        <slf4j.version>1.7.36</slf4j.version>
         <kafka.spark.version>0-10</kafka.spark.version>
 
         <skip.long.tests>true</skip.long.tests>
@@ -203,6 +202,18 @@
                 <groupId>za.co.absa</groupId>
                 <artifactId>abris_${scala.compat.version}</artifactId>
                 <version>${abris.version}</version>
+                <exclusions>
+                    <!-- Exclude Avro deserializer not compatible with Spark 3.5+ -->
+                    <exclusion>
+                        <groupId>org.apache.spark</groupId>
+                        <artifactId>*</artifactId>
+                    </exclusion>
+                </exclusions>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.spark</groupId>
+                <artifactId>spark-avro_${scala.compat.version}</artifactId>
+                <version>${spark.version}</version>
             </dependency>
 
             <!-- Kafka clients (https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients/2.5.1) -->
@@ -210,6 +221,13 @@
                 <groupId>org.apache.kafka</groupId>
                 <artifactId>kafka-clients</artifactId>
                 <version>2.5.1</version>
+                <exclusions>
+                    <!-- Exclude SLF4J v1 -->
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <!-- MongoDB driver -->
@@ -276,18 +294,18 @@
                 <classifier>jdk8</classifier>
             </dependency>
 
-            <!-- https://mvnrepository.com/artifact/com.typesafe.slick/slick -->
-            <dependency>
-                <groupId>com.typesafe.slick</groupId>
-                <artifactId>slick_${scala.compat.version}</artifactId>
-                <version>3.3.3</version>
-            </dependency>
-
             <!-- https://mvnrepository.com/artifact/com.typesafe.slick/slick-hikaricp -->
             <dependency>
                 <groupId>com.typesafe.slick</groupId>
                 <artifactId>slick-hikaricp_${scala.compat.version}</artifactId>
                 <version>3.3.3</version>
+                <exclusions>
+                    <!-- Exclude SLF4J v1 -->
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <!-- https://mvnrepository.com/artifact/io.delta/delta-spark -->
@@ -330,36 +348,6 @@
             </dependency>
 
             <!-- Logging -->
-            <dependency>
-                <groupId>org.slf4s</groupId>
-                <artifactId>slf4s-api_${scala.compat.version}</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-api</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-simple</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-log4j12</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.slf4j</groupId>
-                <artifactId>slf4j-log4j13</artifactId>
-                <version>${slf4j.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.logging.log4j</groupId>
-                <artifactId>log4j-1.2-api</artifactId>
-                <version>2.19.0</version>
-            </dependency>
 
             <!-- https://github.com/scopt/scopt -->
             <dependency>
