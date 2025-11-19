@@ -130,11 +130,11 @@ class CmdLineConfigSuite extends AnyWordSpec {
 
   "CmdLineConfig.applyCmdLineToConfig()" should {
     "return a modified config if the list of operations is specified" in {
-      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--ops", "table_1,table_2,table_3"))
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--ops", "table_1,table_2,table_3,table_4->table_5"))
       val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
 
       assert(config.hasPath(RUN_TABLES))
-      assert(ConfigUtils.getOptListStrings(config, RUN_TABLES) == Seq("table_1", "table_2", "table_3"))
+      assert(ConfigUtils.getOptListStrings(config, RUN_TABLES) == Seq("table_1", "table_2", "table_3", "table_4->table_5"))
     }
 
     "return a modified config if number of parallel tasks is specified" in {

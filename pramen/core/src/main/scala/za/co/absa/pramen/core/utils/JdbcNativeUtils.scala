@@ -135,7 +135,7 @@ object JdbcNativeUtils {
       case ex: SQLException if retriesLeft > 0 && ex.getMessage.contains("Index: 1, Size: 1") =>
         log.error(s"Error executing query. Retries left = $retriesLeft. Retrying...", ex)
         executeQuery(statement, query, retriesLeft - 1)
-      case ex =>
+      case ex: Throwable =>
         throw ex
     }
   }
