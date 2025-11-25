@@ -47,6 +47,16 @@ class OffsetTypeSuite extends AnyWordSpec {
       assert(offsetValue.dataTypeString == "datetime")
     }
 
+    "be able to create a DateTimeType instance from a string with different case" in {
+      val offsetValue = OffsetType.fromString("dateTime")
+      assert(offsetValue.dataTypeString == "datetime")
+    }
+
+    "be able to create a DateTimeType instance from a string with different case and spaces" in {
+      val offsetValue = OffsetType.fromString(" DATETIME ")
+      assert(offsetValue.dataTypeString == "datetime")
+    }
+
     "be able to create a IntegralType instance from a string" in {
       val offsetValue = OffsetType.fromString("integral")
       assert(offsetValue.dataTypeString == "integral")

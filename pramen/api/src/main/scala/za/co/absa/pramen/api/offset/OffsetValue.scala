@@ -129,7 +129,7 @@ object OffsetValue {
     if (value == null || value.isEmpty) {
       None
     } else
-      dataType match {
+      dataType.trim.toLowerCase match {
         case DATETIME_TYPE_STR => Some(DateTimeValue(Instant.ofEpochMilli(value.toLong)))
         case INTEGRAL_TYPE_STR => Some(IntegralValue(value.toLong))
         case STRING_TYPE_STR => Some(StringValue(value))
