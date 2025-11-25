@@ -69,6 +69,12 @@ class OffsetValueSuite extends AnyWordSpec {
       assert(offsetValue.get.valueString == "1726552310000")
     }
 
+    "be able to create a DateTimeType instance from a string with different casing and spaces" in {
+      val offsetValue = OffsetValue.fromString(" dateTime ", "1726552310000")
+      assert(offsetValue.get.dataType == OffsetType.DateTimeType)
+      assert(offsetValue.get.valueString == "1726552310000")
+    }
+
     "be able to create a IntegralType instance from a string" in {
       val offsetValue = OffsetValue.fromString("integral", "42")
       assert(offsetValue.get.dataType == OffsetType.IntegralType)

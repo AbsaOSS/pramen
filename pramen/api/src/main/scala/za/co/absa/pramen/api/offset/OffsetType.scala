@@ -57,7 +57,7 @@ object OffsetType {
     override def getSparkCol(c: Column): Column = c
   }
 
-  def fromString(dataType: String): OffsetType = dataType match {
+  def fromString(dataType: String): OffsetType = dataType.trim.toLowerCase match {
     case DATETIME_TYPE_STR => DateTimeType
     case INTEGRAL_TYPE_STR => IntegralType
     case INTEGRAL_TYPE_ALT_STR => IntegralType
