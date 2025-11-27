@@ -47,9 +47,14 @@ class MetastoreReaderIncrementalImpl(metastore: Metastore,
     if (readMode == ReaderMode.IncrementalPostProcessing && !isRerun) {
       log.info(s"Getting the current batch for table '$tableName' at '$infoDate'...")
       metastore.getBatch(tableName, infoDate, None)
-    } else if ((readMode == ReaderMode.IncrementalValidation || readMode == ReaderMode.IncrementalRun) && !isRerun) {
-      log.info(s"Getting the current incremental chunk for table '$tableName' at '$infoDate'...")
-      getIncremental(tableName, infoDate)
+    } else if (readMode == ReaderMode.IncrementalValidation || readMode == ReaderMode.IncrementalRun) {
+      if (isRerun) {
+        log.info(s"Getting the current incremental chunk for table rerun '$tableName' at '$infoDate'...")
+        getIncrementalForRerun(tableName, infoDate)
+      } else {
+        log.info(s"Getting the current incremental chunk for table '$tableName' at '$infoDate'...")
+        getIncremental(tableName, infoDate)
+      }
     } else {
       log.info(s"Getting daily data for table '$tableName' at '$infoDate'...")
       metastore.getTable(tableName, Option(infoDate), Option(infoDate))
@@ -87,6 +92,13 @@ class MetastoreReaderIncrementalImpl(metastore: Metastore,
     val trackingName = s"$tableName->$outputTable"
 
     getIncrementalDf(tableName, trackingName, infoDate, commitChanges)
+  }
+
+  private def getIncrementalForRerun(tableName: String, infoDate: LocalDate): DataFrame = {
+    val commitChanges = readMode == ReaderMode.IncrementalRun
+    val trackingName = s"$tableName->$outputTable"
+
+    getIncrementalDfForRerun(tableName, trackingName, infoDate, commitChanges)
   }
 
   private def getIncrementalDf(tableName: String, trackingName: String, infoDate: LocalDate, commit: Boolean): DataFrame = {
@@ -132,5 +144,32 @@ class MetastoreReaderIncrementalImpl(metastore: Metastore,
     }
 
     df
+  }
+
+  private def getIncrementalDfForRerun(tableName: String, trackingName: String, infoDate: LocalDate, commit: Boolean): DataFrame = {
+    val tableDef = metastore.getTableDef(tableName)
+    val om = bookkeeper.getOffsetManager
+    val offsets = om.getMaxInfoDateAndOffset(trackingName, Option(infoDate))
+    val tableDf = metastore.getTable(tableName, Option(infoDate), Option(infoDate))
+
+    if (commit && !trackingTables.exists(t => t.trackingName == trackingName && t.infoDate == infoDate)) {
+      log.info(s"Starting offset commit for table rerun '$trackingName' for '$infoDate'")
+
+      val trackingTable = TrackingTable(
+        Thread.currentThread().getId,
+        tableName,
+        outputTable,
+        trackingName,
+        tableDef.batchIdColumn,
+        offsets.map(_.minimumOffset),
+        offsets.map(_.maximumOffset),
+        infoDate,
+        Instant.now()
+      )
+
+      trackingTables += trackingTable
+    }
+
+    tableDf
   }
 }

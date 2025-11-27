@@ -113,5 +113,13 @@ class IncrementalPipelineDeltaLongSuite extends IncrementalPipelineLongFixture {
     "transformer picks up doubly ingested offsets" in {
       testTransformerPicksUpFromDoubleIngestedData(format)
     }
+
+    "run normal run after a rerun" in {
+      testNormalRunAfterRerun(format)
+    }
+
+    "run normal run then rerun, then normal run again for the same day" in {
+      testNormalRunAfterRerunAfterNormalRun(format)
+    }
   }
 }

@@ -1279,6 +1279,120 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
     succeed
   }
 
+  def testNormalRunAfterRerun(metastoreFormat: String): Assertion = {
+    val csv1DataStr = s"id,name,info_date\n1,John,$infoDate\n2,Jack,$infoDate\n"
+    val csv2DataStr = s"id,name,info_date\n3,Jill,$infoDate\n4,Mary,$infoDate\n"
+
+    val expectedStr1: String =
+      """{"id":1,"name":"John"}
+        |{"id":2,"name":"Jack"}
+        |""".stripMargin
+
+    val expectedStr2: String =
+      """{"id":1,"name":"John"}
+        |{"id":2,"name":"Jack"}
+        |{"id":3,"name":"Jill"}
+        |{"id":4,"name":"Mary"}
+        |""".stripMargin
+
+    withTempDirectory("incremental1") { tempDir =>
+      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+      val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+      val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+
+      val table1Path = new Path(tempDir, "table1")
+      val table2Path = new Path(tempDir, "table2")
+
+      fsUtils.writeFile(path1, csv1DataStr)
+      val conf1 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema, isRerun = true)
+      val exitCode1 = AppRunner.runPipeline(conf1)
+      assert(exitCode1 == 0)
+
+      fsUtils.writeFile(path2, csv2DataStr)
+      val conf2 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema)
+      val exitCode2 = AppRunner.runPipeline(conf2)
+      assert(exitCode2 == 0)
+
+      val dfTable1 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1 = dfTable1.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2 = dfTable2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      compareText(actualTable1, expectedStr2)
+      compareText(actualTable2, expectedStr2)
+
+      val batchIds = dfTable1.select(BATCH_ID_COLUMN).distinct().collect()
+
+      assert(batchIds.length == 2)
+
+      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+
+      val offsets = om.getOffsets("table1->table2", infoDate).map(_.asInstanceOf[CommittedOffset])
+      assert(offsets.length == 1)
+    }
+    succeed
+  }
+
+  def testNormalRunAfterRerunAfterNormalRun(metastoreFormat: String): Assertion = {
+    val csv1DataStr = s"id,name,info_date\n1,John,$infoDate\n2,Jack,$infoDate\n"
+    val csv2DataStr = s"id,name,info_date\n3,Jill,$infoDate\n4,Mary,$infoDate\n"
+    val csv3DataStr = s"id,name,info_date\n5,Jane,$infoDate\n6,Kate,$infoDate\n"
+
+    val expectedStr: String =
+      """{"id":1,"name":"John"}
+        |{"id":2,"name":"Jack"}
+        |{"id":3,"name":"Jill"}
+        |{"id":4,"name":"Mary"}
+        |{"id":5,"name":"Jane"}
+        |{"id":6,"name":"Kate"}
+        |""".stripMargin
+
+    withTempDirectory("incremental1") { tempDir =>
+      val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
+
+      val path1 = new Path(tempDir, new Path("landing", "landing_file1.csv"))
+      val path2 = new Path(tempDir, new Path("landing", "landing_file2.csv"))
+      val path3 = new Path(tempDir, new Path("landing", "landing_file3.csv"))
+
+      val table1Path = new Path(tempDir, "table1")
+      val table2Path = new Path(tempDir, "table2")
+
+      fsUtils.writeFile(path1, csv1DataStr)
+      val conf1 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema)
+      val exitCode1 = AppRunner.runPipeline(conf1)
+      assert(exitCode1 == 0)
+
+      fsUtils.writeFile(path2, csv2DataStr)
+      val conf2 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema, isRerun = true)
+      val exitCode2 = AppRunner.runPipeline(conf2)
+      assert(exitCode2 == 0)
+
+      fsUtils.writeFile(path3, csv3DataStr)
+      val conf3 = getConfig(tempDir, metastoreFormat, hasInfoDate = true, inferSchema = false, csvSchema = csvWithInfoDateSchema)
+      val exitCode3 = AppRunner.runPipeline(conf3)
+      assert(exitCode3 == 0)
+
+      val dfTable1 = spark.read.format(metastoreFormat).load(table1Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val dfTable2 = spark.read.format(metastoreFormat).load(table2Path.toString).filter(col(INFO_DATE_COLUMN) === Date.valueOf(infoDate))
+      val actualTable1 = dfTable1.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+      val actualTable2 = dfTable2.select("id", "name").orderBy("id").toJSON.collect().mkString("\n")
+
+      compareText(actualTable1, expectedStr)
+      compareText(actualTable2, expectedStr)
+
+      val batchIds = dfTable1.select(BATCH_ID_COLUMN).distinct().collect()
+
+      assert(batchIds.length == 2)
+
+      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+
+      val offsets = om.getOffsets("table1->table2", infoDate).map(_.asInstanceOf[CommittedOffset])
+      assert(offsets.length == 1)
+    }
+    succeed
+  }
+
   def getConfig(basePath: String,
                 metastoreFormat: String,
                 isRerun: Boolean = false,
