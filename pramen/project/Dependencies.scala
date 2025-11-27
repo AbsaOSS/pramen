@@ -46,9 +46,9 @@ object Dependencies {
 
   def ExtrasJobsDependencies(scalaVersion: String): Seq[ModuleID] = Seq(
     "org.apache.spark"          %% "spark-sql"                  % sparkVersion(scalaVersion) % Provided,
+    "org.apache.spark"          %% "spark-avro"                 % sparkVersion(scalaVersion) % Provided,
     "net.sourceforge.jtds"      %  "jtds"                       % msSqlDriverVersion,
     "org.apache.httpcomponents" %  "httpclient"                 % httpClientVersion,
-    "org.apache.spark"          %% "spark-avro"                 % sparkVersion(scalaVersion),
     "org.scalatest"             %% "scalatest"                  % scalatestVersion           % Test,
     "org.mockito"               %  "mockito-core"               % mockitoVersion             % Test,
     "org.hsqldb"                %  "hsqldb"                     % hsqlDbVersion              % Test classifier "jdk8"
