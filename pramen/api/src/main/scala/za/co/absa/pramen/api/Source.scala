@@ -112,7 +112,7 @@ trait Source extends ExternalChannel {
   def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], columns: Seq[String]): SourceResult
 
   /**
-    * This method is called after the ingestion is finished. You can query the output table form the output information
+    * This method is called after the ingestion is finished. You can query the output table from the output information
     * data and the data should be there.
     *
     * @param query           The query used to read the data from the source.

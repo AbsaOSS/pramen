@@ -365,7 +365,7 @@ abstract class TaskRunnerBase(conf: Config,
           case None => runResult.data
         }
 
-        val dfWithInfoDate = if (dfWithTimestamp.schema.exists(f => f.name.equals(task.job.outputTable.infoDateColumn)) || task.job.outputTable.infoDateColumn.isEmpty) {
+        val dfWithInfoDate = if (task.job.outputTable.infoDateColumn.isEmpty) {
           dfWithTimestamp
         } else {
           dfWithTimestamp.withColumn(task.job.outputTable.infoDateColumn, lit(Date.valueOf(task.infoDate)))
