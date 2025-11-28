@@ -262,7 +262,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1->mysink")
 
-    (new SinkJob(operation, metastore, bk, Nil, outputTable, "sink_name", sink, sinkTable), bk)
+    (new SinkJob(operation, metastore, bk, Nil, None, outputTable, "sink_name", sink, sinkTable), bk)
   }
 
 }

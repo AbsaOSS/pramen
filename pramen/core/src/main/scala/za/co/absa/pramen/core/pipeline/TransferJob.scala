@@ -18,10 +18,11 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import za.co.absa.pramen.api.jobdef.TransferTable
+import za.co.absa.pramen.api.jobdef.{Schedule, TransferTable}
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Sink, Source}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.bookkeeper.model.DataOffsetAggregated
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategy
@@ -32,6 +33,8 @@ class TransferJob(operationDef: OperationDef,
                   metastore: Metastore,
                   bookkeeper: Bookkeeper,
                   notificationTargets: Seq[JobNotificationTarget],
+                  latestOffsetIn: Option[DataOffsetAggregated],
+                  batchId: Long,
                   sourceName: String,
                   source: Source,
                   table: TransferTable,
@@ -44,12 +47,21 @@ class TransferJob(operationDef: OperationDef,
                  (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable) {
 
-  override val jobType: JobType = JobType.Transfer(sourceName, source.config, sinkName, sink.config, table)
+  val latestInfoDate: Option[LocalDate] = latestOffsetIn.map(_.maximumInfoDate)
 
-  val ingestionJob = new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, TransferTableParser.getSourceTable(table), bookkeepingMetaTable, specialCharacters, tempDirectory, disableCountQuery)
-  val sinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable, sinkName, sink, TransferTableParser.getSinkTable(table))
+  val ingestionJob: IngestionJob = {
+    if (operationDef.schedule == Schedule.Incremental) {
+      new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsetIn, batchId, sourceName, source, TransferTableParser.getSourceTable(table), outputTable, specialCharacters)
+    } else {
+      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, TransferTableParser.getSourceTable(table), bookkeepingMetaTable, specialCharacters, tempDirectory, disableCountQuery)
+    }
+  }
+
+  val sinkJob: SinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDate, bookkeepingMetaTable, sinkName, sink, TransferTableParser.getSinkTable(table))
 
   override val scheduleStrategy: ScheduleStrategy = ingestionJob.scheduleStrategy
+
+  override val jobType: JobType = JobType.Transfer(sourceName, source.config, sinkName, sink.config, table)
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     ingestionJob.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)

@@ -52,7 +52,6 @@ object MetastoreDependencyFactory {
       dateToExprOpt
     }
 
-
     MetastoreDependency(tables, dateFromExpr, dateToExpr, triggerUpdates, isOptional, isPassive)
   }
 }
