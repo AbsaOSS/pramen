@@ -16,10 +16,10 @@
 
 package za.co.absa.pramen.core.rdb
 
-import java.sql.Connection
-
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.rdb.RdbJdbc.dbVersionTableName
 
+import java.sql.{Connection, SQLException}
 import scala.util.control.NonFatal
 
 object RdbJdbc {
@@ -27,6 +27,8 @@ object RdbJdbc {
 }
 
 class RdbJdbc(connection: Connection) extends Rdb{
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   override def getVersion(): Int = {
     getDbVersion()
   }
@@ -37,18 +39,24 @@ class RdbJdbc(connection: Connection) extends Rdb{
       executeDDL(s"INSERT INTO $dbVersionTableName (version) VALUES (0)")
     }
 
-    executeDDL(s"UPDATE db_version SET version = $version")
+    executeDDL(s"UPDATE $dbVersionTableName SET version = $version")
   }
 
   override def doesTableExists(tableName: String): Boolean = {
     val meta = connection.getMetaData
-    val res = meta.getTables(null, null, tableName, Array[String]("TABLE"))
-    if (res.next) {
-      res.close()
-      true
-    } else {
-      res.close()
-      false
+    try {
+      val res = meta.getTables(null, null, tableName, Array[String]("TABLE"))
+      if (res.next) {
+        res.close()
+        true
+      } else {
+        res.close()
+        false
+      }
+    } catch {
+      case ex: SQLException =>
+        log.warn(s"Error while checking existence of $tableName.", ex)
+        false
     }
   }
 
@@ -61,7 +69,7 @@ class RdbJdbc(connection: Connection) extends Rdb{
   private def getDbVersion(): Int = {
     val statement = connection.createStatement()
     val dbVersion = try {
-      val rs = statement.executeQuery("SELECT version FROM db_version;")
+      val rs = statement.executeQuery(s"SELECT version FROM $dbVersionTableName;")
       rs.next()
       rs.getInt(1)
     } catch {

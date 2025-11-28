@@ -27,6 +27,7 @@ import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.sql.Connection
+import scala.util.Try
 import scala.util.control.NonFatal
 
 class PramenDb(val jdbcConfig: JdbcConfig,
@@ -43,6 +44,11 @@ class PramenDb(val jdbcConfig: JdbcConfig,
   def db: Database = slickDb
 
   def setupDatabase(): Unit = {
+    // Explicitly set auto-commit to true, overriding any user JDBC settings or PostgreSQL defaults
+    Try(jdbcConnection.setAutoCommit(true)).recover {
+      case NonFatal(e) => log.warn(s"Unable to set autoCommit=true for the bookkeeping database that uses the driver: ${jdbcConfig.driver}.")
+    }
+
     val dbVersion = rdb.getVersion()
     if (dbVersion < MODEL_VERSION) {
       initDatabase(dbVersion)
