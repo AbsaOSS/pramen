@@ -37,6 +37,7 @@ class SinkJob(operationDef: OperationDef,
               metastore: Metastore,
               bookkeeper: Bookkeeper,
               notificationTargets: Seq[JobNotificationTarget],
+              latestInfoDate: Option[LocalDate],
               outputTable: MetaTable,
               sinkName: String,
               sink: Sink,
@@ -51,7 +52,7 @@ class SinkJob(operationDef: OperationDef,
 
   override val scheduleStrategy: ScheduleStrategy = {
     if (isIncremental)
-      new ScheduleStrategyIncremental(None, true)
+      new ScheduleStrategyIncremental(latestInfoDate, true)
     else
       new ScheduleStrategySourcing(true)
   }

@@ -101,7 +101,12 @@ class OperationSplitter(conf: Config,
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
 
-      new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery)
+      if (operationDef.schedule == Schedule.Incremental) {
+        val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
+        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery)
+      } else {
+        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, None, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery)
+      }
     })
   }
 
@@ -162,7 +167,11 @@ class OperationSplitter(conf: Config,
       val notificationTargets = operationDef.notificationTargets
         .map(targetName => getNotificationTarget(conf, targetName, sinkTable.conf))
 
-      new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, outputTable, sinkName, sink, sinkTable)
+      val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
+        bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTableName, None).map(_.maximumInfoDate)
+      } else None
+
+      new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDateOpt, outputTable, sinkName, sink, sinkTable)
     })
   }
 }

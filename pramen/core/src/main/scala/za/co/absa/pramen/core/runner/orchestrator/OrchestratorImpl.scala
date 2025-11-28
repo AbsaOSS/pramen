@@ -194,7 +194,7 @@ class OrchestratorImpl extends Orchestrator {
             JobDependency(
               Seq(table.metaTableName),
               table.outputTableName.getOrElse(s"${table.metaTableName}->${sink.sinkName}"),
-              isPassive = false
+              isPassive = true
             )
           }
           inputDependencies ++ sinkDependencies
@@ -202,7 +202,7 @@ class OrchestratorImpl extends Orchestrator {
           // If there are no dependencies, adding a dependency for the output table not depending on any input tables.
           // This is the requirement for the orchestrator.
           if (inputDependencies.isEmpty)
-            Seq(JobDependency(Seq.empty, job.outputTable.name, isPassive = false))
+            Seq(JobDependency(Seq.empty, job.outputTable.name, isPassive = true))
           else
             inputDependencies
       }

@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.runner.orchestrator
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.app.config.GeneralConfig.ENABLE_MULTIPLE_JOBS_PER_OUTPUT_TABLE
 import za.co.absa.pramen.core.pipeline.JobDependency
 import za.co.absa.pramen.core.utils.AlgorithmUtils
@@ -23,6 +24,8 @@ import za.co.absa.pramen.core.utils.AlgorithmUtils
 import scala.collection.mutable
 
 class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTable: Boolean) extends DependencyResolver {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   private val inputTables = deps.flatMap(_.inputTables).toSet
   private val outputTables = deps.map(_.outputTable).toSet
   private val dependentTables = outputTables.intersect(inputTables)
@@ -72,8 +75,12 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
 
       // For non-passive dependencies all input tables should have succeeded/available.
       // For passive and optional dependencies we just ensure the jobs are going to be run in the proper order.
-      jobBreakingTables.forall(t => availableTables.contains(t)) &&
+      val canRunResult = jobBreakingTables.forall(t => availableTables.contains(t)) &&
         passiveTables.forall(t => availableTables.contains(t) || unavailableTables.contains(t))
+
+      log.info(s"CanRun for '$outputTable'. Active tables: ${jobBreakingTables.mkString(", ")}. Passive tables: ${passiveTables.mkString(", ")}. Result = $canRunResult.")
+
+      canRunResult
     }
   }
 
