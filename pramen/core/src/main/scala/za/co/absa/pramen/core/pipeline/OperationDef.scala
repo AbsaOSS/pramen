@@ -117,9 +117,6 @@ object OperationDef {
       log.warn(s"Using legacy '$SPARK_CONFIG_PREFIX' option. Please, use the new option: '$SPARK_CONFIG_PREFIX_V2'")
     }
 
-    log.info(s"Strict dependency management = $strictDependencyManagement")
-    log.info(s"Dependencies: ${dependencies.mkString("; ")}")
-
     val outputInfoDateExpression = outputInfoDateExpressionOpt match {
       case Some(expr) => expr
       case None       =>
