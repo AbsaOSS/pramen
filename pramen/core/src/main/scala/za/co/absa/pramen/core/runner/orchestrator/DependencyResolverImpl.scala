@@ -78,7 +78,7 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
       val canRunResult = jobBreakingTables.forall(t => availableTables.contains(t)) &&
         passiveTables.forall(t => availableTables.contains(t) || unavailableTables.contains(t))
 
-      log.info(s"CanRun for '$outputTable'. Active tables: ${jobBreakingTables.mkString(", ")}. Passive tables: ${passiveTables.mkString(", ")}. Result = $canRunResult.")
+      log.debug(s"CanRun for '$outputTable'. Active tables: ${jobBreakingTables.mkString(", ")}. Passive tables: ${passiveTables.mkString(", ")}. Result = $canRunResult.")
 
       canRunResult
     }
