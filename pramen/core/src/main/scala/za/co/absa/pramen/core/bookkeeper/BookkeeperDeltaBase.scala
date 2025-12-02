@@ -60,13 +60,9 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
   }
 
   final override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, dateBegin, dateEnd).lastOption
-  }
+    val infoDateFilter = getFilter(table, Option(dateBegin), Option(dateEnd))
 
-  final override def getDataChunksFromStorage(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[DataChunk] = {
-    val infoDateFilter = getFilter(tableName, Option(infoDateBegin), Option(infoDateEnd))
-
-    getBkData(infoDateFilter)
+    getBkData(infoDateFilter).lastOption
   }
 
   final def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
@@ -75,17 +71,13 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
 
   final private[pramen] override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
-                                                        infoDateBegin: LocalDate,
-                                                        infoDateEnd: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
                                                         jobStarted: Long,
                                                         jobFinished: Long): Unit = {
     val dateStr = getDateStr(infoDate)
-    val dateBeginStr = getDateStr(infoDateBegin)
-    val dateEndStr = getDateStr(infoDateEnd)
 
-    val chunk = DataChunk(table, dateStr, dateBeginStr, dateEndStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
 
     saveRecordCountDelta(chunk)
   }

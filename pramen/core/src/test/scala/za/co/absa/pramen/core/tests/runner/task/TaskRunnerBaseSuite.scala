@@ -498,7 +498,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val failure = result.runStatus.asInstanceOf[Failed]
 
       assert(failure.ex.getMessage == "TestException")
-      assert(bk.getDataChunks("table_out", infoDate, infoDate).isEmpty)
+      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", infoDate, infoDate).isEmpty)
     }
 
     "handle a dry run" in {
@@ -514,7 +514,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       assert(success.recordCount.contains(2))
       assert(success.sizeBytes.isEmpty)
-      assert(bk.getDataChunks("table_out", infoDate, infoDate).isEmpty)
+      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", infoDate, infoDate).isEmpty)
     }
 
     "expose Hive table" in {

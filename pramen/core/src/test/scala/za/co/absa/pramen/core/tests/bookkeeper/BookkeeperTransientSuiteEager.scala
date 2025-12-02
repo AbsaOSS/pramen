@@ -56,19 +56,6 @@ class BookkeeperTransientSuiteEager extends AnyWordSpec {
     }
   }
 
-  "getDataChunks()" should {
-    "return chunks from the current session" in {
-      val bk = getBookkeeper
-
-      val chunks = bk.getDataChunks("table", infoDate1, infoDate2)
-
-      assert(chunks.nonEmpty)
-      assert(chunks.length == 2)
-      assert(chunks.head.infoDate == infoDate2.toString)
-      assert(chunks(1).infoDate == infoDate1.toString)
-    }
-  }
-
   "getDataChunksCount()" should {
     "return the number of chunks from the current session" in {
       val bk = getBookkeeper
@@ -82,9 +69,9 @@ class BookkeeperTransientSuiteEager extends AnyWordSpec {
   "setRecordCount()" should {
     "return the newly added record" in {
       val bk = getBookkeeper
-      bk.setRecordCount("table1", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = true)
+      bk.setRecordCount("table1", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = true)
 
-      val chunks = bk.getDataChunks("table1", infoDate2, infoDate2)
+      val chunks = bk.getTransientDataChunks("table1", Option(infoDate2), Option(infoDate2))
 
       assert(chunks.length == 1)
       assert(chunks.head.infoDate == infoDate2.toString)
@@ -93,9 +80,9 @@ class BookkeeperTransientSuiteEager extends AnyWordSpec {
 
   def getBookkeeper: BookkeeperBase = {
     val bk = new BookkeeperNull
-    bk.setRecordCount("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = true)
-    bk.setRecordCount("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318830, 1597318836, isTableTransient = true)
-    bk.setRecordCount("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318830, 1597318837, isTableTransient = true)
+    bk.setRecordCount("table", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = true)
+    bk.setRecordCount("table", infoDate3, 200, 20, 1597318830, 1597318836, isTableTransient = true)
+    bk.setRecordCount("table", infoDate1, 400, 40, 1597318830, 1597318837, isTableTransient = true)
     bk
   }
 }

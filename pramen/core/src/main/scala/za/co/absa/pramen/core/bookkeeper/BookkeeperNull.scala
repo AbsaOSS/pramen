@@ -33,14 +33,10 @@ class BookkeeperNull() extends BookkeeperBase(false) {
 
   override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = None
 
-  override def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = Nil
-
   override def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = 0
 
   private[pramen] override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
-                                                        infoDateBegin: LocalDate,
-                                                        infoDateEnd: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
                                                         jobStarted: Long,

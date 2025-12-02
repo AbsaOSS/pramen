@@ -164,8 +164,6 @@ class SinkJob(operationDef: OperationDef,
 
       bookkeeper.setRecordCount(outputTable.name,
         infoDate,
-        infoDate,
-        infoDate,
         inputRecordCount.getOrElse(sinkResult.recordsSent),
         sinkResult.recordsSent,
         jobStarted.getEpochSecond,

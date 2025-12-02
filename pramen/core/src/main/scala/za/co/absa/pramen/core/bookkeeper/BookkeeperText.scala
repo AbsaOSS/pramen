@@ -78,13 +78,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
   }
 
   override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunksFromStorage(table, dateBegin, dateEnd).lastOption
-  }
-
-  override def getDataChunksFromStorage(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Seq[DataChunk] = {
-    val infoDateFilter = getFilter(tableName, Option(infoDateBegin), Option(infoDateEnd))
-
-    getData(infoDateFilter)
+    getData(getFilter(table, Option(dateBegin), Option(dateEnd))).lastOption
   }
 
   def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
@@ -93,8 +87,6 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
 
   private[pramen] override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
-                                                        infoDateBegin: LocalDate,
-                                                        infoDateEnd: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
                                                         jobStarted: Long,
@@ -103,10 +95,8 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
 
     try {
       val dateStr = getDateStr(infoDate)
-      val dateBeginStr = getDateStr(infoDateBegin)
-      val dateEndStr = getDateStr(infoDateEnd)
 
-      val chunk = DataChunk(table, dateStr, dateBeginStr, dateEndStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+      val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
       val csv = CsvUtils.getRecord(chunk, '|')
       fsUtils.appendFile(bkFilePath, csv)
 
