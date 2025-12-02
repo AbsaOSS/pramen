@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.DenodoDialect
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, LocalTime, ZonedDateTime}
 
 object SqlGeneratorDenodo {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -40,6 +40,7 @@ object SqlGeneratorDenodo {
 
 class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
+  private val timestampDbFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSSXXX")
 
   SqlGeneratorDenodo.registerDialect
 
@@ -76,22 +77,15 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
-    val dateBeginLit = getDateLiteral(dateBegin)
-    val dateEndLit = getDateLiteral(dateEnd)
+    if (sqlConfig.infoDateType == SqlColumnType.DATE && dateBegin == dateEnd) {
+      val dateBeginLit = getDateLiteral(dateBegin)
 
-    val dateTypes: Array[SqlColumnType] = Array(SqlColumnType.DATETIME)
-
-    val infoDateColumnAdjusted =
-      if (dateTypes.contains(sqlConfig.infoDateType)) {
-        s"CAST($infoDateColumn AS DATE)"
-      } else {
-        infoDateColumn
-      }
-
-    if (dateBeginLit == dateEndLit) {
-      s"$infoDateColumnAdjusted = $dateBeginLit"
+      s"$infoDateColumn = $dateBeginLit"
     } else {
-      s"$infoDateColumnAdjusted >= $dateBeginLit AND $infoDateColumnAdjusted <= $dateEndLit"
+      val dateBeginLit = getDateLiteral(dateBegin)
+      val dateEndLit = getDateLiteral(dateEnd.plusDays(1))
+
+      s"$infoDateColumn >= $dateBeginLit AND $infoDateColumn < $dateEndLit"
     }
   }
 
@@ -101,8 +95,9 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
         val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
         s"date'$dateStr'"
       case SqlColumnType.DATETIME =>
-        val dateStr = DateTimeFormatter.ISO_LOCAL_DATE.format(date)
-        s"date'$dateStr'"
+        val zdt = ZonedDateTime.of(date, LocalTime.MIDNIGHT, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampDbFormatter.format(zdt)
+        s"TIMESTAMP '$tsLiteral'"
       case SqlColumnType.STRING =>
         val dateStr = dateFormatterApp.format(date)
         s"'$dateStr'"
@@ -115,8 +110,8 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
   override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
-        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        val zdt = ZonedDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tsLiteral = timestampDbFormatter.format(zdt)
         s"$column $condition TIMESTAMP '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
