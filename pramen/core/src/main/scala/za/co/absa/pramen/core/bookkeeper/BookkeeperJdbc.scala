@@ -85,7 +85,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
     }
   }
 
-  override def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
+  def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
     val query = getFilter(table, Option(dateBegin), Option(dateEnd))
 
     try {
@@ -117,17 +117,13 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
 
   private[pramen] override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
-                                                        infoDateBegin: LocalDate,
-                                                        infoDateEnd: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
                                                         jobStarted: Long,
                                                         jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
-    val dateBeginStr = DataChunk.dateFormatter.format(infoDateBegin)
-    val dateEndStr = DataChunk.dateFormatter.format(infoDateEnd)
 
-    val record = BookkeepingRecord(table, dateStr, dateBeginStr, dateEndStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+    val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
 
     try {
       db.run(

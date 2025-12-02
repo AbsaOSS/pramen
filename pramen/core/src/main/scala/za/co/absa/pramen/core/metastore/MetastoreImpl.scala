@@ -137,7 +137,7 @@ class MetastoreImpl(appConfig: Config,
 
     stats.recordCount.foreach{recordCount =>
       if (!skipBookKeepingUpdates && !nothingAppended) {
-        bookkeeper.setRecordCount(tableName, infoDate, infoDate, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, start, finish, isTransient)
+        bookkeeper.setRecordCount(tableName, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, start, finish, isTransient)
       }
     }
 

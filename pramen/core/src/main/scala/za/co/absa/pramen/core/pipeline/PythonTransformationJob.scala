@@ -142,8 +142,6 @@ class PythonTransformationJob(operationDef: OperationDef,
     stats.recordCount.foreach{ recordCount =>
       bookkeeper.setRecordCount(outputTable.name,
         infoDate,
-        infoDate,
-        infoDate,
         recordCount,
         recordCount,
         jobStarted.getEpochSecond,

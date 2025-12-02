@@ -56,7 +56,7 @@ class SyncBookkeeperMock extends Bookkeeper {
     getDataChunks(table, dateBegin, dateEnd).lastOption
   }
 
-  override def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
+  def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
     chunks.toList.flatMap { case ((tblName, infoDate), chunk) =>
       val isInsidePeriod = tblName == table && (infoDate.isAfter(dateBegin) || infoDate.equals(dateBegin)) &&
         (infoDate.isBefore(dateEnd) || infoDate.equals(dateEnd))
@@ -85,21 +85,17 @@ class SyncBookkeeperMock extends Bookkeeper {
 
   private[pramen] override def setRecordCount(table: String,
                                                infoDate: LocalDate,
-                                               infoDateBegin: LocalDate,
-                                               infoDateEnd: LocalDate,
                                                inputRecordCount: Long,
                                                outputRecordCount: Long,
                                                jobStarted: Long,
                                                jobFinished: Long,
                                                isTableTransient: Boolean): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
-    val dateBeginStr = DataChunk.dateFormatter.format(infoDateBegin)
-    val dateEndStr = DataChunk.dateFormatter.format(infoDateEnd)
 
     val chunk = DataChunk(table,
       dateStr,
-      dateBeginStr,
-      dateEndStr,
+      dateStr,
+      dateStr,
       inputRecordCount,
       outputRecordCount,
       jobStarted,

@@ -46,27 +46,6 @@ class BookkeeperNullSuite extends AnyWordSpec {
     }
   }
 
-  "getDataChunks()" should {
-    "return nothing" in {
-      val bk = getBookkeeper
-
-      val chunks = bk.getDataChunksFromStorage("table", infoDate1, infoDate2)
-
-      assert(chunks.isEmpty)
-    }
-  }
-
-  "setRecordCount()" should {
-    "do nothing" in {
-      val bk = getBookkeeper
-      bk.setRecordCount("table1", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false)
-
-      val chunks = bk.getDataChunksFromStorage("table", infoDate1, infoDate2)
-
-      assert(chunks.isEmpty)
-    }
-  }
-
   "getLatestSchema" should {
     "return nothing" in {
       val bk = getBookkeeper
@@ -90,9 +69,9 @@ class BookkeeperNullSuite extends AnyWordSpec {
 
   def getBookkeeper: BookkeeperBase = {
     val bk = new BookkeeperNull
-    bk.saveRecordCountToStorage("table", infoDate2, infoDate2, infoDate2, 100, 10, 1597318830, 1597318835)
-    bk.saveRecordCountToStorage("table", infoDate3, infoDate3, infoDate3, 200, 20, 1597318830, 1597318835)
-    bk.saveRecordCountToStorage("table", infoDate1, infoDate1, infoDate1, 400, 40, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate2, 100, 10, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate3, 200, 20, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate1, 400, 40, 1597318830, 1597318835)
     bk
   }
 }

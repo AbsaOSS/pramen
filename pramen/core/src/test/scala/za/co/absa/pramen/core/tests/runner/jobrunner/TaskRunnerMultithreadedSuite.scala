@@ -83,7 +83,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
       assert(results.head.runStatus.isInstanceOf[Failed])
       assert(results.head.runInfo.get.infoDate == runDate)
 
-      assert(bk.getDataChunks("table_out", runDate, runDate).isEmpty)
+      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", runDate, runDate).isEmpty)
     }
 
     "handle a successful multiple task job sequential execution" in {
@@ -109,7 +109,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
       assert(results.head.runStatus.isInstanceOf[Failed])
       assert(results.head.runInfo.get.infoDate == runDate)
 
-      assert(bk.getDataChunks("table_out", runDate, runDate).isEmpty)
+      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", runDate, runDate).isEmpty)
     }
 
     "run job even if it is asking for more resources than maximum available" in {
@@ -188,7 +188,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     val state = new PipelineStateSpy
 
-    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), runDate.minusDays(1), runDate.minusDays(1), 1, 1, 0, 0, isTableTransient = false)
+    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), 1, 1, 0, 0, isTableTransient = false)
 
     val stats = MetaTableStats(Some(2), None, Some(100))
 

@@ -28,14 +28,10 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
 
   def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk]
 
-  def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk]
-
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 
   private[pramen] def saveRecordCountToStorage(table: String,
                                                infoDate: LocalDate,
-                                               infoDateBegin: LocalDate,
-                                               infoDateEnd: LocalDate,
                                                inputRecordCount: Long,
                                                outputRecordCount: Long,
                                                jobStarted: Long,
@@ -43,8 +39,6 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
 
   private[pramen] final def setRecordCount(table: String,
                                            infoDate: LocalDate,
-                                           infoDateBegin: LocalDate,
-                                           infoDateEnd: LocalDate,
                                            inputRecordCount: Long,
                                            outputRecordCount: Long,
                                            jobStarted: Long,
@@ -52,14 +46,14 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
                                            isTableTransient: Boolean): Unit = {
     if (isTableTransient || !isBookkeepingEnabled) {
       val tableLowerCase = table.toLowerCase
-      val dataChunk = DataChunk(table, infoDate.toString, infoDateBegin.toString, infoDateEnd.toString, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+      val dataChunk = DataChunk(table, infoDate.toString, infoDate.toString, infoDate.toString, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
       this.synchronized {
         val dataChunks = transientDataChunks.getOrElse(tableLowerCase, Array.empty[DataChunk])
         val newDataChunks = (dataChunks :+ dataChunk).sortBy(_.jobFinished)
         transientDataChunks += tableLowerCase -> newDataChunks
       }
     } else {
-      saveRecordCountToStorage(table, infoDate, infoDateBegin, infoDateEnd, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+      saveRecordCountToStorage(table, infoDate, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
     }
   }
 
@@ -85,18 +79,6 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
       getLatestTransientChunk(table, Option(dateBegin), Option(dateEnd))
     } else {
       getLatestDataChunkFromStorage(table, dateBegin, dateEnd)
-    }
-  }
-
-  final def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
-    val isTransient = this.synchronized {
-      transientDataChunks.contains(table.toLowerCase)
-    }
-
-    if (isTransient || !isBookkeepingEnabled) {
-      getTransientDataChunks(table, Option(dateBegin), Option(dateEnd))
-    } else {
-      getDataChunksFromStorage(table, dateBegin, dateEnd)
     }
   }
 
@@ -135,7 +117,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
   }
 
 
-  private def getTransientDataChunks(table: String, from: Option[LocalDate], until: Option[LocalDate]): Array[DataChunk] = {
+  private[core] def getTransientDataChunks(table: String, from: Option[LocalDate], until: Option[LocalDate]): Array[DataChunk] = {
     val minDate = from.map(_.toString).getOrElse("0000-00-00")
     val maxDate = until.map(_.toString).getOrElse("9999-99-99")
     val tableLowerCase = table.toLowerCase

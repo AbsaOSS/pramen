@@ -41,21 +41,17 @@ trait Bookkeeper {
 
   def getLatestDataChunk(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk]
 
-  def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk]
-
   def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
+
+  def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
 
   private[pramen] def setRecordCount(table: String,
                                      infoDate: LocalDate,
-                                     infoDateBegin: LocalDate,
-                                     infoDateEnd: LocalDate,
                                      inputRecordCount: Long,
                                      outputRecordCount: Long,
                                      jobStarted: Long,
                                      jobFinished: Long,
                                      isTableTransient: Boolean): Unit
-
-  def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
 
   private[pramen] def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit
 

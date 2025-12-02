@@ -79,14 +79,13 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
   }
 
   override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunksFromStorage(table, dateBegin, dateEnd).lastOption
-  }
+    val infoDateFilter = getFilter(table, Option(dateBegin), Option(dateEnd))
 
-  override def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
-    val chunks = collection.find(getFilter(table, Option(dateBegin), Option(dateEnd))).execute()
-      .sortBy(_.jobFinished)
-    log.info(s"For $table $dateBegin - $dateEnd : ${chunks.mkString("[ ", ", ", " ]")}")
-    chunks
+    collection.find(infoDateFilter)
+      .sort(Sorts.descending("jobFinished"))
+      .limit(1)
+      .execute()
+      .headOption
   }
 
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
@@ -95,17 +94,13 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
 
   private[pramen] override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
-                                                        infoDateBegin: LocalDate,
-                                                        infoDateEnd: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
                                                         jobStarted: Long,
                                                         jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
-    val dateBeginStr = DataChunk.dateFormatter.format(infoDateBegin)
-    val dateEndStr = DataChunk.dateFormatter.format(infoDateEnd)
 
-    val chunk = DataChunk(table, dateStr, dateBeginStr, dateEndStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
 
     val opts = (new ReplaceOptions).upsert(true)
     collection.replaceOne(getFilter(table, Option(infoDate), Option(infoDate)), chunk, opts).execute()

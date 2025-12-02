@@ -72,7 +72,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
       " the number of records do not match" in {
       val (job, bk) = getUseCase(numberOfRecords = 7)
 
-      bk.setRecordCount("table1->sink", infoDate, infoDate, infoDate, 3, 3, 10000, 1001, isTableTransient = false)
+      bk.setRecordCount("table1->sink", infoDate, 3, 3, 10000, 1001, isTableTransient = false)
 
       val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
@@ -82,7 +82,7 @@ class TransferJobSuite extends AnyWordSpec with SparkTestBase with TextCompariso
     "return AlreadyRan when the number of records didn't change" in {
       val (job, bk) = getUseCase(numberOfRecords = 7)
 
-      bk.setRecordCount("table1->sink", infoDate, infoDate, infoDate, 7, 3, 10000, 1001, isTableTransient = false)
+      bk.setRecordCount("table1->sink", infoDate, 7, 3, 10000, 1001, isTableTransient = false)
 
       val actual = job.preRunCheckJob(infoDate, runReason, conf, Nil)
 
