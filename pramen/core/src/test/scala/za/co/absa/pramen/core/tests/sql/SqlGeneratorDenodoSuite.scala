@@ -71,35 +71,35 @@ class SqlGeneratorDenodoSuite extends AnyWordSpec {
       assert(gen.getCountQuery("A", date1, date1) ==
         "SELECT COUNT(*) FROM A WHERE D = date'2020-08-17'")
       assert(gen.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
+        "SELECT COUNT(*) FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-31'")
     }
 
     "date is in DATETIME format" in {
       assert(genDateTime.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
+        "SELECT COUNT(*) FROM A WHERE D >= TIMESTAMP '2020-08-17 00:00:00.000+02:00' AND D < TIMESTAMP '2020-08-18 00:00:00.000+02:00'")
       assert(genDateTime.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
+        "SELECT COUNT(*) FROM A WHERE D >= TIMESTAMP '2020-08-17 00:00:00.000+02:00' AND D < TIMESTAMP '2020-08-31 00:00:00.000+02:00'")
     }
 
     "date is in STRING format" in {
       assert(genStr.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE D = '2020-08-17'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D < '2020-08-18'")
       assert(genStr.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
+        "SELECT COUNT(*) FROM A WHERE D >= '2020-08-17' AND D < '2020-08-31'")
     }
 
     "date is in NUMBER format" in {
       assert(genNum.getCountQuery("A", date1, date1) ==
-        "SELECT COUNT(*) FROM A WHERE D = 20200817")
+        "SELECT COUNT(*) FROM A WHERE D >= 20200817 AND D < 20200818")
       assert(genNum.getCountQuery("A", date1, date2) ==
-        "SELECT COUNT(*) FROM A WHERE D >= 20200817 AND D <= 20200830")
+        "SELECT COUNT(*) FROM A WHERE D >= 20200817 AND D < 20200831")
     }
 
     "the table name and column name need to be escaped" in {
       assert(genEscaped.getCountQuery("Input Table", date1, date1) ==
         "SELECT COUNT(*) FROM \"Input Table\" WHERE \"Info date\" = date'2020-08-17'")
       assert(genEscapedAuto.getCountQuery("Input Table", date1, date2) ==
-        "SELECT COUNT(*) FROM \"Input Table\" WHERE \"Info date\" >= date'2020-08-17' AND \"Info date\" <= date'2020-08-30'")
+        "SELECT COUNT(*) FROM \"Input Table\" WHERE \"Info date\" >= date'2020-08-17' AND \"Info date\" < date'2020-08-31'")
     }
   }
 
@@ -108,35 +108,35 @@ class SqlGeneratorDenodoSuite extends AnyWordSpec {
       assert(gen.getDataQuery("A", date1, date1, Nil, None) ==
         "SELECT * FROM A WHERE D = date'2020-08-17'")
       assert(gen.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-31'")
     }
 
     "date is in DATETIME format" in {
       assert(genDateTime.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE CAST(D AS DATE) = date'2020-08-17'")
+        "SELECT * FROM A WHERE D >= TIMESTAMP '2020-08-17 00:00:00.000+02:00' AND D < TIMESTAMP '2020-08-18 00:00:00.000+02:00'")
       assert(genDateTime.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE CAST(D AS DATE) >= date'2020-08-17' AND CAST(D AS DATE) <= date'2020-08-30'")
+        "SELECT * FROM A WHERE D >= TIMESTAMP '2020-08-17 00:00:00.000+02:00' AND D < TIMESTAMP '2020-08-31 00:00:00.000+02:00'")
     }
 
     "date is in STRING format" in {
       assert(genStr.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE D = '2020-08-17'")
+        "SELECT * FROM A WHERE D >= '2020-08-17' AND D < '2020-08-18'")
       assert(genStr.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE D >= '2020-08-17' AND D <= '2020-08-30'")
+        "SELECT * FROM A WHERE D >= '2020-08-17' AND D < '2020-08-31'")
     }
 
     "date is in NUMBER format" in {
       assert(genNum.getDataQuery("A", date1, date1, Nil, None) ==
-        "SELECT * FROM A WHERE D = 20200817")
+        "SELECT * FROM A WHERE D >= 20200817 AND D < 20200818")
       assert(genNum.getDataQuery("A", date1, date2, Nil, None) ==
-        "SELECT * FROM A WHERE D >= 20200817 AND D <= 20200830")
+        "SELECT * FROM A WHERE D >= 20200817 AND D < 20200831")
     }
 
     "with limit records" in {
       assert(gen.getDataQuery("A", date1, date1, Nil, Some(100)) ==
         "SELECT * FROM A WHERE D = date'2020-08-17'")
       assert(gen.getDataQuery("A", date1, date2, Nil, Some(100)) ==
-        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D <= date'2020-08-30'")
+        "SELECT * FROM A WHERE D >= date'2020-08-17' AND D < date'2020-08-31'")
     }
   }
 
@@ -184,7 +184,7 @@ class SqlGeneratorDenodoSuite extends AnyWordSpec {
       val actual = gen.asInstanceOf[SqlGeneratorBase]
         .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeValue(Instant.ofEpochMilli(1727761000)))
 
-      assert(actual == "offset > TIMESTAMP '1970-01-21 01:56:01.000'")
+      assert(actual == "offset > TIMESTAMP '1970-01-21 01:56:01.000+02:00'")
     }
 
     "return the correct condition for string offsets" in {
