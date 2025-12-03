@@ -82,7 +82,7 @@ class IngestionJob(operationDef: OperationDef,
       failIfNoAnyData || failIfNoNewData
     }
 
-    val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate, infoDate)
+    val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate)
 
     val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
 

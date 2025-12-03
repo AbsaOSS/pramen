@@ -34,8 +34,8 @@ class ScheduleStrategyUtilsSuite extends AnyWordSpec {
 
     "getRerun" should {
       val bk = mock(classOf[Bookkeeper])
-      when(bk.getLatestDataChunk("table", date.minusDays(1), date.minusDays(1))).thenReturn(Some(null))
-      when(bk.getLatestDataChunk("table", date, date)).thenReturn(None)
+      when(bk.getLatestDataChunk("table", date.minusDays(1))).thenReturn(Some(null))
+      when(bk.getLatestDataChunk("table", date)).thenReturn(None)
 
       "return information date of the rerun" in {
         val expected = pipeline.TaskPreDef(date.minusDays(1), TaskRunReason.Rerun)

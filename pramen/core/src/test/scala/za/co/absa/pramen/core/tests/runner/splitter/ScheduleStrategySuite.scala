@@ -135,7 +135,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
           val bk = mock(classOf[Bookkeeper])
           val infoDateExpression = "@runDate - 2"
 
-          when(bk.getLatestDataChunk(outputTable, runDate.minusDays(7), runDate.minusDays(7))).thenReturn(Some(null))
+          when(bk.getLatestDataChunk(outputTable, runDate.minusDays(7))).thenReturn(Some(null))
           when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
 
           val params = ScheduleParams.Rerun(runDate.minusDays(5))
@@ -150,7 +150,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         "earlier than the minimum date" in {
           val bk = mock(classOf[Bookkeeper])
 
-          when(bk.getLatestDataChunk(outputTable, runDate.minusDays(365), runDate.minusDays(365))).thenReturn(None)
+          when(bk.getLatestDataChunk(outputTable, runDate.minusDays(365))).thenReturn(None)
           when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
 
           val params = ScheduleParams.Rerun(runDate.minusDays(365))
@@ -325,7 +325,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         val bk = mock(classOf[Bookkeeper])
         val infoDateExpression = "@runDate - 2"
 
-        when(bk.getLatestDataChunk(outputTable, runDate.minusDays(7), runDate.minusDays(7))).thenReturn(Some(null))
+        when(bk.getLatestDataChunk(outputTable, runDate.minusDays(7))).thenReturn(Some(null))
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(9)))
 
         "normal rerun" in {

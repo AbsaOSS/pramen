@@ -65,7 +65,7 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
 
     "getLatestDataChunk()" should {
       "return None if there are no entries" in {
-        assert(bk.getLatestDataChunk("table", infoDate1, infoDate1).isEmpty)
+        assert(bk.getLatestDataChunk("table", infoDate1).isEmpty)
       }
 
       "return the latest date from the specified periods" in {
@@ -73,7 +73,7 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
         bk.setRecordCount("table", infoDate3, 200, 20, 1597318832, 1597318836, isTableTransient = false)
         bk.setRecordCount("table", infoDate1, 400, 40, 1597318833, 1597318837, isTableTransient = false)
 
-        val chunkOpt = bk.getLatestDataChunk("table", infoDate2, infoDate3)
+        val chunkOpt = bk.getLatestDataChunk("table", infoDate3)
         val infoDate3Str = infoDate3.format(DataChunk.dateFormatter)
 
         assert(chunkOpt.nonEmpty)

@@ -59,8 +59,8 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
     }
   }
 
-  final override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    val infoDateFilter = getFilter(table, Option(dateBegin), Option(dateEnd))
+  final override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
+    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate))
 
     getBkData(infoDateFilter).lastOption
   }

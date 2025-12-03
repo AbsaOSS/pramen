@@ -49,7 +49,7 @@ class BookkeeperTransientSuiteEager extends AnyWordSpec {
     "return information according to data available at the session" in {
       val bk = getBookkeeper
 
-      val chunkOpt = bk.getLatestDataChunk("table", infoDate2, infoDate3)
+      val chunkOpt = bk.getLatestDataChunk("table", infoDate3)
 
       assert(chunkOpt.isDefined)
       assert(chunkOpt.get.infoDate == infoDate3.toString)

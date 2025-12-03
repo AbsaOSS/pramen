@@ -53,7 +53,7 @@ object ScheduleStrategyUtils {
     if (schedule.isEnabled(runDate)) {
       val infoDate = evaluateRunDate(runDate, infoDateExpression)
 
-      bookkeeper.getLatestDataChunk(outputTable, infoDate, infoDate) match {
+      bookkeeper.getLatestDataChunk(outputTable, infoDate) match {
         case Some(_) =>
           log.info(s"Rerunning '$outputTable' for date $runDate. Info date = '$infoDateExpression' = $infoDate.")
           List(pipeline.TaskPreDef(infoDate, TaskRunReason.Rerun))

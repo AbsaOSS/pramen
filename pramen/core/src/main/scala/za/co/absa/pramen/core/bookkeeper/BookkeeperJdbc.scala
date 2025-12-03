@@ -67,8 +67,8 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
     }
   }
 
-  override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    val query = getFilter(table, Option(dateBegin), Option(dateEnd))
+  override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
+    val query = getFilter(table, Option(infoDate), Option(infoDate))
       .sortBy(r => r.jobFinished.desc)
       .take(1)
 
@@ -78,25 +78,8 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
         .toArray[DataChunk]
 
       if (records.length > 1)
-        throw new IllegalStateException(s"More than one record was returned when only one was expected. Table: $table, dateBegin: $dateBegin, dateEnd: $dateEnd")
+        throw new IllegalStateException(s"More than one record was returned when only one was expected. Table: $table, infoDate: $infoDate")
       records.headOption
-    } catch {
-      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
-    }
-  }
-
-  def getDataChunksFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
-    val query = getFilter(table, Option(dateBegin), Option(dateEnd))
-
-    try {
-      SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
-        .map(toChunk)
-        .sortBy(_.jobFinished)
-        .groupBy(v => (v.tableName, v.infoDate))
-        .map { case (_, listChunks) =>
-          listChunks.maxBy(c => c.jobFinished)
-        }
-        .toArray[DataChunk]
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
     }

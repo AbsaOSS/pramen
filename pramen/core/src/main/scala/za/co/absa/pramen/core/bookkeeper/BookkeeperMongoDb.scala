@@ -78,8 +78,8 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
     }
   }
 
-  override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    val infoDateFilter = getFilter(table, Option(dateBegin), Option(dateEnd))
+  override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
+    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate))
 
     collection.find(infoDateFilter)
       .sort(Sorts.descending("jobFinished"))
