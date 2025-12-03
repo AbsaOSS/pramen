@@ -39,7 +39,7 @@ trait Bookkeeper {
 
   def getLatestProcessedDate(table: String, until: Option[LocalDate] = None): Option[LocalDate]
 
-  def getLatestDataChunk(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk]
+  def getLatestDataChunk(table: String, infoDate: LocalDate): Option[DataChunk]
 
   def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 

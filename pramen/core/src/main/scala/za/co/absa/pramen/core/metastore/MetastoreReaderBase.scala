@@ -70,7 +70,7 @@ abstract class MetastoreReaderBase(metastore: Metastore,
   }
 
   override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = {
-    bookkeeper.getLatestDataChunk(tableName, infoDate, infoDate)
+    bookkeeper.getLatestDataChunk(tableName, infoDate)
       .map(chunk =>
         MetaTableRunInfo(tableName, LocalDate.parse(chunk.infoDate), chunk.inputRecordCount, chunk.outputRecordCount, Instant.ofEpochSecond(chunk.jobStarted), Instant.ofEpochSecond(chunk.jobFinished))
       )

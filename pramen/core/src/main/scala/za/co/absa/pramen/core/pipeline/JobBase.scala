@@ -127,7 +127,7 @@ abstract class JobBase(operationDef: OperationDef,
   }
 
   protected def validateTransformationAlreadyRanCases(infoDate: LocalDate, dependencyWarnings: Seq[DependencyWarning]): Option[JobPreRunResult] = {
-    bookkeeper.getLatestDataChunk(outputTableDef.name, infoDate, infoDate) match {
+    bookkeeper.getLatestDataChunk(outputTableDef.name, infoDate) match {
       case Some(chunk) =>
         val outOfDateTables = getOutdatedTables(infoDate, chunk.jobFinished)
         if (outOfDateTables.nonEmpty) {
@@ -150,7 +150,7 @@ abstract class JobBase(operationDef: OperationDef,
       .flatMap(_.tables)
       .distinct
       .filter { table =>
-        bookkeeper.getLatestDataChunk(table, infoDate, infoDate) match {
+        bookkeeper.getLatestDataChunk(table, infoDate) match {
           case Some(chunk) if chunk.jobFinished >= targetJobFinishedSeconds =>
             log.warn(s"${Emoji.WARNING} The dependent table '$table' has been updated at ${Instant.ofEpochSecond(chunk.jobFinished)} retrospectively " +
               s"after the transformation at ${Instant.ofEpochSecond(targetJobFinishedSeconds)} .")

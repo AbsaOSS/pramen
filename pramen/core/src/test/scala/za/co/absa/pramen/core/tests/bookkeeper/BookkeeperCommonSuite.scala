@@ -97,7 +97,7 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "return None if there are no entries" in {
         val bk = getBookkeeper()
 
-        assert(bk.getLatestDataChunk("table", infoDate1, infoDate1).isEmpty)
+        assert(bk.getLatestDataChunk("table", infoDate1).isEmpty)
       }
 
       "return the latest date from the specified periods" in {
@@ -107,7 +107,7 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         bk.setRecordCount("table", infoDate3, 200, 20, 1597318832, 1597318836, isTableTransient = false)
         bk.setRecordCount("table", infoDate1, 400, 40, 1597318833, 1597318837, isTableTransient = false)
 
-        val chunkOpt = bk.getLatestDataChunk("table", infoDate2, infoDate3)
+        val chunkOpt = bk.getLatestDataChunk("table", infoDate3)
         val infoDate3Str = infoDate3.format(DataChunk.dateFormatter)
 
         assert(chunkOpt.nonEmpty)
@@ -149,7 +149,7 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         bk.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false)
         bk.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false)
 
-        val latestChunkOpt = bk.getLatestDataChunk("table", infoDate1, infoDate1)
+        val latestChunkOpt = bk.getLatestDataChunk("table", infoDate1)
 
         assert(latestChunkOpt.isDefined)
 
@@ -215,24 +215,27 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         val bk2 = if (bk.isInstanceOf[BookkeeperDeltaTable]) bk else getBookkeeper()
         val bk3 = if (bk.isInstanceOf[BookkeeperDeltaTable]) bk else getBookkeeper()
 
-        bk.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false)
-        bk.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318840, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318841, isTableTransient = false)
 
-        bk2.setRecordCount("table", infoDate2, 101, 10, 1597318833, 1597318837, isTableTransient = false)
-        bk2.setRecordCount("table", infoDate3, 201, 20, 1597318838, 1597318839, isTableTransient = false)
+        bk2.setRecordCount("table", infoDate2, 101, 10, 1597318833, 1597318843, isTableTransient = false)
+        bk2.setRecordCount("table", infoDate3, 201, 20, 1597318838, 1597318844, isTableTransient = false)
 
-        bk3.setRecordCount("table", infoDate3, 102, 10, 1597318833, 1597318837, isTableTransient = false)
-        bk3.setRecordCount("table", infoDate2, 202, 20, 1597318838, 1597318839, isTableTransient = false)
+        bk3.setRecordCount("table", infoDate3, 102, 10, 1597318833, 1597318842, isTableTransient = false)
+        bk3.setRecordCount("table", infoDate2, 202, 20, 1597318838, 1597318843, isTableTransient = false)
 
-        val chunk1 = bk.getLatestDataChunk("table", infoDate1, infoDate3)
-        val chunk2 = bk2.getLatestDataChunk("table", infoDate1, infoDate3)
-        val chunk3 = bk3.getLatestDataChunk("table", infoDate1, infoDate3)
+        val chunk1 = bk.getLatestDataChunk("table", infoDate3)
+        val chunk2 = bk2.getLatestDataChunk("table", infoDate3)
+        val chunk3 = bk3.getLatestDataChunk("table", infoDate3)
 
         assert(chunk1.isDefined)
-        assert(chunk1.head.infoDate == "2020-08-12")
+        assert(chunk1.get.infoDate == "2020-08-13")
 
         // Both are correct, depending on the notion of 'latest' used.
-        assert(chunk1.head.inputRecordCount == 201 || chunk1.head.inputRecordCount == 102)
+        assert(chunk1.get.inputRecordCount == 201 || chunk1.get .inputRecordCount == 102)
+
+        assert(chunk1.get == chunk2.get)
+        assert(chunk2.get == chunk3.get)
       }
     }
   }

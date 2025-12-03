@@ -77,8 +77,8 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
     }
   }
 
-  override def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getData(getFilter(table, Option(dateBegin), Option(dateEnd))).lastOption
+  override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
+    getData(getFilter(table, Option(infoDate), Option(infoDate))).lastOption
   }
 
   def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {

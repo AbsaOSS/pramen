@@ -40,7 +40,7 @@ class BookkeeperNullSuite extends AnyWordSpec {
     "return nothing" in {
       val bk = getBookkeeper
 
-      val chunkOpt = bk.getLatestDataChunkFromStorage("table", infoDate2, infoDate3)
+      val chunkOpt = bk.getLatestDataChunkFromStorage("table", infoDate3)
 
       assert(chunkOpt.isEmpty)
     }

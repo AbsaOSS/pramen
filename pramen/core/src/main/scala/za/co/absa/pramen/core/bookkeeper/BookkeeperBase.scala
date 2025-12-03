@@ -26,7 +26,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
 
   def getLatestProcessedDateFromStorage(table: String, until: Option[LocalDate] = None): Option[LocalDate]
 
-  def getLatestDataChunkFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk]
+  def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk]
 
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 
@@ -70,15 +70,15 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean) extends Bookkeeper 
   }
 
 
-  final def getLatestDataChunk(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
+  final def getLatestDataChunk(table: String, infoDate: LocalDate): Option[DataChunk] = {
     val isTransient = this.synchronized {
       transientDataChunks.contains(table.toLowerCase)
     }
 
     if (isTransient || !isBookkeepingEnabled) {
-      getLatestTransientChunk(table, Option(dateBegin), Option(dateEnd))
+      getLatestTransientChunk(table, Option(infoDate), Option(infoDate))
     } else {
-      getLatestDataChunkFromStorage(table, dateBegin, dateEnd)
+      getLatestDataChunkFromStorage(table, infoDate)
     }
   }
 

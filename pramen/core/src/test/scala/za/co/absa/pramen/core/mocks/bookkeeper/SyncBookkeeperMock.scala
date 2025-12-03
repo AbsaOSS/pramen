@@ -52,8 +52,8 @@ class SyncBookkeeperMock extends Bookkeeper {
     }
   }
 
-  override def getLatestDataChunk(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, dateBegin, dateEnd).lastOption
+  override def getLatestDataChunk(table: String, infoDate: LocalDate): Option[DataChunk] = {
+    getDataChunks(table, infoDate, infoDate).lastOption
   }
 
   def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
