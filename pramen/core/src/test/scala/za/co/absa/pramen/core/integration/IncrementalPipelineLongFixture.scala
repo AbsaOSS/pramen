@@ -292,9 +292,10 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       assert(offsetsBefore0.head.asInstanceOf[CommittedOffset].maxOffset.valueString == "3")
 
       // Running the job for 2021-02-18. It should reconcile uncommitted offsets and return with 'No data' since no data arrived since 2021-02-17
+      // No data should not produce an error for incremental tables
       val conf2 = getConfig(tempDir, metastoreFormat, useInfoDate = infoDate)
       val exitCode2 = AppRunner.runPipeline(conf2)
-      assert(exitCode2 == 2)
+      assert(exitCode2 == 0)
 
       // Checking expected offset table
       val offsetsAfter0 = om.getOffsets("table1", infoDate.minusDays(2))

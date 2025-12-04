@@ -19,6 +19,7 @@ package za.co.absa.pramen.api.status
 case class DependencyFailure(
                               dep: MetastoreDependency,
                               emptyTables: Seq[String],
+                              emptyIncrementalTables: Seq[String],
                               failedTables: Seq[String],
                               failedDateRanges: Seq[String]
                             ) {
@@ -26,11 +27,12 @@ case class DependencyFailure(
     val length = Math.min(failedTables.length, failedDateRanges.length)
 
     val emptyTablesRendered = emptyTables.map(t => s"$t (Empty table or wrong table name)")
+    val emptyIncrementalTablesRendered = emptyIncrementalTables.map(t => s"$t (Empty incremental table)")
 
     val failedTablesRendered = Range(0, length).map { i =>
       s"${failedTables(i)} (${failedDateRanges(i)})"
     }
 
-    (emptyTablesRendered ++ failedTablesRendered).mkString(", ")
+    (emptyTablesRendered ++ emptyIncrementalTablesRendered ++ failedTablesRendered).mkString(", ")
   }
 }

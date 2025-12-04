@@ -669,7 +669,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case s: Succeeded           => getSuccessTextElement(s, task.dependencyWarnings.nonEmpty)
       case _: InsufficientData    => TextElement("Insufficient data", Style.Exception)
       case NoData(isFailure)      => TextElement("No Data", if (isFailure) Style.Exception else Style.Warning)
-      case s: Skipped             => if (s.isWarning) TextElement("Skipped", Style.Warning) else TextElement("Skipped", successStyle)
+      case s: Skipped             => getSkippedTextElement(s, successStyle)
       case NotRan                 => TextElement("Skipped", Style.Warning)
       case _: ValidationFailed    => TextElement("Validation failed", Style.Warning)
       case _: MissingDependencies => TextElement("Skipped", Style.Warning)
@@ -705,6 +705,13 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
           TextElement("Success", style)
       }
     }
+  }
+
+  private[core] def getSkippedTextElement(status: RunStatus.Skipped, successStyle: Style): TextElement = {
+    if (status.isWarning)
+      TextElement("Skipped", Style.Warning)
+    else
+      TextElement("Skipped", successStyle)
   }
 
   private[core] def renderSchemaDifference(builder: MessageBuilder, schemaDifferences: Seq[SchemaDifference]): MessageBuilder = {

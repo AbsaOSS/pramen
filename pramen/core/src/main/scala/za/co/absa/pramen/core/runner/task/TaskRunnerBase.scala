@@ -273,7 +273,7 @@ abstract class TaskRunnerBase(conf: Config,
               Left(TaskResult(task.job.taskDef, RunStatus.NotRan, getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
             }
           case Skip(msg) =>
-            log.info(s"SKIPPING job: $outputTableName for date: ${task.infoDate}. Reason: msg")
+            log.info(s"SKIPPING job: $outputTableName for date: ${task.infoDate}. Reason: $msg")
             Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
           case FailedDependencies(isFailure, failures) =>
             Left(TaskResult(task.job.taskDef, RunStatus.FailedDependencies(isFailure, failures), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, Nil, Nil, options))

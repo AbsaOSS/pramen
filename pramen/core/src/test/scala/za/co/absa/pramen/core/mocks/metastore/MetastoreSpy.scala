@@ -29,6 +29,7 @@ import za.co.absa.pramen.core.mocks.utils.hive.QueryExecutorMock
 import za.co.absa.pramen.core.utils.hive.{HiveHelper, HiveHelperSql, HiveQueryTemplates}
 
 import java.time.LocalDate
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
@@ -49,6 +50,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
   var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean)]
   val queryExecutorMock = new QueryExecutorMock(true)
   val metadataManagerMock = new MetadataManagerNull(false)
+  private val incrementalTables = new mutable.HashSet[String]
 
   override def getRegisteredTables: Seq[String] = registeredTables
 
@@ -177,6 +179,14 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
       override def commitIncrementalStage(): Unit = {}
     }
+  }
+
+  override def setTableIncremental(table: String): Unit = {
+    incrementalTables += table.toLowerCase
+  }
+
+  override def isTableIncremental(table: String): Boolean = {
+    incrementalTables.contains(table.toLowerCase)
   }
 
   override def addTrackingTables(trackingTables: Seq[TrackingTable]): Unit = {}
