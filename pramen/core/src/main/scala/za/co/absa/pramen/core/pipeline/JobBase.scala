@@ -193,8 +193,13 @@ abstract class JobBase(operationDef: OperationDef,
       val isAvailable = metastore.isDataAvailable(table, Option(dateFrom), dateUntilOpt)
       if (!isAvailable) {
         if (metastore.isDataAvailable(table, None, None)) {
-          if (isIncremental && metastore.isTableIncremental(table)) {
-            log.info(s"No data found for incremental table '$table' $range.")
+          // Incremental dependencies should not be considered a failure if:
+          // - The job has an incremental schedule
+          // - The dependent table is incremental
+          // - The info date expression is exactly "@infoDate", meaning the job depends on the current batch,
+          //   not a wide range of data from the incremental table
+          if (isIncremental && dep.dateFromExpr == "@infoDate" && metastore.isTableIncremental(table)) {
+            log.info(s"No data found for the incremental table '$table' $range.")
             Some(None, None, Some(table))
           } else {
             log.warn(s"$WARNING No data found for '$table' $range.")
