@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.runner
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
@@ -73,6 +74,7 @@ object AppRunner {
       pipeline   <- getPipelineDef(conf, state, appContext)
       _          <- addSinkTables(state, pipeline, appContext)
       jobsOrig   <- splitJobs(conf, pipeline, state, appContext, spark)
+      _          <- setIncrementalFlag(state, jobsOrig, appContext)
       jobs       <- filterJobs(state, jobsOrig, appContext.appConfig.runtimeConfig)
       _          <- runStartupHook(state, appContext.appConfig.hookConfig)
       _          <- validateShutdownHook(state, appContext.appConfig.hookConfig)
@@ -231,6 +233,24 @@ object AppRunner {
         splitter.createJobs(op)
       }
     }, state, "splitting of the pipeline into jobs")
+  }
+
+  private def setIncrementalFlag(state: PipelineState, jobs: Seq[Job], appContext: AppContext): Try[Unit] = {
+    handleFailure(Try {
+      val metastore = appContext.metastore
+
+      val incrementalTables = jobs.flatMap { job =>
+        if (job.operation.schedule == Schedule.Incremental) {
+          Option(job.outputTable.name)
+        } else {
+          None
+        }
+      }.distinct
+
+      incrementalTables.foreach(metastore.setTableIncremental)
+
+      log.info(s"Tables identified as incremental: ${incrementalTables.mkString(", ")}")
+    }, state, "setting the incremental flag for jobs")
   }
 
   private[core] def preProcessOperationForHistoricalRun(ops: OperationDef): OperationDef = {

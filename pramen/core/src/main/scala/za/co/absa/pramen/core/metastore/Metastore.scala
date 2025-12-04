@@ -56,6 +56,10 @@ trait Metastore {
 
   def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, readMode: ReaderMode): MetastoreReader
 
+  def setTableIncremental(table: String): Unit
+
+  def isTableIncremental(table: String): Boolean
+
   def addTrackingTables(trackingTables: Seq[TrackingTable])
 
   def addSinkTables(sinkTables: Seq[String]): Unit

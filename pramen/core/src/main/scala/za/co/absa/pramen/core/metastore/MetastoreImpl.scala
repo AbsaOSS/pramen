@@ -36,6 +36,7 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 
 import java.time.{Instant, LocalDate}
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class MetastoreImpl(appConfig: Config,
@@ -52,6 +53,8 @@ class MetastoreImpl(appConfig: Config,
   private val globalTrackingTables = new ListBuffer[TrackingTable]
 
   private var tableDefs: Seq[MetaTable] = tableDefsIn
+
+  private val incrementalTables = new mutable.HashSet[String]
 
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
 
@@ -219,6 +222,14 @@ class MetastoreImpl(appConfig: Config,
       new MetastoreReaderBatchImpl(this, metadata, bookkeeper, tables, infoDate, runReason)
     else
       new MetastoreReaderIncrementalImpl(this, metadata, bookkeeper, tables, outputTable, infoDate, runReason, readMode, isRerun)
+  }
+
+  override def setTableIncremental(table: String): Unit = {
+    incrementalTables += table.toLowerCase
+  }
+
+  override def isTableIncremental(table: String): Boolean = {
+    incrementalTables.contains(table.toLowerCase)
   }
 
   override def commitIncrementalTables(): Unit = synchronized {

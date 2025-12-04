@@ -68,7 +68,13 @@ abstract class JobBase(operationDef: OperationDef,
       checkDependency(dependency, infoDate)
     })
 
-    val dependencyErrors = validationFailures.filter(!_.dep.isOptional)
+    val dependencyErrors = validationFailures.filter(failure => !failure.dep.isOptional && (failure.failedTables.nonEmpty || failure.emptyTables.nonEmpty))
+
+    val dependencyIncrementalEmptyTables = validationFailures
+      .filter(failure => !failure.dep.isOptional)
+      .flatMap(failure => failure.emptyIncrementalTables)
+      .sortBy(identity)
+      .map(table => DependencyWarning(table))
 
     val dependencyWarnings = validationFailures
       .filter(_.dep.isOptional)
@@ -81,13 +87,17 @@ abstract class JobBase(operationDef: OperationDef,
       val isFailure = dependencyErrors.nonEmpty
       JobPreRunResult(JobPreRunStatus.FailedDependencies(isFailure, dependencyErrors), None, dependencyWarnings, Seq.empty[String])
     } else {
-      if (dependencyWarnings.nonEmpty) {
-        log.info(s"Job for table ${outputTableDef.name} at $infoDate has validation warnings: ${dependencyWarnings.map(_.table).mkString(", ")}.")
+      if (dependencyIncrementalEmptyTables.nonEmpty) {
+        log.info(s"Job for table ${outputTableDef.name} at $infoDate has empty incremental tables - skipping...")
+        JobPreRunResult(JobPreRunStatus.Skip(s"No new data for: ${dependencyIncrementalEmptyTables.map(_.table).mkString(", ")}"), None, dependencyWarnings, Nil)
       } else {
-        log.info(s"Job for table ${outputTableDef.name} at $infoDate has no validation failures.")
+        if (dependencyWarnings.nonEmpty) {
+          log.info(s"Job for table ${outputTableDef.name} at $infoDate has validation warnings: ${dependencyWarnings.map(_.table).mkString(", ")}.")
+        } else {
+          log.info(s"Job for table ${outputTableDef.name} at $infoDate has no validation failures.")
+        }
+        preRunCheckJob(infoDate, runReason, conf, dependencyWarnings)
       }
-
-      preRunCheckJob(infoDate, runReason, conf, dependencyWarnings)
     }
   }
 
@@ -183,11 +193,16 @@ abstract class JobBase(operationDef: OperationDef,
       val isAvailable = metastore.isDataAvailable(table, Option(dateFrom), dateUntilOpt)
       if (!isAvailable) {
         if (metastore.isDataAvailable(table, None, None)) {
-          log.warn(s"$WARNING No data found for '$table' $range.")
-          Some(Some(table), None)
+          if (isIncremental && metastore.isTableIncremental(table)) {
+            log.info(s"No data found for incremental table '$table' $range.")
+            Some(None, None, Some(table))
+          } else {
+            log.warn(s"$WARNING No data found for '$table' $range.")
+            Some(Some(table), None, None)
+          }
         } else {
           log.warn(s"$STAR Empty input table (no bookkeeping information) for '$table'.")
-          Some(None, Some(table))
+          Some(None, Some(table), None)
         }
       } else {
         None
@@ -196,12 +211,13 @@ abstract class JobBase(operationDef: OperationDef,
 
     val failedTables = failures.flatMap(_._1)
     val emptyTables = failures.flatMap(_._2)
+    val emptyIncrementalTables = failures.flatMap(_._3)
     val failedDateRanges = failedTables.map(_ => range)
 
-    if (failedTables.isEmpty && emptyTables.isEmpty) {
+    if (failedTables.isEmpty && emptyTables.isEmpty && emptyIncrementalTables.isEmpty) {
       None
     } else {
-      Some(DependencyFailure(dep, emptyTables, failedTables, failedDateRanges))
+      Some(DependencyFailure(dep, emptyTables, emptyIncrementalTables, failedTables, failedDateRanges))
     }
   }
 

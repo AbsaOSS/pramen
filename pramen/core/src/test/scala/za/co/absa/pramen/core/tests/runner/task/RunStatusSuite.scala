@@ -193,11 +193,12 @@ class RunStatusSuite extends AnyWordSpec {
         DependencyFailure(
           MetastoreDependency(Seq("table2", "table1", "table3"), "", None, triggerUpdates = false, isOptional = false, isPassive = false),
           Seq("table3"),
+          Seq("table2"),
           Seq("table1"),
           Seq("2022-01-01")
         )))
 
-      assert(status.getReason().contains("Dependency check failures: table3 (Empty table or wrong table name), table1 (2022-01-01)"))
+      assert(status.getReason().contains("Dependency check failures: table3 (Empty table or wrong table name), table2 (Empty incremental table), table1 (2022-01-01)"))
     }
 
     "NoData" in {
