@@ -113,8 +113,9 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
 
   /** Invoked from a synchronized block. */
   private def acquireGuardLock(): Unit = {
+    val now = Instant.now().getEpochSecond
     db.run(DBIO.seq(
-      LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket)
+      LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket, createdAt = now)
     )).execute()
   }
 }

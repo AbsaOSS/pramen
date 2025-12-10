@@ -23,7 +23,8 @@ class LockTickets(tag: Tag) extends Table[LockTicket](tag, "lock_tickets") {
   def token = column[String]("token", O.PrimaryKey, O.Length(255))
   def owner = column[String]("owner", O.Length(255))
   def expires = column[Long]("expires")
-  def * = (token, owner, expires) <> (LockTicket.tupled, LockTicket.unapply)
+  def createdAt = column[Long]("created_at")
+  def * = (token, owner, expires, createdAt) <> (LockTicket.tupled, LockTicket.unapply)
 }
 
 object LockTickets {
