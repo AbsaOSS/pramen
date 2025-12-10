@@ -80,7 +80,8 @@ class TokenLockMongoDb(token: String,
       log.error(s"Cannot try acquire a lock after $thisTry retries.")
       false
     } else {
-      val ok = Try(c.insertOne(LockTicket(escapedToken, owner, getNewTicket)).execute())
+      val now = Instant.now().getEpochSecond
+      val ok = Try(c.insertOne(LockTicket(escapedToken, owner, getNewTicket, now)).execute())
 
       ok match {
         case Success(_) =>
