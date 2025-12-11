@@ -30,7 +30,7 @@ import scala.util.{Failure, Success, Try}
 class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
-  private val TICKETS_HARD_EXPIRE_DAYS = 7
+  private val TICKETS_HARD_EXPIRE_DAYS = 1
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -79,12 +79,14 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
   /** Invoked from a synchronized block. */
   override def releaseGuardLock(): Unit = {
     try {
-      val hardExpireTickets = Instant.now().minus(TICKETS_HARD_EXPIRE_DAYS, ChronoUnit.DAYS).getEpochSecond
+      val now = Instant.now()
+      val nowEpoch = now.getEpochSecond
+      val hardExpireTickets = now.minus(TICKETS_HARD_EXPIRE_DAYS, ChronoUnit.DAYS).getEpochSecond
       SlickUtils.executeAction(
         db,
         LockTickets.lockTickets
-          .filter(ticket => (ticket.token === escapedToken && ticket.owner === owner) || (ticket.createdAt.isDefined && ticket.createdAt < hardExpireTickets))
-          .delete
+          .filter(ticket => (ticket.token === escapedToken && ticket.owner === owner) ||
+            (ticket.createdAt.isDefined && ticket.createdAt < hardExpireTickets && ticket.expires < nowEpoch)).delete
       )
     } catch {
       case NonFatal(ex) => log.error(s"An error occurred when trying to release the lock: $escapedToken.", ex)
