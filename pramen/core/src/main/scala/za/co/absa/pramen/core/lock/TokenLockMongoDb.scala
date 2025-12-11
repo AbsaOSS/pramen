@@ -81,7 +81,7 @@ class TokenLockMongoDb(token: String,
       false
     } else {
       val now = Instant.now().getEpochSecond
-      val ok = Try(c.insertOne(LockTicket(escapedToken, owner, getNewTicket, now)).execute())
+      val ok = Try(c.insertOne(LockTicket(escapedToken, owner, getNewTicket, Option(now))).execute())
 
       ok match {
         case Success(_) =>
