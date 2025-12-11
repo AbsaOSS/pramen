@@ -19,4 +19,4 @@ package za.co.absa.pramen.core.lock.model
 case class LockTicket(token: String,
                       owner: String,
                       expires: Long,
-                      createdAt: Long)
+                      createdAt: Option[Long])

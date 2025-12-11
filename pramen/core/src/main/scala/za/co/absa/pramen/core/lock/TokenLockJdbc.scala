@@ -22,12 +22,14 @@ import za.co.absa.pramen.core.lock.model.{LockTicket, LockTickets}
 import za.co.absa.pramen.core.utils.SlickUtils
 
 import java.sql.SQLIntegrityConstraintViolationException
-import java.time.Instant
+import java.time.{Instant, ZonedDateTime}
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
   import za.co.absa.pramen.core.utils.FutureImplicits._
+
+  private val TICKETS_HARD_EXPIRE_DAYS = 7
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -76,9 +78,10 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
   /** Invoked from a synchronized block. */
   override def releaseGuardLock(): Unit = {
     try {
+      val hardExpireTickets = Instant.from(ZonedDateTime.now().minusDays(TICKETS_HARD_EXPIRE_DAYS)).getEpochSecond
       db.run(LockTickets.lockTickets
-        .filter(ticket => ticket.token === escapedToken && ticket.owner === owner)
-        .delete)
+          .filter(ticket => (ticket.token === escapedToken && ticket.owner === owner) || (ticket.createdAt.isDefined && ticket.createdAt < hardExpireTickets))
+          .delete)
         .execute()
     } catch {
       case NonFatal(ex) => log.error(s"An error occurred when trying to release the lock: $escapedToken.", ex)
@@ -115,7 +118,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
   private def acquireGuardLock(): Unit = {
     val now = Instant.now().getEpochSecond
     db.run(DBIO.seq(
-      LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket, createdAt = now)
+      LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket, createdAt = Option(now))
     )).execute()
   }
 }
