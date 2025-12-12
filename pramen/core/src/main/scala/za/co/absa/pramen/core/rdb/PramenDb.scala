@@ -115,7 +115,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
         ).execute()
     } catch {
       case NonFatal(ex) =>
-        throw new RuntimeException(s"Unable to add column: '$columnName $columnType' to table: '$table'for the url: $activeUrl", ex)
+        throw new RuntimeException(s"Unable to add column: '$columnName $columnType' to table: '$table 'for the url: $activeUrl", ex)
     }
   }
 

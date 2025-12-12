@@ -16,12 +16,9 @@
 
 package za.co.absa.pramen.core.tests.journal
 
-import org.apache.avro.generic.GenericData.Array
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.PipelineInfo
-import za.co.absa.pramen.api.status.{PipelineNotificationFailure, RunInfo, RunStatus, RuntimeInfo, TaskResult, TaskRunReason}
+import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.journal.model.TaskCompleted
-import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.mocks.PipelineInfoFactory
 import za.co.absa.pramen.core.mocks.job.JobSpy
 import za.co.absa.pramen.core.pipeline.Task
@@ -40,7 +37,8 @@ class TaskCompletedSuite extends AnyWordSpec {
     failureException = None,
     pipelineNotificationFailures = Seq.empty,
     pipelineId = "test_pipeline_id",
-    tenant = Some("test_tenant")
+    tenant = Some("test_tenant"),
+    country = Some("za")
   )
 
   "fromTaskResult" should {
@@ -81,6 +79,7 @@ class TaskCompletedSuite extends AnyWordSpec {
       assert(taskCompleted.pipelineName.contains(pipelineInfo.pipelineName))
       assert(taskCompleted.environmentName.contains(pipelineInfo.environment))
       assert(taskCompleted.tenant == pipelineInfo.tenant)
+      assert(taskCompleted.country == pipelineInfo.country)
     }
 
     "create a TaskCompleted from a TaskResult for a failed task" in {
@@ -122,6 +121,7 @@ class TaskCompletedSuite extends AnyWordSpec {
       assert(taskCompleted.pipelineName.contains(pipelineInfo.pipelineName))
       assert(taskCompleted.environmentName.contains(pipelineInfo.environment))
       assert(taskCompleted.tenant == pipelineInfo.tenant)
+      assert(taskCompleted.country == pipelineInfo.country)
     }
   }
 }

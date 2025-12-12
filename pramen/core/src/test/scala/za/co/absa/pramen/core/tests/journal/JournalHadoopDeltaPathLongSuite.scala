@@ -39,7 +39,7 @@ class JournalHadoopDeltaPathLongSuite extends AnyWordSpec with SparkTestBase wit
     super.afterAll()
   }
 
-  "Journal" should {
+  "Journal/DeltaPath" should {
     "Make sure the journal works even with empty path" in {
       val journal = getJournal(tmpDir)
 

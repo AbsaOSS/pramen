@@ -124,6 +124,7 @@ class JournalHadoopCsv(journalPath: String)
       t.pipelineName.getOrElse("") ::
       t.environmentName.getOrElse("") ::
       t.tenant.getOrElse("") ::
+      t.country.getOrElse("") ::
       Nil
     record.mkString("", s"$separator", "\n")
   }

@@ -41,7 +41,7 @@ class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfte
   }
 
 
-  "Journal" should {
+  "Journal/JDBC" should {
     "Initialize journal directory empty database" in {
       val journal = getJournal
 
