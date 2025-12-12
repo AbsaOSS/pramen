@@ -36,5 +36,6 @@ case class JournalTask(
                           pipelineId: Option[String],
                           pipelineName: Option[String],
                           environmentName: Option[String],
-                          tenant: Option[String]
+                          tenant: Option[String],
+                          country: Option[String]
                         )

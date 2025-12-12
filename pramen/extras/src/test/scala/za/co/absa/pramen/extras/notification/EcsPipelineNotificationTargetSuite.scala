@@ -62,7 +62,7 @@ class EcsPipelineNotificationTargetSuite extends AnyWordSpec {
       val task3 = TestPrototypes.taskNotification.copy(taskDef = taskDef3)
 
       notificationTarget.sendNotification(
-        PipelineInfo("Dummy", "DEV", RuntimeInfo(LocalDate.parse("2022-02-18")), Instant.now, None, warningFlag = false, None, PipelineStatus.Success, None, Seq.empty, "pid_123", None),
+        PipelineInfo("Dummy", "DEV", RuntimeInfo(LocalDate.parse("2022-02-18")), Instant.now, None, warningFlag = false, None, PipelineStatus.Success, None, Seq.empty, "pid_123", None, None),
         Seq(task1, task2, task3),
         CustomNotification(Seq.empty, Seq.empty)
       )

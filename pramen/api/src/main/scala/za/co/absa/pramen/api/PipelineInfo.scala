@@ -32,5 +32,6 @@ case class PipelineInfo(
                          failureException: Option[Throwable],
                          pipelineNotificationFailures: Seq[PipelineNotificationFailure],
                          pipelineId: String,
-                         tenant: Option[String]
+                         tenant: Option[String],
+                         country: Option[String]
                        )

@@ -43,7 +43,8 @@ case class TaskCompleted(
                           pipelineId: Option[String],
                           pipelineName: Option[String],
                           environmentName: Option[String],
-                          tenant: Option[String]
+                          tenant: Option[String],
+                          country: Option[String]
                         )
 
 object TaskCompleted {
@@ -84,7 +85,8 @@ object TaskCompleted {
       Option(pipelineInfo.pipelineId),
       Option(pipelineInfo.pipelineName),
       Option(pipelineInfo.environment),
-      pipelineInfo.tenant
+      pipelineInfo.tenant,
+      pipelineInfo.country
     )
   }
 }
