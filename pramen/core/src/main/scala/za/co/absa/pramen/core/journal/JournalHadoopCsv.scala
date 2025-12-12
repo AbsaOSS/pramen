@@ -87,7 +87,8 @@ class JournalHadoopCsv(journalPath: String)
         pipelineId = v.pipelineId,
         pipelineName = v.pipelineName,
         environmentName = v.environmentName,
-        tenant = v.tenant
+        tenant = v.tenant,
+        country = v.country
       ))
   }
 

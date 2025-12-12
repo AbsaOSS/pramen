@@ -42,7 +42,8 @@ object TaskCompletedFactory {
                        pipelineId: Option[String] = Some(java.util.UUID.randomUUID().toString),
                        pipelineName: Option[String] = Some("test"),
                        environmentName: Option[String] = Some("DEV"),
-                       tenant: Option[String] = Some("Dummy tenant")): TaskCompleted = {
+                       tenant: Option[String] = Some("Dummy tenant"),
+                       country: Option[String] = Some("noname")): TaskCompleted = {
     model.TaskCompleted(
       jobName,
       tableName,
@@ -63,7 +64,8 @@ object TaskCompletedFactory {
       pipelineId,
       pipelineName,
       environmentName,
-      tenant
+      tenant,
+      country
     )
   }
 

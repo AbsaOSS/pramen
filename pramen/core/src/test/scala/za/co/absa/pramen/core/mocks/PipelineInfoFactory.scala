@@ -33,7 +33,8 @@ object PipelineInfoFactory {
                            failureException: Option[Throwable] = None,
                            pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty,
                            pipelineId: String = "dummy_pipeline_id",
-                           tenant:  Option[String] = Some("Dummy tenant")): PipelineInfo = {
-    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, warningFlag, sparkApplicationId, pipelineStatus, failureException, pipelineNotificationFailures, pipelineId, tenant)
+                           tenant:  Option[String] = Some("Dummy tenant"),
+                           country:  Option[String] = Some("noname")): PipelineInfo = {
+    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, warningFlag, sparkApplicationId, pipelineStatus, failureException, pipelineNotificationFailures, pipelineId, tenant, country)
   }
 }

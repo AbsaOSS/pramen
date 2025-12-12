@@ -47,6 +47,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val pipelineName = conf.getString(PIPELINE_NAME_KEY)
   private val environmentName = conf.getString(ENVIRONMENT_NAME)
   private val tenant = ConfigUtils.getOptionString(conf, TENANT_KEY)
+  private val country = ConfigUtils.getOptionString(conf, COUNTRY_KEY)
   private val sendEmailIfNoNewData: Boolean = conf.getBoolean(EMAIL_IF_NO_CHANGES)
   private val hookConfig = HookConfig.fromConfig(conf)
   private var pipelineNotificationTargets: Seq[PipelineNotificationTarget] = Seq.empty
@@ -137,7 +138,8 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       appException,
       pipelineNotificationFailures.toSeq,
       pipelineId,
-      tenant
+      tenant,
+      country
     )
   }
 

@@ -89,6 +89,9 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (0 < dbVersion && dbVersion < 7) {
       addColumn(LockTickets.lockTickets.baseTableRow.tableName, "created_at", "bigint")
     }
+    if (0 < dbVersion && dbVersion < 8) {
+      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "country", "varchar(50)")
+    }
   }
 
   def initTable(schema: H2Profile.SchemaDescription): Unit = {
@@ -112,7 +115,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
         ).execute()
     } catch {
       case NonFatal(ex) =>
-        throw new RuntimeException(s"Unable to add column: '${columnName} ${columnType}' to table: '${table}'for the url: $activeUrl", ex)
+        throw new RuntimeException(s"Unable to add column: '$columnName $columnType' to table: '$table'for the url: $activeUrl", ex)
     }
   }
 
@@ -124,7 +127,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 }
 
 object PramenDb {
-  val MODEL_VERSION = 7
+  val MODEL_VERSION = 8
   val DEFAULT_RETRIES = 3
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {

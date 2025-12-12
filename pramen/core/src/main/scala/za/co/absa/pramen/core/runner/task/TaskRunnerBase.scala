@@ -32,7 +32,7 @@ import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
-import za.co.absa.pramen.core.pipeline.PipelineDef.{ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
+import za.co.absa.pramen.core.pipeline.PipelineDef.{COUNTRY_KEY, ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
@@ -648,6 +648,7 @@ object TaskRunnerBase {
     val pipelineName = conf.getString(PIPELINE_NAME_KEY)
     val environmentName = ConfigUtils.getOptionString(conf, ENVIRONMENT_NAME).getOrElse("UNKNOWN")
     val tenant = ConfigUtils.getOptionString(conf, TENANT_KEY).getOrElse("UNKNOWN")
+    val country = ConfigUtils.getOptionString(conf, COUNTRY_KEY).getOrElse("-")
     val dryRun = if (runtimeConfig.isDryRun) "(DRY RUN)" else ""
 
     template.replaceAll("@jobName", job.name)
@@ -657,6 +658,7 @@ object TaskRunnerBase {
       .replaceAll("@table", job.outputTable.name)
       .replaceAll("@pipeline", pipelineName)
       .replaceAll("@tenant", tenant)
+      .replaceAll("@country", country)
       .replaceAll("@environment", environmentName)
       .replaceAll("@dryRun", dryRun)
   }
