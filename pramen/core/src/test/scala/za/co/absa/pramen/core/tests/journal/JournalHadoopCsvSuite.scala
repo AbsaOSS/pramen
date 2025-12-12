@@ -42,7 +42,7 @@ class JournalHadoopCsvSuite extends AnyWordSpec with SparkTestBase with BeforeAn
     super.afterAll()
   }
 
-  "Journal" should {
+  "Journal/CSV" should {
     "Initialize journal directory empty database" in {
       val journal = getJournal(tmpDir)
 

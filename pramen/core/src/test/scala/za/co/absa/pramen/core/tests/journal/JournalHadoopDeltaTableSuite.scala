@@ -37,7 +37,7 @@ class JournalHadoopDeltaTableSuite extends AnyWordSpec with BeforeAndAfterAll wi
     super.afterAll()
   }
 
-  "Journal" should {
+  "Journal/DeltaTable" should {
     "Make sure the journal works even with empty path" in {
       val journal = getJournal("tbl1_")
 
