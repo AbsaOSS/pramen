@@ -70,4 +70,56 @@ class CatalogTableSuite extends AnyWordSpec {
       assert(actual == CatalogTable(Some("catalog"), None, "table"))
     }
   }
+
+  "getFullTableName" should {
+    "return just table name when no catalog and database are present" in {
+      val table = CatalogTable(None, None, "table")
+
+      assert(table.getFullTableName == "`table`")
+    }
+
+    "return database.table when only database is present" in {
+      val table = CatalogTable(None, Some("database"), "table")
+
+      assert(table.getFullTableName == "`database`.`table`")
+    }
+
+    "return catalog.database.table when both catalog and database are present" in {
+      val table = CatalogTable(Some("catalog"), Some("database"), "table")
+
+      assert(table.getFullTableName == "`catalog`.`database`.`table`")
+    }
+
+    "return catalog.table when only catalog is present" in {
+      val table = CatalogTable(Some("catalog"), None, "table")
+
+      assert(table.getFullTableName == "`catalog`.`table`")
+    }
+  }
+
+  "getShortUnescapedTableName" should {
+    "return database.table when no catalog is present" in {
+      val table = CatalogTable(None, Some("database"), "table")
+
+      assert(table.getShortUnescapedTableName == "database.table")
+    }
+
+    "return just table name when no catalog and database are present" in {
+      val table = CatalogTable(None, None, "table")
+
+      assert(table.getShortUnescapedTableName == "table")
+    }
+
+    "return database.table when both catalog and database are present" in {
+      val table = CatalogTable(Some("catalog"), Some("database"), "table")
+
+      assert(table.getShortUnescapedTableName == "database.table")
+    }
+
+    "return table when only catalog is present" in {
+      val table = CatalogTable(Some("catalog"), None, "table")
+
+      assert(table.getShortUnescapedTableName == "table")
+    }
+  }
 }

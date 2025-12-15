@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.pipeline
 import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
-import za.co.absa.pramen.api.{Reason, Transformer}
+import za.co.absa.pramen.api.{DataFormat, Query, Reason, Transformer}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreReaderIncremental}
@@ -90,7 +90,16 @@ class TransformationJob(operationDef: OperationDef,
     else
       metastore.saveTable(outputTable.name, infoDate, df, None)
 
-    val saveResults = SaveResult(stats, warnings = stats.warnings)
+    val outputCatalogTable = outputTable.format match {
+      case iceberg: DataFormat.Iceberg =>
+        Seq(iceberg.table.getShortUnescapedTableName)
+      case delta: DataFormat.Delta if delta.query.isInstanceOf[Query.Table] =>
+        Seq(delta.query.query)
+      case _ =>
+        Seq.empty[String]
+    }
+
+    val saveResults = SaveResult(stats, warnings = stats.warnings, hiveTablesUpdates = outputCatalogTable)
 
     val readerMode = if (isIncremental) ReaderMode.IncrementalPostProcessing else ReaderMode.Batch
     val metastoreReaderPostProcess = metastore.getMetastoreReader(inputTables :+ outputTable.name, outputTable.name, infoDate, runReason, readerMode)

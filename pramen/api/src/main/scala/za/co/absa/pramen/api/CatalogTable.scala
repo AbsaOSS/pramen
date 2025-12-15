@@ -30,6 +30,10 @@ case class CatalogTable(
     s"$catalogPart$databasePart$escapeCharacter$table$escapeCharacter"
   }
 
+  def getShortUnescapedTableName: String = {
+    val databasePart = database.map(d => s"$d.").getOrElse("")
+    s"$databasePart$table"
+  }
 }
 
 object CatalogTable {
