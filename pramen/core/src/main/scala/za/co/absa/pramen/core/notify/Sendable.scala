@@ -86,7 +86,7 @@ trait Sendable {
     try {
       ThreadUtils.runWithTimeout(SEND_TIMEOUT_SECONDS) {
         Transport.send(message)
-        log.info(s"$VOLTAGE An email has been sent successfully.")
+        log.info(s"$ROCKET An email has been sent successfully.")
       }
     } catch {
       case NonFatal(ex) =>
