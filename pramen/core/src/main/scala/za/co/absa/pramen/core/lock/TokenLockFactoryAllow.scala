@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.lock
 
+import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
+
 class TokenLockFactoryAllow extends TokenLockFactory {
   override def getLock(token: String): TokenLock = {
     new TokenLockAllow

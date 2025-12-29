@@ -18,16 +18,15 @@ package za.co.absa.pramen.core.runner.task
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status.RunStatus
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
 import za.co.absa.pramen.core.journal.Journal
-import za.co.absa.pramen.core.lock.TokenLockFactory
-import za.co.absa.pramen.core.pipeline.PipelineDef.{ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
-import za.co.absa.pramen.core.pipeline.{Job, Task}
+import za.co.absa.pramen.core.pipeline.Task
 import za.co.absa.pramen.core.state.PipelineState
-import za.co.absa.pramen.core.utils.{ConfigUtils, Emoji}
+import za.co.absa.pramen.core.utils.Emoji
 
 import java.util.concurrent.Executors.newFixedThreadPool
 import java.util.concurrent.{ExecutorService, Semaphore}

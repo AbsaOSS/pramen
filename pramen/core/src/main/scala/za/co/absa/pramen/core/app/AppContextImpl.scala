@@ -19,11 +19,12 @@ package za.co.absa.pramen.core.app
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.MetadataManager
+import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
-import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
+import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreImpl}
 
@@ -61,6 +62,7 @@ object AppContextImpl {
 
     PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
     PramenImpl.instance.asInstanceOf[PramenImpl].setWorkflowConfig(conf)
+    PramenImpl.instance.asInstanceOf[PramenImpl].setTokenLockFactory(tokenLockFactory)
 
     val appContext = new AppContextImpl(
       appConfig,

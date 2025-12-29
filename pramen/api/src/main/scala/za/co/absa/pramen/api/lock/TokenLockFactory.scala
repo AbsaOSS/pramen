@@ -14,32 +14,33 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.lock
-
 /**
   * This class provides facilities to protect against multiple jobs writing
-  * to the same table.
+  * to the same table based on a global lock held using a database.
   *
   * To achieve this a lock must be acquired for a particular token that should
-  * be the table name.
+  * be uniquely defined based on the table identifier, and sometimes information date.
   *
-  * The state is isolated in this class. The usage is like this:
+  * The implementation does not depend on tokens to be related to tables, it can be anything.
+  * But as along as one process owns the token, other processes can't acquire the lock.
+  *
+  * The usage is like this:
   * {{{
-  *   val lock = new TokenLockHdfs("mytable")
+  *   val lockFactory = new TokenLockFactory // One of available implementations
+  *   val lock = lockFactory.getLock("my_token")
   *   try {
-  *     if (lock.tryAcquire() {
+  *     if (lock.tryAcquire {
   *       runJob(...)
   *     } else {
-  *       log.error("Sorry cannot acquire a write lock for 'mytable'.")
+  *       log.error("Sorry cannot acquire a write lock for 'my_token'.")
   *     }
   *   } finally {
   *     lock.release()
   *   }
   * }}}
   */
+package za.co.absa.pramen.api.lock
 
-trait TokenLock extends AutoCloseable {
-  def tryAcquire(): Boolean
-
-  def release(): Unit
+trait TokenLockFactory {
+  def getLock(token: String): TokenLock
 }

@@ -22,6 +22,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.NotificationBuilder
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
 import za.co.absa.pramen.api.status.RunStatus
+import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.mocks.{PipelineStateSnapshotFactory, TaskResultFactory}
 import za.co.absa.pramen.core.state.PipelineState
@@ -209,4 +210,38 @@ class PramenImplSuite extends AnyWordSpec {
       }
     }
   }
+
+  "tokenLockFactory" should {
+    "return the token lock factory if it is available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      val tokenLockFactoryIn = new TokenLockFactoryAllow
+
+      pramen.setTokenLockFactory(tokenLockFactoryIn)
+
+      val tokenLockFactory = PramenImpl.instance.tokenLockFactory
+
+      assert(tokenLockFactory != null)
+
+      val lock = tokenLockFactory.getLock("mylock")
+      try {
+        assert(lock.tryAcquire())
+      } finally {
+        lock.release()
+
+        pramen.setTokenLockFactory(null)
+      }
+    }
+
+    "throw an exception if the token lock factory is not available" in {
+      val pramen = PramenImpl.instance.asInstanceOf[PramenImpl]
+
+      pramen.setTokenLockFactory(null)
+
+      assertThrows[IllegalStateException] {
+        PramenImpl.instance.tokenLockFactory
+      }
+    }
+  }
+
 }

@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks.lock
 
-import za.co.absa.pramen.core.lock.{TokenLock, TokenLockFactory}
+import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 
 class TokenLockFactoryMock extends TokenLockFactory {
   override def getLock(token: String): TokenLock = {

@@ -19,6 +19,7 @@ package za.co.absa.pramen.core
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
+import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen}
 import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState}
@@ -32,6 +33,8 @@ class PramenImpl extends Pramen {
   private var _metadataManager: Option[MetadataManager] = None
 
   private var _pipelineState: Option[PipelineState] = None
+
+  private var _tokenLockFactory: Option[TokenLockFactory] = None
 
   override def buildProperties: BuildPropertiesRetriever = BuildPropertyUtils.instance
 
@@ -79,6 +82,10 @@ class PramenImpl extends Pramen {
     pipelineState.setWarningFlag()
   }
 
+  override def tokenLockFactory: TokenLockFactory = _tokenLockFactory.getOrElse(
+    throw new IllegalStateException("Tocken lock factory is not available at the context.")
+  )
+
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
     _workflowConfig = Option(config)
   }
@@ -89,6 +96,22 @@ class PramenImpl extends Pramen {
 
   private[core] def setPipelineState(s: PipelineState): Unit = synchronized {
     _pipelineState = Option(s)
+  }
+
+  private[core] def setTokenLockFactory(f: TokenLockFactory): Unit = synchronized {
+    if (f == null) {
+      _tokenLockFactory = None
+    } else {
+      val customTokenLockFactory = new TokenLockFactory {
+        private val underlyingTokenLockFactory = f
+        override def getLock(token: String): TokenLock = {
+          val sep = "$"
+          val keyWithPrefix = s"custom$sep$token"
+          underlyingTokenLockFactory.getLock(keyWithPrefix)
+        }
+      }
+      _tokenLockFactory = Some(customTokenLockFactory)
+    }
   }
 
   private[core] def reset(): Unit = synchronized {

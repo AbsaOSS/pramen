@@ -22,13 +22,14 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.jobdef.Schedule
+import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
-import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
+import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
