@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.lock
 
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.lock.TokenLock
 import za.co.absa.pramen.core.utils.{JvmUtils, StringUtils}
 
 import java.time.Instant

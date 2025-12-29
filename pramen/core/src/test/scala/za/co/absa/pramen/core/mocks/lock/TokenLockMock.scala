@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.mocks.lock
 
-import za.co.absa.pramen.core.lock.TokenLock
+import za.co.absa.pramen.api.lock.TokenLock
 
 class TokenLockMock extends TokenLock {
   var acquired = false

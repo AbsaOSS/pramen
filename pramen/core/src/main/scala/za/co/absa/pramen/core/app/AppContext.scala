@@ -16,9 +16,9 @@
 
 package za.co.absa.pramen.core.app
 
+import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
-import za.co.absa.pramen.core.lock.TokenLockFactory
 import za.co.absa.pramen.core.metastore.Metastore
 
 trait AppContext {

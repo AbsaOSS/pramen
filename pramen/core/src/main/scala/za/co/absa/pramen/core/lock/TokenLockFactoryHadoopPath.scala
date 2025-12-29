@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.lock
 
 import org.apache.hadoop.conf.Configuration
+import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 
 class TokenLockFactoryHadoopPath(hadoopConf: Configuration, lockLocation: String) extends TokenLockFactory {
   override def getLock(token: String): TokenLock = {

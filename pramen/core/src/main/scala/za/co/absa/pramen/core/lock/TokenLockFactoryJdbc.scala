@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.lock
 
 import slick.jdbc.H2Profile.api._
+import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 
 class TokenLockFactoryJdbc(db: Database) extends TokenLockFactory {
 

@@ -19,6 +19,7 @@ package za.co.absa.pramen.api
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
+import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 
 /**
@@ -64,6 +65,14 @@ trait Pramen {
     * This can be set from any operation, but cannot be unset.
     */
   def setWarningFlag(): Unit
+
+  /**
+    * Provides a factory for creating and managing token-based locks, which can be used for
+    * tasks like ensuring only one instance of a process is running or managing resource access.
+    *
+    * @return An instance of the TokenLockFactory, which allows for token-based locking functionality.
+    */
+  def tokenLockFactory: TokenLockFactory
 }
 
 object Pramen {

@@ -19,8 +19,9 @@ package za.co.absa.pramen.core.tests.lock
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.api.lock.TokenLock
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.lock.{TokenLock, TokenLockJdbc}
+import za.co.absa.pramen.core.lock.TokenLockJdbc
 import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
