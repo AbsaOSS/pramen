@@ -30,6 +30,7 @@ abstract class MetastoreReaderBase(metastore: Metastore,
                                    bookkeeper: Bookkeeper,
                                    tables: Seq[String],
                                    infoDate: LocalDate,
+                                   val batchId: Long,
                                    runReason: TaskRunReason) extends MetastoreReader {
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     validateTable(tableName)

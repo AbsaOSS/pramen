@@ -33,14 +33,17 @@ class MetastoreReaderIncrementalImpl(metastore: Metastore,
                                      tables: Seq[String],
                                      outputTable: String,
                                      infoDate: LocalDate,
+                                     batchId: Long,
                                      runReason: TaskRunReason,
                                      readMode: ReaderMode,
                                      isRerun: Boolean)
-  extends MetastoreReaderBase(metastore, metadataManager, bookkeeper, tables, infoDate, runReason)
+  extends MetastoreReaderBase(metastore, metadataManager, bookkeeper, tables, infoDate, batchId, runReason)
     with MetastoreReaderIncremental {
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val trackingTables = new ListBuffer[TrackingTable]
+
+  override def isIncremental: Boolean = true
 
   override def getCurrentBatch(tableName: String): DataFrame = {
     validateTable(tableName)

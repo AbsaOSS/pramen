@@ -17,12 +17,11 @@
 package za.co.absa.pramen.core.mocks.metastore
 
 import org.apache.spark.sql.DataFrame
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.DataOffset
 import za.co.absa.pramen.api.status.TaskRunReason
-import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.MetaTableDefFactory
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
-import za.co.absa.pramen.core.mocks.MetaTableFactory
 
 import java.time.LocalDate
 
@@ -71,4 +70,8 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
   override def metadataManager: MetadataManager = metadata
 
   override def getRunReason: TaskRunReason = TaskRunReason.New
+
+  override def isIncremental: Boolean = false
+
+  override def batchId: Long = 123L
 }

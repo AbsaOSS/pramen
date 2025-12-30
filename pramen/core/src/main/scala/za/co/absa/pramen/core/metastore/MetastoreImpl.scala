@@ -219,9 +219,9 @@ class MetastoreImpl(appConfig: Config,
 
   override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, readMode: ReaderMode): MetastoreReader = {
     if (readMode == ReaderMode.Batch)
-      new MetastoreReaderBatchImpl(this, metadata, bookkeeper, tables, infoDate, runReason)
+      new MetastoreReaderBatchImpl(this, metadata, bookkeeper, tables, infoDate, batchId, runReason)
     else
-      new MetastoreReaderIncrementalImpl(this, metadata, bookkeeper, tables, outputTable, infoDate, runReason, readMode, isRerun)
+      new MetastoreReaderIncrementalImpl(this, metadata, bookkeeper, tables, outputTable, infoDate, batchId, runReason, readMode, isRerun)
   }
 
   override def setTableIncremental(table: String): Unit = {

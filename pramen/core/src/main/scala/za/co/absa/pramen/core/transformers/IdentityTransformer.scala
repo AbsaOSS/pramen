@@ -62,7 +62,10 @@ class IdentityTransformer extends Transformer {
       throw new IllegalArgumentException(s"Option '$INPUT_TABLE_KEY' is not defined")
     }
 
-    val emptyAllowed = options.getOrElse(EMPTY_ALLOWED_KEY, "true").toBoolean
+    val emptyAllowed = if (metastore.isIncremental)
+      true
+    else
+      options.getOrElse(EMPTY_ALLOWED_KEY, "true").toBoolean
 
     val tableName = options.getOrElse(INPUT_TABLE_KEY, options(INPUT_TABLE_LEGACY_KEY))
 
