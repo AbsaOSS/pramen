@@ -29,7 +29,7 @@
   *   val lockFactory = new TokenLockFactory // One of available implementations
   *   val lock = lockFactory.getLock("my_token")
   *   try {
-  *     if (lock.tryAcquire {
+  *     if (lock.tryAcquire()) {
   *       runJob(...)
   *     } else {
   *       log.error("Sorry cannot acquire a write lock for 'my_token'.")

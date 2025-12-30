@@ -83,7 +83,7 @@ class PramenImpl extends Pramen {
   }
 
   override def tokenLockFactory: TokenLockFactory = _tokenLockFactory.getOrElse(
-    throw new IllegalStateException("Tocken lock factory is not available at the context.")
+    throw new IllegalStateException("Token lock factory is not available at the context.")
   )
 
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
