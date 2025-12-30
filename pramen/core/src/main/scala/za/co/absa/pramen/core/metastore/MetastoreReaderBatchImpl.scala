@@ -29,8 +29,11 @@ class MetastoreReaderBatchImpl(metastore: Metastore,
                                bookkeeper: Bookkeeper,
                                tables: Seq[String],
                                infoDate: LocalDate,
-                               runReason: TaskRunReason) extends MetastoreReaderBase(metastore, metadataManager, bookkeeper, tables, infoDate, runReason) {
+                               batchId: Long,
+                               runReason: TaskRunReason) extends MetastoreReaderBase(metastore, metadataManager, bookkeeper, tables, infoDate, batchId, runReason) {
   private val log = LoggerFactory.getLogger(this.getClass)
+
+  override def isIncremental: Boolean = false
 
   override def getCurrentBatch(tableName: String): DataFrame = {
     log.info(s"Getting daily data for table '$tableName' at '$infoDate'...")

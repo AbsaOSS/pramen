@@ -43,6 +43,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    isTableEmpty: Boolean = false,
                    trackDays: Int = 0,
                    failHive: Boolean = false,
+                   batchIdIn: Long = 123L,
                    readOptions: Map[String, String] = Map.empty[String, String],
                    writeOptions: Map[String, String] = Map.empty[String, String]) extends Metastore {
 
@@ -167,6 +168,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
 
       override def getRunReason: TaskRunReason = TaskRunReason.New
 
+      override def isIncremental: Boolean = true
+
       override def metadataManager: MetadataManager = metadataManagerMock
 
       private def validateTable(tableName: String): Unit = {
@@ -178,6 +181,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
       override def commitIncrementalOutputTable(tableName: String, trackingName: String): Unit = {}
 
       override def commitIncrementalStage(): Unit = {}
+
+      override def batchId: Long = batchIdIn
     }
   }
 

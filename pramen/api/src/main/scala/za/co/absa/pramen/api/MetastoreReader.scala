@@ -139,6 +139,16 @@ trait MetastoreReader {
   def getRunReason: TaskRunReason
 
   /**
+    * Indicates whether the processing is incremental.
+    *
+    * @return true if the processing is incremental, false otherwise.
+    */
+  def isIncremental: Boolean
+
+  /** Retrieves the unique identifier of the current batch being processed. It is unique for a session. */
+  def batchId: Long
+
+  /**
     * Returns an object that allows accessing metadata of metastore tables.
     */
   def metadataManager: MetadataManager
