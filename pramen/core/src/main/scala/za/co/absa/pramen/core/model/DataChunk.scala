@@ -25,7 +25,8 @@ case class DataChunk(tableName: String,
                      inputRecordCount: Long,
                      outputRecordCount: Long,
                      jobStarted: Long,
-                     jobFinished: Long)
+                     jobFinished: Long,
+                     batchId: Long)
 
 
 object DataChunk {

@@ -249,7 +249,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         val df1 = m.getTable("table1", Some(infoDate), Some(infoDate))
 
         assert(df1.count() == 3)
-        assert(b.getDataChunks("table1", infoDate, infoDate).nonEmpty)
+        assert(b.getDataChunks("table1", infoDate, None).nonEmpty, None)
       }
     }
 
@@ -262,7 +262,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         val df1 = m.getTable("table1", Some(infoDate), Some(infoDate))
 
         assert(df1.count() == 3)
-        assert(b.getDataChunks("table1", infoDate, infoDate).isEmpty)
+        assert(b.getDataChunks("table1", infoDate, None).isEmpty)
       }
     }
   }
@@ -422,14 +422,14 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         m.saveTable("table1", infoDate, getDf)
 
         val reader = m.getMetastoreReader("table1" :: Nil, "output_table", infoDate, TaskRunReason.New, ReaderMode.Batch)
-        val runInfo1 = reader.getTableRunInfo("table1", infoDate)
-        val runInfo2 = reader.getTableRunInfo("table1", infoDate.plusDays(1))
+        val runInfo1 = reader.getTableRunInfo("table1", infoDate, None)
+        val runInfo2 = reader.getTableRunInfo("table1", infoDate.plusDays(1), None)
 
-        assert(runInfo1.isDefined)
+        assert(runInfo1.nonEmpty)
         assert(runInfo2.isEmpty)
 
-        assert(runInfo1.get.tableName == "table1")
-        assert(runInfo1.get.infoDate == infoDate)
+        assert(runInfo1.head.tableName == "table1")
+        assert(runInfo1.head.infoDate == infoDate)
       }
     }
 

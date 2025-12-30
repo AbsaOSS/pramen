@@ -38,8 +38,9 @@ object BookkeeperDeltaTable {
 }
 
 class BookkeeperDeltaTable(database: Option[String],
-                           tablePrefix: String)
-                          (implicit spark: SparkSession) extends BookkeeperDeltaBase {
+                           tablePrefix: String,
+                           batchId: Long)
+                          (implicit spark: SparkSession) extends BookkeeperDeltaBase(batchId) {
   import BookkeeperDeltaTable._
   import spark.implicits._
 

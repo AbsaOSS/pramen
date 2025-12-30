@@ -28,9 +28,10 @@ class BookkeepingRecords(tag: Tag) extends Table[BookkeepingRecord](tag, "bookke
   def outputRecordCount = column[Long]("output_record_count")
   def jobStarted = column[Long]("job_started")
   def jobFinished = column[Long]("job_finished")
+  def batchId = column[Long]("batch_id")
   def * = (pramenTableName, infoDate, infoDateBegin, infoDateEnd,
     inputRecordCount, outputRecordCount,
-    jobStarted, jobFinished) <> (BookkeepingRecord.tupled, BookkeepingRecord.unapply)
+    jobStarted, jobFinished, batchId) <> (BookkeepingRecord.tupled, BookkeepingRecord.unapply)
   def idx1 = index("bk_idx_1", (pramenTableName, infoDate), unique = false)
 }
 

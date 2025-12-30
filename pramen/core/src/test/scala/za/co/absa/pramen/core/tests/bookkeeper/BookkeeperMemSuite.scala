@@ -93,7 +93,7 @@ class BookkeeperMemSuite extends AnyWordSpec with BeforeAndAfter {
         bk.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false)
         bk.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false)
 
-        val chunks = bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table", infoDate1, infoDate1)
+        val chunks = bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table", infoDate1, None)
 
         assert(chunks.size == 1)
 

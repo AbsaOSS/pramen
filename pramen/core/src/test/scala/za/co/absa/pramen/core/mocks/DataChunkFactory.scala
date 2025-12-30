@@ -24,7 +24,8 @@ object DataChunkFactory {
                         inputRecordCount: Long = 1000,
                         outputRecordCount: Long = 1000,
                         jobStarted: Long = 10000,
-                        jobFinished: Long = 20000): DataChunk = {
+                        jobFinished: Long = 20000,
+                        batchId: Long = 123L): DataChunk = {
     DataChunk(tableName = tableName,
       infoDate = infoDate,
       infoDateBegin = infoDate,
@@ -32,6 +33,7 @@ object DataChunkFactory {
       inputRecordCount = inputRecordCount,
       outputRecordCount = outputRecordCount,
       jobStarted = jobStarted,
-      jobFinished = jobFinished)
+      jobFinished = jobFinished,
+      batchId = batchId)
   }
 }

@@ -26,7 +26,7 @@ import java.time.LocalDate
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
 
-abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
+abstract class BookkeeperDeltaBase(batchId: Long) extends BookkeeperHadoop(batchId) {
 
   def getBkDf(filter: Column): Dataset[DataChunk]
 
@@ -60,13 +60,19 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
   }
 
   final override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
-    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate))
+    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate), None)
 
     getBkData(infoDateFilter).lastOption
   }
 
+  final override def getDataChunksFromStorage(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+    val infoDateFilter = getFilter(tableName, Option(infoDate), Option(infoDate), batchId)
+
+    getBkAllData(infoDateFilter)
+  }
+
   final def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
-    getBkDf(getFilter(table, dateBegin, dateEnd)).count()
+    getBkDf(getFilter(table, dateBegin, dateEnd, None)).count()
   }
 
   final private[pramen] override def saveRecordCountToStorage(table: String,
@@ -77,13 +83,13 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
                                                         jobFinished: Long): Unit = {
     val dateStr = getDateStr(infoDate)
 
-    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
 
     saveRecordCountDelta(chunk)
   }
 
   final override def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)] = {
-    val filter = getFilter(table, None, Option(until))
+    val filter = getFilter(table, None, Option(until), None)
 
     val df = getSchemasDeltaDf
 
@@ -101,6 +107,12 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
     val tableSchema = TableSchema(table, infoDate.toString, schema.json)
 
     saveSchemaDelta(tableSchema)
+  }
+
+  private[core] def getBkAllData(filter: Column): Seq[DataChunk] = {
+    getBkDf(filter)
+      .collect()
+      .sortBy(_.infoDate)
   }
 
   private[core] def getBkData(filter: Column): Seq[DataChunk] = {

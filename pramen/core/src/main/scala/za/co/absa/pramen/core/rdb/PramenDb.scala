@@ -89,8 +89,13 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (0 < dbVersion && dbVersion < 7) {
       addColumn(LockTickets.lockTickets.baseTableRow.tableName, "created_at", "bigint")
     }
+
     if (0 < dbVersion && dbVersion < 8) {
       addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "country", "varchar(50)")
+    }
+
+    if (0 < dbVersion && dbVersion < 9) {
+      addColumn(BookkeepingRecords.records.baseTableRow.tableName, "batch_id", "bigint")
     }
   }
 
@@ -127,7 +132,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 }
 
 object PramenDb {
-  val MODEL_VERSION = 8
+  val MODEL_VERSION = 9
   val DEFAULT_RETRIES = 3
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {

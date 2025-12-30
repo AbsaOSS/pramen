@@ -35,7 +35,7 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
   }
 
   def getBookkeeper(prefix: String): BookkeeperDeltaTable = {
-    new BookkeeperDeltaTable(None, prefix)
+    new BookkeeperDeltaTable(None, prefix, 123L)
   }
 
   "BookkeeperHadoopDeltaTable" when {

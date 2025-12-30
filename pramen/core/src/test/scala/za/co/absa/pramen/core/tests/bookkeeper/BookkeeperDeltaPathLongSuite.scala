@@ -39,7 +39,7 @@ class BookkeeperDeltaPathLongSuite extends BookkeeperCommonSuite with SparkTestB
   }
 
   def getBookkeeper: BookkeeperDeltaPath = {
-    new BookkeeperDeltaPath(tmpDir)
+    new BookkeeperDeltaPath(tmpDir, 123L)
   }
 
   "BookkeeperHadoopDeltaPath" when {

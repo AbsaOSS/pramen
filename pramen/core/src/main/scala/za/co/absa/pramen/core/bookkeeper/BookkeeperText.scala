@@ -38,7 +38,7 @@ object BookkeeperText {
   val locksDirName = "locks"
 }
 
-class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) extends BookkeeperHadoop {
+class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: SparkSession) extends BookkeeperHadoop(batchId) {
 
   import BookkeeperText._
   import spark.implicits._
@@ -77,12 +77,18 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
     }
   }
 
+  override def getDataChunksFromStorage(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+    val infoDateFilter = getFilter(tableName, Option(infoDate), Option(infoDate), batchId)
+
+    getData(infoDateFilter)
+  }
+
   override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
-    getData(getFilter(table, Option(infoDate), Option(infoDate))).lastOption
+    getData(getFilter(table, Option(infoDate), Option(infoDate), None)).lastOption
   }
 
   def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
-    getDf(getFilter(table, dateBegin, dateEnd)).count()
+    getDf(getFilter(table, dateBegin, dateEnd, None)).count()
   }
 
   private[pramen] override def saveRecordCountToStorage(table: String,
@@ -96,7 +102,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
     try {
       val dateStr = getDateStr(infoDate)
 
-      val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+      val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
       val csv = CsvUtils.getRecord(chunk, '|')
       fsUtils.appendFile(bkFilePath, csv)
 
@@ -160,7 +166,7 @@ class BookkeeperText(bookkeepingPath: String)(implicit spark: SparkSession) exte
   }
 
   override def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)] = {
-    val filter = getFilter(table, None, Option(until))
+    val filter = getFilter(table, None, Option(until), None)
 
     val df = spark
       .read

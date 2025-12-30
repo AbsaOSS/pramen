@@ -42,6 +42,8 @@ trait Bookkeeper {
 
   def getLatestDataChunk(table: String, infoDate: LocalDate): Option[DataChunk]
 
+  def getDataChunks(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk]
+
   def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 
   def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
@@ -115,23 +117,23 @@ object Bookkeeper {
       mongoDbConnection match {
         case Some(connection) =>
           log.info(s"Using MongoDB for bookkeeping.")
-          new BookkeeperMongoDb(connection)
+          new BookkeeperMongoDb(connection, batchId)
         case None =>
           bookkeepingConfig.bookkeepingHadoopFormat match {
             case HadoopFormat.Text =>
               val path = bookkeepingConfig.bookkeepingLocation.get
               log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping at $path")
-              new BookkeeperText(path)
+              new BookkeeperText(path, batchId)
             case HadoopFormat.Delta =>
               bookkeepingConfig.deltaTablePrefix match {
                 case Some(tablePrefix) =>
                   val fullTableName = BookkeeperDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix, "*")
                   log.info(s"Using Delta Lake managed table '$fullTableName' for bookkeeping.")
-                  new BookkeeperDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix)
+                  new BookkeeperDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix, batchId)
                 case None =>
                   val path = bookkeepingConfig.bookkeepingLocation.get
                   log.info(s"Using Delta Lake for bookkeeping at $path")
-                  new BookkeeperDeltaPath(path)
+                  new BookkeeperDeltaPath(path, batchId)
               }
           }
       }
