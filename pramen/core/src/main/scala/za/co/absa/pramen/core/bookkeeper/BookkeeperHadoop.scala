@@ -18,14 +18,13 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.spark.sql.Column
 import org.apache.spark.sql.functions._
-import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
 
 
-abstract class BookkeeperHadoop extends BookkeeperBase(true) {
-  private[core] def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate]): Column = {
-    (infoDateBegin, infoDateEnd) match {
+abstract class BookkeeperHadoop(batchId: Long) extends BookkeeperBase(true, batchId) {
+  private[core] def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate], batchId: Option[Long]): Column = {
+    val baseFilter = (infoDateBegin, infoDateEnd) match {
       case (Some(begin), Some(end)) =>
         val beginStr = getDateStr(begin)
         val endStr = getDateStr(end)
@@ -38,6 +37,11 @@ abstract class BookkeeperHadoop extends BookkeeperBase(true) {
         col("tableName") === tableName && col("infoDate") <= endStr
       case (None, None) =>
         col("tableName") === tableName
+    }
+
+    batchId match {
+      case Some(id) => baseFilter && col("batchId") === lit(id)
+      case None => baseFilter
     }
   }
 }

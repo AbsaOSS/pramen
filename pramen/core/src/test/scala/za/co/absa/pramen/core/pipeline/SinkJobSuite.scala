@@ -193,9 +193,9 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val outputTable = "table1->mysink"
 
-      assert(bk.getDataChunks(outputTable, infoDate, infoDate).nonEmpty)
+      assert(bk.getDataChunks(outputTable, infoDate, None).nonEmpty)
 
-      val chunk = bk.getDataChunks(outputTable, infoDate, infoDate).head
+      val chunk = bk.getDataChunks(outputTable, infoDate, None).head
 
       assert(chunk.inputRecordCount == 10)
       assert(chunk.outputRecordCount == 3)

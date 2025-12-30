@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.utils.SlickUtils
 import java.time.LocalDate
 import scala.util.control.NonFatal
 
-class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
+class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, batchId) {
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -67,8 +67,21 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
     }
   }
 
+  override def getDataChunksFromStorage(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+    val query = getFilter(table, Option(infoDate), Option(infoDate), batchId)
+
+    try {
+      SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
+        .map(toChunk)
+        .toArray[DataChunk]
+        .sortBy(_.jobFinished)
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
+    }
+  }
+
   override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
-    val query = getFilter(table, Option(infoDate), Option(infoDate))
+    val query = getFilter(table, Option(infoDate), Option(infoDate), None)
       .sortBy(r => r.jobFinished.desc)
       .take(1)
 
@@ -86,7 +99,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
   }
 
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
-    val query = getFilter(table, dateBeginOpt, dateEndOpt)
+    val query = getFilter(table, dateBeginOpt, dateEndOpt, None)
       .length
 
     val count = try {
@@ -106,7 +119,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
                                                         jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+    val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
 
     try {
       db.run(
@@ -123,11 +136,11 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
 
   private def toChunk(r: BookkeepingRecord): DataChunk = {
     DataChunk(
-      r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.jobStarted, r.jobFinished)
+      r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.jobStarted, r.jobFinished, r.batchId)
   }
 
-  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate]): Query[BookkeepingRecords, BookkeepingRecord, Seq] = {
-    (infoDateBeginOpt, infoDateEndOpt) match {
+  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[BookkeepingRecords, BookkeepingRecord, Seq] = {
+    val baseFilter = (infoDateBeginOpt, infoDateEndOpt) match {
       case (Some(infoDateBegin), Some(infoDateEnd)) =>
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
         val date1Str = DataChunk.dateFormatter.format(infoDateEnd)
@@ -152,6 +165,11 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true) {
       case (None, None) =>
         BookkeepingRecords.records
           .filter(r => r.pramenTableName === tableName)
+    }
+
+    batchId match {
+      case Some(id) => baseFilter.filter(r => r.batchId === id)
+      case None => baseFilter
     }
   }
 

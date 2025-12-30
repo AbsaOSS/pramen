@@ -34,7 +34,7 @@ object BookkeeperDeltaPath {
   val locksDirName = "locks"
 }
 
-class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession) extends BookkeeperDeltaBase {
+class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark: SparkSession) extends BookkeeperDeltaBase(batchId) {
   import BookkeeperDeltaPath._
   import spark.implicits._
 

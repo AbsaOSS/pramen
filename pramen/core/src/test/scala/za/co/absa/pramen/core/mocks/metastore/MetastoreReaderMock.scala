@@ -65,7 +65,7 @@ class MetastoreReaderMock(tables: Seq[(String, DataFrame)], infoDate: LocalDate)
     }
   }
 
-  override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
+  override def getTableRunInfo(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[MetaTableRunInfo] = Seq.empty
 
   override def metadataManager: MetadataManager = metadata
 

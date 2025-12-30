@@ -37,7 +37,7 @@ class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixtu
   }
 
   def getBookkeeper: Bookkeeper = {
-    new BookkeeperMongoDb(connection)
+    new BookkeeperMongoDb(connection, 123L)
   }
 
   if (db != null) {

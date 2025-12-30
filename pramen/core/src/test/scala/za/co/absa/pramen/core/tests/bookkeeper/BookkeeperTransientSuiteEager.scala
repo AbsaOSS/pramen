@@ -71,7 +71,7 @@ class BookkeeperTransientSuiteEager extends AnyWordSpec {
       val bk = getBookkeeper
       bk.setRecordCount("table1", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = true)
 
-      val chunks = bk.getTransientDataChunks("table1", Option(infoDate2), Option(infoDate2))
+      val chunks = bk.getTransientDataChunks("table1", Option(infoDate2), Option(infoDate2), None)
 
       assert(chunks.length == 1)
       assert(chunks.head.infoDate == infoDate2.toString)
