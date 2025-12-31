@@ -37,7 +37,7 @@ class JournalMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAnd
     }
   }
 
-  if (db != null) {
+  if (mongoDbExecutable.nonEmpty) {
     "Journal/MongoDB" should {
       "Initialize an empty database" in {
         db.doesCollectionExists("collectionName")
