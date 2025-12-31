@@ -41,7 +41,7 @@ class JournalTasks(tag: Tag) extends Table[JournalTask](tag, "journal") {
   def environmentName = column[Option[String]]("environmentName", O.Length(128))
   def tenant = column[Option[String]]("tenant", O.Length(200))
   def country = column[Option[String]]("country", O.Length(50))
-  def batchId = column[Long]("batch_id")
+  def batchId = column[Option[Long]]("batch_id")
   def * = (jobName, pramenTableName, periodBegin, periodEnd,
     informationDate, inputRecordCount, inputRecordCountOld, outputRecordCount,
     outputRecordCountOld, appendedRecordCount, outputSize, startedAt, finishedAt,

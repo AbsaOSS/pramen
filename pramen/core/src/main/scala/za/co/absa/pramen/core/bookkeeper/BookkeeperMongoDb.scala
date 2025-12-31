@@ -169,13 +169,13 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
       val dbVersion = d.getVersion()
       if (!d.doesCollectionExists(collectionName)) {
         d.createCollection(collectionName)
-        d.createIndex(collectionName, IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil, unique = true)
+        d.createIndex(collectionName, IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil)
       }
       if (dbVersion < 2) {
         d.createCollection(schemaCollectionName)
         d.createIndex(schemaCollectionName, IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil, unique = true)
       }
-      if (dbVersion < 3) {
+      if (dbVersion < 3 && dbVersion > 0) {
         val keys = IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil
         // Make the bookkeeping index non-unique
         d.dropIndex(collectionName, keys)

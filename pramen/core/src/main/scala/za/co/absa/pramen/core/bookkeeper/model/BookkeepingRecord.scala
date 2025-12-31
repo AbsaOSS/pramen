@@ -24,7 +24,7 @@ case class BookkeepingRecord(pramenTableName: String,
                              outputRecordCount: Long,
                              jobStarted: Long,
                              jobFinished: Long,
-                             batchId: Long)
+                             batchId: Option[Long])
 
 
 
