@@ -28,7 +28,7 @@ trait MongoDbFixture extends BeforeAndAfterAll {
 
   import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
-  private val (mongoDbExecutable, mongoPort) = MongoDbSingleton.embeddedMongoDb
+  protected val (mongoDbExecutable, mongoPort) = MongoDbSingleton.embeddedMongoDb
 
   def connectionString: String = s"mongodb://localhost:$mongoPort"
 

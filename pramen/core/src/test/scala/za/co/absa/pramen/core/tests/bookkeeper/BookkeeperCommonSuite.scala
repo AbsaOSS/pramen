@@ -143,15 +143,17 @@ class BookkeeperCommonSuite extends AnyWordSpec {
     }
 
     "setRecordCount()" should {
-      "overwrite the previous entry" in {
+      "add a new entry" in {
         val bk = getBookkeeper()
 
         bk.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false)
         bk.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false)
 
         val latestChunkOpt = bk.getLatestDataChunk("table", infoDate1)
+        val chunks = bk.getDataChunks("table", infoDate1, None)
 
         assert(latestChunkOpt.isDefined)
+        assert(chunks.length == 2)
 
         assert(latestChunkOpt.get.infoDate == "2020-08-11")
         assert(latestChunkOpt.get.jobFinished == 1597318839)

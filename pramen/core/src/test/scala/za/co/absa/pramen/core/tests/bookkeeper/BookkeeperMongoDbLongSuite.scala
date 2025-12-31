@@ -40,7 +40,7 @@ class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixtu
     new BookkeeperMongoDb(connection, 123L)
   }
 
-  if (db != null) {
+  if (mongoDbExecutable.nonEmpty) {
     "BookkeeperMongoDb" when {
       "initialized" should {
         "Initialize an empty database" in {

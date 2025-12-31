@@ -119,7 +119,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
                                                         jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
+    val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId))
 
     try {
       db.run(
@@ -136,7 +136,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
 
   private def toChunk(r: BookkeepingRecord): DataChunk = {
     DataChunk(
-      r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.jobStarted, r.jobFinished, r.batchId)
+      r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.jobStarted, r.jobFinished, r.batchId.getOrElse(0L))
   }
 
   private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[BookkeepingRecords, BookkeepingRecord, Seq] = {
