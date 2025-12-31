@@ -41,11 +41,12 @@ class JournalTasks(tag: Tag) extends Table[JournalTask](tag, "journal") {
   def environmentName = column[Option[String]]("environmentName", O.Length(128))
   def tenant = column[Option[String]]("tenant", O.Length(200))
   def country = column[Option[String]]("country", O.Length(50))
+  def batchId = column[Long]("batch_id")
   def * = (jobName, pramenTableName, periodBegin, periodEnd,
     informationDate, inputRecordCount, inputRecordCountOld, outputRecordCount,
     outputRecordCountOld, appendedRecordCount, outputSize, startedAt, finishedAt,
     status, failureReason, sparkApplicationId, pipelineId, pipelineName, environmentName,
-    tenant, country) <> (JournalTask.tupled, JournalTask.unapply)
+    tenant, country, batchId) <> (JournalTask.tupled, JournalTask.unapply)
   def idx1 = index("idx_started_at", startedAt, unique = false)
   def idx2 = index("idx_finished_at", finishedAt, unique = false)
 }

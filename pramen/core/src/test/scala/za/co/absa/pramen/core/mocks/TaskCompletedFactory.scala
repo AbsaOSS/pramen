@@ -43,7 +43,8 @@ object TaskCompletedFactory {
                        pipelineName: Option[String] = Some("test"),
                        environmentName: Option[String] = Some("DEV"),
                        tenant: Option[String] = Some("Dummy tenant"),
-                       country: Option[String] = Some("noname")): TaskCompleted = {
+                       country: Option[String] = Some("noname"),
+                       batchId: Long = 123L): TaskCompleted = {
     model.TaskCompleted(
       jobName,
       tableName,
@@ -65,7 +66,8 @@ object TaskCompletedFactory {
       pipelineName,
       environmentName,
       tenant,
-      country
+      country,
+      batchId
     )
   }
 

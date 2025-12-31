@@ -33,5 +33,6 @@ case class PipelineInfo(
                          pipelineNotificationFailures: Seq[PipelineNotificationFailure],
                          pipelineId: String,
                          tenant: Option[String],
-                         country: Option[String]
+                         country: Option[String],
+                         batchId: Long
                        )

@@ -56,7 +56,8 @@ class JournalJdbc(db: Database) extends Journal {
       entry.pipelineName,
       entry.environmentName,
       entry.tenant,
-      entry.country)
+      entry.country,
+      entry.batchId)
 
     try {
       db.run(
@@ -97,7 +98,8 @@ class JournalJdbc(db: Database) extends Journal {
         pipelineName = v.pipelineName,
         environmentName = v.environmentName,
         tenant = v.tenant,
-        country = v.country
+        country = v.country,
+        batchId = v.batchId
       )
     }).toList
   }

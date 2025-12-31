@@ -88,7 +88,8 @@ class JournalHadoopCsv(journalPath: String)
         pipelineName = v.pipelineName,
         environmentName = v.environmentName,
         tenant = v.tenant,
-        country = v.country
+        country = v.country,
+        batchId = v.batchId
       ))
   }
 
@@ -125,6 +126,7 @@ class JournalHadoopCsv(journalPath: String)
       t.environmentName.getOrElse("") ::
       t.tenant.getOrElse("") ::
       t.country.getOrElse("") ::
+      t.batchId ::
       Nil
     record.mkString("", s"$separator", "\n")
   }
