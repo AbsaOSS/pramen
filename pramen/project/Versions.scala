@@ -31,7 +31,7 @@ object Versions {
   val channelVersion = "0.2.1"
   val requestsVersion = "0.8.0"
   val javaXMailVersion = "1.6.2"
-  val embeddedMongoDbVersion = "2.2.0"
+  val embeddedMongoDbVersion = "4.22.0"
   val scalaCompatColsVersion = "2.12.0"
   val scalatestVersion = "3.2.14"
   val mockitoVersion = "2.28.2"
