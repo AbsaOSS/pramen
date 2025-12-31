@@ -157,11 +157,6 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
   private def getData(filter: Column): Seq[DataChunk] = {
     getDf(filter)
       .collect()
-      .groupBy(v => (v.tableName, v.infoDate))
-      .map { case (_, listChunks) =>
-        listChunks.maxBy(c => c.jobFinished)
-      }
-      .toArray[DataChunk]
       .sortBy(_.jobFinished)
   }
 
