@@ -168,7 +168,8 @@ class SinkJob(operationDef: OperationDef,
         sinkResult.recordsSent,
         jobStarted.getEpochSecond,
         jobFinished.getEpochSecond,
-        isTransient
+        isTransient,
+        overwrite = false
       )
 
       if (isIncremental) {

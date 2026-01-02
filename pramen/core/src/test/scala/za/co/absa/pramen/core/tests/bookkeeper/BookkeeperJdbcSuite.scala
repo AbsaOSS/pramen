@@ -37,14 +37,14 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
     super.afterAll()
   }
 
-  def getBookkeeper: Bookkeeper = {
-    new BookkeeperJdbc(pramenDb.slickDb, 0L)
+  def getBookkeeper(batchId: Long): Bookkeeper = {
+    new BookkeeperJdbc(pramenDb.slickDb, batchId)
   }
 
   "BookkeeperJdbc" when {
     "initialized" should {
       "Initialize an empty database" in {
-        getBookkeeper
+        getBookkeeper(0L)
 
         assert(getTables.exists(_.equalsIgnoreCase("bookkeeping")))
         assert(getTables.exists(_.equalsIgnoreCase("schemas")))
@@ -53,6 +53,6 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
       }
     }
 
-    testBookKeeper(() => getBookkeeper)
+    testBookKeeper(batchId => getBookkeeper(batchId))
   }
 }

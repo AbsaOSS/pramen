@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
+import io.delta.tables.DeltaTable
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
@@ -23,7 +24,7 @@ import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.utils.FsUtils
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
 
@@ -65,6 +66,14 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
       .format("delta")
       .option("mergeSchema", "true")
       .save(recordsPath.toUri.toString)
+  }
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
+    val infoDateStr = DataChunk.dateFormatter.format(infoDate)
+    val filter = (col("tableName") === lit(table)) && (col("infoDate") === lit(infoDateStr)) && (col("batchId") =!= lit(batchId))
+
+    val deltaTable = DeltaTable.forPath(spark, recordsPath.toUri.toString)
+    deltaTable.delete(filter)
   }
 
   override def getSchemasDeltaDf: Dataset[TableSchemaJson] = {

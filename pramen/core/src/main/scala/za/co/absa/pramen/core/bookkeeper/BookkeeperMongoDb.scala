@@ -99,7 +99,7 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
     chunks
   }
 
-  private[pramen] override def saveRecordCountToStorage(table: String,
+  override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
@@ -110,6 +110,18 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
     val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
 
     collection.insertOne(chunk).execute()
+  }
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
+    val dateStr = DataChunk.dateFormatter.format(infoDate)
+
+    val filter = Filters.and(
+      Filters.eq("tableName", table),
+      Filters.eq("infoDate", dateStr),
+      Filters.ne("batchId", batchId)
+    )
+
+    collection.deleteMany(filter).execute()
   }
 
   private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Bson = {

@@ -24,7 +24,8 @@ import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.rdb.PramenDb.DEFAULT_RETRIES
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.SlickUtils
+import za.co.absa.pramen.core.utils.SlickUtils.{WARN_IF_LONGER_MS, log}
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, SlickUtils, TimeUtils}
 
 import java.time.LocalDate
 import scala.util.control.NonFatal
@@ -111,7 +112,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
     count
   }
 
-  private[pramen] override def saveRecordCountToStorage(table: String,
+  override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
@@ -127,6 +128,26 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
       ).execute()
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to write to the bookkeeping table.", ex)
+    }
+  }
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
+    val dateStr = DataChunk.dateFormatter.format(infoDate)
+
+    val query = BookkeepingRecords.records
+      .filter(r => r.pramenTableName === table && r.infoDate === dateStr && r.batchId =!= batchId)
+      .delete
+
+    try {
+      AlgorithmUtils.resultWithTimeout(WARN_IF_LONGER_MS) {
+        db.run(query).execute()
+      } { actualTimeMs =>
+        val elapsedTime = TimeUtils.prettyPrintElapsedTimeShort(actualTimeMs)
+        val sql = query.statements.mkString("; ")
+        log.warn(s"Action execution time: $elapsedTime. SQL: $sql")
+      }
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to delete non-current batch records from the bookkeeping table.", ex)
     }
   }
 

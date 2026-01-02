@@ -192,4 +192,8 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
       lock.release()
     }
   }
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
+
+  }
 }

@@ -36,15 +36,15 @@ class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixtu
     }
   }
 
-  def getBookkeeper: Bookkeeper = {
-    new BookkeeperMongoDb(connection, 123L)
+  def getBookkeeper(batchId: Long): Bookkeeper = {
+    new BookkeeperMongoDb(connection, batchId)
   }
 
   if (mongoDbExecutable.nonEmpty) {
     "BookkeeperMongoDb" when {
       "initialized" should {
         "Initialize an empty database" in {
-          getBookkeeper
+          getBookkeeper(123L)
 
           assert(db.doesCollectionExists(collectionName))
 
@@ -53,7 +53,7 @@ class BookkeeperMongoDbLongSuite extends BookkeeperCommonSuite with MongoDbFixtu
         }
       }
 
-      testBookKeeper(() => getBookkeeper)
+      testBookKeeper(batchId => getBookkeeper(batchId))
     }
   }
   else {

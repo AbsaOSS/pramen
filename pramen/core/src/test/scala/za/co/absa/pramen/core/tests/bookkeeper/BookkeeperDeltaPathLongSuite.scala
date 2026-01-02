@@ -38,20 +38,20 @@ class BookkeeperDeltaPathLongSuite extends BookkeeperCommonSuite with SparkTestB
     deleteDir(tmpDir)
   }
 
-  def getBookkeeper: BookkeeperDeltaPath = {
-    new BookkeeperDeltaPath(tmpDir, 123L)
+  def getBookkeeper(batchId: Long): BookkeeperDeltaPath = {
+    new BookkeeperDeltaPath(tmpDir, batchId)
   }
 
   "BookkeeperHadoopDeltaPath" when {
     "initialized" should {
       "Initialize bookkeeping directory" in {
-        getBookkeeper
+        getBookkeeper(123L)
 
         assert(fsUtils.exists(new Path(tmpDir, s"$bookkeepingRootPath/$recordsDirName")))
         assert(fsUtils.exists(new Path(tmpDir, locksDirName)))
       }
     }
 
-    testBookKeeper(() => getBookkeeper)
+    testBookKeeper(batchId => getBookkeeper(batchId))
   }
 }
