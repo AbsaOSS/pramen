@@ -76,7 +76,7 @@ abstract class MetastoreReaderBase(metastore: Metastore,
         MetaTableRunInfo(
           tableName,
           LocalDate.parse(chunk.infoDate),
-          chunk.batchId,
+          chunk.batchId.getOrElse(0L),
           chunk.inputRecordCount,
           chunk.outputRecordCount,
           chunk.appendedRecordCount,

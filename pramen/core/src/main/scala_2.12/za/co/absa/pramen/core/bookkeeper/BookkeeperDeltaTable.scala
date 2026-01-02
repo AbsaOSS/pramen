@@ -58,8 +58,8 @@ class BookkeeperDeltaTable(database: Option[String],
       .as[DataChunk]
   }
 
-  override def saveRecordCountDelta(dataChunks: DataChunk): Unit = {
-    val df = Seq(dataChunks).toDF()
+  override def saveRecordCountDelta(dataChunk: DataChunk): Unit = {
+    val df = Seq(dataChunk).toDF()
 
     df.write
       .format("delta")

@@ -106,10 +106,10 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
       dateStr,
       inputRecordCount,
       outputRecordCount,
-      recordsAppended,
       jobStarted,
       jobFinished,
-      batchId)
+      Option(batchId),
+      recordsAppended)
 
     chunks += (table, infoDate) -> chunk
   }

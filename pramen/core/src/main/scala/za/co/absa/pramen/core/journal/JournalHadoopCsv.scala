@@ -89,7 +89,7 @@ class JournalHadoopCsv(journalPath: String)
         environmentName = v.environmentName,
         tenant = v.tenant,
         country = v.country,
-        batchId = v.batchId
+        batchId = v.batchId.getOrElse(0L)
       ))
   }
 

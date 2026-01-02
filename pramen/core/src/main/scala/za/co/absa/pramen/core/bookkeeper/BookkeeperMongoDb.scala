@@ -25,7 +25,6 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.{Filters, Sorts}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecord, BookkeepingRecordMongoDb}
 import za.co.absa.pramen.core.dao.MongoDb
 import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
@@ -47,12 +46,12 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[BookkeepingRecordMongoDb], classOf[TableSchema]), DEFAULT_CODEC_REGISTRY)
+  private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[DataChunk], classOf[TableSchema]), DEFAULT_CODEC_REGISTRY)
   private val db = mongoDbConnection.getDatabase
 
   initCollection()
 
-  private val collection = db.getCollection[BookkeepingRecordMongoDb](collectionName).withCodecRegistry(codecRegistry)
+  private val collection = db.getCollection[DataChunk](collectionName).withCodecRegistry(codecRegistry)
   private val schemaCollection = db.getCollection[TableSchema](schemaCollectionName).withCodecRegistry(codecRegistry)
 
   override val bookkeepingEnabled: Boolean = true
@@ -86,7 +85,6 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
       .limit(1)
       .execute()
       .headOption
-      .map(DataChunk.fromRecordMongo)
   }
 
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
@@ -97,7 +95,7 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
     val chunks = collection.find(getFilter(table, Option(infoDate), Option(infoDate), batchId)).execute()
       .sortBy(_.jobFinished)
     log.info(s"For $table ($infoDate) : ${chunks.mkString("[ ", ", ", " ]")}")
-    chunks.map(DataChunk.fromRecordMongo)
+    chunks
   }
 
   override def saveRecordCountToStorage(table: String,
@@ -109,7 +107,7 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
                                         jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val record = BookkeepingRecordMongoDb(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, Option(batchId))
+    val record = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId), recordsAppended)
 
     collection.insertOne(record).execute()
   }

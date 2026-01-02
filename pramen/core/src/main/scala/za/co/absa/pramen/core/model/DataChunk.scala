@@ -16,20 +16,25 @@
 
 package za.co.absa.pramen.core.model
 
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecord, BookkeepingRecordMongoDb}
+import za.co.absa.pramen.core.bookkeeper.model.BookkeepingRecord
 
 import java.time.format.DateTimeFormatter
 
+/**
+  * Represents a data chunk for storing bookkeeping records in non-relational storage (e.g., CSV files).
+  * The order of columns must be preserved to maintain compatibility with existing CSV files
+  * since the field order in CSV directly depends on it.
+  */
 case class DataChunk(tableName: String,
-                     infoDate: String, /* Use String to workaround serialization issues */
+                     infoDate: String,
                      infoDateBegin: String,
                      infoDateEnd: String,
                      inputRecordCount: Long,
                      outputRecordCount: Long,
-                     appendedRecordCount: Option[Long],
                      jobStarted: Long,
                      jobFinished: Long,
-                     batchId: Long)
+                     batchId: Option[Long],
+                     appendedRecordCount: Option[Long])
 
 
 object DataChunk {
@@ -38,12 +43,6 @@ object DataChunk {
   val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(datePersistFormat)
 
   def fromRecord(r: BookkeepingRecord): DataChunk = {
-    DataChunk(
-      r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.appendedRecordCount, r.jobStarted, r.jobFinished, r.batchId.getOrElse(0L))
-  }
-
-  def fromRecordMongo(r: BookkeepingRecordMongoDb): DataChunk = {
-    DataChunk(
-      r.tableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.appendedRecordCount, r.jobStarted, r.jobFinished, r.batchId.getOrElse(0L))
+    DataChunk(r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.jobStarted, r.jobFinished, r.batchId, r.appendedRecordCount)
   }
 }

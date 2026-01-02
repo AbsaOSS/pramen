@@ -103,7 +103,7 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
     try {
       val dateStr = getDateStr(infoDate)
 
-      val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, batchId)
+      val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId), recordsAppended)
       val csv = CsvUtils.getRecord(chunk, '|')
       fsUtils.appendFile(bkFilePath, csv)
 

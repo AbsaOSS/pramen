@@ -30,7 +30,6 @@ class BookkeepingRecords(tag: Tag) extends Table[BookkeepingRecord](tag, "bookke
   def jobStarted = column[Long]("job_started")
   def jobFinished = column[Long]("job_finished")
   def batchId = column[Option[Long]]("batch_id")
-  def writeMode = column[Option[Int]]("write_mode")
   def * = (pramenTableName, infoDate, infoDateBegin, infoDateEnd,
     inputRecordCount, outputRecordCount, appendedRecordCount,
     jobStarted, jobFinished, batchId) <> (BookkeepingRecord.tupled, BookkeepingRecord.unapply)
