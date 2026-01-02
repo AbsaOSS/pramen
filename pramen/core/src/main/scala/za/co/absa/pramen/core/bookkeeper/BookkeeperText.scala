@@ -95,6 +95,7 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
                                                         infoDate: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
+                                                        recordsAppended: Option[Long],
                                                         jobStarted: Long,
                                                         jobFinished: Long): Unit = {
     val lock: TokenLockHadoopPath = getLock
@@ -102,7 +103,7 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
     try {
       val dateStr = getDateStr(infoDate)
 
-      val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
+      val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, batchId)
       val csv = CsvUtils.getRecord(chunk, '|')
       fsUtils.appendFile(bkFilePath, csv)
 

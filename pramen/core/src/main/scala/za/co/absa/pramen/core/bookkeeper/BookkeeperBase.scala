@@ -38,6 +38,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
                                                infoDate: LocalDate,
                                                inputRecordCount: Long,
                                                outputRecordCount: Long,
+                                               recordsAppended: Option[Long],
                                                jobStarted: Long,
                                                jobFinished: Long): Unit
 
@@ -45,21 +46,21 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
                                            infoDate: LocalDate,
                                            inputRecordCount: Long,
                                            outputRecordCount: Long,
+                                           recordsAppended: Option[Long],
                                            jobStarted: Long,
                                            jobFinished: Long,
-                                           isTableTransient: Boolean,
-                                           overwrite: Boolean): Unit = {
+                                           isTableTransient: Boolean): Unit = {
     if (isTableTransient || !isBookkeepingEnabled) {
       val tableLowerCase = table.toLowerCase
-      val dataChunk = DataChunk(table, infoDate.toString, infoDate.toString, infoDate.toString, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
+      val dataChunk = DataChunk(table, infoDate.toString, infoDate.toString, infoDate.toString, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, batchId)
       this.synchronized {
         val dataChunks = transientDataChunks.getOrElse(tableLowerCase, Array.empty[DataChunk])
         val newDataChunks = (dataChunks :+ dataChunk).sortBy(_.jobFinished)
         transientDataChunks += tableLowerCase -> newDataChunks
       }
     } else {
-      saveRecordCountToStorage(table, infoDate, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
-      if (overwrite) {
+      saveRecordCountToStorage(table, infoDate, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished)
+      if (recordsAppended.isEmpty) {
         deleteNonCurrentBatchRecords(table, infoDate)
       }
     }

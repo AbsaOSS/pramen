@@ -144,10 +144,10 @@ class PythonTransformationJob(operationDef: OperationDef,
         infoDate,
         recordCount,
         recordCount,
+        None,
         jobStarted.getEpochSecond,
         jobFinished.getEpochSecond,
-        isTableTransient = false,
-        overwrite = true)
+        isTableTransient = false)
     }
 
     SaveResult(stats)

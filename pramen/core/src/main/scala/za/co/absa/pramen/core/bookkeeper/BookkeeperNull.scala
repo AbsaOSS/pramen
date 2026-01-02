@@ -41,6 +41,7 @@ class BookkeeperNull() extends BookkeeperBase(false, 0L) {
                                                         infoDate: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
+                                                        recordsAppended: Option[Long],
                                                         jobStarted: Long,
                                                         jobFinished: Long): Unit = {}
 

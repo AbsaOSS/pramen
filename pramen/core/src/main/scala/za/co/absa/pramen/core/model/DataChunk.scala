@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.model
 
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecord, BookkeepingRecordMongoDb}
+
 import java.time.format.DateTimeFormatter
 
 case class DataChunk(tableName: String,
@@ -24,6 +26,7 @@ case class DataChunk(tableName: String,
                      infoDateEnd: String,
                      inputRecordCount: Long,
                      outputRecordCount: Long,
+                     appendedRecordCount: Option[Long],
                      jobStarted: Long,
                      jobFinished: Long,
                      batchId: Long)
@@ -33,4 +36,14 @@ object DataChunk {
   /* This is how info dates are stored */
   val datePersistFormat = "yyyy-MM-dd"
   val dateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(datePersistFormat)
+
+  def fromRecord(r: BookkeepingRecord): DataChunk = {
+    DataChunk(
+      r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.appendedRecordCount, r.jobStarted, r.jobFinished, r.batchId.getOrElse(0L))
+  }
+
+  def fromRecordMongo(r: BookkeepingRecordMongoDb): DataChunk = {
+    DataChunk(
+      r.tableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.appendedRecordCount, r.jobStarted, r.jobFinished, r.batchId.getOrElse(0L))
+  }
 }

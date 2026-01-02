@@ -91,13 +91,13 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
   }
 
   private[pramen] override def setRecordCount(table: String,
-                                               infoDate: LocalDate,
-                                               inputRecordCount: Long,
-                                               outputRecordCount: Long,
-                                               jobStarted: Long,
-                                               jobFinished: Long,
-                                               isTableTransient: Boolean,
-                                               overwrite: Boolean): Unit = {
+                                              infoDate: LocalDate,
+                                              inputRecordCount: Long,
+                                              outputRecordCount: Long,
+                                              recordsAppended: Option[Long],
+                                              jobStarted: Long,
+                                              jobFinished: Long,
+                                              isTableTransient: Boolean): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
     val chunk = DataChunk(table,
@@ -106,6 +106,7 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
       dateStr,
       inputRecordCount,
       outputRecordCount,
+      recordsAppended,
       jobStarted,
       jobFinished,
       batchId)

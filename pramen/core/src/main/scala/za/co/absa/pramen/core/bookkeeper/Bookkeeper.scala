@@ -52,10 +52,10 @@ trait Bookkeeper {
                                      infoDate: LocalDate,
                                      inputRecordCount: Long,
                                      outputRecordCount: Long,
+                                     appendedRecordCount: Option[Long],
                                      jobStarted: Long,
                                      jobFinished: Long,
-                                     isTableTransient: Boolean,
-                                     overwrite: Boolean): Unit
+                                     isTableTransient: Boolean): Unit
 
   private[pramen] def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit
 

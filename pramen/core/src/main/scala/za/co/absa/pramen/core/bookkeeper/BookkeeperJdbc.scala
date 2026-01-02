@@ -55,7 +55,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
 
     val chunks = try {
       SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
-        .map(toChunk)
+        .map(DataChunk.fromRecord)
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
     }
@@ -73,7 +73,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
 
     try {
       SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
-        .map(toChunk)
+        .map(DataChunk.fromRecord)
         .toArray[DataChunk]
         .sortBy(_.jobFinished)
     } catch {
@@ -88,7 +88,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
 
     try {
       val records = SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
-        .map(toChunk)
+        .map(DataChunk.fromRecord)
         .toArray[DataChunk]
 
       if (records.length > 1)
@@ -113,14 +113,15 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
   }
 
   override def saveRecordCountToStorage(table: String,
-                                                        infoDate: LocalDate,
-                                                        inputRecordCount: Long,
-                                                        outputRecordCount: Long,
-                                                        jobStarted: Long,
-                                                        jobFinished: Long): Unit = {
+                                        infoDate: LocalDate,
+                                        inputRecordCount: Long,
+                                        outputRecordCount: Long,
+                                        recordsAppended: Option[Long],
+                                        jobStarted: Long,
+                                        jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId))
+    val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, Option(batchId))
 
     try {
       db.run(
@@ -153,11 +154,6 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
 
   private[pramen] override def getOffsetManager: OffsetManager = {
     offsetManagement
-  }
-
-  private def toChunk(r: BookkeepingRecord): DataChunk = {
-    DataChunk(
-      r.pramenTableName, r.infoDate, r.infoDateBegin, r.infoDateEnd, r.inputRecordCount, r.outputRecordCount, r.jobStarted, r.jobFinished, r.batchId.getOrElse(0L))
   }
 
   private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[BookkeepingRecords, BookkeepingRecord, Seq] = {

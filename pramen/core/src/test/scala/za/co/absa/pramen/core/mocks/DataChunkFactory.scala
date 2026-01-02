@@ -23,6 +23,7 @@ object DataChunkFactory {
                         infoDate: String = "2022-01-15",
                         inputRecordCount: Long = 1000,
                         outputRecordCount: Long = 1000,
+                        recordsAppended: Option[Long] = None,
                         jobStarted: Long = 10000,
                         jobFinished: Long = 20000,
                         batchId: Long = 123L): DataChunk = {
@@ -32,6 +33,7 @@ object DataChunkFactory {
       infoDateEnd = infoDate,
       inputRecordCount = inputRecordCount,
       outputRecordCount = outputRecordCount,
+      appendedRecordCount = recordsAppended,
       jobStarted = jobStarted,
       jobFinished = jobFinished,
       batchId = batchId)

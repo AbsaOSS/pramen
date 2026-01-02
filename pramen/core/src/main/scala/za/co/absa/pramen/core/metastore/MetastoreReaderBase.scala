@@ -79,6 +79,7 @@ abstract class MetastoreReaderBase(metastore: Metastore,
           chunk.batchId,
           chunk.inputRecordCount,
           chunk.outputRecordCount,
+          chunk.appendedRecordCount,
           Instant.ofEpochSecond(chunk.jobStarted),
           Instant.ofEpochSecond(chunk.jobFinished)
         )
