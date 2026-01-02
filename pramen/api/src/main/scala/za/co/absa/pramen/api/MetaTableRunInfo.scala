@@ -20,7 +20,9 @@ import java.time.{Instant, LocalDate}
 
 case class MetaTableRunInfo(tableName: String,
                             infoDate: LocalDate,
+                            batchId: Long,
                             inputRecordCount: Long,
                             outputRecordCount: Long,
+                            appendedRecordCount: Option[Long],
                             jobStarted: Instant,
                             jobFinished: Instant)

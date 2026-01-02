@@ -24,7 +24,7 @@ import java.time.LocalDate
 import scala.collection.mutable
 import scala.util.Try
 
-class SyncBookkeeperMock extends Bookkeeper {
+class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
   private val chunks = new mutable.HashMap[(String, LocalDate), DataChunk]()
   private val schemas = new mutable.ListBuffer[(String, (LocalDate, TableSchema))]()
 
@@ -53,15 +53,22 @@ class SyncBookkeeperMock extends Bookkeeper {
   }
 
   override def getLatestDataChunk(table: String, infoDate: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, infoDate, infoDate).lastOption
+    getDataChunks(table, infoDate, None).lastOption
   }
 
-  def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
-    chunks.toList.flatMap { case ((tblName, infoDate), chunk) =>
-      val isInsidePeriod = tblName == table && (infoDate.isAfter(dateBegin) || infoDate.equals(dateBegin)) &&
-        (infoDate.isBefore(dateEnd) || infoDate.equals(dateEnd))
+  override def getDataChunks(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+    chunks.toList.flatMap { case ((tblName, date), chunk) =>
+      val isInsidePeriod = tblName == table && date.equals(infoDate)
       if (isInsidePeriod) {
-        Some(chunk)
+        batchId match {
+          case Some(id) =>
+            if (chunk.batchId.contains(id)) {
+              Some(chunk)
+            } else {
+              None
+            }
+          case None => Some(chunk)
+        }
       } else {
         None
       }
@@ -84,12 +91,13 @@ class SyncBookkeeperMock extends Bookkeeper {
   }
 
   private[pramen] override def setRecordCount(table: String,
-                                               infoDate: LocalDate,
-                                               inputRecordCount: Long,
-                                               outputRecordCount: Long,
-                                               jobStarted: Long,
-                                               jobFinished: Long,
-                                               isTableTransient: Boolean): Unit = {
+                                              infoDate: LocalDate,
+                                              inputRecordCount: Long,
+                                              outputRecordCount: Long,
+                                              recordsAppended: Option[Long],
+                                              jobStarted: Long,
+                                              jobFinished: Long,
+                                              isTableTransient: Boolean): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
     val chunk = DataChunk(table,
@@ -99,7 +107,9 @@ class SyncBookkeeperMock extends Bookkeeper {
       inputRecordCount,
       outputRecordCount,
       jobStarted,
-      jobFinished)
+      jobFinished,
+      Option(batchId),
+      recordsAppended)
 
     chunks += (table, infoDate) -> chunk
   }

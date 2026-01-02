@@ -140,7 +140,12 @@ class MetastoreImpl(appConfig: Config,
 
     stats.recordCount.foreach{recordCount =>
       if (!skipBookKeepingUpdates && !nothingAppended) {
-        bookkeeper.setRecordCount(tableName, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, start, finish, isTransient)
+        val overwrite = saveModeOverride.contains(SaveMode.Overwrite)
+        val recordsAppended = if (overwrite)
+          None
+        else
+          stats.recordCountAppended
+        bookkeeper.setRecordCount(tableName, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, recordsAppended, start, finish, isTransient)
       }
     }
 

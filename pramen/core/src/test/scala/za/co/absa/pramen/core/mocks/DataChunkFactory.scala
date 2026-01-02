@@ -23,8 +23,10 @@ object DataChunkFactory {
                         infoDate: String = "2022-01-15",
                         inputRecordCount: Long = 1000,
                         outputRecordCount: Long = 1000,
+                        recordsAppended: Option[Long] = None,
                         jobStarted: Long = 10000,
-                        jobFinished: Long = 20000): DataChunk = {
+                        jobFinished: Long = 20000,
+                        batchId: Option[Long] = Some(123L)): DataChunk = {
     DataChunk(tableName = tableName,
       infoDate = infoDate,
       infoDateBegin = infoDate,
@@ -32,6 +34,8 @@ object DataChunkFactory {
       inputRecordCount = inputRecordCount,
       outputRecordCount = outputRecordCount,
       jobStarted = jobStarted,
-      jobFinished = jobFinished)
+      jobFinished = jobFinished,
+      batchId = batchId,
+      appendedRecordCount = recordsAppended)
   }
 }

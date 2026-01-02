@@ -139,7 +139,8 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       pipelineNotificationFailures.toSeq,
       pipelineId,
       tenant,
-      country
+      country,
+      batchId
     )
   }
 

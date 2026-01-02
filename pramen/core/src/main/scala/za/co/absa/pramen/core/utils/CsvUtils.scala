@@ -38,7 +38,14 @@ object CsvUtils {
       .filterNot(_.getName.contains('$'))
       .map(field => {
         field.setAccessible(true)
-        field.get(obj).toString.replace(separator, ' ')
+        val ref = field.get(obj)
+        // Handle Option[_]
+        val str = ref match {
+          case Some(x) => x.toString
+          case None    => ""
+          case x       => x.toString
+        }
+        str.replace(separator, ' ')
       }).mkString("", s"$separator", "\n")
   }
 

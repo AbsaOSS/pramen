@@ -30,7 +30,7 @@ object TestCases {
   val instant2: Instant = Instant.ofEpochSecond(1597318835)
   val instant3: Instant = Instant.ofEpochSecond(1597318839)
 
-  val task1: TaskCompleted = model.TaskCompleted("job1", "table1", infoDate1, infoDate1, infoDate1, Some(100), Some(0), Some(100), None, None, None, 597318830, 1597318830, "New", Some("Test1"), Some("abc123"), Some("p_id_1"), Some("p_1"), Some("TEST"), Some("T1"), Some("C1"))
-  val task2: TaskCompleted = model.TaskCompleted("job1", "table1", infoDate2, infoDate2, infoDate2, Some(100), Some(0), Some(100), None, None, None, 1597318835, 1597318835, "Late", Some("Test2"), Some("abc123"), Some("p_id_2"), Some("p_2"), Some("TEST"), Some("T2"), Some("C2"))
-  val task3: TaskCompleted = model.TaskCompleted("job2", "table2", infoDate3, infoDate3, infoDate3, Some(100), Some(0), Some(100), None, None, None, 1597318839, 1597318839, "Fail", Some("Test3"), Some("abc123"), Some("p_id_3"), Some("p_2"), Some("TEST"), Some("T2"), Some("C3"))
+  val task1: TaskCompleted = model.TaskCompleted("job1", "table1", infoDate1, infoDate1, infoDate1, Some(100), Some(0), Some(100), None, None, None, 597318830, 1597318830, "New", Some("Test1"), Some("abc123"), Some("p_id_1"), Some("p_1"), Some("TEST"), Some("T1"), Some("C1"), 123L)
+  val task2: TaskCompleted = model.TaskCompleted("job1", "table1", infoDate2, infoDate2, infoDate2, Some(100), Some(0), Some(100), None, None, None, 1597318835, 1597318835, "Late", Some("Test2"), Some("abc123"), Some("p_id_2"), Some("p_2"), Some("TEST"), Some("T2"), Some("C2"), 123L)
+  val task3: TaskCompleted = model.TaskCompleted("job2", "table2", infoDate3, infoDate3, infoDate3, Some(100), Some(0), Some(100), None, None, None, 1597318839, 1597318839, "Fail", Some("Test3"), Some("abc123"), Some("p_id_3"), Some("p_2"), Some("TEST"), Some("T2"), Some("C3"), 123L)
 }

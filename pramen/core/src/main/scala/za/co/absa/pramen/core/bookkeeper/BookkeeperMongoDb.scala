@@ -29,6 +29,7 @@ import za.co.absa.pramen.core.dao.MongoDb
 import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.mongo.MongoDbConnection
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, TimeUtils}
 
 import java.time.LocalDate
 import scala.util.control.NonFatal
@@ -37,16 +38,16 @@ object BookkeeperMongoDb {
   val collectionName = "bookkeeping"
   val schemaCollectionName = "schemas"
 
-  val MODEL_VERSION = 2
+  val MODEL_VERSION = 3
 }
 
-class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends BookkeeperBase(true) {
-
+class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) extends BookkeeperBase(true, batchId) {
   import BookkeeperMongoDb._
   import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  private val queryWarningTimeoutMs = 10000L
   private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[DataChunk], classOf[TableSchema]), DEFAULT_CODEC_REGISTRY)
   private val db = mongoDbConnection.getDatabase
 
@@ -79,7 +80,7 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
   }
 
   override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
-    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate))
+    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate), None)
 
     collection.find(infoDateFilter)
       .sort(Sorts.descending("jobFinished"))
@@ -89,25 +90,49 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
   }
 
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
-    collection.countDocuments(getFilter(table, dateBeginOpt, dateEndOpt)).execute()
+    collection.countDocuments(getFilter(table, dateBeginOpt, dateEndOpt, None)).execute()
   }
 
-  private[pramen] override def saveRecordCountToStorage(table: String,
-                                                        infoDate: LocalDate,
-                                                        inputRecordCount: Long,
-                                                        outputRecordCount: Long,
-                                                        jobStarted: Long,
-                                                        jobFinished: Long): Unit = {
+  override def getDataChunksFromStorage(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+    val chunks = collection.find(getFilter(table, Option(infoDate), Option(infoDate), batchId)).execute()
+      .sortBy(_.jobFinished)
+    log.debug(s"For $table ($infoDate) : ${chunks.mkString("[ ", ", ", " ]")}")
+    chunks
+  }
+
+  override def saveRecordCountToStorage(table: String,
+                                        infoDate: LocalDate,
+                                        inputRecordCount: Long,
+                                        outputRecordCount: Long,
+                                        recordsAppended: Option[Long],
+                                        jobStarted: Long,
+                                        jobFinished: Long): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+    val record = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId), recordsAppended)
 
-    val opts = (new ReplaceOptions).upsert(true)
-    collection.replaceOne(getFilter(table, Option(infoDate), Option(infoDate)), chunk, opts).execute()
+    collection.insertOne(record).execute()
   }
 
-  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate]): Bson = {
-    (infoDateBeginOpt, infoDateEndOpt) match {
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
+    val dateStr = DataChunk.dateFormatter.format(infoDate)
+
+    val filter = Filters.and(
+      Filters.eq("tableName", table),
+      Filters.eq("infoDate", dateStr),
+      Filters.ne("batchId", batchId)
+    )
+
+    AlgorithmUtils.runActionWithElapsedTimeEvent(queryWarningTimeoutMs) {
+      collection.deleteMany(filter).execute()
+    }{ actualTimeMs =>
+      val elapsedTime = TimeUtils.prettyPrintElapsedTimeShort(actualTimeMs)
+      log.warn(s"MongoDB query took too long ($elapsedTime) while deleting from $collectionName, tableName='$table', infoDate='$infoDate', batchId!=$batchId")
+    }
+  }
+
+  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Bson = {
+    val baseFilter = (infoDateBeginOpt, infoDateEndOpt) match {
       case (Some(infoDateBegin), Some(infoDateEnd)) =>
 
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
@@ -139,6 +164,10 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
         Filters.eq("tableName", tableName)
     }
 
+    batchId match {
+      case Some(id) => Filters.and(baseFilter, Filters.eq("batchId", id))
+      case None => baseFilter
+    }
   }
 
   private def getSchemaGetFilter(tableName: String, until: LocalDate): Bson = {
@@ -159,11 +188,17 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection) extends Bookkeeper
       val dbVersion = d.getVersion()
       if (!d.doesCollectionExists(collectionName)) {
         d.createCollection(collectionName)
-        d.createIndex(collectionName, IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil, unique = true)
+        d.createIndex(collectionName, IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil)
       }
       if (dbVersion < 2) {
         d.createCollection(schemaCollectionName)
         d.createIndex(schemaCollectionName, IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil, unique = true)
+      }
+      if (dbVersion < 3 && dbVersion > 0) {
+        val keys = IndexField("tableName", ASC) :: IndexField("infoDate", ASC) :: Nil
+        // Make the bookkeeping index non-unique
+        d.dropIndex(collectionName, keys)
+        d.createIndex(collectionName, keys)
       }
       if (dbVersion < MODEL_VERSION) {
         d.setVersion(MODEL_VERSION)

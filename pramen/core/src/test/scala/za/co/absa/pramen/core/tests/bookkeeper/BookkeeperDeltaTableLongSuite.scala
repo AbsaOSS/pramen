@@ -16,14 +16,16 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDeltaTable
 
 import java.io.File
 import scala.util.Random
 
-class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTestBase with BeforeAndAfterAll {
+class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll {
+  val bookkeepingTablePrefix: String = getNewTablePrefix
+
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     cleanUpWarehouse()
@@ -34,22 +36,46 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
     super.afterAll()
   }
 
-  def getBookkeeper(prefix: String): BookkeeperDeltaTable = {
-    new BookkeeperDeltaTable(None, prefix)
+  before {
+    if (!spark.version.startsWith("2.")) {
+      val fullRecordsTableName = BookkeeperDeltaTable.getFullTableName(None, bookkeepingTablePrefix, BookkeeperDeltaTable.recordsTable)
+      val fullSchemasTableName = BookkeeperDeltaTable.getFullTableName(None, bookkeepingTablePrefix, BookkeeperDeltaTable.schemasTable)
+
+      if (spark.catalog.tableExists(fullRecordsTableName)) {
+        spark.sql(s"DELETE FROM $fullRecordsTableName WHERE true").count()
+      }
+
+      if (spark.catalog.tableExists(fullSchemasTableName)) {
+        spark.sql(s"DELETE FROM $fullSchemasTableName WHERE true").count()
+      }
+    }
+  }
+
+  def getBookkeeper(prefix: String, batchId: Long): BookkeeperDeltaTable = {
+    new BookkeeperDeltaTable(None, prefix, batchId)
   }
 
   "BookkeeperHadoopDeltaTable" when {
-    testBookKeeper { () =>
-      val rndInt = Math.abs(Random.nextInt())
-      getBookkeeper(s"tbl${rndInt}_")
+    testBookKeeper { batchId =>
+      if (spark.version.startsWith("2.")) {
+        getBookkeeper(getNewTablePrefix, batchId)
+      } else {
+        getBookkeeper(bookkeepingTablePrefix, batchId)
+      }
     }
 
     "test tables are created properly" in {
-      getBookkeeper(s"tbl0000_")
+      val prefix = getNewTablePrefix
+      getBookkeeper(prefix, 123L)
 
-      assert(spark.catalog.tableExists("tbl0000_bookkeeping"))
-      assert(spark.catalog.tableExists("tbl0000_schemas"))
+      assert(spark.catalog.tableExists(s"${prefix}bookkeeping"))
+      assert(spark.catalog.tableExists(s"${prefix}schemas"))
     }
+  }
+
+  private def getNewTablePrefix: String = {
+    val rndInt = Math.abs(Random.nextInt())
+    s"tbl${rndInt}_"
   }
 
   private def cleanUpWarehouse(): Unit = {

@@ -128,9 +128,10 @@ trait MetastoreReader {
     *
     * @param tableName The name of the table in the metastore.
     * @param infoDate  The information date of the data.
+    * @param batchId   An optional batch ID to filter by.
     * @return The run info of the table if available.
     */
-  def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo]
+  def getTableRunInfo(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[MetaTableRunInfo]
 
   /**
     * Returns the reason of running the task. This helps transformers and sinks to determine logic based on whether

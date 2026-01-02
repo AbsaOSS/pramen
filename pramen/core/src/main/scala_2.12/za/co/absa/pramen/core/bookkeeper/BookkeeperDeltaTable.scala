@@ -17,41 +17,41 @@
 package za.co.absa.pramen.core.bookkeeper
 
 import io.delta.tables.DeltaTable
-import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.functions._
+import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
-import za.co.absa.pramen.core.utils.FsUtils
 
 import java.time.{Instant, LocalDate}
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
 
-object BookkeeperDeltaPath {
-  val bookkeepingRootPath = "bk"
-  val recordsDirName = "records_delta"
-  val schemasDirName = "schemas_delta"
-  val locksDirName = "locks"
+object BookkeeperDeltaTable {
+  val recordsTable = "bookkeeping"
+  val schemasTable = "schemas"
+
+  def getFullTableName(databaseOpt: Option[String], tablePrefix: String, tableName: String): String = {
+    databaseOpt match {
+      case Some(db) => s"$db.$tablePrefix$tableName"
+      case None     => s"$tablePrefix$tableName"
+    }
+  }
 }
 
-class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark: SparkSession) extends BookkeeperDeltaBase(batchId) {
-  import BookkeeperDeltaPath._
+class BookkeeperDeltaTable(database: Option[String],
+                           tablePrefix: String,
+                           batchId: Long)
+                          (implicit spark: SparkSession) extends BookkeeperDeltaBase(batchId) {
+  import BookkeeperDeltaTable._
   import spark.implicits._
 
-  private val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, bookkeepingPath)
-  private val bkPath = new Path(bookkeepingPath, bookkeepingRootPath)
-  private val recordsPath = new Path(bkPath, recordsDirName)
-  private val schemasPath = new Path(bkPath, schemasDirName)
-  private val locksPath = new Path(bookkeepingPath, locksDirName)
+  private val recordsFullTableName = getFullTableName(database, tablePrefix, recordsTable)
+  private val schemasFullTableName = getFullTableName(database, tablePrefix, schemasTable)
 
   init()
 
   override def getBkDf(filter: Column): Dataset[DataChunk] = {
-    val df = spark
-      .read
-      .format("delta")
-      .load(recordsPath.toUri.toString)
+    val df = spark.table(recordsFullTableName).as[DataChunk]
 
     df.filter(filter)
       .orderBy(col("jobFinished"))
@@ -62,26 +62,22 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
     val df = Seq(dataChunk).toDF()
 
     df.write
-      .mode(SaveMode.Append)
       .format("delta")
+      .mode(SaveMode.Append)
       .option("mergeSchema", "true")
-      .save(recordsPath.toUri.toString)
+      .saveAsTable(recordsFullTableName)
   }
 
   override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
     val infoDateStr = DataChunk.dateFormatter.format(infoDate)
     val filter = (col("tableName") === lit(table)) && (col("infoDate") === lit(infoDateStr)) && (col("batchId") =!= lit(batchId))
 
-    val deltaTable = DeltaTable.forPath(spark, recordsPath.toUri.toString)
+    val deltaTable = DeltaTable.forName(spark, recordsFullTableName)
     deltaTable.delete(filter)
   }
 
   override def getSchemasDeltaDf: Dataset[TableSchemaJson] = {
-    spark
-      .read
-      .format("delta")
-      .load(schemasPath.toUri.toString)
-      .as[TableSchemaJson]
+    spark.table(schemasFullTableName).as[TableSchemaJson]
   }
 
   override def saveSchemaDelta(schema: TableSchema): Unit = {
@@ -90,44 +86,34 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
     ).toDF()
 
     df.write
-      .mode(SaveMode.Append)
       .format("delta")
+      .mode(SaveMode.Append)
       .option("mergeSchema", "true")
-      .save(schemasPath.toUri.toString)
+      .saveAsTable(schemasFullTableName)
   }
 
   override def writeEmptyDataset[T <: Product : universe.TypeTag : ClassTag](pathOrTable: String): Unit = {
     val df = Seq.empty[T].toDS
 
     df.write
-      .mode(SaveMode.Overwrite)
       .format("delta")
-      .save(pathOrTable)
+      .saveAsTable(pathOrTable)
   }
 
-  private def init(): Unit = {
-    initRecordsDirectory(recordsPath)
-    initSchemasDirectory(schemasPath)
-    initDirectory(locksPath)
+  def init(): Unit = {
+    initRecordsDirectory()
+    initSchemasDirectory()
   }
 
-  private def initDirectory(path: Path): Unit = {
-    if (!fsUtils.exists(path)) {
-      fsUtils.createDirectoryRecursive(path)
+  private def initRecordsDirectory(): Unit = {
+    if (!spark.catalog.tableExists(recordsFullTableName)) {
+      writeEmptyDataset[DataChunk](recordsFullTableName)
     }
   }
 
-  private def initRecordsDirectory(path: Path): Unit = {
-    if (!fsUtils.exists(path)) {
-      fsUtils.createDirectoryRecursive(path)
-      writeEmptyDataset[DataChunk](path.toUri.toString)
-    }
-  }
-
-  private def initSchemasDirectory(path: Path): Unit = {
-    if (!fsUtils.exists(path)) {
-      fsUtils.createDirectoryRecursive(path)
-      writeEmptyDataset[TableSchemaJson](path.toUri.toString)
+  private def initSchemasDirectory(): Unit = {
+    if (!spark.catalog.tableExists(schemasFullTableName)) {
+      writeEmptyDataset[TableSchemaJson](schemasFullTableName)
     }
   }
 }

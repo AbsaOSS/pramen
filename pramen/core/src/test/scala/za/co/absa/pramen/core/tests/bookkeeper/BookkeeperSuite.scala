@@ -80,7 +80,7 @@ class BookkeeperSuite extends AnyWordSpec
       closable.close()
     }
 
-    if (db != null) {
+    if (mongoDbExecutable.nonEmpty) {
       "build bookkeeper, token lock, journal, and closable object for MongoDB" in {
         val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
           bookkeepingEnabled = true,

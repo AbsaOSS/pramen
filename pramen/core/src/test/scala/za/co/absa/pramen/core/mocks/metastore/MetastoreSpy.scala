@@ -164,7 +164,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
           table.writeOptions)
       }
 
-      override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
+      override def getTableRunInfo(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[MetaTableRunInfo] = Seq.empty
 
       override def getRunReason: TaskRunReason = TaskRunReason.New
 

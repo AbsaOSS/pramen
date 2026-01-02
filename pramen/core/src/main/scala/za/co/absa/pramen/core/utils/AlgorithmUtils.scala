@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.utils
 
 import org.slf4j.Logger
 
+import java.time.{Duration, Instant}
 import scala.annotation.tailrec
 import scala.collection.mutable
 
@@ -91,5 +92,17 @@ object AlgorithmUtils {
           actionWithRetry(attemptsLeft, log)(action)
         }
     }
+  }
+
+  final def runActionWithElapsedTimeEvent[R](maxTimeMs: Long)(action: => R)(onMaxTimeBreach: Long => Unit): R = {
+    val start = Instant.now
+    val result = action
+    val finish = Instant.now
+
+    val duration = Duration.between(start, finish).toMillis
+    if (duration > maxTimeMs) {
+      onMaxTimeBreach(duration)
+    }
+    result
   }
 }

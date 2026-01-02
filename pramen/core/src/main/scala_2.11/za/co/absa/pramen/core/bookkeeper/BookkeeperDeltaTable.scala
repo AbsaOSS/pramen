@@ -21,7 +21,7 @@ import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
 
@@ -38,8 +38,9 @@ object BookkeeperDeltaTable {
 }
 
 class BookkeeperDeltaTable(database: Option[String],
-                           tablePrefix: String)
-                          (implicit spark: SparkSession) extends BookkeeperDeltaBase {
+                           tablePrefix: String,
+                           batchId: Long)
+                          (implicit spark: SparkSession) extends BookkeeperDeltaBase(batchId) {
   import BookkeeperDeltaTable._
   import spark.implicits._
 
@@ -56,13 +57,18 @@ class BookkeeperDeltaTable(database: Option[String],
       .as[DataChunk]
   }
 
-  override def saveRecordCountDelta(dataChunks: DataChunk): Unit = {
-    val df = Seq(dataChunks).toDF()
+  override def saveRecordCountDelta(dataChunk: DataChunk): Unit = {
+    val df = Seq(dataChunk).toDF()
 
     df.write
+      .format("delta")
       .mode(SaveMode.Append)
       .option("mergeSchema", "true")
       .saveAsTable(recordsFullTableName)
+  }
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
+    // This is not supported for Delta tables using Spark 2.*
   }
 
   override def getSchemasDeltaDf: Dataset[TableSchemaJson] = {
@@ -75,6 +81,7 @@ class BookkeeperDeltaTable(database: Option[String],
     ).toDF()
 
     df.write
+      .format("delta")
       .mode(SaveMode.Append)
       .option("mergeSchema", "true")
       .saveAsTable(schemasFullTableName)
@@ -84,7 +91,7 @@ class BookkeeperDeltaTable(database: Option[String],
     val df = Seq.empty[T].toDS
 
     df.write
-      .mode(SaveMode.Overwrite)
+      .format("delta")
       .saveAsTable(pathOrTable)
   }
 

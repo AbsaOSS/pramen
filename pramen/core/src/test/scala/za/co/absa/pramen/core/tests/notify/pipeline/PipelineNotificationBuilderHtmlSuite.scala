@@ -175,7 +175,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(
         runStatus = TestPrototypes.runStatusWarning,
         schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil,
-        notificationTargetErrors = Seq(NotificationFailure("table1", "my_tagret", LocalDate.parse("2020-02-18"), new RuntimeException("Target 1 exception"))))
+        notificationTargetErrors = Seq(NotificationFailure("table1", "my_target", LocalDate.parse("2020-02-18"), new RuntimeException("Target 1 exception"))))
       )
 
       val actual = builder.renderBody()

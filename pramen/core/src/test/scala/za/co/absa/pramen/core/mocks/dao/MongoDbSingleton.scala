@@ -16,17 +16,27 @@
 
 package za.co.absa.pramen.core.mocks.dao
 
-import de.flapdoodle.embed.mongo.config.{MongodConfigBuilder, Net, RuntimeConfigBuilder}
+
+import de.flapdoodle.embed.mongo.commands.ServerAddress
 import de.flapdoodle.embed.mongo.distribution.Version
-import de.flapdoodle.embed.mongo.{Command, MongodExecutable, MongodStarter}
-import de.flapdoodle.embed.process.config.io.ProcessOutput
-import de.flapdoodle.embed.process.runtime.Network
-import org.slf4j.LoggerFactory
+import de.flapdoodle.embed.mongo.transitions.{Mongod, RunningMongodProcess}
+import de.flapdoodle.embed.process.io.{ProcessOutput, StreamProcessor}
+import de.flapdoodle.reverse.transitions.Start
+import de.flapdoodle.reverse.{StateID, TransitionWalker}
+import org.slf4j.{Logger, LoggerFactory}
 
 object MongoDbSingleton {
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  lazy val embeddedMongoDb: (Option[MongodExecutable], Int) = startEmbeddedMongoDb()
+  lazy val embeddedMongoDb: (Option[RunningMongodProcess], Int) = startEmbeddedMongoDb()
+
+  final class Slf4jProcessor(logger: Logger, prefix: String) extends StreamProcessor {
+    override def process(block: String): Unit = {
+      if (block != null && block.nonEmpty) logger.info(s"$prefix$block")
+    }
+
+    override def onProcessed(): Unit = () // no-op
+  }
 
   /**
     * Create and run a MongoDb instance.
@@ -35,31 +45,35 @@ object MongoDbSingleton {
     *
     * @return A pair: a MongoDb executable object to be used to stop it and the port number the embedded MongoDB listens to.
     */
-  private def startEmbeddedMongoDb(): (Option[MongodExecutable], Int) = {
-    val mongoPort: Int = Network.getFreeServerPort()
+  private def startEmbeddedMongoDb(): (Option[RunningMongodProcess], Int) = {
+    try {
+      val version: Version = Version.V8_2_2
+      val mongod = Mongod.builder()
+        .processOutput(
+          Start.to(classOf[ProcessOutput]).initializedWith(
+            ProcessOutput.builder()
+              .output(new Slf4jProcessor(log, "[mongod-out] "))
+              .error(new Slf4jProcessor(log, "[mongod-err] "))
+              .commands(new Slf4jProcessor(log, "[mongod-cmd] "))
+              .build()
+          )
+        )
+        .build()
 
-    // Do not print Embedded MongoDB logs
-    val runtimeConfig = new RuntimeConfigBuilder()
-      .defaultsWithLogger(Command.MongoD, log)
-      .processOutput(ProcessOutput.getDefaultInstanceSilent)
-      .build()
+      val executable: TransitionWalker.ReachedState[RunningMongodProcess] =
+        mongod.transitions(version)
+          .walker()
+          .initState(StateID.of(classOf[RunningMongodProcess]))
 
-    val starter = MongodStarter.getInstance(runtimeConfig)
+      val addr: ServerAddress = executable.current().getServerAddress
+      val mongoPort: Int = addr.getPort
 
-    val mongodConfig = new MongodConfigBuilder()
-      .version(Version.Main.V4_0)
-      .net(new Net("localhost", mongoPort, Network.localhostIsIPv6()))
-      .build()
-
-    val executable = try {
-      val exec = starter.prepare(mongodConfig)
-      exec.start()
-      Some(exec)
+      (Option(executable.current()), mongoPort)
     } catch {
-      case _: Throwable => None
+      case ex: Throwable =>
+        log.warn("Couldn't start embedded Mongodb. MongoDB tests will be skipped", ex)
+        (None, 0)
     }
-
-    (executable, mongoPort)
   }
 
 }
