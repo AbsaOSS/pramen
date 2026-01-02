@@ -29,6 +29,7 @@ import za.co.absa.pramen.core.dao.MongoDb
 import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.mongo.MongoDbConnection
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, TimeUtils}
 
 import java.time.LocalDate
 import scala.util.control.NonFatal
@@ -46,6 +47,7 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  private val queryWarningTimeoutMs = 10000L
   private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[DataChunk], classOf[TableSchema]), DEFAULT_CODEC_REGISTRY)
   private val db = mongoDbConnection.getDatabase
 
@@ -94,7 +96,7 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
   override def getDataChunksFromStorage(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
     val chunks = collection.find(getFilter(table, Option(infoDate), Option(infoDate), batchId)).execute()
       .sortBy(_.jobFinished)
-    log.info(s"For $table ($infoDate) : ${chunks.mkString("[ ", ", ", " ]")}")
+    log.debug(s"For $table ($infoDate) : ${chunks.mkString("[ ", ", ", " ]")}")
     chunks
   }
 
@@ -121,7 +123,12 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
       Filters.ne("batchId", batchId)
     )
 
-    collection.deleteMany(filter).execute()
+    AlgorithmUtils.runActionWithElapsedTimeEvent(queryWarningTimeoutMs) {
+      collection.deleteMany(filter).execute()
+    }{ actualTimeMs =>
+      val elapsedTime = TimeUtils.prettyPrintElapsedTimeShort(actualTimeMs)
+      log.warn(s"MongoDB query took too long ($elapsedTime) while deleting from $collectionName, tableName='$table', infoDate='$infoDate', batchId!=$batchId")
+    }
   }
 
   private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Bson = {

@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
-import org.apache.spark.sql.functions.{col, lit}
+import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}

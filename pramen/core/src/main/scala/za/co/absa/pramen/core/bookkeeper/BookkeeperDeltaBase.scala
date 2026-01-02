@@ -113,7 +113,7 @@ abstract class BookkeeperDeltaBase(batchId: Long) extends BookkeeperHadoop(batch
   private[core] def getBkAllData(filter: Column): Seq[DataChunk] = {
     getBkDf(filter)
       .collect()
-      .sortBy(_.infoDate)
+      .sortBy(_.jobFinished)
   }
 
   private[core] def getBkData(filter: Column): Seq[DataChunk] = {

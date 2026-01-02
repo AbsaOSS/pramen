@@ -148,7 +148,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
 
     batchId match {
       case Some(id) =>
-        allChunks.filter(chunk => chunk.infoDate >= minDate && chunk.infoDate <= maxDate && chunk.batchId == id)
+        allChunks.filter(chunk => chunk.infoDate >= minDate && chunk.infoDate <= maxDate && chunk.batchId.contains(id))
       case None =>
         allChunks.filter(chunk => chunk.infoDate >= minDate && chunk.infoDate <= maxDate)
     }

@@ -46,7 +46,7 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
       }
 
       if (spark.catalog.tableExists(fullSchemasTableName)) {
-        spark.sql(s"DELETE FROM $fullRecordsTableName WHERE true").count()
+        spark.sql(s"DELETE FROM $fullSchemasTableName WHERE true").count()
       }
     }
   }

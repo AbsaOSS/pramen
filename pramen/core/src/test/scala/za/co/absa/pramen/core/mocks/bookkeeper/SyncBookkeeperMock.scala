@@ -62,7 +62,7 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
       if (isInsidePeriod) {
         batchId match {
           case Some(id) =>
-            if (chunk.batchId == id) {
+            if (chunk.batchId.contains(id)) {
               Some(chunk)
             } else {
               None

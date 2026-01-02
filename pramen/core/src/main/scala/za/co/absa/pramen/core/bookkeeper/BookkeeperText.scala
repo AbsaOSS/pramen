@@ -195,6 +195,7 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
   }
 
   override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
-
+    // No-op: CSV-based storage doesn't support efficient in-place deletion.
+    // Cross-batch replacement is not supported for BookkeeperText.
   }
 }
