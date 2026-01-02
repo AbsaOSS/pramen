@@ -38,5 +38,5 @@ case class TaskCompletedCsv(
                              environmentName: Option[String],
                              tenant: Option[String],
                              country: Option[String],
-                             batchId: Long
+                             batchId: Option[Long]
                            )

@@ -16,9 +16,7 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
-import io.delta.tables.DeltaTable
-import org.apache.spark.sql.functions.lit
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll, fullstacks}
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDeltaTable
 
@@ -39,17 +37,17 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
   }
 
   before {
-    val fullRecordsTableName = BookkeeperDeltaTable.getFullTableName(None, bookkeepingTablePrefix, BookkeeperDeltaTable.recordsTable)
-    val fullSchemasTableName = BookkeeperDeltaTable.getFullTableName(None, bookkeepingTablePrefix, BookkeeperDeltaTable.schemasTable)
+    if (!spark.version.startsWith("2.")) {
+      val fullRecordsTableName = BookkeeperDeltaTable.getFullTableName(None, bookkeepingTablePrefix, BookkeeperDeltaTable.recordsTable)
+      val fullSchemasTableName = BookkeeperDeltaTable.getFullTableName(None, bookkeepingTablePrefix, BookkeeperDeltaTable.schemasTable)
 
-    if (spark.catalog.tableExists(fullRecordsTableName)) {
-      val deltaTable = DeltaTable.forName(spark, fullRecordsTableName)
-      deltaTable.delete(lit(true))
-    }
+      if (spark.catalog.tableExists(fullRecordsTableName)) {
+        spark.sql(s"DELETE FROM $fullRecordsTableName WHERE true").count()
+      }
 
-    if (spark.catalog.tableExists(fullSchemasTableName)) {
-      val deltaTable = DeltaTable.forName(spark, fullSchemasTableName)
-      deltaTable.delete(lit(true))
+      if (spark.catalog.tableExists(fullSchemasTableName)) {
+        spark.sql(s"DELETE FROM $fullRecordsTableName WHERE true").count()
+      }
     }
   }
 
@@ -59,7 +57,11 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
 
   "BookkeeperHadoopDeltaTable" when {
     testBookKeeper { batchId =>
-      getBookkeeper(bookkeepingTablePrefix, batchId)
+      if (spark.version.startsWith("2.")) {
+        getBookkeeper(getNewTablePrefix, batchId)
+      } else {
+        getBookkeeper(bookkeepingTablePrefix, batchId)
+      }
     }
 
     "test tables are created properly" in {

@@ -16,9 +16,10 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperDeltaTable, BookkeeperHadoop, BookkeeperText}
+import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperDeltaTable, BookkeeperText}
 import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
@@ -181,6 +182,9 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "add the entry for a different batch non overwrite" in {
         val bk1 = getBookkeeper(123L)
         val bk2 = getBookkeeper(456L)
+
+        // The feature is not supported with Delta Table implementation and Spark 2.x
+        assume(!SparkSession.active.version.startsWith("2.") || !bk1.isInstanceOf[BookkeeperDeltaTable])
 
         bk1.setRecordCount("table", infoDate1, 100, 10, Some(1), 1597318833, 1597318837, isTableTransient = false)
         bk2.setRecordCount("table", infoDate1, 200, 20, Some(1), 1597318838, 1597318839, isTableTransient = false)

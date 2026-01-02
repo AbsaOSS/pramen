@@ -57,8 +57,8 @@ class BookkeeperDeltaTable(database: Option[String],
       .as[DataChunk]
   }
 
-  override def saveRecordCountDelta(dataChunks: DataChunk): Unit = {
-    val df = Seq(dataChunks).toDF()
+  override def saveRecordCountDelta(dataChunk: DataChunk): Unit = {
+    val df = Seq(dataChunk).toDF()
 
     df.write
       .format("delta")
@@ -68,10 +68,7 @@ class BookkeeperDeltaTable(database: Option[String],
   }
 
   override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
-    val infoDateStr = DataChunk.dateFormatter.format(infoDate)
-    val filter = (col("tableName") === lit(table)) && (col("infoDate") === lit(infoDateStr)) && (col("batchId") =!= lit(batchId))
-
-    spark.sql(s"DROM FROM $schemasFullTableName WHERE tableName='$table' AND infoDate='$infoDateStr' AND batchId != $batchId").count()
+    // This is not supported for Delta tables using Spark 2.*
   }
 
   override def getSchemasDeltaDf: Dataset[TableSchemaJson] = {

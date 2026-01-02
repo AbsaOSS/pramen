@@ -84,7 +84,7 @@ abstract class BookkeeperDeltaBase(batchId: Long) extends BookkeeperHadoop(batch
                                                               jobFinished: Long): Unit = {
     val dateStr = getDateStr(infoDate)
 
-    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, batchId)
+    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId), recordsAppended)
 
     saveRecordCountDelta(chunk)
   }

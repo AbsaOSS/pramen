@@ -29,7 +29,7 @@ ThisBuild / scalaVersion := scala212
 ThisBuild / crossScalaVersions := Seq(scala211, scala212, scala213)
 
 ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation", "-target:jvm-1.8")
-ThisBuild / javacOptions := Seq("-source", "1.8", "-tagret", "1.8")
+ThisBuild / javacOptions := Seq("-source", "1.8", "-target", "1.8")
 
 ThisBuild / versionScheme := Some("early-semver")
 

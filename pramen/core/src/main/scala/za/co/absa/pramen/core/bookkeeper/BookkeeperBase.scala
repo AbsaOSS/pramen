@@ -52,7 +52,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
                                            isTableTransient: Boolean): Unit = {
     if (isTableTransient || !isBookkeepingEnabled) {
       val tableLowerCase = table.toLowerCase
-      val dataChunk = DataChunk(table, infoDate.toString, infoDate.toString, infoDate.toString, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, batchId)
+      val dataChunk = DataChunk(table, infoDate.toString, infoDate.toString, infoDate.toString, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId), recordsAppended)
       this.synchronized {
         val dataChunks = transientDataChunks.getOrElse(tableLowerCase, Array.empty[DataChunk])
         val newDataChunks = (dataChunks :+ dataChunk).sortBy(_.jobFinished)
