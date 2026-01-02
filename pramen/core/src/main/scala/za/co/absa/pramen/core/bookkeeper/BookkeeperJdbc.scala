@@ -140,7 +140,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
       .delete
 
     try {
-      AlgorithmUtils.resultWithTimeout(WARN_IF_LONGER_MS) {
+      AlgorithmUtils.runActionWithElapsedTimeEvent(WARN_IF_LONGER_MS) {
         db.run(query).execute()
       } { actualTimeMs =>
         val elapsedTime = TimeUtils.prettyPrintElapsedTimeShort(actualTimeMs)
