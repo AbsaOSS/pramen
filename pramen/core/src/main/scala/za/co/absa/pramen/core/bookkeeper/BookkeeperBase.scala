@@ -32,6 +32,8 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
 
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 
+  def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit
+
   private[pramen] def saveRecordCountToStorage(table: String,
                                                infoDate: LocalDate,
                                                inputRecordCount: Long,
@@ -45,7 +47,8 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
                                            outputRecordCount: Long,
                                            jobStarted: Long,
                                            jobFinished: Long,
-                                           isTableTransient: Boolean): Unit = {
+                                           isTableTransient: Boolean,
+                                           overwrite: Boolean): Unit = {
     if (isTableTransient || !isBookkeepingEnabled) {
       val tableLowerCase = table.toLowerCase
       val dataChunk = DataChunk(table, infoDate.toString, infoDate.toString, infoDate.toString, inputRecordCount, outputRecordCount, jobStarted, jobFinished, batchId)
@@ -56,6 +59,9 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
       }
     } else {
       saveRecordCountToStorage(table, infoDate, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+      if (overwrite) {
+        deleteNonCurrentBatchRecords(table, infoDate)
+      }
     }
   }
 

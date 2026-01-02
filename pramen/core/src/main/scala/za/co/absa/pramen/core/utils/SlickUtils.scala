@@ -30,7 +30,7 @@ object SlickUtils {
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val WARN_IF_LONGER_MS = 1000L
+  val WARN_IF_LONGER_MS = 1000L
 
   /**
     * Synchronously executes a query against a JDBC connection.

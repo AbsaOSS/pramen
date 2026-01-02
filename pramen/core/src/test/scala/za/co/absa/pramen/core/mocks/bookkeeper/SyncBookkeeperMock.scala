@@ -96,7 +96,8 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
                                                outputRecordCount: Long,
                                                jobStarted: Long,
                                                jobFinished: Long,
-                                               isTableTransient: Boolean): Unit = {
+                                               isTableTransient: Boolean,
+                                               overwrite: Boolean): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
     val chunk = DataChunk(table,

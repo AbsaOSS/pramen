@@ -47,4 +47,6 @@ class BookkeeperNull() extends BookkeeperBase(false, 0L) {
   override def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)] = None
 
   override def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit = {}
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {}
 }

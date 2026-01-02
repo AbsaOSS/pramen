@@ -41,26 +41,26 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     deleteDir(tmpDir)
   }
 
-  def getBookkeeper: BookkeeperText = {
-    new BookkeeperText(tmpDir, 123L)
+  def getBookkeeper(batchId: Long): BookkeeperText = {
+    new BookkeeperText(tmpDir, batchId)
   }
 
   "BookkeeperHadoopText" when {
     "initialized" should {
       "Initialize bookkeeping directory" in {
-        getBookkeeper
+        getBookkeeper(123L)
 
         assert(fsUtils.exists(new Path(tmpDir, s"$bookkeepingRootPath/$recordsDirName")))
         assert(fsUtils.exists(new Path(tmpDir, locksDirName)))
       }
     }
 
-    testBookKeeper(() => getBookkeeper)
+    testBookKeeper(batchId => getBookkeeper(batchId))
   }
 
   "getFilter" should {
     "get a ranged filter" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
       val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2)), None).toString()
 
@@ -68,7 +68,7 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     }
 
     "get a ranged filter with batch id" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
       val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2)), Some(123L)).toString()
 
@@ -76,7 +76,7 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     }
 
     "get a from filter" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
       val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), None, None).toString()
 
@@ -84,7 +84,7 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     }
 
     "get a to filter" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
       val actual = bk.getFilter("table1", None, Some(LocalDate.of(2021, 1, 2)), None).toString()
 
@@ -92,7 +92,7 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     }
 
     "get a batchid filter" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
       val actual = bk.getFilter("table1", None, None, Some(123L)).toString()
 
@@ -100,7 +100,7 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     }
 
     "get a table filter" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
       val actual = bk.getFilter("table1", None, None, None).toString()
 
