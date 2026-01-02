@@ -96,6 +96,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
     if (0 < dbVersion && dbVersion < 9) {
       addColumn(BookkeepingRecords.records.baseTableRow.tableName, "batch_id", "bigint")
+      addColumn(BookkeepingRecords.records.baseTableRow.tableName, "appended_record_count", "bigint")
       addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "batch_id", "bigint")
     }
   }

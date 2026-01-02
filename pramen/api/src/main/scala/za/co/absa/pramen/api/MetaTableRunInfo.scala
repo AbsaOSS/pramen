@@ -23,5 +23,6 @@ case class MetaTableRunInfo(tableName: String,
                             batchId: Long,
                             inputRecordCount: Long,
                             outputRecordCount: Long,
+                            appendedRecordCount: Option[Long],
                             jobStarted: Instant,
                             jobFinished: Instant)

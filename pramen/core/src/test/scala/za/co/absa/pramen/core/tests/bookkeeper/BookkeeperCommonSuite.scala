@@ -49,7 +49,7 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "return a date when there is an entry" in {
         val bk = getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318830, 1597318835, isTableTransient = false)
 
         val dateOpt = bk.getLatestProcessedDate("table")
 
@@ -60,7 +60,7 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "return None if the passed date is too old" in {
         val bk = getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318830, 1597318835, isTableTransient = false)
 
         val dateOpt = bk.getLatestProcessedDate("table", Some(infoDate1))
 
@@ -70,7 +70,7 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "return a date when there is an entry and until date is passed" in {
         val bk = getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318830, 1597318835, isTableTransient = false)
 
         val dateOpt = bk.getLatestProcessedDate("table", Some(infoDate2))
 
@@ -81,9 +81,9 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "return the latest date when there are several dates" in {
         val bk = getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate3, 200, 20, 1597318830, 1597318835, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate1, 400, 40, 1597318830, 1597318835, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318830, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, 200, 20, None, 1597318830, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, 400, 40, None, 1597318830, 1597318835, isTableTransient = false)
 
         val dateOpt = bk.getLatestProcessedDate("table")
 
@@ -102,9 +102,9 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "return the latest date from the specified periods" in {
         val bk = getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate2, 100, 10, 1597318831, 1597318835, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate3, 200, 20, 1597318832, 1597318836, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate1, 400, 40, 1597318833, 1597318837, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318831, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, 200, 20, None, 1597318832, 1597318836, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, 400, 40, None, 1597318833, 1597318837, isTableTransient = false)
 
         val chunkOpt = bk.getLatestDataChunk("table", infoDate3)
         val infoDate3Str = infoDate3.format(DataChunk.dateFormatter)
@@ -131,9 +131,9 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "return the number of entries if there are entries" in {
         val bk = getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate1, 400, 40, 1597318833, 1597318837, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate2, 100, 10, 1597318831, 1597318835, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate3, 200, 20, 1597318832, 1597318836, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate1, 400, 40, None, 1597318833, 1597318837, isTableTransient = false)
+        bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318831, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, 200, 20, None, 1597318832, 1597318836, isTableTransient = false)
 
         val chunksCount = bk.getDataChunksCount("table", Option(infoDate1), Option(infoDate2))
 
@@ -145,8 +145,8 @@ class BookkeeperCommonSuite extends AnyWordSpec {
       "add a new entry for the same batch" in {
         val bk = getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate1, 100, 10, None, 1597318833, 1597318837, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, 200, 20, None, 1597318838, 1597318839, isTableTransient = false)
 
         val latestChunkOpt = bk.getLatestDataChunk("table", infoDate1)
         val chunks = bk.getDataChunks("table", infoDate1, None)
@@ -165,8 +165,8 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         // The feature is not implemented in these implementations
         assume(!bk1.isInstanceOf[BookkeeperText])
 
-        bk1.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false, overwrite = true)
-        bk2.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false, overwrite = true)
+        bk1.setRecordCount("table", infoDate1, 100, 10, None, 1597318833, 1597318837, isTableTransient = false)
+        bk2.setRecordCount("table", infoDate1, 200, 20, None, 1597318838, 1597318839, isTableTransient = false)
 
         val latestChunkOpt = bk2.getLatestDataChunk("table", infoDate1)
         val chunks = bk2.getDataChunks("table", infoDate1, None)
@@ -182,8 +182,8 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         val bk1 = getBookkeeper(123L)
         val bk2 = getBookkeeper(456L)
 
-        bk1.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318837, isTableTransient = false, overwrite = false)
-        bk2.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318839, isTableTransient = false, overwrite = false)
+        bk1.setRecordCount("table", infoDate1, 100, 10, Some(1), 1597318833, 1597318837, isTableTransient = false)
+        bk2.setRecordCount("table", infoDate1, 200, 20, Some(1), 1597318838, 1597318839, isTableTransient = false)
 
         val latestChunkOpt = bk2.getLatestDataChunk("table", infoDate1)
         val chunks = bk2.getDataChunks("table", infoDate1, None)
@@ -252,14 +252,14 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         val bk2 = if (bk.isInstanceOf[BookkeeperDeltaTable]) bk else getBookkeeper(123L)
         val bk3 = if (bk.isInstanceOf[BookkeeperDeltaTable]) bk else getBookkeeper(123L)
 
-        bk.setRecordCount("table", infoDate1, 100, 10, 1597318833, 1597318840, isTableTransient = false, overwrite = true)
-        bk.setRecordCount("table", infoDate1, 200, 20, 1597318838, 1597318841, isTableTransient = false, overwrite = true)
+        bk.setRecordCount("table", infoDate1, 100, 10, None, 1597318833, 1597318840, isTableTransient = false)
+        bk.setRecordCount("table", infoDate1, 200, 20, None, 1597318838, 1597318841, isTableTransient = false)
 
-        bk2.setRecordCount("table", infoDate2, 101, 10, 1597318833, 1597318843, isTableTransient = false, overwrite = true)
-        bk2.setRecordCount("table", infoDate3, 201, 20, 1597318838, 1597318844, isTableTransient = false, overwrite = true)
+        bk2.setRecordCount("table", infoDate2, 101, 10, None, 1597318833, 1597318843, isTableTransient = false)
+        bk2.setRecordCount("table", infoDate3, 201, 20, None, 1597318838, 1597318844, isTableTransient = false)
 
-        bk3.setRecordCount("table", infoDate3, 102, 10, 1597318833, 1597318842, isTableTransient = false, overwrite = true)
-        bk3.setRecordCount("table", infoDate2, 202, 20, 1597318838, 1597318843, isTableTransient = false, overwrite = true)
+        bk3.setRecordCount("table", infoDate3, 102, 10, None, 1597318833, 1597318842, isTableTransient = false)
+        bk3.setRecordCount("table", infoDate2, 202, 20, None, 1597318838, 1597318843, isTableTransient = false)
 
         val chunk1 = bk.getLatestDataChunk("table", infoDate3)
         val chunk2 = bk2.getLatestDataChunk("table", infoDate3)

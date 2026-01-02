@@ -69,7 +69,7 @@ class BookkeeperTransientSuiteEager extends AnyWordSpec {
   "setRecordCount()" should {
     "return the newly added record" in {
       val bk = getBookkeeper
-      bk.setRecordCount("table1", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = true, overwrite = true)
+      bk.setRecordCount("table1", infoDate2, 100, 10, None, 1597318830, 1597318835, isTableTransient = true)
 
       val chunks = bk.getTransientDataChunks("table1", Option(infoDate2), Option(infoDate2), None)
 
@@ -80,9 +80,9 @@ class BookkeeperTransientSuiteEager extends AnyWordSpec {
 
   def getBookkeeper: BookkeeperBase = {
     val bk = new BookkeeperNull
-    bk.setRecordCount("table", infoDate2, 100, 10, 1597318830, 1597318835, isTableTransient = true, overwrite = true)
-    bk.setRecordCount("table", infoDate3, 200, 20, 1597318830, 1597318836, isTableTransient = true, overwrite = true)
-    bk.setRecordCount("table", infoDate1, 400, 40, 1597318830, 1597318837, isTableTransient = true, overwrite = true)
+    bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318830, 1597318835, isTableTransient = true)
+    bk.setRecordCount("table", infoDate3, 200, 20, None, 1597318830, 1597318836, isTableTransient = true)
+    bk.setRecordCount("table", infoDate1, 400, 40, None, 1597318830, 1597318837, isTableTransient = true)
     bk
   }
 }

@@ -16,13 +16,13 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-case class BookkeepingRecord(pramenTableName: String,
-                             infoDate: String, /* Use String to workaround serialization issues */
-                             infoDateBegin: String,
-                             infoDateEnd: String,
-                             inputRecordCount: Long,
-                             outputRecordCount: Long,
-                             appendedRecordCount: Option[Long],
-                             jobStarted: Long,
-                             jobFinished: Long,
-                             batchId: Option[Long])
+case class BookkeepingRecordMongoDb(tableName: String,
+                                    infoDate: String, /* Use String to workaround serialization issues */
+                                    infoDateBegin: String,
+                                    infoDateEnd: String,
+                                    inputRecordCount: Long,
+                                    outputRecordCount: Long,
+                                    appendedRecordCount: Option[Long],
+                                    jobStarted: Long,
+                                    jobFinished: Long,
+                                    batchId: Option[Long])
