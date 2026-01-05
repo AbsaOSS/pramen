@@ -60,15 +60,7 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
     chunks.toList.flatMap { case ((tblName, date), chunk) =>
       val isInsidePeriod = tblName == table && date.equals(infoDate)
       if (isInsidePeriod) {
-        batchId match {
-          case Some(id) =>
-            if (chunk.batchId.contains(id)) {
-              Some(chunk)
-            } else {
-              None
-            }
-          case None => Some(chunk)
-        }
+        if (batchId.forall(chunk.batchId.contains)) Some(chunk) else None
       } else {
         None
       }

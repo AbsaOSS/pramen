@@ -23,6 +23,7 @@ import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperDeltaTable, Book
 import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
+import scala.util.Try
 
 class BookkeeperCommonSuite extends AnyWordSpec {
   def testBookKeeper(getBookkeeper: Long => Bookkeeper): Unit = {
@@ -183,8 +184,12 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         val bk1 = getBookkeeper(123L)
         val bk2 = getBookkeeper(456L)
 
+        val sparkVersion = Try {
+          SparkSession.active.version
+        }.toOption.getOrElse("")
+
         // The feature is not supported with Delta Table implementation and Spark 2.x
-        assume(!SparkSession.active.version.startsWith("2.") || !bk1.isInstanceOf[BookkeeperDeltaTable])
+        assume(!sparkVersion.startsWith("2.") || !bk1.isInstanceOf[BookkeeperDeltaTable])
 
         bk1.setRecordCount("table", infoDate1, 100, 10, Some(1), 1597318833, 1597318837, isTableTransient = false)
         bk2.setRecordCount("table", infoDate1, 200, 20, Some(1), 1597318838, 1597318839, isTableTransient = false)
