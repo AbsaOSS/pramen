@@ -136,7 +136,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
     val query = BookkeepingRecords.records
-      .filter(r => r.pramenTableName === table && r.infoDate === dateStr && r.batchId =!= batchId)
+      .filter(r => r.pramenTableName === table && r.infoDate === dateStr && r.batchId =!= Option(batchId))
       .delete
 
     try {
