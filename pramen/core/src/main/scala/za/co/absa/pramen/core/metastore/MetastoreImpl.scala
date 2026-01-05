@@ -145,6 +145,7 @@ class MetastoreImpl(appConfig: Config,
           None
         else
           stats.recordCountAppended
+        log.info(s"Updating bookkeeping for '$tableName', overwrite=$overwrite, stats = $stats, recordsAppended=$recordsAppended.")
         bookkeeper.setRecordCount(tableName, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, recordsAppended, start, finish, isTransient)
       }
     }
