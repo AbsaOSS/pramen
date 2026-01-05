@@ -185,7 +185,7 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
     }
 
     batchId match {
-      case Some(id) => baseFilter.filter(r => r.batchId === id)
+      case Some(id) => baseFilter.filter(r => r.batchId === Option(id))
       case None => baseFilter
     }
   }
