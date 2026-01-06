@@ -621,13 +621,13 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
       val operationWithIgnoredSchemaChanges = operation.copy(ignoreSchemaChange = true)
 
-      val (hasSchamaChanged, changes) = runner.handleSchemaChange(df2, metaTable, operationWithIgnoredSchemaChanges, infoDate)
+      val (hasSchemaChanged, changes) = runner.handleSchemaChange(df2, metaTable, operationWithIgnoredSchemaChanges, infoDate)
 
       val schemaOpt1 = bk.getLatestSchema("table", infoDate.minusDays(1))
       val schemaOpt2 = bk.getLatestSchema("table", infoDate)
       val schemaOpt3 = bk.getLatestSchema("table", infoDate.plusDays(1))
 
-      assert(!hasSchamaChanged)
+      assert(!hasSchemaChanged)
       assert(changes.isEmpty)
 
       assert(schemaOpt1.nonEmpty)
