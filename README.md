@@ -1771,6 +1771,9 @@ pramen.operations = [
     # Thus, the task will take up multiple "slots" in 'pramen.parallel.tasks' setting.
     # This is useful if some tasks consume lot of memory and CPU and should not be running with other tasks in parallel.
     consume.threads = 2
+    
+    # When true, schema changes in the source are ignored and are not displayed in notifications.
+    ignore.schema.change = false
 
     tables = [
       {
@@ -2277,7 +2280,7 @@ Here is a example:
   name = "My Scala Transformation"
   type = "transformer"
   class = "com.example.MyTransformer"
-  
+
   schedule.type = "daily"
   
   output.table = "my_output_table"
@@ -2319,6 +2322,25 @@ Here is a example:
   
   # Optional column selection
   columns = [ "A", "B", "C" ]
+
+  # [Optional] If true (default) jobs in this operation is allowed to run in parallel.
+  # It makes sense to set it to false for jobs that take a lot of cluster resources.
+  allow.parallel = true
+
+  # [Optional] If this is true, the operation will run regardless if dependent jobs had failed.
+  # This gives more responsibilities for validation to ensure that the job can run.
+  # Useful for transformations that should still run if they do not strongly need latest
+  # data from previous jobs.
+  always.attempt = false
+
+  # [Optional] You can determine number of tasks running in parallel with 'pramen.parallel.tasks' setting. 
+  # By setting 'consume.threads' to greater value than 1, the task will appear to require more than 1 thread to run. 
+  # Thus, the task will take up multiple "slots" in 'pramen.parallel.tasks' setting.
+  # This is useful if some tasks consume lot of memory and CPU and should not be running with other tasks in parallel.
+  consume.threads = 2
+
+  # [Optional] When true, schema changes in the source are ignored and are not displayed in notifications.
+  ignore.schema.change = false
 }
 ```
 

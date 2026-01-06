@@ -572,8 +572,8 @@ abstract class TaskRunnerBase(conf: Config,
 
   private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, operationDef: OperationDef, infoDate: LocalDate): (Boolean, List[SchemaDifference]) = {
     if (table.format.isRaw || operationDef.ignoreSchemaChange) {
-      // Raw tables do need schema check
-      // When schema changes are explicitly ignored - return non changes
+      // Raw tables do not need schema check
+      // When schema changes are explicitly ignored - return no changes
       return (false, List.empty[SchemaDifference])
     }
 
