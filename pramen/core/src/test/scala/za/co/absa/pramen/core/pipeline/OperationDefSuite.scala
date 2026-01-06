@@ -109,6 +109,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[Ingestion].sourceTables.head.metaTableName == "table1_sync")
       assert(op.allowParallel)
       assert(!op.alwaysAttempt)
+      assert(!op.ignoreSchemaChange)
       assert(op.warnMaxExecutionTimeSeconds.isEmpty)
       assert(op.killMaxExecutionTimeSeconds.isEmpty)
       assert(op.notificationTargets.size == 2)
@@ -127,6 +128,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
            |class = "myclass"
            |output.table = "dummy_table"
            |always.attempt = "true"
+           |ignore.schema.change = "true"
            |warn.maximum.execution.time.seconds = 50
            |kill.maximum.execution.time.seconds = 100
            |
@@ -162,6 +164,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[Transformation].clazz == "myclass")
       assert(op.allowParallel)
       assert(op.alwaysAttempt)
+      assert(op.ignoreSchemaChange)
       assert(op.dependencies.length == 2)
       assert(op.dependencies.head.tables.contains("table1"))
       assert(op.dependencies.head.dateFromExpr.contains("@infoDate - 1"))
@@ -226,6 +229,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.schedule.isInstanceOf[Schedule.EveryDay])
       assert(op.outputInfoDateExpression == "@date")
       assert(op.operationType.asInstanceOf[Transformation].clazz == "myclass")
+      assert(!op.ignoreSchemaChange)
       assert(op.dependencies.length == 2)
       assert(op.dependencies.head.tables.contains("table1"))
       assert(op.dependencies.head.dateFromExpr.contains("@infoDate - 1"))
@@ -265,6 +269,7 @@ class OperationDefSuite extends AnyWordSpec with TempDirFixture {
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.head.metaTableName == "table1_sync")
       assert(op.operationType.asInstanceOf[OperationType.Sink].sinkTables.head.options("topic") == "table1_topic")
       assert(!op.allowParallel)
+      assert(!op.ignoreSchemaChange)
     }
 
     "set a correct number of threads to consume by an operation and handles edge cases" in {
