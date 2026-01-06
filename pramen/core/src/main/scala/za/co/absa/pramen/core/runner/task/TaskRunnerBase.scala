@@ -359,7 +359,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         val runResult = task.job.run(task.infoDate, task.reason, conf)
 
-        val (newSchemaRegistered, schemaChangesBeforeTransform) = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
+        val (newSchemaRegistered, schemaChangesBeforeTransform) = handleSchemaChange(runResult.data, task.job.outputTable, task.job.operation, task.infoDate)
 
         val dfWithTimestamp = task.job.operation.processingTimestampColumn match {
           case Some(timestampCol) => addProcessingTimestamp(runResult.data, timestampCol)
@@ -393,7 +393,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         val (newSchemaRegisteredAfterTransform, schemaChangesAfterTransform) = if (task.job.operation.schemaTransformations.nonEmpty) {
           val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")
-          handleSchemaChange(dfTransformed, transformedTable, task.infoDate)
+          handleSchemaChange(dfTransformed, transformedTable, task.job.operation, task.infoDate)
         } else {
           (false, Nil)
         }
@@ -570,9 +570,10 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
-  private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, infoDate: LocalDate): (Boolean, List[SchemaDifference]) = {
-    if (table.format.isRaw) {
+  private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, operationDef: OperationDef, infoDate: LocalDate): (Boolean, List[SchemaDifference]) = {
+    if (table.format.isRaw || operationDef.ignoreSchemaChange) {
       // Raw tables do need schema check
+      // When schema changes are explicitly ignored - return non changes
       return (false, List.empty[SchemaDifference])
     }
 
