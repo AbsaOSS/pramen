@@ -157,13 +157,13 @@ API (for defining custom sources, transformers, and sinks):
 <tr><th>Scala 2.11</th><th>Scala 2.12</th><th>Scala 2.13</th></tr>
 <tr>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.11"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.11/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api_2.11"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-api_2.11" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.12"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.12/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api_2.12"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-api_2.12" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.13"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.13/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api_2.13"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-api_2.13" alt="Maven Central"></a><br>
 </td>
 </tr>
 </table>
@@ -173,13 +173,13 @@ Framework core (for advanced usage):
 <tr><th>Scala 2.11</th><th>Scala 2.12</th><th>Scala 2.13</th></tr>
 <tr>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.11"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.11/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core_2.11"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-core_2.11" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.12"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.12/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core_2.12"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-core_2.12" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.13"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.13/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core_2.13"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-core_2.13" alt="Maven Central"></a><br>
 </td>
 </tr>
 </table>
