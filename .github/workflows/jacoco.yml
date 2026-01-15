@@ -38,17 +38,20 @@ jobs:
     name: Test Coverage on Scala ${{matrix.scala}}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Setup Scala
-        uses: olafurpg/setup-scala@v10
+        uses: actions/checkout@v6.0.2
+      - name: Setup JDK
+        uses: actions/setup-java@v5.1.0
         with:
-          java-version: "adopt@1.8"
+          distribution: temurin
+          java-version: 8
+          cache: sbt
       - name: Build and run tests
         working-directory: ./pramen
         run: sbt -DSPARK_VERSION=${{matrix.spark}} ++${{matrix.scala}} jacoco
       - name: Add coverage to PR
         id: jacoco
-        uses: madrapps/jacoco-report@v1.7.1
+        # gh api repos/madrapps/jacoco-report/commits/v1.7.2 --jq '.sha'
+        uses: madrapps/jacoco-report@50d3aff4548aa991e6753342d9ba291084e63848
         with:
           paths: >
             ${{ github.workspace }}/pramen/core/target/scala-${{ matrix.scala_short }}/jacoco/report/jacoco.xml,
@@ -65,7 +68,7 @@ jobs:
           echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
       - name: Fail PR if unit test coverage is less than ${{ matrix.overall }}%
         if: (steps.jacoco.outputs.coverage-overall < matrix.overall)
-        uses: actions/github-script@v6
+        uses: actions/github-script@v6.4.1
         with:
           script: |
             core.setFailed('Unit test coverage is less than ${{ matrix.overall }}%!')
