@@ -53,6 +53,8 @@ abstract class JobBase(operationDef: OperationDef,
 
   override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies
 
+  override val isSelfDependent: Boolean = hasSelfDependencies
+
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
   override def trackDays: Int = outputTable.trackDays
