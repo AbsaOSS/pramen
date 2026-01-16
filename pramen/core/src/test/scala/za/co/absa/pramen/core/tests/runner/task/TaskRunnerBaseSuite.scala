@@ -226,6 +226,39 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val job = tasks.head.job.asInstanceOf[JobSpy]
 
+    assert(job.validateCount == 2)
+    assert(job.runCount == 2)
+    assert(job.postProcessingCount == 0)
+    assert(job.saveCount == 0)
+    assert(job.createHiveTableCount == 0)
+    assert(result.length == 2)
+    assert(result.head.runStatus.isInstanceOf[Failed])
+    assert(result(1).runStatus.isInstanceOf[Failed])
+
+    val journalEntries = journal.getEntries(now, now.plusSeconds(30))
+
+    assert(journalEntries.length == 2)
+    assert(journalEntries.head.status == "Failed")
+    assert(notificationTarget.notificationsSent.length == 2)
+    assert(notificationTarget.notificationsSent.head.runStatus.isInstanceOf[RunStatus.Failed])
+  }
+
+  "run multiple failure jobs sequential execution and self=dependencies" in {
+    val now = Instant.now()
+    val notificationTarget = new NotificationTargetSpy(ConfigFactory.empty(), (action: TaskResult) => ())
+    val jobNotificationTarget = JobNotificationTarget("notification1", Map.empty[String, String], notificationTarget)
+    val (runner, _, journal, state, _, tasks) = getUseCase(hasSelfDependencies = true, runFunction = () => throw new IllegalStateException("Test exception"), jobNotificationTargets = Seq(jobNotificationTarget))
+
+    val taskPreDefs = (infoDate :: infoDate.plusDays(1) :: Nil).map(d => core.pipeline.TaskPreDef(d, TaskRunReason.New))
+
+    val fut = runner.runJobTasks(tasks.head.job, taskPreDefs)
+
+    Await.result(fut, Duration.Inf)
+
+    val result = state.completedStatuses
+
+    val job = tasks.head.job.asInstanceOf[JobSpy]
+
     assert(job.validateCount == 1)
     assert(job.runCount == 1)
     assert(job.postProcessingCount == 0)
@@ -648,6 +681,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  isRerun: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
                  allowParallel: Boolean = true,
+                 hasSelfDependencies: Boolean = false,
                  hiveTable: Option[String] = None,
                  jobNotificationTargets: Seq[JobNotificationTarget] = Nil,
                  timeoutTask: Boolean = false
@@ -675,6 +709,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       runFunction = runFunction,
       operationDef = operationDef,
       allowParallel = allowParallel,
+      hasSelfDependencies = hasSelfDependencies,
       saveStats = stats,
       hiveTable = hiveTable,
       jobNotificationTargets = jobNotificationTargets)

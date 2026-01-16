@@ -41,6 +41,7 @@ class JobSpy(jobName: String = "Dummy Job",
              runFunction: () => RunResult = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing(true),
              allowParallel: Boolean = true,
+             hasSelfDependencies: Boolean = false,
              saveStats: MetaTableStats = MetaTableStats(Some(0)),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty,
              jobTrackDays: Int = 0
@@ -66,7 +67,9 @@ class JobSpy(jobName: String = "Dummy Job",
 
   override val scheduleStrategy: ScheduleStrategy = scheduleStrategyIn
 
-  override def allowRunningTasksInParallel: Boolean = allowParallel
+  override def allowRunningTasksInParallel: Boolean = allowParallel && !hasSelfDependencies
+
+  override def isSelfDependent: Boolean = hasSelfDependencies
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 

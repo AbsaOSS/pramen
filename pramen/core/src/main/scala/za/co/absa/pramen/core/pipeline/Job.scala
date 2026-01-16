@@ -42,6 +42,8 @@ trait Job {
 
   def allowRunningTasksInParallel: Boolean
 
+  def isSelfDependent: Boolean
+
   def notificationTargets: Seq[JobNotificationTarget]
 
   def trackDays: Int

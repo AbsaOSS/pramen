@@ -107,17 +107,18 @@ abstract class TaskRunnerBase(conf: Config,
     val sortedTasks = tasks.sortBy(_.infoDate)
     var failedInfoDate: Option[LocalDate] = None
 
-    sortedTasks.map(task =>
+    sortedTasks.map { task =>
+      val selfDependent = task.job.isSelfDependent
       failedInfoDate match {
-        case Some(failedDate) =>
+        case Some(failedDate) if selfDependent =>
           skipTask(task, s"Due to failure for $failedDate", isWarning = true)
-        case None =>
+        case _ =>
           val status = runTask(task)
           if (status.isFailure)
             failedInfoDate = Option(task.infoDate)
           status
       }
-    )
+    }
   }
 
   /** Runs a task in the single thread. Performs all task logging and notification sending activities. */
