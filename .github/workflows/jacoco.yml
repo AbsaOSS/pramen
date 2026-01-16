@@ -26,13 +26,13 @@ on:
 
 jobs:
   coverage:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     strategy:
       matrix:
         include:
-          - scala: 2.12.18
+          - scala: 2.12.20
             scala_short: 2.12
-            spark: 3.4.1
+            spark: 3.4.4
             overall: 80.0
             changed: 80.0
     name: Test Coverage on Scala ${{matrix.scala}}
