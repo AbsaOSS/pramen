@@ -51,9 +51,9 @@ abstract class JobBase(operationDef: OperationDef,
 
   override val operation: OperationDef = operationDef
 
-  override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies
+  override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies(includeOptional = true)
 
-  override val isSelfDependent: Boolean = hasSelfDependencies
+  override val isSelfDependent: Boolean = hasSelfDependencies(includeOptional = false)
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
 
@@ -228,8 +228,11 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  private[core] def hasSelfDependencies: Boolean = {
-    operationDef.dependencies.exists(_.tables.contains(outputTableDef.name))
+  private[core] def hasSelfDependencies(includeOptional: Boolean): Boolean = {
+    if (includeOptional)
+      operationDef.dependencies.exists(_.tables.contains(outputTableDef.name))
+    else
+      operationDef.dependencies.filter(!_.isOptional).exists(_.tables.contains(outputTableDef.name))
   }
 
   private[core] def getInfoDateRange(infoDate: LocalDate, fromExpr: Option[String], toExpr: Option[String]): (LocalDate, LocalDate) = {
