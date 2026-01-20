@@ -44,6 +44,7 @@ class JobSpy(jobName: String = "Dummy Job",
              hasSelfDependencies: Boolean = false,
              saveStats: MetaTableStats = MetaTableStats(Some(0)),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty,
+             jobBackfillDays: Int = 0,
              jobTrackDays: Int = 0
             ) extends Job {
   var getDatesToRunCount = 0
@@ -72,6 +73,8 @@ class JobSpy(jobName: String = "Dummy Job",
   override def isSelfDependent: Boolean = hasSelfDependencies
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
+
+  override def backfillDays: Int = jobBackfillDays
 
   override def trackDays: Int = jobTrackDays
 

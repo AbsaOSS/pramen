@@ -26,6 +26,7 @@ sealed trait ScheduleParams
 object ScheduleParams {
   case class Normal(
                      runDate: LocalDate,
+                     backfillDays: Int,
                      trackDays: Int,
                      delayDays: Int,
                      newOnly: Boolean,
@@ -43,7 +44,7 @@ object ScheduleParams {
                          mode: RunMode
                        ) extends ScheduleParams
 
-  def fromRuntimeConfig(conf: RuntimeConfig, trackDays: Int, delayDays: Int): ScheduleParams = {
+  def fromRuntimeConfig(conf: RuntimeConfig, backfillDays: Int, trackDays: Int, delayDays: Int): ScheduleParams = {
     if (conf.runDateTo.nonEmpty) {
       ScheduleParams.Historical(
         conf.runDate,
@@ -55,6 +56,7 @@ object ScheduleParams {
       ScheduleParams.Rerun(conf.runDate)
     } else {
       ScheduleParams.Normal(conf.runDate,
+        backfillDays,
         trackDays,
         delayDays,
         conf.checkOnlyNewData,

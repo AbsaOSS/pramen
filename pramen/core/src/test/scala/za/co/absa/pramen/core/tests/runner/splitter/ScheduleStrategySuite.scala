@@ -48,7 +48,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
 
-        val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(runDate, 0, 4, 0, newOnly = false, lateOnly = false)
 
         val expected = Seq(
           pipeline.TaskPreDef(runDate.minusDays(3), TaskRunReason.Late),
@@ -67,7 +67,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate.minusDays(1)))).thenReturn(Some(runDate.minusDays(1)))
 
-        val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
         val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, "@runDate - 1", schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -79,7 +79,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate.minusDays(1)))).thenReturn(Some(runDate.minusDays(7)))
 
-        val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
         val result = strategySnapshot.getDaysToRun(outputTable, dependencies, bk, "@runDate - 1", schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -93,7 +93,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
 
-        val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = false, lateOnly = true)
+        val params = ScheduleParams.Normal(runDate, 0, 4, 0, newOnly = false, lateOnly = true)
 
         val expected = Seq(runDate.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
@@ -108,7 +108,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
 
-        val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = true, lateOnly = false)
+        val params = ScheduleParams.Normal(runDate, 0, 4, 0, newOnly = true, lateOnly = false)
 
         val expected = Seq(runDate)
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.New))
@@ -123,7 +123,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
 
-        val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = true, lateOnly = true)
+        val params = ScheduleParams.Normal(runDate, 0, 4, 0, newOnly = true, lateOnly = true)
 
         val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -225,7 +225,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(runDate.plusDays(1)))).thenReturn(Some(runDate.minusDays(9)))
 
-          val params = ScheduleParams.Normal(nextSunday, 15, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(nextSunday, 0, 15, 0, newOnly = false, lateOnly = false)
 
           val expected = Seq(
             pipeline.TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.Late),
@@ -241,7 +241,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         "default behavior with track days" in {
           val minimumDate = LocalDate.parse("2022-07-01")
           val runDate = LocalDate.parse("2022-07-14")
-          val params = ScheduleParams.Normal(runDate, 6, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(runDate, 0, 6, 0, newOnly = false, lateOnly = false)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(LocalDate.parse("2022-07-09")))).thenReturn(Some(LocalDate.parse("2022-07-05")))
@@ -258,7 +258,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         "default behavior with more than 1 day late" in {
           val minimumDate = LocalDate.parse("2022-07-01")
           val runDate = LocalDate.parse("2022-07-14")
-          val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(LocalDate.parse("2022-07-09")))).thenReturn(Some(LocalDate.parse("2022-07-05")))
@@ -277,7 +277,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
           when(bk.getLatestProcessedDate(outputTable, Some(runDate.minusDays(1)))).thenReturn(Some(runDate.minusDays(30)))
 
-          val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
           val result = strategySnapshot.getDaysToRun(outputTable, dependencies, bk, "@runDate - 1", schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -287,7 +287,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         }
 
         "late only" in {
-          val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = false, lateOnly = true)
+          val params = ScheduleParams.Normal(nextSunday, 0, 14, 0, newOnly = false, lateOnly = true)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(runDate.plusDays(1)))).thenReturn(Some(runDate.minusDays(9)))
@@ -298,7 +298,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         }
 
         "new only" in {
-          val params = ScheduleParams.Normal(nextSunday, 14, 0, newOnly = true, lateOnly = false)
+          val params = ScheduleParams.Normal(nextSunday, 0, 14, 0, newOnly = true, lateOnly = false)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(runDate.plusDays(1)))).thenReturn(Some(runDate.minusDays(9)))
@@ -309,7 +309,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         }
 
         "incorrect settings" in {
-          val params = ScheduleParams.Normal(runDate, 4, 0, newOnly = true, lateOnly = true)
+          val params = ScheduleParams.Normal(runDate, 0, 4, 0, newOnly = true, lateOnly = true)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(ArgumentMatchers.eq(outputTable), ArgumentMatchers.any[Option[LocalDate]]()))
@@ -398,7 +398,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
         "default behavior with a monthly job" in {
           val minimumDate = LocalDate.parse("2022-05-30")
           val runDate = LocalDate.parse("2022-07-14")
-          val params = ScheduleParams.Normal(runDate, 0, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(LocalDate.parse("2022-07-01"))))

@@ -33,7 +33,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
     "info date is defined" should {
       "run for the current info date when the job have never ran" in {
         val strategy = new ScheduleStrategyIncremental(None, true)
-        val params = ScheduleParams.Normal(infoDate, 0, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -44,7 +44,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       "run for the current info date when the job ran today before" in {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate), true)
-        val params = ScheduleParams.Normal(infoDate, 0, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -55,7 +55,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       "run for the current info date when the job ran several before track days = 2" in {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(10)), true)
-        val params = ScheduleParams.Normal(infoDate, 2, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, 2, 0, newOnly = false, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -70,7 +70,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       "run for the current info date when the job ran several before track days = -1" in {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(3)), true)
-        val params = ScheduleParams.Normal(infoDate, -1, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, -1, 0, newOnly = false, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -87,7 +87,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       "run for the current info date new only" in {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(3)), true)
-        val params = ScheduleParams.Normal(infoDate, -1, 0, newOnly = true, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, -1, 0, newOnly = true, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -100,7 +100,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       "run for the current info date late only" in {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(3)), true)
-        val params = ScheduleParams.Normal(infoDate, -1, 0, newOnly = false, lateOnly = true)
+        val params = ScheduleParams.Normal(infoDate, 0, -1, 0, newOnly = false, lateOnly = true)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -115,7 +115,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
     "info date is not defined" should {
       "run for the current info date when the job have never ran" in {
         val strategy = new ScheduleStrategyIncremental(None, false)
-        val params = ScheduleParams.Normal(infoDate, 0, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -126,7 +126,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       "run for the current info date when the job ran today before" in {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate), false)
-        val params = ScheduleParams.Normal(infoDate, 0, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
@@ -137,7 +137,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
 
       "run for the current info date when the job ran some time ago" in {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(5)), false)
-        val params = ScheduleParams.Normal(infoDate, 0, 0, newOnly = false, lateOnly = false)
+        val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
         val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 

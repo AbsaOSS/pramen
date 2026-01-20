@@ -39,7 +39,7 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
                              minimumDate: LocalDate
                            ): Seq[TaskPreDef] = {
     val dates = params match {
-      case ScheduleParams.Normal(runDate, trackDays, _, newOnly, lateOnly) =>
+      case ScheduleParams.Normal(runDate, backfillDays, trackDays, _, newOnly, lateOnly) =>
         val infoDate = evaluateRunDate(runDate, infoDateExpression)
         log.info(s"Normal run strategy: runDate=$runDate, infoDate=$infoDate")
 

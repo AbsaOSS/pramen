@@ -17,7 +17,7 @@
 package za.co.absa.pramen.api.jobdef
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{DataFormat, Query}
+import za.co.absa.pramen.api.Query
 
 import java.time.LocalDate
 
@@ -28,6 +28,7 @@ case class TransferTable(
                           rangeFromExpr: Option[String],
                           rangeToExpr: Option[String],
                           infoDateStart: LocalDate,
+                          backfillDays: Int,
                           trackDays: Int,
                           trackDaysExplicitlySet: Boolean,
                           warnMaxExecutionTimeSeconds: Option[Int],

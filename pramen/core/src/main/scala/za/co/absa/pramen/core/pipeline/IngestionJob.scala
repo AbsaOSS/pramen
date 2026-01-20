@@ -53,15 +53,14 @@ class IngestionJob(operationDef: OperationDef,
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing(source.hasInfoDateColumn(sourceTable.query))
 
-  override def trackDays: Int = {
-    val hasInfoDate = try {
-      source.hasInfoDateColumn(sourceTable.query)
-    } catch {
-      case _: AbstractMethodError =>
-        log.warn(s"Sources were built using old version of Pramen that does not support track days handling for snapshot tables. Ignoring...")
-        true
-    }
+  override def backfillDays: Int = {
+    if (hasInfoDate)
+      outputTable.backfillDays
+    else
+      0
+  }
 
+  override def trackDays: Int = {
     if (supportsTrackDays(hasInfoDate))
       outputTable.trackDays
     else
@@ -188,6 +187,16 @@ class IngestionJob(operationDef: OperationDef,
 
     val warnings = stats.warnings ++ tooLongWarnings
     SaveResult(stats, warnings = warnings)
+  }
+
+  private def hasInfoDate: Boolean = {
+    try {
+      source.hasInfoDateColumn(sourceTable.query)
+    } catch {
+      case _: AbstractMethodError =>
+        log.warn(s"Sources were built using old version of Pramen that does not support track days handling for snapshot tables. Ignoring...")
+        true
+    }
   }
 
   private def supportsTrackDays(hasInfoDate: Boolean): Boolean = {

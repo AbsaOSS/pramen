@@ -48,7 +48,7 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
                              minimumDate: LocalDate
                            ): Seq[TaskPreDef] = {
     val dates = params match {
-      case ScheduleParams.Normal(runDate, trackDays, delayDays, newOnly, lateOnly)                      =>
+      case ScheduleParams.Normal(runDate, backfillDays, trackDays, delayDays, newOnly, lateOnly)                      =>
         val infoDate = evaluateRunDate(runDate, infoDateExpression)
         log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly, infoDate=$infoDate")
         val trackedDays = if (!lateOnly && !newOnly) {

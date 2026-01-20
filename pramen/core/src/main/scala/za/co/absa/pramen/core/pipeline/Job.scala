@@ -46,6 +46,8 @@ trait Job {
 
   def notificationTargets: Seq[JobNotificationTarget]
 
+  def backfillDays: Int
+
   def trackDays: Int
 
   /**
