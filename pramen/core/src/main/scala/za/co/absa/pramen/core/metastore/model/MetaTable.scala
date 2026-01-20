@@ -64,6 +64,7 @@ case class MetaTable(
                       hivePreferAddPartition: Boolean,
                       infoDateExpression: Option[String],
                       infoDateStart: LocalDate,
+                      backfillDays: Int,
                       trackDays: Int,
                       trackDaysExplicitlySet: Boolean,
                       saveModeOpt: Option[SaveMode],
@@ -81,6 +82,7 @@ object MetaTable {
   val HIVE_TABLE_KEY = "hive.table"
   val HIVE_PATH_KEY = "hive.path"
   val HIVE_PREFER_ADD_PARTITION_KEY = "hive.prefer.add.partition"
+  val BACKFILL_DAYS_KEY = "backfill.days"
   val TRACK_DAYS_KEY = "track.days"
   val SAVE_MODE_OPTION_KEY = "save.mode"
   val TABLE_PROPERTIES_KEY = "table.properties"
@@ -98,6 +100,7 @@ object MetaTable {
     val defaultInfoDateFormat = infoDateConfig.dateFormat
     val defaultPartitionSchemne = infoDateConfig.partitionScheme
     val defaultStartDate = infoDateConfig.startDate
+    val defaultBackfillDays = infoDateConfig.defaultBackfillDays
     val defaultTrackDays = infoDateConfig.defaultTrackDays
     val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
     val defaultPreferAddPartition = conf.getBoolean(s"pramen.$HIVE_PREFER_ADD_PARTITION_KEY")
@@ -110,7 +113,7 @@ object MetaTable {
     }
 
     val metatables = tableConfigs
-      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultPartitionSchemne, defaultStartDate, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition, defaultBatchIdColumnName))
+      .map(tableConfig => fromConfigSingleEntity(tableConfig, conf, defaultInfoDateColumnName, defaultInfoDateFormat, defaultPartitionSchemne, defaultStartDate, defaultBackfillDays, defaultTrackDays, defaultHiveConfig, defaultPreferAddPartition, defaultBatchIdColumnName))
       .toSeq
 
     val duplicates = AlgorithmUtils.findDuplicates(metatables.map(_.name))
@@ -126,6 +129,7 @@ object MetaTable {
                              defaultInfoDateFormat: String,
                              defaultPartitionScheme: PartitionScheme,
                              defaultStartDate: LocalDate,
+                             defaultBackfillDays: Int,
                              defaultTrackDays: Int,
                              defaultHiveConfig: HiveDefaultConfig,
                              defaultPreferAddPartition: Boolean,
@@ -138,6 +142,7 @@ object MetaTable {
     val infoDateExpressionOpt = infoDateOverride.expression
     val partitionScheme = infoDateOverride.partitionScheme.getOrElse(defaultPartitionScheme)
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
+    val backfillDays = ConfigUtils.getOptionInt(conf, BACKFILL_DAYS_KEY).getOrElse(defaultBackfillDays)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
 
@@ -183,6 +188,7 @@ object MetaTable {
       hivePreferAddPartition,
       infoDateExpressionOpt,
       startDate,
+      backfillDays,
       trackDays,
       trackDaysExplicitlySet,
       saveModeOpt,
@@ -207,6 +213,7 @@ object MetaTable {
       hivePreferAddPartition = false,
       infoDateExpression = None,
       infoDateStart = LocalDate.of(1970, 1, 1),
+      backfillDays = 0,
       trackDays = 0,
       trackDaysExplicitlySet = false,
       saveModeOpt = None,

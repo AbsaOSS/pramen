@@ -63,6 +63,10 @@ class TransferJob(operationDef: OperationDef,
 
   override val jobType: JobType = JobType.Transfer(sourceName, source.config, sinkName, sink.config, table)
 
+  override def backfillDays: Int = ingestionJob.backfillDays
+
+  override def trackDays: Int = ingestionJob.trackDays
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     ingestionJob.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)
   }

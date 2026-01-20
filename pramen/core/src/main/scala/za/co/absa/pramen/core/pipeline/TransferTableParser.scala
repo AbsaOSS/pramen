@@ -22,6 +22,7 @@ import za.co.absa.pramen.api.jobdef.{SinkTable, SourceTable, TransferTable}
 import za.co.absa.pramen.api.{DataFormat, PartitionScheme, Query}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
+import za.co.absa.pramen.core.metastore.model.MetaTable.{BACKFILL_DAYS_KEY, TRACK_DAYS_KEY}
 import za.co.absa.pramen.core.metastore.model.{HiveConfig, MetaTable}
 import za.co.absa.pramen.core.model.QueryBuilder
 import za.co.absa.pramen.core.pipeline.OperationDef.{SPARK_CONFIG_PREFIX, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY}
@@ -41,14 +42,14 @@ object TransferTableParser {
   val FILTERS_KEY = "filters"
   val SOURCE_OVERRIDE_PREFIX = "source"
   val SINK_OVERRIDE_PREFIX = "sink"
-  val TRACK_DAYS_KEY = "track.days"
 
-  def fromConfigSingleEntry(conf: Config, parentPath: String, sinkName: String, defaultStartDate: LocalDate, defaultTrackDays: Int): TransferTable = {
+  def fromConfigSingleEntry(conf: Config, parentPath: String, sinkName: String, defaultStartDate: LocalDate, defaultBackfillDays: Int, defaultTrackDays: Int): TransferTable = {
     val query = QueryBuilder.fromConfig(conf, "input", parentPath)
     val jobMetaTableOpt = ConfigUtils.getOptionString(conf, JOB_METASTORE_OUTPUT_TABLE_KEY)
     val dateFromExpr = ConfigUtils.getOptionString(conf, DATE_FROM_KEY)
     val dateToExpr = ConfigUtils.getOptionString(conf, DATE_TO_KEY)
     val maximumExecutionTimeSeconds = ConfigUtils.getOptionInt(conf, WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY)
+    val backfillDays = ConfigUtils.getOptionInt(conf, BACKFILL_DAYS_KEY).getOrElse(defaultBackfillDays)
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
     val columns = ConfigUtils.getOptListStrings(conf, COLUMNS_KEY)
@@ -78,18 +79,19 @@ object TransferTableParser {
     val startDate = infoDateOverride.startDate.getOrElse(defaultStartDate)
     val jobMetaTable = getOutputTableName(jobMetaTableOpt, query, sinkName)
 
-    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, trackDays, trackDaysExplicitlySet, maximumExecutionTimeSeconds, transformations, filters, columns, readOptions, writeOptions, sparkConfig, sourceOverrideConf, sinkOverrideConf)
+    TransferTable(query, jobMetaTable, conf, dateFromExpr, dateToExpr, startDate, backfillDays, trackDays, trackDaysExplicitlySet, maximumExecutionTimeSeconds, transformations, filters, columns, readOptions, writeOptions, sparkConfig, sourceOverrideConf, sinkOverrideConf)
   }
 
   def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, arrayPath: String, sinkName: String): Seq[TransferTable] = {
     val defaultStartDate = infoDateConfig.startDate
+    val defaultBackfillDays = infoDateConfig.defaultBackfillDays
     val defaultTrackDays = infoDateConfig.defaultTrackDays
 
     val tableConfigs = conf.getConfigList(arrayPath).asScala
 
     val transferTables = tableConfigs
       .zipWithIndex
-      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]", sinkName, defaultStartDate, defaultTrackDays) }
+      .map { case (tableConfig, idx) => fromConfigSingleEntry(tableConfig, s"$arrayPath[$idx]", sinkName, defaultStartDate, defaultBackfillDays, defaultTrackDays) }
 
     val duplicates = AlgorithmUtils.findDuplicates(transferTables.map(_.jobMetaTableName).toSeq)
     if (duplicates.nonEmpty) {
@@ -160,6 +162,7 @@ object TransferTableParser {
       hivePreferAddPartition = true,
       None,
       transferTable.infoDateStart,
+      transferTable.backfillDays,
       transferTable.trackDays,
       trackDaysExplicitlySet = transferTable.trackDaysExplicitlySet,
       None,

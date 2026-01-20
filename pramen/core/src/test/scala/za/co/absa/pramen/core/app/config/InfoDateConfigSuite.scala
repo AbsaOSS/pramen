@@ -32,6 +32,7 @@ class InfoDateConfigSuite extends AnyWordSpec {
            |  information.date.partition.by = true
            |  information.date.start = "2020-01-31"
            |
+           |  backfill.days = 6
            |  track.days = 4
            |  expected.delay.days =  0
            |
@@ -53,6 +54,7 @@ class InfoDateConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.dateFormat == "dummy_format")
       assert(runtimeConfig.startDate.toString == "2020-01-31")
 
+      assert(runtimeConfig.defaultBackfillDays == 6)
       assert(runtimeConfig.defaultTrackDays == 4)
       assert(runtimeConfig.defaultDelayDays == 0)
 
@@ -71,6 +73,10 @@ class InfoDateConfigSuite extends AnyWordSpec {
 
       assert(runtimeConfig.columnName == "pramen_info_date")
       assert(runtimeConfig.dateFormat == "yyyy-MM-dd")
+
+      assert(runtimeConfig.defaultBackfillDays == 5)
+      assert(runtimeConfig.defaultTrackDays == 3)
+      assert(runtimeConfig.defaultDelayDays == 0)
 
       assert(runtimeConfig.expressionDaily == "@runDate")
       assert(runtimeConfig.expressionWeekly == "lastMonday(@runDate)")
