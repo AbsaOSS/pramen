@@ -91,6 +91,7 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
   }
 
   private[core] def getLateDays(infoDate: LocalDate, lastInfoDate: LocalDate, trackDays: Int): Seq[TaskPreDef] = {
+    // The previous day is also considered new (not late) in incremental ingestion, that's why we decrement 1 day.
     val lastNewDate = infoDate.minusDays(1)
 
     if (lastInfoDate.isBefore(lastNewDate)) {
@@ -112,6 +113,7 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
         }
       }
 
+      // Minus one more day because incremental ingestion can cover previous day and not consider it late data.
       val potentialDates = getInfoDateRange(startDate, lastNewDate.minusDays(1), "@runDate", Schedule.Incremental)
       potentialDates.map(date => {
         TaskPreDef(date, TaskRunReason.Late)

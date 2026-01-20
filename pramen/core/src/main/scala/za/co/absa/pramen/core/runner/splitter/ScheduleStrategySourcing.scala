@@ -61,6 +61,9 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
         val lastProcessedDate = bookkeeper.getLatestProcessedDate(outputTable, Option(infoDate))
         lastProcessedDate.foreach(d => log.info(s"Last processed info date: $d"))
 
+        val backfillDates = getBackFillDays(outputTable, runDate, backfillDays, trackDays, lastProcessedDate, schedule, infoDateExpression, bookkeeper)
+          .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
+
         val newDaysOrig = if (!lateOnly) {
           getNew(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression).toList
         } else {
@@ -88,12 +91,13 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
           }
         }
 
+        log.info(s"Backfill days: ${backfillDates.map(_.infoDate).mkString(", ")}")
         log.info(s"Tracked days: ${trackedDays.map(_.infoDate).mkString(", ")}")
         log.info(s"Late days: ${lateDays.map(_.infoDate).mkString(", ")}")
         log.info(s"New days: ${newDaysOrig.map(_.infoDate).mkString(", ")}")
         log.info(s"New days not ran already: ${newDays.map(_.infoDate).mkString(", ")}")
 
-        (trackedDays ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
+        (backfillDates ++ trackedDays ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
       case ScheduleParams.Rerun(runDate)                                                     =>
         log.info(s"Rerun strategy for a single day: $runDate")
         getRerun(outputTable, runDate, schedule, infoDateExpression, bookkeeper)
@@ -103,5 +107,40 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
     }
 
     filterOutPastMinimumDates(dates, minimumDate)
+  }
+
+  def getBackFillDays(outputTable: String,
+                      runDate: LocalDate,
+                      backfillDays: Int,
+                      trackDays: Int,
+                      lastProcessedDate: Option[LocalDate],
+                      schedule: Schedule,
+                      initialSourcingDateExpr: String,
+                      bookkeeper: Bookkeeper): Seq[LocalDate] = {
+    // If backfillDays == 0, backfill is disabled
+    // If trackDays > backfillDays, track days supersede backfill with checks for retrospective updates
+    if (backfillDays == 0 || (backfillDays > 0 && trackDays > backfillDays)) return Seq.empty
+
+    val backfillStart = if (backfillDays < 0) {
+      lastProcessedDate.getOrElse(runDate)
+    } else {
+      runDate.minusDays(backfillDays - 1)
+    }
+
+    if (backfillStart.isEqual(runDate)) return Seq.empty
+
+    val trackDaysBehind = if (trackDays > 0) trackDays - 1 else 0
+    val backfillEnd = runDate.minusDays(trackDaysBehind) // the end backfill date is exclusive
+
+    if (backfillEnd.isBefore(backfillStart) || backfillEnd.isEqual(backfillStart)) return Seq.empty
+
+    val potentialDates = getInfoDateRange(backfillStart, backfillEnd.minusDays(1), initialSourcingDateExpr, schedule)
+    if (potentialDates.nonEmpty) {
+      val dataAvailability = bookkeeper.getDataAvailability(outputTable, backfillStart, backfillEnd.minusDays(1))
+        .map(d => (d.infoDate, d.chunks)).toMap
+      potentialDates.filterNot(d => dataAvailability.contains(d))
+    } else {
+      potentialDates
+    }
   }
 }
