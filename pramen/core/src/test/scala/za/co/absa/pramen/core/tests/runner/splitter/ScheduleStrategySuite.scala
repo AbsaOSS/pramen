@@ -23,6 +23,7 @@ import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.runner.splitter.{ScheduleParams, ScheduleStrategySourcing}
 
@@ -43,7 +44,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
       val infoDateExpression = "@runDate"
       val schedule = Schedule.EveryDay()
 
-      "normal execution" in {
+      "normal execution with track days" in {
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
@@ -53,6 +54,45 @@ class ScheduleStrategySuite extends AnyWordSpec {
         val expected = Seq(
           pipeline.TaskPreDef(runDate.minusDays(3), TaskRunReason.Late),
           pipeline.TaskPreDef(runDate.minusDays(2), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate.minusDays(1), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate, TaskRunReason.New)
+        )
+
+        val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
+
+        assert(result == expected)
+      }
+
+      "normal execution with backfill days" in {
+        val bk = mock(classOf[Bookkeeper])
+
+        when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
+
+        when(bk.getDataAvailability(outputTable, runDate.minusDays(3), runDate.minusDays(1))).thenReturn(Seq(DataAvailability(runDate.minusDays(2), 1, 1)))
+
+        val params = ScheduleParams.Normal(runDate, 4, 0, 0, newOnly = false, lateOnly = false)
+
+        val expected = Seq(
+          pipeline.TaskPreDef(runDate.minusDays(3), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate.minusDays(1), TaskRunReason.Late),
+          pipeline.TaskPreDef(runDate, TaskRunReason.New)
+        )
+
+        val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
+
+        assert(result == expected)
+      }
+
+      "normal execution with backfill and track days" in {
+        val bk = mock(classOf[Bookkeeper])
+
+        when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
+        when(bk.getDataAvailability(outputTable, runDate.minusDays(4), runDate.minusDays(2))).thenReturn(Seq(DataAvailability(runDate.minusDays(2), 1, 1), DataAvailability(runDate.minusDays(3), 1, 1)))
+
+        val params = ScheduleParams.Normal(runDate, 5, 2, 0, newOnly = false, lateOnly = false)
+
+        val expected = Seq(
+          pipeline.TaskPreDef(runDate.minusDays(4), TaskRunReason.Late),
           pipeline.TaskPreDef(runDate.minusDays(1), TaskRunReason.Late),
           pipeline.TaskPreDef(runDate, TaskRunReason.New)
         )
@@ -220,7 +260,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
       val nextSaturday = runDate.plusDays(1)
       val nextSunday = runDate.plusDays(2)
 
-      "normal execution" when {
+      "normal execution with track days" when {
         "default behavior" in {
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(runDate.plusDays(1)))).thenReturn(Some(runDate.minusDays(9)))
@@ -229,6 +269,43 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
           val expected = Seq(
             pipeline.TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.Late),
+            pipeline.TaskPreDef(lastSaturday, TaskRunReason.Late),
+            pipeline.TaskPreDef(nextSaturday, TaskRunReason.New)
+          )
+
+          val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
+
+          assert(result == expected)
+        }
+
+        "normal execution with backfill days" in {
+          val bk = mock(classOf[Bookkeeper])
+
+          when(bk.getLatestProcessedDate(outputTable, Some(runDate.plusDays(1)))).thenReturn(Some(lastSaturday))
+
+          when(bk.getDataAvailability(outputTable, runDate.minusDays(12), runDate.plusDays(1))).thenReturn(Seq(DataAvailability(lastSaturday, 1, 1)))
+
+          val params = ScheduleParams.Normal(nextSunday, 15, 0, 0, newOnly = false, lateOnly = false)
+
+          val expected = Seq(
+            pipeline.TaskPreDef(saturdayTwoWeeksAgo, TaskRunReason.Late),
+            pipeline.TaskPreDef(nextSaturday, TaskRunReason.New)
+          )
+
+          val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
+
+          assert(result == expected)
+        }
+
+        "normal execution with backfill and track days" in {
+          val bk = mock(classOf[Bookkeeper])
+
+          when(bk.getLatestProcessedDate(outputTable, Some(runDate.plusDays(1)))).thenReturn(Some(runDate.minusDays(9)))
+          when(bk.getDataAvailability(outputTable, runDate.minusDays(12), runDate.minusDays(6))).thenReturn(Seq(DataAvailability(saturdayTwoWeeksAgo, 1, 1), DataAvailability(lastSaturday, 1, 1)))
+
+          val params = ScheduleParams.Normal(nextSunday, 15, 8, 0, newOnly = false, lateOnly = false)
+
+          val expected = Seq(
             pipeline.TaskPreDef(lastSaturday, TaskRunReason.Late),
             pipeline.TaskPreDef(nextSaturday, TaskRunReason.New)
           )

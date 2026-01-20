@@ -16,10 +16,12 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 
 abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) extends Bookkeeper {
   private val transientDataChunks = new mutable.HashMap[String, Array[DataChunk]]()
@@ -42,7 +44,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
                                                jobStarted: Long,
                                                jobFinished: Long): Unit
 
-  private[pramen] final def setRecordCount(table: String,
+  private[pramen] final override def setRecordCount(table: String,
                                            infoDate: LocalDate,
                                            inputRecordCount: Long,
                                            outputRecordCount: Long,
@@ -66,7 +68,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
     }
   }
 
-  final def getLatestProcessedDate(table: String, until: Option[LocalDate] = None): Option[LocalDate] = {
+  final override def getLatestProcessedDate(table: String, until: Option[LocalDate] = None): Option[LocalDate] = {
     val isTransient = this.synchronized {
       transientDataChunks.contains(table.toLowerCase)
     }
@@ -91,7 +93,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
     }
   }
 
-  final def getDataChunks(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+  final override def getDataChunks(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
     val isTransient = this.synchronized {
       transientDataChunks.contains(table.toLowerCase)
     }
@@ -103,7 +105,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
     }
   }
 
-  final def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
+  final override def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = {
     val isTransient = this.synchronized {
       transientDataChunks.contains(table.toLowerCase)
     }
@@ -113,6 +115,27 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
     } else {
       getDataChunksCountFromStorage(table, dateBeginOpt, dateEndOpt)
     }
+  }
+
+  final override def getDataAvailability(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    if (dateBegin.isAfter(dateEnd)) return Seq.empty
+    val dateEndPlus = dateEnd.plusDays(1)
+    var date = dateBegin
+
+    val foundDataAvailable = new ListBuffer[DataAvailability]
+
+    while (date.isBefore(dateEndPlus)) {
+      val chunks = getDataChunks(table, date, None)
+
+      if (chunks.nonEmpty) {
+        val totalRecords = chunks.map(_.outputRecordCount).sum
+        foundDataAvailable += DataAvailability(date, chunks.length, totalRecords)
+      }
+
+      date = date.plusDays(1)
+    }
+
+    foundDataAvailable.toSeq
   }
 
   private[pramen] override def getOffsetManager: OffsetManager = {

@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.mocks.bookkeeper
 
 import org.apache.spark.sql.types.{DataType, StructType}
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
@@ -80,6 +81,31 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
         None
       }
     }.size
+  }
+
+  override def getDataAvailability(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    if (dateBegin.isAfter(dateEnd)) return Seq.empty
+    val dateEndPlus = dateEnd.plusDays(1)
+    var date = dateBegin
+
+    val foundDataAvailable = new mutable.ListBuffer[DataAvailability]
+
+    while (date.isBefore(dateEndPlus)) {
+      val chunksForDate = getDataChunks(table, date, None)
+      if (chunksForDate.nonEmpty) {
+        val totalRecordCount = chunksForDate.map(_.outputRecordCount).sum
+
+        foundDataAvailable += DataAvailability(
+          date,
+          chunks.size,
+          totalRecordCount
+        )
+      }
+
+      date = date.plusDays(1)
+    }
+
+    foundDataAvailable.toList
   }
 
   private[pramen] override def setRecordCount(table: String,

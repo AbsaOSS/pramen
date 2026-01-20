@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.MetadataManager
 import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.journal._
 import za.co.absa.pramen.core.lock._
 import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
@@ -45,6 +46,8 @@ trait Bookkeeper {
   def getDataChunks(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk]
 
   def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
+
+  def getDataAvailability(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability]
 
   def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
 
