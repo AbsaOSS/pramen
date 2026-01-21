@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types._
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperDeltaTable, BookkeeperText}
 import za.co.absa.pramen.core.model.DataChunk
 
@@ -140,6 +141,30 @@ class BookkeeperCommonSuite extends AnyWordSpec {
         val chunksCount = bk.getDataChunksCount("table", Option(infoDate1), Option(infoDate2))
 
         assert(chunksCount == 2)
+      }
+    }
+
+    "getDataAvailability" should {
+      "return an empty seq if there were no entries" in {
+        val bk = getBookkeeper(123L)
+
+        assert(bk.getDataAvailability("table", infoDate1, infoDate3).isEmpty)
+      }
+
+      "return found entries" in {
+        val bk = getBookkeeper(123L)
+
+        bk.setRecordCount("table", infoDate1, 400, 40, None, 1597318833, 1597318837, isTableTransient = false)
+        bk.setRecordCount("table", infoDate2, 100, 10, None, 1597318831, 1597318835, isTableTransient = false)
+        bk.setRecordCount("table", infoDate2, 200, 20, None, 1597318836, 1597318838, isTableTransient = false)
+        bk.setRecordCount("table", infoDate3, 300, 30, None, 1597318832, 1597318836, isTableTransient = false)
+
+        val da = bk.getDataAvailability("table", infoDate1, infoDate3)
+
+        assert(da.length == 3)
+        assert(da.head == DataAvailability(infoDate1, 1, 40))
+        assert(da(1) == DataAvailability(infoDate2, 2, 30))
+        assert(da(2) == DataAvailability(infoDate3, 1, 30))
       }
     }
 

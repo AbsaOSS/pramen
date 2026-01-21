@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.TableQuery
 
 class BookkeepingRecords(tag: Tag) extends Table[BookkeepingRecord](tag, "bookkeeping") {

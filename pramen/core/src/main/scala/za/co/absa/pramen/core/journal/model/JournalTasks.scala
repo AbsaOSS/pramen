@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.journal.model
 
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.TableQuery
 
 class JournalTasks(tag: Tag) extends Table[JournalTask](tag, "journal") {

@@ -17,8 +17,9 @@
 package za.co.absa.pramen.core.rdb
 
 import org.slf4j.LoggerFactory
-import slick.jdbc.H2Profile
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.JdbcBackend.Database
+import slick.jdbc.JdbcProfile
+import slick.util.AsyncExecutor
 import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, MetadataRecords, OffsetRecords, SchemaRecords}
 import za.co.absa.pramen.core.journal.model.JournalTasks
 import za.co.absa.pramen.core.lock.model.LockTickets
@@ -33,15 +34,16 @@ import scala.util.control.NonFatal
 class PramenDb(val jdbcConfig: JdbcConfig,
                val activeUrl: String,
                val jdbcConnection: Connection,
-               val slickDb: Database) extends AutoCloseable {
+               val slickDb: Database,
+               val profile: JdbcProfile) extends AutoCloseable {
+  def db: Database = slickDb
 
+  import profile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
   val rdb: Rdb = new RdbJdbc(jdbcConnection)
-
-  def db: Database = slickDb
 
   def setupDatabase(): Unit = {
     // Explicitly set auto-commit to true, overriding any user JDBC settings or PostgreSQL defaults
@@ -101,7 +103,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
-  def initTable(schema: H2Profile.SchemaDescription): Unit = {
+  def initTable(schema: profile.SchemaDescription): Unit = {
     try {
       db.run(DBIO.seq(
         schema.createIfNotExists
@@ -138,22 +140,38 @@ object PramenDb {
   val DEFAULT_RETRIES = 3
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
-    val (url, conn, database) = openDb(jdbcConfig)
+    val (url, conn, database, profile) = openDb(jdbcConfig)
 
-    new PramenDb(jdbcConfig, url, conn, database)
+    new PramenDb(jdbcConfig, url, conn, database, profile)
   }
 
-  private def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database) = {
+  def getProfile(driver: String): JdbcProfile = {
+    driver match {
+      case "org.postgresql.Driver"      => slick.jdbc.PostgresProfile
+      case "org.hsqldb.jdbc.JDBCDriver" => slick.jdbc.HsqldbProfile
+      case "org.h2.Driver"              => slick.jdbc.H2Profile
+      case "org.sqlite.JDBC"            => slick.jdbc.SQLiteProfile
+      case "com.mysql.cj.jdbc.Driver" | "com.mysql.jdbc.Driver" =>
+        slick.jdbc.MySQLProfile
+      case "com.microsoft.sqlserver.jdbc.SQLServerDriver" | "net.sourceforge.jtds.jdbc.Driver" =>
+        slick.jdbc.SQLServerProfile
+      case other => throw new IllegalArgumentException(s"Unknown driver for the bookeeping database: $other")
+    }
+  }
+
+  private def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database, JdbcProfile) = {
     val selector = JdbcUrlSelector(jdbcConfig)
     val (conn, url) = selector.getWorkingConnection(DEFAULT_RETRIES)
     val prop = selector.getProperties
+
+    val slickProfile = getProfile(jdbcConfig.driver)
 
     val database = jdbcConfig.user match {
       case Some(user) => Database.forURL(url = url, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
       case None       => Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
     }
 
-    (url, conn, database)
+    (url, conn, database, slickProfile)
   }
 
 }

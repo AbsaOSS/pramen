@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.journal
 
 import org.slf4j.LoggerFactory
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.journal.model.{JournalTask, JournalTasks, TaskCompleted}
 import za.co.absa.pramen.core.utils.SlickUtils

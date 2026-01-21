@@ -23,8 +23,9 @@ import org.bson.codecs.configuration.CodecRegistry
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
 import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.bson.conversions.Bson
-import org.mongodb.scala.model.{Filters, Sorts}
+import org.mongodb.scala.model.{Accumulators, Aggregates, Filters, Sorts}
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.bookkeeper.model.{DataAvailability, DataAvailabilityAggregation}
 import za.co.absa.pramen.core.dao.MongoDb
 import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
@@ -48,7 +49,7 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val queryWarningTimeoutMs = 10000L
-  private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[DataChunk], classOf[TableSchema]), DEFAULT_CODEC_REGISTRY)
+  private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[DataChunk], classOf[TableSchema], classOf[DataAvailabilityAggregation]), DEFAULT_CODEC_REGISTRY)
   private val db = mongoDbConnection.getDatabase
 
   initCollection()
@@ -98,6 +99,25 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
       .sortBy(_.jobFinished)
     log.debug(s"For $table ($infoDate) : ${chunks.mkString("[ ", ", ", " ]")}")
     chunks
+  }
+
+  override def getDataAvailabilityFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    val filterByDates = getFilter(table, Option(dateBegin), Option(dateEnd), None)
+
+    val pipeline = Seq(
+      Aggregates.`match`(filterByDates),
+      Aggregates.group(
+        "$infoDate",
+        Accumulators.first("infoDate", "$infoDate"),
+        Accumulators.sum("chunks", 1),
+        Accumulators.sum("totalRecords", "$outputRecordCount")
+      ),
+      Aggregates.sort(Sorts.ascending("infoDate"))
+    )
+
+    val tuples = collection.aggregate[DataAvailabilityAggregation](pipeline).execute()
+
+    tuples.map(t => DataAvailability(LocalDate.parse(t.infoDate), t.chunks, t.totalRecords))
   }
 
   override def saveRecordCountToStorage(table: String,

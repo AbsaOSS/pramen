@@ -16,13 +16,13 @@
 
 package za.co.absa.pramen.core.metadata
 
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 import za.co.absa.pramen.api.MetadataValue
 import za.co.absa.pramen.core.bookkeeper.model.{MetadataRecord, MetadataRecords}
+import za.co.absa.pramen.core.utils.SlickUtils
 
 import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
-import za.co.absa.pramen.core.utils.SlickUtils
 
 class MetadataManagerJdbc(db: Database) extends MetadataManagerBase(true) {
   import za.co.absa.pramen.core.utils.FutureImplicits._

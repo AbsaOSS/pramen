@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 
 class MetadataRecords(tag: Tag) extends Table[MetadataRecord](tag, "metadata") {
   def pramenTableName = column[String]("table_name", O.Length(128))

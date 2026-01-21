@@ -75,7 +75,7 @@ class InfoDateConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.dateFormat == "yyyy-MM-dd")
 
       assert(runtimeConfig.defaultBackfillDays == 5)
-      assert(runtimeConfig.defaultTrackDays == 3)
+      assert(runtimeConfig.defaultTrackDays == 5)
       assert(runtimeConfig.defaultDelayDays == 0)
 
       assert(runtimeConfig.expressionDaily == "@runDate")

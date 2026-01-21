@@ -116,7 +116,7 @@ object Bookkeeper {
       log.info(s"Bookkeeping is DISABLED. Updates won't be tracked")
       new BookkeeperNull()
     } else if (hasBookkeepingJdbc) {
-      new BookkeeperJdbc(dbOpt.get.slickDb, batchId)
+      new BookkeeperJdbc(dbOpt.get.slickDb, dbOpt.get.profile, batchId)
     } else {
       mongoDbConnection match {
         case Some(connection) =>

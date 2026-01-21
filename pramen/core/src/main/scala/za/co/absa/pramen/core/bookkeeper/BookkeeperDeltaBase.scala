@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.bookkeeper
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Column, Dataset}
-import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
+import za.co.absa.pramen.core.bookkeeper.model.{DataAvailability, TableSchemaJson}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
 import java.time.LocalDate
@@ -27,7 +27,6 @@ import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
 
 abstract class BookkeeperDeltaBase(batchId: Long) extends BookkeeperHadoop(batchId) {
-
   def getBkDf(filter: Column): Dataset[DataChunk]
 
   def saveRecordCountDelta(dataChunk: DataChunk): Unit
@@ -71,8 +70,14 @@ abstract class BookkeeperDeltaBase(batchId: Long) extends BookkeeperHadoop(batch
     getBkAllData(infoDateFilter)
   }
 
-  final def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
+  final override def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
     getBkDf(getFilter(table, dateBegin, dateEnd, None)).count()
+  }
+
+  final override def getDataAvailabilityFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    val infoDateFilter = getFilter(table, Option(dateBegin), Option(dateEnd), None)
+
+    getDataAvailabilityFromDf(getBkDf(infoDateFilter))
   }
 
   final private[pramen] override def saveRecordCountToStorage(table: String,
