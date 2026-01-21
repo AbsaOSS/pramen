@@ -3464,10 +3464,22 @@ execution Pramen will do the following:
 
 ![](resources/run_diagram.png)
 
+- Check for days where jobs didn't run or failed even though they were scheduled for these days, up to the maximum
+  defined in
+  the `backfill.days` global option or a metatable definition option. The option has the following meaning:
+    - `-1` means backfill up until the last successful attempt.
+    - `0` means never backfill.
+    - `1` means backfill only for the same info date.
+    - `2` means backfill for the info date and the date before.
 - Check for retrospective updates of the source data according to `track.days` of corresponding tables in the metastore.
   For this check Pramen will query sources for record counts for each of previous days.
   - If a mismatch is found (as at `2020-07-16` on this diagram), the data is reloaded and dependent transformers are
     recomputed (if `trigger.updates = true`)
+  - The option has the following meaning (similar to `backfill.days``):
+    - `-1` means backfill only up until the last successfull attempt. Never track retrospective updates.
+    - `0` means never track retrospective updates.
+    - `1` means track retrospective only for the same info date.
+    - `2` means track retrospective for the info date and the date before.
 - Check for late data by querying sources for records for previous days if none were loaded. If such data is found, it
   is loaded and related transformations will be ran.
 - Run the pipeline for the day - check new data and run dependent transformers and sink jobs.
