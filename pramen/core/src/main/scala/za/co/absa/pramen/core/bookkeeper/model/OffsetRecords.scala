@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 
 class OffsetRecords(tag: Tag) extends Table[OffsetRecord](tag, "offsets") {
   def pramenTableName = column[String]("table_name", O.Length(256))

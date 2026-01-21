@@ -14,14 +14,6 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.lock
+package za.co.absa.pramen.core.bookkeeper.model
 
-import slick.jdbc.PostgresProfile.api._
-import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
-
-class TokenLockFactoryJdbc(db: Database) extends TokenLockFactory {
-
-  override def getLock(token: String): TokenLock = {
-    new TokenLockJdbc(token, db)
-  }
-}
+case class DataAvailabilityAggregation(infoDate: String, chunks: Int, totalRecords: Long)

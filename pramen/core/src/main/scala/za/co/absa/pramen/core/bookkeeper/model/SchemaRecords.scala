@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 
 class SchemaRecords(tag: Tag) extends Table[SchemaRecord](tag, "schemas") {
   def pramenTableName = column[String]("watcher_table_name", O.Length(128))

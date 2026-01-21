@@ -16,8 +16,12 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
-import org.apache.spark.sql.Column
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.{Column, Dataset}
+import za.co.absa.pramen.core.bookkeeper.model.{DataAvailability, DataAvailabilityAggregation}
+import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
 
@@ -43,5 +47,21 @@ abstract class BookkeeperHadoop(batchId: Long) extends BookkeeperBase(true, batc
       case Some(id) => baseFilter && col("batchId") === lit(id)
       case None => baseFilter
     }
+  }
+
+  private[core] def getDataAvailabilityFromDf(filteredChunkDf: Dataset[DataChunk]): Seq[DataAvailability] = {
+    implicit val encoder: ExpressionEncoder[DataAvailabilityAggregation] = ExpressionEncoder[DataAvailabilityAggregation]
+
+    val grouped = filteredChunkDf.groupBy("infoDate")
+      .agg(
+        count(lit(1)).cast(IntegerType).as("chunks"),
+        sum("outputRecordCount").as("totalRecords")
+      )
+      .orderBy(col("infoDate").asc)
+      .as[DataAvailabilityAggregation]
+
+    val tuples = grouped.collect()
+
+    tuples.map(t => DataAvailability(LocalDate.parse(t.infoDate, DataChunk.dateFormatter), t.chunks, t.totalRecords))
   }
 }

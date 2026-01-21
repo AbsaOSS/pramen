@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.utils
 
 import org.slf4j.LoggerFactory
 import slick.dbio.Effect
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 import slick.sql.SqlAction
 
 import java.time.{Duration, Instant}

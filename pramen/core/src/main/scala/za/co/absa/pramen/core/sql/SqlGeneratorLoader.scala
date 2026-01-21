@@ -43,6 +43,7 @@ object SqlGeneratorLoader {
     driver match {
       case "org.postgresql.Driver"                        => new SqlGeneratorPostgreSQL(sqlConfig)
       case "com.mysql.cj.jdbc.Driver"                     => new SqlGeneratorMySQL(sqlConfig)
+      case "com.mysql.jdbc.Driver"                        => new SqlGeneratorMySQL(sqlConfig)
       case "oracle.jdbc.OracleDriver"                     => new SqlGeneratorOracle(sqlConfig)
       case "net.sourceforge.jtds.jdbc.Driver"             => new SqlGeneratorMicrosoft(sqlConfig)
       case "com.microsoft.sqlserver.jdbc.SQLServerDriver" => new SqlGeneratorMicrosoft(sqlConfig)

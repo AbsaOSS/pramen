@@ -18,19 +18,22 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
-import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecord, BookkeepingRecords, SchemaRecord, SchemaRecords}
+import slick.jdbc.JdbcBackend.Database
+import slick.jdbc.JdbcProfile
+import za.co.absa.pramen.core.bookkeeper.model._
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
+import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.rdb.PramenDb.DEFAULT_RETRIES
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.SlickUtils.{WARN_IF_LONGER_MS, log}
+import za.co.absa.pramen.core.utils.SlickUtils.WARN_IF_LONGER_MS
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, SlickUtils, TimeUtils}
 
 import java.time.LocalDate
 import scala.util.control.NonFatal
 
-class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, batchId) {
+class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends BookkeeperBase(true, batchId) {
+  import profile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -110,6 +113,25 @@ class BookkeeperJdbc(db: Database, batchId: Long) extends BookkeeperBase(true, b
     }
 
     count
+  }
+
+  override def getDataAvailabilityFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    val query = getFilter(table, Option(dateBegin), Option(dateEnd), None)
+      .groupBy(r => r.infoDate)
+      .map {case (infoDate, group) =>
+        (infoDate, group.size, group.map(r => r.outputRecordCount).sum.getOrElse(0L))
+      }
+      .sortBy(_._1)
+
+    try {
+      SlickUtils.executeQuery[(Rep[String], Rep[Int], Rep[Long]), (String, Int, Long)](db, query)
+        .map { case (infoDateStr, recordCount, outputRecordCount) =>
+          val infoDate = LocalDate.parse(infoDateStr, DataChunk.dateFormatter)
+          DataAvailability(infoDate, recordCount, outputRecordCount)
+        }
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
+    }
   }
 
   override def saveRecordCountToStorage(table: String,
@@ -242,12 +264,14 @@ object BookkeeperJdbc {
     val url = selector.getWorkingUrl(DEFAULT_RETRIES)
     val prop = selector.getProperties
 
+    val profile = PramenDb.getProfile(jdbcConfig.driver)
+
     val db = if (jdbcConfig.user.nonEmpty) {
       Database.forURL(url = url, driver = jdbcConfig.driver, user = jdbcConfig.user.get, password = jdbcConfig.password.getOrElse(""), prop = prop)
     } else {
       Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop)
     }
-    new BookkeeperJdbc(db, batchId)
+    new BookkeeperJdbc(db,  profile, batchId)
   }
 
 }

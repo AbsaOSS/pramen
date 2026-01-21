@@ -20,7 +20,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Column, Dataset, SparkSession}
-import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
+import za.co.absa.pramen.core.bookkeeper.model.{DataAvailability, TableSchemaJson}
 import za.co.absa.pramen.core.lock.TokenLockHadoopPath
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.utils.{CsvUtils, FsUtils, JsonUtils, SparkUtils}
@@ -89,6 +89,10 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
 
   def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
     getDf(getFilter(table, dateBegin, dateEnd, None)).count()
+  }
+
+  final override def getDataAvailabilityFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    getDataAvailabilityFromDf(getDf(getFilter(table, Option(dateBegin), Option(dateEnd), None)))
   }
 
   private[pramen] override def saveRecordCountToStorage(table: String,

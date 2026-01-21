@@ -34,6 +34,8 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
 
   def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 
+  def getDataAvailabilityFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability]
+
   def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit
 
   private[pramen] def saveRecordCountToStorage(table: String,
@@ -119,23 +121,16 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
 
   final override def getDataAvailability(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
     if (dateBegin.isAfter(dateEnd)) return Seq.empty
-    val dateEndPlus = dateEnd.plusDays(1)
-    var date = dateBegin
 
-    val foundDataAvailable = new ListBuffer[DataAvailability]
-
-    while (date.isBefore(dateEndPlus)) {
-      val chunks = getDataChunks(table, date, None)
-
-      if (chunks.nonEmpty) {
-        val totalRecords = chunks.map(_.outputRecordCount).sum
-        foundDataAvailable += DataAvailability(date, chunks.length, totalRecords)
-      }
-
-      date = date.plusDays(1)
+    val isTransient = this.synchronized {
+      transientDataChunks.contains(table.toLowerCase)
     }
 
-    foundDataAvailable.toSeq
+    if (isTransient || !isBookkeepingEnabled) {
+      getDataAvailabilityTransient(table, dateBegin, dateEnd)
+    } else {
+      getDataAvailabilityFromStorage(table, dateBegin, dateEnd)
+    }
   }
 
   private[pramen] override def getOffsetManager: OffsetManager = {
@@ -175,6 +170,27 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
       case None =>
         allChunks.filter(chunk => chunk.infoDate >= minDate && chunk.infoDate <= maxDate)
     }
+  }
+
+  private[core] def getDataAvailabilityTransient(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    if (dateBegin.isAfter(dateEnd)) return Seq.empty
+    val dateEndPlus = dateEnd.plusDays(1)
+    var date = dateBegin
+
+    val foundDataAvailable = new ListBuffer[DataAvailability]
+
+    while (date.isBefore(dateEndPlus)) {
+      val chunks = getTransientDataChunks(table, Option(date), None, None)
+
+      if (chunks.nonEmpty) {
+        val totalRecords = chunks.map(_.outputRecordCount).sum
+        foundDataAvailable += DataAvailability(date, chunks.length, totalRecords)
+      }
+
+      date = date.plusDays(1)
+    }
+
+    foundDataAvailable.toSeq
   }
 
   protected def getDateStr(date: LocalDate): String = DataChunk.dateFormatter.format(date)

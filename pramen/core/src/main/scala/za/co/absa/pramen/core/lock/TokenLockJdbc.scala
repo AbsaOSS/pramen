@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.lock
 
 import org.slf4j.LoggerFactory
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.PostgresProfile.api._
 import za.co.absa.pramen.core.lock.model.{LockTicket, LockTickets}
 import za.co.absa.pramen.core.utils.SlickUtils
 
