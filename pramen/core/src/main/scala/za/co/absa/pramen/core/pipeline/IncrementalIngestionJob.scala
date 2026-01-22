@@ -51,9 +51,19 @@ class IncrementalIngestionJob(operationDef: OperationDef,
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffsetIn.map(_.maximumInfoDate), source.hasInfoDateColumn(sourceTable.query))
 
-  override def backfillDays: Int = 0
+  override def backfillDays: Int = {
+    if (source.hasInfoDateColumn(sourceTable.query))
+      outputTable.backfillDays
+    else
+      0
+  }
 
-  override def trackDays: Int = 0
+  override def trackDays: Int = {
+    if (source.hasInfoDateColumn(sourceTable.query))
+      outputTable.trackDays
+    else
+      0
+  }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Nil)
