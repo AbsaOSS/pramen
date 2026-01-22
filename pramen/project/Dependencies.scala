@@ -33,6 +33,7 @@ object Dependencies {
     "com.typesafe.slick"     %% "slick"                     % slickVersion,
     "com.typesafe.slick"     %% "slick-hikaricp"            % slickVersion,
     "org.postgresql"         %  "postgresql"                % postgreSqlDriverVersion,
+    "org.xerial"             %  "sqlite-jdbc"               % sqliteVersion,
     "com.github.scopt"       %% "scopt"                     % scoptVersion,
     "com.github.yruslan"     %% "channel_scala"             % channelVersion,
     "com.sun.mail"           %  "javax.mail"                % javaXMailVersion,
