@@ -134,7 +134,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
   }
 
   private[pramen] override def getOffsetManager: OffsetManager = {
-    throw new IllegalArgumentException(s"This implementation of bookeeping does not support offset management and incremental pipelines. " +
+    throw new IllegalArgumentException(s"This implementation of bookkeeping does not support offset management and incremental pipelines. " +
       "Please, use JDBC for bookkeeping to enable this.")
   }
 
@@ -180,7 +180,7 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
     val foundDataAvailable = new ListBuffer[DataAvailability]
 
     while (date.isBefore(dateEndPlus)) {
-      val chunks = getTransientDataChunks(table, Option(date), None, None)
+      val chunks = getTransientDataChunks(table, Option(date), Option(date), None)
 
       if (chunks.nonEmpty) {
         val totalRecords = chunks.map(_.outputRecordCount).sum

@@ -97,7 +97,7 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
 
         foundDataAvailable += DataAvailability(
           date,
-          chunks.size,
+          chunksForDate.size,
           totalRecordCount
         )
       }

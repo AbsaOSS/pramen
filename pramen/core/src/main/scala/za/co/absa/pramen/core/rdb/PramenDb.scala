@@ -155,7 +155,7 @@ object PramenDb {
         slick.jdbc.MySQLProfile
       case "com.microsoft.sqlserver.jdbc.SQLServerDriver" | "net.sourceforge.jtds.jdbc.Driver" =>
         slick.jdbc.SQLServerProfile
-      case other => throw new IllegalArgumentException(s"Unknown driver for the bookeeping database: $other")
+      case other => throw new IllegalArgumentException(s"Unknown driver for the bookkeeping database: $other")
     }
   }
 
