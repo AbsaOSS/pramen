@@ -3473,13 +3473,13 @@ execution Pramen will do the following:
     - `2` means backfill for the info date and the date before.
 - Check for retrospective updates of the source data according to `track.days` of corresponding tables in the metastore.
   For this check Pramen will query sources for record counts for each of previous days.
+  - The option has the following meaning (similar to `backfill.days``):
+      - `-1` means backfill only up until the last successfull attempt. Never track retrospective updates.
+      - `0` means never track retrospective updates.
+      - `1` means track retrospective only for the same info date.
+      - `2` means track retrospective for the info date and the date before.
   - If a mismatch is found (as at `2020-07-16` on this diagram), the data is reloaded and dependent transformers are
     recomputed (if `trigger.updates = true`)
-  - The option has the following meaning (similar to `backfill.days``):
-    - `-1` means backfill only up until the last successfull attempt. Never track retrospective updates.
-    - `0` means never track retrospective updates.
-    - `1` means track retrospective only for the same info date.
-    - `2` means track retrospective for the info date and the date before.
 - Check for late data by querying sources for records for previous days if none were loaded. If such data is found, it
   is loaded and related transformations will be ran.
 - Run the pipeline for the day - check new data and run dependent transformers and sink jobs.
