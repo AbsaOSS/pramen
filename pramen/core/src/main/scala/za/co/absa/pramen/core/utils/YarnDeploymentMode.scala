@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.utils
 
-trait YarnDeploymentMode
+sealed trait YarnDeploymentMode
 
 object YarnDeploymentMode {
   case object Client extends YarnDeploymentMode

@@ -54,7 +54,7 @@ class BookkeeperConfigSuite extends AnyWordSpec {
       assert(jdbc.primaryUrl.get.startsWith("jdbc:sqlite:"))
     }
 
-    "throw en exception when bookkeeping config is not defined and the usage of SQLite is not possible" in {
+    "throw an exception when bookkeeping config is not defined and the usage of SQLite is not possible" in {
       val config = ConfigFactory.empty()
         .withFallback(ConfigFactory.load())
         .resolve()

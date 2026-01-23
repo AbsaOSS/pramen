@@ -266,7 +266,7 @@ pramen {
 }
 ```
 
-When you start Pramen pipelines fromm edge nodes with local storage available you can use SQLite database for bookkeeping,
+When you start Pramen pipelines from edge nodes with local storage available, you can use an SQLite database for bookkeeping.
 This works well for exploration and test purposes so you don't have to provision a PostgreSQL database. The configuration
 looks like this:
 
@@ -278,7 +278,7 @@ pramen {
   bookkeeping.enabled = true
   bookkeeping.jdbc {
     driver = "org.sqlite.JDBC"
-    url = "jdbc:postgresql:pramen.sqlite"
+    url = "jdbc:sqlite:pramen.sqlite"
   }
   temporary.directory = "/tmp"
 }
