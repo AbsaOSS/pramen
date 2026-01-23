@@ -780,7 +780,7 @@ object SparkUtils {
   def getSparkMaster(implicit spark: SparkSession): SparkMaster = {
     val conf = spark.sparkContext.getConf
 
-    val master = conf.get("spark.master").toLowerCase
+    val master = conf.getOption("spark.master").map(_.toLowerCase).getOrElse("unknown")
     val deployMode = conf.getOption("spark.submit.deployMode").getOrElse("client").toLowerCase
 
     val isDatabricks = sys.env.contains("DATABRICKS_RUNTIME_VERSION") ||

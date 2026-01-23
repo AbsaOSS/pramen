@@ -827,7 +827,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     when(confMock.getOption("spark.databricks.clusterUsageTags.clusterName")).thenReturn(None)
 
     "use Unknown when unrecognized" in {
-      when(confMock.get("spark.master")).thenReturn("dummy://dummy")
+      when(confMock.getOption("spark.master")).thenReturn(Some("dummy://dummy"))
 
       val master = SparkUtils.getSparkMaster(sparkMock)
 
@@ -836,7 +836,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "recognize Local mode" in {
-      when(confMock.get("spark.master")).thenReturn("local[*]")
+      when(confMock.getOption("spark.master")).thenReturn(Some("local[*]"))
 
       val master = SparkUtils.getSparkMaster(sparkMock)
 
@@ -845,7 +845,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "recognize Standalone mode" in {
-      when(confMock.get("spark.master")).thenReturn("spark://dummy")
+      when(confMock.getOption("spark.master")).thenReturn(Some("spark://dummy"))
 
       val master = SparkUtils.getSparkMaster(sparkMock)
 
@@ -854,7 +854,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "recognize Yarn mode with client deployment mode" in {
-      when(confMock.get("spark.master")).thenReturn("yarn")
+      when(confMock.getOption("spark.master")).thenReturn(Some("yarn"))
       when(confMock.getOption("spark.submit.deployMode")).thenReturn(Some("client"))
 
       val master = SparkUtils.getSparkMaster(sparkMock)
@@ -864,7 +864,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "recognize Yarn mode with cluster deployment mode" in {
-      when(confMock.get("spark.master")).thenReturn("yarn")
+      when(confMock.getOption("spark.master")).thenReturn(Some("yarn"))
       when(confMock.getOption("spark.submit.deployMode")).thenReturn(Some("cluster"))
 
       val master = SparkUtils.getSparkMaster(sparkMock)
@@ -874,7 +874,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
 
     "recognize Kubernetes mode" in {
-      when(confMock.get("spark.master")).thenReturn("k8s://dummy")
+      when(confMock.getOption("spark.master")).thenReturn(Some("k8s://dummy"))
 
       val master = SparkUtils.getSparkMaster(sparkMock)
 
