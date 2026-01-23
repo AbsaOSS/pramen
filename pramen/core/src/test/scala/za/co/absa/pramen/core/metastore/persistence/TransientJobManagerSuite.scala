@@ -23,6 +23,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
 import za.co.absa.pramen.api.{CachePolicy, DataFormat}
 import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.exceptions.LazyJobErrorWrapper
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.metastore.peristence.TransientJobManager.{MAXIMUM_UNIONS, WARN_UNIONS}
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
@@ -222,7 +223,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
       TransientJobManager.setTaskRunner(taskRunner)
 
-      val ex = intercept[IllegalStateException] {
+      val ex = intercept[LazyJobErrorWrapper] {
         TransientJobManager.runJob(job, infoDate)
       }
 
@@ -262,7 +263,7 @@ class TransientJobManagerSuite extends AnyWordSpec with BeforeAndAfterAll with S
 
       TransientJobManager.setTaskRunner(taskRunner)
 
-      val ex = intercept[IllegalStateException] {
+      val ex = intercept[LazyJobErrorWrapper] {
         TransientJobManager.runJob(job, infoDate)
       }
 
