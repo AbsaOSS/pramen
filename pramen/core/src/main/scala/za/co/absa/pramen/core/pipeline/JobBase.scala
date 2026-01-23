@@ -42,7 +42,7 @@ abstract class JobBase(operationDef: OperationDef,
   def jobType: JobType
 
   override def taskDef: TaskDef = TaskDef(
-    name, jobType, MetaTable.getMetaTableDef(outputTableDef), operationDef.schedule, operationDef.operationConf
+    name, jobType, MetaTable.getMetaTableDef(outputTableDef), operationDef.schedule, operationDef.isCritical, operationDef.operationConf
   )
 
   override val name: String = operationDef.name

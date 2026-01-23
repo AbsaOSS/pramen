@@ -1774,6 +1774,9 @@ pramen.operations = [
     # For monthly jobs the default is: "beginOfMonth(@runDate)"
     info.date.expr = "@runDate"
     
+    # If true, failure of this operation causes failure of the whole pipeline.
+    critical = false
+    
     # If true (default) jobs in this operation is allowed to run in parallel.
     # It makes sense to set it to false for jobs that take a lot of cluster resources.
     allow.parallel = true
