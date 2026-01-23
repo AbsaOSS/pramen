@@ -38,6 +38,32 @@ class BookkeeperConfigSuite extends AnyWordSpec {
       assert(bookkeeperConfig.temporaryDirectory.isEmpty)
     }
 
+    "deserialize the config properly for the default SQLite config" in {
+      val config = ConfigFactory.empty()
+        .withFallback(ConfigFactory.load())
+        .resolve()
+
+      val bookkeeperConfig = BookkeeperConfig.fromConfig(config, allowLocalBookkepingStorage = true)
+
+      assert(bookkeeperConfig.bookkeepingEnabled)
+      assert(bookkeeperConfig.temporaryDirectory.isEmpty)
+      assert(bookkeeperConfig.bookkeepingJdbcConfig.isDefined)
+
+      val jdbc = bookkeeperConfig.bookkeepingJdbcConfig.get
+      assert(jdbc.driver == "org.sqlite.JDBC")
+      assert(jdbc.primaryUrl.get.startsWith("jdbc:sqlite:"))
+    }
+
+    "throw en exception when bookkeeping config is not defined and the usage of SQLite is not possible" in {
+      val config = ConfigFactory.empty()
+        .withFallback(ConfigFactory.load())
+        .resolve()
+
+      assertThrows[RuntimeException] {
+        BookkeeperConfig.fromConfig(config)
+      }
+    }
+
     "deserialize the config properly for JDBC" in {
       val configStr =
         s"""pramen {
