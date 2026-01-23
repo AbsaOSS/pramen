@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.metastore.peristence
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.RunStatus
+import za.co.absa.pramen.core.exceptions.LazyJobErrorWrapper
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils
 import za.co.absa.pramen.core.runner.task.TaskRunner
@@ -225,9 +226,9 @@ object TransientJobManager {
         taskRunner.runLazyTask(job, infoDate) match {
           case _: RunStatus.Succeeded         => TransientTableManager.getDataForTheDate(job.outputTable.name, infoDate)
           case _: RunStatus.Skipped           => spark.emptyDataFrame
-          case RunStatus.ValidationFailed(ex) => throw new IllegalStateException(s"$jobStr validation failed.", ex)
-          case RunStatus.Failed(ex)           => throw new IllegalStateException(s"$jobStr failed.", ex)
-          case runStatus                      => throw new IllegalStateException(s"$jobStr failed to run ${runStatus.getReason.map(a => s"($a)").getOrElse("")}.")
+          case RunStatus.ValidationFailed(ex) => throw new LazyJobErrorWrapper(s"$jobStr validation failed.", ex)
+          case RunStatus.Failed(ex)           => throw new LazyJobErrorWrapper(s"$jobStr failed.", ex)
+          case runStatus                      => throw new LazyJobErrorWrapper(s"$jobStr failed to run ${runStatus.getReason.map(a => s"($a)").getOrElse("")}.")
         }
       case None =>
         throw new IllegalStateException("Task runner is not set.")

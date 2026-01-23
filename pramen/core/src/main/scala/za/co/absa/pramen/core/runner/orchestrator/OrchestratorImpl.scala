@@ -86,9 +86,7 @@ class OrchestratorImpl extends Orchestrator {
         runningJobs.remove(finishedJob)
 
         hasFatalErrors = hasFatalErrors || taskResults.exists(status => isFatalFailure(status.runStatus))
-        if (!isSucceeded) {
-          hasCriticalJobFailures = hasCriticalJobFailures || hasJobCriticallyFailed(taskResults)
-        }
+        hasCriticalJobFailures = hasCriticalJobFailures || (!isSucceeded && finishedJob.operation.isCritical)
 
         val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
         if (hasAnotherUnfinishedJob) {
@@ -154,16 +152,6 @@ class OrchestratorImpl extends Orchestrator {
       case RunStatus.Failed(ex) if ex.isInstanceOf[FatalErrorWrapper] => true
       case _ => false
     }
-  }
-
-  private def hasJobCriticallyFailed(taskResults: Seq[TaskResult]): Boolean = {
-    val criticalTasks = taskResults.filter(_.taskDef.isCritical)
-
-    val criticallyFailed = criticalTasks.nonEmpty && criticalTasks.forall(_.runStatus.isFailure)
-
-    log.warn(s"Job critically failed: ${taskResults.head.taskDef.name} outputting to ${taskResults.head.taskDef.outputTable.name}.")
-
-    criticallyFailed
   }
 
   private def hasNonPassiveNonOptionalDeps(job: Job, missingTables: Seq[String]): Boolean = {

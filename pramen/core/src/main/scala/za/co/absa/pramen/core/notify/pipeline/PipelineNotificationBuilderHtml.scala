@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.status.RunStatus._
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
-import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
+import za.co.absa.pramen.core.exceptions.{CmdFailedException, LazyJobErrorWrapper, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.state.PipelineStateImpl
 import za.co.absa.pramen.core.state.PipelineStateImpl.NOTIFICATION_STRICT_FAILURES_KEY
@@ -291,6 +291,10 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
   }
 
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
+    // Do not include lazy job stack traces because they are already included in actual lazy jobs.
+    if (ex.isInstanceOf[LazyJobErrorWrapper])
+      return builder
+
     val paragraphBuilder = ParagraphBuilder()
       .withText("Job ", Style.Exception)
       .withText(taskResult.taskDef.name, Style.Error)
