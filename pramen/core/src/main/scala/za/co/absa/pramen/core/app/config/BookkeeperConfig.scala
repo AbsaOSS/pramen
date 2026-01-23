@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -33,6 +34,8 @@ case class BookkeeperConfig(
                             )
 
 object BookkeeperConfig {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val BOOKKEEPING_PARENT = "pramen.bookkeeping"
   val BOOKKEEPING_ENABLED = "pramen.bookkeeping.enabled"
   val BOOKKEEPING_LOCATION = "pramen.bookkeeping.location"
@@ -43,7 +46,7 @@ object BookkeeperConfig {
   val BOOKKEEPING_DELTA_TABLE_PREFIX = "pramen.bookkeeping.delta.table.prefix"
   val BOOKKEEPING_TEMPORARY_DIRECTORY_KEY = "pramen.temporary.directory"
 
-  def fromConfig(conf: Config): BookkeeperConfig = {
+  def fromConfig(conf: Config, allowLocalBookkepingStorage: Boolean = false): BookkeeperConfig = {
     val bookkeepingEnabled = conf.getBoolean(BOOKKEEPING_ENABLED)
     val bookkeepingLocation = ConfigUtils.getOptionString(conf, BOOKKEEPING_LOCATION)
     val bookkeepingHadoopFormat = HadoopFormat(conf.getString(BOOKKEEPING_HADOOP_FORMAT))
@@ -61,8 +64,26 @@ object BookkeeperConfig {
       }
     } else {
       if (bookkeepingEnabled && bookkeepingConnectionString.isEmpty && bookkeepingLocation.isEmpty && bookkeepingJdbcConfig.isEmpty) {
-        throw new RuntimeException(s"One of the following should be defined: $BOOKKEEPING_PARENT.jdbc.url, $BOOKKEEPING_CONNECTION_STRING or $BOOKKEEPING_LOCATION" +
-          s" when bookkeeping is enabled. You can disable bookkeeping by setting $BOOKKEEPING_ENABLED = false.")
+        if (allowLocalBookkepingStorage) {
+          log.warn("Bookeeping configuration is missing. Using the default SQLite database 'pramen.sqlite'")
+          return BookkeeperConfig(
+            bookkeepingEnabled = true,
+            None,
+            bookkeepingHadoopFormat,
+            None,
+            None,
+            Some(JdbcConfig(
+              driver = "org.sqlite.JDBC",
+              primaryUrl = Some("jdbc:sqlite:pramen.sqlite")
+            )),
+            None,
+            None,
+            temporaryDirectory
+          )
+        } else {
+          throw new RuntimeException(s"One of the following should be defined: $BOOKKEEPING_PARENT.jdbc.url, $BOOKKEEPING_CONNECTION_STRING or $BOOKKEEPING_LOCATION" +
+            s" when bookkeeping is enabled. You can disable bookkeeping by setting $BOOKKEEPING_ENABLED = false.")
+        }
       }
 
       if (bookkeepingConnectionString.isDefined && bookkeepingDbName.isEmpty) {

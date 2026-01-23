@@ -27,6 +27,7 @@ import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreImpl}
+import za.co.absa.pramen.core.utils.SparkUtils
 
 class AppContextImpl(val appConfig: AppConfig,
                      val bookkeeper: Bookkeeper,
@@ -54,7 +55,8 @@ class AppContextImpl(val appConfig: AppConfig,
 object AppContextImpl {
   def apply(conf: Config, batchId: Long)(implicit spark: SparkSession): AppContextImpl = {
 
-    val appConfig = AppConfig.fromConfig(conf)
+    val allowLocalBookkepingStorage = SparkUtils.isDriverRunningOnEdgeNode(SparkUtils.getSparkMaster)
+    val appConfig = AppConfig.fromConfig(conf, allowLocalBookkepingStorage)
 
     val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
 
@@ -82,7 +84,7 @@ object AppContextImpl {
               infoDateConfig: InfoDateConfig,
               bookkeeper: Bookkeeper,
               journal: Journal)(implicit spark: SparkSession): AppContextImpl = {
-    val appConfig = AppConfig.fromConfig(conf)
+    val appConfig = AppConfig.fromConfig(conf, allowLocalBookkepingStorage = false)
 
     val metadataManager = new MetadataManagerNull(isPersistenceEnabled = false)
     val runtimeConfig = RuntimeConfig.default
