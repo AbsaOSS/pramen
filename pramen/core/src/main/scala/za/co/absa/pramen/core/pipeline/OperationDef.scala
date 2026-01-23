@@ -39,6 +39,7 @@ case class OperationDef(
                          allowParallel: Boolean,
                          alwaysAttempt: Boolean,
                          ignoreSchemaChange: Boolean,
+                         isCritical: Boolean,
                          consumeThreads: Int,
                          dependencies: Seq[MetastoreDependency],
                          outputInfoDateExpression: String,
@@ -65,6 +66,7 @@ object OperationDef {
   val ALLOW_PARALLEL_KEY = "parallel"
   val ALWAYS_ATTEMPT_KEY = "always.attempt"
   val IGNORE_SCHEMA_CHANGE_KEY = "ignore.schema.change"
+  val IS_CRITICAL_KEY = "critical"
   val CONSUME_THREADS_KEY = "consume.threads"
   val DEPENDENCIES_KEY = "dependencies"
   val STRICT_DEPENDENCY_MANAGEMENT_KEY = "pramen.strict.dependency.management"
@@ -103,6 +105,7 @@ object OperationDef {
     val consumeThreads = getThreadsToConsume(name, conf, appConfig)
     val allowParallel = ConfigUtils.getOptionBoolean(conf, ALLOW_PARALLEL_KEY).getOrElse(true)
     val ignoreSchemaChange = ConfigUtils.getOptionBoolean(conf, IGNORE_SCHEMA_CHANGE_KEY).getOrElse(false)
+    val isCritical = ConfigUtils.getOptionBoolean(conf, IS_CRITICAL_KEY).getOrElse(false)
     val alwaysAttempt = ConfigUtils.getOptionBoolean(conf, ALWAYS_ATTEMPT_KEY).getOrElse(false)
     val dependencies = getDependencies(conf, parent, strictDependencyManagement)
     val outputInfoDateExpressionOpt = ConfigUtils.getOptionString(conf, OUTPUT_INFO_DATE_EXPRESSION_KEY)
@@ -150,6 +153,7 @@ object OperationDef {
       allowParallel,
       alwaysAttempt,
       ignoreSchemaChange,
+      isCritical,
       consumeThreads,
       dependencies,
       outputInfoDateExpression,

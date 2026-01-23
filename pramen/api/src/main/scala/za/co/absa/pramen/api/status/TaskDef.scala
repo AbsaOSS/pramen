@@ -25,5 +25,6 @@ case class TaskDef(
                     jobType: JobType,
                     outputTable: MetaTableDef,
                     schedule: Schedule,
+                    isCritical: Boolean,
                     operationConf: Config
                   )

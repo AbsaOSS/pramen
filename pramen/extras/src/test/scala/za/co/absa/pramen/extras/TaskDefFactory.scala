@@ -26,7 +26,8 @@ object TaskDefFactory {
                                jobType: JobType = JobType.Transformation("dummy.class"),
                                outputTable: MetaTableDef = MetaTableDefFactory.getDummyMetaTableDef(name = "dummy_table"),
                                schedule: Schedule = Schedule.EveryDay(),
+                               isCritical: Boolean = false,
                                operationConf: Config = ConfigFactory.empty()): TaskDef = {
-    TaskDef(name, jobType, outputTable, schedule, operationConf)
+    TaskDef(name, jobType, outputTable, schedule, isCritical, operationConf)
   }
 }

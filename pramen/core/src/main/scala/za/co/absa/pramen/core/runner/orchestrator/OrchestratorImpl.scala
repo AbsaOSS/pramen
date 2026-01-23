@@ -79,12 +79,16 @@ class OrchestratorImpl extends Orchestrator {
 
     val atLeastOneStarted = sendPendingJobs(runJobChannel, dependencyResolver)
     var hasFatalErrors = false
+    var hasCriticalJobFailures = false
 
     if (atLeastOneStarted) {
       completedJobsChannel.foreach { case (finishedJob, taskResults, isSucceeded) =>
         runningJobs.remove(finishedJob)
 
         hasFatalErrors = hasFatalErrors || taskResults.exists(status => isFatalFailure(status.runStatus))
+        if (!isSucceeded) {
+          hasCriticalJobFailures = hasCriticalJobFailures || hasJobCriticallyFailed(taskResults)
+        }
 
         val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
         if (hasAnotherUnfinishedJob) {
@@ -99,7 +103,7 @@ class OrchestratorImpl extends Orchestrator {
 
         state.addTaskCompletion(taskResults)
 
-        if (hasFatalErrors) {
+        if (hasFatalErrors || hasCriticalJobFailures) {
           // In case of a fatal error, we either need to interrupt running threads, or wait for them to return.
           // In the current implementation we wait for threads to finish, but not start new jobs in running threads.
           // This can be also reconsidered if there are issues with the current solutions observed.
@@ -119,26 +123,27 @@ class OrchestratorImpl extends Orchestrator {
       log.warn(s"$WARNING Job '${job.name}' outputting to '${job.outputTable.name}' is SKIPPED.")
       log.warn(s"Dependencies: ${dependencyResolver.getDag(job.outputTable.name :: Nil)}")
 
-      val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
+      if (!hasFatalErrors && !hasCriticalJobFailures) {
+        val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
+        val isTransient = job.outputTable.format.isTransient
+        val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
 
-      val isTransient = job.outputTable.format.isTransient
-      val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
+        val taskResult = TaskResult(
+          job.taskDef,
+          RunStatus.MissingDependencies(isFailure, missingTables),
+          None,
+          applicationId,
+          isTransient,
+          job.outputTable.format.isRaw,
+          newSchemaRegistered = false,
+          Nil,
+          Nil,
+          Nil,
+          job.operation.extraOptions
+        )
 
-      val taskResult = TaskResult(
-        job.taskDef,
-        RunStatus.MissingDependencies(isFailure, missingTables),
-        None,
-        applicationId,
-        isTransient,
-        job.outputTable.format.isRaw,
-        newSchemaRegistered = false,
-        Nil,
-        Nil,
-        Nil,
-        job.operation.extraOptions
-      )
-
-      state.addTaskCompletion(taskResult :: Nil)
+        state.addTaskCompletion(taskResult :: Nil)
+      }
     })
 
     jobRunner.shutdown()
@@ -149,6 +154,16 @@ class OrchestratorImpl extends Orchestrator {
       case RunStatus.Failed(ex) if ex.isInstanceOf[FatalErrorWrapper] => true
       case _ => false
     }
+  }
+
+  private def hasJobCriticallyFailed(taskResults: Seq[TaskResult]): Boolean = {
+    val criticalTasks = taskResults.filter(_.taskDef.isCritical)
+
+    val criticallyFailed = criticalTasks.nonEmpty && criticalTasks.forall(_.runStatus.isFailure)
+
+    log.warn(s"Job critically failed: ${taskResults.head.taskDef.name} outputting to ${taskResults.head.taskDef.outputTable.name}.")
+
+    criticallyFailed
   }
 
   private def hasNonPassiveNonOptionalDeps(job: Job, missingTables: Seq[String]): Boolean = {
@@ -224,7 +239,12 @@ class OrchestratorImpl extends Orchestrator {
 
       dependencyResolver.setAvailableTable(outputTable.name)
     } else {
-      log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED.")
+      if (job.operation.isCritical) {
+        log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED (critical).")
+      } else {
+        log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED.")
+      }
+
       dependencyResolver.setFailedTable(outputTable.name)
     }
   }

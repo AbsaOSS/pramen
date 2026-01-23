@@ -17,18 +17,17 @@
 package za.co.absa.pramen.core
 
 import com.typesafe.config.{Config, ConfigFactory}
+import za.co.absa.pramen.api.MetaTableDef
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status._
-import za.co.absa.pramen.api.{MetaTableDef, SchemaDifference}
-
-import java.time.{Instant, LocalDate}
 
 object TaskDefFactory {
   def getDummyTaskNotification(name: String = "Dummy Job",
                                jobType: JobType = JobType.Transformation("dummy.class"),
                                outputTable: MetaTableDef = MetaTableDefFactory.getDummyMetaTableDef(name = "dummy_table"),
                                schedule: Schedule = Schedule.EveryDay(),
+                               isCritical: Boolean = false,
                                operationConf: Config = ConfigFactory.empty()): TaskDef = {
-    TaskDef(name, jobType, outputTable, schedule, operationConf)
+    TaskDef(name, jobType, outputTable, schedule, isCritical, operationConf)
   }
 }
