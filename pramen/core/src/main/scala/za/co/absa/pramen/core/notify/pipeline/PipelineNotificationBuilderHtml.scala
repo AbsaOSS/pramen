@@ -668,6 +668,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private[core] def getStatus(task: TaskResult): TextElement = {
     val successStyle = if (task.dependencyWarnings.nonEmpty) Style.Warning else Style.Success
+    val errorStyle = if (task.taskDef.isCritical) Style.Exception else Style.Warning
 
     task.runStatus match {
       case s: Succeeded           => getSuccessTextElement(s, task.dependencyWarnings.nonEmpty)
@@ -675,7 +676,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case NoData(isFailure)      => TextElement("No Data", if (isFailure) Style.Exception else Style.Warning)
       case s: Skipped             => getSkippedTextElement(s, successStyle)
       case NotRan                 => TextElement("Skipped", Style.Warning)
-      case _: ValidationFailed    => TextElement("Validation failed", Style.Warning)
+      case _: ValidationFailed    => TextElement("Validation failed", errorStyle)
       case _: MissingDependencies => TextElement("Skipped", Style.Warning)
       case _: FailedDependencies  => TextElement("Skipped", Style.Warning)
       case _                      => TextElement("Failed", Style.Exception)
