@@ -27,6 +27,7 @@ import za.co.absa.pramen.core.utils.FsUtils
 
 import java.time.{Instant, LocalDate}
 import scala.collection.mutable
+import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 object TransientTableManager {
@@ -172,11 +173,24 @@ object TransientTableManager {
     schemas.clear()
 
     if (spark != null) {
+      val parentTempDirs = new ListBuffer[Path]
       persistedLocations.foreach { case (_, path) =>
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+        val partitionPath = new Path(path)
+
+        if (partitionPath.getName.startsWith("temp_partition_date=")) {
+          parentTempDirs += partitionPath.getParent
+        } else {
+          log.info(s"Deleting $path...")
+          fsUtils.deleteDirectoryRecursively(partitionPath)
+        }
+      }
+
+      parentTempDirs.foreach { path =>
+        val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path.toString)
 
         log.info(s"Deleting $path...")
-        fsUtils.deleteDirectoryRecursively(new Path(path))
+        fsUtils.deleteDirectoryRecursively(path)
       }
       persistedLocations.clear()
     }
