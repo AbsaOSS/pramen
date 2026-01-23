@@ -19,7 +19,9 @@ package za.co.absa.pramen.core.tests.utils
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.{SparkConf, SparkContext}
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.api.jobdef.TransformExpression
@@ -27,9 +29,9 @@ import za.co.absa.pramen.core.NestedDataFrameFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.samples.SampleCaseClass2
-import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.StringUtils.stripLineEndings
+import za.co.absa.pramen.core.utils.{SparkMaster, SparkUtils, YarnDeploymentMode}
 
 import java.time.LocalDate
 
@@ -793,6 +795,99 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val actualDDL = escapeColumnsSparkDDL(inputDDL)
 
       assert(actualDDL == expectedDDL)
+    }
+  }
+
+  "isDriverRunningOnEdgeNode" should {
+    "return true for local master" in {
+      assert(SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Local("local[2]")))
+    }
+
+    "return true for Yarn in client mode" in {
+      assert(SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Yarn(YarnDeploymentMode.Client)))
+    }
+
+    "return false for Yarn in cluster mode" in {
+      assert(!SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Yarn(YarnDeploymentMode.Cluster)))
+    }
+
+    "return false for Kubernetes in cluster mode" in {
+      assert(!SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Kubernetes("k8s://dummy")))
+    }
+  }
+
+  "getSparkMaster" should {
+    val sparkMock = mock(classOf[SparkSession])
+    val sparkContextMock = mock(classOf[SparkContext])
+    val confMock = mock(classOf[SparkConf])
+
+    when(sparkMock.sparkContext).thenReturn(sparkContextMock)
+    when(sparkContextMock.getConf).thenReturn(confMock)
+    when(confMock.getOption("spark.submit.deployMode")).thenReturn(None)
+    when(confMock.getOption("spark.databricks.clusterUsageTags.clusterName")).thenReturn(None)
+
+    "use Unknown when unrecognized" in {
+      when(confMock.get("spark.master")).thenReturn("dummy://dummy")
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Unknown])
+      assert(master.asInstanceOf[SparkMaster.Unknown].master == "dummy://dummy")
+    }
+
+    "recognize Local mode" in {
+      when(confMock.get("spark.master")).thenReturn("local[*]")
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Local])
+      assert(master.asInstanceOf[SparkMaster.Local].spec == "local[*]")
+    }
+
+    "recognize Standalone mode" in {
+      when(confMock.get("spark.master")).thenReturn("spark://dummy")
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Standalone])
+      assert(master.asInstanceOf[SparkMaster.Standalone].url == "spark://dummy")
+    }
+
+    "recognize Yarn mode with client deployment mode" in {
+      when(confMock.get("spark.master")).thenReturn("yarn")
+      when(confMock.getOption("spark.submit.deployMode")).thenReturn(Some("client"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Yarn])
+      assert(master.asInstanceOf[SparkMaster.Yarn].deploymentMode == YarnDeploymentMode.Client)
+    }
+
+    "recognize Yarn mode with cluster deployment mode" in {
+      when(confMock.get("spark.master")).thenReturn("yarn")
+      when(confMock.getOption("spark.submit.deployMode")).thenReturn(Some("cluster"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Yarn])
+      assert(master.asInstanceOf[SparkMaster.Yarn].deploymentMode == YarnDeploymentMode.Cluster)
+    }
+
+    "recognize Kubernetes mode" in {
+      when(confMock.get("spark.master")).thenReturn("k8s://dummy")
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Kubernetes])
+      assert(master.asInstanceOf[SparkMaster.Kubernetes].url == "k8s://dummy")
+    }
+
+    "recognize Databricks mode" in {
+      when(confMock.getOption("spark.databricks.clusterUsageTags.clusterName")).thenReturn(Some("MyCluster"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master == SparkMaster.Databricks)
     }
   }
 
