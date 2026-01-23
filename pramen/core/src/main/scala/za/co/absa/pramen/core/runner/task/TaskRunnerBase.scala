@@ -261,7 +261,7 @@ abstract class TaskRunnerBase(conf: Config,
             log.info(s"The table needs update: $outputTableName for date: ${task.infoDate}.")
             Right(validationResult)
           case NoData(isFailure) =>
-            log.info(s"NO DATA available for the task: $outputTableName for date: ${task.infoDate}.")
+            log.info(s"NO DATA available for the task: $outputTableName for date: ${task.infoDate}. isFailure = $isFailure")
             Left(TaskResult(task.job.taskDef, RunStatus.NoData(isFailure), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
           case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTableName for date: ${task.infoDate}. Expected = $expected, actual = $actual")

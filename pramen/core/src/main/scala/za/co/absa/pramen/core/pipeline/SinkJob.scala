@@ -22,6 +22,7 @@ import za.co.absa.pramen.api.jobdef.SinkTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, MetastoreReader, Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.exceptions.LazyJobErrorWrapper
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental}
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus.Ready
@@ -198,6 +199,7 @@ class SinkJob(operationDef: OperationDef,
         metastore.getTable(sinkTable.metaTableName, Option(from), Option(to))
       }
     } catch {
+      case ex: LazyJobErrorWrapper => throw new LazyJobErrorWrapper(s"Unable to read input table ${sinkTable.metaTableName} for $infoDate.", ex)
       case NonFatal(ex) => throw new IllegalStateException(s"Unable to read input table ${sinkTable.metaTableName} for $infoDate.", ex)
     }
   }

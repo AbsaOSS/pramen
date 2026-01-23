@@ -350,6 +350,7 @@ object PipelineStateImpl {
   def pipelineStatus(appException: Option[Throwable], taskResults: Seq[TaskResult], pipelineNotificationFailures: Seq[PipelineNotificationFailure], warningFlag: Boolean, strictFailures: Boolean): PipelineStatus = {
     val isCertainFailure = appException.nonEmpty
     val (someTasksSucceeded, someTasksFailed) = getSuccessFlags(appException, taskResults)
+    val someCriticalTasksFailed = taskResults.exists(t => t.taskDef.isCritical && t.runStatus.isFailure)
 
     val warningState = warningFlag || hasWarnings(taskResults, pipelineNotificationFailures)
 
@@ -357,7 +358,7 @@ object PipelineStateImpl {
       PipelineStatus.Failure
     } else if (!someTasksFailed && !warningState) {
       PipelineStatus.Success
-    } else if (someTasksSucceeded && someTasksFailed && !strictFailures) {
+    } else if (someTasksSucceeded && someTasksFailed && !strictFailures && !someCriticalTasksFailed) {
       PipelineStatus.PartialSuccess
     } else if (someTasksSucceeded && !someTasksFailed && warningState) {
       PipelineStatus.Warning
