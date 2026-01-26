@@ -51,7 +51,6 @@ object SlickUtils {
 
     try {
       val start = Instant.now
-      ensureDbConnected(db)
       val result = db.run(action).execute()
       val finish = Instant.now
 
