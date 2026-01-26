@@ -79,7 +79,7 @@ class RdbJdbc(connection: Connection) extends AutoCloseable with Rdb{
     dbVersion
   }
 
-  override def close(): Unit = if (connection.isClosed) connection.close()
+  override def close(): Unit = if (!connection.isClosed) connection.close()
 }
 
 object RdbJdbc {

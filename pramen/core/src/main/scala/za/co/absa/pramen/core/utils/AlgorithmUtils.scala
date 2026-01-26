@@ -98,7 +98,7 @@ object AlgorithmUtils {
             log.warn(s"Attempt failed: ${getErrorMessage(ex)}. Attempts left: $attemptsLeft. Retrying...")
           }
 
-          actionWithRetry(attemptsLeft, log)(action)
+          actionWithRetry(attemptsLeft, log, backoffMinMs, backoffMaxMs)(action)
         }
     }
   }
