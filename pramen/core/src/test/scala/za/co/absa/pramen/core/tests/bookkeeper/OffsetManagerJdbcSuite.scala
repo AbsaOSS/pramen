@@ -36,9 +36,8 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
   before {
     val rdb = RdbJdbc(jdbcConfig)
     rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase(rdb.connection)
     rdb.close()
-
-    pramenDb.setupDatabase()
   }
 
   override def afterAll(): Unit = {

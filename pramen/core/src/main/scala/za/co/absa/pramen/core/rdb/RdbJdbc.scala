@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 import java.sql.{Connection, SQLException}
 import scala.util.control.NonFatal
 
-class RdbJdbc(connection: Connection) extends AutoCloseable with Rdb{
+class RdbJdbc(val connection: Connection) extends AutoCloseable with Rdb{
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def getVersion(): Int = {

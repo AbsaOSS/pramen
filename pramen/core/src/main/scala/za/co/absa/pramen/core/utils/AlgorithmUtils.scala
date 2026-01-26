@@ -89,7 +89,7 @@ object AlgorithmUtils {
         if (attemptsLeft < 1) {
           throw ex
         } else {
-          if (backoffMaxMs > backoffMinMs && backoffMaxMs > 0) {
+          if (backoffMaxMs > backoffMinMs && backoffMinMs > 0) {
             val backoffMs = Random.nextInt(backoffMaxMs - backoffMinMs) + backoffMinMs
             val backoffS = backoffMs / 1000
             log.warn(s"Attempt failed: ${getErrorMessage(ex)}. Attempts left: $attemptsLeft. Retrying in $backoffS seconnds...")
