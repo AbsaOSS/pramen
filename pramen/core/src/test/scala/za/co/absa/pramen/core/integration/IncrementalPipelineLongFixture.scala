@@ -32,7 +32,7 @@ import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
-import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils, UsingUtils}
 
 import java.sql.Date
 import java.time.LocalDate
@@ -46,13 +46,13 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   with TextComparisonFixture {
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   before {
-    val rdb = RdbJdbc(jdbcConfig)
-    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase(rdb.connection)
-    rdb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
   }
 
   override def afterAll(): Unit = {

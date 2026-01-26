@@ -23,18 +23,19 @@ import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.journal.{Journal, JournalJdbc}
 import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.UsingUtils
 
 class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll with RelationalDbFixture {
   import TestCases._
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   before {
-    val rdb = RdbJdbc(jdbcConfig)
-    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase(rdb.connection)
-    rdb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
   }
 
   override def afterAll(): Unit = {

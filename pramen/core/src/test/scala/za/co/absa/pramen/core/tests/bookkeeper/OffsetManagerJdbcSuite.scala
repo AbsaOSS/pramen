@@ -24,20 +24,21 @@ import za.co.absa.pramen.core.bookkeeper.{OffsetManager, OffsetManagerCached, Of
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.UsingUtils
 
 import java.time.{Instant, LocalDate}
 
 class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   private val infoDate = LocalDate.of(2023, 8, 25)
 
   before {
-    val rdb = RdbJdbc(jdbcConfig)
-    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase(rdb.connection)
-    rdb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
   }
 
   override def afterAll(): Unit = {

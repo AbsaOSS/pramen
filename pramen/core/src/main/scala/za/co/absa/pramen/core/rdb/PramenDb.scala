@@ -43,7 +43,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def setupDatabase(jdbcConnection: Connection): Unit = {
+  private def setupDatabase(jdbcConnection: Connection): Unit = {
     // Explicitly set auto-commit to true, overriding any user JDBC settings or PostgreSQL defaults
     Try(jdbcConnection.setAutoCommit(true)).recover {
       case NonFatal(e) => log.warn(s"Unable to set autoCommit=true for the bookkeeping database that uses the driver: ${jdbcConfig.driver}.")
@@ -58,7 +58,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
-  def initDatabase(dbVersion: Int): Unit = {
+  private def initDatabase(dbVersion: Int): Unit = {
     log.warn(s"Initializing new database at $activeUrl")
     if (dbVersion < 1) {
       initTable(LockTickets.lockTickets.schema)
@@ -103,7 +103,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
-  def initTable(schema: profile.SchemaDescription): Unit = {
+  private def initTable(schema: profile.SchemaDescription): Unit = {
     try {
       db.run(DBIO.seq(
         schema.createIfNotExists
@@ -115,7 +115,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
-  def addColumn(table: String, columnName: String, columnType: String): Unit = {
+  private def addColumn(table: String, columnName: String, columnType: String): Unit = {
     try {
       val quotedTable = s""""$table""""
       val quotedColumnName = s""""$columnName""""
@@ -130,7 +130,13 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
 
   override def close(): Unit = {
-    slickDb.close()
+    try {
+      slickDb.close()
+    } catch {
+      case NonFatal(ex) =>
+        log.warn("Error closing the Pramen RDB database connection.", ex)
+    }
+
   }
 }
 
@@ -153,7 +159,7 @@ object PramenDb {
       pramenDb.setupDatabase(conn)
     }
 
-    pramenDb   
+    pramenDb
   }
 
   def getProfile(driver: String): JdbcProfile = {

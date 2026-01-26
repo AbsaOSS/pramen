@@ -21,6 +21,7 @@ import za.co.absa.pramen.core.rdb.PramenDb.DEFAULT_RETRIES
 import za.co.absa.pramen.core.rdb.RdbJdbc.dbVersionTableName
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.UsingUtils
 
 import java.sql.{Connection, SQLException}
 import scala.util.control.NonFatal
@@ -60,9 +61,9 @@ class RdbJdbc(val connection: Connection) extends AutoCloseable with Rdb{
   }
 
   override def executeDDL(ddl: String): Unit = {
-    val statement = connection.createStatement()
-    statement.execute(ddl)
-    statement.close()
+    UsingUtils.using(connection.createStatement()) { statement =>
+      statement.execute(ddl)
+    }
   }
 
   private def getDbVersion(): Int = {
