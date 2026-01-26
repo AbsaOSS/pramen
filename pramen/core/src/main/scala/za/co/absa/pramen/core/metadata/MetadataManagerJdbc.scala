@@ -57,6 +57,7 @@ class MetadataManagerJdbc(db: Database) extends MetadataManagerBase(true) {
     val record = MetadataRecord(tableName, infoDate.toString, key, metadata.value, metadata.lastUpdated.getEpochSecond)
 
     try {
+      SlickUtils.ensureDbConnected(db)
       db.run(
         MetadataRecords.records
           .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString && r.key === key)
@@ -76,6 +77,7 @@ class MetadataManagerJdbc(db: Database) extends MetadataManagerBase(true) {
       .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString && r.key === key)
 
     try {
+      SlickUtils.ensureDbConnected(db)
       db.run(query.delete).execute()
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to delete from the metadata table.", ex)
@@ -87,6 +89,7 @@ class MetadataManagerJdbc(db: Database) extends MetadataManagerBase(true) {
       .filter(r => r.pramenTableName === tableName && r.infoDate === infoDate.toString)
 
     try {
+      SlickUtils.ensureDbConnected(db)
       db.run(query.delete).execute()
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to delete from the metadata table.", ex)

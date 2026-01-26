@@ -17,16 +17,15 @@
 package za.co.absa.pramen.core.rdb
 
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.rdb.PramenDb.DEFAULT_RETRIES
 import za.co.absa.pramen.core.rdb.RdbJdbc.dbVersionTableName
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
+import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.sql.{Connection, SQLException}
 import scala.util.control.NonFatal
 
-object RdbJdbc {
-  val dbVersionTableName = "db_version"
-}
-
-class RdbJdbc(connection: Connection) extends Rdb{
+class RdbJdbc(connection: Connection) extends AutoCloseable with Rdb{
   private val log = LoggerFactory.getLogger(this.getClass)
 
   override def getVersion(): Int = {
@@ -80,4 +79,17 @@ class RdbJdbc(connection: Connection) extends Rdb{
     dbVersion
   }
 
+  override def close(): Unit = if (connection.isClosed) connection.close()
+}
+
+object RdbJdbc {
+  val dbVersionTableName = "db_version"
+
+  def apply(jdbcConfig: JdbcConfig): RdbJdbc = {
+    val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
+    val selector = JdbcUrlSelector(jdbcConfig)
+    val (conn, _) = selector.getWorkingConnection(numberOfAttempts)
+
+    new RdbJdbc(conn)
+  }
 }

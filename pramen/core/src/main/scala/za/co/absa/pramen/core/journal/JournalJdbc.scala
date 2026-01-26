@@ -60,6 +60,7 @@ class JournalJdbc(db: Database) extends Journal {
       Option(entry.batchId))
 
     try {
+      SlickUtils.ensureDbConnected(db)
       db.run(
         JournalTasks.journalTasks += journalTask
       ).execute()

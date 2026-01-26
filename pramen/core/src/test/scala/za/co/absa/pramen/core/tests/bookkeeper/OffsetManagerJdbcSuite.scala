@@ -22,7 +22,7 @@ import za.co.absa.pramen.api.offset.DataOffset.{CommittedOffset, UncommittedOffs
 import za.co.absa.pramen.api.offset.{OffsetType, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.{OffsetManager, OffsetManagerCached, OffsetManagerJdbc}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.time.{Instant, LocalDate}
@@ -34,7 +34,10 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
   private val infoDate = LocalDate.of(2023, 8, 25)
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    val rdb = RdbJdbc(jdbcConfig)
+    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    rdb.close()
+
     pramenDb.setupDatabase()
   }
 

@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperJdbc}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
@@ -28,7 +28,10 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
   lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    val rdb = RdbJdbc(jdbcConfig)
+    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    rdb.close()
+
     pramenDb.setupDatabase()
   }
 
