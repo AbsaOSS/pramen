@@ -26,10 +26,10 @@ import java.util.Properties
 import scala.util.{Failure, Random, Success, Try}
 
 class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
-  val BACKOFF_MIN_S = 1
-  val BACKOFF_MAX_S = 10
-
   private val log = LoggerFactory.getLogger(this.getClass)
+
+  private val BACKOFF_MIN_S = 1
+  private val BACKOFF_MAX_S = 10
   private val allUrls = (jdbcConfig.primaryUrl ++ jdbcConfig.fallbackUrls).toSeq
   private val numberOfUrls = allUrls.size
   private var urlPool = allUrls
