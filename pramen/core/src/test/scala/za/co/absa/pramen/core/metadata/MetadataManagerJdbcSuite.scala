@@ -20,7 +20,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.api.MetadataValue
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.time.{LocalDate, ZoneOffset}
@@ -32,7 +32,10 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
   private val exampleInstant = infoDate.atStartOfDay().toInstant(ZoneOffset.UTC)
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    val rdb = RdbJdbc(jdbcConfig)
+    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    rdb.close()
+
     pramenDb.setupDatabase()
   }
 

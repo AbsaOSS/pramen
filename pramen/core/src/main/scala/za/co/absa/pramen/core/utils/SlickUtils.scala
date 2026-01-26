@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory
 import slick.dbio.Effect
 import slick.jdbc.PostgresProfile.api._
 import slick.sql.SqlAction
+import za.co.absa.pramen.core.rdb.PramenDb
 
 import java.time.{Duration, Instant}
 import scala.util.control.NonFatal
@@ -43,11 +44,14 @@ object SlickUtils {
     * @return The result of the query
     */
   def executeQuery[E, U](db: Database, query: Query[E, U, Seq]): Seq[U] = {
+    ensureDbConnected(db)
+
     val action = query.result
     val sql = action.statements.mkString("; ")
 
     try {
       val start = Instant.now
+      ensureDbConnected(db)
       val result = db.run(action).execute()
       val finish = Instant.now
 
@@ -75,10 +79,13 @@ object SlickUtils {
     * @return The result of the action
     */
   def executeAction[R, E <: Effect](db: Database, action: SqlAction[R, NoStream, E]): R = {
+    ensureDbConnected(db)
+
     val sql = action.statements.mkString("; ")
 
     try {
       val start = Instant.now
+      ensureDbConnected(db)
       val result = db.run(action).execute()
       val finish = Instant.now
 
@@ -106,6 +113,8 @@ object SlickUtils {
     * @return The result of the query
     */
   def executeCount(db: Database, rep: Rep[Int]): Int = {
+    ensureDbConnected(db)
+
     val action = rep.result
     val sql = action.statements.mkString("; ")
 
@@ -138,6 +147,8 @@ object SlickUtils {
     * @return The result of the query
     */
   def executeMaxString(db: Database, rep: Rep[Option[String]]): Option[String] = {
+    ensureDbConnected(db)
+
     val action = rep.result
     val sql = action.statements.mkString("; ")
 
@@ -156,6 +167,25 @@ object SlickUtils {
       result
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Error executing an SQL query: $sql", ex)
+    }
+  }
+
+  /**
+    * Ensures that the database connection is valid and ready for use.
+    * If the connection is not valid, an exception is thrown.
+    * The method retries the connection check according to the retry logic.
+    *
+    * @param db The database instance to verify the connection for.
+    */
+  def ensureDbConnected(db: Database): Unit = {
+    val check = SimpleDBIO { ctx =>
+      val conn = ctx.connection
+      if (!conn.isValid(FutureImplicits.executionTimeout.toSeconds.toInt))
+        throw new RuntimeException("Connection not valid")
+    }
+
+    AlgorithmUtils.actionWithRetry(PramenDb.DEFAULT_RETRIES, log, PramenDb.BACKOFF_MIN_MS, PramenDb.BACKOFF_MAX_MS) {
+      db.run(check).execute()
     }
   }
 }

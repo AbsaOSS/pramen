@@ -26,6 +26,9 @@ import java.util.Properties
 import scala.util.{Failure, Random, Success, Try}
 
 class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
+  val BACKOFF_MIN_S = 1
+  val BACKOFF_MAX_S = 10
+
   private val log = LoggerFactory.getLogger(this.getClass)
   private val allUrls = (jdbcConfig.primaryUrl ++ jdbcConfig.fallbackUrls).toSeq
   private val numberOfUrls = allUrls.size
@@ -102,7 +105,6 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
   @throws[SQLException]
   def getWorkingConnection(retriesLeft: Int): (Connection, String) = {
     val currentUrl = getUrl
-
     Try {
       JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl)
     } match {
@@ -110,7 +112,9 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
       case Failure(ex)         =>
         if (retriesLeft > 1) {
           val newUrl = getNextUrl
-          log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying...", ex)
+          val backoffS = Random.nextInt(BACKOFF_MIN_S - BACKOFF_MAX_S) + BACKOFF_MIN_S
+          log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying... in $backoffS seconds", ex)
+          Thread.sleep(backoffS * 1000)
           log.info(s"Trying URL: $newUrl")
           getWorkingConnection(retriesLeft - 1)
         } else {

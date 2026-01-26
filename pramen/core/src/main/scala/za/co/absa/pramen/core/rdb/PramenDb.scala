@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.rdb
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.JdbcBackend.Database
-import slick.jdbc.JdbcProfile
+import slick.jdbc.{JdbcBackend, JdbcProfile}
 import slick.util.AsyncExecutor
 import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, MetadataRecords, OffsetRecords, SchemaRecords}
 import za.co.absa.pramen.core.journal.model.JournalTasks
@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.lock.model.LockTickets
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, UsingUtils}
 
 import java.sql.Connection
 import scala.util.Try
@@ -43,18 +44,18 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  val rdb: Rdb = new RdbJdbc(jdbcConnection)
-
   def setupDatabase(): Unit = {
     // Explicitly set auto-commit to true, overriding any user JDBC settings or PostgreSQL defaults
     Try(jdbcConnection.setAutoCommit(true)).recover {
       case NonFatal(e) => log.warn(s"Unable to set autoCommit=true for the bookkeeping database that uses the driver: ${jdbcConfig.driver}.")
     }
 
-    val dbVersion = rdb.getVersion()
-    if (dbVersion < MODEL_VERSION) {
-      initDatabase(dbVersion)
-      rdb.setVersion(MODEL_VERSION)
+    UsingUtils.using(new RdbJdbc(jdbcConnection)) { rdb =>
+      val dbVersion = rdb.getVersion()
+      if (dbVersion < MODEL_VERSION) {
+        initDatabase(dbVersion)
+        rdb.setVersion(MODEL_VERSION)
+      }
     }
   }
 
@@ -130,14 +131,18 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
 
   override def close(): Unit = {
-    jdbcConnection.close()
+    if (!jdbcConnection.isClosed) jdbcConnection.close()
     slickDb.close()
   }
 }
 
 object PramenDb {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val MODEL_VERSION = 9
   val DEFAULT_RETRIES = 3
+  val BACKOFF_MIN_MS = 1000
+  val BACKOFF_MAX_MS = 20000
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
     val (url, conn, database, profile) = openDb(jdbcConfig)
@@ -159,20 +164,23 @@ object PramenDb {
     }
   }
 
-  private def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database, JdbcProfile) = {
+  def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database, JdbcProfile) = {
+    val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
     val selector = JdbcUrlSelector(jdbcConfig)
-    val (conn, url) = selector.getWorkingConnection(DEFAULT_RETRIES)
+    val (conn, url) = selector.getWorkingConnection(numberOfAttempts)
     val prop = selector.getProperties
 
     val slickProfile = getProfile(jdbcConfig.driver)
 
-    val database = jdbcConfig.user match {
-      case Some(user) => Database.forURL(url = url, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
-      case None       => Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+    var database: JdbcBackend.DatabaseDef = null
+    AlgorithmUtils.actionWithRetry(numberOfAttempts, log, BACKOFF_MIN_MS, BACKOFF_MAX_MS) {
+      database = jdbcConfig.user match {
+        case Some(user) => Database.forURL(url = url, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+        case None       => Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+      }
     }
 
     (url, conn, database, slickProfile)
   }
-
 }
 

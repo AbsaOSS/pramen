@@ -146,6 +146,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, Option(batchId))
 
     try {
+      SlickUtils.ensureDbConnected(db)
       db.run(
         BookkeepingRecords.records += record
       ).execute()
@@ -230,6 +231,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     val infoDateStr = infoDate.toString
 
     try {
+      SlickUtils.ensureDbConnected(db)
       db.run(
         SchemaRecords.records.filter(t => t.pramenTableName === table && t.infoDate === infoDateStr).delete
       ).execute()

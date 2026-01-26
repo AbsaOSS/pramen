@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.fixtures.{MongoDbFixture, RelationalDbFixture, Tem
 import za.co.absa.pramen.core.journal._
 import za.co.absa.pramen.core.lock.{TokenLockFactoryAllow, TokenLockFactoryHadoopPath, TokenLockFactoryJdbc, TokenLockFactoryMongoDb}
 import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.{BookkeepingConfigFactory, RuntimeConfigFactory}
 
@@ -46,7 +46,10 @@ class BookkeeperSuite extends AnyWordSpec
   lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    val rdb = RdbJdbc(jdbcConfig)
+    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    rdb.close()
+
     pramenDb.setupDatabase()
 
     if (db != null) {

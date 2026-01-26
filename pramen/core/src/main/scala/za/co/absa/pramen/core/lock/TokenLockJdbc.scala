@@ -36,6 +36,8 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
 
   /** Invoked from a synchronized block. */
   override def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = {
+    SlickUtils.ensureDbConnected(db)
+
     def tryAcquireExistingTicket(): Boolean = {
       val ticket = getTicket
 

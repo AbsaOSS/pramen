@@ -21,7 +21,7 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.journal.{Journal, JournalJdbc}
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll with RelationalDbFixture {
@@ -31,7 +31,10 @@ class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfte
   lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    val rdb = RdbJdbc(jdbcConfig)
+    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    rdb.close()
+
     pramenDb.setupDatabase()
   }
 

@@ -28,7 +28,7 @@ import za.co.absa.pramen.api.offset.OffsetType
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.OffsetManagerJdbc
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
@@ -49,7 +49,10 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    val rdb = RdbJdbc(jdbcConfig)
+    rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    rdb.close()
+
     pramenDb.setupDatabase()
   }
 

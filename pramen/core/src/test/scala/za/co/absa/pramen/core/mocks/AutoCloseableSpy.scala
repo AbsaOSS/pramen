@@ -14,17 +14,27 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.utils
+package za.co.absa.pramen.core.mocks
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.{Duration, FiniteDuration}
-import scala.concurrent.{Await, Future}
+class AutoCloseableSpy(failCreate: Boolean = false, failAction: Boolean = false, failClose: Boolean = false) extends AutoCloseable {
+  var actionCallCount: Int = 0
+  var closeCallCount: Int = 0
 
-object FutureImplicits {
-  val executionTimeout: FiniteDuration = Duration(300, TimeUnit.SECONDS)
-
-  implicit class FutureExecutor[T](future: Future[T]) {
-    def execute(): T = Await.result(future, executionTimeout)
+  if (failCreate) {
+    throw new RuntimeException("Failed to create resource")
   }
 
+  def dummyAction(): Unit = {
+    actionCallCount += 1
+    if (failAction) {
+      throw new RuntimeException("Failed during action")
+    }
+  }
+
+  override def close(): Unit = {
+    closeCallCount += 1
+    if (failClose) {
+      throw new RuntimeException("Failed to close resource")
+    }
+  }
 }

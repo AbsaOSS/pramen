@@ -73,6 +73,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
     val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, "", "", batchId, createdAt.toEpochMilli, None)
 
+    SlickUtils.ensureDbConnected(db)
     db.run(
       OffsetRecords.records += record
     ).execute()
@@ -83,6 +84,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   override def commitOffsets(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
     val committedAt = Instant.now().toEpochMilli
 
+    SlickUtils.ensureDbConnected(db)
     db.run(
       OffsetRecords.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
@@ -98,6 +100,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
     val committedAt = Instant.now().toEpochMilli
 
+    SlickUtils.ensureDbConnected(db)
     db.run(
       OffsetRecords.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
@@ -121,6 +124,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
       OffsetRecord(req.table, req.infoDate.toString, req.minOffset.dataType.dataTypeString, req.minOffset.valueString, req.maxOffset.valueString, batchId, req.createdAt.toEpochMilli, Some(committedAtMilli))
     }
 
+    SlickUtils.ensureDbConnected(db)
     db.run(
       OffsetRecords.records ++= records
     ).execute()
@@ -137,6 +141,7 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   }
 
   override def rollbackOffsets(request: DataOffsetRequest): Unit = {
+    SlickUtils.ensureDbConnected(db)
     db.run(
       OffsetRecords.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
