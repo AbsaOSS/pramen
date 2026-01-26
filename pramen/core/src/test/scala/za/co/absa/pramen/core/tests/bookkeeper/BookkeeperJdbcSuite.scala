@@ -30,9 +30,8 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
   before {
     val rdb = RdbJdbc(jdbcConfig)
     rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase(rdb.connection)
     rdb.close()
-
-    pramenDb.setupDatabase()
   }
 
   override def afterAll(): Unit = {

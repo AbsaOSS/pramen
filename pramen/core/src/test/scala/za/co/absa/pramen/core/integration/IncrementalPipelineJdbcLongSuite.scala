@@ -52,9 +52,9 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   before {
     val rdb = RdbJdbc(jdbcConfig)
     rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase(rdb.connection)
     rdb.close()
 
-    pramenDb.setupDatabase()
     RdbExampleTable.IncrementalTable.initTable(getConnection)
   }
 

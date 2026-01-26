@@ -81,7 +81,6 @@ object Bookkeeper {
     val dbOpt = if (hasBookkeepingJdbc) {
       val jdbcConfig = bookkeepingConfig.bookkeepingJdbcConfig.get
       val syncDb = PramenDb(jdbcConfig)
-      syncDb.setupDatabase()
       Option(syncDb)
     } else None
 

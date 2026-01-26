@@ -33,9 +33,8 @@ class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfte
   before {
     val rdb = RdbJdbc(jdbcConfig)
     rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    pramenDb.setupDatabase(rdb.connection)
     rdb.close()
-
-    pramenDb.setupDatabase()
   }
 
   override def afterAll(): Unit = {

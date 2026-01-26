@@ -34,7 +34,6 @@ import scala.util.control.NonFatal
 
 class PramenDb(val jdbcConfig: JdbcConfig,
                val activeUrl: String,
-               val jdbcConnection: Connection,
                val slickDb: Database,
                val profile: JdbcProfile) extends AutoCloseable {
   def db: Database = slickDb
@@ -44,7 +43,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  def setupDatabase(): Unit = {
+  def setupDatabase(jdbcConnection: Connection): Unit = {
     // Explicitly set auto-commit to true, overriding any user JDBC settings or PostgreSQL defaults
     Try(jdbcConnection.setAutoCommit(true)).recover {
       case NonFatal(e) => log.warn(s"Unable to set autoCommit=true for the bookkeeping database that uses the driver: ${jdbcConfig.driver}.")
@@ -131,7 +130,6 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
 
   override def close(): Unit = {
-    if (!jdbcConnection.isClosed) jdbcConnection.close()
     slickDb.close()
   }
 }
@@ -145,9 +143,17 @@ object PramenDb {
   val BACKOFF_MAX_MS = 20000
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
-    val (url, conn, database, profile) = openDb(jdbcConfig)
+    val (url, connection) = getConnection(jdbcConfig)
 
-    new PramenDb(jdbcConfig, url, conn, database, profile)
+    val (database, profile) = openDb(jdbcConfig, url)
+
+    val pramenDb = new PramenDb(jdbcConfig, url, database, profile)
+
+    UsingUtils.using(connection) { conn =>
+      pramenDb.setupDatabase(conn)
+    }
+
+    pramenDb   
   }
 
   def getProfile(driver: String): JdbcProfile = {
@@ -164,10 +170,17 @@ object PramenDb {
     }
   }
 
-  def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database, JdbcProfile) = {
+  def getConnection(jdbcConfig: JdbcConfig): (String, Connection) = {
     val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
     val selector = JdbcUrlSelector(jdbcConfig)
     val (conn, url) = selector.getWorkingConnection(numberOfAttempts)
+
+    (url, conn)
+  }
+
+  def openDb(jdbcConfig: JdbcConfig, workingUrl: String): (Database, JdbcProfile) = {
+    val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
+    val selector = JdbcUrlSelector(jdbcConfig)
     val prop = selector.getProperties
 
     val slickProfile = getProfile(jdbcConfig.driver)
@@ -175,12 +188,12 @@ object PramenDb {
     var database: JdbcBackend.DatabaseDef = null
     AlgorithmUtils.actionWithRetry(numberOfAttempts, log, BACKOFF_MIN_MS, BACKOFF_MAX_MS) {
       database = jdbcConfig.user match {
-        case Some(user) => Database.forURL(url = url, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
-        case None       => Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+        case Some(user) => Database.forURL(url = workingUrl, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+        case None       => Database.forURL(url = workingUrl, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
       }
     }
 
-    (url, conn, database, slickProfile)
+    (database, slickProfile)
   }
 }
 
