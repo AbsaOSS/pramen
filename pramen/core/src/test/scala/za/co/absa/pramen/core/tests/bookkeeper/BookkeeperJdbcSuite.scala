@@ -29,6 +29,7 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
   var pramenDb: PramenDb = _
 
   before {
+    if (pramenDb != null) pramenDb.close()
     UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
       rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
     }
@@ -36,7 +37,7 @@ class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 

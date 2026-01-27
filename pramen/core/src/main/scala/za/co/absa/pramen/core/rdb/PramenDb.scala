@@ -145,8 +145,8 @@ object PramenDb {
 
   val MODEL_VERSION = 9
   val DEFAULT_RETRIES = 3
-  val BACKOFF_MIN_MS = 1000
-  val BACKOFF_MAX_MS = 20000
+  val BACKOFF_MIN_MS = 10000
+  val BACKOFF_MAX_MS = 60000
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
     val (url, connection) = getConnection(jdbcConfig)

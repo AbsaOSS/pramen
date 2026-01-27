@@ -47,6 +47,7 @@ class BookkeeperSuite extends AnyWordSpec
   var pramenDb: PramenDb = _
 
   before {
+    if (pramenDb != null) pramenDb.close()
     UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
       rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
     }
@@ -62,6 +63,10 @@ class BookkeeperSuite extends AnyWordSpec
     }
   }
 
+  override def afterAll(): Unit = {
+    if (pramenDb != null) pramenDb.close()
+    super.afterAll()
+  }
 
   val runtimeConfig: RuntimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(
     useLocks = true

@@ -50,6 +50,7 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   private val INFO_DATE_COLUMN = "pramen_info_date"
 
   before {
+    if (pramenDb != null) pramenDb.close()
     UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
       rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
     }
@@ -59,7 +60,7 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 

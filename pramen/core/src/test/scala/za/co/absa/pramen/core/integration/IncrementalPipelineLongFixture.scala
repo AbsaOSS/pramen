@@ -49,6 +49,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   var pramenDb: PramenDb = _
 
   before {
+    if (pramenDb != null) pramenDb.close()
     UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
       rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
     }
@@ -56,7 +57,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 
