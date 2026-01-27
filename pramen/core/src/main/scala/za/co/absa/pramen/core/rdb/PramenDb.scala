@@ -151,15 +151,12 @@ object PramenDb {
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
     val (url, connection) = getConnection(jdbcConfig)
 
-    val (database, profile) = openDb(jdbcConfig, url)
-
-    val pramenDb = new PramenDb(jdbcConfig, url, database, profile)
-
     UsingUtils.using(connection) { conn =>
+      val (database, profile) = openDb(jdbcConfig, url)
+      val pramenDb = new PramenDb(jdbcConfig, url, database, profile)
       pramenDb.setupDatabase(conn)
+      pramenDb
     }
-
-    pramenDb
   }
 
   def getProfile(driver: String): JdbcProfile = {

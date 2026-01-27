@@ -168,7 +168,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
       assert(ex.getMessage.contains("Unable to delete from the metadata table."))
     }
 
-    "throw an exception on connection errors when deleting metadata from a partision" in {
+    "throw an exception on connection errors when deleting metadata from a partition" in {
       val metadata = new MetadataManagerJdbc(null)
 
       val ex = intercept[RuntimeException] {
