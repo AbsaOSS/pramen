@@ -35,6 +35,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
   private val infoDate = LocalDate.of(2023, 8, 25)
 
   before {
+    if (pramenDb != null) pramenDb.close()
     UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
       rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
     }
@@ -42,7 +43,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 

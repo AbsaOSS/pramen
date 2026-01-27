@@ -33,6 +33,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
   private val exampleInstant = infoDate.atStartOfDay().toInstant(ZoneOffset.UTC)
 
   before {
+    if (pramenDb != null) pramenDb.close()
     UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
       rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
     }
@@ -40,7 +41,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 
