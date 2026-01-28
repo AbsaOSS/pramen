@@ -111,7 +111,7 @@
 
         <scala.version>2.12.20</scala.version>
         <scala.compat.version>2.12</scala.compat.version>
-        <spark.version>3.5.7</spark.version>
+        <spark.version>3.5.8</spark.version>
         <spark.compat.version>3.5</spark.compat.version>
         <hadoop.version>3.3.6</hadoop.version>
         <delta.version>3.3.2</delta.version>
