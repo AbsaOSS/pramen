@@ -260,7 +260,7 @@ class OrchestratorImpl extends Orchestrator {
     val infoDates = jobs.flatMap { job =>
       if (job.operation.schedule.isEnabled(runDate)) {
         val infoDateExpression = job.operation.outputInfoDateExpression
-        val infoDate = evaluateRunDate(runDate, infoDateExpression).toString
+        val infoDate = evaluateRunDate(runDate, infoDateExpression, logExpression = false).toString
         Option(infoDate)
       } else {
         None

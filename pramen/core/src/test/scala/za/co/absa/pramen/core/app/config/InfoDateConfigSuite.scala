@@ -74,7 +74,7 @@ class InfoDateConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.columnName == "pramen_info_date")
       assert(runtimeConfig.dateFormat == "yyyy-MM-dd")
 
-      assert(runtimeConfig.defaultBackfillDays == 5)
+      assert(runtimeConfig.defaultBackfillDays == -1)
       assert(runtimeConfig.defaultTrackDays == 5)
       assert(runtimeConfig.defaultDelayDays == 0)
 
