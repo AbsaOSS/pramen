@@ -177,7 +177,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
                  consumeThreads: Int = 1,
                  allowParallel: Boolean = true,
                  parallelTasks: Int = 1,
-                 backfillDays: Int = 1,
+                 backfillDays: Int = 1
                 ): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
     val conf = ConfigFactory.empty()
 
