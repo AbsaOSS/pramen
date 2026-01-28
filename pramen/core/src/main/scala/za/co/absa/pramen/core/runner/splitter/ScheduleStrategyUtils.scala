@@ -51,7 +51,7 @@ object ScheduleStrategyUtils {
                              bookkeeper: Bookkeeper
                             ): List[TaskPreDef] = {
     if (schedule.isEnabled(runDate)) {
-      val infoDate = evaluateRunDate(runDate, infoDateExpression)
+      val infoDate = evaluateRunDate(runDate, infoDateExpression, logExpression = false)
 
       bookkeeper.getLatestDataChunk(outputTable, infoDate) match {
         case Some(_) =>
@@ -82,7 +82,7 @@ object ScheduleStrategyUtils {
                            infoDateExpression: String
                           ): Option[TaskPreDef] = {
     if (schedule.isEnabled(runDate)) {
-      val infoDate = evaluateRunDate(runDate, infoDateExpression)
+      val infoDate = evaluateRunDate(runDate, infoDateExpression, logExpression = false)
 
       log.info(s"For $outputTable $runDate is one of scheduled days. Adding infoDate = '$infoDateExpression' = $infoDate to check.")
 
@@ -216,7 +216,7 @@ object ScheduleStrategyUtils {
       val end = dateTo.plusDays(1)
       while (date.isBefore(end)) {
         if (schedule.isEnabled(date)) {
-          val infoDate = evaluateRunDate(date, infoDateExpression)
+          val infoDate = evaluateRunDate(date, infoDateExpression, logExpression = false)
           if (uniqueInfoDates.add(infoDate)) {
             infoDates += infoDate
           }
