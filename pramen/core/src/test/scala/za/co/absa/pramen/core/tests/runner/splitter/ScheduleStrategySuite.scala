@@ -132,8 +132,9 @@ class ScheduleStrategySuite extends AnyWordSpec {
         val bk = mock(classOf[Bookkeeper])
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
+        when(bk.getDataAvailability(outputTable, runDate.minusDays(1), runDate.minusDays(1))).thenReturn(Seq.empty)
 
-        val params = ScheduleParams.Normal(runDate, 0, 4, 0, newOnly = false, lateOnly = true)
+        val params = ScheduleParams.Normal(runDate, 0, 2, 0, newOnly = false, lateOnly = true)
 
         val expected = Seq(runDate.minusDays(1))
           .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
@@ -163,7 +164,8 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
         when(bk.getLatestProcessedDate(outputTable, Some(runDate))).thenReturn(Some(runDate.minusDays(2)))
 
-        val params = ScheduleParams.Normal(runDate, 0, 4, 0, newOnly = true, lateOnly = true)
+        val params = ScheduleParams.Normal(runDate, 0, 2, 0, newOnly = true, lateOnly = true)
+        when(bk.getDataAvailability(outputTable, runDate.minusDays(1), runDate.minusDays(1))).thenReturn(Seq(DataAvailability(runDate.minusDays(1), 1, 1)))
 
         val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -335,10 +337,11 @@ class ScheduleStrategySuite extends AnyWordSpec {
         "default behavior with more than 1 day late" in {
           val minimumDate = LocalDate.parse("2022-07-01")
           val runDate = LocalDate.parse("2022-07-14")
-          val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(runDate, 7, 0, 0, newOnly = false, lateOnly = false)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(LocalDate.parse("2022-07-09")))).thenReturn(Some(LocalDate.parse("2022-07-05")))
+          when(bk.getDataAvailability(outputTable, LocalDate.parse("2022-07-08"), LocalDate.parse("2022-07-13"))).thenReturn(Seq.empty)
 
           val expected = Seq(
             pipeline.TaskPreDef(LocalDate.of(2022, 7, 9), TaskRunReason.Late)
@@ -354,7 +357,8 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
           when(bk.getLatestProcessedDate(outputTable, Some(runDate.minusDays(1)))).thenReturn(Some(runDate.minusDays(30)))
 
-          val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(runDate, 2, 7, 0, newOnly = false, lateOnly = false)
+          when(bk.getDataAvailability(outputTable, LocalDate.parse("2022-07-07"), LocalDate.parse("2022-07-20"))).thenReturn(Seq.empty)
 
           val result = strategySnapshot.getDaysToRun(outputTable, dependencies, bk, "@runDate - 1", schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -368,6 +372,7 @@ class ScheduleStrategySuite extends AnyWordSpec {
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(runDate.plusDays(1)))).thenReturn(Some(runDate.minusDays(9)))
+          when(bk.getDataAvailability(outputTable, nextSunday.minusDays(13), nextSunday.minusDays(1))).thenReturn(Seq(DataAvailability(runDate.minusDays(1), 1, 1)))
 
           val result = strategyEvent.getDaysToRun(outputTable, dependencies, bk, infoDateExpression, schedule, params, initialSourcingDateExpr, minimumDate)
 
@@ -475,11 +480,13 @@ class ScheduleStrategySuite extends AnyWordSpec {
         "default behavior with a monthly job" in {
           val minimumDate = LocalDate.parse("2022-05-30")
           val runDate = LocalDate.parse("2022-07-14")
-          val params = ScheduleParams.Normal(runDate, 0, 0, 0, newOnly = false, lateOnly = false)
+          val params = ScheduleParams.Normal(runDate, 0, 62, 0, newOnly = false, lateOnly = false)
 
           val bk = mock(classOf[Bookkeeper])
           when(bk.getLatestProcessedDate(outputTable, Some(LocalDate.parse("2022-07-01"))))
             .thenReturn(Some(LocalDate.parse("2022-05-01")))
+
+          when(bk.getDataAvailability(outputTable, LocalDate.parse("2022-07-08"), LocalDate.parse("2022-07-13"))).thenReturn(Seq.empty)
 
           val expected = Seq(
             pipeline.TaskPreDef(LocalDate.of(2022, 6, 1), TaskRunReason.Late),

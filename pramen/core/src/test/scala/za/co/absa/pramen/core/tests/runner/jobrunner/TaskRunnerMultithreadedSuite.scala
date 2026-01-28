@@ -61,7 +61,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "handle a successful multiple task job parallel execution" in {
-      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1))
+      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1), backfillDays = 2)
 
       runner.runJob(job)
 
@@ -87,7 +87,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "handle a successful multiple task job sequential execution" in {
-      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1), allowParallel = false)
+      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1), allowParallel = false, backfillDays = 2)
 
       runner.runJob(job)
 
@@ -176,7 +176,8 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
                  runFunction: () => RunResult = () => RunResult(exampleDf),
                  consumeThreads: Int = 1,
                  allowParallel: Boolean = true,
-                 parallelTasks: Int = 1
+                 parallelTasks: Int = 1,
+                 backfillDays: Int = 1,
                 ): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
     val conf = ConfigFactory.empty()
 
@@ -193,7 +194,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     val stats = MetaTableStats(Some(2), None, Some(100))
 
     val operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = consumeThreads)
-    val job = new JobSpy(runFunction = runFunction, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)
+    val job = new JobSpy(runFunction = runFunction, jobBackfillDays = backfillDays, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)
 
     val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
 
