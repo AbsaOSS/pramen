@@ -54,7 +54,7 @@ class UsingUtilsSuite extends AnyWordSpec {
       assert(resource.closeCallCount == 1)
     }
 
-    "handle a null resource resource" in {
+    "handle a null resource" in {
       var resourceWasNull = false
 
       UsingUtils.using(null: AutoCloseableSpy) { res =>
@@ -64,7 +64,7 @@ class UsingUtilsSuite extends AnyWordSpec {
       assert(resourceWasNull)
     }
 
-    "handle a null resource resource and action throw" in {
+    "handle a null resource and action throw" in {
       var exceptionThrown = false
       var resourceWasNull = false
 

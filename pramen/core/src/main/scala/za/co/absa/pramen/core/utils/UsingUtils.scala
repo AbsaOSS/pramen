@@ -16,13 +16,11 @@
 
 package za.co.absa.pramen.core.utils
 
-import scala.util.control.NonFatal
-
 object UsingUtils {
   /**
     * Executes the given action with a resource that implements the AutoCloseable interface, ensuring
     * proper closure of the resource. Any exception that occurs during the action or resource closure
-    * is handled appropriately, with suppressed exceptions added where relevant. Null resources are not supported.
+    * is handled appropriately, with suppressed exceptions added where relevant.
     *
     * @param resource a lazily evaluated resource that implements AutoCloseable
     * @param action   a function to be executed using the provided resource
@@ -30,35 +28,28 @@ object UsingUtils {
     * @throws Throwable if either the action or resource closure fails. If both fail, the action's exception
     *                   is thrown with the closure's exception added as suppressed
     */
-  def using[T <: AutoCloseable,U](resource: => T)(action: T => U): U = {
-    var actionExceptionOpt: Option[Throwable] = None
+  def using[T <: AutoCloseable, U](resource: => T)(action: T => U): U = {
+    var actionException: Throwable = null
     val openedResource = resource
 
     try {
-      return action(openedResource)
+      action(openedResource)
     } catch {
-      case NonFatal(ex) =>
-        actionExceptionOpt = Option(ex)
+      case t: Throwable =>
+        actionException = t
+        throw t
     } finally
       if (openedResource != null) {
         try
           openedResource.close()
         catch {
-          case NonFatal(closeException) =>
-            actionExceptionOpt match {
-              case Some(actionException) =>
-                actionException.addSuppressed(closeException)
-                throw actionException
-              case None =>
-                throw closeException
+          case closeException: Throwable =>
+            if (actionException != null) {
+              actionException.addSuppressed(closeException)
+            } else {
+              throw closeException
             }
         }
       }
-
-    // It is not possible to return a valid value of type U at this point so the rest of code should return Nothing
-    actionExceptionOpt match {
-      case Some(ex) => throw ex
-      case None     => throw new IllegalArgumentException("Unreachable code")
-    }
   }
 }
