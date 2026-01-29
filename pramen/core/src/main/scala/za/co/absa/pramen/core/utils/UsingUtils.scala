@@ -35,10 +35,6 @@ object UsingUtils {
     var suppressedException: Option[Throwable] = None
     val openedResource = resource
 
-    if (openedResource == null) {
-      throw new IllegalArgumentException("Resource must not be null")
-    }
-
     val result = try {
       Option(action(openedResource))
     } catch {

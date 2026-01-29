@@ -55,19 +55,13 @@ class UsingUtilsSuite extends AnyWordSpec {
     }
 
     "throw an exception on null resource" in {
-      var exceptionThrown = false
+      var resourceWasNull = false
 
-      try {
-        UsingUtils.using(null: AutoCloseableSpy) { res =>
-          res.dummyAction()
-        }
-      } catch {
-        case ex: Throwable =>
-          assert(ex.getMessage.contains("Resource must not be null"))
-          exceptionThrown = true
+      UsingUtils.using(null: AutoCloseableSpy) { res =>
+        resourceWasNull = res == null
       }
 
-      assert(exceptionThrown)
+      assert(resourceWasNull)
     }
 
     "handle exceptions when a resource is created" in {
