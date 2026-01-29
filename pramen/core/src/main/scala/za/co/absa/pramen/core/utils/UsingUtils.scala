@@ -31,32 +31,34 @@ object UsingUtils {
     *                   is thrown with the closure's exception added as suppressed
     */
   def using[T <: AutoCloseable,U](resource: => T)(action: T => U): U = {
-    var thrownException: Option[Throwable] = None
-    var suppressedException: Option[Throwable] = None
+    var actionExceptionOpt: Option[Throwable] = None
     val openedResource = resource
 
-    val result = try {
-      Option(action(openedResource))
+    try {
+      return action(openedResource)
     } catch {
       case NonFatal(ex) =>
-        thrownException = Option(ex)
-        None
+        actionExceptionOpt = Option(ex)
     } finally
       if (openedResource != null) {
         try
           openedResource.close()
         catch {
-          case NonFatal(ex) => suppressedException = Option(ex)
+          case NonFatal(closeException) =>
+            actionExceptionOpt match {
+              case Some(actionException) =>
+                actionException.addSuppressed(closeException)
+                throw actionException
+              case None =>
+                throw closeException
+            }
         }
       }
 
-    (thrownException, suppressedException) match {
-      case (Some(thrown), Some(suppressed)) =>
-        thrown.addSuppressed(suppressed)
-        throw thrown
-      case (Some(thrown), None)     => throw thrown
-      case (None, Some(suppressed)) => throw suppressed
-      case (None, None)             => result.getOrElse(throw new IllegalArgumentException("Action returned null"))
+    // It is not possible to return a valid value of type U at this point so the rest of code should return Nothing
+    actionExceptionOpt match {
+      case Some(ex) => throw ex
+      case None     => throw new IllegalArgumentException("Unreachable code")
     }
   }
 }
