@@ -34,9 +34,9 @@ import za.co.absa.pramen.core.rdb.PramenDb
 import java.time.LocalDate
 
 /**
-  * A bookkeeper is responsible of querying and updating state of all tables related to an ingestion pipeline.
+  * A bookkeeper is responsible for querying and updating state of all tables related to an ingestion pipeline.
   */
-trait Bookkeeper {
+trait Bookkeeper extends AutoCloseable {
   val bookkeepingEnabled: Boolean
 
   def getLatestProcessedDate(table: String, until: Option[LocalDate] = None): Option[LocalDate]
@@ -50,6 +50,19 @@ trait Bookkeeper {
   def getDataAvailability(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability]
 
   def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
+
+  /**
+    * Deletes tables matching the given wildcard pattern. The wildcard pattern is expected
+    * according to this syntax: 'my_table_prefix_*'. Only '*' is supported at the moment.
+    *
+    * The method deletes just the metadata about selected tables in every bookeeping table except
+    * journal, which is used for logging only.
+    *
+    * @param tableWithWildcard A string representing the name or pattern of the tables
+    *                          to be deleted.
+    * @return A sequence of strings representing the names of the tables that were successfully deleted.
+    */
+  def deleteTable(tableWithWildcard: String): Seq[String]
 
   private[pramen] def setRecordCount(table: String,
                                      infoDate: LocalDate,

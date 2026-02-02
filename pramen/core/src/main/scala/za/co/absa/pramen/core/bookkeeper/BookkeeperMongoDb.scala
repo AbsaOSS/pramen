@@ -151,6 +151,8 @@ class BookkeeperMongoDb(mongoDbConnection: MongoDbConnection, batchId: Long) ext
     }
   }
 
+  override def deleteTable(tableWithWildcard: String): Seq[String] = ???
+
   private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Bson = {
     val baseFilter = (infoDateBeginOpt, infoDateEndOpt) match {
       case (Some(infoDateBegin), Some(infoDateEnd)) =>

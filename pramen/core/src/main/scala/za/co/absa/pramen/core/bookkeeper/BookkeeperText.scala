@@ -202,4 +202,6 @@ class BookkeeperText(bookkeepingPath: String, batchId: Long)(implicit spark: Spa
     // No-op: CSV-based storage doesn't support efficient in-place deletion.
     // Cross-batch replacement is not supported for BookkeeperText.
   }
+
+  override def deleteTable(tableWithWildcard: String): Seq[String] = ???
 }

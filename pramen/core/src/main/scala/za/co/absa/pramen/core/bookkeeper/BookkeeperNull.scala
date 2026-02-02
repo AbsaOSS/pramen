@@ -53,4 +53,6 @@ class BookkeeperNull() extends BookkeeperBase(false, 0L) {
   override def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit = {}
 
   override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {}
+
+  override def deleteTable(tableWithWildcard: String): Seq[String] = Seq.empty
 }
