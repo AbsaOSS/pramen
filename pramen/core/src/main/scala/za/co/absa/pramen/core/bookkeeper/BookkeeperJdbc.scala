@@ -181,9 +181,11 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     val hasWildcard = tableName.contains("*")
 
     val escape = '\\'
+    val tableNameTrimmed = tableName.trim
     val baseEscaped = tableName.trim
       .replace("\\", "\\\\")
       .replace("%", "\\%")
+      .replace("_", "\\_")
 
     val tableNameEscaped = if (hasWildcard) baseEscaped.replace("*", "%") else baseEscaped
 
@@ -195,10 +197,10 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     val patternForLogging = if (hasWildcard)
       s"'$likePattern'"
     else
-      s"'$tableNameEscaped' or '$likePattern'"
+      s"'$tableNameTrimmed' or '$likePattern'"
 
     val listQuery = BookkeepingRecords.records
-      .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
+      .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .map(_.pramenTableName)
       .distinct
 
@@ -208,7 +210,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
       throw new IllegalArgumentException(s"The table wildcard '$tableName' matches more than 100 tables (${tablesToDelete.length}). To avoid accidental deletions, please refine the wildcard.")
 
     val deletionQuery = BookkeepingRecords.records
-      .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+      .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .delete
 
     try {
@@ -216,26 +218,26 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
       log.info(s"Deleted $deletedBkCount records from the bookkeeping table for tables matching $patternForLogging: ${tablesToDelete.mkString(", ")}")
 
       val deletedSchemaCount = SlickUtils.executeAction(db, SchemaRecords.records
-        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
+        .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedSchemaCount records from the schemas table.")
 
       val deletedOffsetsCount = SlickUtils.executeAction(db, OffsetRecords.records
-        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
+        .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedOffsetsCount records from the offsets table.")
 
       val deletedMetadataCount = SlickUtils.executeAction(db, MetadataRecords.records
-        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
+        .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedMetadataCount records from the metadata table.")
 
       tablesToDelete
     } catch {
-      case NonFatal(ex) => throw new RuntimeException(s"Unable to delete records from the bookkeeping table for tables matching '$likePattern'.", ex)
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to delete records from the bookkeeping table for tables matching '$patternForLogging'.", ex)
     }
   }
 
