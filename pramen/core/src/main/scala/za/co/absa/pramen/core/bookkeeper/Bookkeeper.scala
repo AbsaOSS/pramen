@@ -55,7 +55,7 @@ trait Bookkeeper extends AutoCloseable {
     * Deletes tables matching the given wildcard pattern. The wildcard pattern is expected
     * according to this syntax: 'my_table_prefix_*'. Only '*' is supported at the moment.
     *
-    * The method deletes just the metadata about selected tables in every bookeeping table except
+    * The method deletes just the metadata about selected tables in every bookkeeping table except
     * journal, which is used for logging only.
     *
     * @param tableWithWildcard A string representing the name or pattern of the tables
