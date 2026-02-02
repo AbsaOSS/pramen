@@ -30,6 +30,7 @@ import za.co.absa.pramen.core.utils.SlickUtils.WARN_IF_LONGER_MS
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, SlickUtils, TimeUtils}
 
 import java.time.LocalDate
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.control.NonFatal
 
 class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends BookkeeperBase(true, batchId) {
@@ -38,7 +39,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(db, batchId))
-  @volatile private var isClosed = false
+  private val isClosed = new AtomicBoolean(false)
 
   override val bookkeepingEnabled: Boolean = true
 
@@ -178,10 +179,13 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
 
   override def deleteTable(tableName: String): Seq[String] = {
     val hasWildcard = tableName.contains("*")
-    val tableNameEscaped = if (hasWildcard)
-      tableName.trim.replace("%", "\\%").replace('*', '%')
-    else
-      tableName.trim.replace("%", "\\%")
+
+    val escape = '\\'
+    val baseEscaped = tableName.trim
+      .replace("\\", "\\\\")
+      .replace("%", "\\%")
+
+    val tableNameEscaped = if (hasWildcard) baseEscaped.replace("*", "%") else baseEscaped
 
     val likePattern = if (!hasWildcard)
       tableNameEscaped + "->%"
@@ -194,7 +198,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
       s"'$tableNameEscaped' or '$likePattern'"
 
     val listQuery = BookkeepingRecords.records
-      .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+      .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
       .map(_.pramenTableName)
       .distinct
 
@@ -212,19 +216,19 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
       log.info(s"Deleted $deletedBkCount records from the bookkeeping table for tables matching $patternForLogging: ${tablesToDelete.mkString(", ")}")
 
       val deletedSchemaCount = SlickUtils.executeAction(db, SchemaRecords.records
-        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedSchemaCount records from the schemas table.")
 
       val deletedOffsetsCount = SlickUtils.executeAction(db, OffsetRecords.records
-        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedOffsetsCount records from the offsets table.")
 
       val deletedMetadataCount = SlickUtils.executeAction(db, MetadataRecords.records
-        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedMetadataCount records from the metadata table.")
@@ -236,9 +240,8 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
   }
 
   override def close(): Unit = {
-    if (!isClosed) {
+    if (isClosed.compareAndSet(false, true)) {
       db.close()
-      isClosed = true
     }
   }
 

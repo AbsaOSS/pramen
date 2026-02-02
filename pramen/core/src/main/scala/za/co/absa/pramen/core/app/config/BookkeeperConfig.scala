@@ -65,7 +65,7 @@ object BookkeeperConfig {
     } else {
       if (bookkeepingEnabled && bookkeepingConnectionString.isEmpty && bookkeepingLocation.isEmpty && bookkeepingJdbcConfig.isEmpty) {
         if (allowLocalBookkepingStorage) {
-          log.warn("Bookeeping configuration is missing. Using the default SQLite database 'pramen.sqlite'")
+          log.warn("Bookkeeping configuration is missing. Using the default SQLite database 'pramen.sqlite'")
           return BookkeeperConfig(
             bookkeepingEnabled = true,
             None,

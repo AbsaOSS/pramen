@@ -164,7 +164,7 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
       tableName.trim.replace(".", "\\.").replace("%", "\\%").replace("*", "\\*")
 
     val likePattern = if (!hasWildcard)
-      tableNameEscaped + "->%"
+      tableNameEscaped + "->*."
     else
       tableNameEscaped
 
