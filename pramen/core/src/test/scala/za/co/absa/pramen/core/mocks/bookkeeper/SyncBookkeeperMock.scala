@@ -156,5 +156,29 @@ class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
     schemas += table -> (infoDate, tableSchema)
   }
 
+  override def deleteTable(tableName: String): Seq[String] = {
+    val hasWildcard = tableName.contains("*")
+    val tableNameEscaped = if (hasWildcard)
+      tableName.trim.replace(".", "\\.").replace("%", ".*").replace("*", ".*")
+    else
+      tableName.trim.replace(".", "\\.").replace("%", "\\%").replace("*", "\\*")
+
+    val likePattern = if (!hasWildcard)
+      tableNameEscaped + "->%"
+    else
+      tableNameEscaped
+
+
+    val keysToDelete = chunks.keys.filter { case (tblName, _) =>
+      tblName.matches(likePattern) || tblName.matches(tableNameEscaped)
+    }.toList
+
+    keysToDelete.foreach(chunks.remove)
+
+    keysToDelete.map(_._1).distinct
+  }
+
   override private[pramen] def getOffsetManager: OffsetManager = null
+
+  override def close(): Unit = {}
 }

@@ -38,6 +38,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(db, batchId))
+  @volatile private var isClosed = false
 
   override val bookkeepingEnabled: Boolean = true
 
@@ -172,6 +173,72 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
       }
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to delete non-current batch records from the bookkeeping table.", ex)
+    }
+  }
+
+  override def deleteTable(tableName: String): Seq[String] = {
+    val hasWildcard = tableName.contains("*")
+    val tableNameEscaped = if (hasWildcard)
+      tableName.trim.replace("%", "\\%").replace('*', '%')
+    else
+      tableName.trim.replace("%", "\\%")
+
+    val likePattern = if (!hasWildcard)
+      tableNameEscaped + "->%"
+    else
+      tableNameEscaped
+
+    val patternForLogging = if (hasWildcard)
+      s"'$likePattern'"
+    else
+      s"'$tableNameEscaped' or '$likePattern'"
+
+    val listQuery = BookkeepingRecords.records
+      .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+      .map(_.pramenTableName)
+      .distinct
+
+    val tablesToDelete = SlickUtils.executeQuery(db, listQuery).sorted
+
+    if (tablesToDelete.length > 100)
+      throw new IllegalArgumentException(s"The table wildcard '$tableName' matches more than 100 tables (${tablesToDelete.length}). To avoid accidental deletions, please refine the wildcard.")
+
+    val deletionQuery = BookkeepingRecords.records
+      .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+      .delete
+
+    try {
+      val deletedBkCount = SlickUtils.executeAction(db, deletionQuery)
+      log.info(s"Deleted $deletedBkCount records from the bookkeeping table for tables matching $patternForLogging: ${tablesToDelete.mkString(", ")}")
+
+      val deletedSchemaCount = SlickUtils.executeAction(db, SchemaRecords.records
+        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+        .delete
+      )
+      log.info(s"Deleted $deletedSchemaCount records from the schemas table.")
+
+      val deletedOffsetsCount = SlickUtils.executeAction(db, OffsetRecords.records
+        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+        .delete
+      )
+      log.info(s"Deleted $deletedOffsetsCount records from the offsets table.")
+
+      val deletedMetadataCount = SlickUtils.executeAction(db, MetadataRecords.records
+        .filter(r => r.pramenTableName === tableNameEscaped || r.pramenTableName.like(likePattern))
+        .delete
+      )
+      log.info(s"Deleted $deletedMetadataCount records from the metadata table.")
+
+      tablesToDelete
+    } catch {
+      case NonFatal(ex) => throw new RuntimeException(s"Unable to delete records from the bookkeeping table for tables matching '$likePattern'.", ex)
+    }
+  }
+
+  override def close(): Unit = {
+    if (!isClosed) {
+      db.close()
+      isClosed = true
     }
   }
 

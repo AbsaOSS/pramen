@@ -38,6 +38,8 @@ abstract class BookkeeperBase(isBookkeepingEnabled: Boolean, batchId: Long) exte
 
   def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit
 
+  override def close(): Unit = {}
+
   private[pramen] def saveRecordCountToStorage(table: String,
                                                infoDate: LocalDate,
                                                inputRecordCount: Long,

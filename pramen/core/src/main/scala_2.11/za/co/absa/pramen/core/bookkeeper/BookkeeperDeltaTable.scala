@@ -95,6 +95,8 @@ class BookkeeperDeltaTable(database: Option[String],
       .saveAsTable(pathOrTable)
   }
 
+  override def deleteTable(tableWithWildcard: String): Seq[String] = ???
+
   def init(): Unit = {
     initRecordsDirectory()
     initSchemasDirectory()

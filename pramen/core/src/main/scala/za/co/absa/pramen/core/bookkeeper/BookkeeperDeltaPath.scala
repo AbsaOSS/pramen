@@ -105,6 +105,8 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
       .save(pathOrTable)
   }
 
+  override def deleteTable(tableWithWildcard: String): Seq[String] = ???
+
   private def init(): Unit = {
     initRecordsDirectory(recordsPath)
     initSchemasDirectory(schemasPath)
