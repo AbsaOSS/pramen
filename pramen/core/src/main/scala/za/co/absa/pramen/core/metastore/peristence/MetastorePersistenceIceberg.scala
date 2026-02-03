@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{CatalogTable, PartitionScheme}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
+import za.co.absa.pramen.core.utils.CatalogUtils
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
 import java.sql.Date
@@ -57,7 +58,7 @@ class MetastorePersistenceIceberg(table: CatalogTable,
       case _ => (false, "Writing to")
     }
 
-    val tableExists = doesTableExist(table)
+    val tableExists = CatalogUtils.doesTableExist(table)
 
     if (tableExists) {
       log.info(s"$operationStr to table $fullTableName...")
@@ -104,29 +105,6 @@ class MetastorePersistenceIceberg(table: CatalogTable,
                                queryExecutor: QueryExecutor,
                                hiveConfig: HiveConfig): Unit = {
     throw new UnsupportedOperationException("Iceberg only operates on tables in a catalog. Separate Hive options are not supported.")
-  }
-
-  def doesTableExist(catalogTable: CatalogTable)(implicit spark: SparkSession): Boolean = {
-    getExistingTable(catalogTable).isDefined
-  }
-
-  def getExistingTable(catalogTable: CatalogTable)(implicit spark: SparkSession): Option[DataFrame] = {
-    try {
-      val df = spark.table(catalogTable.getFullTableName)
-      // Force analysis to surface TABLE_OR_VIEW_NOT_FOUND at this point.
-      // Technically, not needed, but Spark can potentially skip analysis until the schema is requested.
-      val _ = df.schema
-      Some(df)
-    } catch {
-      // This is a common error
-      case ex: AnalysisException if ex.getMessage().contains("Table or view not found") || ex.getMessage().contains("TABLE_OR_VIEW_NOT_FOUND") =>
-        None
-      // This is the exception, needs to be re-thrown.
-      case ex: AnalysisException if ex.getMessage().contains("TableType cannot be null for table:") =>
-        throw new IllegalArgumentException("Attempt to use a catalog not supported by the file format. " +
-          "Ensure you are using the iceberg catalog and/or it is set as the default catalog with (spark.sql.defaultCatalog) " +
-          "or the catalog is specified explicitly as the table name.", ex)
-    }
   }
 
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
@@ -187,5 +165,4 @@ object MetastorePersistenceIceberg {
         throw new UnsupportedOperationException(s"Partition scheme $partitionScheme is not supported for adding generated columns.")
     }
   }
-
 }
