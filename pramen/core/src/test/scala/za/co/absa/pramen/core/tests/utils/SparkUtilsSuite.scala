@@ -105,19 +105,19 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
   }
 
   "sanitizeDfColumns()" should {
-    "rename spaces of input dataframe columns" in {
+    "trim leading and trailing spaces, and rename spaces in the middle of input dataframe columns" in {
       val expected =
       """[ {
         |  "a_a" : "A",
-        |  "_b_" : 1,
+        |  "b" : 1,
         |  "c" : 4
         |}, {
         |  "a_a" : "B",
-        |  "_b_" : 2,
+        |  "b" : 2,
         |  "c" : 5
         |}, {
         |  "a_a" : "C",
-        |  "_b_" : 3,
+        |  "b" : 3,
         |  "c" : 6
         |} ]"""
 

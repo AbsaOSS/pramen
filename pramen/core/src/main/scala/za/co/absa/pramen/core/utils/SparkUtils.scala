@@ -125,9 +125,9 @@ object SparkUtils {
 
     val fieldsToSelect = df.schema.fields.map(field => {
       val srcName = field.name
-      val trgName = replaceSpecialChars(if(hasTablePrefix) removeTablePrefix(srcName) else srcName)
+      val trgName = replaceSpecialChars(if(hasTablePrefix) removeTablePrefix(srcName.trim) else srcName.trim)
       if (srcName != trgName) {
-        log.info(s"Renamed column: $srcName -> $trgName")
+        log.info(s"Renamed column: '$srcName' -> '$trgName''")
         col(s"`$srcName`").as(trgName)
       } else {
         col(s"`$srcName`")
