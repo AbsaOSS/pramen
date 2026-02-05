@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.rdb
 
+import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import slick.jdbc.JdbcBackend.Database
 import slick.jdbc.{JdbcBackend, JdbcProfile}
@@ -142,11 +143,12 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
 object PramenDb {
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val conf = ConfigFactory.load()
 
   val MODEL_VERSION = 9
-  val DEFAULT_RETRIES = 3
-  val BACKOFF_MIN_MS = 10000
-  val BACKOFF_MAX_MS = 60000
+  val DEFAULT_RETRIES: Int = conf.getInt("pramen.internal.connection.retries.default")
+  val BACKOFF_MIN_MS: Int = conf.getInt("pramen.internal.connection.backoff.min.ms")
+  val BACKOFF_MAX_MS: Int = conf.getInt("pramen.internal.connection.backoff.max.ms")
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
     val (url, connection) = getConnection(jdbcConfig)
