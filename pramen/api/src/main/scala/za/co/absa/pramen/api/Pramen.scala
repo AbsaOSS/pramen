@@ -16,11 +16,13 @@
 
 package za.co.absa.pramen.api
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigFactory}
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.{BuildPropertiesRetriever, FactoryLoader}
 import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
+
+import scala.util.Try
 
 /**
   * Pramen provides additional features via a client that you can access like this:
@@ -78,5 +80,23 @@ trait Pramen {
 object Pramen {
   val PRAMEN_NOTIFICATION_BUILDER_FACTORY_CLASS = "za.co.absa.pramen.core.PramenImpl"
 
+  /**
+    * Returns the instance of Pramen client.
+    * Projects can depend only on `pramen-api`, but the implementation of this interface is in `pramen-core`.
+    * IllegalArgumentException will be thrown if `pramen-core` is not in the runtime classpath or if the implementation
+    * class cannot be loaded for some reason.
+    */
   lazy val instance: Pramen = FactoryLoader.loadSingletonFactoryOfType[PramenFactory](PRAMEN_NOTIFICATION_BUILDER_FACTORY_CLASS).instance
+
+  /**
+    * Returns the configuration of the currently running workflow.
+    *
+    * If no workflow is running at the moment, returns the default TypeSafe config
+    * which combines reference.conf and application.conf.
+    */
+  def getConfig: Config = {
+    Try {
+      Pramen.instance.workflowConfig
+    }.toOption.getOrElse(ConfigFactory.load())
+  }
 }
