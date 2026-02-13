@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.bookkeeper.model
 
 import slick.jdbc.JdbcProfile
 
-trait BookkeepingTables {
+trait BookkeepingTable {
   val profile: JdbcProfile
   import profile.api._
 
