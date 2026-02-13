@@ -33,33 +33,38 @@ import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.control.NonFatal
 
-class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends BookkeeperBase(true, batchId) {
-  import profile.api._
+class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) extends BookkeeperBase(true, batchId) {
+  import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(db, batchId))
   private val isClosed = new AtomicBoolean(false)
+  private val bookkeepingRecords = new BookkeepingTables {
+    override val profile = slickProfile
+  }
+
 
   override val bookkeepingEnabled: Boolean = true
 
   override def getLatestProcessedDateFromStorage(table: String, until: Option[LocalDate]): Option[LocalDate] = {
+
     val query = until match {
       case Some(endDate) =>
         val endDateStr = DataChunk.dateFormatter.format(endDate)
-        BookkeepingRecords.records
+        bookkeepingRecords.records
           .filter(r => r.pramenTableName === table && r.infoDate <= endDateStr)
           .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
       case None          =>
-        BookkeepingRecords.records
+        bookkeepingRecords.records
           .filter(r => r.pramenTableName === table)
           .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
     }
 
     val chunks = try {
-      SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
+      SlickUtils.executeQuery(db, query)
         .map(DataChunk.fromRecord)
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
@@ -77,7 +82,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     val query = getFilter(table, Option(infoDate), Option(infoDate), batchId)
 
     try {
-      SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
+      SlickUtils.executeQuery(db, query)
         .map(DataChunk.fromRecord)
         .toArray[DataChunk]
         .sortBy(_.jobFinished)
@@ -92,7 +97,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
       .take(1)
 
     try {
-      val records = SlickUtils.executeQuery[BookkeepingRecords, BookkeepingRecord](db, query)
+      val records = SlickUtils.executeQuery(db, query)
         .map(DataChunk.fromRecord)
         .toArray[DataChunk]
 
@@ -150,7 +155,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     try {
       SlickUtils.ensureDbConnected(db)
       db.run(
-        BookkeepingRecords.records += record
+        bookkeepingRecords.records += record
       ).execute()
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to write to the bookkeeping table.", ex)
@@ -160,7 +165,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
   override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val query = BookkeepingRecords.records
+    val query = bookkeepingRecords.records
       .filter(r => r.pramenTableName === table && r.infoDate === dateStr && r.batchId =!= Option(batchId))
       .delete
 
@@ -199,7 +204,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     else
       s"'$tableNameTrimmed' or '$likePattern'"
 
-    val listQuery = BookkeepingRecords.records
+    val listQuery = bookkeepingRecords.records
       .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .map(_.pramenTableName)
       .distinct
@@ -209,7 +214,7 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     if (tablesToDelete.length > 100)
       throw new IllegalArgumentException(s"The table wildcard '$tableName' matches more than 100 tables (${tablesToDelete.length}). To avoid accidental deletions, please refine the wildcard.")
 
-    val deletionQuery = BookkeepingRecords.records
+    val deletionQuery = bookkeepingRecords.records
       .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .delete
 
@@ -251,31 +256,31 @@ class BookkeeperJdbc(db: Database, profile: JdbcProfile, batchId: Long) extends 
     offsetManagement
   }
 
-  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[BookkeepingRecords, BookkeepingRecord, Seq] = {
+  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[bookkeepingRecords.BookkeepingRecords, BookkeepingRecord, Seq] = {
     val baseFilter = (infoDateBeginOpt, infoDateEndOpt) match {
       case (Some(infoDateBegin), Some(infoDateEnd)) =>
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
         val date1Str = DataChunk.dateFormatter.format(infoDateEnd)
 
         if (date0Str == date1Str) {
-          BookkeepingRecords.records
+          bookkeepingRecords.records
             .filter(r => r.pramenTableName === tableName && r.infoDate === date0Str)
         } else {
-          BookkeepingRecords.records
+          bookkeepingRecords.records
             .filter(r => r.pramenTableName === tableName && r.infoDate >= date0Str && r.infoDate <= date1Str)
         }
       case (Some(infoDateBegin), None) =>
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
 
-        BookkeepingRecords.records
+        bookkeepingRecords.records
           .filter(r => r.pramenTableName === tableName && r.infoDate >= date0Str)
       case (None, Some(infoDateEnd)) =>
         val date1Str = DataChunk.dateFormatter.format(infoDateEnd)
 
-        BookkeepingRecords.records
+        bookkeepingRecords.records
           .filter(r => r.pramenTableName === tableName && r.infoDate <= date1Str)
       case (None, None) =>
-        BookkeepingRecords.records
+        bookkeepingRecords.records
           .filter(r => r.pramenTableName === tableName)
     }
 

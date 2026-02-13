@@ -16,12 +16,12 @@
 
 package za.co.absa.pramen.core.rdb
 
-import com.typesafe.config.ConfigFactory
 import org.slf4j.LoggerFactory
 import slick.jdbc.JdbcBackend.Database
 import slick.jdbc.{JdbcBackend, JdbcProfile}
 import slick.util.AsyncExecutor
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, MetadataRecords, OffsetRecords, SchemaRecords}
+import za.co.absa.pramen.api.Pramen
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTables, MetadataRecords, OffsetRecords, SchemaRecords}
 import za.co.absa.pramen.core.journal.model.JournalTasks
 import za.co.absa.pramen.core.lock.model.LockTickets
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
@@ -36,11 +36,15 @@ import scala.util.control.NonFatal
 class PramenDb(val jdbcConfig: JdbcConfig,
                val activeUrl: String,
                val slickDb: Database,
-               val profile: JdbcProfile) extends AutoCloseable {
+               val slickProfile: JdbcProfile) extends AutoCloseable {
   def db: Database = slickDb
 
-  import profile.api._
+  import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
+
+  private val bookkeepingRecords = new BookkeepingTables {
+    override val profile = slickProfile
+  }
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -64,7 +68,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (dbVersion < 1) {
       initTable(LockTickets.lockTickets.schema)
       initTable(JournalTasks.journalTasks.schema)
-      initTable(BookkeepingRecords.records.schema)
+      initTable(bookkeepingRecords.records.schema)
     }
     if (dbVersion < 2) {
       initTable(SchemaRecords.records.schema)
@@ -98,13 +102,13 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
 
     if (0 < dbVersion && dbVersion < 9) {
-      addColumn(BookkeepingRecords.records.baseTableRow.tableName, "batch_id", "bigint")
-      addColumn(BookkeepingRecords.records.baseTableRow.tableName, "appended_record_count", "bigint")
+      addColumn(bookkeepingRecords.records.baseTableRow.tableName, "batch_id", "bigint")
+      addColumn(bookkeepingRecords.records.baseTableRow.tableName, "appended_record_count", "bigint")
       addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "batch_id", "bigint")
     }
   }
 
-  private def initTable(schema: profile.SchemaDescription): Unit = {
+  private def initTable(schema: slickProfile.SchemaDescription): Unit = {
     try {
       db.run(DBIO.seq(
         schema.createIfNotExists
@@ -143,7 +147,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
 object PramenDb {
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val conf = ConfigFactory.load()
+  private val conf = Pramen.getConfig
 
   val MODEL_VERSION = 9
   val DEFAULT_RETRIES: Int = conf.getInt("pramen.internal.connection.retries.default")
