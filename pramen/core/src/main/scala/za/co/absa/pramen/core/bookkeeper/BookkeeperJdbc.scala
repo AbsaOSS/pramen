@@ -38,12 +38,14 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(db, batchId))
+  private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(db, slickProfile, batchId))
   private val isClosed = new AtomicBoolean(false)
-  private val bookkeepingRecords = new BookkeepingTables {
+  private val bookkeepingTable = new BookkeepingTable {
     override val profile = slickProfile
   }
-
+  private val offsetTable = new OffsetTable {
+    override val profile = slickProfile
+  }
 
   override val bookkeepingEnabled: Boolean = true
 
@@ -52,12 +54,12 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     val query = until match {
       case Some(endDate) =>
         val endDateStr = DataChunk.dateFormatter.format(endDate)
-        bookkeepingRecords.records
+        bookkeepingTable.records
           .filter(r => r.pramenTableName === table && r.infoDate <= endDateStr)
           .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
       case None          =>
-        bookkeepingRecords.records
+        bookkeepingTable.records
           .filter(r => r.pramenTableName === table)
           .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
@@ -155,7 +157,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     try {
       SlickUtils.ensureDbConnected(db)
       db.run(
-        bookkeepingRecords.records += record
+        bookkeepingTable.records += record
       ).execute()
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to write to the bookkeeping table.", ex)
@@ -165,7 +167,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
   override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val query = bookkeepingRecords.records
+    val query = bookkeepingTable.records
       .filter(r => r.pramenTableName === table && r.infoDate === dateStr && r.batchId =!= Option(batchId))
       .delete
 
@@ -204,7 +206,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     else
       s"'$tableNameTrimmed' or '$likePattern'"
 
-    val listQuery = bookkeepingRecords.records
+    val listQuery = bookkeepingTable.records
       .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .map(_.pramenTableName)
       .distinct
@@ -214,7 +216,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     if (tablesToDelete.length > 100)
       throw new IllegalArgumentException(s"The table wildcard '$tableName' matches more than 100 tables (${tablesToDelete.length}). To avoid accidental deletions, please refine the wildcard.")
 
-    val deletionQuery = bookkeepingRecords.records
+    val deletionQuery = bookkeepingTable.records
       .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .delete
 
@@ -228,7 +230,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
       )
       log.info(s"Deleted $deletedSchemaCount records from the schemas table.")
 
-      val deletedOffsetsCount = SlickUtils.executeAction(db, OffsetRecords.records
+      val deletedOffsetsCount = SlickUtils.executeAction(db, offsetTable.records
         .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
         .delete
       )
@@ -256,31 +258,31 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     offsetManagement
   }
 
-  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[bookkeepingRecords.BookkeepingRecords, BookkeepingRecord, Seq] = {
+  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[bookkeepingTable.BookkeepingRecords, BookkeepingRecord, Seq] = {
     val baseFilter = (infoDateBeginOpt, infoDateEndOpt) match {
       case (Some(infoDateBegin), Some(infoDateEnd)) =>
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
         val date1Str = DataChunk.dateFormatter.format(infoDateEnd)
 
         if (date0Str == date1Str) {
-          bookkeepingRecords.records
+          bookkeepingTable.records
             .filter(r => r.pramenTableName === tableName && r.infoDate === date0Str)
         } else {
-          bookkeepingRecords.records
+          bookkeepingTable.records
             .filter(r => r.pramenTableName === tableName && r.infoDate >= date0Str && r.infoDate <= date1Str)
         }
       case (Some(infoDateBegin), None) =>
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
 
-        bookkeepingRecords.records
+        bookkeepingTable.records
           .filter(r => r.pramenTableName === tableName && r.infoDate >= date0Str)
       case (None, Some(infoDateEnd)) =>
         val date1Str = DataChunk.dateFormatter.format(infoDateEnd)
 
-        bookkeepingRecords.records
+        bookkeepingTable.records
           .filter(r => r.pramenTableName === tableName && r.infoDate <= date1Str)
       case (None, None) =>
-        bookkeepingRecords.records
+        bookkeepingTable.records
           .filter(r => r.pramenTableName === tableName)
     }
 

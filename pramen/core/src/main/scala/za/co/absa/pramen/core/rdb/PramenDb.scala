@@ -21,7 +21,7 @@ import slick.jdbc.JdbcBackend.Database
 import slick.jdbc.{JdbcBackend, JdbcProfile}
 import slick.util.AsyncExecutor
 import za.co.absa.pramen.api.Pramen
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTables, MetadataRecords, OffsetRecords, SchemaRecords}
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTable, MetadataRecords, OffsetTable, SchemaRecords}
 import za.co.absa.pramen.core.journal.model.JournalTasks
 import za.co.absa.pramen.core.lock.model.LockTickets
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
@@ -42,7 +42,10 @@ class PramenDb(val jdbcConfig: JdbcConfig,
   import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
-  private val bookkeepingRecords = new BookkeepingTables {
+  private val bookkeepingTable = new BookkeepingTable {
+    override val profile = slickProfile
+  }
+  private val offsetTable = new OffsetTable {
     override val profile = slickProfile
   }
 
@@ -68,7 +71,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (dbVersion < 1) {
       initTable(LockTickets.lockTickets.schema)
       initTable(JournalTasks.journalTasks.schema)
-      initTable(bookkeepingRecords.records.schema)
+      initTable(bookkeepingTable.records.schema)
     }
     if (dbVersion < 2) {
       initTable(SchemaRecords.records.schema)
@@ -86,7 +89,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
 
     if (dbVersion < 5) {
-      initTable(OffsetRecords.records.schema)
+      initTable(offsetTable.records.schema)
     }
 
     if (0 < dbVersion && dbVersion < 6) {
@@ -102,8 +105,8 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
 
     if (0 < dbVersion && dbVersion < 9) {
-      addColumn(bookkeepingRecords.records.baseTableRow.tableName, "batch_id", "bigint")
-      addColumn(bookkeepingRecords.records.baseTableRow.tableName, "appended_record_count", "bigint")
+      addColumn(bookkeepingTable.records.baseTableRow.tableName, "batch_id", "bigint")
+      addColumn(bookkeepingTable.records.baseTableRow.tableName, "appended_record_count", "bigint")
       addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "batch_id", "bigint")
     }
   }
