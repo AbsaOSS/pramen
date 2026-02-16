@@ -25,6 +25,7 @@ import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotific
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
+import za.co.absa.pramen.core.exceptions.OsSignalException
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
@@ -212,10 +213,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     override def run(): Unit = {
       if (!exitedNormally && !isFinished) {
         if (failureException.isEmpty && signalException.isEmpty) {
-          setFailureException(new IllegalStateException("The application exited unexpectedly."))
-
           val nonDaemonStackTraces = JvmUtils.getStackTraces
           val renderedStackTraces = JvmUtils.renderStackTraces(nonDaemonStackTraces)
+
+          setFailureException(OsSignalException("System.exit()", nonDaemonStackTraces))
 
           log.error("Stack traces at the moment of the unexpected exit:\n" + renderedStackTraces)
         }
