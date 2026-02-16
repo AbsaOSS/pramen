@@ -17,8 +17,9 @@
 package za.co.absa.pramen.core.lock
 
 import org.slf4j.LoggerFactory
-import slick.jdbc.PostgresProfile.api._
-import za.co.absa.pramen.core.lock.model.{LockTicket, LockTickets}
+import slick.jdbc.JdbcBackend.Database
+import slick.jdbc.JdbcProfile
+import za.co.absa.pramen.core.lock.model.{LockTicket, LockTicketTable}
 import za.co.absa.pramen.core.utils.SlickUtils
 
 import java.sql.SQLIntegrityConstraintViolationException
@@ -27,16 +28,22 @@ import java.time.temporal.ChronoUnit
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
-class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
+class TokenLockJdbc(token: String, db: Database, slickProfile: JdbcProfile) extends TokenLockBase(token) {
+  import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val TICKETS_HARD_EXPIRE_DAYS = 1
 
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val slickUtils = new SlickUtils(slickProfile)
+
+  private val lockTicketTable = new LockTicketTable {
+    override val profile = slickProfile
+  }
 
   /** Invoked from a synchronized block. */
   override def tryAcquireGuardLock(retries: Int = 3, thisTry: Int = 0): Boolean = {
-    SlickUtils.ensureDbConnected(db)
+    slickUtils.ensureDbConnected(db)
 
     def tryAcquireExistingTicket(): Boolean = {
       val ticket = getTicket
@@ -84,9 +91,9 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
       val now = Instant.now()
       val nowEpoch = now.getEpochSecond
       val hardExpireTickets = now.minus(TICKETS_HARD_EXPIRE_DAYS, ChronoUnit.DAYS).getEpochSecond
-      SlickUtils.executeAction(
+      slickUtils.executeAction(
         db,
-        LockTickets.lockTickets
+        lockTicketTable.records
           .filter(ticket => (ticket.token === escapedToken && ticket.owner === owner) ||
             (ticket.createdAt.isDefined && ticket.createdAt < hardExpireTickets && ticket.expires < nowEpoch)).delete
       )
@@ -102,7 +109,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
     try {
       log.debug(s"Update $escapedToken to $newTicket")
 
-      db.run(LockTickets.lockTickets
+      db.run(lockTicketTable.records
           .filter(_.token === escapedToken)
           .map(_.expires)
           .update(newTicket))
@@ -115,8 +122,8 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
 
   /** Invoked from a synchronized block. */
   private def getTicket: Option[LockTicket] = {
-    val ticket = SlickUtils.executeQuery(db,
-      LockTickets.lockTickets
+    val ticket = slickUtils.executeQuery(db,
+      lockTicketTable.records
         .filter(_.token === escapedToken))
     ticket.headOption
   }
@@ -125,7 +132,7 @@ class TokenLockJdbc(token: String, db: Database) extends TokenLockBase(token) {
   private def acquireGuardLock(): Unit = {
     val now = Instant.now().getEpochSecond
     db.run(DBIO.seq(
-      LockTickets.lockTickets += LockTicket(escapedToken, owner, expires = getNewTicket, createdAt = Option(now))
+      lockTicketTable.records += LockTicket(escapedToken, owner, expires = getNewTicket, createdAt = Option(now))
     )).execute()
   }
 }

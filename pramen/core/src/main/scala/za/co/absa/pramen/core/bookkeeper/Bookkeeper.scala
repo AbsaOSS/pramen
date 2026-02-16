@@ -100,7 +100,7 @@ object Bookkeeper {
     val tokenFactory = if (runtimeConfig.useLocks && bookkeepingConfig.bookkeepingEnabled) {
       if (hasBookkeepingJdbc) {
         log.info(s"Using RDB for lock management.")
-        new TokenLockFactoryJdbc(dbOpt.get.slickDb)
+        new TokenLockFactoryJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
       } else {
         mongoDbConnection match {
           case Some(connection) =>
@@ -160,7 +160,7 @@ object Bookkeeper {
       new JournalNull()
     } else if (hasBookkeepingJdbc) {
       log.info(s"Using RDB to keep journal of executed jobs.")
-      new JournalJdbc(dbOpt.get.slickDb)
+      new JournalJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
     } else {
       mongoDbConnection match {
         case Some(connection) =>
@@ -193,7 +193,7 @@ object Bookkeeper {
       new MetadataManagerNull(isPersistenceEnabled = false)
     } else if (hasBookkeepingJdbc) {
       log.info(s"Using RDB to keep custom metadata.")
-      new MetadataManagerJdbc(dbOpt.get.slickDb)
+      new MetadataManagerJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
     } else {
       log.info(s"The custom metadata management is not supported.")
       new MetadataManagerNull(isPersistenceEnabled = true)

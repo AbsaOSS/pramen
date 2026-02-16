@@ -17,21 +17,19 @@
 package za.co.absa.pramen.core.utils
 
 import org.slf4j.LoggerFactory
-import slick.dbio.Effect
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.JdbcProfile
 import slick.sql.SqlAction
 import za.co.absa.pramen.core.rdb.PramenDb
 
 import java.time.{Duration, Instant}
 import scala.util.control.NonFatal
 
-object SlickUtils {
-
+class SlickUtils(profile: JdbcProfile) {
+  import SlickUtils._
+  import profile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
-
-  val WARN_IF_LONGER_MS = 1000L
 
   /**
     * Synchronously executes a query against a JDBC connection.
@@ -187,4 +185,8 @@ object SlickUtils {
       db.run(check).execute()
     }
   }
+}
+
+object SlickUtils {
+  val WARN_IF_LONGER_MS = 1000L
 }
