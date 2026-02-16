@@ -17,19 +17,26 @@
 package za.co.absa.pramen.core.journal
 
 import org.slf4j.LoggerFactory
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.JdbcBackend.Database
+import slick.jdbc.JdbcProfile
 import za.co.absa.pramen.core.app.config.InfoDateConfig
-import za.co.absa.pramen.core.journal.model.{JournalTask, JournalTasks, TaskCompleted}
+import za.co.absa.pramen.core.journal.model.{JournalTable, JournalTask, TaskCompleted}
 import za.co.absa.pramen.core.utils.SlickUtils
 
 import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 
-class JournalJdbc(db: Database) extends Journal {
+class JournalJdbc(db: Database, slickProfile: JdbcProfile) extends Journal {
+  import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = InfoDateConfig.defaultDateFormatter
+  private val slickUtils = new SlickUtils(slickProfile)
+
+  private val journalTable = new JournalTable {
+    override val profile = slickProfile
+  }
 
   override def addEntry(entry: TaskCompleted): Unit = {
     val periodBegin = entry.periodBegin.format(dateFormatter)
@@ -60,9 +67,9 @@ class JournalJdbc(db: Database) extends Journal {
       Option(entry.batchId))
 
     try {
-      SlickUtils.ensureDbConnected(db)
+      slickUtils.ensureDbConnected(db)
       db.run(
-        JournalTasks.journalTasks += journalTask
+        journalTable.records += journalTask
       ).execute()
     } catch {
       case NonFatal(ex) => log.error(s"Unable to write to the journal table.", ex)
@@ -73,7 +80,7 @@ class JournalJdbc(db: Database) extends Journal {
     val fromSec = from.getEpochSecond
     val toSec = to.getEpochSecond
 
-    val entries = SlickUtils.executeQuery(db, JournalTasks.journalTasks.filter(d => d.finishedAt >= fromSec && d.finishedAt <= toSec ))
+    val entries = slickUtils.executeQuery(db, journalTable.records.filter(d => d.finishedAt >= fromSec && d.finishedAt <= toSec ))
 
     entries.map(v => {
       val recordCountOpt = if (v.inputRecordCount < 0) None else Option(v.inputRecordCount)

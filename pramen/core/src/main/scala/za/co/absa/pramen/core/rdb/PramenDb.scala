@@ -21,9 +21,9 @@ import slick.jdbc.JdbcBackend.Database
 import slick.jdbc.{JdbcBackend, JdbcProfile}
 import slick.util.AsyncExecutor
 import za.co.absa.pramen.api.Pramen
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTable, MetadataRecords, OffsetTable, SchemaRecords}
-import za.co.absa.pramen.core.journal.model.JournalTasks
-import za.co.absa.pramen.core.lock.model.LockTickets
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTable, MetadataTable, OffsetTable, SchemaTable}
+import za.co.absa.pramen.core.journal.model.JournalTable
+import za.co.absa.pramen.core.lock.model.LockTicketTable
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
@@ -42,10 +42,22 @@ class PramenDb(val jdbcConfig: JdbcConfig,
   import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
-  private val bookkeepingTable = new BookkeepingTable {
+  val bookkeepingTable: BookkeepingTable = new BookkeepingTable {
     override val profile = slickProfile
   }
-  private val offsetTable = new OffsetTable {
+  private val schemaTable = new SchemaTable {
+    override val profile = slickProfile
+  }
+  val offsetTable: OffsetTable = new OffsetTable {
+    override val profile = slickProfile
+  }
+  val journalTable: JournalTable = new JournalTable {
+    override val profile = slickProfile
+  }
+  val lockTicketTable: LockTicketTable = new LockTicketTable {
+    override val profile = slickProfile
+  }
+  val metadataTable: MetadataTable = new MetadataTable {
     override val profile = slickProfile
   }
 
@@ -69,23 +81,23 @@ class PramenDb(val jdbcConfig: JdbcConfig,
   private def initDatabase(dbVersion: Int): Unit = {
     log.warn(s"Initializing new database at $activeUrl")
     if (dbVersion < 1) {
-      initTable(LockTickets.lockTickets.schema)
-      initTable(JournalTasks.journalTasks.schema)
+      initTable(lockTicketTable.records.schema)
+      initTable(journalTable.records.schema)
       initTable(bookkeepingTable.records.schema)
     }
     if (dbVersion < 2) {
-      initTable(SchemaRecords.records.schema)
+      initTable(schemaTable.records.schema)
     }
     if (dbVersion < 3) {
-      initTable(MetadataRecords.records.schema)
+      initTable(metadataTable.records.schema)
     }
 
     if (0 < dbVersion && dbVersion < 4) {
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "spark_application_id", "varchar(128)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "pipelineId", "varchar(40)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "pipelineName", "varchar(200)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "environmentName", "varchar(128)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "tenant", "varchar(200)")
+      addColumn(journalTable.records.baseTableRow.tableName, "spark_application_id", "varchar(128)")
+      addColumn(journalTable.records.baseTableRow.tableName, "pipelineId", "varchar(40)")
+      addColumn(journalTable.records.baseTableRow.tableName, "pipelineName", "varchar(200)")
+      addColumn(journalTable.records.baseTableRow.tableName, "environmentName", "varchar(128)")
+      addColumn(journalTable.records.baseTableRow.tableName, "tenant", "varchar(200)")
     }
 
     if (dbVersion < 5) {
@@ -93,21 +105,21 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
 
     if (0 < dbVersion && dbVersion < 6) {
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "appended_record_count", "bigint")
+      addColumn(journalTable.records.baseTableRow.tableName, "appended_record_count", "bigint")
     }
 
     if (0 < dbVersion && dbVersion < 7) {
-      addColumn(LockTickets.lockTickets.baseTableRow.tableName, "created_at", "bigint")
+      addColumn(lockTicketTable.records.baseTableRow.tableName, "created_at", "bigint")
     }
 
     if (0 < dbVersion && dbVersion < 8) {
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "country", "varchar(50)")
+      addColumn(journalTable.records.baseTableRow.tableName, "country", "varchar(50)")
     }
 
     if (0 < dbVersion && dbVersion < 9) {
       addColumn(bookkeepingTable.records.baseTableRow.tableName, "batch_id", "bigint")
       addColumn(bookkeepingTable.records.baseTableRow.tableName, "appended_record_count", "bigint")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "batch_id", "bigint")
+      addColumn(journalTable.records.baseTableRow.tableName, "batch_id", "bigint")
     }
   }
 

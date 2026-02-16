@@ -16,8 +16,8 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
+import slick.jdbc.JdbcBackend.Database
 import slick.jdbc.JdbcProfile
-import slick.jdbc.PostgresProfile.api._
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.model._
@@ -27,7 +27,10 @@ import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 
 class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) extends OffsetManager {
+  import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
+
+  private val slickUtils = new SlickUtils(slickProfile)
 
   private val offsetTable = new OffsetTable {
     override val profile = slickProfile
@@ -56,7 +59,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
           .sorted(r => r.infoDate)
     }
 
-    SlickUtils.executeQuery(db, query)
+    slickUtils.executeQuery(db, query)
       .toArray[OffsetRecord]
       .map(record => OffsetRecordConverter.toDataOffset(record).asInstanceOf[UncommittedOffset])
   }
@@ -78,7 +81,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
 
     val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, "", "", batchId, createdAt.toEpochMilli, None)
 
-    SlickUtils.ensureDbConnected(db)
+    slickUtils.ensureDbConnected(db)
     db.run(
       offsetTable.records += record
     ).execute()
@@ -89,7 +92,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
   override def commitOffsets(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
     val committedAt = Instant.now().toEpochMilli
 
-    SlickUtils.ensureDbConnected(db)
+    slickUtils.ensureDbConnected(db)
     db.run(
       offsetTable.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
@@ -105,7 +108,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
 
     val committedAt = Instant.now().toEpochMilli
 
-    SlickUtils.ensureDbConnected(db)
+    slickUtils.ensureDbConnected(db)
     db.run(
       offsetTable.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
@@ -129,7 +132,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
       OffsetRecord(req.table, req.infoDate.toString, req.minOffset.dataType.dataTypeString, req.minOffset.valueString, req.maxOffset.valueString, batchId, req.createdAt.toEpochMilli, Some(committedAtMilli))
     }
 
-    SlickUtils.ensureDbConnected(db)
+    slickUtils.ensureDbConnected(db)
     db.run(
       offsetTable.records ++= records
     ).execute()
@@ -146,7 +149,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
   }
 
   override def rollbackOffsets(request: DataOffsetRequest): Unit = {
-    SlickUtils.ensureDbConnected(db)
+    slickUtils.ensureDbConnected(db)
     db.run(
       offsetTable.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
@@ -160,7 +163,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
       .map(_.infoDate).max
 
     try {
-      SlickUtils.executeMaxString(db, query)
+      slickUtils.executeMaxString(db, query)
         .map(LocalDate.parse)
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the offset table.", ex)
@@ -172,7 +175,7 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
     val query = offsetTable.records
       .filter(r => r.pramenTableName === table && r.infoDate === infoDateStr)
 
-    SlickUtils.executeQuery(db, query)
+    slickUtils.executeQuery(db, query)
       .toArray[OffsetRecord]
   }
 

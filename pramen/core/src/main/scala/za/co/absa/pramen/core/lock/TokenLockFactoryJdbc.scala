@@ -16,12 +16,13 @@
 
 package za.co.absa.pramen.core.lock
 
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.JdbcBackend.Database
+import slick.jdbc.JdbcProfile
 import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 
-class TokenLockFactoryJdbc(db: Database) extends TokenLockFactory {
+class TokenLockFactoryJdbc(db: Database, slickProfile: JdbcProfile) extends TokenLockFactory {
 
   override def getLock(token: String): TokenLock = {
-    new TokenLockJdbc(token, db)
+    new TokenLockJdbc(token, db, slickProfile)
   }
 }

@@ -16,17 +16,19 @@
 
 package za.co.absa.pramen.core.bookkeeper.model
 
-import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.JdbcProfile
 
-class SchemaRecords(tag: Tag) extends Table[SchemaRecord](tag, "schemas") {
-  def pramenTableName = column[String]("watcher_table_name", O.Length(128))
-  def infoDate = column[String]("info_date", O.Length(20))
-  def schemaJson = column[String]("schema_json")
-  def * = (pramenTableName, infoDate, schemaJson) <> (SchemaRecord.tupled, SchemaRecord.unapply)
-  def idx1 = index("sch_idx_1", (pramenTableName, infoDate), unique = true)
-}
+trait SchemaTable {
+  val profile: JdbcProfile
+  import profile.api._
 
-object SchemaRecords {
+  class SchemaRecords(tag: Tag) extends Table[SchemaRecord](tag, "schemas") {
+    def pramenTableName = column[String]("watcher_table_name", O.Length(128))
+    def infoDate = column[String]("info_date", O.Length(20))
+    def schemaJson = column[String]("schema_json")
+    def * = (pramenTableName, infoDate, schemaJson) <> (SchemaRecord.tupled, SchemaRecord.unapply)
+    def idx1 = index("sch_idx_1", (pramenTableName, infoDate), unique = true)
+  }
+
   lazy val records = TableQuery[SchemaRecords]
 }
-

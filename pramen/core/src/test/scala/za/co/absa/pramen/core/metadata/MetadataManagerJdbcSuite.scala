@@ -76,7 +76,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors when querying a key" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.getMetadataFromStorage("table1", infoDate, "key1")
@@ -86,7 +86,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors when querying a table" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.getMetadataFromStorage("table1", infoDate)
@@ -111,7 +111,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
       val v = MetadataValue("value1", exampleInstant)
 
       val ex = intercept[RuntimeException] {
@@ -159,7 +159,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors when deleting a key" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.deleteMetadataFromStorage("table1", infoDate, "key1")
@@ -169,7 +169,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors when deleting metadata from a partition" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.deleteMetadataFromStorage("table1", infoDate)
@@ -180,6 +180,6 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
   }
 
   def getMetadataManager: MetadataManagerJdbc = {
-    new MetadataManagerJdbc(pramenDb.slickDb)
+    new MetadataManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile)
   }
 }

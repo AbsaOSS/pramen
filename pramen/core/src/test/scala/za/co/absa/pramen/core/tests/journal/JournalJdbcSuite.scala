@@ -78,6 +78,6 @@ class JournalJdbcSuite extends AnyWordSpec with SparkTestBase with BeforeAndAfte
   }
 
   private def getJournal: Journal = {
-    new JournalJdbc(pramenDb.slickDb)
+    new JournalJdbc(pramenDb.slickDb, pramenDb.slickProfile)
   }
 }

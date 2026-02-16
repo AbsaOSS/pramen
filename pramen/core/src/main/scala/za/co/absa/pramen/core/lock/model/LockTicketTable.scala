@@ -16,17 +16,19 @@
 
 package za.co.absa.pramen.core.lock.model
 
-import slick.jdbc.PostgresProfile.api._
-import slick.lifted.TableQuery
+import slick.jdbc.JdbcProfile
 
-class LockTickets(tag: Tag) extends Table[LockTicket](tag, "lock_tickets") {
-  def token = column[String]("token", O.PrimaryKey, O.Length(255))
-  def owner = column[String]("owner", O.Length(255))
-  def expires = column[Long]("expires")
-  def createdAt = column[Option[Long]]("created_at")
-  def * = (token, owner, expires, createdAt) <> (LockTicket.tupled, LockTicket.unapply)
-}
+trait LockTicketTable {
+  val profile: JdbcProfile
+  import profile.api._
 
-object LockTickets {
-  lazy val lockTickets = TableQuery[LockTickets]
+  class LockTicketRecords(tag: Tag) extends Table[LockTicket](tag, "lock_tickets") {
+    def token = column[String]("token", O.PrimaryKey, O.Length(255))
+    def owner = column[String]("owner", O.Length(255))
+    def expires = column[Long]("expires")
+    def createdAt = column[Option[Long]]("created_at")
+    def * = (token, owner, expires, createdAt) <> (LockTicket.tupled, LockTicket.unapply)
+  }
+
+  lazy val records = TableQuery[LockTicketRecords]
 }
