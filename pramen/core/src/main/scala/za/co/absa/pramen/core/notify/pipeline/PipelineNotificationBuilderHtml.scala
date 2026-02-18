@@ -751,14 +751,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
       val oldColumnCell = change match {
         case _: FieldChange.NewField     => TextElement("")
-        case c: FieldChange.DeletedField => TextElement(s"<b>${c.columnName}</b> (${c.dataType})")
-        case c: FieldChange.ChangedType  => TextElement(s"<b>${c.columnName}</b> (${c.oldType})")
+        case c: FieldChange.DeletedField => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.dataType)})")
+        case c: FieldChange.ChangedType  => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.oldType)})")
       }
 
       val newColumnCell = change match {
-        case c: FieldChange.NewField     => TextElement(s"<b>${c.columnName}</b> (${c.dataType})")
+        case c: FieldChange.NewField     => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.dataType)})")
         case _: FieldChange.DeletedField => TextElement("")
-        case c: FieldChange.ChangedType  => TextElement(s"<b>${c.columnName}</b> (${c.newType})")
+        case c: FieldChange.ChangedType  => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.newType)})")
       }
 
       tableBuilder.withRow(Seq(
