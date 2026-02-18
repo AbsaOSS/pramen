@@ -114,13 +114,10 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) 
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
         .map(r => (r.minOffset, r.maxOffset, r.committedAt))
         .update((minOffset.valueString, maxOffset.valueString, Some(committedAt)))
-    ).execute()
-
-    // Cleaning up previous batches
-    db.run(
-      offsetTable.records
-        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt =!= request.createdAt.toEpochMilli)
-        .delete
+        .andThen(offsetTable.records
+          .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt =!= request.createdAt.toEpochMilli)
+          .delete
+        ).transactionally
     ).execute()
   }
 

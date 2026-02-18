@@ -37,8 +37,6 @@ class PramenDb(val jdbcConfig: JdbcConfig,
                val activeUrl: String,
                val slickDb: Database,
                val slickProfile: JdbcProfile) extends AutoCloseable {
-  def db: Database = slickDb
-
   import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
@@ -125,7 +123,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
   private def initTable(schema: slickProfile.SchemaDescription): Unit = {
     try {
-      db.run(DBIO.seq(
+      slickDb.run(DBIO.seq(
         schema.createIfNotExists
       )).execute()
     } catch {
@@ -137,9 +135,9 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
   private def addColumn(table: String, columnName: String, columnType: String): Unit = {
     try {
-      val quotedTable = s""""$table""""
-      val quotedColumnName = s""""$columnName""""
-      db.run(
+      val quotedTable = slickProfile.quoteIdentifier(table)
+      val quotedColumnName = slickProfile.quoteIdentifier(columnName)
+      slickDb.run(
           sqlu"ALTER TABLE #$quotedTable ADD #$quotedColumnName #$columnType"
         ).execute()
     } catch {

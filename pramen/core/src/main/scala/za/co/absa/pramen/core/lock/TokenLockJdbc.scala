@@ -73,11 +73,18 @@ class TokenLockJdbc(token: String, db: Database, slickProfile: JdbcProfile) exte
       ok match {
         case Success(_) =>
           true
-        case Failure(_: SQLIntegrityConstraintViolationException) =>
+        case Failure(_: SQLIntegrityConstraintViolationException) => // HSQLDB and possible other DB engines
           tryAcquireExistingTicket()
-        case Failure(_: org.postgresql.util.PSQLException) =>
+        case Failure(_: org.postgresql.util.PSQLException) => // PostgreSQL
           tryAcquireExistingTicket()
-        case Failure(ex) if ex.getMessage.contains("constraint") =>
+        case Failure(_: org.sqlite.SQLiteException) => // SQLite
+          tryAcquireExistingTicket()
+        case Failure(sqlEx: java.sql.SQLException) if sqlEx.getSQLState != null && (sqlEx.getSQLState == "23505" || sqlEx.getSQLState == "23000") => // Conformant JDBC engines
+          // 23505: unique violation; 23000: integrity constraint violation (common umbrella)
+          tryAcquireExistingTicket()
+        case Failure(ex) if ex.getMessage.contains("constraint") => // MS SQL Server
+          tryAcquireExistingTicket()
+        case Failure(ex) if ex.getMessage.toLowerCase.contains("duplicate entry") => // MySQL
           tryAcquireExistingTicket()
         case Failure(ex) =>
           throw new IllegalStateException(s"Unable to acquire a lock by querying the DB", ex)
