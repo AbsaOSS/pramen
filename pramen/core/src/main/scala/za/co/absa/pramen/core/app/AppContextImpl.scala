@@ -41,6 +41,7 @@ class AppContextImpl(val appConfig: AppConfig,
 
   override def close(): Unit = synchronized {
     if (closable != null) {
+      bookkeeper.close()
       closable.close()
       closable = null
     }

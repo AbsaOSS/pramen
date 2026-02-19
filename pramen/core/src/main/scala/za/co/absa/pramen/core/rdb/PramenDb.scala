@@ -30,6 +30,7 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, UsingUtils}
 
 import java.sql.Connection
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -43,7 +44,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
   val bookkeepingTable: BookkeepingTable = new BookkeepingTable {
     override val profile = slickProfile
   }
-  private val schemaTable = new SchemaTable {
+  val schemaTable: SchemaTable = new SchemaTable {
     override val profile = slickProfile
   }
   val offsetTable: OffsetTable = new OffsetTable {
@@ -60,6 +61,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
   }
 
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val isClosed = new AtomicBoolean(false)
 
   private def setupDatabase(jdbcConnection: Connection): Unit = {
     // Explicitly set auto-commit to true, overriding any user JDBC settings or PostgreSQL defaults
@@ -149,12 +151,13 @@ class PramenDb(val jdbcConfig: JdbcConfig,
 
   override def close(): Unit = {
     try {
-      slickDb.close()
+      if (isClosed.compareAndSet(false, true)) {
+        slickDb.close()
+      }
     } catch {
       case NonFatal(ex) =>
         log.warn("Error closing the Pramen RDB database connection.", ex)
     }
-
   }
 }
 
