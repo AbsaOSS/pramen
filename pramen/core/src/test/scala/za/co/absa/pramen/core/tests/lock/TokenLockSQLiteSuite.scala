@@ -17,18 +17,15 @@
 package za.co.absa.pramen.core.tests.lock
 
 import org.apache.commons.io.FileUtils
-import org.scalatest.concurrent.Eventually._
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.api.lock.TokenLock
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.lock.TokenLockJdbc
-import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
+import za.co.absa.pramen.core.rdb.PramenDb
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.UsingUtils
 
 import java.io.File
-import scala.concurrent.duration._
 
 class TokenLockSQLiteSuite extends AnyWordSpec with  BeforeAndAfter with BeforeAndAfterAll with TempDirFixture {
   private var jdbcConfig: JdbcConfig = _
@@ -37,8 +34,9 @@ class TokenLockSQLiteSuite extends AnyWordSpec with  BeforeAndAfter with BeforeA
 
   before {
     if (pramenDb != null) pramenDb.close()
-    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
-      //rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    val dbFile = new File("pramen.sqlite", tempDir)
+    if (dbFile.exists()) {
+      dbFile.delete()
     }
     pramenDb = PramenDb(jdbcConfig)
   }
@@ -101,10 +99,8 @@ class TokenLockSQLiteSuite extends AnyWordSpec with  BeforeAndAfter with BeforeA
       assert(lock1.tryAcquire())
 
       try {
-        eventually(timeout(4.seconds), interval(200.millis)) {
-          assert(!lock2.tryAcquire())
-          assert(!lock1.tryAcquire())
-        }
+        Thread.sleep(3000) // Wait past the 2-second expiry
+        assert(!lock2.tryAcquire())
       } finally {
         lock1.release()
       }

@@ -48,7 +48,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
   }
 
   def getOffsetManager: OffsetManager = {
-    new OffsetManagerCached(new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, 123L))
+    new OffsetManagerCached(new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L))
   }
 
   "getOffsets" should {
@@ -414,7 +414,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
 
   "getMinMaxOffsets" should {
     "be able to sort Kafka offsets properly" in {
-      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
       val offsets = Array(
         OffsetRecordFactory.getOffsetRecord(dataType = "kafka", minOffset = """{"0":100,"1":120}""", maxOffset = """{"0":101,"1":121}"""),

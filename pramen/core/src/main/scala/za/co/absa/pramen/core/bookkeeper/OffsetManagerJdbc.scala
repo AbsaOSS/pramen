@@ -26,15 +26,11 @@ import za.co.absa.pramen.core.utils.SlickUtils
 import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 
-class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) extends OffsetManager {
+class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, offsetTable: OffsetTable, batchId: Long) extends OffsetManager {
   import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
   private val slickUtils = new SlickUtils(slickProfile)
-
-  private val offsetTable = new OffsetTable {
-    override val profile = slickProfile
-  }
 
   override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
     val offsets = getOffsetRecords(table, infoDate)
