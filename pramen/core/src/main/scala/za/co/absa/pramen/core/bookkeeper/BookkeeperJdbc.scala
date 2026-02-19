@@ -36,7 +36,7 @@ class BookkeeperJdbc(pramenDb: PramenDb, batchId: Long, autoCloseDb: Boolean) ex
   private val isClosed = new AtomicBoolean(false)
   private val log = LoggerFactory.getLogger(this.getClass)
   private val slickUtils = new SlickUtils(pramenDb.slickProfile)
-  private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(pramenDb.slickDb, slickProfile, batchId))
+  private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, batchId))
 
   override val bookkeepingEnabled: Boolean = true
 

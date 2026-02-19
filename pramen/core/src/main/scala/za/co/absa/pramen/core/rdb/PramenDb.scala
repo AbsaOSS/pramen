@@ -187,6 +187,7 @@ object PramenDb {
       case "org.hsqldb.jdbc.JDBCDriver" => slick.jdbc.HsqldbProfile
       case "org.h2.Driver"              => slick.jdbc.H2Profile
       case "org.sqlite.JDBC"            => slick.jdbc.SQLiteProfile
+      case "oracle.jdbc.OracleDriver" => slick.jdbc.OracleProfile
       case "com.mysql.cj.jdbc.Driver" | "com.mysql.jdbc.Driver" =>
         slick.jdbc.MySQLProfile
       case "com.microsoft.sqlserver.jdbc.SQLServerDriver" | "net.sourceforge.jtds.jdbc.Driver" =>
