@@ -18,13 +18,9 @@ package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
-import slick.jdbc.JdbcBackend.Database
-import slick.jdbc.JdbcProfile
 import za.co.absa.pramen.core.bookkeeper.model._
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.rdb.PramenDb
-import za.co.absa.pramen.core.rdb.PramenDb.DEFAULT_RETRIES
-import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.SlickUtils.WARN_IF_LONGER_MS
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, SlickUtils, TimeUtils}
@@ -33,26 +29,14 @@ import java.time.LocalDate
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.control.NonFatal
 
-class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) extends BookkeeperBase(true, batchId) {
-  import slickProfile.api._
+class BookkeeperJdbc(pramenDb: PramenDb, batchId: Long, autoCloseDb: Boolean) extends BookkeeperBase(true, batchId) {
+  import pramenDb.slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
-  private val log = LoggerFactory.getLogger(this.getClass)
-  private val slickUtils = new SlickUtils(slickProfile)
-  private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(db, slickProfile, batchId))
   private val isClosed = new AtomicBoolean(false)
-  private val bookkeepingTable = new BookkeepingTable {
-    override val profile = slickProfile
-  }
-  private val schemaTable = new SchemaTable {
-    override val profile = slickProfile
-  }
-  private val offsetTable = new OffsetTable {
-    override val profile = slickProfile
-  }
-  private val metadataTable = new MetadataTable {
-    override val profile = slickProfile
-  }
+  private val log = LoggerFactory.getLogger(this.getClass)
+  private val slickUtils = new SlickUtils(pramenDb.slickProfile)
+  private val offsetManagement = new OffsetManagerCached(new OffsetManagerJdbc(pramenDb.slickDb, slickProfile, batchId))
 
   override val bookkeepingEnabled: Boolean = true
 
@@ -60,19 +44,19 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     val query = until match {
       case Some(endDate) =>
         val endDateStr = DataChunk.dateFormatter.format(endDate)
-        bookkeepingTable.records
+        pramenDb.bookkeepingTable.records
           .filter(r => r.pramenTableName === table && r.infoDate <= endDateStr)
           .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
       case None          =>
-        bookkeepingTable.records
+        pramenDb.bookkeepingTable.records
           .filter(r => r.pramenTableName === table)
           .sortBy(r => (r.infoDate.desc, r.jobFinished.desc))
           .take(1)
     }
 
     val chunks = try {
-      slickUtils.executeQuery(db, query)
+      slickUtils.executeQuery(pramenDb.slickDb, query)
         .map(DataChunk.fromRecord)
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
@@ -90,7 +74,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     val query = getFilter(table, Option(infoDate), Option(infoDate), batchId)
 
     try {
-      slickUtils.executeQuery(db, query)
+      slickUtils.executeQuery(pramenDb.slickDb, query)
         .map(DataChunk.fromRecord)
         .toArray[DataChunk]
         .sortBy(_.jobFinished)
@@ -105,7 +89,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
       .take(1)
 
     try {
-      val records = slickUtils.executeQuery(db, query)
+      val records = slickUtils.executeQuery(pramenDb.slickDb, query)
         .map(DataChunk.fromRecord)
         .toArray[DataChunk]
 
@@ -122,7 +106,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
       .length
 
     val count = try {
-      slickUtils.executeCount(db, query)
+      slickUtils.executeCount(pramenDb.slickDb, query)
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the bookkeeping table.", ex)
     }
@@ -139,7 +123,7 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
       .sortBy(_._1)
 
     try {
-      slickUtils.executeQuery[(Rep[String], Rep[Int], Rep[Long]), (String, Int, Long)](db, query)
+      slickUtils.executeQuery[(Rep[String], Rep[Int], Rep[Long]), (String, Int, Long)](pramenDb.slickDb, query)
         .map { case (infoDateStr, recordCount, outputRecordCount) =>
           val infoDate = LocalDate.parse(infoDateStr, DataChunk.dateFormatter)
           DataAvailability(infoDate, recordCount, outputRecordCount)
@@ -161,9 +145,9 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     val record = BookkeepingRecord(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, recordsAppended, jobStarted, jobFinished, Option(batchId))
 
     try {
-      slickUtils.ensureDbConnected(db)
-      db.run(
-        bookkeepingTable.records += record
+      slickUtils.ensureDbConnected(pramenDb.slickDb)
+      pramenDb.slickDb.run(
+        pramenDb.bookkeepingTable.records += record
       ).execute()
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to write to the bookkeeping table.", ex)
@@ -173,13 +157,13 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
   override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
-    val query = bookkeepingTable.records
+    val query = pramenDb.bookkeepingTable.records
       .filter(r => r.pramenTableName === table && r.infoDate === dateStr && r.batchId =!= Option(batchId))
       .delete
 
     try {
       AlgorithmUtils.runActionWithElapsedTimeEvent(WARN_IF_LONGER_MS) {
-        db.run(query).execute()
+        pramenDb.slickDb.run(query).execute()
       } { actualTimeMs =>
         val elapsedTime = TimeUtils.prettyPrintElapsedTimeShort(actualTimeMs)
         val sql = query.statements.mkString("; ")
@@ -212,37 +196,37 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     else
       s"'$tableNameTrimmed' or '$likePattern'"
 
-    val listQuery = bookkeepingTable.records
+    val listQuery = pramenDb.bookkeepingTable.records
       .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .map(_.pramenTableName)
       .distinct
 
-    val tablesToDelete = slickUtils.executeQuery(db, listQuery).sorted
+    val tablesToDelete = slickUtils.executeQuery(pramenDb.slickDb, listQuery).sorted
 
     if (tablesToDelete.length > 100)
       throw new IllegalArgumentException(s"The table wildcard '$tableName' matches more than 100 tables (${tablesToDelete.length}). To avoid accidental deletions, please refine the wildcard.")
 
-    val deletionQuery = bookkeepingTable.records
+    val deletionQuery = pramenDb.bookkeepingTable.records
       .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
       .delete
 
     try {
-      val deletedBkCount = slickUtils.executeAction(db, deletionQuery)
+      val deletedBkCount = slickUtils.executeAction(pramenDb.slickDb, deletionQuery)
       log.info(s"Deleted $deletedBkCount records from the bookkeeping table for tables matching $patternForLogging: ${tablesToDelete.mkString(", ")}")
 
-      val deletedSchemaCount = slickUtils.executeAction(db, schemaTable.records
+      val deletedSchemaCount = slickUtils.executeAction(pramenDb.slickDb, pramenDb.schemaTable.records
         .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedSchemaCount records from the schemas table.")
 
-      val deletedOffsetsCount = slickUtils.executeAction(db, offsetTable.records
+      val deletedOffsetsCount = slickUtils.executeAction(pramenDb.slickDb, pramenDb.offsetTable.records
         .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
         .delete
       )
       log.info(s"Deleted $deletedOffsetsCount records from the offsets table.")
 
-      val deletedMetadataCount = slickUtils.executeAction(db, metadataTable.records
+      val deletedMetadataCount = slickUtils.executeAction(pramenDb.slickDb, pramenDb.metadataTable.records
         .filter(r => r.pramenTableName === tableNameTrimmed || r.pramenTableName.like(likePattern, escape))
         .delete
       )
@@ -255,8 +239,8 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
   }
 
   override def close(): Unit = {
-    if (isClosed.compareAndSet(false, true)) {
-      db.close()
+    if (autoCloseDb && isClosed.compareAndSet(false, true)) {
+      pramenDb.close()
     }
   }
 
@@ -264,31 +248,31 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     offsetManagement
   }
 
-  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[bookkeepingTable.BookkeepingRecords, BookkeepingRecord, Seq] = {
+  private def getFilter(tableName: String, infoDateBeginOpt: Option[LocalDate], infoDateEndOpt: Option[LocalDate], batchId: Option[Long]): Query[pramenDb.bookkeepingTable.BookkeepingRecords, BookkeepingRecord, Seq] = {
     val baseFilter = (infoDateBeginOpt, infoDateEndOpt) match {
       case (Some(infoDateBegin), Some(infoDateEnd)) =>
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
         val date1Str = DataChunk.dateFormatter.format(infoDateEnd)
 
         if (date0Str == date1Str) {
-          bookkeepingTable.records
+          pramenDb.bookkeepingTable.records
             .filter(r => r.pramenTableName === tableName && r.infoDate === date0Str)
         } else {
-          bookkeepingTable.records
+          pramenDb.bookkeepingTable.records
             .filter(r => r.pramenTableName === tableName && r.infoDate >= date0Str && r.infoDate <= date1Str)
         }
       case (Some(infoDateBegin), None) =>
         val date0Str = DataChunk.dateFormatter.format(infoDateBegin)
 
-        bookkeepingTable.records
+        pramenDb.bookkeepingTable.records
           .filter(r => r.pramenTableName === tableName && r.infoDate >= date0Str)
       case (None, Some(infoDateEnd)) =>
         val date1Str = DataChunk.dateFormatter.format(infoDateEnd)
 
-        bookkeepingTable.records
+        pramenDb.bookkeepingTable.records
           .filter(r => r.pramenTableName === tableName && r.infoDate <= date1Str)
       case (None, None) =>
-        bookkeepingTable.records
+        pramenDb.bookkeepingTable.records
           .filter(r => r.pramenTableName === tableName)
     }
 
@@ -300,11 +284,11 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
 
   override def getLatestSchema(table: String, infoDate: LocalDate): Option[(StructType, LocalDate)] = {
     val infoDateStr = infoDate.toString
-    val query = schemaTable.records.filter(t => t.pramenTableName === table && t.infoDate <= infoDateStr)
+    val query = pramenDb.schemaTable.records.filter(t => t.pramenTableName === table && t.infoDate <= infoDateStr)
       .sortBy(t => t.infoDate.desc)
       .take(1)
 
-    slickUtils.executeQuery(db, query)
+    slickUtils.executeQuery(pramenDb.slickDb, query)
       .map(schemaRecord => TableSchema(schemaRecord.pramenTableName, schemaRecord.infoDate, schemaRecord.schemaJson))
       .flatMap(tableSchema =>
         TableSchema.toSchemaAndDate(tableSchema)
@@ -316,13 +300,13 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
     val infoDateStr = infoDate.toString
 
     try {
-      slickUtils.ensureDbConnected(db)
-      db.run(
-        schemaTable.records.filter(t => t.pramenTableName === table && t.infoDate === infoDateStr).delete
+      slickUtils.ensureDbConnected(pramenDb.slickDb)
+      pramenDb.slickDb.run(
+        pramenDb.schemaTable.records.filter(t => t.pramenTableName === table && t.infoDate === infoDateStr).delete
       ).execute()
 
-      db.run(
-        schemaTable.records += SchemaRecord(table, infoDate.toString, schema.json)
+      pramenDb.slickDb.run(
+        pramenDb.schemaTable.records += SchemaRecord(table, infoDate.toString, schema.json)
       ).execute()
     } catch {
       case NonFatal(ex) => log.error(s"Unable to write to the bookkeeping schema table.", ex)
@@ -332,12 +316,12 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
   /** This method is for migration purposes*/
   private[pramen] def saveSchemaRaw(table: String, infoDate: String, schema: String): Unit = {
     try {
-      db.run(
-        schemaTable.records.filter(t => t.pramenTableName === table && t.infoDate === infoDate).delete
+      pramenDb.slickDb.run(
+        pramenDb.schemaTable.records.filter(t => t.pramenTableName === table && t.infoDate === infoDate).delete
       ).execute()
 
-      db.run(
-        schemaTable.records += SchemaRecord(table, infoDate, schema)
+      pramenDb.slickDb.run(
+        pramenDb.schemaTable.records += SchemaRecord(table, infoDate, schema)
       ).execute()
     } catch {
       case NonFatal(ex) => log.error(s"Unable to write to the bookkeeping schema table.", ex)
@@ -346,18 +330,12 @@ class BookkeeperJdbc(db: Database, slickProfile: JdbcProfile, batchId: Long) ext
 }
 
 object BookkeeperJdbc {
+  def fromPramenDb(pramenDb: PramenDb, batchId: Long): BookkeeperJdbc = {
+    new BookkeeperJdbc(pramenDb, batchId, false)
+  }
+
   def fromJdbcConfig(jdbcConfig: JdbcConfig, batchId: Long): BookkeeperJdbc = {
-    val selector = JdbcUrlSelector(jdbcConfig)
-    val url = selector.getWorkingUrl(DEFAULT_RETRIES)
-    val prop = selector.getProperties
-
-    val profile = PramenDb.getProfile(jdbcConfig.driver)
-
-    val db = if (jdbcConfig.user.nonEmpty) {
-      Database.forURL(url = url, driver = jdbcConfig.driver, user = jdbcConfig.user.get, password = jdbcConfig.password.getOrElse(""), prop = prop)
-    } else {
-      Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop)
-    }
-    new BookkeeperJdbc(db,  profile, batchId)
+    val pramenDb = PramenDb(jdbcConfig)
+    new BookkeeperJdbc(pramenDb, batchId, true)
   }
 }
