@@ -762,7 +762,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       }
 
       tableBuilder.withRow(Seq(
-        TextElement(diff.tableName),
+        TextElement(StringUtils.escapeHTML(diff.tableName)),
         changeCell,
         oldColumnCell,
         newColumnCell,

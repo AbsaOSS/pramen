@@ -316,6 +316,7 @@ class BookkeeperJdbc(pramenDb: PramenDb, batchId: Long, autoCloseDb: Boolean) ex
   /** This method is for migration purposes*/
   private[pramen] def saveSchemaRaw(table: String, infoDate: String, schema: String): Unit = {
     try {
+      slickUtils.ensureDbConnected(pramenDb.slickDb)
       pramenDb.slickDb.run(
         pramenDb.schemaTable.records.filter(t => t.pramenTableName === table && t.infoDate === infoDate).delete
       ).execute()
