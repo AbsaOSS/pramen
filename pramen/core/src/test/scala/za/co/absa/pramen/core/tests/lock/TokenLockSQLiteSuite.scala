@@ -34,7 +34,7 @@ class TokenLockSQLiteSuite extends AnyWordSpec with  BeforeAndAfter with BeforeA
 
   before {
     if (pramenDb != null) pramenDb.close()
-    val dbFile = new File("pramen.sqlite", tempDir)
+    val dbFile = new File(tempDir, "pramen.sqlite")
     if (dbFile.exists()) {
       dbFile.delete()
     }
