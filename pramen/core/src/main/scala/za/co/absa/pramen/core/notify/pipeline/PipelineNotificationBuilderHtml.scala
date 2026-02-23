@@ -213,7 +213,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     introParagraph.withText(". ")
 
     runtimeInfo.foreach { c =>
-      val executionInfoParagraph = renderExecutionInfo(c.runDateFrom, c.runDateTo, c.isRerun, c.isNewOnly, c.isLateOnly)
+      val executionInfoParagraph = renderExecutionInfo(c.runDateFrom, c.runDateTo, c.isRerun, c.isNewOnly, c.isLateOnly, c.attempt, c.maxAttempts)
         .withText(". ")
         .paragraph
       introParagraph
@@ -274,7 +274,9 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
                                         runDateTo: Option[LocalDate],
                                         isRerun: Boolean,
                                         isNewOnly: Boolean,
-                                        isLateOnly: Boolean): ParagraphBuilder = {
+                                        isLateOnly: Boolean,
+                                        attempt: Int,
+                                        maxAttempts: Int): ParagraphBuilder = {
     val executionStr = if (isRerun) "Re-run execution" else "Execution"
     val datesStr = runDateTo match {
       case Some(dateTo) => s"the period from <b>$runDateFrom</b> to <b>$dateTo</b>"
@@ -283,11 +285,12 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
     val newOnlyDescription = if (isNewOnly) " (only new data)" else ""
     val lateOnlyDescription = if (isLateOnly) " (only late data)" else ""
+    val attemptDescription = if (maxAttempts > 1) s" (attempt <b>$attempt</b> of <b>$maxAttempts</b>)" else ""
 
     ParagraphBuilder()
       .withText(executionStr)
       .withText(" for ")
-      .withText(datesStr + newOnlyDescription + lateOnlyDescription)
+      .withText(datesStr + newOnlyDescription + lateOnlyDescription + attemptDescription)
   }
 
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {

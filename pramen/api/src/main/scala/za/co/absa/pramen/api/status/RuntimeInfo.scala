@@ -30,5 +30,7 @@ case class RuntimeInfo(
                         isNewOnly: Boolean = false, // If true, the pipeline runs without catching up late data mode.
                         isLateOnly: Boolean = false, // If true, the pipeline runs in catching up late data only mode.
                         minRps: Int = 0, // Configured records per second that is considered bad if the actual rps is lower, ignored if 0.
-                        goodRps: Int = 0 // Configured records per second that is considered very good if the actual rps is higher, ignored if 0.
+                        goodRps: Int = 0, // Configured records per second that is considered very good if the actual rps is higher, ignored if 0.
+                        attempt: Int = 1, // Current attempt number for the pipeline run (for auto-retry automation).
+                        maxAttempts: Int = 1 // Maximum number of attempts allowed for the pipeline run.
                       )

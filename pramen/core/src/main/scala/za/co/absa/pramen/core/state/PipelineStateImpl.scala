@@ -129,7 +129,9 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         runtimeConfig.checkOnlyNewData,
         runtimeConfig.checkOnlyLateData,
         minRps,
-        goodRps
+        goodRps,
+        runtimeConfig.attempt,
+        runtimeConfig.maxAttempts
       ),
       startedInstant,
       finishedInstant,
