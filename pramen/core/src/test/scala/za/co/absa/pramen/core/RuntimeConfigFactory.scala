@@ -40,7 +40,9 @@ object RuntimeConfigFactory {
                             allowEmptyPipeline: Boolean = false,
                             alwaysAddBatchIdColumn: Boolean = false,
                             historicalRunMode: RunMode = RunMode.CheckUpdates,
-                            sparkAppDescriptionTemplate: Option[String] = None): RuntimeConfig = {
+                            sparkAppDescriptionTemplate: Option[String] = None,
+                            attempt: Int = 1,
+                            maxAttempts: Int = 1): RuntimeConfig = {
     RuntimeConfig(isDryRun,
       isRerun,
       runTables,
@@ -58,7 +60,9 @@ object RuntimeConfigFactory {
       allowEmptyPipeline,
       alwaysAddBatchIdColumn,
       historicalRunMode,
-      sparkAppDescriptionTemplate)
+      sparkAppDescriptionTemplate,
+      attempt,
+      maxAttempts)
   }
 
 }

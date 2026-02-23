@@ -31,6 +31,8 @@ class RuntimeConfigSuite extends AnyWordSpec {
            |    is.rerun = true
            |    inverse.order = true
            |    run.tables = [ tbl1, tbl2 ]
+           |    attempt = 2
+           |    max.attempts = 5
            |  }
            |  undercover = true
            |  use.lock = false
@@ -65,6 +67,8 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.parallelTasks == 4)
       assert(runtimeConfig.stopSparkSession)
       assert(runtimeConfig.sparkAppDescriptionTemplate.contains("Test template"))
+      assert(runtimeConfig.attempt == 2)
+      assert(runtimeConfig.maxAttempts == 5)
     }
 
     "have default values" in {
@@ -86,6 +90,8 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.parallelTasks == 1)
       assert(!runtimeConfig.stopSparkSession)
       assert(runtimeConfig.sparkAppDescriptionTemplate.isEmpty)
+      assert(runtimeConfig.attempt == 1)
+      assert(runtimeConfig.maxAttempts == 1)
     }
   }
 
