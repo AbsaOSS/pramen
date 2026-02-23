@@ -45,7 +45,9 @@ case class RuntimeConfig(
                           allowEmptyPipeline: Boolean,
                           alwaysAddBatchIdColumn: Boolean,
                           historicalRunMode: RunMode,
-                          sparkAppDescriptionTemplate: Option[String]
+                          sparkAppDescriptionTemplate: Option[String],
+                          attempt: Int, // Current attempt number for the pipeline run (for auto-retry automation)
+                          maxAttempts: Int // Maximum number of attempts allowed for the pipeline run
                         )
 
 object RuntimeConfig {
@@ -72,6 +74,8 @@ object RuntimeConfig {
   val ALLOW_EMPTY_PIPELINE = "pramen.allow.empty.pipeline"
   val ALWAYS_ADD_BATCHID_COLUMN = "pramen.always.add.batchid.column"
   val SPARK_APP_DESCRIPTION_TEMPLATE = "pramen.job.description.template"
+  val ATTEMPT = "pramen.runtime.attempt"
+  val MAX_ATTEMPTS = "pramen.runtime.max.attempts"
 
   def fromConfig(conf: Config): RuntimeConfig = {
     val infoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
@@ -136,6 +140,8 @@ object RuntimeConfig {
     val allowEmptyPipeline = ConfigUtils.getOptionBoolean(conf, ALLOW_EMPTY_PIPELINE).getOrElse(false)
     val alwaysAddBatchIdColumn = ConfigUtils.getOptionBoolean(conf, ALWAYS_ADD_BATCHID_COLUMN).getOrElse(false)
     val sparkAppDescriptionTemplate = ConfigUtils.getOptionString(conf, SPARK_APP_DESCRIPTION_TEMPLATE)
+    val attempt = ConfigUtils.getOptionInt(conf, ATTEMPT).getOrElse(1)
+    val maxAttempts = ConfigUtils.getOptionInt(conf, MAX_ATTEMPTS).getOrElse(1)
 
     RuntimeConfig(
       isDryRun = isDryRun,
@@ -155,7 +161,9 @@ object RuntimeConfig {
       allowEmptyPipeline,
       alwaysAddBatchIdColumn,
       runMode,
-      sparkAppDescriptionTemplate
+      sparkAppDescriptionTemplate,
+      attempt,
+      maxAttempts
     )
   }
 
@@ -178,7 +186,9 @@ object RuntimeConfig {
       allowEmptyPipeline = false,
       alwaysAddBatchIdColumn = false,
       historicalRunMode = RunMode.CheckUpdates,
-      sparkAppDescriptionTemplate = None
+      sparkAppDescriptionTemplate = None,
+      attempt = 1,
+      maxAttempts = 1
     )
   }
 }
