@@ -722,7 +722,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       val paragraph = result.paragraph
 
       assert(paragraph.exists(_.text == "Execution"))
-      assert(paragraph.exists(_.text.contains("attempt <b>2</b> of <b>5</b>")))
+      assert(paragraph.exists(_.text.contains("Attempt <b>2</b>/<b>5</b>")))
     }
 
     "render execution info with attempt and period" in {
@@ -734,14 +734,14 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
         isRerun = true,
         isNewOnly = false,
         isLateOnly = false,
-        attempt = 3,
+        attempt = 1,
         maxAttempts = 10
       )
 
       val paragraph = result.paragraph
 
       assert(paragraph.exists(_.text == "Re-run execution"))
-      assert(paragraph.exists(_.text.contains("attempt <b>3</b> of <b>10</b>")))
+      assert(paragraph.exists(_.text.contains("Attempt <b>1</b>/<b>10</b>")))
     }
   }
 

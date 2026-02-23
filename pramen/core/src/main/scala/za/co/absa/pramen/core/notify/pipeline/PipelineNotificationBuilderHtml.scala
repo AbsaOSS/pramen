@@ -283,14 +283,14 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case None => s"the run date <b>$runDateFrom</b>"
     }
 
+    val attemptDescription = if (maxAttempts > 1) s". Attempt <b>$attempt</b>/<b>$maxAttempts</b>" else ""
     val newOnlyDescription = if (isNewOnly) " (only new data)" else ""
     val lateOnlyDescription = if (isLateOnly) " (only late data)" else ""
-    val attemptDescription = if (maxAttempts > 1) s" (attempt <b>$attempt</b> of <b>$maxAttempts</b>)" else ""
 
     ParagraphBuilder()
       .withText(executionStr)
       .withText(" for ")
-      .withText(datesStr + newOnlyDescription + lateOnlyDescription + attemptDescription)
+      .withText(datesStr + attemptDescription + newOnlyDescription + lateOnlyDescription)
   }
 
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
