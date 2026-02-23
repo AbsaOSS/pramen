@@ -3537,6 +3537,8 @@ Execution options:
 | --undercover               | `--undercover`              | If specified, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
 | --use-lock <true \| false> | `--use-lock true`           | If true (default) a lock will be used to protect against parallel writes to the same partition. Bookkeeping storage or database will be used for locking across pipelines.                                          |
 | --skip-locked              | `--skip-locked`             | If specified, jobs that are already running (holding a lock) will be skipped. Otherwise, an error will be thrown.                                                                                                   |
+| --attempt                  | `--attempt 2`               | Specifies attempt number for the pipeline. This is only for notification purposes. Used together with `--max-attempts`.                                                                                             |
+| --max-attempts             | `--max-attempts 5`          | Specifies the number of attempts for the pipeline. This is only for notification purposes.                                                                                                                          |
 
 ### Command line examples
 

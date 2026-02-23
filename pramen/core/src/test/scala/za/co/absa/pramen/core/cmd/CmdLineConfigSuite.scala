@@ -99,6 +99,13 @@ class CmdLineConfigSuite extends AnyWordSpec {
         assert(cmd.get.checkOnlyNewData.get)
       }
 
+      "parse attempts" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--attempt", "2", "--max-attempts", "5"))
+        assert(cmd.nonEmpty)
+        assert(cmd.get.maxAttempts.get == 5)
+        assert(cmd.get.attempt.get == 2)
+      }
+
       "return None when wrong date format is passed to --date" in {
         val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date", "16/08/2020"))
         assert(cmd.isEmpty)
@@ -270,6 +277,17 @@ class CmdLineConfigSuite extends AnyWordSpec {
 
       assert(config.getBoolean(UNDERCOVER))
     }
+
+    "return the modified config with attempts" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--attempt", "2", "--max-attempts", "5"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(ATTEMPT))
+      assert(config.getInt(ATTEMPT) == 2)
+      assert(config.hasPath(MAX_ATTEMPTS))
+      assert(config.getInt(MAX_ATTEMPTS) == 5)
+    }
+
 
     "return the modified config if useLock = true" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--use-lock", "true"))

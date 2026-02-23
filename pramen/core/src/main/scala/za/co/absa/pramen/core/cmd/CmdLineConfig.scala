@@ -46,7 +46,9 @@ case class CmdLineConfig(
                           inverseOrder: Option[Boolean] = None,
                           verbose: Option[Boolean] = None,
                           overrideLogLevel: Option[String] = None,
-                          logEffectiveConfig: Option[Boolean] = None
+                          logEffectiveConfig: Option[Boolean] = None,
+                          attempt: Option[Int] = None,
+                          maxAttempts: Option[Int] = None
                         )
 
 object CmdLineConfig {
@@ -129,6 +131,12 @@ object CmdLineConfig {
     for (logEffectiveConfig <- cmd.logEffectiveConfig)
       accumulatedConfig = accumulatedConfig.withValue(LOG_EFFECTIVE_CONFIG, ConfigValueFactory.fromAnyRef(logEffectiveConfig))
 
+    for (attempt <- cmd.attempt)
+      accumulatedConfig = accumulatedConfig.withValue(ATTEMPT, ConfigValueFactory.fromAnyRef(attempt))
+
+    for (maxAttempts <- cmd.maxAttempts)
+      accumulatedConfig = accumulatedConfig.withValue(MAX_ATTEMPTS, ConfigValueFactory.fromAnyRef(maxAttempts))
+
     accumulatedConfig
   }
 
@@ -205,6 +213,14 @@ object CmdLineConfig {
     opt[Unit]("dry-run").optional().action((_, config) =>
       config.copy(dryRun = Some(true)))
       .text("If true, no actual data processing will be done.")
+
+    opt[Int]("attempt").optional().action((value, config) =>
+        config.copy(attempt = Option(value)))
+      .text("The attempt number for notification purposes (default 1).")
+
+    opt[Int]("max-attempts").optional().action((value, config) =>
+        config.copy(maxAttempts = Option(value)))
+      .text("The maximum number of attempts for notification purposes (default 1).")
 
     opt[Boolean]("use-lock").optional().action((value, config) =>
       config.copy(useLock = Option(value)))
