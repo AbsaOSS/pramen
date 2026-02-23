@@ -684,6 +684,67 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
     }
   }
 
+  "renderExecutionInfo" should {
+    "render execution info without attempt information when maxAttempts is 1" in {
+      val builder = getBuilder()
+
+      val result = builder.renderExecutionInfo(
+        LocalDate.parse("2022-02-18"),
+        None,
+        isRerun = false,
+        isNewOnly = false,
+        isLateOnly = false,
+        attempt = 1,
+        maxAttempts = 1
+      )
+
+      val paragraph = result.paragraph
+
+      assert(paragraph.exists(_.text == "Execution"))
+      assert(paragraph.exists(_.text == " for "))
+      assert(paragraph.exists(_.text == "the run date <b>2022-02-18</b>"))
+      assert(!paragraph.exists(_.text.contains("attempt")))
+    }
+
+    "render execution info with attempt information when maxAttempts is greater than 1" in {
+      val builder = getBuilder()
+
+      val result = builder.renderExecutionInfo(
+        LocalDate.parse("2022-02-18"),
+        None,
+        isRerun = false,
+        isNewOnly = false,
+        isLateOnly = false,
+        attempt = 2,
+        maxAttempts = 5
+      )
+
+      val paragraph = result.paragraph
+
+      assert(paragraph.exists(_.text == "Execution"))
+      assert(paragraph.exists(_.text.contains("attempt <b>2</b> of <b>5</b>")))
+    }
+
+    "render execution info with attempt and period" in {
+      val builder = getBuilder()
+
+      val result = builder.renderExecutionInfo(
+        LocalDate.parse("2022-02-18"),
+        Some(LocalDate.parse("2022-02-25")),
+        isRerun = true,
+        isNewOnly = false,
+        isLateOnly = false,
+        attempt = 3,
+        maxAttempts = 10
+      )
+
+      val paragraph = result.paragraph
+
+      assert(paragraph.exists(_.text == "Re-run execution"))
+      assert(paragraph.exists(_.text.contains("attempt <b>3</b> of <b>10</b>")))
+    }
+  }
+
   def getBuilder(conf: Config = emptyConfig,
                  structFailure: Boolean = false): PipelineNotificationBuilderHtml = {
     implicit val implicitConfig: Config =
