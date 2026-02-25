@@ -287,6 +287,66 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(diff.head.asInstanceOf[ChangedType].oldType == "varchar(10)")
       assert(diff.head.asInstanceOf[ChangedType].newType == "varchar(15)")
     }
+
+    "detect nested type changes" in {
+      val schema1 = StructType(Seq(
+        StructField("id", IntegerType, nullable = false),
+        StructField("name", StringType, nullable = true),
+        StructField("address", StructType(Seq(
+          StructField("street", StringType, nullable = true),
+          StructField("city", StringType, nullable = true)
+        ))),
+        StructField("tags", ArrayType(StringType, containsNull = true), nullable = true),
+        StructField("phones", ArrayType(StructType(Seq(
+          StructField("type", StringType, nullable = true),
+          StructField("number", IntegerType, nullable = true)
+        )), containsNull = true), nullable = true),
+        StructField("error_info", StructType(Seq(
+          StructField("reason", StringType, nullable = true),
+          StructField("value", StringType, nullable = true)
+        ))),
+      ))
+
+      val schema2 = StructType(Seq(
+        StructField("id", IntegerType, nullable = false),
+        StructField("name", StringType, nullable = true),
+        StructField("address", StructType(Seq(
+          StructField("street", StringType, nullable = true),
+          StructField("city", LongType, nullable = true),
+          StructField("state", StringType, nullable = true)
+        ))),
+        StructField("tags", ArrayType(IntegerType, containsNull = true), nullable = true),
+        StructField("phones", ArrayType(StructType(Seq(
+          StructField("type", StringType, nullable = true),
+          StructField("number", StringType, nullable = true),
+          StructField("country", StringType, nullable = true)
+        )), containsNull = true), nullable = true),
+        StructField("additional_properties", ArrayType(StructType(Seq(
+          StructField("key", StringType, nullable = true),
+          StructField("value", StringType, nullable = true)
+        )), containsNull = true), nullable = true)
+      ))
+
+      val diff = compareSchemas(schema1, schema2)
+
+      assert(diff.length == 7)
+      assert(diff.count(_.isInstanceOf[ChangedType]) == 3)
+      assert(diff.count(_.isInstanceOf[NewField]) == 3)
+      assert(diff.count(_.isInstanceOf[DeletedField]) == 1)
+
+      val changedTypes = diff.collect { case ct: ChangedType => ct }
+      assert(changedTypes.exists(ct => ct.columnName == "address.city" && ct.oldType == "string" && ct.newType == "long"))
+      assert(changedTypes.exists(ct => ct.columnName == "tags" && ct.oldType == "array<string>" && ct.newType == "array<integer>"))
+      assert(changedTypes.exists(ct => ct.columnName == "phones[].number" && ct.oldType == "integer" && ct.newType == "string"))
+
+      val newFields = diff.collect { case nf: NewField => nf }
+      assert(newFields.exists(nf => nf.columnName == "address.state" && nf.dataType == "string"))
+      assert(newFields.exists(nf => nf.columnName == "phones[].country" && nf.dataType == "string"))
+      assert(newFields.exists(nf => nf.columnName == "additional_properties" && nf.dataType == "array<struct<...>>"))
+
+      val deletedFields = diff.collect { case df: DeletedField => df }
+      assert(deletedFields.exists(df => df.columnName == "error_info" && df.dataType == "struct<...>"))
+    }
   }
 
   "applyTransformations" should {
