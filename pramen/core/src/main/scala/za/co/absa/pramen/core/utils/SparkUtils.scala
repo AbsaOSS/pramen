@@ -175,8 +175,8 @@ object SparkUtils {
     }
 
     def processStruct(schema1: StructType, schema2: StructType, path: String = ""): Unit = {
-      val fields1 = schema1.fields.map(f => (f.name.toLowerCase, f)).toMap
-      val fields2 = schema2.fields.map(f => (f.name.toLowerCase, f)).toMap
+      val fields1 = schema1.fields.map(f => (f.name, f)).toMap
+      val fields2 = schema2.fields.map(f => (f.name, f)).toMap
 
       val newColumns: Array[FieldChange] = schema2.fields
         .filter(f => !fields1.contains(f.name))
@@ -218,10 +218,8 @@ object SparkUtils {
       (array1.elementType, array2.elementType) match {
         case (st1: StructType, st2: StructType) =>
           processStruct(st1, st2, s"$path[].")
-          Seq.empty
         case (ar1: ArrayType, ar2: ArrayType) =>
           processArray(ar1, ar2, metadata1, metadata2, s"$path[]")
-          Seq.empty
         case _ =>
           val dt1 = dataTypeToString(array1, metadata1)
           val dt2 = dataTypeToString(array2, metadata2)

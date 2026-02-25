@@ -304,7 +304,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
         StructField("error_info", StructType(Seq(
           StructField("reason", StringType, nullable = true),
           StructField("value", StringType, nullable = true)
-        ))),
+        )))
       ))
 
       val schema2 = StructType(Seq(
