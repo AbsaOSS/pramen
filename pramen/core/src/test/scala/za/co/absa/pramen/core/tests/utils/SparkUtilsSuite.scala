@@ -308,7 +308,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       ))
 
       val schema2 = StructType(Seq(
-        StructField("id", IntegerType, nullable = false),
+        StructField("Id", IntegerType, nullable = false),
         StructField("name", StringType, nullable = true),
         StructField("address", StructType(Seq(
           StructField("street", StringType, nullable = true),
@@ -329,23 +329,25 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
 
       val diff = compareSchemas(schema1, schema2)
 
-      assert(diff.length == 7)
+      assert(diff.length == 9)
       assert(diff.count(_.isInstanceOf[ChangedType]) == 3)
-      assert(diff.count(_.isInstanceOf[NewField]) == 3)
-      assert(diff.count(_.isInstanceOf[DeletedField]) == 1)
+      assert(diff.count(_.isInstanceOf[NewField]) == 4)
+      assert(diff.count(_.isInstanceOf[DeletedField]) == 2)
 
       val changedTypes = diff.collect { case ct: ChangedType => ct }
-      assert(changedTypes.exists(ct => ct.columnName == "address.city" && ct.oldType == "string" && ct.newType == "long"))
-      assert(changedTypes.exists(ct => ct.columnName == "tags" && ct.oldType == "array<string>" && ct.newType == "array<integer>"))
-      assert(changedTypes.exists(ct => ct.columnName == "phones[].number" && ct.oldType == "integer" && ct.newType == "string"))
+      assert(changedTypes.exists(c => c.columnName == "address.city" && c.oldType == "string" && c.newType == "long"))
+      assert(changedTypes.exists(c => c.columnName == "tags" && c.oldType == "array<string>" && c.newType == "array<integer>"))
+      assert(changedTypes.exists(c => c.columnName == "phones[].number" && c.oldType == "integer" && c.newType == "string"))
 
       val newFields = diff.collect { case nf: NewField => nf }
-      assert(newFields.exists(nf => nf.columnName == "address.state" && nf.dataType == "string"))
-      assert(newFields.exists(nf => nf.columnName == "phones[].country" && nf.dataType == "string"))
-      assert(newFields.exists(nf => nf.columnName == "additional_properties" && nf.dataType == "array<struct<...>>"))
+      assert(newFields.exists(n => n.columnName == "Id" && n.dataType == "integer"))
+      assert(newFields.exists(n => n.columnName == "address.state" && n.dataType == "string"))
+      assert(newFields.exists(n => n.columnName == "phones[].country" && n.dataType == "string"))
+      assert(newFields.exists(n => n.columnName == "additional_properties" && n.dataType == "array<struct<...>>"))
 
       val deletedFields = diff.collect { case df: DeletedField => df }
-      assert(deletedFields.exists(df => df.columnName == "error_info" && df.dataType == "struct<...>"))
+      assert(deletedFields.exists(d => d.columnName == "id" && d.dataType == "integer"))
+      assert(deletedFields.exists(d => d.columnName == "error_info" && d.dataType == "struct<...>"))
     }
   }
 
