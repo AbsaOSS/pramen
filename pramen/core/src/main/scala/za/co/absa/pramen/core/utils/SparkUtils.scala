@@ -32,7 +32,7 @@ import za.co.absa.pramen.core.utils.SparkMaster.Databricks
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
 
@@ -157,43 +157,84 @@ object SparkUtils {
   /**
     * Compares 2 schemas.
     */
-  def compareSchemas(schema1: StructType, schema2: StructType): List[FieldChange] = {
+  def compareSchemas(schemaA: StructType, schemaB: StructType): List[FieldChange] = {
+    val newFields = new ListBuffer[FieldChange]
+    val deletedFields = new ListBuffer[FieldChange]
+    val changedFields = new ListBuffer[FieldChange]
+
     def dataTypeToString(dt: DataType, metadata: Metadata): String = {
       val maxLength = getLengthFromMetadata(metadata).getOrElse(0)
 
       dt match {
-        case _: StructType | _: ArrayType    => dt.simpleString
-        case _: StringType if maxLength > 0  => s"varchar($maxLength)"
-        case _                               => dt.typeName
+        case a: ArrayType if a.elementType.isInstanceOf[StructType] => "array<struct<...>>"
+        case a: ArrayType                                           => s"array<${a.elementType.typeName}>"
+        case _: StructType                                          => "struct<...>"
+        case _: StringType if maxLength > 0                         => s"varchar($maxLength)"
+        case _                                                      => dt.typeName
       }
     }
 
-    val fields1 = schema1.fields.map(f => (f.name, f)).toMap
-    val fields2 = schema2.fields.map(f => (f.name, f)).toMap
+    def processStruct(schema1: StructType, schema2: StructType, path: String = ""): Unit = {
+      val fields1 = schema1.fields.map(f => (f.name.toLowerCase, f)).toMap
+      val fields2 = schema2.fields.map(f => (f.name.toLowerCase, f)).toMap
 
-    val newColumns: Array[FieldChange] = schema2.fields
-      .filter(f => !fields1.contains(f.name))
-      .map(f => FieldChange.NewField(f.name, dataTypeToString(f.dataType, f.metadata)))
+      val newColumns: Array[FieldChange] = schema2.fields
+        .filter(f => !fields1.contains(f.name))
+        .map(f => FieldChange.NewField(s"$path${f.name}", dataTypeToString(f.dataType, f.metadata)))
 
-    val deletedColumns: Array[FieldChange] = schema1.fields
-      .filter(f => !fields2.contains(f.name))
-      .map(f => FieldChange.DeletedField(f.name, dataTypeToString(f.dataType, f.metadata)))
+      val deletedColumns: Array[FieldChange] = schema1.fields
+        .filter(f => !fields2.contains(f.name))
+        .map(f => FieldChange.DeletedField(s"$path${f.name}", dataTypeToString(f.dataType, f.metadata)))
 
-    val changedType: Array[FieldChange] = schema1.fields
-      .filter(f => fields2.contains(f.name))
-      .flatMap(f1 => {
-        val dt1 = dataTypeToString(f1.dataType, f1.metadata)
-        val f2 = fields2(f1.name)
-        val dt2 = dataTypeToString(f2.dataType, f2.metadata)
+      val changedType: Array[FieldChange] = schema1.fields
+        .filter(f => fields2.contains(f.name))
+        .flatMap(f1 => {
+          val f2 = fields2(f1.name)
 
-        if (dt1 == dt2) {
-          Seq.empty[FieldChange]
-        } else {
-          Seq(FieldChange.ChangedType(f1.name, dt1, dt2))
-        }
-      })
+          (f1.dataType, f2.dataType) match {
+            case (st1: StructType, st2: StructType) =>
+              processStruct(st1, st2, s"$path${f1.name}.")
+              Seq.empty
+            case (ar1: ArrayType, ar2: ArrayType) =>
+              processArray(ar1, ar2, f1.metadata, f2.metadata, s"$path${f1.name}")
+              Seq.empty
+            case _ =>
+              val dt1 = dataTypeToString(f1.dataType, f1.metadata)
+              val dt2 = dataTypeToString(f2.dataType, f2.metadata)
 
-    (newColumns ++ deletedColumns ++ changedType).toList
+              if (dt1 == dt2) {
+                Seq.empty[FieldChange]
+              } else {
+                Seq(FieldChange.ChangedType(s"$path${f1.name}", dt1, dt2))
+              }
+          }
+        })
+      newFields ++= newColumns
+      deletedFields ++= deletedColumns
+      changedFields ++= changedType
+    }
+
+    def processArray(array1: ArrayType, array2: ArrayType, metadata1: Metadata, metadata2: Metadata, path: String = ""): Unit = {
+      (array1.elementType, array2.elementType) match {
+        case (st1: StructType, st2: StructType) =>
+          processStruct(st1, st2, s"$path[].")
+          Seq.empty
+        case (ar1: ArrayType, ar2: ArrayType) =>
+          processArray(ar1, ar2, metadata1, metadata2, s"$path[]")
+          Seq.empty
+        case _ =>
+          val dt1 = dataTypeToString(array1, metadata1)
+          val dt2 = dataTypeToString(array2, metadata2)
+
+          if (dt1 != dt2) {
+            changedFields += FieldChange.ChangedType(path, dt1, dt2)
+          }
+      }
+    }
+
+    processStruct(schemaA, schemaB)
+    val allChanges = newFields ++ deletedFields ++ changedFields
+    allChanges.toList
   }
 
   /**
