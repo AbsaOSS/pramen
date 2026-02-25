@@ -155,7 +155,12 @@ object SparkUtils {
   }
 
   /**
-    * Compares 2 schemas.
+    * Compares two schemas represented as `StructType` and identifies the differences
+    * between them, such as newly added fields, deleted fields, or fields with changed types.
+    *
+    * @param schemaA the first schema to compare
+    * @param schemaB the second schema to compare
+    * @return a list of `FieldChange` that represents the differences between the two schemas
     */
   def compareSchemas(schemaA: StructType, schemaB: StructType): List[FieldChange] = {
     val newFields = new ListBuffer[FieldChange]
@@ -181,37 +186,32 @@ object SparkUtils {
       val newColumns: Array[FieldChange] = schema2.fields
         .filter(f => !fields1.contains(f.name))
         .map(f => FieldChange.NewField(s"$path${f.name}", dataTypeToString(f.dataType, f.metadata)))
+      newFields ++= newColumns
 
       val deletedColumns: Array[FieldChange] = schema1.fields
         .filter(f => !fields2.contains(f.name))
         .map(f => FieldChange.DeletedField(s"$path${f.name}", dataTypeToString(f.dataType, f.metadata)))
+      deletedFields ++= deletedColumns
 
-      val changedType: Array[FieldChange] = schema1.fields
+      schema1.fields
         .filter(f => fields2.contains(f.name))
-        .flatMap(f1 => {
+        .foreach(f1 => {
           val f2 = fields2(f1.name)
 
           (f1.dataType, f2.dataType) match {
             case (st1: StructType, st2: StructType) =>
               processStruct(st1, st2, s"$path${f1.name}.")
-              Seq.empty
             case (ar1: ArrayType, ar2: ArrayType) =>
               processArray(ar1, ar2, f1.metadata, f2.metadata, s"$path${f1.name}")
-              Seq.empty
             case _ =>
               val dt1 = dataTypeToString(f1.dataType, f1.metadata)
               val dt2 = dataTypeToString(f2.dataType, f2.metadata)
 
-              if (dt1 == dt2) {
-                Seq.empty[FieldChange]
-              } else {
-                Seq(FieldChange.ChangedType(s"$path${f1.name}", dt1, dt2))
+              if (dt1 != dt2) {
+                changedFields += FieldChange.ChangedType(s"$path${f1.name}", dt1, dt2)
               }
           }
         })
-      newFields ++= newColumns
-      deletedFields ++= deletedColumns
-      changedFields ++= changedType
     }
 
     def processArray(array1: ArrayType, array2: ArrayType, metadata1: Metadata, metadata2: Metadata, path: String = ""): Unit = {
