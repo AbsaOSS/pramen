@@ -21,7 +21,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.api.lock.TokenLock
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.lock.TokenLockJdbc
+import za.co.absa.pramen.core.lock.{TokenLockBase, TokenLockJdbc, TokenLockRegistry}
 import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.UsingUtils
@@ -97,6 +97,14 @@ class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with Befor
       } finally {
         lock1.release()
       }
+    }
+
+    "lock registry releases all locks" in {
+      val lock1 = getLock("token1")
+      assert(lock1.tryAcquire())
+
+      TokenLockRegistry.releaseAllLocks()
+      assert(!lock1.asInstanceOf[TokenLockBase].isAcquired)
     }
   }
 

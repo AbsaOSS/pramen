@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.lock
 
 import za.co.absa.pramen.api.lock.TokenLock
 
-class TokenLockAllow extends TokenLock {
+class TokenLockAllow(override val token: String) extends TokenLock {
   override def tryAcquire(): Boolean = true
 
   override def release(): Unit = {}

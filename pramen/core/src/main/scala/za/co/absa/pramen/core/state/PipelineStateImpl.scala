@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHA
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
 import za.co.absa.pramen.core.exceptions.OsSignalException
+import za.co.absa.pramen.core.lock.TokenLockRegistry
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
 import za.co.absa.pramen.core.notify.pipeline.{PipelineNotification, PipelineNotificationEmail}
@@ -209,6 +210,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     runCustomShutdownHook()
     removeSignalHandlers()
     sendNotificationEmail()
+    TokenLockRegistry.releaseAllLocks()
   }
 
   private lazy val shutdownHook = new Thread() {
