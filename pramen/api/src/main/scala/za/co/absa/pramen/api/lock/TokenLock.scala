@@ -41,4 +41,6 @@ trait TokenLock extends AutoCloseable {
   def tryAcquire(): Boolean
 
   def release(): Unit
+
+  def token: String
 }

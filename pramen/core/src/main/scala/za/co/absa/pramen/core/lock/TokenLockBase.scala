@@ -32,7 +32,7 @@ import scala.util.control.NonFatal
   *
   * @param token the unique identifier for the lock (across multiple JVM processes and Spark jobs).
   */
-abstract class TokenLockBase(token: String) extends TokenLock {
+abstract class TokenLockBase(override val token: String) extends TokenLock {
   import TokenLockBase._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -65,7 +65,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     *         Note: Unlike standard lock implementations, this returns false even when the current instance already owns the lock.
     */
   override def tryAcquire(): Boolean = synchronized {
-    if (lockAcquired) {
+    val isAcquired = if (lockAcquired) {
       false
     } else {
       if (tryAcquireGuardLock(lockAcquireRetries, 0)) {
@@ -79,6 +79,12 @@ abstract class TokenLockBase(token: String) extends TokenLock {
         false
       }
     }
+
+    if (isAcquired) {
+      TokenLockRegistry.registerLock(this)
+    }
+
+    isAcquired
   }
 
   override def release(): Unit = {
@@ -96,6 +102,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
       watcherThreadOpt = None
       releaseGuardLock()
       JvmUtils.safeRemoveShutdownHook(shutdownHook)
+      TokenLockRegistry.unregisterLock(this)
       log.info(s"Lock released: '$escapedToken'.")
     }
   }
@@ -104,7 +111,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     release()
   }
 
-  protected def isAcquired: Boolean = synchronized {
+  private[core] def isAcquired: Boolean = synchronized {
     lockAcquired
   }
 
