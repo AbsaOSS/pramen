@@ -100,9 +100,12 @@ abstract class TokenLockBase(override val token: String) extends TokenLock {
     if (wasAcquired) {
       watcherThreadOpt.foreach(_.interrupt())
       watcherThreadOpt = None
-      releaseGuardLock()
-      JvmUtils.safeRemoveShutdownHook(shutdownHook)
-      TokenLockRegistry.unregisterLock(this)
+      try {
+        releaseGuardLock()
+      } finally {
+        JvmUtils.safeRemoveShutdownHook(shutdownHook)
+        TokenLockRegistry.unregisterLock(this)
+      }
       log.info(s"Lock released: '$escapedToken'.")
     }
   }
