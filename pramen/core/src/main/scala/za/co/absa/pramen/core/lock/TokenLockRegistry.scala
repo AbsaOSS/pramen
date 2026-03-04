@@ -56,7 +56,7 @@ object TokenLockRegistry {
         try {
           l.release()
         } catch {
-          case NonFatal(ex) => log.warn(s"Unable to release the lock: ${l.token}")
+          case NonFatal(ex) => log.warn(s"Unable to release the lock: ${l.token}", ex)
         }
       }
       currentLocks.clear()
