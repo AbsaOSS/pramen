@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.sink
+package za.co.absa.pramen.extras.sink
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
@@ -22,15 +22,14 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.mocks.QueryExecutorSpy
-import za.co.absa.pramen.extras.sink.EnceladusUtils
 import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.{Files, Paths}
 import java.time.LocalDate
 
 class EnceladusUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonFixture with TempDirFixture {
-  import za.co.absa.pramen.extras.sink.InfoVersionStatus._
   import spark.implicits._
+  import za.co.absa.pramen.extras.sink.InfoVersionStatus._
 
   private val infoDate = LocalDate.of(2022, 2, 18)
   private val rawPathPattern = "{year}/{month}/{day}/v{version}"

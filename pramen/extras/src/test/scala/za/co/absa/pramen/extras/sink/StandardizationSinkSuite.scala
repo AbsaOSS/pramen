@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.sink
+package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
 import org.apache.hadoop.fs.Path
@@ -24,7 +24,6 @@ import za.co.absa.pramen.core.utils.hive.{HiveHelperSql, HiveQueryTemplates}
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.mocks.QueryExecutorMock
-import za.co.absa.pramen.extras.sink.{StandardizationConfig, StandardizationSink}
 import za.co.absa.pramen.extras.utils.FsUtils
 
 import java.nio.file.{Files, Paths}

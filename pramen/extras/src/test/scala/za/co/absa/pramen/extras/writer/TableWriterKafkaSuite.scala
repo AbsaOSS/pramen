@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.writer
+package za.co.absa.pramen.extras.writer
 
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
-import za.co.absa.pramen.extras.writer.TableWriterKafka
 
 class TableWriterKafkaSuite extends AnyWordSpec with SparkTestBase {
   "TableWriterKafka" should {

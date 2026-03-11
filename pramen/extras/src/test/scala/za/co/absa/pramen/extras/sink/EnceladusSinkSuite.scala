@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.extras.tests.sink
+package za.co.absa.pramen.extras.sink
 
 import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
@@ -23,7 +23,6 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.extras.mocks.QueryExecutorSpy
-import za.co.absa.pramen.extras.sink.EnceladusSink
 import za.co.absa.pramen.extras.sink.EnceladusSink.{DATASET_NAME_KEY, DATASET_VERSION_KEY, HIVE_TABLE_KEY}
 import za.co.absa.pramen.extras.utils.FsUtils
 
