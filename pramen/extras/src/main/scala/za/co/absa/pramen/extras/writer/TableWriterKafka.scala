@@ -125,7 +125,7 @@ class TableWriterKafka(topicName: String,
       AbrisConfig.SCHEMA_REGISTRY_URL -> writerConf.kafkaAvroConfig.schemaRegistryUrl
     ) ++ writerConf.kafkaAvroConfig.schemaRegistryExtraOptions
 
-    ConfigUtils.logExtraOptions("Schema registry options", schemaRegistryClientConfig, Set("basic.auth.user.info"))
+    ConfigUtils.logExtraOptions("Schema registry options", schemaRegistryClientConfig, KAFKA_TOKENS_TO_REDACT)
 
     val schemaId = schemaIdOpt match {
       case Some(id) => id
