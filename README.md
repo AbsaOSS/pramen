@@ -982,12 +982,14 @@ pramen.sources = [
       value.naming.strategy = "topic.name"
       #key.naming.strategy = "topic.name"
 
-      # Arbitrary options for Schema registry
-      basic.auth.credentials.source = "..."
-      basic.auth.user.info = "..."
-      ssl.truststore.location = "..."
-      ssl.truststore.password = "..."
-      ssl.truststore.type = "..."
+      option {
+        # Arbitrary options for Schema registry
+        basic.auth.credentials.source = "..."
+        basic.auth.user.info = "..."
+        ssl.truststore.location = "..."
+        ssl.truststore.password = "..."
+        ssl.truststore.type = "..."
+      }
     }
   }
 ]
@@ -1055,12 +1057,14 @@ pramen.sinks = [
       url = "https://my.schema.registry:8081"
       value.naming.strategy = "topic.name"
 
-      # Arbitrary options for Schema registry
-      basic.auth.credentials.source = "..."
-      basic.auth.user.info = "..."
-      ssl.truststore.location = "..."
-      ssl.truststore.password = "..."
-      ssl.truststore.type = "..."
+      option {
+        # Arbitrary options for Schema registry
+        basic.auth.credentials.source = "..."
+        basic.auth.user.info = "..."
+        ssl.truststore.location = "..."
+        ssl.truststore.password = "..."
+        ssl.truststore.type = "..."
+      }
     }
   }
 ]
