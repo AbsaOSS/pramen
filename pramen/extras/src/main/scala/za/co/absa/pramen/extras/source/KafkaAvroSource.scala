@@ -201,6 +201,8 @@ class KafkaAvroSource(sourceConfig: Config,
       AbrisConfig.SCHEMA_REGISTRY_URL -> kafkaAvroConfig.schemaRegistryUrl
     ) ++ kafkaAvroConfig.schemaRegistryExtraOptions
 
+    ConfigUtils.logExtraOptions("Schema registry options", schemaRegistryClientConfig, Set("basic.auth.user.info"))
+
     val abrisValueBase = AbrisConfig
       .fromConfluentAvro.downloadReaderSchemaByLatestVersion
 
