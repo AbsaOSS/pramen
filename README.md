@@ -975,6 +975,14 @@ pramen.sources = [
       sasl.jaas.config = "..."
       sasl.mechanism = "..."
       security.protocol = "..."
+
+      ssl.truststore.location = "..."
+      ssl.truststore.password = "..."
+      ssl.truststore.type = "..."
+      ssl.keystore.location = "..."
+      ssl.keystore.password = "..."
+      ssl.keystore.type = "..."
+      ssl.key.password = "..."
     }
 
     schema.registry {
@@ -986,9 +994,12 @@ pramen.sources = [
         # Arbitrary options for Schema registry
         basic.auth.credentials.source = "..."
         basic.auth.user.info = "..."
-        ssl.truststore.location = "..."
-        ssl.truststore.password = "..."
-        ssl.truststore.type = "..."
+        schema.registry.ssl.truststore.location = "..."
+        schema.registry.ssl.truststore.password = "..."
+        schema.registry.ssl.truststore.type = "..."
+        schema.registry.ssl.keystore.location = "..."
+        schema.registry.ssl.keystore.password = "..."
+        schema.registry.ssl.keystore.type = "..."
       }
     }
   }
@@ -1051,6 +1062,14 @@ pramen.sinks = [
       sasl.jaas.config = "..."
       sasl.mechanism = "..."
       security.protocol = "..."
+
+      ssl.truststore.location = "..."
+      ssl.truststore.password = "..."
+      ssl.truststore.type = "..."
+      ssl.keystore.location = "..."
+      ssl.keystore.password = "..."
+      ssl.keystore.type = "..."
+      ssl.key.password = "..."
     }
 
     schema.registry {
@@ -1061,9 +1080,12 @@ pramen.sinks = [
         # Arbitrary options for Schema registry
         basic.auth.credentials.source = "..."
         basic.auth.user.info = "..."
-        ssl.truststore.location = "..."
-        ssl.truststore.password = "..."
-        ssl.truststore.type = "..."
+        schema.registry.ssl.truststore.location = "..."
+        schema.registry.ssl.truststore.password = "..."
+        schema.registry.ssl.truststore.type = "..."
+        schema.registry.ssl.keystore.location = "..."
+        schema.registry.ssl.keystore.password = "..."
+        schema.registry.ssl.keystore.type = "..."
       }
     }
   }
