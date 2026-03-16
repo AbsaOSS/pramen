@@ -23,6 +23,13 @@ import za.co.absa.pramen.core.metastore.model.{HiveApi, HiveConfig}
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 
 abstract class HiveHelper {
+  def createHiveTable(path: String,
+                      format: HiveFormat,
+                      schema: StructType,
+                      partitionBy: Seq[String],
+                      databaseName: Option[String],
+                      tableName: String): Unit
+
   def createOrUpdateHiveTable(path: String,
                               format: HiveFormat,
                               schema: StructType,

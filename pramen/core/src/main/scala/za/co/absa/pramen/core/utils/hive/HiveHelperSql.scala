@@ -25,6 +25,20 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                     alwaysEscapeColumnNames: Boolean) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  override def createHiveTable(path: String,
+                               format: HiveFormat,
+                               schema: StructType,
+                               partitionBy: Seq[String],
+                               databaseName: Option[String],
+                               tableName: String): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = true)
+    if (partitionBy.nonEmpty) {
+      repairHiveTable(fullTableName)
+    }
+  }
+
   override def createOrUpdateHiveTable(path: String,
                                        format: HiveFormat,
                                        schema: StructType,
@@ -34,7 +48,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
-    createHiveTable(fullTableName, path, format, schema, partitionBy)
+    createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = false)
     if (partitionBy.nonEmpty) {
       repairHiveTable(fullTableName)
     }
@@ -87,13 +101,19 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                               path: String,
                               format: HiveFormat,
                               schema: StructType,
-                              partitionBy: Seq[String]
+                              partitionBy: Seq[String],
+                              failIfExists: Boolean
                              ): Unit = {
 
     log.info(s"Creating Hive table: $fullTableName...")
 
+    val sqlTemplate = if (failIfExists)
+      hiveConfig.createOnlyTableTemplate
+    else
+      hiveConfig.createTableTemplate
+
     val sqlHiveCreate = applyTemplate(
-      hiveConfig.createTableTemplate,
+      sqlTemplate,
       fullTableName,
       path,
       format,

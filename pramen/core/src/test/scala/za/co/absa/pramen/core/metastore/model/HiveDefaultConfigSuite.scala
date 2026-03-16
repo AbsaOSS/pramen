@@ -53,9 +53,11 @@ class HiveDefaultConfigSuite extends AnyWordSpec {
           |
           |  conf {
           |     parquet.create.table.template = "create1"
+          |     parquet.create.only.table.template = "create_only1"
           |     parquet.repair.table.template = "repair1"
           |     parquet.drop.table.template = "drop1"
           |     delta.create.table.template = "create2"
+          |     delta.create.only.table.template = "create_only2"
           |     delta.repair.table.template = "repair2"
           |     delta.drop.table.template = "drop2"
           |  }
@@ -70,9 +72,11 @@ class HiveDefaultConfigSuite extends AnyWordSpec {
       assert(hiveDefaultConfig.ignoreFailures)
       assert(hiveDefaultConfig.templates.nonEmpty)
       assert(hiveDefaultConfig.templates("parquet").createTableTemplate.contains("create1"))
+      assert(hiveDefaultConfig.templates("parquet").createOnlyTableTemplate.contains("create_only1"))
       assert(hiveDefaultConfig.templates("parquet").repairTableTemplate.contains("repair1"))
       assert(hiveDefaultConfig.templates("parquet").dropTableTemplate.contains("drop1"))
       assert(hiveDefaultConfig.templates("delta").createTableTemplate.contains("create2"))
+      assert(hiveDefaultConfig.templates("delta").createOnlyTableTemplate.contains("create_only2"))
       assert(hiveDefaultConfig.templates("delta").repairTableTemplate.contains("repair2"))
       assert(hiveDefaultConfig.templates("delta").dropTableTemplate.contains("drop2"))
     }

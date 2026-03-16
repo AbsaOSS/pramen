@@ -84,6 +84,7 @@ object HiveConfig {
   def fromConfigWithDefaults(conf: Config, defaults: HiveDefaultConfig, format: DataFormat, parent: String = ""): HiveConfig = {
     val defaultTemplates = defaults.templates.getOrElse(format.name, HiveQueryTemplates(
       DEFAULT_CREATE_TABLE_TEMPLATE,
+      DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
       DEFAULT_REPAIR_TABLE_TEMPLATE,
       DEFAULT_ADD_PARTITION_TEMPLATE,
       DEFAULT_DROP_TABLE_TEMPLATE
@@ -107,6 +108,9 @@ object HiveConfig {
     val createTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$CREATE_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.createTableTemplate)
 
+    val createOnlyTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$CREATE_ONLY_TABLE_TEMPLATE_KEY")
+      .getOrElse(defaultTemplates.createOnlyTableTemplate)
+
     val repairTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPAIR_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.repairTableTemplate)
 
@@ -122,7 +126,7 @@ object HiveConfig {
     HiveConfig(
       hiveApi = hiveApi,
       database = database,
-      templates = HiveQueryTemplates(createTableTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
+      templates = HiveQueryTemplates(createTableTemplate, createOnlyTableTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
       jdbcConfig = jdbcConfig,
       ignoreFailures,
       alwaysEscapeColumnNames,
@@ -140,6 +144,7 @@ object HiveConfig {
   def fromDefaults(defaults: HiveDefaultConfig, format: DataFormat): HiveConfig = {
     val templates = defaults.templates.getOrElse(format.name, HiveQueryTemplates(
       DEFAULT_CREATE_TABLE_TEMPLATE,
+      DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
       DEFAULT_REPAIR_TABLE_TEMPLATE,
       DEFAULT_ADD_PARTITION_TEMPLATE,
       DEFAULT_DROP_TABLE_TEMPLATE
@@ -151,7 +156,7 @@ object HiveConfig {
   def getNullConfig: HiveConfig = HiveConfig(
     HiveApi.Sql,
     None,
-    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
+    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_CREATE_ONLY_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
     None,
     ignoreFailures = false,
     alwaysEscapeColumnNames = true,
