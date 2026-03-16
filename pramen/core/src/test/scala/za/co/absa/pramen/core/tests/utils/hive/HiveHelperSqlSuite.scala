@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.types.{IntegerType, MetadataBuilder, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -88,6 +88,34 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
         hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "execute expected creation only query for partitioned table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected =
+          s"""CREATE EXTERNAL TABLE
+             |`db`.`tbl` ( `c` INT )
+             |PARTITIONED BY (`a` STRING,`b` INT)
+             |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+             |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+             |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+             |LOCATION '$path';
+             |MSCK REPAIR TABLE `db`.`tbl`
+             |""".stripMargin
+
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 
         val actual = qe.queries.mkString("\n")
 

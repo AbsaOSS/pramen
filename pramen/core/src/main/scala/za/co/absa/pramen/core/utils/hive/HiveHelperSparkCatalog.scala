@@ -27,6 +27,25 @@ import scala.util.control.NonFatal
 class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  override def createHiveTable(path: String,
+                               format: HiveFormat,
+                               schema: StructType,
+                               partitionBy: Seq[String],
+                               databaseName: Option[String],
+                               tableName: String): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    createCatalogTable(fullTableName, path, format)
+
+    if (partitionBy.nonEmpty) {
+      repairHiveTable(databaseName, tableName, format)
+    }
+
+    if (!doesTableExist(databaseName, tableName)) {
+      throw new IllegalStateException(s"Unable to create Spark Catalog table: $fullTableName")
+    }
+  }
+
   override def createOrUpdateHiveTable(path: String,
                                        format: HiveFormat,
                                        schema: StructType,

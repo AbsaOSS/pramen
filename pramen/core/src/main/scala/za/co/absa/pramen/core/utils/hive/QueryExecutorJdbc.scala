@@ -21,10 +21,11 @@ import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
 import java.sql.{Connection, ResultSet, SQLException, SQLSyntaxErrorException}
-import scala.util.{Failure, Try}
 import scala.util.control.NonFatal
+import scala.util.{Failure, Try}
 
 class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: Boolean) extends QueryExecutor {
+
   private val log = LoggerFactory.getLogger(this.getClass)
   private var connection: Connection = _
   private val defaultRetries = jdbcUrlSelector.getNumberOfUrls
@@ -34,21 +35,26 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
     val fullTableName = HiveHelper.getFullTable(dbName, tableName)
 
-    val query = if (optimizedExistQuery) {
-      s"DESCRIBE $fullTableName"
+    if (optimizedExistQuery) {
+      val exists = checkTableExistenceUsingJdbcNative(dbName, tableName)
+      if (exists)
+         log.info(s"Table $fullTableName exists.")
+      else {
+        log.info(s"Table $fullTableName does not exist.")
+      }
+      exists
     } else {
-      s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
-    }
-
-    Try {
-      execute(query)
-    } match {
-      case Failure(ex) =>
-        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist" + ex.getMessage)
-        false
-      case _ =>
-        log.info(s"Table $fullTableName exists.")
-        true
+      val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
+      Try {
+        execute(query)
+      } match {
+        case Failure(ex) =>
+          log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist" + ex.getMessage)
+          false
+        case _ =>
+          log.info(s"Table $fullTableName exists.")
+          true
+      }
     }
   }
 
@@ -93,6 +99,18 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       connection = newConnection
     }
     connection
+  }
+
+  def checkTableExistenceUsingJdbcNative(dbName: Option[String], tableName: String): Boolean = {
+    import za.co.absa.pramen.core.utils.UsingUtils.Implicits._
+
+    val conn = getConnection(false)
+    val meta = conn.getMetaData
+
+    for (rs <- meta.getTables(null, dbName.orNull, tableName, Array[String]("TABLE", "VIEW", "MATERIALIZED VIEW"))) yield {
+      val exists = rs.next
+      exists
+    }
   }
 }
 
