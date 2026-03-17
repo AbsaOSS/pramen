@@ -50,7 +50,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
         execute(query)
       } match {
         case Failure(ex) =>
-          log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist" + ex.getMessage)
+          log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
           false
         case _ =>
           log.info(s"Table $fullTableName exists.")

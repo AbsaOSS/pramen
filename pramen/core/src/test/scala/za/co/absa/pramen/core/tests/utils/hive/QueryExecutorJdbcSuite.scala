@@ -226,6 +226,8 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
       val actual = qe.getEscapedMetadataString("100% escaped_table", metadata)
 
+      qe.close()
+
       assert(actual == "100\\% escaped\\_table")
     }
   }
