@@ -218,4 +218,15 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       assert(!actionExecuted)
     }
   }
+
+  "getEscapedMetadataString" should {
+    "escape % and _" in {
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
+      val metadata = getConnection.getMetaData
+
+      val actual = qe.getEscapedMetadataString("100% escaped_table", metadata)
+
+      assert(actual == "100\\% escaped\\_table")
+    }
+  }
 }

@@ -20,11 +20,12 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-import java.sql.{Connection, ResultSet, SQLException, SQLSyntaxErrorException}
+import java.sql._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
 
 class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: Boolean) extends QueryExecutor {
+  import QueryExecutorJdbc._
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private var connection: Connection = _
@@ -101,20 +102,37 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     connection
   }
 
-  def checkTableExistenceUsingJdbcNative(dbName: Option[String], tableName: String): Boolean = {
+  def checkTableExistenceUsingJdbcNative(databaseNameOpt: Option[String], tableName: String): Boolean = {
     import za.co.absa.pramen.core.utils.UsingUtils.Implicits._
 
     val conn = getConnection(false)
-    val meta = conn.getMetaData
+    val metadata = conn.getMetaData
 
-    for (rs <- meta.getTables(null, dbName.orNull, tableName, Array[String]("TABLE", "VIEW", "MATERIALIZED VIEW"))) yield {
+    val db = databaseNameOpt match {
+      case Some(s) => getEscapedMetadataString(s, metadata)
+      case None => null
+    }
+
+    val table = getEscapedMetadataString(tableName, metadata)
+
+    for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
       val exists = rs.next
       exists
     }
   }
+
+  def getEscapedMetadataString(s: String, metaData: DatabaseMetaData): String = {
+    val esc = metaData.getSearchStringEscape
+
+    s.replace(esc, s"${esc}$esc")
+      .replace("%", s"$esc%")
+      .replace("_", s"${esc}_")
+  }
 }
 
 object QueryExecutorJdbc {
+  val HIVE_TABLE_TYPES = scala.Array[String]("TABLE", "VIEW", "MATERIALIZED VIEW")
+
   def fromJdbcConfig(jdbcConfig: JdbcConfig, optimizedExistQuery: Boolean): QueryExecutorJdbc = {
     val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
