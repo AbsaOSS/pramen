@@ -48,10 +48,12 @@ class TokenLockSQLiteSuite extends AnyWordSpec with  BeforeAndAfter with BeforeA
   }
 
   override def afterAll(): Unit = {
-    if (pramenDb != null) pramenDb.close()
-    FileUtils.deleteDirectory(new File(tempDir))
-
-    super.afterAll()
+    try {
+      if (pramenDb != null) pramenDb.close()
+    } finally {
+      FileUtils.deleteDirectory(new File(tempDir))
+      super.afterAll()
+    }
   }
 
   "Token lock" should {
