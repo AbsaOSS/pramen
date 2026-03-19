@@ -67,14 +67,18 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     executeActionOnConnection { conn =>
       val statement = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
-      val autoCloseStatement = new AutoCloseable {
+      val autoCloseStatement: AutoCloseable = new AutoCloseable {
+        val statementClosed = new java.util.concurrent.atomic.AtomicBoolean(false)
+
         override def close(): Unit = {
-          try {
-            log.warn(s"Cancelling SQL statement: $query")
-            statement.cancel()
-          } finally {
-            log.warn(s"Closing the SQL statement...")
-            statement.close()
+          if (statementClosed.compareAndSet(false, true)) {
+            try {
+              log.info(s"Cancelling SQL statement: $query")
+              statement.cancel()
+            } finally {
+              log.info(s"Closing the SQL statement...")
+              statement.close()
+            }
           }
         }
       }
@@ -85,7 +89,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
         statement.execute(query)
       } finally {
         ThreadClosableRegistry.unregisterCloseable(autoCloseStatement)
-        statement.close()
+        autoCloseStatement.close()
       }
     }
   }
