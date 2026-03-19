@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.utils.hive
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.runner.task.ThreadClosableRegistry
 
 import java.sql._
 import scala.util.control.NonFatal
@@ -66,15 +67,39 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     executeActionOnConnection { conn =>
       val statement = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
+      val autoCloseStatement = new AutoCloseable {
+        override def close(): Unit = {
+          try {
+            log.warn(s"Cancelling SQL statement: $query")
+            statement.cancel()
+          } finally {
+            log.warn(s"Closing the SQL statement...")
+            statement.close()
+          }
+        }
+      }
+
+      ThreadClosableRegistry.registerCloseable(autoCloseStatement)
+
       try {
         statement.execute(query)
       } finally {
+        ThreadClosableRegistry.unregisterCloseable(autoCloseStatement)
         statement.close()
       }
     }
   }
 
-  override def close(): Unit = if (connection != null) connection.close()
+  override def close(): Unit = {
+    if (connection != null) {
+      ThreadClosableRegistry.unregisterCloseable(connection)
+      try {
+        connection.close()
+      } catch {
+        case NonFatal(ex) => log.warn("Failed to close JDBC connection", ex)
+      }
+    }
+  }
 
   private[core] def executeActionOnConnection(action: Connection => Boolean): Boolean = {
     val currentConnection = getConnection(forceReconnect = false)
@@ -97,7 +122,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     if (connection == null || forceReconnect) {
       val (newConnection, url) = jdbcUrlSelector.getWorkingConnection(retries)
       log.info(s"Selected query executor connection: $url")
+      close()
       connection = newConnection
+      ThreadClosableRegistry.registerCloseable(connection)
     }
     connection
   }
