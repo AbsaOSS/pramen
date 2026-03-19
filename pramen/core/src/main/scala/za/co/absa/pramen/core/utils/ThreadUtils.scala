@@ -16,13 +16,17 @@
 
 package za.co.absa.pramen.core.utils
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.exceptions.TimeoutException
+import za.co.absa.pramen.core.runner.task.ThreadClosableRegistry
 import za.co.absa.pramen.core.utils.impl.ThreadWithException
 
 import java.lang.Thread.UncaughtExceptionHandler
 import scala.concurrent.duration.Duration
 
 object ThreadUtils {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   /**
     * Executes an action with a timeout. If the timeout is breached the task is killed (using Thread.interrupt())
     *
@@ -30,8 +34,8 @@ object ThreadUtils {
     *
     * Any exception is passed to the caller.
     *
-    * @param timeout  The task timeout.
-    * @param action   An action to execute.
+    * @param timeout The task timeout.
+    * @param action  An action to execute.
     */
   @throws[TimeoutException]
   def runWithTimeout(timeout: Duration)(action: => Unit): Unit = {
@@ -54,6 +58,15 @@ object ThreadUtils {
 
     if (thread.isAlive) {
       val stackTrace = thread.getStackTrace
+
+      try {
+        // Execute cleanup BEFORE interrupt - e.g. close the JDBC connection/statement
+        ThreadClosableRegistry.cleanupThread(thread.getId)
+      } catch {
+        case ex: Throwable =>
+          log.warn(s"Exception during timeout cleanup: ${ex.getMessage}")
+      }
+
       thread.interrupt()
 
       val prettyTimeout = TimeUtils.prettyPrintElapsedTimeShort(timeout.toMillis)

@@ -306,7 +306,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = false)
 
         assert(qe.queries.length == 1)
-        assert(qe.queries.exists(_.contains("REPAIR")))
+        assert(qe.queries.exists(_.contains("ALTER TABLE")))
       }
 
       "do nothing for a delta since it does not need repairing" in {
