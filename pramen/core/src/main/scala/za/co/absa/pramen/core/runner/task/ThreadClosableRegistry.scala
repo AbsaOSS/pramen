@@ -18,12 +18,12 @@ package za.co.absa.pramen.core.runner.task
 
 import org.slf4j.LoggerFactory
 
-import java.util
 import scala.collection.JavaConverters._
+import scala.util.control.NonFatal
 
 object ThreadClosableRegistry {
   private val log = LoggerFactory.getLogger(this.getClass)
-  private val closables = new util.HashMap[Long, util.List[AutoCloseable]]()
+  private val closeables = new java.util.LinkedList[(Long, AutoCloseable)]
 
   /**
     * Registers a closeable resource for the current thread.
@@ -33,26 +33,24 @@ object ThreadClosableRegistry {
     */
   def registerCloseable(closeable: AutoCloseable): Unit = synchronized {
     val threadId = Thread.currentThread().getId
-    val list = Option(closables.get(threadId)).getOrElse {
-      val newList = new util.ArrayList[AutoCloseable]()
-      closables.put(threadId, newList)
-      newList
+
+    if (closeables.indexOf(closeable) < 0) {
+      closeables.add((threadId, closeable))
     }
-    list.add(closeable)
   }
 
   /**
-    * Unregisters a closeable resource from the current thread's registry.
-    * If this was the last resource for the thread, the thread entry is removed from the registry.
+    * Unregisters a closeable resource from the thread's registry.
     *
     * @param closeable The AutoCloseable resource to unregister
     */
   def unregisterCloseable(closeable: AutoCloseable): Unit = synchronized {
-    val threadId = Thread.currentThread().getId
-    Option(closables.get(threadId)).foreach { list =>
-      list.remove(closeable)
-      if (list.isEmpty) {
-        closables.remove(threadId)
+    val iterator = closeables.iterator()
+    while (iterator.hasNext) {
+      val (_, c) = iterator.next()
+      if (c == closeable) {
+        iterator.remove()
+        return
       }
     }
   }
@@ -65,17 +63,15 @@ object ThreadClosableRegistry {
     * @param threadId The ID of the thread whose resources should be cleaned up
     */
   def cleanupThread(threadId: Long): Unit = synchronized {
-    Option(closables.remove(threadId)).foreach { list =>
-      // Ensure LIFO order
-      val iterator = list.asScala.reverseIterator
-      while (iterator.hasNext) {
-        val closeable = iterator.next()
-        try {
-          closeable.close()
-        } catch {
-          case ex: Exception =>
-            log.warn(s"Failed to close resource for thread $threadId", ex)
-        }
+    val threadCloseables = closeables.asScala.filter(_._1 == threadId).map(_._2).toList
+    threadCloseables.reverse.foreach { closeable =>
+      try {
+        closeable.close()
+      } catch {
+        case NonFatal(ex) =>
+          log.warn(s"Error closing resource for thread $threadId.", ex)
+      } finally {
+        unregisterCloseable(closeable)
       }
     }
   }

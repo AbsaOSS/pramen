@@ -58,15 +58,19 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
       var thread1Id: Long = 0
       var thread2Id: Long = 0
 
-      val thread1 = new Thread(() => {
-        thread1Id = Thread.currentThread().getId
-        ThreadClosableRegistry.registerCloseable(closeableThread1)
-      })
+      val thread1 = new Thread {
+        override def run(): Unit = {
+          thread1Id = Thread.currentThread().getId
+          ThreadClosableRegistry.registerCloseable(closeableThread1)
+        }
+      }
 
-      val thread2 = new Thread(() => {
-        thread2Id = Thread.currentThread().getId
-        ThreadClosableRegistry.registerCloseable(closeableThread2)
-      })
+      val thread2 = new Thread {
+        override def run(): Unit = {
+          thread2Id = Thread.currentThread().getId
+          ThreadClosableRegistry.registerCloseable(closeableThread2)
+        }
+      }
 
       thread1.start()
       thread2.start()
@@ -146,18 +150,20 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
       val threadData = mutable.Map[Long, Seq[() => Int]]()
 
       val threads = (1 to numThreads).map { _ =>
-        new Thread(() => {
-          val threadId = Thread.currentThread().getId
-          val closeablesWithCounters = (1 to closeablesPerThread).map(_ => createCountingCloseable())
+        new Thread {
+          override def run(): Unit = {
+            val threadId = Thread.currentThread().getId
+            val closeablesWithCounters = (1 to closeablesPerThread).map(_ => createCountingCloseable())
 
-          threadData.synchronized {
-            threadData(threadId) = closeablesWithCounters.map(_._2)
-          }
+            threadData.synchronized {
+              threadData(threadId) = closeablesWithCounters.map(_._2)
+            }
 
-          closeablesWithCounters.foreach { case (closeable, _) =>
-            ThreadClosableRegistry.registerCloseable(closeable)
+            closeablesWithCounters.foreach { case (closeable, _) =>
+              ThreadClosableRegistry.registerCloseable(closeable)
+            }
           }
-        })
+        }
       }
 
       threads.foreach(_.start())
