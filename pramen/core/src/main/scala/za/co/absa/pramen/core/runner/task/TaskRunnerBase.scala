@@ -411,7 +411,7 @@ abstract class TaskRunnerBase(conf: Config,
         }
 
         val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
-          val recreate = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || task.reason == TaskRunReason.Rerun
+          val recreate = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || runtimeConfig.forceReCreateHiveTables
           task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, recreate)
         } else {
           Seq.empty

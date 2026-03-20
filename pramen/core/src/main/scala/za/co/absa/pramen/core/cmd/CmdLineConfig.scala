@@ -48,7 +48,8 @@ case class CmdLineConfig(
                           overrideLogLevel: Option[String] = None,
                           logEffectiveConfig: Option[Boolean] = None,
                           attempt: Option[Int] = None,
-                          maxAttempts: Option[Int] = None
+                          maxAttempts: Option[Int] = None,
+                          forceReCreateHiveTables: Option[Boolean] = None
                         )
 
 object CmdLineConfig {
@@ -136,6 +137,9 @@ object CmdLineConfig {
 
     for (maxAttempts <- cmd.maxAttempts)
       accumulatedConfig = accumulatedConfig.withValue(MAX_ATTEMPTS, ConfigValueFactory.fromAnyRef(maxAttempts))
+
+    for (forcereCreateHiveTables <- cmd.forceReCreateHiveTables)
+      accumulatedConfig = accumulatedConfig.withValue(FORCE_RECREATE_HIVE_TABLES, ConfigValueFactory.fromAnyRef(forcereCreateHiveTables))
 
     accumulatedConfig
   }
@@ -253,6 +257,10 @@ object CmdLineConfig {
     opt[Boolean]("log-config").optional().action((value, config) =>
         config.copy(logEffectiveConfig = Option(value)))
       .text("When true (default), Pramen logs the effective configuration.")
+
+    opt[Unit]("force-recreate-hive-tables").optional().action((_, config) =>
+        config.copy(forceReCreateHiveTables = Some(true)))
+      .text("When specified, Hive tables configured for metastore tables will be re-created, and partitions repaired.")
 
     help("help").text("prints this usage text")
   }
