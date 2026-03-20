@@ -34,13 +34,19 @@ object ThreadClosableRegistry {
   def registerCloseable(closeable: AutoCloseable): Unit = synchronized {
     val threadId = Thread.currentThread().getId
 
-    if (closeables.indexOf(closeable) < 0) {
+    val iterator = closeables.iterator()
+    var alreadyRegistered = false
+    while (iterator.hasNext && !alreadyRegistered) {
+      alreadyRegistered = iterator.next()._2 == closeable
+    }
+    if (!alreadyRegistered) {
       closeables.add((threadId, closeable))
     }
   }
 
   /**
-    * Unregisters a closeable resource from the thread's registry.
+    * Unregisters a closeable resource from the registry.
+    * This removes the resource regardless of which thread it was registered from.
     *
     * @param closeable The AutoCloseable resource to unregister
     */
