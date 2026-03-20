@@ -47,7 +47,8 @@ case class RuntimeConfig(
                           historicalRunMode: RunMode,
                           sparkAppDescriptionTemplate: Option[String],
                           attempt: Int, // Current attempt number for the pipeline run (for auto-retry automation)
-                          maxAttempts: Int // Maximum number of attempts allowed for the pipeline run
+                          maxAttempts: Int, // Maximum number of attempts allowed for the pipeline run
+                          forceReCreateHiveTables: Boolean
                         )
 
 object RuntimeConfig {
@@ -76,6 +77,7 @@ object RuntimeConfig {
   val SPARK_APP_DESCRIPTION_TEMPLATE = "pramen.job.description.template"
   val ATTEMPT = "pramen.runtime.attempt"
   val MAX_ATTEMPTS = "pramen.runtime.max.attempts"
+  val FORCE_RECREATE_HIVE_TABLES = "pramen.runtime.hive.force.recreate"
 
   def fromConfig(conf: Config): RuntimeConfig = {
     val infoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
@@ -163,7 +165,8 @@ object RuntimeConfig {
       runMode,
       sparkAppDescriptionTemplate,
       attempt,
-      maxAttempts
+      maxAttempts,
+      forceReCreateHiveTables =  ConfigUtils.getOptionBoolean(conf, FORCE_RECREATE_HIVE_TABLES).getOrElse(false)
     )
   }
 
@@ -188,7 +191,8 @@ object RuntimeConfig {
       historicalRunMode = RunMode.CheckUpdates,
       sparkAppDescriptionTemplate = None,
       attempt = 1,
-      maxAttempts = 1
+      maxAttempts = 1,
+      forceReCreateHiveTables = false
     )
   }
 }

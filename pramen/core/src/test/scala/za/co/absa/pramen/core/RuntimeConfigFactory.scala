@@ -42,7 +42,8 @@ object RuntimeConfigFactory {
                             historicalRunMode: RunMode = RunMode.CheckUpdates,
                             sparkAppDescriptionTemplate: Option[String] = None,
                             attempt: Int = 1,
-                            maxAttempts: Int = 1): RuntimeConfig = {
+                            maxAttempts: Int = 1,
+                            forceReCreateHiveTables: Boolean = false): RuntimeConfig = {
     RuntimeConfig(isDryRun,
       isRerun,
       runTables,
@@ -62,7 +63,8 @@ object RuntimeConfigFactory {
       historicalRunMode,
       sparkAppDescriptionTemplate,
       attempt,
-      maxAttempts)
+      maxAttempts,
+      forceReCreateHiveTables)
   }
 
 }

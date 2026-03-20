@@ -366,6 +366,14 @@ class CmdLineConfigSuite extends AnyWordSpec {
 
       assert(cmd.isEmpty)
     }
+
+    "return the modified config if force-recreate-hive-tables = true" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--force-recreate-hive-tables"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(FORCE_RECREATE_HIVE_TABLES))
+      assert(config.getBoolean(FORCE_RECREATE_HIVE_TABLES))
+    }
   }
 
 }
