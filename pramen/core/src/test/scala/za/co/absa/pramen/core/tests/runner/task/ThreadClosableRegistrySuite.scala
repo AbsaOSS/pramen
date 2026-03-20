@@ -1,3 +1,18 @@
+/*
+ * Copyright 2022 ABSA Group Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package za.co.absa.pramen.core.tests.runner.task
 
@@ -9,88 +24,47 @@ import scala.collection.mutable
 
 class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
 
-  "ThreadClosableRegistry" should {
-    "register a closeable resource for the current thread" in {
-      var closeCalled = 0
-      val closeable = new AutoCloseable {
-        override def close(): Unit = closeCalled += 1
-      }
-      val threadId = Thread.currentThread().getId
-
-      ThreadClosableRegistry.registerCloseable(closeable)
-
-      // Cleanup to verify it was registered
-      ThreadClosableRegistry.cleanupThread(threadId)
-      closeCalled shouldBe 1
+  private def createCountingCloseable(): (AutoCloseable, () => Int) = {
+    var count = 0
+    val closeable = new AutoCloseable {
+      override def close(): Unit = count += 1
     }
+    (closeable, () => count)
+  }
 
-    "register multiple closeable resources for the same thread" in {
-      var closeCalled1 = 0
-      var closeCalled2 = 0
-      var closeCalled3 = 0
-      val closeable1 = new AutoCloseable {
-        override def close(): Unit = closeCalled1 += 1
-      }
-      val closeable2 = new AutoCloseable {
-        override def close(): Unit = closeCalled2 += 1
-      }
-      val closeable3 = new AutoCloseable {
-        override def close(): Unit = closeCalled3 += 1
-      }
-      val threadId = Thread.currentThread().getId
+  private def currentThreadId: Long = Thread.currentThread().getId
+
+  "ThreadClosableRegistry" should {
+    "register and cleanup single or multiple closeable resources" in {
+      val (closeable1, getCount1) = createCountingCloseable()
+      val (closeable2, getCount2) = createCountingCloseable()
+      val (closeable3, getCount3) = createCountingCloseable()
 
       ThreadClosableRegistry.registerCloseable(closeable1)
       ThreadClosableRegistry.registerCloseable(closeable2)
       ThreadClosableRegistry.registerCloseable(closeable3)
 
-      ThreadClosableRegistry.cleanupThread(threadId)
+      ThreadClosableRegistry.cleanupThread(currentThreadId)
 
-      closeCalled1 shouldBe 1
-      closeCalled2 shouldBe 1
-      closeCalled3 shouldBe 1
-    }
-
-    "cleanup all registered resources for a specific thread" in {
-      var closeCalled1 = 0
-      var closeCalled2 = 0
-      val closeable1 = new AutoCloseable {
-        override def close(): Unit = closeCalled1 += 1
-      }
-      val closeable2 = new AutoCloseable {
-        override def close(): Unit = closeCalled2 += 1
-      }
-
-      val threadId = Thread.currentThread().getId
-
-      ThreadClosableRegistry.registerCloseable(closeable1)
-      ThreadClosableRegistry.registerCloseable(closeable2)
-
-      ThreadClosableRegistry.cleanupThread(threadId)
-
-      closeCalled1 shouldBe 1
-      closeCalled2 shouldBe 1
+      getCount1() shouldBe 1
+      getCount2() shouldBe 1
+      getCount3() shouldBe 1
     }
 
     "not affect other threads when cleaning up a specific thread" in {
-      var closeCalled1 = 0
-      var closeCalled2 = 0
-      val closeableThread1 = new AutoCloseable {
-        override def close(): Unit = closeCalled1 += 1
-      }
-      val closeableThread2 = new AutoCloseable {
-        override def close(): Unit = closeCalled2 += 1
-      }
+      val (closeableThread1, getCount1) = createCountingCloseable()
+      val (closeableThread2, getCount2) = createCountingCloseable()
 
-      val thread1Results = mutable.ArrayBuffer[Long]()
-      val thread2Results = mutable.ArrayBuffer[Long]()
+      var thread1Id: Long = 0
+      var thread2Id: Long = 0
 
       val thread1 = new Thread(() => {
-        thread1Results += Thread.currentThread().getId
+        thread1Id = Thread.currentThread().getId
         ThreadClosableRegistry.registerCloseable(closeableThread1)
       })
 
       val thread2 = new Thread(() => {
-        thread2Results += Thread.currentThread().getId
+        thread2Id = Thread.currentThread().getId
         ThreadClosableRegistry.registerCloseable(closeableThread2)
       })
 
@@ -99,49 +73,38 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
       thread1.join()
       thread2.join()
 
-      val thread1Id = thread1Results.head
-      val thread2Id = thread2Results.head
-
       // Cleanup only thread1
       ThreadClosableRegistry.cleanupThread(thread1Id)
-
-      closeCalled1 shouldBe 1
-      closeCalled2 shouldBe 0
+      getCount1() shouldBe 1
+      getCount2() shouldBe 0
 
       // Cleanup thread2
       ThreadClosableRegistry.cleanupThread(thread2Id)
-      closeCalled2 shouldBe 1
+      getCount2() shouldBe 1
     }
 
     "handle exceptions during resource cleanup gracefully" in {
-      var closeCalled1 = 0
+      val (closeable1, getCount1) = createCountingCloseable()
+      val (closeable3, getCount3) = createCountingCloseable()
+
       var closeCalled2 = 0
-      var closeCalled3 = 0
-      val closeable1 = new AutoCloseable {
-        override def close(): Unit = closeCalled1 += 1
-      }
       val closeable2 = new AutoCloseable {
         override def close(): Unit = {
           closeCalled2 += 1
           throw new RuntimeException("Close failed")
         }
       }
-      val closeable3 = new AutoCloseable {
-        override def close(): Unit = closeCalled3 += 1
-      }
-
-      val threadId = Thread.currentThread().getId
 
       ThreadClosableRegistry.registerCloseable(closeable1)
       ThreadClosableRegistry.registerCloseable(closeable2)
       ThreadClosableRegistry.registerCloseable(closeable3)
 
       // Should not throw exception, should attempt to close all resources
-      noException should be thrownBy ThreadClosableRegistry.cleanupThread(threadId)
+      noException should be thrownBy ThreadClosableRegistry.cleanupThread(currentThreadId)
 
-      closeCalled1 shouldBe 1
+      getCount1() shouldBe 1
       closeCalled2 shouldBe 1
-      closeCalled3 shouldBe 1
+      getCount3() shouldBe 1
     }
 
     "do nothing when cleaning up a thread with no registered resources" in {
@@ -151,43 +114,28 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
     }
 
     "do nothing when cleaning up an already cleaned thread" in {
-      var closeCalled = 0
-      val closeable = new AutoCloseable {
-        override def close(): Unit = closeCalled += 1
-      }
-      val threadId = Thread.currentThread().getId
+      val (closeable, getCount) = createCountingCloseable()
 
       ThreadClosableRegistry.registerCloseable(closeable)
-      ThreadClosableRegistry.cleanupThread(threadId)
-
-      closeCalled shouldBe 1
+      ThreadClosableRegistry.cleanupThread(currentThreadId)
+      getCount() shouldBe 1
 
       // Cleanup again - should not call close again
-      ThreadClosableRegistry.cleanupThread(threadId)
-
-      closeCalled shouldBe 1
+      ThreadClosableRegistry.cleanupThread(currentThreadId)
+      getCount() shouldBe 1
     }
 
     "close resources in LIFO order (last registered, first closed)" in {
       val closeOrder = mutable.ArrayBuffer[Int]()
 
-      val closeable1 = new AutoCloseable {
-        override def close(): Unit = closeOrder += 1
-      }
-      val closeable2 = new AutoCloseable {
-        override def close(): Unit = closeOrder += 2
-      }
-      val closeable3 = new AutoCloseable {
-        override def close(): Unit = closeOrder += 3
+      val closeables = (1 to 3).map { id =>
+        new AutoCloseable {
+          override def close(): Unit = closeOrder += id
+        }
       }
 
-      val threadId = Thread.currentThread().getId
-
-      ThreadClosableRegistry.registerCloseable(closeable1)
-      ThreadClosableRegistry.registerCloseable(closeable2)
-      ThreadClosableRegistry.registerCloseable(closeable3)
-
-      ThreadClosableRegistry.cleanupThread(threadId)
+      closeables.foreach(ThreadClosableRegistry.registerCloseable)
+      ThreadClosableRegistry.cleanupThread(currentThreadId)
 
       closeOrder should contain theSameElementsInOrderAs Seq(3, 2, 1)
     }
@@ -195,34 +143,41 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
     "handle concurrent registrations from multiple threads" in {
       val numThreads = 10
       val closeablesPerThread = 5
-      val allCloseables = mutable.Map[Long, Seq[(AutoCloseable, () => Int)]]()
+      val threadData = mutable.Map[Long, Seq[() => Int]]()
 
-      val threads = (1 to numThreads).map { i =>
+      val threads = (1 to numThreads).map { _ =>
         new Thread(() => {
           val threadId = Thread.currentThread().getId
-          val closeables = (1 to closeablesPerThread).map { _ =>
-            var closeCalled = 0
-            val closeable = new AutoCloseable {
-              override def close(): Unit = closeCalled += 1
-            }
-            (closeable, () => closeCalled)
+          val closeablesWithCounters = (1 to closeablesPerThread).map(_ => createCountingCloseable())
+
+          threadData.synchronized {
+            threadData(threadId) = closeablesWithCounters.map(_._2)
           }
-          allCloseables.synchronized {
-            allCloseables(threadId) = closeables
+
+          closeablesWithCounters.foreach { case (closeable, _) =>
+            ThreadClosableRegistry.registerCloseable(closeable)
           }
-          closeables.foreach { case (closeable, _) => ThreadClosableRegistry.registerCloseable(closeable) }
         })
       }
 
       threads.foreach(_.start())
       threads.foreach(_.join())
 
-      allCloseables.foreach { case (threadId, closeables) =>
+      threadData.foreach { case (threadId, getCounters) =>
         ThreadClosableRegistry.cleanupThread(threadId)
-        closeables.foreach { case (_, getCloseCalled) =>
-          getCloseCalled() shouldBe 1
-        }
+        getCounters.foreach(getCount => getCount() shouldBe 1)
       }
+    }
+
+    "not close an explicitly unregistered resource during cleanup" in {
+      val (closeable, getCount) = createCountingCloseable()
+
+      ThreadClosableRegistry.registerCloseable(closeable)
+      ThreadClosableRegistry.unregisterCloseable(closeable)
+
+      // cleanupThread should not close the unregistered resource
+      ThreadClosableRegistry.cleanupThread(currentThreadId)
+      getCount() shouldBe 0
     }
   }
 }
