@@ -41,7 +41,7 @@ object TransientJobManager {
   private var taskRunnerOpt: Option[TaskRunner] = None
   private var criticalLazyJobFailed = false
 
-  def getCriticalLazyJobFailed: Boolean = synchronized {
+  def hasCriticalLazyJobFailed: Boolean = synchronized {
     criticalLazyJobFailed
   }
 
