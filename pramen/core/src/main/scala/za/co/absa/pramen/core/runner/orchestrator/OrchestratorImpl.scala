@@ -87,7 +87,7 @@ class OrchestratorImpl extends Orchestrator {
         runningJobs.remove(finishedJob)
 
         hasFatalErrors = hasFatalErrors || taskResults.exists(status => isFatalFailure(status.runStatus))
-        hasCriticalJobFailures = hasCriticalJobFailures || TransientJobManager.getCriticalLazyJobFailed || (!isSucceeded && finishedJob.operation.isCritical)
+        hasCriticalJobFailures = hasCriticalJobFailures || TransientJobManager.hasCriticalLazyJobFailed || (!isSucceeded && finishedJob.operation.isCritical)
 
         val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
         if (hasAnotherUnfinishedJob) {

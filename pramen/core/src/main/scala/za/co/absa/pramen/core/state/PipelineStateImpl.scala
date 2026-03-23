@@ -355,7 +355,7 @@ object PipelineStateImpl {
   def pipelineStatus(appException: Option[Throwable], taskResults: Seq[TaskResult], pipelineNotificationFailures: Seq[PipelineNotificationFailure], warningFlag: Boolean, strictFailures: Boolean): PipelineStatus = {
     val isCertainFailure = appException.nonEmpty
     val (someTasksSucceeded, someTasksFailed) = getSuccessFlags(appException, taskResults)
-    val someCriticalTasksFailed = taskResults.exists(t => t.taskDef.isCritical && t.runStatus.isFailure)
+    val someCriticalTasksFailed = taskResults.exists(t => t.taskDef.isCritical && t.runStatus.isFailure) || TransientJobManager.hasCriticalLazyJobFailed
 
     val warningState = warningFlag || hasWarnings(taskResults, pipelineNotificationFailures)
 

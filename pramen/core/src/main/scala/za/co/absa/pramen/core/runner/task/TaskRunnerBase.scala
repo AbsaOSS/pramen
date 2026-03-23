@@ -93,7 +93,7 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   override def runLazyTask(job: Job, infoDate: LocalDate): RunStatus = {
-    if (TransientJobManager.getCriticalLazyJobFailed) {
+    if (TransientJobManager.hasCriticalLazyJobFailed) {
       RunStatus.NotRan
     } else {
       val started = Instant.now()
@@ -498,10 +498,10 @@ abstract class TaskRunnerBase(conf: Config,
 
     logTaskResult(updatedResult, isLazy)
     val wasInterrupted = isTaskInterrupted(task, taskResult)
-    val isFaliedBecauseOfALazyJob = isFailureOfLazyJob(updatedResult.runStatus)
+    val isFailedBecauseOfALazyJob = isFailureOfLazyJob(updatedResult.runStatus)
     if (wasInterrupted) {
       log.warn("Skipping the interrupted exception of the killed task.")
-    } else if (isFaliedBecauseOfALazyJob) {
+    } else if (isFailedBecauseOfALazyJob) {
       log.warn("Skipping the caller of the lazy task.")
     } else {
       pipelineState.addTaskCompletion(Seq(updatedResult))
