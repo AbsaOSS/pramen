@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
+import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
@@ -86,7 +87,7 @@ class OrchestratorImpl extends Orchestrator {
         runningJobs.remove(finishedJob)
 
         hasFatalErrors = hasFatalErrors || taskResults.exists(status => isFatalFailure(status.runStatus))
-        hasCriticalJobFailures = hasCriticalJobFailures || (!isSucceeded && finishedJob.operation.isCritical)
+        hasCriticalJobFailures = hasCriticalJobFailures || TransientJobManager.getCriticalLazyJobFailed || (!isSucceeded && finishedJob.operation.isCritical)
 
         val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
         if (hasAnotherUnfinishedJob) {

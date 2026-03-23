@@ -26,12 +26,13 @@ import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
+import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, LazyJobErrorWrapper, ReasonException}
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
 import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline.PipelineDef.{COUNTRY_KEY, ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
 import za.co.absa.pramen.core.pipeline._
@@ -92,14 +93,25 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   override def runLazyTask(job: Job, infoDate: LocalDate): RunStatus = {
-    val started = Instant.now()
-    val task = Task(job, infoDate, TaskRunReason.OnRequest)
-    val result: TaskResult = validate(task, started) match {
-      case Left(failedResult) => failedResult
-      case Right(validationResult) => run(task, started, validationResult)
-    }
+    if (TransientJobManager.getCriticalLazyJobFailed) {
+      RunStatus.NotRan
+    } else {
+      val started = Instant.now()
+      val task = Task(job, infoDate, TaskRunReason.OnRequest)
+      val result: TaskResult = validate(task, started) match {
+        case Left(failedResult) => failedResult
+        case Right(validationResult) => run(task, started, validationResult)
+      }
 
-    onTaskCompletion(task, result, isLazy = true)
+      val runStatus = onTaskCompletion(task, result, isLazy = true)
+
+      if (job.operation.isCritical && result.runStatus.isFailure) {
+        // Set the flag that a critical job has failed to fail early
+        TransientJobManager.setCriticalLazyJobFailed(true)
+      }
+
+      runStatus
+    }
   }
 
   /** Runs multiple tasks in the single thread in the order of info dates. If one task fails, the rest will be skipped. */
@@ -486,8 +498,11 @@ abstract class TaskRunnerBase(conf: Config,
 
     logTaskResult(updatedResult, isLazy)
     val wasInterrupted = isTaskInterrupted(task, taskResult)
+    val isFaliedBecauseOfALazyJob = isFailureOfLazyJob(updatedResult.runStatus)
     if (wasInterrupted) {
       log.warn("Skipping the interrupted exception of the killed task.")
+    } else if (isFaliedBecauseOfALazyJob) {
+      log.warn("Skipping the caller of the lazy task.")
     } else {
       pipelineState.addTaskCompletion(Seq(updatedResult))
       if (taskResult.runStatus != RunStatus.NotRan)
@@ -495,6 +510,17 @@ abstract class TaskRunnerBase(conf: Config,
     }
 
     updatedResult.runStatus
+  }
+
+  private def isFailureOfLazyJob(runStatus: RunStatus): Boolean = {
+    runStatus match {
+      case RunStatus.ValidationFailed(ex) if ex.isInstanceOf[LazyJobErrorWrapper] =>
+        true
+      case RunStatus.Failed(ex) if ex.isInstanceOf[LazyJobErrorWrapper] =>
+        true
+      case _ =>
+        false
+    }
   }
 
   private def isTaskInterrupted(task: Task, taskResult: TaskResult): Boolean = {
