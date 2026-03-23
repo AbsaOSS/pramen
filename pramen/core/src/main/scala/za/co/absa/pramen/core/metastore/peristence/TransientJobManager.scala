@@ -39,6 +39,15 @@ object TransientJobManager {
   private val lazyJobs = new mutable.HashMap[String, Job]()
   private val runningJobs = new mutable.HashMap[MetastorePartition, Future[DataFrame]]()
   private var taskRunnerOpt: Option[TaskRunner] = None
+  private var criticalLazyJobFailed = false
+
+  def getCriticalLazyJobFailed: Boolean = synchronized {
+    criticalLazyJobFailed
+  }
+
+  private[core] def setCriticalLazyJobFailed(failed: Boolean): Unit = synchronized {
+    criticalLazyJobFailed = failed
+  }
 
   private[core] def setTaskRunner(taskRunner_ : TaskRunner): Unit = synchronized {
     taskRunnerOpt = Option(taskRunner_)
@@ -215,6 +224,7 @@ object TransientJobManager {
     lazyJobs.clear()
     runningJobs.clear()
     taskRunnerOpt = None
+    setCriticalLazyJobFailed(false)
   }
 
   private[core] def runJob(job: Job,
