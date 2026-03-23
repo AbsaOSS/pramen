@@ -550,7 +550,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", infoDate, None).isEmpty)
     }
 
-    "expose Hive table" in {
+    "expose a new Hive table" in {
       val (runner, bk, _, state, _, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), hiveTable = Some("table_hive"))
 
       val task = tasks.head
@@ -565,6 +565,27 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
       val success = result.runStatus.asInstanceOf[Succeeded]
 
       assert(job.createHiveTableCount == 1)
+      assert(!job.recreateHiveTable)
+      assert(success.hiveTablesUpdated.length == 1)
+      assert(success.hiveTablesUpdated.head == "table_hive")
+    }
+
+    "force re-create existing Hive table" in {
+      val (runner, bk, _, state, _, tasks) = getUseCase(runFunction = () => RunResult(exampleDf), hiveTable = Some("table_hive"), forceReCreateHiveTable = true)
+
+      val task = tasks.head
+      val job = task.job.asInstanceOf[JobSpy]
+
+      val started = Instant.now()
+
+      val result = runner.run(task, started, JobPreRunResult(JobPreRunStatus.Ready, Some(150), Nil, Nil))
+
+      assert(result.runStatus.isInstanceOf[Succeeded])
+
+      val success = result.runStatus.asInstanceOf[Succeeded]
+
+      assert(job.createHiveTableCount == 1)
+      assert(job.recreateHiveTable)
       assert(success.hiveTablesUpdated.length == 1)
       assert(success.hiveTablesUpdated.head == "table_hive")
     }
@@ -679,6 +700,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                  runFunction: () => RunResult = () => null,
                  isDryRun: Boolean = false,
                  isRerun: Boolean = false,
+                 forceReCreateHiveTable: Boolean = false,
                  bookkeeperIn: Bookkeeper = null,
                  allowParallel: Boolean = true,
                  hasSelfDependencies: Boolean = false,
@@ -688,7 +710,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
                 ): (TaskRunnerBase, Bookkeeper, Journal, PipelineStateSpy, OperationDef, Seq[Task]) = {
     val conf = ConfigFactory.empty()
 
-    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun)
+    val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, isDryRun = isDryRun, forceReCreateHiveTables = forceReCreateHiveTable)
 
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
     val journal = new JournalMock

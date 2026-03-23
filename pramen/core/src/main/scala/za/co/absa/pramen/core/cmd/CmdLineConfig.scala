@@ -138,8 +138,8 @@ object CmdLineConfig {
     for (maxAttempts <- cmd.maxAttempts)
       accumulatedConfig = accumulatedConfig.withValue(MAX_ATTEMPTS, ConfigValueFactory.fromAnyRef(maxAttempts))
 
-    for (forcereCreateHiveTables <- cmd.forceReCreateHiveTables)
-      accumulatedConfig = accumulatedConfig.withValue(FORCE_RECREATE_HIVE_TABLES, ConfigValueFactory.fromAnyRef(forcereCreateHiveTables))
+    for (forceReCreateHiveTables <- cmd.forceReCreateHiveTables)
+      accumulatedConfig = accumulatedConfig.withValue(FORCE_RECREATE_HIVE_TABLES, ConfigValueFactory.fromAnyRef(forceReCreateHiveTables))
 
     accumulatedConfig
   }
