@@ -23,6 +23,6 @@ object PartitionInfo {
 
   case class Explicit(numberOfPartitions: Int) extends PartitionInfo
 
-  case class PerRecordCount(recordsPerPartition: Long) extends PartitionInfo
+  case class PerRecordCount(recordsPerPartition: Long, preferCoalesce: Boolean) extends PartitionInfo
 
 }

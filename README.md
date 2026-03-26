@@ -400,7 +400,13 @@ pramen.metastore {
       name = "table_name"
       format = "parquet"
       path = "hdfs://cluster/path/to/parquet/folder"
+      # You can specify the target nuber of records per partition
       records.per.partition = 1000000
+      # Or the excplicit partition count
+      #number.of.partitions
+
+      # If true, Pramen will use coalesce() instead of repartition() when `records.per.partition` is specified
+      #prefer.coalesce = true
       
       # (Experimental) Save mode to use when writing to partitions.
       # Supported: overwrite (default), append
@@ -447,6 +453,8 @@ Metastore table options:
 | `table`                                   | Delta Lake table name (if Delta Lake tables are the underlying storage).                                                                                                                                                                                            |
 | `cache.policy`                            | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.----                                                                                            |
 | `records.per.partition`                   | Number of records per partition (in order to avoid small files problem).                                                                                                                                                                                            |
+| `number.of.partitions`                    | Specify the number of partitions explicitly. Peamen is going to use `df.coalesce(x)` before writing to the metastore table.                                                                                                                                         |
+| `prefer.coalesce`                         | If true, Pramen will use coalesce() instead of repartition() when `records.per.partition` is specified.                                                                                                                                                             |
 | `information.date.column`                 | Name of the column that contains the information date. *                                                                                                                                                                                                            |
 | `information.date.format`                 | Format of the information date used for partitioning (in Java format notation). *                                                                                                                                                                                   |
 | `information.date.start`                  | The earliest date the table contains data for. *                                                                                                                                                                                                                    |

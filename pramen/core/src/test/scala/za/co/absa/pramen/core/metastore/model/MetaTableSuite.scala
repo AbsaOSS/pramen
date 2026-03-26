@@ -209,6 +209,7 @@ class MetaTableSuite extends AnyWordSpec {
           |name = my_table
           |format = parquet
           |path = /a/b/c
+          |prefer.coalesce = true
           |hive.table = my_hive_table
           |hive.path = /d/e/f
           |information.date.column = INFORMATION_DATE
@@ -250,7 +251,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop")
       assert(metaTable.hiveConfig.ignoreFailures)
       assert(metaTable.format.name == "parquet")
-      assert(metaTable.format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100))
+      assert(metaTable.format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100, preferCoalesce = true))
       assert(metaTable.hiveTable.contains("my_hive_table"))
       assert(metaTable.hivePath.contains("/d/e/f"))
       assert(!metaTable.hivePreferAddPartition)
