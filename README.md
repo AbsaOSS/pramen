@@ -3283,14 +3283,37 @@ pramen {
     }
 
     # Optional, use only if you want to override default templates
+    
     conf.parquet = {
-      create.table.template = "..."
-      repair.table.template = "..."
-     drop.table.template = "..."
+      create.table.template = """
+    CREATE EXTERNAL TABLE IF NOT EXISTS @fullTableName
+      ( @schema )
+    @partitionedBy
+    STORED AS PARQUET
+    LOCATION '@path'
+  """
+      create.only.table.template = """
+    CREATE EXTERNAL TABLE @fullTableName 
+      ( @schema )
+    @partitionedBy
+    ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+    STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+    OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+    LOCATION '@path'
+    """
+
+      add.partition.template = "ALTER TABLE @fullTableName ADD IF NOT EXISTS PARTITION (@partitionClause) LOCATION '@partitionPath'"
+
+      repair.table.template = "MSCK REPAIR TABLE @fullTableName"
+
+      drop.table.template = "DROP TABLE IF EXISTS @fullTableName"
     }
     conf.delta = {
+      # Create table if not exists query template
       create.table.template = "..."
-      repair.table.template = "..."
+      # Create table without checking for existence query template
+      create.only.table.template = "..."
+      # Drop table query template
       drop.table.template = "..."
     }
   }
