@@ -234,13 +234,16 @@ class MetastorePersistenceParquet(path: String,
 object MetastorePersistenceParquet {
   def applyPartitioning(dfIn: DataFrame, partitionInfo: PartitionInfo, recordCountEstimate: Option[Long]): DataFrame = {
     partitionInfo match {
-      case PartitionInfo.Default => dfIn
-      case PartitionInfo.Explicit(nop) =>
+      case PartitionInfo.Default                             => dfIn
+      case PartitionInfo.Explicit(nop)                       =>
         dfIn.coalesce(nop)
-      case PartitionInfo.PerRecordCount(rpp) =>
+      case PartitionInfo.PerRecordCount(rpp, preferCoalesce) =>
         val recordCount = recordCountEstimate.getOrElse(dfIn.count())
         val numPartitions = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
-        dfIn.repartition(numPartitions)
+        if (preferCoalesce)
+          dfIn.coalesce(numPartitions)
+        else
+          dfIn.repartition(numPartitions)
     }
   }
 }

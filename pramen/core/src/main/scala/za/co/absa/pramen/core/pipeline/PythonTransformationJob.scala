@@ -286,8 +286,9 @@ class PythonTransformationJob(operationDef: OperationDef,
         ""
       case PartitionInfo.Explicit(npp) =>
         s"\n  number_of_partitions: $npp"
-      case PartitionInfo.PerRecordCount(rpp) =>
-        s"\n  records_per_partition: $rpp"
+      case PartitionInfo.PerRecordCount(rpp, preferCoalesce) =>
+        s"""\n  records_per_partition: $rpp
+           |  prefer_coalesce: $preferCoalesce""".stripMargin
     }
   }
 
