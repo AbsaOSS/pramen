@@ -143,6 +143,7 @@
         <scodec_bits.version>1.1.4</scodec_bits.version>
         <scodec_core.version>1.10.3</scodec_core.version>
         <kafka.spark.version>0-10</kafka.spark.version>
+        <aws.sdk.version>2.42.23</aws.sdk.version>
 
         <skip.long.tests>true</skip.long.tests>
     </properties>
@@ -370,6 +371,13 @@
                 <groupId>com.lihaoyi</groupId>
                 <artifactId>requests_${scala.compat.version}</artifactId>
                 <version>0.8.0</version>
+            </dependency>
+
+            <!-- AWS SDK for DynamoDB (https://mvnrepository.com/artifact/software.amazon.awssdk/dynamodb) -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>dynamodb</artifactId>
+                <version>${aws.sdk.version}</version>
             </dependency>
 
             <!-- Test scope dependencies -->
