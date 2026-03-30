@@ -38,6 +38,7 @@ object Dependencies {
     "com.github.yruslan"     %% "channel_scala"             % channelVersion,
     "com.sun.mail"           %  "javax.mail"                % javaXMailVersion,
     "com.lihaoyi"            %% "requests"                  % requestsVersion,
+    "software.amazon.awssdk" %  "dynamodb"                  % awsSdkVersion,
     "org.scala-lang.modules" %% "scala-collection-compat"   % scalaCompatColsVersion     % Test,
     "org.scalatest"          %% "scalatest"                 % scalatestVersion           % Test,
     "org.mockito"            %  "mockito-core"              % mockitoVersion             % Test,
