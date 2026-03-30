@@ -14,11 +14,6 @@
  * limitations under the License.
  */
 
-import Dependencies._
-import Versions._
-import BuildInfoTemplateSettings._
-import com.github.sbt.jacoco.report.JacocoReportSettings
-
 val scala211 = "2.11.12"
 val scala212 = "2.12.20"
 val scala213 = "2.13.16"
@@ -192,6 +187,7 @@ lazy val assemblySettingsCommon = Seq(
     case "LICENSE"                                 => MergeStrategy.concat
     case "log4j.properties"                        => MergeStrategy.filterDistinctLines
     case x if x.endsWith("module-info.class")      => MergeStrategy.discard
+    case PathList("org", "sqlite", xs @ _*)        => MergeStrategy.first   // include native SQLite libraries
     case PathList("include", xs @ _*)              => MergeStrategy.discard
     case PathList("com", "ibm", "icu", xs @ _*)    => MergeStrategy.discard
     case PathList("common", "message", xs @ _*)    => MergeStrategy.discard
