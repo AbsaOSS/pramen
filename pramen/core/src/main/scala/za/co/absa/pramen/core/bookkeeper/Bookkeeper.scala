@@ -102,6 +102,14 @@ object Bookkeeper {
       if (hasBookkeepingJdbc) {
         log.info(s"Using RDB for lock management.")
         new TokenLockFactoryJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+      } else if (hasBookkeepingDynamoDb) {
+        val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(BookkeeperDynamoDb.DEFAULT_TABLE_PREFIX)
+        log.info(s"Using DynamoDB for lock management in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+        TokenLockFactoryDynamoDb.builder
+          .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+          .withTablePrefix(tablePrefix)
+          .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+          .build()
       } else {
         mongoDbConnection match {
           case Some(connection) =>
@@ -133,15 +141,12 @@ object Bookkeeper {
     } else if (hasBookkeepingDynamoDb) {
       val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(BookkeeperDynamoDb.DEFAULT_TABLE_PREFIX)
       log.info(s"Using DynamoDB for bookkeeping in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
-      val builder = BookkeeperDynamoDb.builder
+      BookkeeperDynamoDb.builder
         .withRegion(bookkeepingConfig.dynamoDbRegion.get)
         .withBatchId(batchId)
         .withTablePrefix(tablePrefix)
-      val builder2 = bookkeepingConfig.dynamoDbTableArn match {
-        case Some(arn) => builder.withTableArn(arn)
-        case None => builder
-      }
-      builder2.build()
+        .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+        .build()
     } else {
       mongoDbConnection match {
         case Some(connection) =>
@@ -174,6 +179,9 @@ object Bookkeeper {
     } else if (hasBookkeepingJdbc) {
       log.info(s"Using RDB to keep journal of executed jobs.")
       new JournalJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+    } else if (hasBookkeepingDynamoDb) {
+      log.info(s"The journal is DISABLED.")
+      new JournalNull()
     } else {
       mongoDbConnection match {
         case Some(connection) =>
@@ -216,6 +224,10 @@ object Bookkeeper {
       override def close(): Unit = {
         mongoDbConnection.foreach(_.close())
         dbOpt.foreach(_.close())
+        tokenFactory match {
+          case closeable: AutoCloseable => closeable.close()
+          case _ => // Not closeable
+        }
       }
     }
 

@@ -60,8 +60,8 @@ class BookkeeperDynamoDb(
   private val queryWarningTimeoutMs = 10000L
 
   // Construct table names with prefix
-  private val bookkeepingTableBaseName = s"${tablePrefix}_${DEFAULT_BOOKKEEPING_TABLE}"
-  private val schemaTableBaseName = s"${tablePrefix}_${DEFAULT_SCHEMA_TABLE}"
+  private val bookkeepingTableBaseName = s"${tablePrefix}_$DEFAULT_BOOKKEEPING_TABLE"
+  private val schemaTableBaseName = s"${tablePrefix}_$DEFAULT_SCHEMA_TABLE"
 
   // Full table names/ARNs
   private val bookkeepingTableName = getFullTableName(tableArn, bookkeepingTableBaseName)
@@ -734,6 +734,17 @@ object BookkeeperDynamoDb {
       */
     def withTableArn(arn: String): BookkeeperDynamoDbBuilder = {
       this.tableArn = Some(arn)
+      this
+    }
+
+    /**
+      * Sets the table ARN prefix for cross-account or cross-region access.
+      *
+      * @param arnOpt ARN prefix (e.g., "arn:aws:dynamodb:us-east-1:123456789012:table/")
+      * @return this builder
+      */
+    def withTableArn(arnOpt: Option[String]): BookkeeperDynamoDbBuilder = {
+      this.tableArn = arnOpt
       this
     }
 

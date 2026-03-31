@@ -296,6 +296,167 @@ aws dynamodb create-table \
 
 *Note: Offset management for incremental pipelines is not yet implemented for DynamoDB bookkeeper.
 
+## Distributed Locking with DynamoDB
+
+When DynamoDB is configured for bookkeeping, Pramen automatically uses it for distributed locking to prevent concurrent pipeline runs. This ensures data consistency in multi-instance deployments.
+
+### How It Works
+
+1. **Automatic Lock Table Creation**: A locks table is created automatically using a builder pattern:
+   - Table name: `{prefix}_locks` (e.g., `pramen_production_locks`)
+   - Schema: `token` (partition key), `owner`, `expires`, `createdAt`
+   - Created via `TokenLockFactoryDynamoDb.builder`
+
+2. **Lock Acquisition**: Uses DynamoDB conditional writes (`attribute_not_exists`) for atomic lock operations
+
+3. **Lock Renewal**: Active pipelines automatically renew their locks every 2 minutes
+
+4. **Lock Expiration**: Locks expire after 10 minutes of inactivity and can be taken over
+
+5. **Hard Expiration**: Stale locks are cleaned up after 1 day
+
+6. **Builder Pattern**: Lock factory is created using a fluent builder API for flexible configuration
+
+### Configuration
+
+Enable locking along with DynamoDB bookkeeping:
+
+```hocon
+pramen {
+  # Enable distributed locking
+  runtime.use.locks = true
+
+  bookkeeping {
+    enabled = true
+    dynamodb.region = "us-east-1"
+    dynamodb.table.prefix = "pramen_production"
+  }
+}
+```
+
+This creates three tables:
+- `pramen_production_bookkeeping` - Bookkeeping data
+- `pramen_production_schemas` - Table schemas
+- `pramen_production_locks` - Distributed locks
+
+See `dynamodb_with_locks.conf` for a complete example.
+
+### IAM Permissions for Locks
+
+Add the locks table to your IAM policy:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:CreateTable",
+        "dynamodb:DescribeTable",
+        "dynamodb:PutItem",
+        "dynamodb:GetItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:UpdateItem"
+      ],
+      "Resource": [
+        "arn:aws:dynamodb:*:*:table/pramen_production_bookkeeping",
+        "arn:aws:dynamodb:*:*:table/pramen_production_schemas",
+        "arn:aws:dynamodb:*:*:table/pramen_production_locks"
+      ]
+    }
+  ]
+}
+```
+
+### Programmatic Usage
+
+You can also create lock factories programmatically using the builder pattern:
+
+```scala
+import za.co.absa.pramen.core.lock.TokenLockFactoryDynamoDb
+
+// Basic usage
+val lockFactory = TokenLockFactoryDynamoDb.builder
+  .withRegion("us-east-1")
+  .withTablePrefix("my_app")
+  .build()
+
+try {
+  val lock = lockFactory.getLock("my_pipeline")
+
+  if (lock.tryAcquire()) {
+    try {
+      // Run your pipeline
+    } finally {
+      lock.release()
+    }
+  }
+} finally {
+  lockFactory.close()
+}
+
+// Testing with DynamoDB Local
+val testFactory = TokenLockFactoryDynamoDb.builder
+  .withRegion("us-east-1")
+  .withEndpoint("http://localhost:8000")
+  .build()
+```
+
+See `core/src/main/scala/za/co/absa/pramen/core/lock/TokenLockFactoryDynamoDbExample.scala` for more examples.
+
+### Lock Behavior
+
+**Scenario 1: Single Pipeline Run**
+- Pipeline acquires lock → processes data → releases lock
+
+**Scenario 2: Concurrent Pipeline Runs**
+- Instance A acquires lock → starts processing
+- Instance B tries to acquire same lock → blocked (lock already held)
+- Instance A completes → releases lock
+- Instance B can now acquire lock (if still attempting)
+
+**Scenario 3: Pipeline Crash**
+- Pipeline acquires lock → crashes
+- Lock expires after 10 minutes (no renewal)
+- New pipeline run can take over expired lock
+
+### Monitoring Locks
+
+Query active locks:
+
+```bash
+aws dynamodb scan \
+  --table-name pramen_production_locks \
+  --region us-east-1
+```
+
+Check specific lock:
+
+```bash
+aws dynamodb get-item \
+  --table-name pramen_production_locks \
+  --key '{"token":{"S":"my_pipeline_lock"}}' \
+  --region us-east-1
+```
+
+Manually release stuck lock (use with caution):
+
+```bash
+aws dynamodb delete-item \
+  --table-name pramen_production_locks \
+  --key '{"token":{"S":"my_pipeline_lock"}}' \
+  --region us-east-1
+```
+
+### Lock Cost
+
+Lock operations add minimal cost:
+- Lock acquisition: 1 write request (~$0.00000125)
+- Lock renewal (every 2 min): 1 write request per renewal
+- Lock release: 1 delete request (~$0.00000125)
+- Total per pipeline run: ~$0.00001 (for 10-minute pipeline)
+
 ## Advanced Topics
 
 ### Using DynamoDB Local for Development

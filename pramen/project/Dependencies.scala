@@ -29,6 +29,7 @@ object Dependencies {
 
   def CoreDependencies(scalaVersion: String, isDeltaCompile: Boolean): Seq[ModuleID] = Seq(
     "org.apache.spark"       %% "spark-sql"                 % sparkVersion(scalaVersion) % Provided,
+    "software.amazon.awssdk" %  "dynamodb"                  % awsSdkVersion              % Provided,
     "org.mongodb.scala"      %% "mongo-scala-driver"        % mongoDbScalaDriverVersion,
     "com.typesafe.slick"     %% "slick"                     % slickVersion,
     "com.typesafe.slick"     %% "slick-hikaricp"            % slickVersion,
@@ -38,7 +39,6 @@ object Dependencies {
     "com.github.yruslan"     %% "channel_scala"             % channelVersion,
     "com.sun.mail"           %  "javax.mail"                % javaXMailVersion,
     "com.lihaoyi"            %% "requests"                  % requestsVersion,
-    "software.amazon.awssdk" %  "dynamodb"                  % awsSdkVersion,
     "org.scala-lang.modules" %% "scala-collection-compat"   % scalaCompatColsVersion     % Test,
     "org.scalatest"          %% "scalatest"                 % scalatestVersion           % Test,
     "org.mockito"            %  "mockito-core"              % mockitoVersion             % Test,
