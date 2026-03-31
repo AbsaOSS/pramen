@@ -90,6 +90,7 @@ object Bookkeeper {
     }
 
     val hasBookkeepingJdbc = bookkeepingConfig.bookkeepingJdbcConfig.exists(_.primaryUrl.isDefined)
+    val hasBookkeepingDynamoDb = bookkeepingConfig.dynamoDbRegion.isDefined
 
     val dbOpt = if (hasBookkeepingJdbc) {
       val jdbcConfig = bookkeepingConfig.bookkeepingJdbcConfig.get
@@ -129,6 +130,18 @@ object Bookkeeper {
       new BookkeeperNull()
     } else if (hasBookkeepingJdbc) {
       BookkeeperJdbc.fromPramenDb(dbOpt.get, batchId)
+    } else if (hasBookkeepingDynamoDb) {
+      val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(BookkeeperDynamoDb.DEFAULT_TABLE_PREFIX)
+      log.info(s"Using DynamoDB for bookkeeping in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+      val builder = BookkeeperDynamoDb.builder
+        .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+        .withBatchId(batchId)
+        .withTablePrefix(tablePrefix)
+      val builder2 = bookkeepingConfig.dynamoDbTableArn match {
+        case Some(arn) => builder.withTableArn(arn)
+        case None => builder
+      }
+      builder2.build()
     } else {
       mongoDbConnection match {
         case Some(connection) =>
