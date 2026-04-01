@@ -182,14 +182,11 @@ object Bookkeeper {
     } else if (hasBookkeepingDynamoDb) {
       val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(JournalDynamoDB.DEFAULT_TABLE_PREFIX)
       log.info(s"Using DynamoDB for journal in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
-      val builder = JournalDynamoDB.builder
+      JournalDynamoDB.builder
         .withRegion(bookkeepingConfig.dynamoDbRegion.get)
         .withTablePrefix(tablePrefix)
-      val builder2 = bookkeepingConfig.dynamoDbTableArn match {
-        case Some(arn) => builder.withTableArn(arn)
-        case None => builder
-      }
-      builder2.build()
+        .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+        .build()
     } else {
       mongoDbConnection match {
         case Some(connection) =>
@@ -226,14 +223,11 @@ object Bookkeeper {
     } else if (hasBookkeepingDynamoDb) {
       val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(MetadataManagerDynamoDb.DEFAULT_TABLE_PREFIX)
       log.info(s"Using DynamoDB for metadata in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
-      val builder = MetadataManagerDynamoDb.builder
+      MetadataManagerDynamoDb.builder
         .withRegion(bookkeepingConfig.dynamoDbRegion.get)
         .withTablePrefix(tablePrefix)
-      val builder2 = bookkeepingConfig.dynamoDbTableArn match {
-        case Some(arn) => builder.withTableArn(arn)
-        case None => builder
-      }
-      builder2.build()
+        .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+        .build()
     } else {
       log.info(s"The custom metadata management is not supported.")
       new MetadataManagerNull(isPersistenceEnabled = true)
@@ -243,18 +237,9 @@ object Bookkeeper {
       override def close(): Unit = {
         mongoDbConnection.foreach(_.close())
         dbOpt.foreach(_.close())
-        tokenFactory match {
-          case closeable: AutoCloseable => closeable.close()
-          case _ => // Not closeable
-        }
-        journal match {
-          case closeable: AutoCloseable => closeable.close()
-          case _ => // Not closeable
-        }
-        metadataManager match {
-          case closeable: AutoCloseable => closeable.close()
-          case _ => // Not closeable
-        }
+        tokenFactory.close()
+        journal.close()
+        metadataManager.close()
       }
     }
 

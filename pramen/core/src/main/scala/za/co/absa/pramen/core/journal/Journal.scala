@@ -23,10 +23,11 @@ import java.time.Instant
 /**
   * A journal is responsible of keeping track of all completed tasks.
   */
-trait Journal {
+trait Journal extends AutoCloseable {
 
   def addEntry(entry: TaskCompleted): Unit
 
   def getEntries(from: Instant, to: Instant): Seq[TaskCompleted]
 
+  override def close(): Unit = {}
 }

@@ -43,7 +43,7 @@ class JournalDynamoDB(
     dynamoDbClient: DynamoDbClient,
     tableArn: Option[String] = None,
     tablePrefix: String = JournalDynamoDB.DEFAULT_TABLE_PREFIX
-) extends Journal with AutoCloseable {
+) extends Journal {
 
   private val log = LoggerFactory.getLogger(this.getClass)
   private val dateFormatter = InfoDateConfig.defaultDateFormatter
@@ -327,6 +327,11 @@ object JournalDynamoDB {
 
     def withTableArn(arn: String): JournalDynamoDBBuilder = {
       this.tableArn = Some(arn)
+      this
+    }
+
+    def withTableArn(arnOpt: Option[String]): JournalDynamoDBBuilder = {
+      this.tableArn = arnOpt
       this
     }
 

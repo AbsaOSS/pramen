@@ -41,6 +41,8 @@
   */
 package za.co.absa.pramen.api.lock
 
-trait TokenLockFactory {
+trait TokenLockFactory extends AutoCloseable {
   def getLock(token: String): TokenLock
+
+  override def close(): Unit = {}
 }

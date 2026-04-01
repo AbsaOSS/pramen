@@ -51,8 +51,9 @@ class OffsetManagerDynamoDb(
     dynamoDbClient: DynamoDbClient,
     batchId: Long,
     tableArn: Option[String] = None,
-    tablePrefix: String = OffsetManagerDynamoDb.DEFAULT_TABLE_PREFIX
-) extends OffsetManager with AutoCloseable {
+    tablePrefix: String = OffsetManagerDynamoDb.DEFAULT_TABLE_PREFIX,
+    closesClient: Boolean = true
+) extends OffsetManager {
 
   import OffsetManagerDynamoDb._
 
@@ -501,7 +502,9 @@ class OffsetManagerDynamoDb(
     */
   override def close(): Unit = {
     try {
-      dynamoDbClient.close()
+      if (closesClient) {
+        dynamoDbClient.close()
+      }
     } catch {
       case NonFatal(ex) =>
         log.warn("Error closing DynamoDB client", ex)
@@ -584,7 +587,8 @@ object OffsetManagerDynamoDb {
         dynamoDbClient = client,
         batchId = batchId,
         tableArn = tableArn,
-        tablePrefix = tablePrefix
+        tablePrefix = tablePrefix,
+        closesClient = true
       )
     }
   }

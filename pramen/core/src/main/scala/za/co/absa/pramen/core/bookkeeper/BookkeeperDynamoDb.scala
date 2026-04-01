@@ -69,7 +69,7 @@ class BookkeeperDynamoDb(
 
   // Offset management
   private val offsetManagement = new OffsetManagerCached(
-    new OffsetManagerDynamoDb(dynamoDbClient, batchId, tableArn, tablePrefix)
+    new OffsetManagerDynamoDb(dynamoDbClient, batchId, tableArn, tablePrefix, closesClient = false)
   )
 
   // Initialize tables on construction

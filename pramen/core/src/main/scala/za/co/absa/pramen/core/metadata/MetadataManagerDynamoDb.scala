@@ -309,6 +309,11 @@ object MetadataManagerDynamoDb {
       this
     }
 
+    def withTableArn(arnOpt: Option[String]): MetadataManagerDynamoDbBuilder = {
+      this.tableArn = arnOpt
+      this
+    }
+
     def withTablePrefix(prefix: String): MetadataManagerDynamoDbBuilder = {
       this.tablePrefix = prefix
       this
