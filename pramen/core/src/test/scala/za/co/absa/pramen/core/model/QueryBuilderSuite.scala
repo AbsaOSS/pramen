@@ -51,31 +51,31 @@ class QueryBuilderSuite extends AnyWordSpec {
     "throw an exception when no query configuration is specified" in {
       val conf = ConfigFactory.parseString("")
 
-      val exception = intercept[IllegalArgumentException] {
+      val ex = intercept[IllegalArgumentException] {
         QueryBuilder.fromConfig(conf, "", "")
       }
 
-      assert(exception.getMessage == "No options are specified for the query. Usually, it is one of: 'sql', 'path', 'table', 'db.table', 'topic'.")
+      assert(ex.getMessage == "No options are specified for the query. Usually, it is one of: 'sql', 'path', 'table', 'db.table', 'topic'.")
     }
 
     "throw an exception when the prefix is empty" in {
       val conf = ConfigFactory.parseString("data = /tmp")
 
-      val exception = intercept[IllegalArgumentException] {
+      val ex = intercept[IllegalArgumentException] {
         QueryBuilder.fromConfig(conf, "input", "")
       }
 
-      assert(exception.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table', 'input.topic'.")
+      assert(ex.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table', 'input.topic'.")
     }
 
     "throw an exception when the prefix is empty and parent is specified" in {
       val conf = ConfigFactory.parseString("data = /tmp")
 
-      val exception = intercept[IllegalArgumentException] {
+      val ex = intercept[IllegalArgumentException] {
         QueryBuilder.fromConfig(conf, "input", "my.parent")
       }
 
-      assert(exception.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table', 'input.topic' at my.parent.")
+      assert(ex.getMessage == "No options are specified for the 'input' query. Usually, it is one of: 'input.sql', 'input.path', 'input.table', 'input.db.table', 'input.topic' at my.parent.")
     }
   }
 }

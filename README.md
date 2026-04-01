@@ -2569,6 +2569,34 @@ pramen {
 }
 ```
 
+### (experimental) DynamoDB database
+Here is how you can use a DynamoDB database for storing bookkeeping information:
+
+```hocon
+pramen {
+  bookkeeping.enabled = "true"
+
+  bookkeeping.dynamodb {
+    region = "af-south-1"
+    table.prefix = "pramen_uat"
+  }
+}
+```
+
+DynamoDB tables are automatically created if they don't exist with default options. Use the prefix to create multiple
+Pramen bookeeping environments per AWS account.
+
+Note that the Pramen project that uses DynamoDB for bookeeping needs to add DynamoDB as a dependency if it is not provided
+by the Spark cluster (e.g. EMR).
+
+```xml
+<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>dynamodb</artifactId>
+    <version>${aws.sdk.version}</version>
+</dependency>
+```
+
 ### Hadoop (CSV+JSON)
 This is less recommended way, and is quite slow. But the advantage is that you don't need a database.
 

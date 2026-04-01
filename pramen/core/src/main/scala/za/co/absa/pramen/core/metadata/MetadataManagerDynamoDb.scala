@@ -38,7 +38,7 @@ import scala.util.control.NonFatal
   * @param tableArn Optional ARN prefix for the metadata table
   * @param tablePrefix Prefix for the metadata table name (default: "pramen")
   */
-class MetadataManagerDynamoDb(
+class MetadataManagerDynamoDb private (
     dynamoDbClient: DynamoDbClient,
     tableArn: Option[String] = None,
     tablePrefix: String = MetadataManagerDynamoDb.DEFAULT_TABLE_PREFIX
