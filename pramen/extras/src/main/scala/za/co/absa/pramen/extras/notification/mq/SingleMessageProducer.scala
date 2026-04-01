@@ -16,10 +16,8 @@
 
 package za.co.absa.pramen.extras.notification.mq
 
-trait SingleMessageProducer {
+trait SingleMessageProducer extends AutoCloseable {
   def send(topic: String, message: String, numberOrRetries: Int = 3): Unit
 
   def connect(): Unit
-
-  def close(): Unit
 }

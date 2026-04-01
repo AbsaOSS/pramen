@@ -33,7 +33,7 @@ import java.time.LocalDate
   * The startWriteOffsets() together with commitOffsets() and rollbackOffsets() provide mechanisms to ensure consistency
   * with data.
   */
-trait OffsetManager {
+trait OffsetManager extends AutoCloseable {
   /**
     * Returns offsets for an information date.
     *
@@ -88,4 +88,6 @@ trait OffsetManager {
     * Rolls back an offset request
     */
   def rollbackOffsets(request: DataOffsetRequest): Unit
+
+  override def close(): Unit = {}
 }

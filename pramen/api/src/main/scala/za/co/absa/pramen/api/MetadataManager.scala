@@ -18,7 +18,7 @@ package za.co.absa.pramen.api
 
 import java.time.LocalDate
 
-trait MetadataManager {
+trait MetadataManager extends AutoCloseable {
   /**
     * Get metadata value for a given table, date and key.
     *
@@ -70,4 +70,6 @@ trait MetadataManager {
     * Returns false if metadata is available only for the duration of the session.
     */
   def isPersistent: Boolean
+
+  override def close(): Unit = {}
 }
