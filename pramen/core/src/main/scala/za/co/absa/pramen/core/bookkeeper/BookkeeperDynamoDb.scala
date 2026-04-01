@@ -47,7 +47,7 @@ import scala.util.control.NonFatal
   * @param tableArn Optional ARN prefix for DynamoDB tables (e.g., "arn:aws:dynamodb:region:account-id:table/")
   * @param tablePrefix Prefix for table names to allow multiple bookkeeping sets in the same account (default: "pramen")
   */
-class BookkeeperDynamoDb(
+class BookkeeperDynamoDb private (
     dynamoDbClient: DynamoDbClient,
     batchId: Long,
     tableArn: Option[String] = None,
@@ -799,7 +799,7 @@ object BookkeeperDynamoDb {
       * @throws IllegalArgumentException if required parameters are missing
       */
     def build(): BookkeeperDynamoDb = {
-      val actualBatchId = batchId.getOrElse(System.currentTimeMillis())
+      val actualBatchId = batchId.getOrElse(throw new IllegalArgumentException("BatchId is not supplied when building the instance of BookkeeperDynamoDb"))
 
       if (region.isEmpty) {
         throw new IllegalArgumentException("Either region or dynamoDbClient must be provided")

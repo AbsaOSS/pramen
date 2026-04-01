@@ -39,7 +39,7 @@ import scala.util.control.NonFatal
   * @param tableArn Optional ARN prefix for the journal table
   * @param tablePrefix Prefix for the journal table name (default: "pramen")
   */
-class JournalDynamoDB(
+class JournalDynamoDB private (
     dynamoDbClient: DynamoDbClient,
     tableArn: Option[String] = None,
     tablePrefix: String = JournalDynamoDB.DEFAULT_TABLE_PREFIX
