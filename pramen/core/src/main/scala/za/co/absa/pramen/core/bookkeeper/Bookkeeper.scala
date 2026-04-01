@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, Runtim
 import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.journal._
 import za.co.absa.pramen.core.lock._
-import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
+import za.co.absa.pramen.core.metadata.{MetadataManagerDynamoDb, MetadataManagerJdbc, MetadataManagerNull}
 import za.co.absa.pramen.core.model.DataChunk
 import za.co.absa.pramen.core.mongo.MongoDbConnection
 import za.co.absa.pramen.core.rdb.PramenDb
@@ -180,8 +180,16 @@ object Bookkeeper {
       log.info(s"Using RDB to keep journal of executed jobs.")
       new JournalJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
     } else if (hasBookkeepingDynamoDb) {
-      log.info(s"The journal is DISABLED.")
-      new JournalNull()
+      val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(JournalDynamoDB.DEFAULT_TABLE_PREFIX)
+      log.info(s"Using DynamoDB for journal in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+      val builder = JournalDynamoDB.builder
+        .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+        .withTablePrefix(tablePrefix)
+      val builder2 = bookkeepingConfig.dynamoDbTableArn match {
+        case Some(arn) => builder.withTableArn(arn)
+        case None => builder
+      }
+      builder2.build()
     } else {
       mongoDbConnection match {
         case Some(connection) =>
@@ -215,6 +223,17 @@ object Bookkeeper {
     } else if (hasBookkeepingJdbc) {
       log.info(s"Using RDB to keep custom metadata.")
       new MetadataManagerJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+    } else if (hasBookkeepingDynamoDb) {
+      val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(MetadataManagerDynamoDb.DEFAULT_TABLE_PREFIX)
+      log.info(s"Using DynamoDB for metadata in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+      val builder = MetadataManagerDynamoDb.builder
+        .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+        .withTablePrefix(tablePrefix)
+      val builder2 = bookkeepingConfig.dynamoDbTableArn match {
+        case Some(arn) => builder.withTableArn(arn)
+        case None => builder
+      }
+      builder2.build()
     } else {
       log.info(s"The custom metadata management is not supported.")
       new MetadataManagerNull(isPersistenceEnabled = true)
@@ -225,6 +244,14 @@ object Bookkeeper {
         mongoDbConnection.foreach(_.close())
         dbOpt.foreach(_.close())
         tokenFactory match {
+          case closeable: AutoCloseable => closeable.close()
+          case _ => // Not closeable
+        }
+        journal match {
+          case closeable: AutoCloseable => closeable.close()
+          case _ => // Not closeable
+        }
+        metadataManager match {
           case closeable: AutoCloseable => closeable.close()
           case _ => // Not closeable
         }

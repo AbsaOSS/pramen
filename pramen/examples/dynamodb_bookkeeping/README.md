@@ -27,8 +27,12 @@ pramen.bookkeeping {
 ```
 
 This creates tables:
-- `pramen_bookkeeping`
-- `pramen_schemas`
+- `pramen_bookkeeping` - Data availability and record counts
+- `pramen_schemas` - Table schema evolution
+- `pramen_locks` - Distributed locking (if locks enabled)
+- `pramen_journal` - Task completion history
+- `pramen_metadata` - Custom metadata key-value pairs
+- `pramen_offsets` - Incremental ingestion offset tracking
 
 ### Production Configuration
 
@@ -41,8 +45,12 @@ pramen.bookkeeping {
 ```
 
 This creates tables:
-- `pramen_production_bookkeeping`
-- `pramen_production_schemas`
+- `pramen_production_bookkeeping` - Data availability and record counts
+- `pramen_production_schemas` - Table schema evolution
+- `pramen_production_locks` - Distributed locking (if locks enabled)
+- `pramen_production_journal` - Task completion history
+- `pramen_production_metadata` - Custom metadata key-value pairs
+- `pramen_production_offsets` - Incremental ingestion offset tracking
 
 ### Multi-Environment Configuration
 
@@ -169,6 +177,21 @@ Tables are automatically created with the following schema:
   - `infoDate`: Date when schema was recorded
   - `schemaJson`: Spark schema in JSON format
 
+#### Offset Table (`{prefix}_offsets`)
+- **Partition Key**: `pramenTableName` (String)
+- **Sort Key**: `compositeKey` (String, format: "infoDate#createdAtMilli")
+- **Billing Mode**: PAY_PER_REQUEST (on-demand)
+- **Attributes**:
+  - `pramenTableName`: Name of the metastore table
+  - `compositeKey`: Composite key for efficient querying (infoDate#createdAtMilli)
+  - `infoDate`: Information date
+  - `dataType`: Offset data type (e.g., "IntegralType", "StringType")
+  - `minOffset`: Minimum offset value for this batch
+  - `maxOffset`: Maximum offset value for this batch
+  - `batchId`: Batch execution ID
+  - `createdAt`: Timestamp when offset was created (milliseconds)
+  - `committedAt`: Timestamp when offset was committed (milliseconds, optional)
+
 ## Running the Example
 
 1. **Configure AWS credentials** (see above)
@@ -196,6 +219,10 @@ Tables are automatically created with the following schema:
    You should see:
    - `pramen_production_bookkeeping`
    - `pramen_production_schemas`
+   - `pramen_production_offsets` (if using incremental ingestion)
+   - `pramen_production_locks` (if locks enabled)
+   - `pramen_production_journal` (if journal enabled)
+   - `pramen_production_metadata` (if metadata enabled)
 
 5. **Query bookkeeping data**:
    ```bash
@@ -292,9 +319,7 @@ aws dynamodb create-table \
 | Scaling | Automatic | Manual | Manual | Automatic |
 | Multi-region | Yes | No | Yes | Yes |
 | Query Performance | Fast | Fast | Fast | Slower |
-| Incremental Support | No* | Yes | No | No |
-
-*Note: Offset management for incremental pipelines is not yet implemented for DynamoDB bookkeeper.
+| Incremental Support | Yes | Yes | No | No |
 
 ## Distributed Locking with DynamoDB
 
@@ -334,10 +359,13 @@ pramen {
 }
 ```
 
-This creates three tables:
+This creates six tables:
 - `pramen_production_bookkeeping` - Bookkeeping data
 - `pramen_production_schemas` - Table schemas
 - `pramen_production_locks` - Distributed locks
+- `pramen_production_journal` - Task completion history
+- `pramen_production_metadata` - Custom metadata
+- `pramen_production_offsets` - Incremental ingestion offsets
 
 See `dynamodb_with_locks.conf` for a complete example.
 
@@ -362,7 +390,10 @@ Add the locks table to your IAM policy:
       "Resource": [
         "arn:aws:dynamodb:*:*:table/pramen_production_bookkeeping",
         "arn:aws:dynamodb:*:*:table/pramen_production_schemas",
-        "arn:aws:dynamodb:*:*:table/pramen_production_locks"
+        "arn:aws:dynamodb:*:*:table/pramen_production_locks",
+        "arn:aws:dynamodb:*:*:table/pramen_production_journal",
+        "arn:aws:dynamodb:*:*:table/pramen_production_metadata",
+        "arn:aws:dynamodb:*:*:table/pramen_production_offsets"
       ]
     }
   ]
