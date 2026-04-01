@@ -22,7 +22,7 @@ import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model._
 import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
-import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb.DEFAULT_TABLE_PREFIX
+import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb
 
 import java.net.URI
 import scala.util.control.NonFatal
@@ -42,6 +42,7 @@ class TokenLockFactoryDynamoDb(
     tableArn: Option[String] = None,
     tablePrefix: String = "pramen"
 ) extends TokenLockFactory with AutoCloseable {
+  import TokenLockFactoryDynamoDb._
 
   import TokenLockDynamoDb._
 
@@ -49,7 +50,7 @@ class TokenLockFactoryDynamoDb(
 
   // Construct table name with prefix
   private val locksTableBaseName = s"${tablePrefix}_locks"
-  private val locksTableName = getFullTableName(tableArn, locksTableBaseName)
+  private val locksTableName = BookkeeperDynamoDb.getFullTableName(tableArn, locksTableBaseName)
 
   // Initialize table on construction
   init()
@@ -184,29 +185,6 @@ class TokenLockFactoryDynamoDb(
       throw new RuntimeException(s"Table $tableName did not become active within $maxWaitSeconds seconds")
     }
   }
-
-  /**
-    * Constructs the full table name using ARN prefix and table name.
-    * If tableArn is provided, uses it as a prefix, otherwise returns just the table name.
-    *
-    * @param tableArn Optional ARN prefix for the table
-    * @param tableName The table name
-    * @return Full table name or ARN
-    */
-  private def getFullTableName(tableArn: Option[String], tableName: String): String = {
-    tableArn match {
-      case Some(arn) if arn.nonEmpty =>
-        // If ARN ends with table/, append the table name, otherwise append /table/tableName
-        if (arn.endsWith("/")) {
-          s"${arn}table/$tableName"
-        } else if (arn.contains("/table/")) {
-          arn // ARN already includes table path
-        } else {
-          s"$arn/table/$tableName"
-        }
-      case _ => tableName
-    }
-  }
 }
 
 object TokenLockFactoryDynamoDb {
@@ -225,7 +203,7 @@ object TokenLockFactoryDynamoDb {
   class TokenLockFactoryDynamoDbBuilder {
     private var region: Option[String] = None
     private var tableArn: Option[String] = None
-    private var tablePrefix: String = DEFAULT_TABLE_PREFIX
+    private var tablePrefix: String = BookkeeperDynamoDb.DEFAULT_TABLE_PREFIX
     private var credentialsProvider: Option[AwsCredentialsProvider] = None
     private var endpoint: Option[String] = None
 
@@ -331,27 +309,4 @@ object TokenLockFactoryDynamoDb {
     * @return A new builder instance
     */
   def builder: TokenLockFactoryDynamoDbBuilder = new TokenLockFactoryDynamoDbBuilder
-
-  /**
-    * Constructs the full table name using ARN prefix and table name.
-    * If tableArn is provided, uses it as a prefix, otherwise returns just the table name.
-    *
-    * @param tableArn Optional ARN prefix for the table
-    * @param tableName The table name
-    * @return Full table name or ARN
-    */
-  def getFullTableName(tableArn: Option[String], tableName: String): String = {
-    tableArn match {
-      case Some(arn) if arn.nonEmpty =>
-        // If ARN ends with table/, append the table name, otherwise append /table/tableName
-        if (arn.endsWith("/")) {
-          s"${arn}table/$tableName"
-        } else if (arn.contains("/table/")) {
-          arn // ARN already includes table path
-        } else {
-          s"$arn/table/$tableName"
-        }
-      case _ => tableName
-    }
-  }
 }

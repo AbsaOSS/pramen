@@ -67,6 +67,11 @@ class BookkeeperDynamoDb(
   private val bookkeepingTableName = getFullTableName(tableArn, bookkeepingTableBaseName)
   private val schemaTableName = getFullTableName(tableArn, schemaTableBaseName)
 
+  // Offset management
+  private val offsetManagement = new OffsetManagerCached(
+    new OffsetManagerDynamoDb(dynamoDbClient, batchId, tableArn, tablePrefix)
+  )
+
   // Initialize tables on construction
   init()
 
@@ -548,8 +553,14 @@ class BookkeeperDynamoDb(
     }
   }
 
+  private[pramen] override def getOffsetManager: OffsetManager = {
+    offsetManagement
+  }
+
   override def close(): Unit = {
     try {
+      // Note: offsetManagement wraps OffsetManagerDynamoDb which shares the same dynamoDbClient,
+      // so we don't need to close it separately
       dynamoDbClient.close()
     } catch {
       case NonFatal(ex) =>

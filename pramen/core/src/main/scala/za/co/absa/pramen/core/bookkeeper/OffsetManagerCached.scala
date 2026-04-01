@@ -25,7 +25,7 @@ import java.time.LocalDate
 import scala.collection.mutable
 
 /**
-  * The offset manager decorator handles caching or repeated queries.
+  * The offset manager decorator handles caching of repeated queries.
   */
 class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
   private val log = LoggerFactory.getLogger(this.getClass)
