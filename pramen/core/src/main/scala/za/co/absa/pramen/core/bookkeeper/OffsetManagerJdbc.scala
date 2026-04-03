@@ -150,6 +150,9 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, offsetTable: Of
     ).execute()
   }
 
+  /** This class does not own the database connection. It is responsibility of the DB connection owner to close it. */
+  override def close(): Unit = {}
+
   private[core] def getMaximumInfoDate(table: String): Option[LocalDate] = {
     val query = offsetTable.records
       .filter(r => r.pramenTableName === table)

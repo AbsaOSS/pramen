@@ -86,18 +86,29 @@ class OffsetManagerDynamoDb(
             .map(record => OffsetRecordConverter.toDataOffset(record).asInstanceOf[UncommittedOffset])
 
         case None =>
-          // Scan all offsets for this table (no info date filter)
-          val scanRequest = ScanRequest.builder()
-            .tableName(offsetTableFullName)
-            .filterExpression(s"${ATTR_PRAMEN_TABLE_NAME} = :table_name AND attribute_not_exists(${ATTR_COMMITTED_AT})")
-            .expressionAttributeValues(Map(
-              ":table_name" -> AttributeValue.builder().s(table).build()
-            ).asJava)
-            .build()
+          // Query all offsets for this table with pagination
+          var allItems = Seq.empty[java.util.Map[String, AttributeValue]]
+          var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
 
-          val result = dynamoDbClient.scan(scanRequest)
+          do {
+            val queryRequestBuilder = QueryRequest.builder()
+              .tableName(offsetTableFullName)
+              .keyConditionExpression(s"$ATTR_PRAMEN_TABLE_NAME = :table_name")
+              .filterExpression(s"attribute_not_exists($ATTR_COMMITTED_AT)")
+              .expressionAttributeValues(Map(
+                ":table_name" -> AttributeValue.builder().s(table).build()
+              ).asJava)
 
-          result.items().asScala
+            if (lastEvaluatedKey != null) {
+              queryRequestBuilder.exclusiveStartKey(lastEvaluatedKey)
+            }
+
+            val result = dynamoDbClient.query(queryRequestBuilder.build())
+            allItems = allItems ++ result.items().asScala
+            lastEvaluatedKey = result.lastEvaluatedKey()
+          } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
+
+          allItems
             .map(itemToOffsetRecord)
             .map(record => OffsetRecordConverter.toDataOffset(record).asInstanceOf[UncommittedOffset])
             .toArray

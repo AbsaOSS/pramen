@@ -133,10 +133,16 @@ class BookkeeperDynamoDbBuilderSuite extends AnyWordSpec {
       assert(result == "test_table")
     }
 
+    "return ARN with some prefix ends with slash" in {
+      val arn = "arn:aws:dynamodb:us-east-1:123456789012:path/"
+      val result = BookkeeperDynamoDb.getFullTableName(Some(arn), "test_table")
+      assert(result == s"${arn}table/test_table")
+    }
+
     "return ARN with /table/ prefix when ARN ends with slash" in {
       val arn = "arn:aws:dynamodb:us-east-1:123456789012:table/"
       val result = BookkeeperDynamoDb.getFullTableName(Some(arn), "test_table")
-      assert(result == s"${arn}table/test_table")
+      assert(result == s"${arn}test_table")
     }
 
     "handle ARN without trailing slash by adding /table/" in {

@@ -36,7 +36,8 @@ import scala.util.control.NonFatal
   *
   * Table schema for bookkeeping:
   * - Partition key: tableName (String)
-  * - Sort key: infoDate (String in yyyy-MM-dd format)
+  * - Sort key: infoDateSortKey (String in "yyyy-MM-dd#jobFinishedMillis" format)
+  *   The composite sort key allows multiple entries for the same table and date.
   *
   * Table schema for schemas:
   * - Partition key: tableName (String)
@@ -86,21 +87,21 @@ class BookkeeperDynamoDb private (
       log.info(s"Initializing DynamoDB bookkeeper with tables: bookkeeping='$bookkeepingTableName', schemas='$schemaTableName'")
 
       // Initialize bookkeeping table
-      if (!tableExists(bookkeepingTableBaseName)) {
-        log.info(s"Creating DynamoDB bookkeeping table: $bookkeepingTableBaseName")
-        createBookkeepingTable(bookkeepingTableBaseName)
-        log.info(s"Successfully created bookkeeping table: $bookkeepingTableBaseName")
+      if (!tableExists(bookkeepingTableName)) {
+        log.info(s"Creating DynamoDB bookkeeping table: $bookkeepingTableName")
+        createBookkeepingTable(bookkeepingTableName)
+        log.info(s"Successfully created bookkeeping table: $bookkeepingTableName")
       } else {
-        log.info(s"DynamoDB bookkeeping table already exists: $bookkeepingTableBaseName")
+        log.info(s"DynamoDB bookkeeping table already exists: $bookkeepingTableName")
       }
 
       // Initialize schema table
-      if (!tableExists(schemaTableBaseName)) {
-        log.info(s"Creating DynamoDB schema table: $schemaTableBaseName")
-        createSchemaTable(schemaTableBaseName)
-        log.info(s"Successfully created schema table: $schemaTableBaseName")
+      if (!tableExists(schemaTableName)) {
+        log.info(s"Creating DynamoDB schema table: $schemaTableName")
+        createSchemaTable(schemaTableName)
+        log.info(s"Successfully created schema table: $schemaTableName")
       } else {
-        log.info(s"DynamoDB schema table already exists: $schemaTableBaseName")
+        log.info(s"DynamoDB schema table already exists: $schemaTableName")
       }
 
       log.info(s"DynamoDB bookkeeper initialization complete")
@@ -135,6 +136,7 @@ class BookkeeperDynamoDb private (
 
   /**
     * Creates the bookkeeping table with the appropriate schema.
+    * Uses a composite sort key (infoDate#jobFinished) to allow multiple entries per table and date.
     *
     * @param tableName The name of the table to create
     */
@@ -147,7 +149,7 @@ class BookkeeperDynamoDb private (
           .keyType(KeyType.HASH)
           .build(),
         KeySchemaElement.builder()
-          .attributeName(ATTR_INFO_DATE)
+          .attributeName(ATTR_INFO_DATE_SORT_KEY)
           .keyType(KeyType.RANGE)
           .build()
       )
@@ -157,7 +159,7 @@ class BookkeeperDynamoDb private (
           .attributeType(ScalarAttributeType.S)
           .build(),
         AttributeDefinition.builder()
-          .attributeName(ATTR_INFO_DATE)
+          .attributeName(ATTR_INFO_DATE_SORT_KEY)
           .attributeType(ScalarAttributeType.S)
           .build()
       )
@@ -259,11 +261,13 @@ class BookkeeperDynamoDb private (
       val query = until match {
         case Some(endDate) =>
           val endDateStr = getDateStr(endDate)
+          // Query using prefix on the sort key since we need items with infoDate <= endDate
           queryBuilder
-            .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE <= :endDate")
+            .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE_SORT_KEY <= :endDateMax")
             .expressionAttributeValues(Map(
               ":tableName" -> AttributeValue.builder().s(table).build(),
-              ":endDate" -> AttributeValue.builder().s(endDateStr).build()
+              // Use max possible value after date to get all entries for that date and before
+              ":endDateMax" -> AttributeValue.builder().s(s"${endDateStr}#~").build()
             ).asJava)
         case None =>
           queryBuilder
@@ -294,11 +298,12 @@ class BookkeeperDynamoDb private (
 
       val queryRequest = QueryRequest.builder()
         .tableName(bookkeepingTableName)
-        .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE = :infoDate")
+        .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND begins_with($ATTR_INFO_DATE_SORT_KEY, :infoDatePrefix)")
         .expressionAttributeValues(Map(
           ":tableName" -> AttributeValue.builder().s(table).build(),
-          ":infoDate" -> AttributeValue.builder().s(dateStr).build()
+          ":infoDatePrefix" -> AttributeValue.builder().s(s"$dateStr#").build()
         ).asJava)
+        .scanIndexForward(false) // descending order by sort key (latest jobFinished first)
         .build()
 
       val response = dynamoDbClient.query(queryRequest)
@@ -307,10 +312,9 @@ class BookkeeperDynamoDb private (
       if (items.isEmpty) {
         None
       } else {
-        // Sort by jobFinished descending and take the first
+        // Take the first item (already sorted in descending order)
         items
           .map(itemToDataChunk)
-          .sortBy(-_.jobFinished)
           .headOption
       }
     } catch {
@@ -326,10 +330,10 @@ class BookkeeperDynamoDb private (
 
       val queryBuilder = QueryRequest.builder()
         .tableName(bookkeepingTableName)
-        .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE = :infoDate")
+        .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND begins_with($ATTR_INFO_DATE_SORT_KEY, :infoDatePrefix)")
         .expressionAttributeValues(Map(
           ":tableName" -> AttributeValue.builder().s(table).build(),
-          ":infoDate" -> AttributeValue.builder().s(dateStr).build()
+          ":infoDatePrefix" -> AttributeValue.builder().s(s"$dateStr#").build()
         ).asJava)
 
       val query = batchIdFilter match {
@@ -338,7 +342,7 @@ class BookkeeperDynamoDb private (
             .filterExpression(s"$ATTR_BATCH_ID = :batchId")
             .expressionAttributeValues(Map(
               ":tableName" -> AttributeValue.builder().s(table).build(),
-              ":infoDate" -> AttributeValue.builder().s(dateStr).build(),
+              ":infoDatePrefix" -> AttributeValue.builder().s(s"$dateStr#").build(),
               ":batchId" -> AttributeValue.builder().n(bId.toString).build()
             ).asJava)
         case None =>
@@ -417,8 +421,11 @@ class BookkeeperDynamoDb private (
   ): Unit = {
     try {
       val dateStr = getDateStr(infoDate)
+      val sortKey = buildSortKey(dateStr, jobFinished)
+
       val item = dataChunkToItem(
-        DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Some(batchId), recordsAppended)
+        DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Some(batchId), recordsAppended),
+        sortKey
       )
 
       val putRequest = PutItemRequest.builder()
@@ -427,7 +434,7 @@ class BookkeeperDynamoDb private (
         .build()
 
       dynamoDbClient.putItem(putRequest)
-      log.debug(s"Saved bookkeeping record for table '$table', infoDate='$dateStr', batchId=$batchId")
+      log.debug(s"Saved bookkeeping record for table '$table', infoDate='$dateStr', sortKey='$sortKey', batchId=$batchId")
     } catch {
       case NonFatal(ex) =>
         log.error(s"Error saving record count for table '$table' at $infoDate", ex)
@@ -443,10 +450,10 @@ class BookkeeperDynamoDb private (
         // Query all items for this table and date
         val queryRequest = QueryRequest.builder()
           .tableName(bookkeepingTableName)
-          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE = :infoDate")
+          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND begins_with($ATTR_INFO_DATE_SORT_KEY, :infoDatePrefix)")
           .expressionAttributeValues(Map(
             ":tableName" -> AttributeValue.builder().s(table).build(),
-            ":infoDate" -> AttributeValue.builder().s(dateStr).build()
+            ":infoDatePrefix" -> AttributeValue.builder().s(s"$dateStr#").build()
           ).asJava)
           .build()
 
@@ -460,11 +467,12 @@ class BookkeeperDynamoDb private (
           )
 
           if (itemBatchId.exists(_ != batchId)) {
+            val sortKey = item.get(ATTR_INFO_DATE_SORT_KEY).s()
             val deleteRequest = DeleteItemRequest.builder()
               .tableName(bookkeepingTableName)
               .key(Map(
                 ATTR_TABLE_NAME -> AttributeValue.builder().s(table).build(),
-                ATTR_INFO_DATE -> AttributeValue.builder().s(dateStr).build()
+                ATTR_INFO_DATE_SORT_KEY -> AttributeValue.builder().s(sortKey).build()
               ).asJava)
               .conditionExpression(s"$ATTR_JOB_FINISHED = :jobFinished")
               .expressionAttributeValues(Map(
@@ -477,7 +485,7 @@ class BookkeeperDynamoDb private (
             } catch {
               case _: ConditionalCheckFailedException =>
                 // Item was already modified or deleted, ignore
-                log.debug(s"Could not delete item for table '$table', date '$dateStr' - already modified")
+                log.info(s"Could not delete item for table '$table', sortKey '$sortKey' - already modified")
             }
           }
         }
@@ -583,9 +591,10 @@ class BookkeeperDynamoDb private (
     )
   }
 
-  private def dataChunkToItem(chunk: DataChunk): java.util.Map[String, AttributeValue] = {
+  private def dataChunkToItem(chunk: DataChunk, sortKey: String): java.util.Map[String, AttributeValue] = {
     val baseMap = Map(
       ATTR_TABLE_NAME -> AttributeValue.builder().s(chunk.tableName).build(),
+      ATTR_INFO_DATE_SORT_KEY -> AttributeValue.builder().s(sortKey).build(),
       ATTR_INFO_DATE -> AttributeValue.builder().s(chunk.infoDate).build(),
       ATTR_INFO_DATE_BEGIN -> AttributeValue.builder().s(chunk.infoDateBegin).build(),
       ATTR_INFO_DATE_END -> AttributeValue.builder().s(chunk.infoDateEnd).build(),
@@ -621,27 +630,27 @@ class BookkeeperDynamoDb private (
         val beginStr = getDateStr(begin)
         val endStr = getDateStr(end)
         builder
-          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE BETWEEN :beginDate AND :endDate")
+          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE_SORT_KEY BETWEEN :beginDate AND :endDateMax")
           .expressionAttributeValues(Map(
             ":tableName" -> AttributeValue.builder().s(table).build(),
-            ":beginDate" -> AttributeValue.builder().s(beginStr).build(),
-            ":endDate" -> AttributeValue.builder().s(endStr).build()
+            ":beginDate" -> AttributeValue.builder().s(s"$beginStr#").build(),
+            ":endDateMax" -> AttributeValue.builder().s(s"$endStr#~").build()
           ).asJava)
       case (Some(begin), None) =>
         val beginStr = getDateStr(begin)
         builder
-          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE >= :beginDate")
+          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE_SORT_KEY >= :beginDate")
           .expressionAttributeValues(Map(
             ":tableName" -> AttributeValue.builder().s(table).build(),
-            ":beginDate" -> AttributeValue.builder().s(beginStr).build()
+            ":beginDate" -> AttributeValue.builder().s(s"$beginStr#").build()
           ).asJava)
       case (None, Some(end)) =>
         val endStr = getDateStr(end)
         builder
-          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE <= :endDate")
+          .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName AND $ATTR_INFO_DATE_SORT_KEY <= :endDateMax")
           .expressionAttributeValues(Map(
             ":tableName" -> AttributeValue.builder().s(table).build(),
-            ":endDate" -> AttributeValue.builder().s(endStr).build()
+            ":endDateMax" -> AttributeValue.builder().s(s"$endStr#~").build()
           ).asJava)
       case (None, None) =>
         builder
@@ -670,6 +679,27 @@ class BookkeeperDynamoDb private (
 
     chunks.toSeq
   }
+
+  /**
+    * Builds the composite sort key for bookkeeping table: "infoDate#jobFinished"
+    *
+    * @param infoDate The information date
+    * @param jobFinished The job finished timestamp in milliseconds
+    * @return Composite sort key string
+    */
+  private def buildSortKey(infoDate: String, jobFinished: Long): String = {
+    s"$infoDate#$jobFinished"
+  }
+
+  /**
+    * Extracts the infoDate from a composite sort key.
+    *
+    * @param sortKey Composite sort key in format "infoDate#jobFinished"
+    * @return The infoDate portion
+    */
+  private def extractInfoDate(sortKey: String): String = {
+    sortKey.split("#").headOption.getOrElse(sortKey)
+  }
 }
 
 object BookkeeperDynamoDb {
@@ -680,6 +710,7 @@ object BookkeeperDynamoDb {
   // Attribute names for bookkeeping table
   val ATTR_TABLE_NAME = "tableName"
   val ATTR_INFO_DATE = "infoDate"
+  val ATTR_INFO_DATE_SORT_KEY = "infoDateSortKey"  // Composite: "infoDate#jobFinished"
   val ATTR_INFO_DATE_BEGIN = "infoDateBegin"
   val ATTR_INFO_DATE_END = "infoDateEnd"
   val ATTR_INPUT_RECORD_COUNT = "inputRecordCount"
@@ -839,10 +870,10 @@ object BookkeeperDynamoDb {
     tableArn match {
       case Some(arn) if arn.nonEmpty =>
         // If ARN ends with table/, append the table name, otherwise append /table/tableName
-        if (arn.endsWith("/")) {
+        if (arn.endsWith("table/")) {
+          s"$arn$tableName"
+        } else if (arn.endsWith("/")) {
           s"${arn}table/$tableName"
-        } else if (arn.contains("/table/")) {
-          arn // ARN already includes table path
         } else {
           s"$arn/table/$tableName"
         }

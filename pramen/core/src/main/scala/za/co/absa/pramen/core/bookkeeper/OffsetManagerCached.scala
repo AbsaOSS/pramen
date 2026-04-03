@@ -31,15 +31,15 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
   private val log = LoggerFactory.getLogger(this.getClass)
   private val aggregatedOffsetsCache = new mutable.HashMap[(String, Option[LocalDate]), Option[DataOffsetAggregated]]
 
-  def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
+  override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
     offsetManager.getOffsets(table, infoDate)
   }
 
-  def getUncommittedOffsets(table: String, onlyForInfoDate: Option[LocalDate]): Array[UncommittedOffset] = {
+  override def getUncommittedOffsets(table: String, onlyForInfoDate: Option[LocalDate]): Array[UncommittedOffset] = {
     offsetManager.getUncommittedOffsets(table, onlyForInfoDate)
   }
 
-  def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = synchronized {
+  override def getMaxInfoDateAndOffset(table: String, onlyForInfoDate: Option[LocalDate]): Option[DataOffsetAggregated] = synchronized {
     val tbl = onlyForInfoDate match {
       case Some(date) => s"'$table' for '$date'"
       case None => s"'$table'"
@@ -57,11 +57,11 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
     }
   }
 
-  def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest = {
+  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest = {
     offsetManager.startWriteOffsets(table, infoDate, offsetType)
   }
 
-  def commitOffsets(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
+  override def commitOffsets(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
     offsetManager.commitOffsets(request, minOffset, maxOffset)
 
     this.synchronized {
@@ -69,7 +69,7 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
     }
   }
 
-  def commitRerun(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
+  override def commitRerun(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
     this.synchronized {
       aggregatedOffsetsCache --= aggregatedOffsetsCache.keys.filter(_._1 == request.tableName)
     }
@@ -77,7 +77,7 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
     offsetManager.commitRerun(request, minOffset, maxOffset)
   }
 
-  def postCommittedRecords(commitRequests: Seq[OffsetCommitRequest]): Unit = {
+  override def postCommittedRecords(commitRequests: Seq[OffsetCommitRequest]): Unit = {
     offsetManager.postCommittedRecords(commitRequests)
 
     val updatedTables = commitRequests.map(_.table).toSet
@@ -86,8 +86,12 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
     }
   }
 
-  def rollbackOffsets(request: DataOffsetRequest): Unit = {
+  override def rollbackOffsets(request: DataOffsetRequest): Unit = {
     offsetManager.rollbackOffsets(request)
+  }
+
+  override def close(): Unit = {
+    offsetManager.close()
   }
 
   private def renderAggregatedOptionalOffset(offsetsOpt: Option[DataOffsetAggregated]): String = {
