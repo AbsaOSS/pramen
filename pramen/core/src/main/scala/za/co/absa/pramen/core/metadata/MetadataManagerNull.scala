@@ -42,4 +42,6 @@ class MetadataManagerNull(isPersistenceEnabled: Boolean) extends MetadataManager
   def deleteMetadataFromStorage(tableName: String, infoDate: LocalDate): Unit = {
     throw new UnsupportedOperationException(errorMessage)
   }
+
+  override def close(): Unit = {}
 }
