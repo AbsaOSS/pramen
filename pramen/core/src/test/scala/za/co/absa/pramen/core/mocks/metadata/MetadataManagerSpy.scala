@@ -65,4 +65,6 @@ class MetadataManagerSpy(isPersistent: Boolean) extends MetadataManagerBase(isPe
 
     metadataLocalStore.remove(MetadataTableKey(tableName, infoDate))
   }
+
+  override def close(): Unit = {}
 }

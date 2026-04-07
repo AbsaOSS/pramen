@@ -102,4 +102,7 @@ class MetadataManagerJdbc(db: Database, slickProfile: JdbcProfile) extends Metad
       case NonFatal(ex) => throw new RuntimeException(s"Unable to delete from the metadata table.", ex)
     }
   }
+
+  /** The implementation does not own DB connections, so it is not responsible for closing them. */
+  override def close(): Unit = {}
 }

@@ -70,6 +70,4 @@ trait MetadataManager extends AutoCloseable {
     * Returns false if metadata is available only for the duration of the session.
     */
   def isPersistent: Boolean
-
-  override def close(): Unit = {}
 }

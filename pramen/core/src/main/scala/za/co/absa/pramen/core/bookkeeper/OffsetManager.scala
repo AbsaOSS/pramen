@@ -88,6 +88,4 @@ trait OffsetManager extends AutoCloseable {
     * Rolls back an offset request
     */
   def rollbackOffsets(request: DataOffsetRequest): Unit
-
-  override def close(): Unit
 }
