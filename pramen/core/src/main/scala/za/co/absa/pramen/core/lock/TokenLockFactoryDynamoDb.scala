@@ -56,7 +56,7 @@ class TokenLockFactoryDynamoDb(
   init()
 
   override def getLock(token: String): TokenLock = {
-    new TokenLockDynamoDb(token, dynamoDbClient, locksTableBaseName)
+    new TokenLockDynamoDb(token, dynamoDbClient, locksTableName)
   }
 
   /**
@@ -80,12 +80,12 @@ class TokenLockFactoryDynamoDb(
     try {
       log.info(s"Initializing DynamoDB lock factory with table: '$locksTableName'")
 
-      if (!tableExists(locksTableBaseName)) {
-        log.info(s"Creating DynamoDB locks table: $locksTableBaseName")
-        createLocksTable(locksTableBaseName)
-        log.info(s"Successfully created locks table: $locksTableBaseName")
+      if (!tableExists(locksTableName)) {
+        log.info(s"Creating DynamoDB locks table: $locksTableName")
+        createLocksTable(locksTableName)
+        log.info(s"Successfully created locks table: $locksTableName")
       } else {
-        log.info(s"DynamoDB locks table already exists: $locksTableBaseName")
+        log.info(s"DynamoDB locks table already exists: $locksTableName")
       }
 
       log.info(s"DynamoDB lock factory initialization complete")
