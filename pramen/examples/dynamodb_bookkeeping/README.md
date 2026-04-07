@@ -434,7 +434,6 @@ val testFactory = TokenLockFactoryDynamoDb.builder
   .build()
 ```
 
-See `core/src/main/scala/za/co/absa/pramen/core/lock/TokenLockFactoryDynamoDbExample.scala` for more examples.
 
 ### Lock Behavior
 

@@ -500,10 +500,131 @@ class BookkeeperDynamoDb private (
     }
   }
 
-  override def deleteTable(tableWithWildcard: String): Seq[String] = {
-    // DynamoDB implementation for wildcard deletion
-    // This would require scanning and deleting matching items
-    throw new UnsupportedOperationException("deleteTable with wildcards is not yet implemented for DynamoDB bookkeeper")
+  override def deleteTable(tableName: String): Seq[String] = {
+    try {
+      val results = scala.collection.mutable.ListBuffer[String]()
+
+      // Delete from bookkeeping table
+      val bookkeepingCount = deleteTableFromBookkeeping(tableName)
+      results += s"Deleted $bookkeepingCount bookkeeping records for table '$tableName'"
+
+      // Delete from schema table
+      val schemaCount = deleteTableFromSchemas(tableName)
+      results += s"Deleted $schemaCount schema records for table '$tableName'"
+
+      // Delete offsets
+      val offsetResults = OffsetManagerDynamoDb.deleteAllOffsets(tableName, dynamoDbClient)
+      results += s"Deleted $offsetResults offset records for table '$tableName'"
+
+      log.info(s"Successfully deleted all records for table '$tableName'")
+      results.toSeq
+    } catch {
+      case NonFatal(ex) =>
+        log.error(s"Error deleting table '$tableName'", ex)
+        throw ex
+    }
+  }
+
+  /**
+    * Deletes all bookkeeping records for the specified table.
+    *
+    * @param tableName The name of the table to delete
+    * @return The number of records deleted
+    */
+  private def deleteTableFromBookkeeping(tableName: String): Int = {
+    var deletedCount = 0
+    var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
+
+    do {
+      val queryBuilder = QueryRequest.builder()
+        .tableName(bookkeepingTableName)
+        .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName")
+        .expressionAttributeValues(Map(
+          ":tableName" -> AttributeValue.builder().s(tableName).build()
+        ).asJava)
+
+      if (lastEvaluatedKey != null) {
+        queryBuilder.exclusiveStartKey(lastEvaluatedKey)
+      }
+
+      val response = dynamoDbClient.query(queryBuilder.build())
+      val items = response.items().asScala
+
+      // Delete each item
+      items.foreach { item =>
+        val sortKey = item.get(ATTR_INFO_DATE_SORT_KEY).s()
+        val deleteRequest = DeleteItemRequest.builder()
+          .tableName(bookkeepingTableName)
+          .key(Map(
+            ATTR_TABLE_NAME -> AttributeValue.builder().s(tableName).build(),
+            ATTR_INFO_DATE_SORT_KEY -> AttributeValue.builder().s(sortKey).build()
+          ).asJava)
+          .build()
+
+        try {
+          dynamoDbClient.deleteItem(deleteRequest)
+          deletedCount += 1
+        } catch {
+          case NonFatal(ex) =>
+            log.warn(s"Failed to delete bookkeeping item for table '$tableName', sortKey '$sortKey'", ex)
+        }
+      }
+
+      lastEvaluatedKey = response.lastEvaluatedKey()
+    } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
+
+    deletedCount
+  }
+
+  /**
+    * Deletes all schema records for the specified table.
+    *
+    * @param tableName The name of the table to delete
+    * @return The number of records deleted
+    */
+  private def deleteTableFromSchemas(tableName: String): Int = {
+    var deletedCount = 0
+    var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
+
+    do {
+      val queryBuilder = QueryRequest.builder()
+        .tableName(schemaTableName)
+        .keyConditionExpression(s"$ATTR_TABLE_NAME = :tableName")
+        .expressionAttributeValues(Map(
+          ":tableName" -> AttributeValue.builder().s(tableName).build()
+        ).asJava)
+
+      if (lastEvaluatedKey != null) {
+        queryBuilder.exclusiveStartKey(lastEvaluatedKey)
+      }
+
+      val response = dynamoDbClient.query(queryBuilder.build())
+      val items = response.items().asScala
+
+      // Delete each item
+      items.foreach { item =>
+        val infoDate = item.get(ATTR_INFO_DATE).s()
+        val deleteRequest = DeleteItemRequest.builder()
+          .tableName(schemaTableName)
+          .key(Map(
+            ATTR_TABLE_NAME -> AttributeValue.builder().s(tableName).build(),
+            ATTR_INFO_DATE -> AttributeValue.builder().s(infoDate).build()
+          ).asJava)
+          .build()
+
+        try {
+          dynamoDbClient.deleteItem(deleteRequest)
+          deletedCount += 1
+        } catch {
+          case NonFatal(ex) =>
+            log.warn(s"Failed to delete schema item for table '$tableName', infoDate '$infoDate'", ex)
+        }
+      }
+
+      lastEvaluatedKey = response.lastEvaluatedKey()
+    } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
+
+    deletedCount
   }
 
   override def getLatestSchema(tableName: String, until: LocalDate): Option[(StructType, LocalDate)] = {

@@ -605,4 +605,55 @@ object OffsetManagerDynamoDb {
   }
 
   def builder: OffsetManagerDynamoDbBuilder = new OffsetManagerDynamoDbBuilder
+
+  /** Deletes all offsets for a given table. */
+  def deleteAllOffsets(tableName: String, dynamoDbClient: DynamoDbClient): Int = {
+    val log = LoggerFactory.getLogger(this.getClass)
+    val offsetTableBaseName = s"${DEFAULT_TABLE_PREFIX}_${DEFAULT_OFFSET_TABLE}"
+    val offsetTableFullName = BookkeeperDynamoDb.getFullTableName(None, offsetTableBaseName)
+
+    try {
+      var allItems = Seq.empty[java.util.Map[String, AttributeValue]]
+      var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
+
+      // Query all offsets for the table with pagination
+      do {
+        val queryRequestBuilder = QueryRequest.builder()
+          .tableName(offsetTableFullName)
+          .keyConditionExpression(s"$ATTR_PRAMEN_TABLE_NAME = :table_name")
+          .expressionAttributeValues(Map(
+            ":table_name" -> AttributeValue.builder().s(tableName).build()
+          ).asJava)
+
+        if (lastEvaluatedKey != null) {
+          queryRequestBuilder.exclusiveStartKey(lastEvaluatedKey)
+        }
+
+        val result = dynamoDbClient.query(queryRequestBuilder.build())
+        allItems = allItems ++ result.items().asScala
+        lastEvaluatedKey = result.lastEvaluatedKey()
+      } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
+
+      // Delete each item
+      allItems.foreach { item =>
+        val deleteRequest = DeleteItemRequest.builder()
+          .tableName(offsetTableFullName)
+          .key(Map(
+            ATTR_PRAMEN_TABLE_NAME -> item.get(ATTR_PRAMEN_TABLE_NAME),
+            ATTR_COMPOSITE_KEY -> item.get(ATTR_COMPOSITE_KEY)
+          ).asJava)
+          .build()
+
+        dynamoDbClient.deleteItem(deleteRequest)
+      }
+
+      val deletedCount = allItems.size
+      log.info(s"Deleted $deletedCount offset records for table '$tableName'")
+      deletedCount
+    } catch {
+      case NonFatal(ex) =>
+        log.error(s"Error deleting offsets for table '$tableName' from '$offsetTableFullName'", ex)
+        throw new RuntimeException(s"Unable to delete offsets for table '$tableName' from '$offsetTableFullName'", ex)
+    }
+  }
 }
