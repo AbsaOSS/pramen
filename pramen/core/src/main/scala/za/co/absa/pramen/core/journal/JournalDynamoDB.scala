@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model._
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb
+import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb.waitForTableActive
 import za.co.absa.pramen.core.journal.model.TaskCompleted
 
 import java.net.URI
@@ -227,43 +228,8 @@ class JournalDynamoDB private (
       .build()
 
     dynamoDbClient.createTable(createRequest)
-    waitForTableActive(journalTableFullName)
+    waitForTableActive(journalTableFullName, dynamoDbClient)
     log.info(s"Journal table '$journalTableFullName' created successfully")
-  }
-
-  /**
-    * Waits for a table to become ACTIVE.
-    */
-  private def waitForTableActive(tableName: String, maxAttempts: Int = 30): Unit = {
-    var attempts = 0
-    var isActive = false
-
-    while (attempts < maxAttempts && !isActive) {
-      try {
-        val describeRequest = DescribeTableRequest.builder()
-          .tableName(tableName)
-          .build()
-
-        val response = dynamoDbClient.describeTable(describeRequest)
-        val status = response.table().tableStatus()
-
-        if (status == TableStatus.ACTIVE) {
-          isActive = true
-        } else {
-          Thread.sleep(1000)
-          attempts += 1
-        }
-      } catch {
-        case NonFatal(ex) =>
-          log.warn(s"Error waiting for table '$tableName' to become active", ex)
-          Thread.sleep(1000)
-          attempts += 1
-      }
-    }
-
-    if (!isActive) {
-      throw new RuntimeException(s"Table '$tableName' did not become ACTIVE after $maxAttempts attempts")
-    }
   }
 
   /**
