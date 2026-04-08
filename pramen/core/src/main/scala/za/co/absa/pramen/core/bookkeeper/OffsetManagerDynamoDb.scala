@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model._
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
+import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb.waitForTableActive
 import za.co.absa.pramen.core.bookkeeper.model._
 
 import java.net.URI
@@ -469,43 +470,8 @@ class OffsetManagerDynamoDb(
       .build()
 
     dynamoDbClient.createTable(createRequest)
-    waitForTableActive(offsetTableFullName)
+    waitForTableActive(offsetTableFullName, dynamoDbClient)
     log.info(s"Offset table '$offsetTableFullName' created successfully")
-  }
-
-  /**
-    * Waits for a table to become ACTIVE.
-    */
-  private def waitForTableActive(tableName: String, maxAttempts: Int = 30): Unit = {
-    var attempts = 0
-    var isActive = false
-
-    while (attempts < maxAttempts && !isActive) {
-      try {
-        val describeRequest = DescribeTableRequest.builder()
-          .tableName(tableName)
-          .build()
-
-        val response = dynamoDbClient.describeTable(describeRequest)
-        val status = response.table().tableStatus()
-
-        if (status == TableStatus.ACTIVE) {
-          isActive = true
-        } else {
-          Thread.sleep(1000)
-          attempts += 1
-        }
-      } catch {
-        case NonFatal(ex) =>
-          log.warn(s"Error waiting for table '$tableName' to become active", ex)
-          Thread.sleep(1000)
-          attempts += 1
-      }
-    }
-
-    if (!isActive) {
-      throw new RuntimeException(s"Table '$tableName' did not become ACTIVE after $maxAttempts attempts")
-    }
   }
 
   /**

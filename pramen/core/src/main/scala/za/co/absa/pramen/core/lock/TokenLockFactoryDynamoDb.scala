@@ -23,6 +23,7 @@ import software.amazon.awssdk.services.dynamodb.DynamoDbClient
 import software.amazon.awssdk.services.dynamodb.model._
 import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb
+import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb.waitForTableActive
 
 import java.net.URI
 import scala.util.control.NonFatal
@@ -144,46 +145,7 @@ class TokenLockFactoryDynamoDb(
     dynamoDbClient.createTable(createTableRequest)
 
     // Wait for table to become active
-    waitForTableActive(tableName)
-  }
-
-  /**
-    * Waits for a table to become active after creation.
-    *
-    * @param tableName The name of the table to wait for
-    * @param maxWaitSeconds Maximum time to wait in seconds (default: 60)
-    */
-  private def waitForTableActive(tableName: String, maxWaitSeconds: Int = 60): Unit = {
-    val startTime = System.currentTimeMillis()
-    val maxWaitMs = maxWaitSeconds * 1000L
-
-    var tableActive = false
-    while (!tableActive && (System.currentTimeMillis() - startTime) < maxWaitMs) {
-      try {
-        val describeRequest = DescribeTableRequest.builder()
-          .tableName(tableName)
-          .build()
-
-        val response = dynamoDbClient.describeTable(describeRequest)
-        val status = response.table().tableStatus()
-
-        if (status == TableStatus.ACTIVE) {
-          tableActive = true
-          log.debug(s"Table $tableName is now ACTIVE")
-        } else {
-          log.debug(s"Table $tableName status: $status, waiting...")
-          Thread.sleep(2000) // Wait 2 seconds before checking again
-        }
-      } catch {
-        case NonFatal(ex) =>
-          log.warn(s"Error checking table status for $tableName", ex)
-          Thread.sleep(2000)
-      }
-    }
-
-    if (!tableActive) {
-      throw new RuntimeException(s"Table $tableName did not become active within $maxWaitSeconds seconds")
-    }
+    waitForTableActive(tableName, dynamoDbClient)
   }
 }
 
