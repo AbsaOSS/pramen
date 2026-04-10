@@ -73,6 +73,8 @@ class BookkeeperDynamoDb private (
     new OffsetManagerDynamoDb(dynamoDbClient, batchId, tableArn, tablePrefix, closesClient = false)
   )
 
+  private val offsetManagementDynamoDB = new OffsetManagerDynamoDb(dynamoDbClient, batchId, tableArn, tablePrefix, closesClient = false)
+
   // Initialize tables on construction
   init()
 
@@ -474,7 +476,7 @@ class BookkeeperDynamoDb private (
       results += s"Deleted $schemaCount schema records for table '$tableName'"
 
       // Delete offsets
-      val offsetResults = getOffsetManager.asInstanceOf[OffsetManagerDynamoDb].deleteAllOffsets(tableName, dynamoDbClient)
+      val offsetResults = offsetManagementDynamoDB.deleteAllOffsets(tableName, dynamoDbClient)
       results += s"Deleted $offsetResults offset records for table '$tableName'"
 
       log.info(s"Successfully deleted all records for table '$tableName'")
