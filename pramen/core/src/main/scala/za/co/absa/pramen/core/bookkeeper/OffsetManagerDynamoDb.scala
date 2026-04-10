@@ -346,26 +346,31 @@ class OffsetManagerDynamoDb(
     */
   private[core] def getMaximumInfoDate(table: String): Option[LocalDate] = {
     try {
-      val queryRequest = QueryRequest.builder()
-        .tableName(offsetTableFullName)
-        .keyConditionExpression(s"${ATTR_PRAMEN_TABLE_NAME} = :table_name")
-        .expressionAttributeValues(Map(
-          ":table_name" -> AttributeValue.builder().s(table).build()
-        ).asJava)
-        .projectionExpression(ATTR_INFO_DATE)
-        .build()
+      var allDates = Seq.empty[LocalDate]
+      var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
 
-      val result = dynamoDbClient.query(queryRequest)
+      do {
+        val queryRequestBuilder = QueryRequest.builder()
+          .tableName(offsetTableFullName)
+          .keyConditionExpression(s"${ATTR_PRAMEN_TABLE_NAME} = :table_name")
+          .expressionAttributeValues(Map(
+            ":table_name" -> AttributeValue.builder().s(table).build()
+          ).asJava)
+          .projectionExpression(ATTR_INFO_DATE)
 
-      if (result.items().isEmpty) {
+        if (lastEvaluatedKey != null) {
+          queryRequestBuilder.exclusiveStartKey(lastEvaluatedKey)
+        }
+
+        val result = dynamoDbClient.query(queryRequestBuilder.build())
+        allDates = allDates ++ result.items().asScala.map(item => LocalDate.parse(item.get(ATTR_INFO_DATE).s()))
+        lastEvaluatedKey = result.lastEvaluatedKey()
+      } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
+
+      if (allDates.isEmpty) {
         None
       } else {
-        // Use maxBy with compareTo to avoid needing implicit Ordering
-        val maxInfoDate = result.items().asScala
-          .map(item => LocalDate.parse(item.get(ATTR_INFO_DATE).s()))
-          .maxBy(_.toEpochDay)
-
-        Some(maxInfoDate)
+        Some(allDates.maxBy(_.toEpochDay))
       }
     } catch {
       case NonFatal(ex) =>
