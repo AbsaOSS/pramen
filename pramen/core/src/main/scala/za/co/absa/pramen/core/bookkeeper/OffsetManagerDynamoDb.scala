@@ -312,21 +312,29 @@ class OffsetManagerDynamoDb(
     */
   private[core] def getOffsetRecords(table: String, infoDate: LocalDate): Array[OffsetRecord] = {
     try {
-      val queryRequest = QueryRequest.builder()
-        .tableName(offsetTableFullName)
-        .keyConditionExpression(s"${ATTR_PRAMEN_TABLE_NAME} = :table_name")
-        .filterExpression(s"${ATTR_INFO_DATE} = :info_date")
-        .expressionAttributeValues(Map(
-          ":table_name" -> AttributeValue.builder().s(table).build(),
-          ":info_date" -> AttributeValue.builder().s(infoDate.toString).build()
-        ).asJava)
-        .build()
+      var allItems = Seq.empty[java.util.Map[String, AttributeValue]]
+      var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
+      val infoDatePrefix = s"${infoDate.toString}#"
 
-      val result = dynamoDbClient.query(queryRequest)
+      do {
+        val queryRequestBuilder = QueryRequest.builder()
+          .tableName(offsetTableFullName)
+          .keyConditionExpression(s"$ATTR_PRAMEN_TABLE_NAME = :table_name AND begins_with($ATTR_COMPOSITE_KEY, :prefix)")
+          .expressionAttributeValues(Map(
+            ":table_name" -> AttributeValue.builder().s(table).build(),
+            ":prefix" -> AttributeValue.builder().s(infoDatePrefix).build()
+          ).asJava)
 
-      result.items().asScala
-        .map(itemToOffsetRecord)
-        .toArray
+        if (lastEvaluatedKey != null) {
+          queryRequestBuilder.exclusiveStartKey(lastEvaluatedKey)
+        }
+
+        val result = dynamoDbClient.query(queryRequestBuilder.build())
+        allItems = allItems ++ result.items().asScala
+        lastEvaluatedKey = result.lastEvaluatedKey()
+      } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
+
+      allItems.map(itemToOffsetRecord).toArray
     } catch {
       case NonFatal(ex) =>
         throw new RuntimeException(s"Unable to read offset records from the offset table '$offsetTableFullName'.", ex)
@@ -487,6 +495,54 @@ class OffsetManagerDynamoDb(
         log.warn("Error closing DynamoDB client", ex)
     }
   }
+
+  /** Deletes all offsets for a given table. */
+  private[core] def deleteAllOffsets(tableName: String, dynamoDbClient: DynamoDbClient): Int = {
+    val log = LoggerFactory.getLogger(this.getClass)
+    try {
+      var allItems = Seq.empty[java.util.Map[String, AttributeValue]]
+      var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
+
+      // Query all offsets for the table with pagination
+      do {
+        val queryRequestBuilder = QueryRequest.builder()
+          .tableName(offsetTableFullName)
+          .keyConditionExpression(s"$ATTR_PRAMEN_TABLE_NAME = :table_name")
+          .expressionAttributeValues(Map(
+            ":table_name" -> AttributeValue.builder().s(tableName).build()
+          ).asJava)
+
+        if (lastEvaluatedKey != null) {
+          queryRequestBuilder.exclusiveStartKey(lastEvaluatedKey)
+        }
+
+        val result = dynamoDbClient.query(queryRequestBuilder.build())
+        allItems = allItems ++ result.items().asScala
+        lastEvaluatedKey = result.lastEvaluatedKey()
+      } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
+
+      // Delete each item
+      allItems.foreach { item =>
+        val deleteRequest = DeleteItemRequest.builder()
+          .tableName(offsetTableFullName)
+          .key(Map(
+            ATTR_PRAMEN_TABLE_NAME -> item.get(ATTR_PRAMEN_TABLE_NAME),
+            ATTR_COMPOSITE_KEY -> item.get(ATTR_COMPOSITE_KEY)
+          ).asJava)
+          .build()
+
+        dynamoDbClient.deleteItem(deleteRequest)
+      }
+
+      val deletedCount = allItems.size
+      log.info(s"Deleted $deletedCount offset records for table '$tableName'")
+      deletedCount
+    } catch {
+      case NonFatal(ex) =>
+        log.error(s"Error deleting offsets for table '$tableName' from '$offsetTableFullName'", ex)
+        throw new RuntimeException(s"Unable to delete offsets for table '$tableName' from '$offsetTableFullName'", ex)
+    }
+  }
 }
 
 object OffsetManagerDynamoDb {
@@ -560,66 +616,22 @@ object OffsetManagerDynamoDb {
 
       val client = clientBuilder.build()
 
-      new OffsetManagerDynamoDb(
-        dynamoDbClient = client,
-        batchId = batchId,
-        tableArn = tableArn,
-        tablePrefix = tablePrefix,
-        closesClient = true
-      )
+      try {
+        new OffsetManagerDynamoDb(
+          dynamoDbClient = client,
+          batchId = batchId,
+          tableArn = tableArn,
+          tablePrefix = tablePrefix,
+          closesClient = true
+        )
+      } catch {
+        case NonFatal(ex) =>
+          client.close()
+          throw ex
+      }
     }
   }
 
   def builder: OffsetManagerDynamoDbBuilder = new OffsetManagerDynamoDbBuilder
 
-  /** Deletes all offsets for a given table. */
-  def deleteAllOffsets(tableName: String, dynamoDbClient: DynamoDbClient): Int = {
-    val log = LoggerFactory.getLogger(this.getClass)
-    val offsetTableBaseName = s"${DEFAULT_TABLE_PREFIX}_${DEFAULT_OFFSET_TABLE}"
-    val offsetTableFullName = BookkeeperDynamoDb.getFullTableName(None, offsetTableBaseName)
-
-    try {
-      var allItems = Seq.empty[java.util.Map[String, AttributeValue]]
-      var lastEvaluatedKey: java.util.Map[String, AttributeValue] = null
-
-      // Query all offsets for the table with pagination
-      do {
-        val queryRequestBuilder = QueryRequest.builder()
-          .tableName(offsetTableFullName)
-          .keyConditionExpression(s"$ATTR_PRAMEN_TABLE_NAME = :table_name")
-          .expressionAttributeValues(Map(
-            ":table_name" -> AttributeValue.builder().s(tableName).build()
-          ).asJava)
-
-        if (lastEvaluatedKey != null) {
-          queryRequestBuilder.exclusiveStartKey(lastEvaluatedKey)
-        }
-
-        val result = dynamoDbClient.query(queryRequestBuilder.build())
-        allItems = allItems ++ result.items().asScala
-        lastEvaluatedKey = result.lastEvaluatedKey()
-      } while (lastEvaluatedKey != null && !lastEvaluatedKey.isEmpty)
-
-      // Delete each item
-      allItems.foreach { item =>
-        val deleteRequest = DeleteItemRequest.builder()
-          .tableName(offsetTableFullName)
-          .key(Map(
-            ATTR_PRAMEN_TABLE_NAME -> item.get(ATTR_PRAMEN_TABLE_NAME),
-            ATTR_COMPOSITE_KEY -> item.get(ATTR_COMPOSITE_KEY)
-          ).asJava)
-          .build()
-
-        dynamoDbClient.deleteItem(deleteRequest)
-      }
-
-      val deletedCount = allItems.size
-      log.info(s"Deleted $deletedCount offset records for table '$tableName'")
-      deletedCount
-    } catch {
-      case NonFatal(ex) =>
-        log.error(s"Error deleting offsets for table '$tableName' from '$offsetTableFullName'", ex)
-        throw new RuntimeException(s"Unable to delete offsets for table '$tableName' from '$offsetTableFullName'", ex)
-    }
-  }
 }

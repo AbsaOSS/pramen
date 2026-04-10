@@ -38,7 +38,7 @@ import scala.util.control.NonFatal
   * @param tableArn Optional ARN prefix for the locks table
   * @param tablePrefix Prefix for the locks table name (default: "pramen")
   */
-class TokenLockFactoryDynamoDb(
+class TokenLockFactoryDynamoDb private(
     dynamoDbClient: DynamoDbClient,
     tableArn: Option[String] = None,
     tablePrefix: String = "pramen"
@@ -257,11 +257,17 @@ object TokenLockFactoryDynamoDb {
 
       val client = clientBuilder.build()
 
-      new TokenLockFactoryDynamoDb(
-        dynamoDbClient = client,
-        tableArn = tableArn,
-        tablePrefix = tablePrefix
-      )
+      try {
+        new TokenLockFactoryDynamoDb(
+          dynamoDbClient = client,
+          tableArn = tableArn,
+          tablePrefix = tablePrefix
+        )
+      } catch {
+        case NonFatal(ex) =>
+          client.close()
+          throw ex
+      }
     }
   }
 

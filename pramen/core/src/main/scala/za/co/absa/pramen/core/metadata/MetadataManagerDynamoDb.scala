@@ -310,11 +310,17 @@ object MetadataManagerDynamoDb {
 
       val client = clientBuilder.build()
 
-      new MetadataManagerDynamoDb(
-        dynamoDbClient = client,
-        tableArn = tableArn,
-        tablePrefix = tablePrefix
-      )
+      try {
+        new MetadataManagerDynamoDb(
+          dynamoDbClient = client,
+          tableArn = tableArn,
+          tablePrefix = tablePrefix
+        )
+      } catch {
+        case NonFatal(ex) =>
+          client.close()
+          throw ex
+      }
     }
   }
 
