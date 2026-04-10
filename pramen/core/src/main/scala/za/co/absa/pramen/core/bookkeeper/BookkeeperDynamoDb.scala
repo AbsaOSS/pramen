@@ -474,7 +474,7 @@ class BookkeeperDynamoDb private (
       results += s"Deleted $schemaCount schema records for table '$tableName'"
 
       // Delete offsets
-      val offsetResults = OffsetManagerDynamoDb.deleteAllOffsets(tableName, dynamoDbClient)
+      val offsetResults = getOffsetManager.asInstanceOf[OffsetManagerDynamoDb].deleteAllOffsets(tableName, dynamoDbClient)
       results += s"Deleted $offsetResults offset records for table '$tableName'"
 
       log.info(s"Successfully deleted all records for table '$tableName'")
@@ -931,12 +931,18 @@ object BookkeeperDynamoDb {
 
       val client = clientBuilder.build()
 
-      new BookkeeperDynamoDb(
-        dynamoDbClient = client,
-        batchId = actualBatchId,
-        tableArn = tableArn,
-        tablePrefix = tablePrefix
-      )
+      try {
+        new BookkeeperDynamoDb(
+          dynamoDbClient = client,
+          batchId = actualBatchId,
+          tableArn = tableArn,
+          tablePrefix = tablePrefix
+        )
+      } catch {
+        case NonFatal(ex) =>
+          client.close()
+          throw ex
+      }
     }
   }
 

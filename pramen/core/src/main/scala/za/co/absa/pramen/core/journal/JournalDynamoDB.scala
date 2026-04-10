@@ -331,11 +331,17 @@ object JournalDynamoDB {
 
       val client = clientBuilder.build()
 
-      new JournalDynamoDB(
-        dynamoDbClient = client,
-        tableArn = tableArn,
-        tablePrefix = tablePrefix
-      )
+      try {
+        new JournalDynamoDB(
+          dynamoDbClient = client,
+          tableArn = tableArn,
+          tablePrefix = tablePrefix
+        )
+      } catch {
+        case NonFatal(ex) =>
+          client.close()
+          throw ex
+      }
     }
   }
 
