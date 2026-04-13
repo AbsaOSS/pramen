@@ -178,6 +178,34 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(stripLineEndings(actual) == stripLineEndings(expected))
     }
 
+    "retain metadata and add the oriainal_name metadata key" in {
+      val expected =
+        """[ {  "a_a" : "A",  "b" : 1}, {  "a_a" : "B",  "b" : 2}, {  "a_a" : "C",  "b" : 3} ]"""
+      val expectedMetadataField1 =
+        """{"original_name":"tbl.a a","maxLength":10}"""
+
+      val expectedMetadataField2 =
+        """{"original_name":"tbl.b","comment":"Test"}"""
+
+      val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("tbl.a a", "tbl.b")
+      val field1 = df.schema.fields.head
+      val field2 = df.schema.fields(1)
+      val field1WIthMetadata = field1.copy(metadata = new MetadataBuilder().putLong("maxLength", 10).build())
+      val field2WIthMetadata = field2.copy(metadata = new MetadataBuilder().putString("comment", "Test").build())
+      val newSchema = StructType(Seq(field1WIthMetadata, field2WIthMetadata))
+      val df1 = spark.createDataFrame(df.rdd, newSchema)
+
+      val actualDf = sanitizeDfColumns(df1, " ")
+      val metadataField1 = actualDf.schema.fields.head.metadata.json
+      val metadataField2 = actualDf.schema.fields(1).metadata.json
+
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+      assert(metadataField1 == expectedMetadataField1)
+      assert(metadataField2 == expectedMetadataField2)
+    }
+
     "convert schema from Spark to Json and back should produce the same schema" in {
       val testCaseSchema = StructType(
         Array(

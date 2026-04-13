@@ -41,6 +41,7 @@ object SparkUtils {
 
   val MAX_LENGTH_METADATA_KEY = "maxLength"
   val COMMENT_METADATA_KEY = "comment"
+  val ORIGINAL_NAME_METADATA_KEY = "original_name"
 
   // This seems to be limitation for multiple catalogs, like Glue and Hive.
   val MAX_COMMENT_LENGTH = 255
@@ -128,7 +129,11 @@ object SparkUtils {
       val trgName = replaceSpecialChars(if(hasTablePrefix) removeTablePrefix(srcName.trim) else srcName.trim)
       if (srcName != trgName) {
         log.info(s"Renamed column: '$srcName' -> '$trgName''")
-        col(s"`$srcName`").as(trgName)
+        val newMetadata = new MetadataBuilder()
+          .withMetadata(field.metadata)
+          .putString(ORIGINAL_NAME_METADATA_KEY, srcName)
+          .build()
+        col(s"`$srcName`").as(trgName, newMetadata)
       } else {
         col(s"`$srcName`")
       }
