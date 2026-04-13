@@ -32,6 +32,7 @@ import za.co.absa.pramen.core.utils.SparkMaster.Databricks
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
+import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.runtime.universe._
 import scala.util.{Failure, Success, Try}
@@ -104,6 +105,9 @@ object SparkUtils {
     * @param characters A set of characters considered special
     */
   def sanitizeDfColumns(df: DataFrame, characters: String): DataFrame = {
+    val namesLowercase = new mutable.HashSet[String]
+    namesLowercase ++= df.schema.fields.map(_.name.toLowerCase)
+
     def replaceSpecialChars(s: String): String = {
       s.map(c => if (characters.contains(c)) '_' else c)
     }
@@ -122,18 +126,39 @@ object SparkUtils {
       }.distinct.length == 1
     }
 
+    def getUniqueName(baseName: String): String = {
+      var uniqueName = baseName
+      var counter = 1
+      while (namesLowercase.contains(uniqueName.toLowerCase)) {
+        uniqueName = s"${baseName}_$counter"
+        counter += 1
+      }
+      uniqueName
+    }
+
     val hasTablePrefix = hasUniformTablePrefix(df.schema.fields)
 
     val fieldsToSelect = df.schema.fields.map(field => {
       val srcName = field.name
-      val trgName = replaceSpecialChars(if(hasTablePrefix) removeTablePrefix(srcName.trim) else srcName.trim)
+      val trgName = replaceSpecialChars(if (hasTablePrefix) removeTablePrefix(srcName.trim) else srcName.trim)
       if (srcName != trgName) {
-        log.info(s"Renamed column: '$srcName' -> '$trgName''")
+        val uniqueName = if (namesLowercase.contains(trgName.toLowerCase)) {
+          val newName = getUniqueName(trgName)
+          namesLowercase.remove(srcName)
+          namesLowercase.add(newName)
+          newName
+        } else {
+          namesLowercase.remove(srcName)
+          namesLowercase.add(trgName)
+          trgName
+        }
+
+        log.info(s"Renamed column: '$srcName' -> '$uniqueName'")
         val newMetadata = new MetadataBuilder()
           .withMetadata(field.metadata)
           .putString(ORIGINAL_NAME_METADATA_KEY, srcName)
           .build()
-        col(s"`$srcName`").as(trgName, newMetadata)
+        col(s"`$srcName`").as(uniqueName, newMetadata)
       } else {
         col(s"`$srcName`")
       }
