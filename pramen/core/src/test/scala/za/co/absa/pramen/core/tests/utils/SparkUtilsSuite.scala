@@ -152,6 +152,38 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(stripLineEndings(actual) == stripLineEndings(expected))
     }
 
+    "add suffixes when there is a name collision" in {
+      val expected =
+        """[ {  "a_a" : "A",  "a_a_1" : 1,  "b_b_1" : 1,  "b_b" : 1,  "c_c" : 1,  "c_c_1" : 1,  "c_c_2" : 1}, {  "a_a" : "B",  "a_a_1" : 2,  "b_b_1" : 2,  "b_b" : 2,  "c_c" : 2,  "c_c_1" : 2,  "c_c_2" : 2}, {  "a_a" : "C",  "a_a_1" : 3,  "b_b_1" : 3,  "b_b" : 3,  "c_c" : 3,  "c_c_1" : 3,  "c_c_2" : 3} ]"""
+
+      val expectedMetadataField1 =
+        """{"original_name":"a:a","maxLength":10}"""
+
+      val expectedMetadataField2 =
+        """{"original_name":"a a"}"""
+
+      val df = List(("A", 1, 1, 1, 1, 1, 1), ("B", 2, 2, 2, 2, 2, 2), ("C", 3, 3, 3, 3, 3, 3)).toDF("a:a", "a a", "b<b", "b_b", "c_c", "c c", "c:c")
+
+      val field1 = df.schema.fields.head
+      val field1WIthMetadata = field1.copy(metadata = new MetadataBuilder().putLong("maxLength", 10).build())
+      val newSchema = StructType(field1WIthMetadata +: df.schema.fields.drop(1))
+      val df1 = spark.createDataFrame(df.rdd, newSchema)
+
+      val actualDf = sanitizeDfColumns(df1, " :<>")
+
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+
+      val metadataField1 = actualDf.schema.fields.head.metadata.json
+      val metadataField2 = actualDf.schema.fields(1).metadata.json
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+      assert(metadataField1 == expectedMetadataField1)
+      assert(metadataField2 == expectedMetadataField2)
+
+    }
+
     "rename columns that start with .tbl" in {
       val expected =
         """[ {  "a_a" : "A",  "b" : 1}, {  "a_a" : "B",  "b" : 2}, {  "a_a" : "C",  "b" : 3} ]"""
@@ -178,7 +210,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(stripLineEndings(actual) == stripLineEndings(expected))
     }
 
-    "retain metadata and add the oriainal_name metadata key" in {
+    "retain metadata and add the original_name metadata key" in {
       val expected =
         """[ {  "a_a" : "A",  "b" : 1}, {  "a_a" : "B",  "b" : 2}, {  "a_a" : "C",  "b" : 3} ]"""
       val expectedMetadataField1 =
