@@ -206,7 +206,7 @@ Tables are automatically created with the following schema:
    spark-submit \
      --class za.co.absa.pramen.runner.PipelineRunner \
      --master local[*] \
-     pramen-runner_2.12-1.13.10.jar \
+     pramen-runner_2.12-1.13.11.jar \
      --config examples/dynamodb_bookkeeping/dynamodb_bookkeeping.conf \
      --date 2024-01-15
    ```
