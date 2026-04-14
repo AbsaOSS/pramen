@@ -675,6 +675,108 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "getStringTypeFromMetadata" should {
+    "return varchar type for long metadata type" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(10))
+    }
+
+    "return varchar type for string metadata type" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "10")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(10))
+    }
+
+    "return varchar type from CHAR_VARCHAR_METADATA_KEY with varchar" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(11)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(11))
+    }
+
+    "return char type from CHAR_VARCHAR_METADATA_KEY with char" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "CHAR(12)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == CharType(12))
+    }
+
+    "return varchar type and ignore case in CHAR_VARCHAR_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "VARCHAR(15)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(15))
+    }
+
+    "return None for wrong type in MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "abc")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "return None for double type in MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putDouble(MAX_LENGTH_METADATA_KEY, 12.25)
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "return None if metadata not specified" in {
+      val metadata = new MetadataBuilder
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "prioritize CHAR_VARCHAR_METADATA_KEY over MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(20)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(20))
+    }
+
+    "handle invalid CHAR_VARCHAR_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(10.1)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "handle malformed CHAR_VARCHAR_METADATA_KEY and fallback to MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "invalid_format")
+  
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(10))
+    }
+  }
+
   "removeNestedMetadata" should {
     "remove metadata, but only from nested fields" in {
       val metadata1 = new MetadataBuilder().putLong("maxLength", 5).putString("comment", "Employee name").build()

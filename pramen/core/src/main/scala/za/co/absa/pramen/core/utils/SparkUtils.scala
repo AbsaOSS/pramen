@@ -35,10 +35,12 @@ import java.time.{Instant, LocalDate}
 import scala.collection.mutable
 import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.runtime.universe._
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 object SparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val charVarcharTypePattern = """(?i)\s*(char|varchar)\((\d+)\)\s*""".r
   private val charVarcharLengthPattern = """(?:char|varchar)\((\d+)\)""".r
 
   val MAX_LENGTH_METADATA_KEY = "maxLength"
@@ -357,10 +359,7 @@ object SparkUtils {
     def transformPrimitive(dataType: DataType, field: StructField): DataType = {
       dataType match {
         case _: StringType =>
-          getLengthFromMetadata(field.metadata) match {
-            case Some(n) => VarcharType(n)
-            case None => StringType
-          }
+          getStringTypeFromMetadata(field.metadata)
         case _ =>
           dataType
       }
@@ -404,12 +403,44 @@ object SparkUtils {
       }
       try2.getOrElse(None)
     } else if (metadata.contains(CHAR_VARCHAR_METADATA_KEY)) {
-      val typeString = metadata.getString("__CHAR_VARCHAR_TYPE_STRING").toLowerCase
-      charVarcharLengthPattern.findFirstMatchIn(typeString).map(_.group(1).toInt)
+      val typeString = metadata.getString(CHAR_VARCHAR_METADATA_KEY).toLowerCase
+      try {
+        charVarcharLengthPattern.findFirstMatchIn(typeString).map(_.group(1).toInt)
+      } catch {
+        case NonFatal(_) => None
+      }
     } else {
       None
     }
   }
+
+  /**
+    * Extracts a string-based data type (CharType, VarcharType, or StringType) from field metadata.
+    *
+    * First checks for the presence of character/varchar type metadata key. If found, parses the metadata
+    * value using a pattern to determine if it represents a CHAR or VARCHAR type with a specific length.
+    * If the metadata key is not present, attempts to extract a length value from metadata and creates
+    * a VarcharType if successful. Falls back to StringType if no specific type information is found
+    * or if the metadata cannot be parsed.
+    *
+    * @param metadata the metadata object containing type information for a field
+    * @return the resolved string-based DataType, which can be CharType, VarcharType, or StringType
+    */
+  def getStringTypeFromMetadata(metadata: Metadata): DataType = {
+    if (metadata.contains(CHAR_VARCHAR_METADATA_KEY)) {
+      metadata.getString(CHAR_VARCHAR_METADATA_KEY) match {
+        case charVarcharTypePattern(kind, len) if kind.equalsIgnoreCase("char") =>
+          CharType(len.toInt)
+        case charVarcharTypePattern(_, len) =>
+          VarcharType(len.toInt)
+        case _ =>
+          getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
+      }
+    } else {
+      getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
+    }
+  }
+
 
   /**
     * Sanitizes a comment for Hive DDL. Ideally this should be done by Spark, but because there are meny versions
