@@ -238,6 +238,19 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(metadataField2 == expectedMetadataField2)
     }
 
+    "handle case-insensitive name collisions" in {
+      val df = List(("A", 1, 2)).toDF("Test_Column", "test column", "TEST:COLUMN")
+
+      val actualDf = sanitizeDfColumns(df, " :")
+
+      // All three should produce unique names despite case differences
+      val colNames = actualDf.schema.fields.map(_.name)
+      assert(colNames.distinct.length == 3, "All columns should have unique names")
+      assert(colNames.head == "Test_Column")
+      assert(colNames(1) == "test_column_1")
+      assert(colNames(2) == "TEST_COLUMN_2")
+    }
+
     "convert schema from Spark to Json and back should produce the same schema" in {
       val testCaseSchema = StructType(
         Array(
@@ -615,6 +628,24 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val len = SparkUtils.getLengthFromMetadata(metadata.build())
 
       assert(len.contains(10))
+    }
+
+    "return length for string type 2" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(11)")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(11))
+    }
+
+    "return length for string type 3" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "CHAR(12)")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(12))
     }
 
     "return None for wrong type" in {
