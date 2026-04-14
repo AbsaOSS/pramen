@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core.reader
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
@@ -163,29 +162,17 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       .load()
 
     if (jdbcReaderConfig.correctDecimalsInSchema || jdbcReaderConfig.correctDecimalsFixPrecision) {
-      if (isDataQuery) {
-        df = SparkUtils.sanitizeDfColumns(df, jdbcReaderConfig.specialCharacters)
-      }
-      
       JdbcSparkUtils.getCorrectedDecimalsSchema(df, jdbcReaderConfig.correctDecimalsFixPrecision).foreach { schema =>
-        val schemaWithMetaData = df.schema
-        val sourceColumns = schemaWithMetaData.fields.map(f => (f.name, f.metadata)).toMap
-
-        val dfJdbcWithCustomSchema = spark
+        df = spark
           .read
           .format("jdbc")
           .options(connectionOptions)
           .option("customSchema", schema)
           .load()
+      }
 
-        val cols = schemaWithMetaData.fields.map { f =>
-          sourceColumns.get(f.name) match {
-            case Some(metadata) => col(s"`${f.name}`").as(f.name, metadata)
-            case None => col(s"`${f.name}`")
-          }
-        }
-
-        df = dfJdbcWithCustomSchema.select(cols: _*)
+      if (isDataQuery) {
+        df = SparkUtils.sanitizeDfColumns(df, jdbcReaderConfig.specialCharacters)
       }
     }
 

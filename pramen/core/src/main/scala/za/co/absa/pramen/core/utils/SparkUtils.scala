@@ -39,8 +39,10 @@ import scala.util.{Failure, Success, Try}
 
 object SparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val charVarcharLengthPattern = """(?:char|varchar)\((\d+)\)""".r
 
   val MAX_LENGTH_METADATA_KEY = "maxLength"
+  val CHAR_VARCHAR_METADATA_KEY = "__CHAR_VARCHAR_TYPE_STRING"
   val COMMENT_METADATA_KEY = "comment"
   val ORIGINAL_NAME_METADATA_KEY = "original_name"
 
@@ -144,12 +146,12 @@ object SparkUtils {
       if (srcName != trgName) {
         val uniqueName = if (namesLowercase.contains(trgName.toLowerCase)) {
           val newName = getUniqueName(trgName)
-          namesLowercase.remove(srcName)
-          namesLowercase.add(newName)
+          namesLowercase.remove(srcName.toLowerCase)
+          namesLowercase.add(newName.toLowerCase)
           newName
         } else {
-          namesLowercase.remove(srcName)
-          namesLowercase.add(trgName)
+          namesLowercase.remove(srcName.toLowerCase)
+          namesLowercase.add(trgName.toLowerCase)
           trgName
         }
 
@@ -401,6 +403,9 @@ object SparkUtils {
         try1
       }
       try2.getOrElse(None)
+    } else if (metadata.contains(CHAR_VARCHAR_METADATA_KEY)) {
+      val typeString = metadata.getString("__CHAR_VARCHAR_TYPE_STRING").toLowerCase
+      charVarcharLengthPattern.findFirstMatchIn(typeString).map(_.group(1).toInt)
     } else {
       None
     }
