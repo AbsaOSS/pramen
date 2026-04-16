@@ -189,7 +189,7 @@ class OrchestratorImpl extends Orchestrator {
   def getDependencies(jobs: Seq[Job]): Seq[JobDependency] = {
     jobs.flatMap(job => {
       val inputDependencies = job.operation.dependencies.map { d =>
-        JobDependency(d.tables, job.outputTable.name, d.isPassive || d.isOptional)
+        JobDependency(d.tables, job.outputTable.name, d.isPassive || d.isOptional, d.triggerUpdates)
       }
 
       job.operation.operationType match {
@@ -206,7 +206,7 @@ class OrchestratorImpl extends Orchestrator {
           // If there are no dependencies, adding a dependency for the output table not depending on any input tables.
           // This is the requirement for the orchestrator.
           if (inputDependencies.isEmpty)
-            Seq(JobDependency(Seq.empty, job.outputTable.name, isPassive = true))
+            Seq(JobDependency(Seq.empty, job.outputTable.name, isPassive = true, triggerUpdates = false))
           else
             inputDependencies
       }
