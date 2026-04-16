@@ -32,6 +32,7 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
 
   private val availableTables = new mutable.HashSet[String]()
   private val unavailableTables = new mutable.HashSet[String]()
+  private val lazyTables = new mutable.HashSet[String]()
 
   override def validate(): Unit = {
     val issues1 = if (enableMultipleJobsPerTable) {
@@ -56,6 +57,14 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
   override def setFailedTable(table: String): Unit = {
     unavailableTables.add(table)
     availableTables.remove(table)
+  }
+
+  def setLazyTable(table: String, isLazy: Boolean): Unit = {
+    if (isLazy) {
+      lazyTables.add(table)
+    } else {
+      lazyTables.remove(table)
+    }
   }
 
   override def canRun(outputTable: String, alwaysAttempt: Boolean): Boolean = {
@@ -88,6 +97,32 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
     val relevantTables = getRelevantTables(outputTable, isPassive = false)
 
     relevantTables.diff(availableTables).toArray.sortBy(a => a)
+  }
+
+  override def getTablesForRetrospectiveUpdateCheck(outputTable: String): Seq[String] = {
+    val processedTables = new mutable.HashSet[String]()
+    val resultTables = new mutable.HashSet[String]()
+
+    def collectDependentTables(table: String): Unit = {
+      if (!processedTables.contains(table)) {
+        processedTables.add(table)
+
+        val directDependencies = deps.filter(dep =>
+          dep.outputTable == table && dep.triggerUpdates
+        ).flatMap(_.inputTables)
+
+        directDependencies.foreach { dependentTable =>
+          if (lazyTables.contains(dependentTable)) {
+            collectDependentTables(dependentTable)
+          } else {
+            resultTables.add(dependentTable)
+          }
+        }
+      }
+    }
+
+    collectDependentTables(outputTable)
+    resultTables.toSeq.sorted
   }
 
   override def getDag(outputTables: Seq[String]): String = {

@@ -219,6 +219,133 @@ class DependencyResolverSuite extends AnyWordSpec {
     }
   }
 
+  "getTablesForRetrospectiveUpdateCheck" should {
+    "return empty sequence for a table with no dependencies" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table1", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("table1")
+
+      assert(result.isEmpty)
+    }
+
+    "return empty sequence for a table with dependencies but triggerUpdates is false" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Seq("table1"), "table2", isPassive = false, triggerUpdates = false)
+      ), enableMultipleJobsPerTable = false)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("table2")
+
+      assert(result.isEmpty)
+    }
+
+    "return direct dependencies when triggerUpdates is true" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Seq("table1"), "table2", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("table2")
+
+      assert(result == Seq("table1"))
+    }
+
+    "return multiple direct dependencies sorted" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "tableA", isPassive = false),
+        JobDependency(Nil, "tableB", isPassive = false),
+        JobDependency(Seq("tableB", "tableA"), "tableC", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("tableC")
+
+      assert(result == Seq("tableA", "tableB"))
+    }
+
+    "traverse through lazy tables recursively" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Seq("table1"), "table2", isPassive = false),
+        JobDependency(Seq("table2"), "table3", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      resolver.setLazyTable("table2", isLazy = true)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("table3")
+
+      assert(result == Seq("table1"))
+    }
+
+    "stop at non-lazy tables in the dependency chain" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Seq("table1"), "table2", isPassive = false),
+        JobDependency(Seq("table2"), "table3", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("table3")
+
+      assert(result == Seq("table2"))
+    }
+
+    "handle complex dependency graph with mixed lazy and non-lazy tables" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "tableA", isPassive = false),
+        JobDependency(Nil, "tableB", isPassive = false),
+        JobDependency(Seq("tableA"), "tableC", isPassive = false),
+        JobDependency(Seq("tableB", "tableC"), "tableD", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      resolver.setLazyTable("tableC", isLazy = true)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("tableD")
+
+      assert(result == Seq("tableA", "tableB"))
+    }
+
+    "not include a table multiple times when traversing" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "table1", isPassive = false),
+        JobDependency(Seq("table1"), "table2", isPassive = false),
+        JobDependency(Seq("table1"), "table3", isPassive = false),
+        JobDependency(Seq("table2", "table3"), "table4", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      resolver.setLazyTable("table2", isLazy = true)
+      resolver.setLazyTable("table3", isLazy = true)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("table4")
+
+      assert(result == Seq("table1"))
+    }
+
+    "return empty for unknown table" in {
+      val resolver = getTestCase
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("unknownTable")
+
+      assert(result.isEmpty)
+    }
+
+    "return proper dependencies for the ingestion pattern" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "ingestion", isPassive = false),
+        JobDependency(Seq("ingestion"), "lazy_transformer1", isPassive = false),
+        JobDependency(Seq("lazy_transformer1"), "lazy_transformer2", isPassive = false),
+        JobDependency(Seq("lazy_transformer2"), "transformer3", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      resolver.setLazyTable("lazy_transformer1", isLazy = true)
+      resolver.setLazyTable("lazy_transformer2", isLazy = true)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("transformer3")
+
+      assert(result == Seq("ingestion"))
+    }
+  }
+
   "getDag" should {
     "visualize a graph before any jobs completed" in {
       val resolver = getTestCase

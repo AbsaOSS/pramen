@@ -47,6 +47,11 @@ class OrchestratorImpl extends Orchestrator {
     val dependencies = getDependencies(jobs)
     val dependencyResolver = new DependencyResolverImpl(dependencies, enableMultipleJobsPerTable)
 
+    jobs.foreach { j =>
+      if (j.taskDef.outputTable.format.isLazy)
+        dependencyResolver.setLazyTable(j.taskDef.outputTable.name, isLazy = true)
+    }
+
     log.info(s"Validating dependencies...")
 
     dependencyResolver.validate()
@@ -71,6 +76,11 @@ class OrchestratorImpl extends Orchestrator {
     val enableMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
     val dependencies = getDependencies(jobs)
     val dependencyResolver = new DependencyResolverImpl(dependencies, enableMultipleJobsPerTable)
+
+    jobs.foreach { j =>
+      if (j.taskDef.outputTable.format.isLazy)
+        dependencyResolver.setLazyTable(j.taskDef.outputTable.name, isLazy = true)
+    }
 
     log.info(s"Starting execution of the pipeline: \n${dependencyResolver.getDag(allOutputTables)}")
 
