@@ -46,6 +46,16 @@ trait DependencyResolver {
   def setFailedTable(table: String): Unit
 
   /**
+    * Updates the lazy execution flag for a specified table in the dependency resolver.
+    *
+    * When a table is marked as lazy, jobs that depend on it need to ask it explicitly to be evaluated
+    *
+    * @param table  the name of the table to configure
+    * @param isLazy if true, marks the table as lazy; if false, marks it as non-lazy
+    */
+  def setLazyTable(table: String, isLazy: Boolean): Unit
+
+  /**
     * Returns if a job that has specific dependent tables can run, e.g. all dependent tables are available.
     *
     * The job is identified by the output table.
@@ -60,6 +70,17 @@ trait DependencyResolver {
     * @return The list of unsatisfied dependencies
     */
   def getMissingDependencies(outputTable: String): Seq[String]
+
+  /**
+    * Get list of tables to check for retrospective updates that would cause this table to be re-calculated.
+    * Returns:
+    * - The list of intermediate dependent tables for which triggerUpdates = true
+    * - For all tables outputted by lazy jobs returns the list of their dependent tables for which triggerUpdates = true
+    *
+    * @param outputTable The output table of the job for which to return tha list
+    * @return
+    */
+  def getTablesForRetrospectiveUpdateCheck(outputTable: String): Seq[String]
 
   /**
     * Get DAG visualization for the current state of the specified list of output tables.
