@@ -24,7 +24,7 @@ import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
 import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
-import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
+import za.co.absa.pramen.core.pipeline.{Job, JobBase, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
 import za.co.absa.pramen.core.state.PipelineState
@@ -46,11 +46,6 @@ class OrchestratorImpl extends Orchestrator {
     val enableMultipleJobsPerTable = appContext.appConfig.generalConfig.enableMultipleJobsPerTable
     val dependencies = getDependencies(jobs)
     val dependencyResolver = new DependencyResolverImpl(dependencies, enableMultipleJobsPerTable)
-
-    jobs.foreach { j =>
-      if (j.taskDef.outputTable.format.isLazy)
-        dependencyResolver.setLazyTable(j.taskDef.outputTable.name, isLazy = true)
-    }
 
     log.info(s"Validating dependencies...")
 
@@ -80,6 +75,15 @@ class OrchestratorImpl extends Orchestrator {
     jobs.foreach { j =>
       if (j.taskDef.outputTable.format.isLazy)
         dependencyResolver.setLazyTable(j.taskDef.outputTable.name, isLazy = true)
+    }
+
+    jobs.foreach { j =>
+      if (!j.taskDef.outputTable.format.isLazy) {
+        j match {
+          case jobBase: JobBase => jobBase.setTriggerUpdatesTables(dependencyResolver.getTablesForRetrospectiveUpdateCheck(j.taskDef.outputTable.name))
+          case _ => // Do nothing
+        }
+      }
     }
 
     log.info(s"Starting execution of the pipeline: \n${dependencyResolver.getDag(allOutputTables)}")

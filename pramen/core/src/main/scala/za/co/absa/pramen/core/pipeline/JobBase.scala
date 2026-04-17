@@ -37,6 +37,7 @@ abstract class JobBase(operationDef: OperationDef,
                        jobNotificationTargets: Seq[JobNotificationTarget],
                        outputTableDef: MetaTable
                       ) extends Job {
+  private var triggerUpdatesTables = Seq.empty[String]
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   def jobType: JobType
@@ -159,10 +160,10 @@ abstract class JobBase(operationDef: OperationDef,
   }
 
   private def getOutdatedTables(infoDate: LocalDate, targetJobFinishedSeconds: Long): Seq[String] = {
-    operationDef.dependencies
-      .filter(d => d.triggerUpdates)
-      .flatMap(_.tables)
-      .distinct
+    if (triggerUpdatesTables.nonEmpty) {
+      log.info(s"Checking for retrospective updates for ${outputTableDef.name} at '$infoDate' for dependent tables: ${triggerUpdatesTables.mkString(", ")}")
+    }
+    triggerUpdatesTables
       .filter { table =>
         bookkeeper.getLatestDataChunk(table, infoDate) match {
           case Some(chunk) if chunk.jobFinished >= targetJobFinishedSeconds =>
@@ -228,6 +229,10 @@ abstract class JobBase(operationDef: OperationDef,
     } else {
       Some(DependencyFailure(dep, emptyTables, emptyIncrementalTables, failedTables, failedDateRanges))
     }
+  }
+
+  private[core] def setTriggerUpdatesTables(tables: Seq[String]): Unit = synchronized {
+    triggerUpdatesTables = tables
   }
 
   private[core] def hasSelfDependencies(includeOptional: Boolean): Boolean = {
