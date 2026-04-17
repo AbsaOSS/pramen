@@ -344,6 +344,23 @@ class DependencyResolverSuite extends AnyWordSpec {
 
       assert(result == Seq("ingestion"))
     }
+
+    "return nothing if the output table itself is a lazy table" in {
+      val resolver = new DependencyResolverImpl(Seq(
+        JobDependency(Nil, "ingestion", isPassive = false),
+        JobDependency(Seq("ingestion"), "lazy_transformer1", isPassive = false),
+        JobDependency(Seq("lazy_transformer1"), "lazy_transformer2", isPassive = false),
+        JobDependency(Seq("lazy_transformer2"), "lazy_transformer3", isPassive = false)
+      ), enableMultipleJobsPerTable = false)
+
+      resolver.setLazyTable("lazy_transformer1", isLazy = true)
+      resolver.setLazyTable("lazy_transformer2", isLazy = true)
+      resolver.setLazyTable("lazy_transformer3", isLazy = true)
+
+      val result = resolver.getTablesForRetrospectiveUpdateCheck("lazy_transformer3")
+
+      assert(result.isEmpty)
+    }
   }
 
   "getDag" should {

@@ -121,8 +121,12 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
       }
     }
 
-    collectDependentTables(outputTable)
-    resultTables.toSeq.sorted
+    if (lazyTables.contains(outputTable)) {
+      Seq.empty
+    } else {
+      collectDependentTables(outputTable)
+      resultTables.toSeq.sorted
+    }
   }
 
   override def getDag(outputTables: Seq[String]): String = {
