@@ -59,7 +59,7 @@ class DependencyResolverImpl(deps: Seq[JobDependency], enableMultipleJobsPerTabl
     availableTables.remove(table)
   }
 
-  def setLazyTable(table: String, isLazy: Boolean): Unit = {
+  override def setLazyTable(table: String, isLazy: Boolean): Unit = {
     if (isLazy) {
       lazyTables.add(table)
     } else {

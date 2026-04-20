@@ -159,11 +159,16 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  private def getOutdatedTables(infoDate: LocalDate, targetJobFinishedSeconds: Long): Seq[String] = {
-    if (triggerUpdatesTables.nonEmpty) {
-      log.info(s"Checking for retrospective updates for ${outputTableDef.name} at '$infoDate' for dependent tables: ${triggerUpdatesTables.mkString(", ")}")
-    }
+  private def getTriggerUpdateTables: Seq[String] = synchronized {
     triggerUpdatesTables
+  }
+
+  private def getOutdatedTables(infoDate: LocalDate, targetJobFinishedSeconds: Long): Seq[String] = {
+    val tablesToCheck = getTriggerUpdateTables
+    if (tablesToCheck.nonEmpty) {
+      log.info(s"Checking for retrospective updates for ${outputTableDef.name} at '$infoDate' for dependent tables: ${tablesToCheck.mkString(", ")}")
+    }
+    tablesToCheck
       .filter { table =>
         bookkeeper.getLatestDataChunk(table, infoDate) match {
           case Some(chunk) if chunk.jobFinished >= targetJobFinishedSeconds =>

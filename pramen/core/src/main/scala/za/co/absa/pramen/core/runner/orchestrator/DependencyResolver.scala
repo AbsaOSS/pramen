@@ -72,13 +72,14 @@ trait DependencyResolver {
   def getMissingDependencies(outputTable: String): Seq[String]
 
   /**
-    * Get list of tables to check for retrospective updates that would cause this table to be re-calculated.
-    * Returns:
-    * - The list of intermediate dependent tables for which triggerUpdates = true
-    * - For all tables outputted by lazy jobs returns the list of their dependent tables for which triggerUpdates = true
+    * Returns the list of dependent tables whose retrospective updates should cause `outputTable` to be re-calculated.
     *
-    * @param outputTable The output table of the job for which to return tha list
-    * @return
+    * The traversal only follows dependencies for which `triggerUpdates = true`. Tables produced by lazy jobs are not
+    * returned themselves; instead, traversal continues transitively through their own `triggerUpdates = true` dependencies.
+    * If `outputTable` itself is marked lazy, an empty sequence is returned.
+    *
+    * @param outputTable The output table of the job for which to compute the list.
+    * @return Deduplicated, sorted list of non-lazy dependent tables relevant for retrospective update checks.
     */
   def getTablesForRetrospectiveUpdateCheck(outputTable: String): Seq[String]
 
