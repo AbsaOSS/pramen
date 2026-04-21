@@ -230,7 +230,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val defaultHiveConfig = HiveDefaultConfig(HiveApi.Sql,
         Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "create_only", "repair", "add_partition", "drop")),
+        Map("parquet" -> HiveQueryTemplates("create", "create_only", "update", "repair", "add_partition", "drop")),
         Some(JdbcConfig("driver", Some("url"),
           user = Some("user"),
           password = Some("pass")
@@ -246,6 +246,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver"))
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create")
       assert(metaTable.hiveConfig.templates.createOnlyTableTemplate == "create_only")
+      assert(metaTable.hiveConfig.templates.updateSchemaTemplate == "update")
       assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair")
       assert(metaTable.hiveConfig.templates.addPartitionTemplate == "add_partition")
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop")
@@ -289,6 +290,7 @@ class MetaTableSuite extends AnyWordSpec {
           |  conf {
           |     create.table.template = "create2"
           |     create.only.table.template = "create_only2"
+          |     update.schema.template = "update2"
           |     repair.table.template = "repair2"
           |     add.partition.template = "add_partition2"
           |     drop.table.template = "drop2"
@@ -299,7 +301,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "repair1", "add_partition1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "update1", "repair1", "add_partition1", "drop1")),
         Some(JdbcConfig("driver1", Some("url1"),
           user = Some("user1"),
           password = Some("pass1")
@@ -315,6 +317,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver2"))
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create2")
       assert(metaTable.hiveConfig.templates.createOnlyTableTemplate == "create_only2")
+      assert(metaTable.hiveConfig.templates.updateSchemaTemplate == "update2")
       assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair2")
       assert(metaTable.hiveConfig.templates.addPartitionTemplate == "add_partition2")
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop2")

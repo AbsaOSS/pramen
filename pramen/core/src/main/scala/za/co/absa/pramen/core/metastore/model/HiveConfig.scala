@@ -82,13 +82,7 @@ object HiveConfig {
     * @return
     */
   def fromConfigWithDefaults(conf: Config, defaults: HiveDefaultConfig, format: DataFormat, parent: String = ""): HiveConfig = {
-    val defaultTemplates = defaults.templates.getOrElse(format.name, HiveQueryTemplates(
-      DEFAULT_CREATE_TABLE_TEMPLATE,
-      DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
-      DEFAULT_REPAIR_TABLE_TEMPLATE,
-      DEFAULT_ADD_PARTITION_TEMPLATE,
-      DEFAULT_DROP_TABLE_TEMPLATE
-    ))
+    val defaultTemplates = defaults.templates.getOrElse(format.name, HiveQueryTemplates.getDefaultQueryTemplates)
 
     val hiveApi = if (conf.hasPath(HIVE_API_KEY))
       HiveApi.fromString(conf.getString(HIVE_API_KEY))
@@ -111,6 +105,9 @@ object HiveConfig {
     val createOnlyTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$CREATE_ONLY_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.createOnlyTableTemplate)
 
+    val updateSchemaTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$UPDATE_SCHEMA_TEMPLATE_KEY")
+      .getOrElse(defaultTemplates.updateSchemaTemplate)
+
     val repairTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPAIR_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.repairTableTemplate)
 
@@ -126,7 +123,7 @@ object HiveConfig {
     HiveConfig(
       hiveApi = hiveApi,
       database = database,
-      templates = HiveQueryTemplates(createTableTemplate, createOnlyTableTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
+      templates = HiveQueryTemplates(createTableTemplate, createOnlyTableTemplate, updateSchemaTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
       jdbcConfig = jdbcConfig,
       ignoreFailures,
       alwaysEscapeColumnNames,
@@ -142,13 +139,7 @@ object HiveConfig {
     * @return Hive configuration with default query templates for the given format.
     */
   def fromDefaults(defaults: HiveDefaultConfig, format: DataFormat): HiveConfig = {
-    val templates = defaults.templates.getOrElse(format.name, HiveQueryTemplates(
-      DEFAULT_CREATE_TABLE_TEMPLATE,
-      DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
-      DEFAULT_REPAIR_TABLE_TEMPLATE,
-      DEFAULT_ADD_PARTITION_TEMPLATE,
-      DEFAULT_DROP_TABLE_TEMPLATE
-    ))
+    val templates = defaults.templates.getOrElse(format.name, HiveQueryTemplates.getDefaultQueryTemplates)
 
     HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures, alwaysEscapeColumnNames = true, optimizeExistQuery = true)
   }
@@ -156,7 +147,7 @@ object HiveConfig {
   def getNullConfig: HiveConfig = HiveConfig(
     HiveApi.Sql,
     None,
-    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_CREATE_ONLY_TABLE_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
+    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_CREATE_ONLY_TABLE_TEMPLATE, DEFAULT_UPDATE_SCHEMA_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
     None,
     ignoreFailures = false,
     alwaysEscapeColumnNames = true,
