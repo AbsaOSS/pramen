@@ -22,7 +22,7 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 case class HiveQueryTemplates(
                                createTableTemplate: String,
                                createOnlyTableTemplate: String,
-                               updateSchemaTemplate: String,
+                               replaceSchemaTemplate: String,
                                repairTableTemplate: String,
                                addPartitionTemplate: String,
                                dropTableTemplate: String
@@ -33,7 +33,7 @@ object HiveQueryTemplates {
 
   val CREATE_TABLE_TEMPLATE_KEY = "create.table.template"
   val CREATE_ONLY_TABLE_TEMPLATE_KEY = "create.only.table.template"
-  val UPDATE_SCHEMA_TEMPLATE_KEY = "update.schema.template"
+  val REPLACE_SCHEMA_TEMPLATE_KEY = "replace.schema.template"
   val REPAIR_TABLE_TEMPLATE_KEY = "repair.table.template"
   val ADD_PARTITION_TEMPLATE_KEY = "add.partition.template"
   val DROP_TABLE_TEMPLATE_KEY = "drop.table.template"
@@ -72,7 +72,7 @@ object HiveQueryTemplates {
     val createOnlyTableTemplate = ConfigUtils.getOptionString(conf, CREATE_ONLY_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_CREATE_ONLY_TABLE_TEMPLATE)
 
-    val updateSchemaTemplate = ConfigUtils.getOptionString(conf, UPDATE_SCHEMA_TEMPLATE_KEY)
+    val updateSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_SCHEMA_TEMPLATE_KEY)
       .getOrElse(DEFAULT_UPDATE_SCHEMA_TEMPLATE)
 
     val repairTableTemplate = ConfigUtils.getOptionString(conf, REPAIR_TABLE_TEMPLATE_KEY)
@@ -87,7 +87,7 @@ object HiveQueryTemplates {
     HiveQueryTemplates(
       createTableTemplate = createTableTemplate,
       createOnlyTableTemplate = createOnlyTableTemplate,
-      updateSchemaTemplate = updateSchemaTemplate,
+      replaceSchemaTemplate = updateSchemaTemplate,
       repairTableTemplate = repairTableTemplate,
       addPartitionTemplate = addPartitionTemplate,
       dropTableTemplate = dropTableTemplate
@@ -98,7 +98,7 @@ object HiveQueryTemplates {
     HiveQueryTemplates(
       createTableTemplate = DEFAULT_CREATE_TABLE_TEMPLATE,
       createOnlyTableTemplate = DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
-      updateSchemaTemplate = DEFAULT_UPDATE_SCHEMA_TEMPLATE,
+      replaceSchemaTemplate = DEFAULT_UPDATE_SCHEMA_TEMPLATE,
       repairTableTemplate = DEFAULT_REPAIR_TABLE_TEMPLATE,
       addPartitionTemplate = DEFAULT_ADD_PARTITION_TEMPLATE,
       dropTableTemplate = DEFAULT_DROP_TABLE_TEMPLATE

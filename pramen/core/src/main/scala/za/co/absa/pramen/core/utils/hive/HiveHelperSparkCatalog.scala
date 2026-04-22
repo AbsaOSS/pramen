@@ -70,6 +70,27 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     }
   }
 
+  override def replaceHiveTableSchema(schema: StructType,
+                                      partitionBy: Seq[String],
+                                      databaseName: Option[String],
+                                      tableName: String): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    val partitionColsLower = partitionBy.map(_.toLowerCase())
+    val nonPartitionFields = SparkUtils.transformSchemaForCatalog(schema)
+      .filter(field => !partitionColsLower.contains(field.name.toLowerCase()))
+      .filter(field => field.name.trim.nonEmpty)
+
+    val schemaDDL = SparkUtils.escapeColumnsSparkDDL(StructType(nonPartitionFields).toDDL)
+
+    val sql = HiveQueryTemplates.DEFAULT_UPDATE_SCHEMA_TEMPLATE
+      .replace("@fullTableName", fullTableName)
+      .replace("@schema", schemaDDL)
+
+    log.info(s"Executing: $sql")
+    spark.sql(sql).collect()
+  }
+
   override def repairHiveTable(databaseName: Option[String],
                                tableName: String,
                                format: HiveFormat): Unit = {

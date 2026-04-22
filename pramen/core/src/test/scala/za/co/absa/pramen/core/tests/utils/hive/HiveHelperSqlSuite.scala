@@ -82,7 +82,6 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
              |MSCK REPAIR TABLE `db`.`tbl`
              |""".stripMargin
 
-
         val qe = new QueryExecutorMock(tableExists = false)
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
@@ -116,6 +115,24 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
         hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "execute expected query for replacing schema of a partitioned table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected = "ALTER TABLE `db`.`tbl` REPLACE COLUMNS ( `c` INT );".stripMargin
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.replaceHiveTableSchema(schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 
         val actual = qe.queries.mkString("\n")
 

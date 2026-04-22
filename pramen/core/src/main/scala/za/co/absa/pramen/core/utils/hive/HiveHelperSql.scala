@@ -54,6 +54,26 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
+  override def replaceHiveTableSchema(schema: StructType,
+                                      partitionBy: Seq[String],
+                                      databaseName: Option[String],
+                                      tableName: String): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    log.info(s"Updating schema Hive table: $fullTableName...")
+
+    val sqlHiveCreate = applyTemplate(
+      hiveConfig.replaceSchemaTemplate,
+      fullTableName,
+      "",
+      HiveFormat.Parquet,
+      getTableDDL(schema, partitionBy),
+      getPartitionDDL(schema, partitionBy)
+    )
+
+    queryExecutor.execute(sqlHiveCreate)
+  }
+
   override def repairHiveTable(databaseName: Option[String],
                                tableName: String,
                                format: HiveFormat): Unit = {
