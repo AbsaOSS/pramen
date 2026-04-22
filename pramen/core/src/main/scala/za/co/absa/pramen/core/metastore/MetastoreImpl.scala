@@ -208,7 +208,7 @@ class MetastoreImpl(appConfig: Config,
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
         if (updateSchema) {
           try {
-            log.info(s"The table '$fullTableName' exists. Updating schema of the Hive table table '$fullTableName'")
+            log.info(s"The table '$fullTableName' exists. Updating schema of the Hive table '$fullTableName'")
             hiveHelper.replaceHiveTableSchema(effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
             // Schema changed in-place. We still need to add the new partition
             needAddPartition = true

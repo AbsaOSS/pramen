@@ -423,7 +423,7 @@ abstract class TaskRunnerBase(conf: Config,
         }
 
         val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
-          val updateSchema = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty
+          val updateSchema = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || newSchemaRegisteredAfterTransform
           task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, updateSchema, runtimeConfig.forceReCreateHiveTables)
         } else {
           Seq.empty
