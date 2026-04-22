@@ -72,7 +72,7 @@ object HiveQueryTemplates {
     val createOnlyTableTemplate = ConfigUtils.getOptionString(conf, CREATE_ONLY_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_CREATE_ONLY_TABLE_TEMPLATE)
 
-    val updateSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_SCHEMA_TEMPLATE_KEY)
+    val replaceSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_SCHEMA_TEMPLATE_KEY)
       .getOrElse(DEFAULT_UPDATE_SCHEMA_TEMPLATE)
 
     val repairTableTemplate = ConfigUtils.getOptionString(conf, REPAIR_TABLE_TEMPLATE_KEY)
@@ -87,7 +87,7 @@ object HiveQueryTemplates {
     HiveQueryTemplates(
       createTableTemplate = createTableTemplate,
       createOnlyTableTemplate = createOnlyTableTemplate,
-      replaceSchemaTemplate = updateSchemaTemplate,
+      replaceSchemaTemplate = replaceSchemaTemplate,
       repairTableTemplate = repairTableTemplate,
       addPartitionTemplate = addPartitionTemplate,
       dropTableTemplate = dropTableTemplate
