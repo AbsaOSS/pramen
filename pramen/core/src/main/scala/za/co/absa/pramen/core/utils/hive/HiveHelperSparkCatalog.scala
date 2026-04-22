@@ -83,7 +83,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
 
     val schemaDDL = SparkUtils.escapeColumnsSparkDDL(StructType(nonPartitionFields).toDDL)
 
-    val sql = HiveQueryTemplates.DEFAULT_UPDATE_SCHEMA_TEMPLATE
+    val sql = HiveQueryTemplates.DEFAULT_REPLACE_SCHEMA_TEMPLATE
       .replace("@fullTableName", fullTableName)
       .replace("@schema", schemaDDL)
 

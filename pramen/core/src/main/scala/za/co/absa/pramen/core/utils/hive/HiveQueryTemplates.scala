@@ -56,7 +56,7 @@ object HiveQueryTemplates {
       |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
       |LOCATION '@path';""".stripMargin
 
-  val DEFAULT_UPDATE_SCHEMA_TEMPLATE: String = "ALTER TABLE @fullTableName REPLACE COLUMNS ( @schema );"
+  val DEFAULT_REPLACE_SCHEMA_TEMPLATE: String = "ALTER TABLE @fullTableName REPLACE COLUMNS ( @schema );"
 
   val DEFAULT_REPAIR_TABLE_TEMPLATE: String = "MSCK REPAIR TABLE @fullTableName"
 
@@ -73,7 +73,7 @@ object HiveQueryTemplates {
       .getOrElse(DEFAULT_CREATE_ONLY_TABLE_TEMPLATE)
 
     val replaceSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_SCHEMA_TEMPLATE_KEY)
-      .getOrElse(DEFAULT_UPDATE_SCHEMA_TEMPLATE)
+      .getOrElse(DEFAULT_REPLACE_SCHEMA_TEMPLATE)
 
     val repairTableTemplate = ConfigUtils.getOptionString(conf, REPAIR_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_REPAIR_TABLE_TEMPLATE)
@@ -98,7 +98,7 @@ object HiveQueryTemplates {
     HiveQueryTemplates(
       createTableTemplate = DEFAULT_CREATE_TABLE_TEMPLATE,
       createOnlyTableTemplate = DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
-      replaceSchemaTemplate = DEFAULT_UPDATE_SCHEMA_TEMPLATE,
+      replaceSchemaTemplate = DEFAULT_REPLACE_SCHEMA_TEMPLATE,
       repairTableTemplate = DEFAULT_REPAIR_TABLE_TEMPLATE,
       addPartitionTemplate = DEFAULT_ADD_PARTITION_TEMPLATE,
       dropTableTemplate = DEFAULT_DROP_TABLE_TEMPLATE
