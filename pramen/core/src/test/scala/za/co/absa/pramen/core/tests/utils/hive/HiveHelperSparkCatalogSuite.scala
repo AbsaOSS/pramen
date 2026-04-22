@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.utils.hive
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{AnalysisException, SaveMode}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
@@ -62,6 +63,24 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
 
         hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2")
         assert(hiveHelper.doesTableExist(Some("default"), "tbl2"))
+      }
+    }
+
+    "replace schema of a partitioned Parquet table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val hiveHelper = new HiveHelperSparkCatalog(spark)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl3")
+        assert(hiveHelper.doesTableExist(Some("default"), "tbl3"))
+
+        val ex = intercept[AnalysisException] {
+          hiveHelper.replaceHiveTableSchema(StructType(schema.drop(1)), "a" :: "b" :: Nil, Some("default"), "tbl3")
+        }
+
+        assert(ex.getMessage().contains("does not support REPLACE COLUMNS"))
       }
     }
   }

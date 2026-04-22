@@ -105,8 +105,8 @@ object HiveConfig {
     val createOnlyTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$CREATE_ONLY_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.createOnlyTableTemplate)
 
-    val updateSchemaTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$UPDATE_SCHEMA_TEMPLATE_KEY")
-      .getOrElse(defaultTemplates.updateSchemaTemplate)
+    val updateSchemaTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPLACE_SCHEMA_TEMPLATE_KEY")
+      .getOrElse(defaultTemplates.replaceSchemaTemplate)
 
     val repairTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPAIR_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.repairTableTemplate)
