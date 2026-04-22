@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.api.{CatalogTable, FieldChange}
 import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.utils.JdbcSparkUtils.MAXIMUM_VARCHAR_LENGTH
 import za.co.absa.pramen.core.utils.SparkMaster.Databricks
 
 import java.io.ByteArrayOutputStream
@@ -50,7 +51,6 @@ object SparkUtils {
 
   // This seems to be limitation for multiple catalogs, like Glue and Hive.
   val MAX_COMMENT_LENGTH = 255
-  val MAX_VARCHAR_LENGTH = 4096
 
   /** Get Spark StructType from a case class. */
   def getStructType[T: TypeTag]: StructType = ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
@@ -389,7 +389,7 @@ object SparkUtils {
     *         otherwise `None`
     */
   def getLengthFromMetadata(metadata: Metadata): Option[Int] = {
-    if (metadata.contains(MAX_LENGTH_METADATA_KEY)) {
+    val proposedLength = if (metadata.contains(MAX_LENGTH_METADATA_KEY)) {
       val try1 = Try {
         val length = metadata.getLong(MAX_LENGTH_METADATA_KEY).toInt
         Option(length)
@@ -413,6 +413,8 @@ object SparkUtils {
     } else {
       None
     }
+
+    proposedLength.filter(length => length < MAXIMUM_VARCHAR_LENGTH && length > 0)
   }
 
   /**
@@ -428,25 +430,32 @@ object SparkUtils {
     * @return the resolved string-based DataType, which can be CharType, VarcharType, or StringType
     */
   def getStringTypeFromMetadata(metadata: Metadata): DataType = {
+    def getLength(lenStr: String): Option[Int] = {
+      Try {
+        lenStr.toInt
+      }.toOption
+        .filter(len => len > 0 && len < MAXIMUM_VARCHAR_LENGTH)
+    }
+
     if (metadata.contains(CHAR_VARCHAR_METADATA_KEY)) {
       metadata.getString(CHAR_VARCHAR_METADATA_KEY) match {
         case charVarcharTypePattern(kind, len) if kind.equalsIgnoreCase("char") =>
-          val lenInt = len.toInt
-          if (lenInt < MAX_VARCHAR_LENGTH && lenInt > 0)
-            CharType(lenInt)
-          else
-            StringType
+          val lenOpt = getLength(len)
+          lenOpt match {
+            case Some(l) => CharType(l)
+            case None => StringType
+          }
         case charVarcharTypePattern(_, len) =>
-          val lenInt = len.toInt
-          if (lenInt < MAX_VARCHAR_LENGTH && lenInt > 0)
-            VarcharType(lenInt)
-          else
-            StringType
+          val lenOpt = getLength(len)
+          lenOpt match {
+            case Some(l) => VarcharType(l)
+            case None => StringType
+          }
         case _ =>
-          getLengthFromMetadata(metadata).filter(length => length < MAX_VARCHAR_LENGTH && length > 0).map(VarcharType.apply).getOrElse(StringType)
+          getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
       }
     } else {
-      getLengthFromMetadata(metadata).filter(length => length < MAX_VARCHAR_LENGTH && length > 0).map(VarcharType.apply).getOrElse(StringType)
+      getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
     }
   }
 

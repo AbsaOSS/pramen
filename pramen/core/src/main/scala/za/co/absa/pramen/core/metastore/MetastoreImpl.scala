@@ -38,6 +38,7 @@ import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 import java.time.{Instant, LocalDate}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.control.NonFatal
 
 class MetastoreImpl(appConfig: Config,
                     tableDefsIn: Seq[MetaTable],
@@ -198,27 +199,42 @@ class MetastoreImpl(appConfig: Config,
     val fullTableName = HiveHelper.getFullTable(mt.hiveConfig.database, hiveTable)
     val effectivePath = mt.hivePath.getOrElse(path)
 
+    var needAddPartition = false
+
     if (recreate) {
       log.info(s"Recreating Hive table '$fullTableName'")
       hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
         if (updateSchema) {
-          log.info(s"Updating schema of the Hive table table '$fullTableName'")
-          hiveHelper.replaceHiveTableSchema(effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
-        }
-
-        if (mt.hivePreferAddPartition && mt.format.isInstanceOf[DataFormat.Parquet]) {
-          val location = new Path(effectivePath, s"${mt.infoDateColumn}=${infoDate}")
-          log.info(s"The table '$fullTableName' exists. Adding partition '$location'...")
-          hiveHelper.addPartition(mt.hiveConfig.database, hiveTable, Seq(mt.infoDateColumn), Seq(infoDate.toString), location.toString)
+          try {
+            log.info(s"The table '$fullTableName' exists. Updating schema of the Hive table table '$fullTableName'")
+            hiveHelper.replaceHiveTableSchema(effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+            // Schema changed in-place. We still need to add the new partition
+            needAddPartition = true
+          } catch {
+            case NonFatal(ex) =>
+              log.warn(s"Could not update Hive schema via ${hiveHelper.getClass.getName}. Recreating Hive table '$fullTableName'", ex)
+              hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+          }
         } else {
-          log.info(s"The table '$fullTableName' exists. Repairing it.")
-          hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
+          // Schema didn't change, but we need to add the new partition
+          needAddPartition = true
         }
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
         hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+      }
+    }
+
+    if (needAddPartition) {
+      if (mt.hivePreferAddPartition && mt.format.isInstanceOf[DataFormat.Parquet]) {
+        val location = new Path(effectivePath, s"${mt.infoDateColumn}=${infoDate}")
+        log.info(s"The table '$fullTableName' exists. Adding partition '$location'...")
+        hiveHelper.addPartition(mt.hiveConfig.database, hiveTable, Seq(mt.infoDateColumn), Seq(infoDate.toString), location.toString)
+      } else {
+        log.info(s"The table '$fullTableName' exists. Repairing it.")
+        hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
       }
     }
   }
