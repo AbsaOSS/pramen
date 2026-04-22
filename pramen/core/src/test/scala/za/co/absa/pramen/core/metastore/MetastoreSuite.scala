@@ -294,26 +294,37 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         val qe = new QueryExecutorMock(tableExists = true)
         val hh = new HiveHelperSql(qe, defaultTemplates, true)
 
-        m.repairOrCreateHiveTable("table1", infoDate, Option(schema), hh, recreate = false)
+        m.repairOrCreateHiveTable("table1", infoDate, Option(schema), hh, updateSchema = false, recreate = false)
 
         assert(qe.queries.isEmpty)
       }
 
-      "repair existing table" in {
+      "repair existing table with no schema change" in {
         val qe = new QueryExecutorMock(tableExists = true)
         val hh = new HiveHelperSql(qe, defaultTemplates, false)
 
-        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = false)
+        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, updateSchema = false, recreate = false)
 
         assert(qe.queries.length == 1)
         assert(qe.queries.exists(_.contains("ALTER TABLE")))
+      }
+
+      "repair existing table with schema change" in {
+        val qe = new QueryExecutorMock(tableExists = true)
+        val hh = new HiveHelperSql(qe, defaultTemplates, false)
+
+        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, updateSchema = true, recreate = false)
+
+        assert(qe.queries.length == 2)
+        assert(qe.queries.exists(_.contains("ALTER TABLE")))
+        assert(qe.queries.exists(_.contains("REPLACE COLUMNS")))
       }
 
       "do nothing for a delta since it does not need repairing" in {
         val qe = new QueryExecutorMock(tableExists = true)
         val hh = new HiveHelperSql(qe, defaultTemplates, true)
 
-        m.repairOrCreateHiveTable("table_hive_delta", infoDate, Option(schema), hh, recreate = false)
+        m.repairOrCreateHiveTable("table_hive_delta", infoDate, Option(schema), hh, updateSchema = false, recreate = false)
 
         assert(qe.queries.isEmpty)
       }
@@ -322,7 +333,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         val qe = new QueryExecutorMock(tableExists = false)
         val hh = new HiveHelperSql(qe, defaultTemplates, false)
 
-        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = false)
+        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, updateSchema = false, recreate = false)
 
         assert(qe.queries.length == 3)
         assert(qe.queries.exists(_.contains("DROP")))
@@ -335,7 +346,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         val qe = new QueryExecutorMock(tableExists = false)
         val hh = new HiveHelperSql(qe, defaultTemplates, true)
 
-        m.repairOrCreateHiveTable("table_hive_delta", infoDate, Option(schema), hh, recreate = false)
+        m.repairOrCreateHiveTable("table_hive_delta", infoDate, Option(schema), hh, updateSchema = false, recreate = false)
 
         assert(qe.queries.length == 3)
         assert(qe.queries.exists(_.contains("DROP")))
@@ -348,7 +359,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         val qe = new QueryExecutorMock(tableExists = true)
         val hh = new HiveHelperSql(qe, defaultTemplates, false)
 
-        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, recreate = true)
+        m.repairOrCreateHiveTable("table_hive_parquet", infoDate, Option(schema), hh, updateSchema = false, recreate = true)
 
         assert(qe.queries.length == 3)
         assert(qe.queries.exists(_.contains("DROP")))
@@ -361,7 +372,7 @@ class MetastoreSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
         val hh = new HiveHelperSql(qe, defaultTemplates, true)
 
         val ex = intercept[IllegalArgumentException] {
-          m.repairOrCreateHiveTable("table_hive_not_supported", infoDate, Option(schema), hh, recreate = false)
+          m.repairOrCreateHiveTable("table_hive_not_supported", infoDate, Option(schema), hh, updateSchema = false, recreate = false)
         }
 
         assert(ex.getMessage.contains("Unsupported query type 'table'"))

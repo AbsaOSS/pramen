@@ -106,14 +106,14 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String] = {
+  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, updateSchema: Boolean, recreate: Boolean): Seq[String] = {
     if (outputTableDef.hiveTable.isEmpty)
       return Seq.empty
 
     val hiveHelper = metastore.getHiveHelper(outputTableDef.name)
 
     val attempt = Try {
-      metastore.repairOrCreateHiveTable(outputTableDef.name, infoDate, Option(schema), hiveHelper, recreate)
+      metastore.repairOrCreateHiveTable(outputTableDef.name, infoDate, Option(schema), hiveHelper, updateSchema, recreate)
     }
 
     attempt match {

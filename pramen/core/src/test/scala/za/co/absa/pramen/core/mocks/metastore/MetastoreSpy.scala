@@ -48,7 +48,7 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    writeOptions: Map[String, String] = Map.empty[String, String]) extends Metastore {
 
   val saveTableInvocations = new ListBuffer[(String, LocalDate, DataFrame)]
-  var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean)]
+  var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean, Boolean)]
   val queryExecutorMock = new QueryExecutorMock(true)
   val metadataManagerMock = new MetadataManagerNull(false)
   private val incrementalTables = new mutable.HashSet[String]
@@ -96,11 +96,12 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                                        infoDate: LocalDate,
                                        schema: Option[StructType],
                                        hiveHelper: HiveHelper,
+                                       updateSchema: Boolean,
                                        recreate: Boolean): Unit = {
     if (failHive) {
       throw new RuntimeException("Test exception")
     } else
-      hiveCreationInvocations.append((tableName, infoDate, schema, recreate))
+      hiveCreationInvocations.append((tableName, infoDate, schema, updateSchema, recreate))
   }
 
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {
