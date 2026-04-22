@@ -50,6 +50,7 @@ object SparkUtils {
 
   // This seems to be limitation for multiple catalogs, like Glue and Hive.
   val MAX_COMMENT_LENGTH = 255
+  val MAX_VARCHAR_LENGTH = 4096
 
   /** Get Spark StructType from a case class. */
   def getStructType[T: TypeTag]: StructType = ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
@@ -430,14 +431,22 @@ object SparkUtils {
     if (metadata.contains(CHAR_VARCHAR_METADATA_KEY)) {
       metadata.getString(CHAR_VARCHAR_METADATA_KEY) match {
         case charVarcharTypePattern(kind, len) if kind.equalsIgnoreCase("char") =>
-          CharType(len.toInt)
+          val lenInt = len.toInt
+          if (lenInt < MAX_VARCHAR_LENGTH && lenInt > 0)
+            CharType(lenInt)
+          else
+            StringType
         case charVarcharTypePattern(_, len) =>
-          VarcharType(len.toInt)
+          val lenInt = len.toInt
+          if (lenInt < MAX_VARCHAR_LENGTH && lenInt > 0)
+            VarcharType(lenInt)
+          else
+            StringType
         case _ =>
-          getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
+          getLengthFromMetadata(metadata).filter(length => length < MAX_VARCHAR_LENGTH && length > 0).map(VarcharType.apply).getOrElse(StringType)
       }
     } else {
-      getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
+      getLengthFromMetadata(metadata).filter(length => length < MAX_VARCHAR_LENGTH && length > 0).map(VarcharType.apply).getOrElse(StringType)
     }
   }
 
