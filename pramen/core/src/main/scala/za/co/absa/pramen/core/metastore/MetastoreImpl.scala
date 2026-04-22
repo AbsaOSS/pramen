@@ -163,6 +163,7 @@ class MetastoreImpl(appConfig: Config,
                                        infoDate: LocalDate,
                                        schema: Option[StructType],
                                        hiveHelper: HiveHelper,
+                                       updateSchema: Boolean,
                                        recreate: Boolean): Unit = {
     val mt = getTableDef(tableName)
     val hiveTable = mt.hiveTable match {
@@ -202,6 +203,11 @@ class MetastoreImpl(appConfig: Config,
       hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
+        if (updateSchema) {
+          log.info(s"Updating schema of the Hive table table '$fullTableName'")
+          hiveHelper.replaceHiveTableSchema(effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+        }
+
         if (mt.hivePreferAddPartition && mt.format.isInstanceOf[DataFormat.Parquet]) {
           val location = new Path(effectivePath, s"${mt.infoDateColumn}=${infoDate}")
           log.info(s"The table '$fullTableName' exists. Adding partition '$location'...")

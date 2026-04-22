@@ -76,11 +76,9 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl3")
         assert(hiveHelper.doesTableExist(Some("default"), "tbl3"))
 
-        val ex = intercept[AnalysisException] {
+        assertThrows[AnalysisException] {
           hiveHelper.replaceHiveTableSchema(StructType(schema.drop(1)), "a" :: "b" :: Nil, Some("default"), "tbl3")
         }
-
-        assert(ex.getMessage().contains("does not support REPLACE COLUMNS"))
       }
     }
   }

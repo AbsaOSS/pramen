@@ -55,6 +55,7 @@ class JobSpy(jobName: String = "Dummy Job",
   var saveCount = 0
   var saveDf: DataFrame = _
   var createHiveTableCount = 0
+  var updateSchemaHiveTable = false
   var recreateHiveTable = false
 
   override def taskDef: TaskDef = TaskDefFactory.getDummyTaskNotification(outputTable = MetaTable.getMetaTableDef(outputTable))
@@ -108,8 +109,9 @@ class JobSpy(jobName: String = "Dummy Job",
     SaveResult(saveStats)
   }
 
-  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String] = {
+  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, updateSchema: Boolean, recreate: Boolean): Seq[String] = {
     createHiveTableCount += 1
+    updateSchemaHiveTable = updateSchema
     recreateHiveTable = recreate
     Nil
   }
