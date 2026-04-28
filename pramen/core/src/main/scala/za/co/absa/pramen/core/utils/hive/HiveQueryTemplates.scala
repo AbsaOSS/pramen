@@ -28,6 +28,26 @@ case class HiveQueryTemplates(
                                dropTableTemplate: String
                              )
 
+/**
+  * This object defines the default SQL templates used for Hive DDL operations such as creating, altering,
+  * repairing, and dropping tables, as well as adding partitions. Templates use placeholder variables
+  * (e.g., `@fullTableName`, `@schema`, `@partitionedBy`, `@path`, `@partitionClause`, `@partitionPath`)
+  * which are substituted at runtime with actual values.
+  *
+  * Templates can be customized via a Typesafe [[com.typesafe.config.Config]] using the following keys
+  * (relative to the configuration prefix):
+  *  - `create.table.template` - Template for `CREATE EXTERNAL TABLE IF NOT EXISTS` statements.
+  *  - `create.only.table.template` - Template for `CREATE EXTERNAL TABLE` statements (without `IF NOT EXISTS`).
+  *  - `replace.schema.template` - Template for `ALTER TABLE ... REPLACE COLUMNS` statements.
+  *  - `repair.table.template` - Template for `MSCK REPAIR TABLE` statements.
+  *  - `add.partition.template` - Template for `ALTER TABLE ... ADD ... PARTITION` statements.
+  *  - `drop.table.template` - Template for `DROP TABLE IF EXISTS` statements.
+  *
+  * If a key is not present in the configuration, the corresponding default template is used.
+  *
+  * @see [[HiveHelper]] for usage of these templates in Hive operations.
+  * @see [[za.co.absa.pramen.core.metastore.Metastore]] for metastore integration that leverages Hive helpers.
+  */
 object HiveQueryTemplates {
   val TEMPLATES_DEFAULT_PREFIX = "hive.conf"
 
@@ -56,7 +76,7 @@ object HiveQueryTemplates {
       |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
       |LOCATION '@path';""".stripMargin
 
-  val DEFAULT_REPLACE_SCHEMA_TEMPLATE: String = "ALTER TABLE @fullTableName REPLACE COLUMNS ( @schema );"
+  val DEFAULT_REPLACE_SCHEMA_TEMPLATE: String = "ALTER TABLE @fullTableName REPLACE COLUMNS ( @schema )"
 
   val DEFAULT_REPAIR_TABLE_TEMPLATE: String = "MSCK REPAIR TABLE @fullTableName"
 
