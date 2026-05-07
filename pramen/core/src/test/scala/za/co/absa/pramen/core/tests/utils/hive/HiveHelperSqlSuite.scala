@@ -126,7 +126,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       withTempDirectory("hive_test") { tempDir =>
         val path = getParquetPath(tempDir)
 
-        val expected = "ALTER TABLE `db`.`tbl` REPLACE COLUMNS ( `c` INT );".stripMargin
+        val expected = "ALTER TABLE `db`.`tbl` REPLACE COLUMNS ( `c` INT )".stripMargin
 
         val qe = new QueryExecutorMock(tableExists = false)
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)

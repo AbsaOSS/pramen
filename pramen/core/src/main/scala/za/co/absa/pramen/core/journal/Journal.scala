@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.journal
 
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
 
 import java.time.Instant
 
@@ -26,6 +26,8 @@ import java.time.Instant
 trait Journal extends AutoCloseable {
 
   def addEntry(entry: TaskCompleted): Unit
+
+  def addPipelineEntry(execution: Execution): Unit
 
   def getEntries(from: Instant, to: Instant): Seq[TaskCompleted]
 

@@ -22,7 +22,7 @@ import slick.jdbc.{JdbcBackend, JdbcProfile}
 import slick.util.AsyncExecutor
 import za.co.absa.pramen.api.Pramen
 import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTable, MetadataTable, OffsetTable, SchemaTable}
-import za.co.absa.pramen.core.journal.model.JournalTable
+import za.co.absa.pramen.core.journal.model.{ExecutionsTable, JournalTable}
 import za.co.absa.pramen.core.lock.model.LockTicketTable
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
@@ -51,6 +51,9 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     override val profile = slickProfile
   }
   val journalTable: JournalTable = new JournalTable {
+    override val profile = slickProfile
+  }
+  val executionsTable: ExecutionsTable = new ExecutionsTable {
     override val profile = slickProfile
   }
   val lockTicketTable: LockTicketTable = new LockTicketTable {
@@ -121,6 +124,10 @@ class PramenDb(val jdbcConfig: JdbcConfig,
       addColumn(bookkeepingTable.records.baseTableRow.tableName, "appended_record_count", "bigint")
       addColumn(journalTable.records.baseTableRow.tableName, "batch_id", "bigint")
     }
+    
+    if (dbVersion < 10) {
+      initTable(executionsTable.records.schema)
+    }
   }
 
   private def initTable(schema: slickProfile.SchemaDescription): Unit = {
@@ -165,7 +172,7 @@ object PramenDb {
   private val log = LoggerFactory.getLogger(this.getClass)
   private val conf = Pramen.getConfig
 
-  val MODEL_VERSION = 9
+  val MODEL_VERSION = 10
   val DEFAULT_RETRIES: Int = conf.getInt("pramen.internal.connection.retries.default")
   val BACKOFF_MIN_MS: Int = conf.getInt("pramen.internal.connection.backoff.min.ms")
   val BACKOFF_MAX_MS: Int = conf.getInt("pramen.internal.connection.backoff.max.ms")

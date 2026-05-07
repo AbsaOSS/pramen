@@ -24,7 +24,7 @@ import software.amazon.awssdk.services.dynamodb.model._
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb.waitForTableActive
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
 
 import java.net.URI
 import java.time.{Instant, LocalDate}
@@ -117,6 +117,10 @@ class JournalDynamoDB private (
       case NonFatal(ex) =>
         log.error(s"Unable to write to the journal table '$journalTableFullName'.", ex)
     }
+  }
+
+  override def addPipelineEntry(execution: Execution): Unit = {
+    // ToDo add the implementation for DynamoDB
   }
 
   /**

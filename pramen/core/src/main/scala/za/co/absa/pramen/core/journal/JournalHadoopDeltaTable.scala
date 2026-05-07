@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.journal
 
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{SaveMode, SparkSession}
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
 
 import java.time.Instant
 
@@ -40,18 +40,33 @@ class JournalHadoopDeltaTable(database: Option[String],
       .mode(SaveMode.Append)
       .option("format", "delta")
       .option("mergeSchema", "true")
-      .saveAsTable(getFullTableName(database, tablePrefix))
+      .saveAsTable(getFullTableName(database, tablePrefix, "journal"))
+  }
+
+  override def addPipelineEntry(execution: Execution): Unit = {
+    val recordDf = Seq(execution).toDS().toDF()
+
+    if (spark.version.split('.').head.toInt < 3) {
+      throw new IllegalArgumentException("Delta Lake for bookkeeping is only available in Spark 3+")
+    }
+
+    recordDf
+      .write
+      .mode(SaveMode.Append)
+      .option("format", "delta")
+      .option("mergeSchema", "true")
+      .saveAsTable(getFullTableName(database, tablePrefix, "executions"))
   }
 
   override def getEntries(from: Instant, to: Instant): Seq[TaskCompleted] = {
     import spark.implicits._
 
-    if (!spark.catalog.tableExists(getFullTableName(database, tablePrefix))) {
+    if (!spark.catalog.tableExists(getFullTableName(database, tablePrefix, "journal"))) {
       return Seq.empty[TaskCompleted]
     }
 
     val df = spark
-      .table(getFullTableName(database, tablePrefix))
+      .table(getFullTableName(database, tablePrefix, "journal"))
 
     df.filter(col("finishedAt") >= from.getEpochSecond && col("finishedAt") <= to.getEpochSecond)
       .orderBy(col("finishedAt"))
@@ -61,10 +76,10 @@ class JournalHadoopDeltaTable(database: Option[String],
 }
 
 object JournalHadoopDeltaTable {
-  def getFullTableName(databaseOpt: Option[String], tablePrefix: String): String = {
+  def getFullTableName(databaseOpt: Option[String], tablePrefix: String, tableName: String): String = {
     databaseOpt match {
-      case Some(db) => s"$db.${tablePrefix}journal"
-      case None     => s"${tablePrefix}journal"
+      case Some(db) => s"$db.$tablePrefix$tableName"
+      case None     => s"$tablePrefix$tableName"
     }
   }
 }

@@ -72,7 +72,7 @@ class JournalHadoopDeltaPathLongSuite extends AnyWordSpec with SparkTestBase wit
   }
 
   private def getJournal(path: String): Journal = {
-    new JournalHadoopDeltaPath(new Path(path, "journal").toString)
+    new JournalHadoopDeltaPath(new Path(path, "journal").toString, new Path(path, "executions").toString)
   }
 
 }

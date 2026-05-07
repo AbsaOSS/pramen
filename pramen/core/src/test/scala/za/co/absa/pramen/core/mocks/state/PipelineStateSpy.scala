@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.mocks.state
 
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
+import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.mocks.{PipelineInfoFactory, PipelineStateSnapshotFactory}
 import za.co.absa.pramen.core.state.PipelineState
 
@@ -32,6 +33,7 @@ class PipelineStateSpy extends PipelineState {
   val completedStatuses = new ListBuffer[TaskResult]
   var closeCalled = 0
   var sparkAppId: Option[String] = None
+  var journalOpt: Option[Journal] = None
 
   override def getState: PipelineStateSnapshot = {
     PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(PipelineInfoFactory.getDummyPipelineInfo(sparkApplicationId = sparkAppId),
@@ -60,6 +62,10 @@ class PipelineStateSpy extends PipelineState {
 
   override def setSparkAppId(sparkAppId: String): Unit = synchronized {
     this.sparkAppId = Option(sparkAppId)
+  }
+
+  override def setJournal(journal: Journal): Unit = synchronized {
+    this.journalOpt = Option(journal)
   }
 
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {

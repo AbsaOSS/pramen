@@ -70,6 +70,7 @@ object AppRunner {
       _          <- logBanner(spark)
       _          <- logExecutorNodes(conf, state, spark)
       appContext <- createAppContext(conf, state, spark)
+      _          <- Try { state.setJournal(appContext.journal) }
       taskRunner <- createTaskRunner(conf, state, appContext, spark.sparkContext.applicationId)
       pipeline   <- getPipelineDef(conf, state, appContext)
       _          <- addSinkTables(state, pipeline, appContext)

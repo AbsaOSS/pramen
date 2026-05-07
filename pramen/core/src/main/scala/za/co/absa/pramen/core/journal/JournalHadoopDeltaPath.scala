@@ -20,12 +20,12 @@ import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{SaveMode, SparkSession}
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
 import za.co.absa.pramen.core.utils.FsUtils
 
 import java.time.Instant
 
-class JournalHadoopDeltaPath(journalPath: String)
+class JournalHadoopDeltaPath(journalPath: String, executionsPath: String)
                             (implicit spark: SparkSession) extends Journal {
   import spark.implicits._
 
@@ -45,6 +45,21 @@ class JournalHadoopDeltaPath(journalPath: String)
       .option("format", "delta")
       .option("mergeSchema", "true")
       .save(journalPath)
+  }
+
+  override def addPipelineEntry(execution: Execution): Unit = {
+    val recordDf = Seq(execution).toDS().toDF()
+
+    if (spark.version.split('.').head.toInt < 3) {
+      throw new IllegalArgumentException("Delta Lake for bookkeeping is only available in Spark 3+")
+    }
+
+    recordDf
+      .write
+      .mode(SaveMode.Append)
+      .option("format", "delta")
+      .option("mergeSchema", "true")
+      .save(executionsPath)
   }
 
   override def getEntries(from: Instant, to: Instant): Seq[TaskCompleted] = {

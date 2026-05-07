@@ -21,11 +21,13 @@ import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
 import za.co.absa.pramen.api.status.RunStatus.{NotRan, Succeeded}
 import za.co.absa.pramen.api.status._
-import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget}
+import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget, RunMode}
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
 import za.co.absa.pramen.core.exceptions.OsSignalException
+import za.co.absa.pramen.core.journal.Journal
+import za.co.absa.pramen.core.journal.model.Execution
 import za.co.absa.pramen.core.lock.TokenLockRegistry
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
@@ -70,6 +72,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   @volatile private var customShutdownHookCanRun = false
   @volatile private var sparkAppId: Option[String] = None
   @volatile private var warningFlag: Boolean = false
+  @volatile private var journalOpt: Option[Journal] = None
 
   init()
 
@@ -178,6 +181,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     this.sparkAppId = Option(sparkAppId)
   }
 
+  override def setJournal(journal: Journal): Unit = synchronized {
+    this.journalOpt = Option(journal)
+  }
+
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
     taskResults ++= statuses.filter(_.runStatus != NotRan)
     if (statuses.exists(_.runStatus.isFailure)) {
@@ -209,6 +216,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     sendPipelineNotifications()
     runCustomShutdownHook()
     removeSignalHandlers()
+    addJournalEntry()
     sendNotificationEmail()
     TokenLockRegistry.releaseAllLocks()
   }
@@ -274,6 +282,37 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       case ex: Throwable =>
         log.error(s"Unable to send a notification to the custom notification target: ${pipelineNotificationTarget.getClass.getName}", ex)
         pipelineNotificationFailures += PipelineNotificationFailure(pipelineNotificationTarget.getClass.getName, ex)
+    }
+  }
+
+  protected def addJournalEntry(): Unit = {
+    val pipelineInfo = getPipelineInfo
+    journalOpt.foreach { journal =>
+      val execution = Execution(
+        pipelineId,
+        pipelineName,
+        environmentName,
+        batchId,
+        sparkAppId.getOrElse(""),
+        None,
+        tenant,
+        country,
+        runtimeConfig.runDate.toString,
+        runtimeConfig.runDateTo.map(_.toString),
+        startedInstant.getEpochSecond,
+        finishedInstant.getOrElse(Instant.now()).getEpochSecond,
+        None,
+        None,
+        None,
+        pipelineInfo.status.toString,
+        runtimeConfig.isRerun || runtimeConfig.historicalRunMode == RunMode.ForceRun,
+        1,
+        1,
+        pipelineInfo.failureException.map(_.getMessage.take(1000)),
+        None
+      )
+
+      journal.addPipelineEntry(execution)
     }
   }
 
