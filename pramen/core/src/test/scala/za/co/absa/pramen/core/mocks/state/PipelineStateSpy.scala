@@ -21,6 +21,7 @@ import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.mocks.{PipelineInfoFactory, PipelineStateSnapshotFactory}
 import za.co.absa.pramen.core.state.PipelineState
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class PipelineStateSpy extends PipelineState {
@@ -34,6 +35,11 @@ class PipelineStateSpy extends PipelineState {
   var closeCalled = 0
   var sparkAppId: Option[String] = None
   var journalOpt: Option[Journal] = None
+  val executionAdditionalOptions: mutable.Map[String, String] = new mutable.HashMap[String, String]
+  var computeEngineId: Option[String] = None
+  var numberOfExecutorsMin: Option[Int] = None
+  var numberOfExecutorsMax: Option[Int] = None
+  var executorType: Option[String] = None
 
   override def getState: PipelineStateSnapshot = {
     PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(PipelineInfoFactory.getDummyPipelineInfo(sparkApplicationId = sparkAppId),
@@ -66,6 +72,32 @@ class PipelineStateSpy extends PipelineState {
 
   override def setJournal(journal: Journal): Unit = synchronized {
     this.journalOpt = Option(journal)
+  }
+
+  override def setComputeEngineId(computeEngineIdIn: String): Unit = synchronized {
+    computeEngineId = Option(computeEngineIdIn)
+  }
+
+  override def setNumberOfExecutorsMin(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMin = Option(nIn)
+    if (numberOfExecutorsMax.exists(_ < nIn)) {
+      numberOfExecutorsMax = Option(nIn)
+    }
+  }
+
+  override def setNumberOfExecutorsMax(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMax = Option(nIn)
+    if (numberOfExecutorsMin.exists(_ > nIn)) {
+      numberOfExecutorsMin = Option(nIn)
+    }
+  }
+
+  override def setExecutorType(executorTypeIn: String): Unit = synchronized {
+    executorType = Option(executorTypeIn)
+  }
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = synchronized {
+    executionAdditionalOptions.put(key, value)
   }
 
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {

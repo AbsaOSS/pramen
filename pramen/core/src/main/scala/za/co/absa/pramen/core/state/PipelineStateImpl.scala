@@ -16,6 +16,8 @@
 
 package za.co.absa.pramen.core.state
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
@@ -36,6 +38,7 @@ import za.co.absa.pramen.core.pipeline.PipelineDef._
 import za.co.absa.pramen.core.utils.{ConfigUtils, JvmUtils}
 
 import java.time.Instant
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -65,6 +68,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val taskResults = new ListBuffer[TaskResult]
   private val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
   private val signalHandlers = new ListBuffer[PramenSignalHandler]
+  private val executionAdditionalOptions: mutable.Map[String, String] = new mutable.HashMap[String, String] ++ runtimeConfig.executionOptions
   @volatile private var failureException: Option[Throwable] = None
   @volatile private var signalException: Option[Throwable] = None
   @volatile private var exitedNormally = false
@@ -73,6 +77,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   @volatile private var sparkAppId: Option[String] = None
   @volatile private var warningFlag: Boolean = false
   @volatile private var journalOpt: Option[Journal] = None
+  @volatile private var computeEngineId: Option[String] = None
+  @volatile private var numberOfExecutorsMin: Option[Int] = None
+  @volatile private var numberOfExecutorsMax: Option[Int] = None
+  @volatile private var executorType: Option[String] = None
 
   init()
 
@@ -185,6 +193,32 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     this.journalOpt = Option(journal)
   }
 
+  override def setComputeEngineId(computeEngineIdIn: String): Unit = synchronized {
+    computeEngineId = Option(computeEngineIdIn)
+  }
+
+  override def setNumberOfExecutorsMin(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMin = Option(nIn)
+    if (numberOfExecutorsMax.exists(_ < nIn)) {
+      numberOfExecutorsMax = Option(nIn)
+    }
+  }
+
+  override def setNumberOfExecutorsMax(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMax = Option(nIn)
+    if (numberOfExecutorsMin.exists(_ > nIn)) {
+      numberOfExecutorsMin = Option(nIn)
+    }
+  }
+
+  override def setExecutorType(executorTypeIn: String): Unit = synchronized {
+    executorType = Option(executorTypeIn)
+  }
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = synchronized {
+    executionAdditionalOptions.put(key, value)
+  }
+
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
     taskResults ++= statuses.filter(_.runStatus != NotRan)
     if (statuses.exists(_.runStatus.isFailure)) {
@@ -294,25 +328,35 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         environmentName,
         batchId,
         sparkAppId.getOrElse(""),
-        None,
+        computeEngineId,
         tenant,
         country,
         runtimeConfig.runDate.toString,
         runtimeConfig.runDateTo.map(_.toString),
         startedInstant.getEpochSecond,
         finishedInstant.getOrElse(Instant.now()).getEpochSecond,
-        None,
-        None,
-        None,
+        numberOfExecutorsMin,
+        numberOfExecutorsMax,
+        executorType,
         pipelineInfo.status.toString,
         runtimeConfig.isRerun || runtimeConfig.historicalRunMode == RunMode.ForceRun,
-        1,
-        1,
+        runtimeConfig.attempt,
+        runtimeConfig.maxAttempts,
         pipelineInfo.failureException.map(_.getMessage.take(1000)),
-        None
+        getExecutionAdditionalOptions
       )
 
       journal.addPipelineEntry(execution)
+    }
+  }
+
+  private def getExecutionAdditionalOptions: Option[String] = {
+    if (executionAdditionalOptions.isEmpty)
+      None
+    else {
+      val mapper = new ObjectMapper()
+      mapper.registerModule(DefaultScalaModule)
+      Some(mapper.writeValueAsString(executionAdditionalOptions.toMap))
     }
   }
 

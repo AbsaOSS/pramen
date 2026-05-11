@@ -36,6 +36,16 @@ trait PipelineState extends AutoCloseable {
 
   def setJournal(journal: Journal): Unit
 
+  def setComputeEngineId(computeEngineId: String): Unit
+
+  def setNumberOfExecutorsMin(n: Int): Unit
+
+  def setNumberOfExecutorsMax(n: Int): Unit
+
+  def setExecutorType(executorType: String): Unit
+
+  def setExecutionAdditionalOption(key: String, value: String): Unit
+
   def addTaskCompletion(statuses: Seq[TaskResult]): Unit
 
   def getExitCode: Int

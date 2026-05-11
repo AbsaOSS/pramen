@@ -157,7 +157,12 @@ object AppRunner {
         val hosts = getExecutorNodes
 
         hosts.foreach(host => log.info(s"Executor node: $host"))
+        setMinMaxExecutors(spark, hosts, state)
+      } else {
+        setMinMaxExecutors(spark, Seq.empty, state)
       }
+      setExecutorNodeType(spark, state)
+
     }, state, "Spark List of executor nodes")
   }
 
@@ -167,6 +172,52 @@ object AppRunner {
 
     val data = sc.parallelize(1 to DEFAULT_DUMMY_JOB_ENTRIES).repartition(sc.defaultParallelism)
     data.mapPartitions { _ => Iterable(java.net.InetAddress.getLocalHost.getHostName).iterator }.collect().distinct.sorted
+  }
+
+  private[core] def setMinMaxExecutors(implicit spark: SparkSession, executorNodes: Seq[String], state: PipelineState): Unit = {
+    val executors = if (executorNodes.isEmpty) {
+      spark.sparkContext.getExecutorMemoryStatus.keySet
+        .filter(_ != "driver")
+    } else {
+      executorNodes
+    }
+
+    val numExecutors = executors.size
+    state.setNumberOfExecutorsMax(numExecutors)
+
+    val dynamicAllocEnabled = spark.conf.get("spark.dynamicAllocation.enabled", "false").toBoolean
+
+    if (dynamicAllocEnabled) {
+      state.setNumberOfExecutorsMin(1)
+    } else {
+      state.setNumberOfExecutorsMin(numExecutors)
+    }
+  }
+
+  private[core] def setExecutorNodeType(implicit spark: SparkSession, state: PipelineState): Unit = {
+    // Get first executor and construct a string like:
+    // C32M64 meaning 32 virtual CPUs and 64 GB of memory
+    try {
+      val executorMemoryStatus = spark.sparkContext.getExecutorMemoryStatus
+      val executorEntries = executorMemoryStatus.filterKeys(_ != "driver")
+
+      if (executorEntries.nonEmpty) {
+        val (_, (maxMemory, _)) = executorEntries.head
+        val memoryGb = maxMemory / (1024L * 1024L * 1024L)
+
+        val cores = spark.conf.get("spark.executor.cores", "0").toInt
+        val maxThreads = if (cores == 0) Runtime.getRuntime.availableProcessors() else cores
+
+        val nodeType = s"C${maxThreads}M$memoryGb"
+        log.info(s"Executor node type: $nodeType")
+        state.setExecutorType(nodeType)
+      } else {
+        log.warn("No executors found to determine node type.")
+      }
+    } catch {
+      case ex: Exception =>
+        log.warn(s"Unable to determine executor node type: ${ex.getMessage}")
+    }
   }
 
   private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {

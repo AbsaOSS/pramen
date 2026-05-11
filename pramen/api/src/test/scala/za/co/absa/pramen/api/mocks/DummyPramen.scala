@@ -40,4 +40,14 @@ class DummyPramen extends Pramen {
   override def setWarningFlag(): Unit = null
 
   override def tokenLockFactory: TokenLockFactory = null
+
+  override def setComputeEngineId(computeEngineId: String): Unit = {}
+
+  override def setNumberOfExecutorsMin(n: Int): Unit = {}
+
+  override def setNumberOfExecutorsMax(n: Int): Unit = {}
+
+  override def setExecutorType(executorType: String): Unit = {}
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = {}
 }

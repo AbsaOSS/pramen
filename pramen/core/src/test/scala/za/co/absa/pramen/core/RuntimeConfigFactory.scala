@@ -43,7 +43,8 @@ object RuntimeConfigFactory {
                             sparkAppDescriptionTemplate: Option[String] = None,
                             attempt: Int = 1,
                             maxAttempts: Int = 1,
-                            forceReCreateHiveTables: Boolean = false): RuntimeConfig = {
+                            forceReCreateHiveTables: Boolean = false,
+                            executionOptions: Map[String, String] = Map.empty): RuntimeConfig = {
     RuntimeConfig(isDryRun,
       isRerun,
       runTables,
@@ -64,7 +65,8 @@ object RuntimeConfigFactory {
       sparkAppDescriptionTemplate,
       attempt,
       maxAttempts,
-      forceReCreateHiveTables)
+      forceReCreateHiveTables,
+      executionOptions)
   }
 
 }
