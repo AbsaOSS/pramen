@@ -157,11 +157,10 @@ object AppRunner {
         val hosts = getExecutorNodes
 
         hosts.foreach(host => log.info(s"Executor node: $host"))
-        setMinMaxExecutors(spark, hosts, state)
-      } else {
-        setMinMaxExecutors(spark, Seq.empty, state)
       }
       setExecutorNodeType(spark, state)
+      setMinMaxExecutors(spark, state)
+      setExecutionAdditionalProperties(spark, state)
 
     }, state, "Spark List of executor nodes")
   }
@@ -174,50 +173,103 @@ object AppRunner {
     data.mapPartitions { _ => Iterable(java.net.InetAddress.getLocalHost.getHostName).iterator }.collect().distinct.sorted
   }
 
-  private[core] def setMinMaxExecutors(implicit spark: SparkSession, executorNodes: Seq[String], state: PipelineState): Unit = {
-    val executors = if (executorNodes.isEmpty) {
-      spark.sparkContext.getExecutorMemoryStatus.keySet
+  private[core] def setMinMaxExecutors(implicit spark: SparkSession, state: PipelineState): Unit = {
+    val executors = spark.sparkContext.getExecutorMemoryStatus.keySet
         .filter(_ != "driver")
-    } else {
-      executorNodes
+
+    val maxNumExecutors = spark.conf.getOption("spark.executor.instances").orElse(
+      spark.conf.getOption("spark.dynamicAllocation.maxExecutors")) match {
+      case Some(s) => s.toInt
+      case None    => executors.size
     }
 
-    val numExecutors = executors.size
-    state.setNumberOfExecutorsMax(numExecutors)
+    state.setNumberOfExecutorsMax(maxNumExecutors)
 
     val dynamicAllocEnabled = spark.conf.get("spark.dynamicAllocation.enabled", "false").toBoolean
 
-    if (dynamicAllocEnabled) {
-      state.setNumberOfExecutorsMin(1)
+    val minNumExecutors = if (dynamicAllocEnabled) {
+      spark.conf.getOption("spark.dynamicAllocation.minExecutors") match {
+        case Some(s) => s.toInt
+        case None    => 1
+      }
     } else {
-      state.setNumberOfExecutorsMin(numExecutors)
+      maxNumExecutors
+    }
+
+    state.setNumberOfExecutorsMin(minNumExecutors)
+  }
+
+  private[core] def getNumberOfExecutorCores(spark: SparkSession): Int = {
+    spark.conf.getOption("spark.executor.cores") match {
+      case Some(s) => s.toInt
+      case None    => Runtime.getRuntime.availableProcessors()
     }
   }
 
-  private[core] def setExecutorNodeType(implicit spark: SparkSession, state: PipelineState): Unit = {
-    // Get first executor and construct a string like:
-    // C32M64 meaning 32 virtual CPUs and 64 GB of memory
-    try {
+  private[core] def getNumberOfExecutorMemoryGb(spark: SparkSession): Int = {
+    val memAttempt1 = spark.conf.getOption("spark.executor.memory") match {
+      case Some(s) => parseMemorySizeInGb(s)
+      case None => None
+    }
+
+    memAttempt1.getOrElse {
       val executorMemoryStatus = spark.sparkContext.getExecutorMemoryStatus
       val executorEntries = executorMemoryStatus.filterKeys(_ != "driver")
 
       if (executorEntries.nonEmpty) {
         val (_, (maxMemory, _)) = executorEntries.head
         val memoryGb = maxMemory / (1024L * 1024L * 1024L)
-
-        val cores = spark.conf.get("spark.executor.cores", "0").toInt
-        val maxThreads = if (cores == 0) Runtime.getRuntime.availableProcessors() else cores
-
-        val nodeType = s"C${maxThreads}M$memoryGb"
-        log.info(s"Executor node type: $nodeType")
-        state.setExecutorType(nodeType)
+        memoryGb.toInt
       } else {
-        log.warn("No executors found to determine node type.")
+        log.warn("No executors found to determine the amount of memory of the executor")
+        0
       }
-    } catch {
-      case ex: Exception =>
-        log.warn(s"Unable to determine executor node type: ${ex.getMessage}")
     }
+  }
+
+  private[core] def parseMemorySizeInGb(s: String): Option[Int] = {
+    val trimmed = s.trim.toLowerCase
+    val memoryGb = Try {
+      if (trimmed.endsWith("g")) {
+        trimmed.dropRight(1).toDouble
+      } else if (trimmed.endsWith("m")) {
+        trimmed.dropRight(1).toDouble / 1024.0
+      } else if (trimmed.endsWith("k")) {
+        trimmed.dropRight(1).toDouble / (1024.0 * 1024.0)
+      } else if (trimmed.endsWith("t")) {
+        trimmed.dropRight(1).toDouble * 1024.0
+      } else {
+        trimmed.toDouble / (1024.0 * 1024.0 * 1024.0)
+      }
+    }
+    memoryGb.map(Math.round(_).toInt).toOption
+  }
+
+  private[core] def setExecutionAdditionalProperties(implicit spark: SparkSession, state: PipelineState): Unit = {
+    spark.conf.getOption("spark.glue.JOB_RUN_ID").foreach { glueId =>
+      state.setComputeEngineId(glueId)
+    }
+
+    spark.conf.getOption("spark.glue.GLUE_VERSION").foreach { glueVersion =>
+      state.setExecutionAdditionalOption("glue_version", glueVersion)
+    }
+
+    spark.conf.getOption("spark.glue.accountId").foreach { awsAccount =>
+      state.setExecutionAdditionalOption("aws_account_id", awsAccount)
+    }
+
+    spark.conf.getOption("spark.glue.JOB_NAME").foreach { glueJobName =>
+      state.setExecutionAdditionalOption("glue_job_name", glueJobName)
+    }
+  }
+
+  private[core] def setExecutorNodeType(implicit spark: SparkSession, state: PipelineState): Unit = {
+    // Get first executor and construct a string like:
+    // C32M64 meaning 32 virtual CPUs and 64 GB of memory
+    val cpus = getNumberOfExecutorCores(spark)
+    val memoryGb = getNumberOfExecutorMemoryGb(spark)
+
+    state.setExecutorType(s"C${cpus}M$memoryGb")    
   }
 
   private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {

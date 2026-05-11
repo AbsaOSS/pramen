@@ -321,6 +321,16 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
   protected def addJournalEntry(): Unit = {
     val pipelineInfo = getPipelineInfo
+    val failureReason = if (pipelineInfo.status == PipelineStatus.Success || pipelineInfo.status == PipelineStatus.Warning) {
+      None
+    } else {
+      pipelineInfo.failureException match {
+        case Some(ex) => Option(RunStatus.getShortExceptionDescription(ex))
+        case None =>
+          val firstReason = taskResults.map(_.runStatus).find(_.isFailure).map(_.getReason.getOrElse(""))
+          firstReason
+      }
+    }
     journalOpt.foreach { journal =>
       val execution = Execution(
         pipelineId,
@@ -342,7 +352,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         runtimeConfig.isRerun || runtimeConfig.historicalRunMode == RunMode.ForceRun,
         runtimeConfig.attempt,
         runtimeConfig.maxAttempts,
-        pipelineInfo.failureException.map(_.getMessage.take(1000)),
+        failureReason.map(_.take(1000)),
         getExecutionAdditionalOptions
       )
 
