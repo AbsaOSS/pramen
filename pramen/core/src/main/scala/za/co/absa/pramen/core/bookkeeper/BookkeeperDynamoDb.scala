@@ -792,20 +792,20 @@ object BookkeeperDynamoDb {
   val DEFAULT_TABLE_PREFIX = "pramen"
 
   // Attribute names for bookkeeping table
-  val ATTR_TABLE_NAME = "tableName"
-  val ATTR_INFO_DATE = "infoDate"
-  val ATTR_INFO_DATE_SORT_KEY = "infoDateSortKey"  // Composite: "infoDate#jobFinished"
-  val ATTR_INFO_DATE_BEGIN = "infoDateBegin"
-  val ATTR_INFO_DATE_END = "infoDateEnd"
-  val ATTR_INPUT_RECORD_COUNT = "inputRecordCount"
-  val ATTR_OUTPUT_RECORD_COUNT = "outputRecordCount"
-  val ATTR_JOB_STARTED = "jobStarted"
-  val ATTR_JOB_FINISHED = "jobFinished"
-  val ATTR_BATCH_ID = "batchId"
-  val ATTR_APPENDED_RECORD_COUNT = "appendedRecordCount"
+  val ATTR_TABLE_NAME = "table_name"
+  val ATTR_INFO_DATE = "info_date"
+  val ATTR_INFO_DATE_SORT_KEY = "info_date_sort_key"  // Composite: "infoDate#jobFinished"
+  val ATTR_INFO_DATE_BEGIN = "info_date_begin"
+  val ATTR_INFO_DATE_END = "info_date_end"
+  val ATTR_INPUT_RECORD_COUNT = "input_record_count"
+  val ATTR_OUTPUT_RECORD_COUNT = "output_record_count"
+  val ATTR_JOB_STARTED = "job_started"
+  val ATTR_JOB_FINISHED = "job_finished"
+  val ATTR_BATCH_ID = "batch_id"
+  val ATTR_APPENDED_RECORD_COUNT = "appended_record_count"
 
   // Attribute names for schema table
-  val ATTR_SCHEMA_JSON = "schemaJson"
+  val ATTR_SCHEMA_JSON = "schema_json"
 
   val MODEL_VERSION = 1
 
