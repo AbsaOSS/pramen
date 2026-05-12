@@ -26,7 +26,7 @@ import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget, RunMode}
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
-import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
+import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, PIPELINE_DEFINITION_ID, WARN_THROUGHPUT_RPS}
 import za.co.absa.pramen.core.exceptions.OsSignalException
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.Execution
@@ -124,6 +124,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     } else
       failureException
 
+    val pipelineDefinitionId = ConfigUtils.getOptionString(conf, PIPELINE_DEFINITION_ID).getOrElse("")
     val minRps = ConfigUtils.getOptionInt(conf, WARN_THROUGHPUT_RPS).getOrElse(0)
     val goodRps = ConfigUtils.getOptionInt(conf, GOOD_THROUGHPUT_RPS).getOrElse(0)
     val dryRun = ConfigUtils.getOptionBoolean(conf, DRY_RUN).getOrElse(false)
@@ -132,6 +133,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
     PipelineInfo(
       pipelineName,
+      pipelineDefinitionId,
       environmentName,
       RuntimeInfo(
         runtimeConfig.runDate,
@@ -264,7 +266,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     sendPipelineNotifications()
     runCustomShutdownHook()
     removeSignalHandlers()
-    addJournalEntry()
+    Try(addJournalEntry()).recover {
+      case NonFatal(ex) =>
+        log.error("Unable to write pipeline execution journal entry.", ex)
+    }
     sendNotificationEmail()
     TokenLockRegistry.releaseAllLocks()
   }
@@ -348,6 +353,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     journalOpt.foreach { journal =>
       val execution = Execution(
         pipelineId,
+        pipelineInfo.pipelineDefinitionId,
         pipelineName,
         environmentName,
         batchId,

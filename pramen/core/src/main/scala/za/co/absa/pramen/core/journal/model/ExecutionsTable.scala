@@ -23,7 +23,8 @@ trait ExecutionsTable {
   import profile.api._
 
   class ExecutionsRecords(tag: Tag) extends Table[Execution](tag, "executions") {
-    def pipelineId = column[String]("pipelineId", O.Length(40))
+    def pipelineId = column[String]("pipeline_id", O.Length(40))
+    def pipelineDefinitionId = column[String]("pipeline_definition_id", O.Length(50))
     def pipelineName = column[String]("pipeline_name", O.Length(200))
     def environmentName = column[String]("environment_name", O.Length(128))
     def batchId = column[Long]("batch_id")
@@ -48,30 +49,30 @@ trait ExecutionsTable {
     def additionalOptions = column[Option[String]]("additional_options")
 
     private type ExecutionTuple = (
-      (String, String, String, Long, String, Option[String], Option[String], Option[String], String, Option[String], Long, Long),
+      (String, String, String, String, Long, String, Option[String], Option[String], Option[String], String, Option[String], Long, Long),
         (Option[Int], Option[Int], Option[String], String, Boolean, Int, Int, Option[String], Option[Long], Option[Long], Option[String])
       )
 
     private def toExecution(t: ExecutionTuple): Execution = Execution(
-      t._1._1, t._1._2, t._1._3, t._1._4, t._1._5, t._1._6, t._1._7, t._1._8, t._1._9, t._1._10, t._1._11, t._1._12,
+      t._1._1, t._1._2, t._1._3, t._1._4, t._1._5, t._1._6, t._1._7, t._1._8, t._1._9, t._1._10, t._1._11, t._1._12, t._1._13,
       t._2._1, t._2._2, t._2._3, t._2._4, t._2._5, t._2._6, t._2._7, t._2._8, t._2._9, t._2._10, t._2._11
     )
 
     private def fromExecution(e: Execution): Option[ExecutionTuple] = Some(
-      (e.pipelineId, e.pipelineName, e.environmentName, e.batchId, e.sparkApplicationId, e.computeEngineId, e.tenant, e.country, e.runDateFrom, e.runDateTo, e.startedAt, e.finishedAt),
+      (e.pipelineId, e.pipelineDefinitionId, e.pipelineName, e.environmentName, e.batchId, e.sparkApplicationId, e.computeEngineId, e.tenant, e.country, e.runDateFrom, e.runDateTo, e.startedAt, e.finishedAt),
       (e.numberOfExecutorsMin, e.numberOfExecutorsMax, e.executorType, e.status, e.isRerun, e.attemptNumber, e.numberOfAttempts, e.failureReason, e.numberOfRecordsIngested, e.maxNumberOfColumns, e.additionalOptions)
     )
 
     def * = (
-      (pipelineId, pipelineName, environmentName, batchId, sparkApplicationId, computeEngineId, tenant, country, runDateFrom, runDateTo, startedAt, finishedAt),
+      (pipelineId, pipelineDefinitionId, pipelineName, environmentName, batchId, sparkApplicationId, computeEngineId, tenant, country, runDateFrom, runDateTo, startedAt, finishedAt),
       (numberOfExecutorsMin, numberOfExecutorsMax, executorType, status, isRerun, attemptNumber, numberOfAttempts, failureReason, numberOfRecordsIngested, maxNumberOfColumns, additionalOptions)
     ) <> (toExecution, fromExecution)
 
     def idx1 = index("idx_exec_started_at", startedAt, unique = false)
     def idx2 = index("idx_exec_finished_at", finishedAt, unique = false)
-    def idx3 = index("idx_exec_batchid", finishedAt, unique = false)
-    def idx4 = index("idx_exec_compute_engine_id", finishedAt, unique = false)
-    def idx5 = index("idx_exec_pipeline_id", finishedAt, unique = false)
+    def idx3 = index("idx_exec_batchid", batchId, unique = false)
+    def idx4 = index("idx_exec_compute_engine_id", computeEngineId, unique = false)
+    def idx5 = index("idx_exec_pipeline_id", pipelineId, unique = false)
   }
 
   lazy val records = TableQuery[ExecutionsRecords]

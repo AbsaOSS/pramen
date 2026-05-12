@@ -38,7 +38,7 @@ class JournalHadoopDeltaTable(database: Option[String],
     recordDf
       .write
       .mode(SaveMode.Append)
-      .option("format", "delta")
+      .format("delta")
       .option("mergeSchema", "true")
       .saveAsTable(getFullTableName(database, tablePrefix, "journal"))
   }
@@ -53,7 +53,7 @@ class JournalHadoopDeltaTable(database: Option[String],
     recordDf
       .write
       .mode(SaveMode.Append)
-      .option("format", "delta")
+      .format("delta")
       .option("mergeSchema", "true")
       .saveAsTable(getFullTableName(database, tablePrefix, "executions"))
   }

@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.journal.model
 
 case class Execution(
                       pipelineId: String,
+                      pipelineDefinitionId: String,
                       pipelineName: String,
                       environmentName: String,
                       batchId: Long,

@@ -161,12 +161,6 @@ object AppRunner {
       setExecutorNodeType(spark, state)
       setMinMaxExecutors(spark, state)
       setExecutionAdditionalProperties(spark, state)
-
-      log.info("Spark configuration properties:")
-      spark.conf.getAll.toSeq.sortBy(_._1).foreach { case (key, value) =>
-        log.info(s"  $key = $value")
-      }
-
     }, state, "Spark List of executor nodes")
   }
 
@@ -184,7 +178,7 @@ object AppRunner {
 
     val maxNumExecutors = spark.conf.getOption("spark.dynamicAllocation.maxExecutors").orElse(
       spark.conf.getOption("spark.executor.instances")) match {
-      case Some(s) => s.toInt
+      case Some(s) => Try(s.toInt).toOption.getOrElse(executors.size)
       case None    => executors.size
     }
 
@@ -194,7 +188,7 @@ object AppRunner {
 
     val minNumExecutors = if (dynamicAllocEnabled) {
       spark.conf.getOption("spark.dynamicAllocation.minExecutors") match {
-        case Some(s) => s.toInt
+        case Some(s) => Try(s.toInt).toOption.getOrElse(1)
         case None    => 1
       }
     } else {
@@ -206,7 +200,7 @@ object AppRunner {
 
   private[core] def getNumberOfExecutorCores(spark: SparkSession): Int = {
     spark.conf.getOption("spark.executor.cores") match {
-      case Some(s) => s.toInt
+      case Some(s) => Try(s.toInt).toOption.getOrElse(Runtime.getRuntime.availableProcessors())
       case None    => Runtime.getRuntime.availableProcessors()
     }
   }

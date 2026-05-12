@@ -42,7 +42,7 @@ class JournalHadoopDeltaPath(journalPath: String, executionsPath: String)
     recordDf
       .write
       .mode(SaveMode.Append)
-      .option("format", "delta")
+      .format("delta")
       .option("mergeSchema", "true")
       .save(journalPath)
   }
@@ -57,7 +57,7 @@ class JournalHadoopDeltaPath(journalPath: String, executionsPath: String)
     recordDf
       .write
       .mode(SaveMode.Append)
-      .option("format", "delta")
+      .format("delta")
       .option("mergeSchema", "true")
       .save(executionsPath)
   }
@@ -71,7 +71,7 @@ class JournalHadoopDeltaPath(journalPath: String, executionsPath: String)
 
     val df = spark
       .read
-      .option("format", "delta")
+      .format("delta")
       .load(journalPath)
 
     df.filter(col("finishedAt") >= from.getEpochSecond && col("finishedAt") <= to.getEpochSecond)

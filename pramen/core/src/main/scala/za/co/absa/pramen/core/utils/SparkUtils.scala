@@ -934,6 +934,15 @@ object SparkUtils {
     }
   }
 
+  /**
+    * Calculates the total number of columns in a given schema, including all nested columns
+    * within struct types. Array types are traversed to count any nested struct columns within
+    * their element types, but the array itself is not counted as an additional column beyond
+    * its top-level entry.
+    *
+    * @param schema the StructType representing the schema whose columns are to be counted
+    * @return the total number of columns, including all columns found in nested struct types
+    */
   def getTotalNumberOfColumns(schema: StructType): Int = {
     def countNestedColumns(dataType: DataType): Int = {
       dataType match {

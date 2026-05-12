@@ -130,6 +130,7 @@ class JournalDynamoDB private (
     itemBuilder += (JournalDynamoDB.ATTR_EXEC_BATCH_ID -> AttributeValue.builder().n(execution.batchId.toString).build())
 
     itemBuilder += (JournalDynamoDB.ATTR_EXEC_PIPELINE_ID -> AttributeValue.builder().s(execution.pipelineId).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_PIPELINE_DEFINITION_ID -> AttributeValue.builder().s(execution.pipelineDefinitionId).build())
     itemBuilder += (JournalDynamoDB.ATTR_EXEC_ENVIRONMENT_NAME -> AttributeValue.builder().s(execution.environmentName).build())
     itemBuilder += (JournalDynamoDB.ATTR_EXEC_SPARK_APP_ID -> AttributeValue.builder().s(execution.sparkApplicationId).build())
     execution.computeEngineId.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_COMPUTE_ENGINE_ID -> AttributeValue.builder().s(v).build()))
@@ -355,6 +356,7 @@ object JournalDynamoDB {
 
   // Attribute names for executions table
   val ATTR_EXEC_PIPELINE_ID = "pipeline_id"
+  val ATTR_EXEC_PIPELINE_DEFINITION_ID = "pipeline_definition_id"
   val ATTR_EXEC_PIPELINE_NAME = "pipeline_name"
   val ATTR_EXEC_ENVIRONMENT_NAME = "environment_name"
   val ATTR_EXEC_BATCH_ID = "batch_id"
@@ -401,7 +403,7 @@ object JournalDynamoDB {
   val ATTR_ENVIRONMENT_NAME = "environment_name"
   val ATTR_TENANT = "tenant"
   val ATTR_COUNTRY = "country"
-  val ATTR_BATCH_ID = "batchId"
+  val ATTR_BATCH_ID = "batchid"
 
   /**
     * Builder for creating JournalDynamoDB instances.
