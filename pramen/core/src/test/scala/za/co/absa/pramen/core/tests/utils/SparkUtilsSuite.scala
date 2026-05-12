@@ -1146,4 +1146,128 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
     }
   }
 
+  "getTotalNumberOfColumns" should {
+    "return the number of columns for a flat schema" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("name", StringType),
+        StructField("age", IntegerType)
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 3)
+    }
+
+    "return the total number of columns including nested struct fields" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("address", StructType(Array(
+          StructField("street", StringType),
+          StructField("city", StringType),
+          StructField("zip", StringType)
+        )))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 5)
+    }
+
+    "return the total number of columns including array of structs" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("phones", ArrayType(StructType(Array(
+          StructField("type", StringType),
+          StructField("number", StringType)
+        ))))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 4)
+    }
+
+    "return the total number of columns for a deeply nested schema" in {
+      val schema = StructType(Array(
+        StructField("id", LongType),
+        StructField("level1", StructType(Array(
+          StructField("field1", StringType),
+          StructField("level2", StructType(Array(
+            StructField("field2", IntegerType),
+            StructField("level3", ArrayType(StructType(Array(
+              StructField("field3", StringType),
+              StructField("field4", DoubleType)
+            ))))
+          )))
+        )))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 8)
+    }
+
+    "return 0 for an empty schema" in {
+      val schema = StructType(Array.empty[StructField])
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 0)
+    }
+
+    "count array of primitives as a single column" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("tags", ArrayType(StringType)),
+        StructField("name", StringType)
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 3)
+    }
+
+    "handle multiple nested structs at the same level" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("struct1", StructType(Array(
+          StructField("a", StringType),
+          StructField("b", StringType)
+        ))),
+        StructField("struct2", StructType(Array(
+          StructField("c", IntegerType),
+          StructField("d", IntegerType),
+          StructField("e", IntegerType)
+        )))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 8)
+    }
+
+    "handle the test case schema from NestedDataFrameFactory" in {
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], NestedDataFrameFactory.testCaseSchema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 29)
+    }
+  }
+
 }

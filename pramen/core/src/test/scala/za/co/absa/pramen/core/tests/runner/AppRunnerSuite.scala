@@ -246,6 +246,58 @@ class AppRunnerSuite extends AnyWordSpec with SparkTestBase {
     }
   }
 
+  "setMinMaxExecutors" should {
+    "set min and max executors on the pipeline state" in {
+      val state = new PipelineStateSpy
+
+      AppRunner.setMinMaxExecutors(spark, state)
+
+      assert(state.numberOfExecutorsMin.isDefined)
+      assert(state.numberOfExecutorsMax.isDefined)
+      assert(state.numberOfExecutorsMin.get >= 1)
+      assert(state.numberOfExecutorsMax.get >= state.numberOfExecutorsMin.get)
+    }
+  }
+
+  "getNumberOfExecutorCores" should {
+    "return the number of executor cores from the Spark session" in {
+      val cores = AppRunner.getNumberOfExecutorCores(spark)
+
+      assert(cores >= 1)
+    }
+  }
+
+  "getNumberOfExecutorMemoryGb" should {
+    "return the executor memory in GB from the Spark session" in {
+      val memoryGb = AppRunner.getNumberOfExecutorMemoryGb(spark)
+
+      assert(memoryGb > 0.0)
+    }
+  }
+
+  "parseMemorySizeInGb" should {
+    "parse gigabytes" in {
+      assert(AppRunner.parseMemorySizeInGb("2g").get == 2)
+      assert(AppRunner.parseMemorySizeInGb("4G").get == 4)
+    }
+
+    "parse megabytes" in {
+      assert(AppRunner.parseMemorySizeInGb("1024m").get == 1)
+      assert(AppRunner.parseMemorySizeInGb("2048M").get == 2)
+      assert(AppRunner.parseMemorySizeInGb("512m").get == 1)
+    }
+
+    "parse terabytes" in {
+      assert(AppRunner.parseMemorySizeInGb("1t").get == 1024)
+      assert(AppRunner.parseMemorySizeInGb("2T").get == 2048)
+    }
+
+    "parse kilobytes" in {
+      assert(AppRunner.parseMemorySizeInGb("1048576k").get == 1)
+      assert(AppRunner.parseMemorySizeInGb("1048576K").get == 1)
+    }
+  }
+
   "handleFailure()" should {
     val state = getMockPipelineState
 

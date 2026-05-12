@@ -22,6 +22,7 @@ import java.time.Instant
 
 case class PipelineInfo(
                          pipelineName: String,
+                         pipelineDefinitionId: String,
                          environment: String,
                          runtimeInfo: RuntimeInfo,
                          startedAt: Instant,

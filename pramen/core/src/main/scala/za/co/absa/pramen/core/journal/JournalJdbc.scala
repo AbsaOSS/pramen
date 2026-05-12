@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory
 import slick.jdbc.JdbcBackend.Database
 import slick.jdbc.JdbcProfile
 import za.co.absa.pramen.core.app.config.InfoDateConfig
-import za.co.absa.pramen.core.journal.model.{JournalTable, JournalTask, TaskCompleted}
+import za.co.absa.pramen.core.journal.model._
 import za.co.absa.pramen.core.utils.SlickUtils
 
 import java.time.{Instant, LocalDate}
@@ -35,6 +35,10 @@ class JournalJdbc(db: Database, slickProfile: JdbcProfile) extends Journal {
   private val slickUtils = new SlickUtils(slickProfile)
 
   private val journalTable = new JournalTable {
+    override val profile = slickProfile
+  }
+
+  private val executionsTable = new ExecutionsTable {
     override val profile = slickProfile
   }
 
@@ -73,6 +77,17 @@ class JournalJdbc(db: Database, slickProfile: JdbcProfile) extends Journal {
       ).execute()
     } catch {
       case NonFatal(ex) => log.error(s"Unable to write to the journal table.", ex)
+    }
+  }
+
+  override def addPipelineEntry(execution: Execution): Unit = {
+    try {
+      slickUtils.ensureDbConnected(db)
+      db.run(
+        executionsTable.records += execution
+      ).execute()
+    } catch {
+      case NonFatal(ex) => log.error(s"Unable to write to the executions table.", ex)
     }
   }
 

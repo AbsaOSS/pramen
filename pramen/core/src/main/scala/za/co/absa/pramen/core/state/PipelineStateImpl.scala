@@ -16,16 +16,20 @@
 
 package za.co.absa.pramen.core.state
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
 import za.co.absa.pramen.api.status.RunStatus.{NotRan, Succeeded}
 import za.co.absa.pramen.api.status._
-import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget}
+import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget, RunMode}
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
-import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, WARN_THROUGHPUT_RPS}
+import za.co.absa.pramen.core.config.Keys.{GOOD_THROUGHPUT_RPS, PIPELINE_DEFINITION_ID, WARN_THROUGHPUT_RPS}
 import za.co.absa.pramen.core.exceptions.OsSignalException
+import za.co.absa.pramen.core.journal.Journal
+import za.co.absa.pramen.core.journal.model.Execution
 import za.co.absa.pramen.core.lock.TokenLockRegistry
 import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, TransientTableManager}
 import za.co.absa.pramen.core.notify.PipelineNotificationTargetFactory
@@ -34,6 +38,7 @@ import za.co.absa.pramen.core.pipeline.PipelineDef._
 import za.co.absa.pramen.core.utils.{ConfigUtils, JvmUtils}
 
 import java.time.Instant
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
@@ -63,6 +68,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   private val taskResults = new ListBuffer[TaskResult]
   private val pipelineNotificationFailures = new ListBuffer[PipelineNotificationFailure]
   private val signalHandlers = new ListBuffer[PramenSignalHandler]
+  private val executionAdditionalOptions: mutable.Map[String, String] = new mutable.HashMap[String, String] ++ runtimeConfig.executionOptions
   @volatile private var failureException: Option[Throwable] = None
   @volatile private var signalException: Option[Throwable] = None
   @volatile private var exitedNormally = false
@@ -70,6 +76,13 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   @volatile private var customShutdownHookCanRun = false
   @volatile private var sparkAppId: Option[String] = None
   @volatile private var warningFlag: Boolean = false
+  @volatile private var journalOpt: Option[Journal] = None
+  @volatile private var computeEngineId: Option[String] = None
+  @volatile private var numberOfExecutorsMin: Option[Int] = None
+  @volatile private var numberOfExecutorsMax: Option[Int] = None
+  @volatile private var executorType: Option[String] = None
+  @volatile private var numberOfRecordsIngested: Option[Long] = None
+  @volatile private var maxNumberOfColumns: Option[Long] = None
 
   init()
 
@@ -111,6 +124,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     } else
       failureException
 
+    val pipelineDefinitionId = ConfigUtils.getOptionString(conf, PIPELINE_DEFINITION_ID).getOrElse("")
     val minRps = ConfigUtils.getOptionInt(conf, WARN_THROUGHPUT_RPS).getOrElse(0)
     val goodRps = ConfigUtils.getOptionInt(conf, GOOD_THROUGHPUT_RPS).getOrElse(0)
     val dryRun = ConfigUtils.getOptionBoolean(conf, DRY_RUN).getOrElse(false)
@@ -119,6 +133,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
     PipelineInfo(
       pipelineName,
+      pipelineDefinitionId,
       environmentName,
       RuntimeInfo(
         runtimeConfig.runDate,
@@ -178,6 +193,48 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     this.sparkAppId = Option(sparkAppId)
   }
 
+  override def setJournal(journal: Journal): Unit = synchronized {
+    this.journalOpt = Option(journal)
+  }
+
+  override def setComputeEngineId(computeEngineIdIn: String): Unit = synchronized {
+    computeEngineId = Option(computeEngineIdIn)
+  }
+
+  override def setNumberOfExecutorsMin(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMin = Option(nIn)
+    if (numberOfExecutorsMax.exists(_ < nIn)) {
+      numberOfExecutorsMax = Option(nIn)
+    }
+  }
+
+  override def setNumberOfExecutorsMax(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMax = Option(nIn)
+    if (numberOfExecutorsMin.exists(_ > nIn)) {
+      numberOfExecutorsMin = Option(nIn)
+    }
+  }
+
+  override def setExecutorType(executorTypeIn: String): Unit = synchronized {
+    executorType = Option(executorTypeIn)
+  }
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = synchronized {
+    executionAdditionalOptions.put(key, value)
+  }
+
+  override def setNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(count)
+  }
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(numberOfRecordsIngested.getOrElse(0L) + count)
+  }
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = synchronized {
+    maxNumberOfColumns = Option(Math.max(maxNumberOfColumns.getOrElse(0L), count))
+  }
+
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
     taskResults ++= statuses.filter(_.runStatus != NotRan)
     if (statuses.exists(_.runStatus.isFailure)) {
@@ -209,6 +266,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     sendPipelineNotifications()
     runCustomShutdownHook()
     removeSignalHandlers()
+    Try(addJournalEntry()).recover {
+      case NonFatal(ex) =>
+        log.error("Unable to write pipeline execution journal entry.", ex)
+    }
     sendNotificationEmail()
     TokenLockRegistry.releaseAllLocks()
   }
@@ -274,6 +335,60 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
       case ex: Throwable =>
         log.error(s"Unable to send a notification to the custom notification target: ${pipelineNotificationTarget.getClass.getName}", ex)
         pipelineNotificationFailures += PipelineNotificationFailure(pipelineNotificationTarget.getClass.getName, ex)
+    }
+  }
+
+  protected def addJournalEntry(): Unit = {
+    val pipelineInfo = getPipelineInfo
+    val failureReason = if (pipelineInfo.status == PipelineStatus.Success || pipelineInfo.status == PipelineStatus.Warning) {
+      None
+    } else {
+      pipelineInfo.failureException match {
+        case Some(ex) => Option(RunStatus.getShortExceptionDescription(ex))
+        case None =>
+          val firstReason = taskResults.map(_.runStatus).find(_.isFailure).map(_.getReason.getOrElse(""))
+          firstReason
+      }
+    }
+    journalOpt.foreach { journal =>
+      val execution = Execution(
+        pipelineId,
+        pipelineInfo.pipelineDefinitionId,
+        pipelineName,
+        environmentName,
+        batchId,
+        sparkAppId.getOrElse(""),
+        computeEngineId,
+        tenant,
+        country,
+        runtimeConfig.runDate.toString,
+        runtimeConfig.runDateTo.map(_.toString),
+        startedInstant.getEpochSecond,
+        finishedInstant.getOrElse(Instant.now()).getEpochSecond,
+        numberOfExecutorsMin,
+        numberOfExecutorsMax,
+        executorType,
+        pipelineInfo.status.toString,
+        runtimeConfig.isRerun || runtimeConfig.historicalRunMode == RunMode.ForceRun,
+        runtimeConfig.attempt,
+        runtimeConfig.maxAttempts,
+        failureReason.map(_.take(1000)),
+        numberOfRecordsIngested,
+        maxNumberOfColumns,
+        getExecutionAdditionalOptions
+      )
+
+      journal.addPipelineEntry(execution)
+    }
+  }
+
+  private def getExecutionAdditionalOptions: Option[String] = {
+    if (executionAdditionalOptions.isEmpty)
+      None
+    else {
+      val mapper = new ObjectMapper()
+      mapper.registerModule(DefaultScalaModule)
+      Some(mapper.writeValueAsString(executionAdditionalOptions.toMap))
     }
   }
 

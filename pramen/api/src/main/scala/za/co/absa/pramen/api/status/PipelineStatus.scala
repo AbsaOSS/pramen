@@ -19,8 +19,16 @@ package za.co.absa.pramen.api.status
 sealed trait PipelineStatus
 
 object PipelineStatus {
-  case object Success extends PipelineStatus
-  case object Warning extends PipelineStatus
-  case object PartialSuccess extends PipelineStatus
-  case object Failure extends PipelineStatus
+  case object Success extends PipelineStatus {
+    override def toString: String = "succeeded"
+  }
+  case object Warning extends PipelineStatus{
+    override def toString: String = "succeeded with warnings"
+  }
+  case object PartialSuccess extends PipelineStatus{
+    override def toString: String = "partially succeeded"
+  }
+  case object Failure extends PipelineStatus{
+    override def toString: String = "failed"
+  }
 }

@@ -75,6 +75,22 @@ trait Pramen {
     * @return An instance of the TokenLockFactory, which allows for token-based locking functionality.
     */
   def tokenLockFactory: TokenLockFactory
+
+  def setComputeEngineId(computeEngineId: String): Unit
+
+  def setNumberOfExecutorsMin(n: Int): Unit
+
+  def setNumberOfExecutorsMax(n: Int): Unit
+
+  def setExecutorType(executorType: String): Unit
+
+  def setNumberOfRecordsIngested(count: Long): Unit
+
+  def addNumberOfRecordsIngested(count: Long): Unit
+
+  def setMaximumNumberOfColumns(count: Long): Unit
+
+  def setExecutionAdditionalOption(key: String, value: String): Unit
 }
 
 object Pramen {

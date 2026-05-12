@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.state
 
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
+import za.co.absa.pramen.core.journal.Journal
 
 trait PipelineState extends AutoCloseable {
   def getState: PipelineStateSnapshot
@@ -32,6 +33,24 @@ trait PipelineState extends AutoCloseable {
   def setFailure(stage: String, exception: Throwable): Unit
 
   def setSparkAppId(sparkAppId: String): Unit
+
+  def setJournal(journal: Journal): Unit
+
+  def setComputeEngineId(computeEngineId: String): Unit
+
+  def setNumberOfExecutorsMin(n: Int): Unit
+
+  def setNumberOfExecutorsMax(n: Int): Unit
+
+  def setExecutorType(executorType: String): Unit
+
+  def setExecutionAdditionalOption(key: String, value: String): Unit
+
+  def setNumberOfRecordsIngested(count: Long): Unit
+
+  def addNumberOfRecordsIngested(count: Long): Unit
+
+  def setMaximumNumberOfColumns(count: Long): Unit
 
   def addTaskCompletion(statuses: Seq[TaskResult]): Unit
 

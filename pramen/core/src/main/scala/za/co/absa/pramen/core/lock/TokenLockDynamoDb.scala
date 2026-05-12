@@ -33,8 +33,8 @@ object TokenLockDynamoDb {
   // Attribute names
   val ATTR_TOKEN = "job_token" // 'token' is a reserved word in DynamoDb and can't be used as an attribute
   val ATTR_OWNER = "job_owner" // 'owner' is a reserved word in DynamoDb and can't be used as an attribute
-  val ATTR_EXPIRES = "expiresAt"
-  val ATTR_CREATED_AT = "createdAt"
+  val ATTR_EXPIRES = "expires_at"
+  val ATTR_CREATED_AT = "created_at"
 
   val TICKETS_HARD_EXPIRE_DAYS = 1
 }

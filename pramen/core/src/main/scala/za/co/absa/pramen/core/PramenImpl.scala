@@ -86,6 +86,22 @@ class PramenImpl extends Pramen {
     throw new IllegalStateException("Token lock factory is not available at the context.")
   )
 
+  override def setComputeEngineId(computeEngineId: String): Unit = _pipelineState.foreach(_.setComputeEngineId(computeEngineId))
+
+  override def setNumberOfExecutorsMin(n: Int): Unit = _pipelineState.foreach(_.setNumberOfExecutorsMin(n))
+
+  override def setNumberOfExecutorsMax(n: Int): Unit = _pipelineState.foreach(_.setNumberOfExecutorsMax(n))
+
+  override def setExecutorType(executorType: String): Unit = _pipelineState.foreach(_.setExecutorType(executorType))
+
+  override def setNumberOfRecordsIngested(count: Long): Unit = _pipelineState.foreach(_.setNumberOfRecordsIngested(count))
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = _pipelineState.foreach(_.addNumberOfRecordsIngested(count))
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = _pipelineState.foreach(_.setMaximumNumberOfColumns(count))
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = _pipelineState.foreach(_.setExecutionAdditionalOption(key, value))
+
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
     _workflowConfig = Option(config)
   }

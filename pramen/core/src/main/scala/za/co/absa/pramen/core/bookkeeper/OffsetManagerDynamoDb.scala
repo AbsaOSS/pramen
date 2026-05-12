@@ -555,15 +555,15 @@ object OffsetManagerDynamoDb {
   val DEFAULT_TABLE_PREFIX = "pramen"
 
   // Attribute names for offset table
-  val ATTR_PRAMEN_TABLE_NAME = "pramenTableName"
-  val ATTR_COMPOSITE_KEY = "compositeKey"  // Format: "infoDate#createdAtMilli"
-  val ATTR_INFO_DATE = "infoDate"
-  val ATTR_DATA_TYPE = "dataType"
-  val ATTR_MIN_OFFSET = "minOffset"
-  val ATTR_MAX_OFFSET = "maxOffset"
-  val ATTR_BATCH_ID = "batchId"
-  val ATTR_CREATED_AT = "createdAt"
-  val ATTR_COMMITTED_AT = "committedAt"
+  val ATTR_PRAMEN_TABLE_NAME = "pramen_table_name"
+  val ATTR_COMPOSITE_KEY = "composite_key"  // Format: "infoDate#createdAtMilli"
+  val ATTR_INFO_DATE = "info_date"
+  val ATTR_DATA_TYPE = "data_type"
+  val ATTR_MIN_OFFSET = "min_offset"
+  val ATTR_MAX_OFFSET = "max_offset"
+  val ATTR_BATCH_ID = "batch_id"
+  val ATTR_CREATED_AT = "created_at"
+  val ATTR_COMMITTED_AT = "committed_at"
 
   /**
     * Builder for creating OffsetManagerDynamoDb instances.

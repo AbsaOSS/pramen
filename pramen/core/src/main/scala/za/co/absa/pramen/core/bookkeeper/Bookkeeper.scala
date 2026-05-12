@@ -201,13 +201,15 @@ object Bookkeeper {
             case HadoopFormat.Delta =>
               bookkeepingConfig.deltaTablePrefix match {
                 case Some(tablePrefix) =>
-                  val fullTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix)
-                  log.info(s"Using Delta Lake managed table '$fullTableName' for the journal.")
+                  val journalTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix, "journal")
+                  val executionsTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix, "executions")
+                  log.info(s"Using Delta Lake managed table '$journalTableName' and '$executionsTableName' for the journal.")
                   new JournalHadoopDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix)
                 case None =>
-                  val path = bookkeepingConfig.bookkeepingLocation.get + "/journal"
-                  log.info(s"Using Delta Lake for the journal at $path")
-                  new JournalHadoopDeltaPath(path)
+                  val journalPath = bookkeepingConfig.bookkeepingLocation.get + "/journal"
+                  val executionsPath = bookkeepingConfig.bookkeepingLocation.get + "/executions"
+                  log.info(s"Using Delta Lake for the journal at '$journalPath' and '$executionsPath'")
+                  new JournalHadoopDeltaPath(journalPath, executionsPath)
               }
           }
 

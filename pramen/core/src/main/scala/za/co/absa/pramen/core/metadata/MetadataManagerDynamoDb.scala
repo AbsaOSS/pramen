@@ -248,12 +248,12 @@ object MetadataManagerDynamoDb {
   val DEFAULT_TABLE_PREFIX = "pramen"
 
   // Attribute names for metadata table
-  val ATTR_COMPOSITE_KEY = "compositeKey"  // tableName#infoDate
-  val ATTR_METADATA_KEY = "metadataKey"
-  val ATTR_METADATA_VALUE = "metadataValue"
-  val ATTR_LAST_UPDATED = "lastUpdated"
-  val ATTR_TABLE_NAME = "tableName"        // For filtering/queries
-  val ATTR_INFO_DATE = "infoDate"          // For filtering/queries
+  val ATTR_COMPOSITE_KEY = "composite_key"  // tableName#infoDate
+  val ATTR_METADATA_KEY = "metadata_key"
+  val ATTR_METADATA_VALUE = "metadata_value"
+  val ATTR_LAST_UPDATED = "last_updated"
+  val ATTR_TABLE_NAME = "table_name"        // For filtering/queries
+  val ATTR_INFO_DATE = "info_date"          // For filtering/queries
 
   /**
     * Builder for creating MetadataManagerDynamoDb instances.

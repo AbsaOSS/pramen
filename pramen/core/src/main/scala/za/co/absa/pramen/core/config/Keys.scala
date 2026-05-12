@@ -17,6 +17,8 @@
 package za.co.absa.pramen.core.config
 
 object Keys {
+  val PIPELINE_DEFINITION_ID = "pramen.pipeline.definition.id"
+
   val INFORMATION_DATE_COLUMN = "pramen.information.date.column"
   val INFORMATION_DATE_FORMAT_APP = "pramen.information.date.format"
 

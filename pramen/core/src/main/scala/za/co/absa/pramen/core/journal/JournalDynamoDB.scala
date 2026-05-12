@@ -24,7 +24,7 @@ import software.amazon.awssdk.services.dynamodb.model._
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDynamoDb.waitForTableActive
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
 
 import java.net.URI
 import java.time.{Instant, LocalDate}
@@ -51,9 +51,12 @@ class JournalDynamoDB private (
 
   private val journalTableBaseName = s"${tablePrefix}_${JournalDynamoDB.DEFAULT_JOURNAL_TABLE}"
   private val journalTableFullName = BookkeeperDynamoDb.getFullTableName(tableArn, journalTableBaseName)
+  private val executionsTableBaseName = s"${tablePrefix}_${JournalDynamoDB.DEFAULT_EXECUTIONS_TABLE}"
+  private val executionsTableFullName = BookkeeperDynamoDb.getFullTableName(tableArn, executionsTableBaseName)
 
-  // Initialize table on creation
+  // Initialize tables on creation
   createJournalTableIfNotExists()
+  createExecutionsTableIfNotExists()
 
   /**
     * Add a task completion entry to the journal.
@@ -119,6 +122,49 @@ class JournalDynamoDB private (
     }
   }
 
+  override def addPipelineEntry(execution: Execution): Unit = {
+    val itemBuilder = Map.newBuilder[String, AttributeValue]
+
+    // Primary key: composite of pipelineName and batchId
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_PIPELINE_NAME -> AttributeValue.builder().s(execution.pipelineName).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_BATCH_ID -> AttributeValue.builder().n(execution.batchId.toString).build())
+
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_PIPELINE_ID -> AttributeValue.builder().s(execution.pipelineId).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_PIPELINE_DEFINITION_ID -> AttributeValue.builder().s(execution.pipelineDefinitionId).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_ENVIRONMENT_NAME -> AttributeValue.builder().s(execution.environmentName).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_SPARK_APP_ID -> AttributeValue.builder().s(execution.sparkApplicationId).build())
+    execution.computeEngineId.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_COMPUTE_ENGINE_ID -> AttributeValue.builder().s(v).build()))
+    execution.tenant.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_TENANT -> AttributeValue.builder().s(v).build()))
+    execution.country.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_COUNTRY -> AttributeValue.builder().s(v).build()))
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_RUN_DATE_FROM -> AttributeValue.builder().s(execution.runDateFrom).build())
+    execution.runDateTo.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_RUN_DATE_TO -> AttributeValue.builder().s(v.format(dateFormatter)).build()))
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_STARTED_AT -> AttributeValue.builder().n(execution.startedAt.toString).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_FINISHED_AT -> AttributeValue.builder().n(execution.finishedAt.toString).build())
+    execution.numberOfExecutorsMin.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_NUMBER_OF_EXECUTORS_MIN -> AttributeValue.builder().n(v.toString).build()))
+    execution.numberOfExecutorsMax.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_NUMBER_OF_EXECUTORS_MAX -> AttributeValue.builder().n(v.toString).build()))
+    execution.executorType.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_EXECUTOR_TYPE -> AttributeValue.builder().s(v).build()))
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_STATUS -> AttributeValue.builder().s(execution.status).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_IS_RERUN -> AttributeValue.builder().s(execution.isRerun.toString).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_ATTEMPT_NUMBER -> AttributeValue.builder().s(execution.attemptNumber.toString).build())
+    itemBuilder += (JournalDynamoDB.ATTR_EXEC_NUMBER_OF_ATTEMPTS -> AttributeValue.builder().s(execution.numberOfAttempts.toString).build())
+    execution.failureReason.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_FAILURE_REASON -> AttributeValue.builder().s(v).build()))
+    execution.numberOfRecordsIngested.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_NUMBER_OR_RECORDS_INGESTED -> AttributeValue.builder().n(v.toString).build()))
+    execution.maxNumberOfColumns.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_MAX_NUMBER_OF_COLUMNS -> AttributeValue.builder().n(v.toString).build()))
+    execution.additionalOptions.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_ADDITIONAL_OPTIONS -> AttributeValue.builder().s(v).build()))
+
+    try {
+      val putRequest = PutItemRequest.builder()
+        .tableName(executionsTableFullName)
+        .item(itemBuilder.result().asJava)
+        .build()
+
+      dynamoDbClient.putItem(putRequest)
+    } catch {
+      case NonFatal(ex) =>
+        log.error(s"Unable to write to the executions table '$executionsTableFullName'.", ex)
+    }
+  }
+
   /**
     * Get journal entries within a time range.
     */
@@ -175,6 +221,61 @@ class JournalDynamoDB private (
         log.error(s"Unable to read from the journal table '$journalTableFullName'.", ex)
         Seq.empty
     }
+  }
+
+  /**
+    * Creates the executions table if it doesn't exist.
+    */
+  private def createExecutionsTableIfNotExists(): Unit = {
+    try {
+      val describeRequest = DescribeTableRequest.builder()
+        .tableName(executionsTableFullName)
+        .build()
+
+      dynamoDbClient.describeTable(describeRequest)
+      log.info(s"Executions table '$executionsTableFullName' already exists")
+    } catch {
+      case _: ResourceNotFoundException =>
+        log.info(s"Creating executions table '$executionsTableFullName'")
+        createExecutionsTable()
+      case NonFatal(ex)                 =>
+        log.error(s"Error checking if executions table exists", ex)
+        throw ex
+    }
+  }
+
+  /**
+    * Creates the executions table in DynamoDB.
+    */
+  private def createExecutionsTable(): Unit = {
+    val createRequest = CreateTableRequest.builder()
+      .tableName(executionsTableFullName)
+      .attributeDefinitions(
+        AttributeDefinition.builder()
+          .attributeName(JournalDynamoDB.ATTR_EXEC_PIPELINE_NAME)
+          .attributeType(ScalarAttributeType.S)
+          .build(),
+        AttributeDefinition.builder()
+          .attributeName(JournalDynamoDB.ATTR_EXEC_BATCH_ID)
+          .attributeType(ScalarAttributeType.N)
+          .build()
+      )
+      .keySchema(
+        KeySchemaElement.builder()
+          .attributeName(JournalDynamoDB.ATTR_EXEC_PIPELINE_NAME)
+          .keyType(KeyType.HASH)
+          .build(),
+        KeySchemaElement.builder()
+          .attributeName(JournalDynamoDB.ATTR_EXEC_BATCH_ID)
+          .keyType(KeyType.RANGE)
+          .build()
+      )
+      .billingMode(BillingMode.PAY_PER_REQUEST)
+      .build()
+
+    dynamoDbClient.createTable(createRequest)
+    waitForTableActive(executionsTableFullName, dynamoDbClient)
+    log.info(s"Executions table '$executionsTableFullName' created successfully")
   }
 
   /**
@@ -247,34 +348,62 @@ class JournalDynamoDB private (
 
 object JournalDynamoDB {
   val DEFAULT_JOURNAL_TABLE = "journal"
+  val DEFAULT_EXECUTIONS_TABLE = "executions"
   val DEFAULT_TABLE_PREFIX = "pramen"
 
   // Maximum length for failure reason (4KB minus some overhead)
   val MAX_FAILURE_REASON_LENGTH = 4000
 
+  // Attribute names for executions table
+  val ATTR_EXEC_PIPELINE_ID = "pipeline_id"
+  val ATTR_EXEC_PIPELINE_DEFINITION_ID = "pipeline_definition_id"
+  val ATTR_EXEC_PIPELINE_NAME = "pipeline_name"
+  val ATTR_EXEC_ENVIRONMENT_NAME = "environment_name"
+  val ATTR_EXEC_BATCH_ID = "batch_id"
+  val ATTR_EXEC_SPARK_APP_ID = "spark_application_id"
+  val ATTR_EXEC_COMPUTE_ENGINE_ID = "compute_engine_id"
+  val ATTR_EXEC_TENANT = "tenant"
+  val ATTR_EXEC_COUNTRY = "country"
+  val ATTR_EXEC_RUN_DATE_FROM = "run_date_from"
+  val ATTR_EXEC_RUN_DATE_TO = "run_date_to"
+  val ATTR_EXEC_STARTED_AT = "started_at"
+  val ATTR_EXEC_FINISHED_AT = "finished_at"
+  val ATTR_EXEC_NUMBER_OF_EXECUTORS_MIN = "number_of_executors_min"
+  val ATTR_EXEC_NUMBER_OF_EXECUTORS_MAX = "number_of_executors_max"
+  val ATTR_EXEC_EXECUTOR_TYPE = "executor_type"
+  val ATTR_EXEC_STATUS = "status"
+  val ATTR_EXEC_IS_RERUN = "is_rerun"
+  val ATTR_EXEC_ATTEMPT_NUMBER = "attempt_number"
+  val ATTR_EXEC_NUMBER_OF_ATTEMPTS = "number_of_attempts"
+  val ATTR_EXEC_FAILURE_REASON = "failure_reason"
+  val ATTR_EXEC_NUMBER_OR_RECORDS_INGESTED = "number_of_records_ingested"
+  val ATTR_EXEC_MAX_NUMBER_OF_COLUMNS = "max_number_of_columns"
+
+  val ATTR_EXEC_ADDITIONAL_OPTIONS = "additional_options"
+
   // Attribute names for journal table
-  val ATTR_JOB_NAME = "jobName"
-  val ATTR_TABLE_NAME = "tableName"
-  val ATTR_PERIOD_BEGIN = "periodBegin"
-  val ATTR_PERIOD_END = "periodEnd"
-  val ATTR_INFO_DATE = "infoDate"
-  val ATTR_INPUT_RECORD_COUNT = "inputRecordCount"
-  val ATTR_INPUT_RECORD_COUNT_OLD = "inputRecordCountOld"
-  val ATTR_OUTPUT_RECORD_COUNT = "outputRecordCount"
-  val ATTR_OUTPUT_RECORD_COUNT_OLD = "outputRecordCountOld"
-  val ATTR_APPENDED_RECORD_COUNT = "appendedRecordCount"
-  val ATTR_OUTPUT_SIZE = "outputSize"
-  val ATTR_STARTED_AT = "startedAt"
-  val ATTR_FINISHED_AT = "finishedAt"
+  val ATTR_JOB_NAME = "job_name"
+  val ATTR_TABLE_NAME = "table_name"
+  val ATTR_PERIOD_BEGIN = "period_begin"
+  val ATTR_PERIOD_END = "period_end"
+  val ATTR_INFO_DATE = "info_date"
+  val ATTR_INPUT_RECORD_COUNT = "input_record_count"
+  val ATTR_INPUT_RECORD_COUNT_OLD = "input_record_count_old"
+  val ATTR_OUTPUT_RECORD_COUNT = "output_record_count"
+  val ATTR_OUTPUT_RECORD_COUNT_OLD = "output_record_count_old"
+  val ATTR_APPENDED_RECORD_COUNT = "appended_record_count"
+  val ATTR_OUTPUT_SIZE = "output_size"
+  val ATTR_STARTED_AT = "started_at"
+  val ATTR_FINISHED_AT = "finished_at"
   val ATTR_STATUS = "status"
-  val ATTR_FAILURE_REASON = "failureReason"
-  val ATTR_SPARK_APP_ID = "sparkApplicationId"
-  val ATTR_PIPELINE_ID = "pipelineId"
-  val ATTR_PIPELINE_NAME = "pipelineName"
-  val ATTR_ENVIRONMENT_NAME = "environmentName"
+  val ATTR_FAILURE_REASON = "failure_reason"
+  val ATTR_SPARK_APP_ID = "spark_application_id"
+  val ATTR_PIPELINE_ID = "pipeline_id"
+  val ATTR_PIPELINE_NAME = "pipeline_name"
+  val ATTR_ENVIRONMENT_NAME = "environment_name"
   val ATTR_TENANT = "tenant"
   val ATTR_COUNTRY = "country"
-  val ATTR_BATCH_ID = "batchId"
+  val ATTR_BATCH_ID = "batchid"
 
   /**
     * Builder for creating JournalDynamoDB instances.
