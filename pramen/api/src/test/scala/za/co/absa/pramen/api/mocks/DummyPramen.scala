@@ -49,5 +49,11 @@ class DummyPramen extends Pramen {
 
   override def setExecutorType(executorType: String): Unit = {}
 
+  override def setNumberOfRecordsIngested(count: Long): Unit = {}
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = {}
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = {}
+
   override def setExecutionAdditionalOption(key: String, value: String): Unit = {}
 }

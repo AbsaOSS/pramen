@@ -40,7 +40,7 @@ import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.hive.HiveHelper
-import za.co.absa.pramen.core.utils.{ConfigUtils, ThreadUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, SparkUtils, ThreadUtils, TimeUtils}
 
 import java.sql.Date
 import java.time.{Instant, LocalDate}
@@ -432,8 +432,9 @@ abstract class TaskRunnerBase(conf: Config,
         val outputMetastoreHiveTable = task.job.outputTable.hiveTable.map(table => HiveHelper.getFullTable(task.job.outputTable.hiveConfig.database, table))
         val hiveTableUpdates = (saveResult.hiveTablesUpdates ++ outputMetastoreHiveTable).distinct
 
-        val stats = saveResult.stats
+        pipelineState.setMaximumNumberOfColumns(SparkUtils.getTotalNumberOfColumns(dfTransformed.schema))
 
+        val stats = saveResult.stats
         val finished = Instant.now()
 
         val completionReason = if (validationResult.status == NeedsUpdate || (validationResult.status == AlreadyRan && task.reason != TaskRunReason.Rerun))

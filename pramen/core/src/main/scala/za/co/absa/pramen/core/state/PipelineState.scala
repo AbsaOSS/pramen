@@ -46,6 +46,12 @@ trait PipelineState extends AutoCloseable {
 
   def setExecutionAdditionalOption(key: String, value: String): Unit
 
+  def setNumberOfRecordsIngested(count: Long): Unit
+
+  def addNumberOfRecordsIngested(count: Long): Unit
+
+  def setMaximumNumberOfColumns(count: Long): Unit
+
   def addTaskCompletion(statuses: Seq[TaskResult]): Unit
 
   def getExitCode: Int

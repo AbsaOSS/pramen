@@ -147,6 +147,8 @@ class JournalDynamoDB private (
     itemBuilder += (JournalDynamoDB.ATTR_EXEC_ATTEMPT_NUMBER -> AttributeValue.builder().s(execution.attemptNumber.toString).build())
     itemBuilder += (JournalDynamoDB.ATTR_EXEC_NUMBER_OF_ATTEMPTS -> AttributeValue.builder().s(execution.numberOfAttempts.toString).build())
     execution.failureReason.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_FAILURE_REASON -> AttributeValue.builder().s(v).build()))
+    execution.numberOfRecordsIngested.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_NUMBER_OR_RECORDS_INGESTED -> AttributeValue.builder().n(v.toString).build()))
+    execution.maxNumberOfColumns.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_MAX_NUMBER_OF_COLUMNS -> AttributeValue.builder().n(v.toString).build()))
     execution.additionalOptions.foreach(v => itemBuilder += (JournalDynamoDB.ATTR_EXEC_ADDITIONAL_OPTIONS -> AttributeValue.builder().s(v).build()))
 
     try {
@@ -372,6 +374,9 @@ object JournalDynamoDB {
   val ATTR_EXEC_ATTEMPT_NUMBER = "attempt_number"
   val ATTR_EXEC_NUMBER_OF_ATTEMPTS = "number_of_attempts"
   val ATTR_EXEC_FAILURE_REASON = "failure_reason"
+  val ATTR_EXEC_NUMBER_OR_RECORDS_INGESTED = "number_of_records_ingested"
+  val ATTR_EXEC_MAX_NUMBER_OF_COLUMNS = "max_number_of_columns"
+
   val ATTR_EXEC_ADDITIONAL_OPTIONS = "additional_options"
 
   // Attribute names for journal table

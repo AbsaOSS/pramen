@@ -84,6 +84,12 @@ trait Pramen {
 
   def setExecutorType(executorType: String): Unit
 
+  def setNumberOfRecordsIngested(count: Long): Unit
+
+  def addNumberOfRecordsIngested(count: Long): Unit
+
+  def setMaximumNumberOfColumns(count: Long): Unit
+
   def setExecutionAdditionalOption(key: String, value: String): Unit
 }
 

@@ -94,6 +94,12 @@ class PramenImpl extends Pramen {
 
   override def setExecutorType(executorType: String): Unit = _pipelineState.foreach(_.setExecutorType(executorType))
 
+  override def setNumberOfRecordsIngested(count: Long): Unit = _pipelineState.foreach(_.setNumberOfRecordsIngested(count))
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = _pipelineState.foreach(_.addNumberOfRecordsIngested(count))
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = _pipelineState.foreach(_.setMaximumNumberOfColumns(count))
+
   override def setExecutionAdditionalOption(key: String, value: String): Unit = _pipelineState.foreach(_.setExecutionAdditionalOption(key, value))
 
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {

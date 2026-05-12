@@ -40,6 +40,8 @@ class PipelineStateSpy extends PipelineState {
   var numberOfExecutorsMin: Option[Int] = None
   var numberOfExecutorsMax: Option[Int] = None
   var executorType: Option[String] = None
+  var numberOfRecordsIngested: Option[Long] = None
+  var maxNumberOfColumns: Option[Long] = None
 
   override def getState: PipelineStateSnapshot = {
     PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(PipelineInfoFactory.getDummyPipelineInfo(sparkApplicationId = sparkAppId),
@@ -94,6 +96,18 @@ class PipelineStateSpy extends PipelineState {
 
   override def setExecutorType(executorTypeIn: String): Unit = synchronized {
     executorType = Option(executorTypeIn)
+  }
+
+  override def setNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(count)
+  }
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(numberOfRecordsIngested.getOrElse(0L) + count)
+  }
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = synchronized {
+    maxNumberOfColumns = Option(Math.max(maxNumberOfColumns.getOrElse(0L), count))
   }
 
   override def setExecutionAdditionalOption(key: String, value: String): Unit = synchronized {

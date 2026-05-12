@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
-import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
@@ -33,6 +33,7 @@ import za.co.absa.pramen.core.utils.Emoji.WARNING
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
+import scala.util.Try
 
 class IngestionJob(operationDef: OperationDef,
                    metastore: Metastore,
@@ -167,6 +168,16 @@ class IngestionJob(operationDef: OperationDef,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
     val stats = metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
+
+    if (!outputTable.format.isRaw) {
+      val pramenOpt = Try {
+        Pramen.instance
+      }.toOption
+
+      pramenOpt.foreach { pramen =>
+        pramen.addNumberOfRecordsIngested(stats.recordCount.getOrElse(0L))
+      }
+    }
 
     try {
       source.postProcess(

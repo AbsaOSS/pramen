@@ -934,6 +934,25 @@ object SparkUtils {
     }
   }
 
+  def getTotalNumberOfColumns(schema: StructType): Int = {
+    def countNestedColumns(dataType: DataType): Int = {
+      dataType match {
+        case struct: StructType =>
+          struct.fields.foldLeft(0) { (count, field) =>
+            count + 1 + countNestedColumns(field.dataType)
+          }
+        case arr: ArrayType     =>
+          countNestedColumns(arr.elementType)
+        case _                  =>
+          0
+      }
+    }
+
+    schema.fields.foldLeft(0) { (count, field) =>
+      count + 1 + countNestedColumns(field.dataType)
+    }
+  }
+
   private def getActualProcessingTimeUdf: UserDefinedFunction = {
     udf((_: Long) => Instant.now().getEpochSecond)
   }

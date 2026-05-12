@@ -162,6 +162,11 @@ object AppRunner {
       setMinMaxExecutors(spark, state)
       setExecutionAdditionalProperties(spark, state)
 
+      log.info("Spark configuration properties:")
+      spark.conf.getAll.toSeq.sortBy(_._1).foreach { case (key, value) =>
+        log.info(s"  $key = $value")
+      }
+
     }, state, "Spark List of executor nodes")
   }
 
@@ -177,8 +182,8 @@ object AppRunner {
     val executors = spark.sparkContext.getExecutorMemoryStatus.keySet
         .filter(_ != "driver")
 
-    val maxNumExecutors = spark.conf.getOption("spark.executor.instances").orElse(
-      spark.conf.getOption("spark.dynamicAllocation.maxExecutors")) match {
+    val maxNumExecutors = spark.conf.getOption("spark.dynamicAllocation.maxExecutors").orElse(
+      spark.conf.getOption("spark.executor.instances")) match {
       case Some(s) => s.toInt
       case None    => executors.size
     }

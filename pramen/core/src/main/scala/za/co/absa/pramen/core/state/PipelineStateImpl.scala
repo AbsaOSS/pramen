@@ -81,6 +81,8 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
   @volatile private var numberOfExecutorsMin: Option[Int] = None
   @volatile private var numberOfExecutorsMax: Option[Int] = None
   @volatile private var executorType: Option[String] = None
+  @volatile private var numberOfRecordsIngested: Option[Long] = None
+  @volatile private var maxNumberOfColumns: Option[Long] = None
 
   init()
 
@@ -219,6 +221,18 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     executionAdditionalOptions.put(key, value)
   }
 
+  override def setNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(count)
+  }
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(numberOfRecordsIngested.getOrElse(0L) + count)
+  }
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = synchronized {
+    maxNumberOfColumns = Option(Math.max(maxNumberOfColumns.getOrElse(0L), count))
+  }
+
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {
     taskResults ++= statuses.filter(_.runStatus != NotRan)
     if (statuses.exists(_.runStatus.isFailure)) {
@@ -353,6 +367,8 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         runtimeConfig.attempt,
         runtimeConfig.maxAttempts,
         failureReason.map(_.take(1000)),
+        numberOfRecordsIngested,
+        maxNumberOfColumns,
         getExecutionAdditionalOptions
       )
 
