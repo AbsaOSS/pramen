@@ -377,9 +377,9 @@ object JournalDynamoDB {
   val ATTR_EXEC_ATTEMPT_NUMBER = "attempt_number"
   val ATTR_EXEC_NUMBER_OF_ATTEMPTS = "number_of_attempts"
   val ATTR_EXEC_FAILURE_REASON = "failure_reason"
+  val ATTR_NUMBER_OF_TASKS_COMPLETED = "number_of_tasks_completed"
   val ATTR_EXEC_NUMBER_OR_RECORDS_INGESTED = "number_of_records_ingested"
   val ATTR_EXEC_MAX_NUMBER_OF_COLUMNS = "max_number_of_columns"
-
   val ATTR_EXEC_ADDITIONAL_OPTIONS = "additional_options"
 
   // Attribute names for journal table
@@ -398,7 +398,6 @@ object JournalDynamoDB {
   val ATTR_FINISHED_AT = "finished_at"
   val ATTR_STATUS = "status"
   val ATTR_FAILURE_REASON = "failure_reason"
-  val ATTR_NUMBER_OF_TASKS_COMPLETED = "number_of_tasks_completed"
   val ATTR_SPARK_APP_ID = "spark_application_id"
   val ATTR_PIPELINE_ID = "pipeline_id"
   val ATTR_PIPELINE_NAME = "pipeline_name"

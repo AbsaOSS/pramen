@@ -352,12 +352,10 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     }
 
     val notSkippedTasks = taskResults.count { task =>
-      val isSkipped = task.runStatus match {
-        case _: RunStatus.Succeeded => false
-        case _: RunStatus.Failed => false
-        case _ => true
+      task.runStatus match {
+        case _: RunStatus.Succeeded | _: RunStatus.Failed => true
+        case _                                            => false
       }
-      !isSkipped
     }
 
     journalOpt.foreach { journal =>
