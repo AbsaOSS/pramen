@@ -350,6 +350,16 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
           firstReason
       }
     }
+
+    val notSkippedTasks = taskResults.count { task =>
+      val isSkipped = task.runStatus match {
+        case _: RunStatus.Succeeded => false
+        case _: RunStatus.Failed => false
+        case _ => true
+      }
+      !isSkipped
+    }
+
     journalOpt.foreach { journal =>
       val execution = Execution(
         pipelineId,
@@ -373,6 +383,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
         runtimeConfig.attempt,
         runtimeConfig.maxAttempts,
         failureReason.map(_.take(1000)),
+        Option(notSkippedTasks),
         numberOfRecordsIngested,
         maxNumberOfColumns,
         getExecutionAdditionalOptions

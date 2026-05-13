@@ -38,6 +38,7 @@ case class Execution(
                       attemptNumber: Int,
                       numberOfAttempts: Int,
                       failureReason: Option[String],
+                      numberOfTasksCompleted: Option[Long],
                       numberOfRecordsIngested: Option[Long],
                       maxNumberOfColumns: Option[Long],
                       additionalOptions: Option[String]
