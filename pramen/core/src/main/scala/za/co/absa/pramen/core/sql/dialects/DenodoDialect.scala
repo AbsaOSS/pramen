@@ -17,12 +17,13 @@
 package za.co.absa.pramen.core.sql.dialects
 
 import org.apache.spark.sql.jdbc.JdbcDialect
-import org.apache.spark.sql.types.{DataType, MetadataBuilder, StringType, TimestampType}
+import org.apache.spark.sql.types._
 
 import java.sql.Types._
 
 object DenodoDialect extends JdbcDialect {
   override def canHandle(url: String): Boolean = url.startsWith("jdbc:denodo") || url.startsWith("jdbc:vdb")
+
   override def getCatalystType(
                                 sqlType: Int,
                                 typeName: String,
@@ -30,8 +31,13 @@ object DenodoDialect extends JdbcDialect {
                                 md: MetadataBuilder
                               ): Option[DataType] =
     sqlType match {
+      case BIT if size > 1         => Some(BinaryType)
+      case REAL                    => Some(FloatType)
+      case SMALLINT                => Some(ShortType)
       case TIMESTAMP_WITH_TIMEZONE => Some(TimestampType)
       case TIME                    => Some(StringType)
+      case OTHER                   => Some(StringType)
+      case ARRAY                   => Some(ArrayType(StringType, containsNull = true))
       case _                       => None
     }
 }
