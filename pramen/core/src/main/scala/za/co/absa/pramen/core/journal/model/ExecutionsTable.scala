@@ -44,35 +44,37 @@ trait ExecutionsTable {
     def attemptNumber = column[Int]("attempt_number")
     def numberOfAttempts = column[Int]("number_of_attempts")
     def failureReason = column[Option[String]]("failure_reason")
+    def numberOfTasksCompleted = column[Option[Long]]("number_of_tasks_completed")
     def numberOfRecordsIngested = column[Option[Long]]("number_of_records_ingested")
     def maxNumberOfColumns = column[Option[Long]]("max_number_of_columns")
     def additionalOptions = column[Option[String]]("additional_options")
 
     private type ExecutionTuple = (
       (String, String, String, String, Long, String, Option[String], Option[String], Option[String], String, Option[String], Long, Long),
-        (Option[Int], Option[Int], Option[String], String, Boolean, Int, Int, Option[String], Option[Long], Option[Long], Option[String])
+        (Option[Int], Option[Int], Option[String], String, Boolean, Int, Int, Option[String], Option[Long], Option[Long], Option[Long], Option[String])
       )
 
     private def toExecution(t: ExecutionTuple): Execution = Execution(
       t._1._1, t._1._2, t._1._3, t._1._4, t._1._5, t._1._6, t._1._7, t._1._8, t._1._9, t._1._10, t._1._11, t._1._12, t._1._13,
-      t._2._1, t._2._2, t._2._3, t._2._4, t._2._5, t._2._6, t._2._7, t._2._8, t._2._9, t._2._10, t._2._11
+      t._2._1, t._2._2, t._2._3, t._2._4, t._2._5, t._2._6, t._2._7, t._2._8, t._2._9, t._2._10, t._2._11, t._2._12
     )
 
     private def fromExecution(e: Execution): Option[ExecutionTuple] = Some(
       (e.pipelineId, e.pipelineDefinitionId, e.pipelineName, e.environmentName, e.batchId, e.sparkApplicationId, e.computeEngineId, e.tenant, e.country, e.runDateFrom, e.runDateTo, e.startedAt, e.finishedAt),
-      (e.numberOfExecutorsMin, e.numberOfExecutorsMax, e.executorType, e.status, e.isRerun, e.attemptNumber, e.numberOfAttempts, e.failureReason, e.numberOfRecordsIngested, e.maxNumberOfColumns, e.additionalOptions)
+      (e.numberOfExecutorsMin, e.numberOfExecutorsMax, e.executorType, e.status, e.isRerun, e.attemptNumber, e.numberOfAttempts, e.failureReason, e.numberOfTasksCompleted, e.numberOfRecordsIngested, e.maxNumberOfColumns, e.additionalOptions)
     )
 
     def * = (
       (pipelineId, pipelineDefinitionId, pipelineName, environmentName, batchId, sparkApplicationId, computeEngineId, tenant, country, runDateFrom, runDateTo, startedAt, finishedAt),
-      (numberOfExecutorsMin, numberOfExecutorsMax, executorType, status, isRerun, attemptNumber, numberOfAttempts, failureReason, numberOfRecordsIngested, maxNumberOfColumns, additionalOptions)
+      (numberOfExecutorsMin, numberOfExecutorsMax, executorType, status, isRerun, attemptNumber, numberOfAttempts, failureReason, numberOfTasksCompleted, numberOfRecordsIngested, maxNumberOfColumns, additionalOptions)
     ) <> (toExecution, fromExecution)
 
     def idx1 = index("idx_exec_started_at", startedAt, unique = false)
     def idx2 = index("idx_exec_finished_at", finishedAt, unique = false)
-    def idx3 = index("idx_exec_batchid", batchId, unique = false)
+    def idx3 = index("idx_exec_pip_def_id", pipelineDefinitionId, unique = false)
     def idx4 = index("idx_exec_compute_engine_id", computeEngineId, unique = false)
-    def idx5 = index("idx_exec_pipeline_id", pipelineId, unique = false)
+    def idx5 = index("idx_exec_pip_id", pipelineId, unique = false)
+    def idx6 = index("idx_exec_pip_name", pipelineName, unique = false)
   }
 
   lazy val records = TableQuery[ExecutionsRecords]

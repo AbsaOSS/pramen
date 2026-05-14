@@ -128,6 +128,10 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (dbVersion < 10) {
       initTable(executionsTable.records.schema)
     }
+
+    if (0 < dbVersion && dbVersion < 11) {
+      addColumn(executionsTable.records.baseTableRow.tableName, "number_of_tasks_completed", "bigint")
+    }
   }
 
   private def initTable(schema: slickProfile.SchemaDescription): Unit = {
@@ -172,7 +176,7 @@ object PramenDb {
   private val log = LoggerFactory.getLogger(this.getClass)
   private val conf = Pramen.getConfig
 
-  val MODEL_VERSION = 10
+  val MODEL_VERSION = 11
   val DEFAULT_RETRIES: Int = conf.getInt("pramen.internal.connection.retries.default")
   val BACKOFF_MIN_MS: Int = conf.getInt("pramen.internal.connection.backoff.min.ms")
   val BACKOFF_MAX_MS: Int = conf.getInt("pramen.internal.connection.backoff.max.ms")
