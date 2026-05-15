@@ -76,12 +76,13 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     "check table existence" in {
       val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
 
-      qe.execute("CREATE TABLE my_table2 (id INT)")
+      qe.execute("CREATE TABLE MY_TABLE2 (id INT)")
 
-      val exist1 = qe.doesTableExistUsingHiveMetadata(None, "MY_TABLE")
-      qe.doesTableExistUsingDescribeTable(None, "my_table") // HSQL does not support DESCRIBE TABLE
+      val exist1 = qe.doesTableExistUsingHiveMetadata(None, "MY_TABLE2")
+      val exist2 = qe.doesTableExistUsingDescribeTable(None, "MY_TABLE2")
 
       assert(exist1)
+      assert(!exist2) // HSQL DB does not have 'DESCRIBE TABLE' statement
 
       qe.close()
     }
