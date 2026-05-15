@@ -132,19 +132,25 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
   def doesTableExistUsingHiveMetadata(databaseNameOpt: Option[String], tableName: String): Boolean = {
     import za.co.absa.pramen.core.utils.UsingUtils.Implicits._
 
-    val conn = getConnection(false)
-    val metadata = conn.getMetaData
+    try {
+      val conn = getConnection(false)
+      val metadata = conn.getMetaData
 
-    val db = databaseNameOpt match {
-      case Some(s) => getEscapedMetadataString(s, metadata)
-      case None => null
-    }
+      val db = databaseNameOpt match {
+        case Some(s) => getEscapedMetadataString(s, metadata)
+        case None => null
+      }
 
-    val table = getEscapedMetadataString(tableName, metadata)
+      val table = getEscapedMetadataString(tableName, metadata)
 
-    for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
-      val exists = rs.next
-      exists
+      for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
+        val exists = rs.next
+        exists
+      }
+    } catch {
+      case NonFatal(ex) =>
+        log.warn(s"Metadata table existence check failed for '$tableName'. Falling back to DESCRIBE TABLE (${ex.getMessage}).")
+        false
     }
   }
 
@@ -157,7 +163,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       execute(query)
     } match {
       case Failure(ex) =>
-        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist" + ex.getMessage)
+        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
         false
       case _ =>
         true
