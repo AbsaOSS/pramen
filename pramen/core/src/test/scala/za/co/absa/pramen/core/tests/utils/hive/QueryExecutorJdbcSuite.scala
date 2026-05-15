@@ -73,6 +73,19 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       qe.close()
     }
 
+    "check table existence" in {
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
+
+      qe.execute("CREATE TABLE my_table2 (id INT)")
+
+      val exist1 = qe.doesTableExistUsingHiveMetadata(None, "MY_TABLE")
+      qe.doesTableExistUsingDescribeTable(None, "my_table") // HSQL does not support DESCRIBE TABLE
+
+      assert(exist1)
+
+      qe.close()
+    }
+
     "throw an exception on errors" in {
       val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
 

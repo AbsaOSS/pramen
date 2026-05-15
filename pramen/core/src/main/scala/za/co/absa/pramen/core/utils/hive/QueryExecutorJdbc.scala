@@ -37,27 +37,23 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
     val fullTableName = HiveHelper.getFullTable(dbName, tableName)
 
-    if (optimizedExistQuery) {
-      val exists = checkTableExistenceUsingJdbcNative(dbName, tableName)
-      if (exists)
-         log.info(s"Table $fullTableName exists.")
-      else {
-        log.info(s"Table $fullTableName does not exist.")
+    val exists = if (optimizedExistQuery) {
+      if (doesTableExistUsingHiveMetadata(dbName, tableName)) {
+        true
+      } else {
+        log.info(s"Table $fullTableName is not in metadata. Checking via 'DESCRIBE TABLE'...")
+        doesTableExistUsingDescribeTable(dbName, tableName)
       }
-      exists
     } else {
-      val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
-      Try {
-        execute(query)
-      } match {
-        case Failure(ex) =>
-          log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
-          false
-        case _ =>
-          log.info(s"Table $fullTableName exists.")
-          true
-      }
+      doesTableExistUsingSqlQuery(dbName, tableName)
     }
+
+    if (exists)
+      log.info(s"Table $fullTableName exists.")
+    else {
+      log.info(s"Table $fullTableName does not exist.")
+    }
+    exists
   }
 
   @throws[SQLSyntaxErrorException]
@@ -73,10 +69,10 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
         override def close(): Unit = {
           if (statementClosed.compareAndSet(false, true)) {
             try {
-              log.info(s"Cancelling SQL statement: $query")
+              log.debug(s"Cancelling SQL statement: $query")
               statement.cancel()
             } finally {
-              log.info(s"Closing the SQL statement...")
+              log.debug(s"Closing the SQL statement...")
               statement.close()
             }
           }
@@ -133,7 +129,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     connection
   }
 
-  def checkTableExistenceUsingJdbcNative(databaseNameOpt: Option[String], tableName: String): Boolean = {
+  def doesTableExistUsingHiveMetadata(databaseNameOpt: Option[String], tableName: String): Boolean = {
     import za.co.absa.pramen.core.utils.UsingUtils.Implicits._
 
     val conn = getConnection(false)
@@ -149,6 +145,37 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
       val exists = rs.next
       exists
+    }
+  }
+
+  def doesTableExistUsingDescribeTable(databaseNameOpt: Option[String], tableName: String): Boolean = {
+    val fullTableName = HiveHelper.getFullTable(databaseNameOpt, tableName)
+
+    val query = s"DESCRIBE $fullTableName"
+
+    Try {
+      execute(query)
+    } match {
+      case Failure(ex) =>
+        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist" + ex.getMessage)
+        false
+      case _ =>
+        true
+    }
+  }
+
+  def doesTableExistUsingSqlQuery(databaseNameOpt: Option[String], tableName: String): Boolean = {
+    val fullTableName = HiveHelper.getFullTable(databaseNameOpt, tableName)
+
+    val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
+    Try {
+      execute(query)
+    } match {
+      case Failure(ex) =>
+        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
+        false
+      case _ =>
+        true
     }
   }
 
