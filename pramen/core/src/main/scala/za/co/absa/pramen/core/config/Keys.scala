@@ -53,6 +53,8 @@ object Keys {
   val LOG_EXECUTOR_NODES = "pramen.log.executor.nodes"
   val LOG_EFFECTIVE_CONFIG = "pramen.log.effective.config"
 
+  val WRAP_SINK_EXCEPTION = "pramen.internal.wrap.sink.exceptions"
+
   final val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "api.key", "api_key", "session.token", "access_key", "session_token", "auth.user.info")
 
   final val CONFIG_KEYS_TO_REDACT = Set(

@@ -226,7 +226,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
       val (job, _) = getUseCase(tableDf = exampleDf, sink = sink)
 
-      val ex = intercept[IllegalStateException] {
+      val ex = intercept[RuntimeException] {
         job.save(exampleDf, infoDate, runReason, conf, Instant.now(), Some(10L))
       }
 
@@ -262,7 +262,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1->mysink")
 
-    (new SinkJob(operation, metastore, bk, Nil, None, outputTable, "sink_name", sink, sinkTable), bk)
+    (new SinkJob(operation, metastore, bk, Nil, None, outputTable, "sink_name", sink, sinkTable, ConfigFactory.empty()), bk)
   }
 
 }
