@@ -709,7 +709,7 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
 
       val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
 
-      assert(stringType == CharType(12))
+      assert(stringType == VarcharType(12))
     }
 
     "return varchar type and ignore case in CHAR_VARCHAR_METADATA_KEY" in {
