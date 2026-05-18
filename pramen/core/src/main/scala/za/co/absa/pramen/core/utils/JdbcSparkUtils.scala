@@ -31,7 +31,6 @@ object JdbcSparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   val MAXIMUM_VARCHAR_LENGTH = 8192
-  val MAXIMUM_CHAR_LENGTH = 255
   val MAXIMUM_UUID_LENGTH = 50
 
   /**
