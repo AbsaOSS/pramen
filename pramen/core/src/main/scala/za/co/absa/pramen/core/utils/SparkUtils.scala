@@ -418,16 +418,16 @@ object SparkUtils {
   }
 
   /**
-    * Extracts a string-based data type (CharType, VarcharType, or StringType) from field metadata.
+    * Extracts a string-based data type (VarcharType or StringType) from field metadata.
     *
-    * First checks for the presence of character/varchar type metadata key. If found, parses the metadata
-    * value using a pattern to determine if it represents a CHAR or VARCHAR type with a specific length.
+    * First checks for the presence of char/varchar type metadata key. If found, parses the metadata
+    * value using a pattern to extract the length. Both CHAR and VARCHAR metadata are mapped to VarcharType.
     * If the metadata key is not present, attempts to extract a length value from metadata and creates
     * a VarcharType if successful. Falls back to StringType if no specific type information is found
     * or if the metadata cannot be parsed.
     *
     * @param metadata the metadata object containing type information for a field
-    * @return the resolved string-based DataType, which can be CharType, VarcharType, or StringType
+    * @return the resolved string-based DataType, which can be VarcharType or StringType
     */
   def getStringTypeFromMetadata(metadata: Metadata): DataType = {
     def getLength(lenStr: String): Option[Int] = {
