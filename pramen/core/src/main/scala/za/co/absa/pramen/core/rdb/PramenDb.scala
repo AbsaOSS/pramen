@@ -129,7 +129,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
       initTable(executionsTable.records.schema)
     }
 
-    if (0 < dbVersion && dbVersion < 11) {
+    if (dbVersion == 10) {
       addColumn(executionsTable.records.baseTableRow.tableName, "number_of_tasks_completed", "bigint")
     }
   }
