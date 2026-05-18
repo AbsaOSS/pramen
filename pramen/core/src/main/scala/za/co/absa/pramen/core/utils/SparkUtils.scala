@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.api.{CatalogTable, FieldChange}
 import za.co.absa.pramen.core.expr.DateExprEvaluator
-import za.co.absa.pramen.core.utils.JdbcSparkUtils.MAXIMUM_VARCHAR_LENGTH
+import za.co.absa.pramen.core.utils.JdbcSparkUtils.{MAXIMUM_CHAR_LENGTH, MAXIMUM_VARCHAR_LENGTH}
 import za.co.absa.pramen.core.utils.SparkMaster.Databricks
 
 import java.io.ByteArrayOutputStream
@@ -442,7 +442,8 @@ object SparkUtils {
         case charVarcharTypePattern(kind, len) if kind.equalsIgnoreCase("char") =>
           val lenOpt = getLength(len)
           lenOpt match {
-            case Some(l) => CharType(l)
+            case Some(l) if l > 0 && l <= MAXIMUM_CHAR_LENGTH  => CharType(l)
+            case Some(l) => VarcharType(l)
             case None => StringType
           }
         case charVarcharTypePattern(_, len) =>
