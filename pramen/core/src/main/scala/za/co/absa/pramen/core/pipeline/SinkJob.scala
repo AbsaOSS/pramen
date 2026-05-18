@@ -22,6 +22,7 @@ import za.co.absa.pramen.api.jobdef.SinkTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, MetastoreReader, Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.exceptions.LazyJobErrorWrapper
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental}
@@ -42,7 +43,8 @@ class SinkJob(operationDef: OperationDef,
               outputTable: MetaTable,
               sinkName: String,
               sink: Sink,
-              sinkTable: SinkTable)
+              sinkTable: SinkTable,
+              workflowConf: Config)
              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
@@ -182,11 +184,23 @@ class SinkJob(operationDef: OperationDef,
       val stats = MetaTableStats(Option(sinkResult.recordsSent))
       SaveResult(stats, sinkResult.filesSent, sinkResult.hiveTables, sinkResult.warnings ++ tooLongWarnings)
     } catch {
-      case NonFatal(ex) => throw new IllegalStateException("Unable to write to the sink.", ex)
+      case NonFatal(ex) =>
+        throw getSinkException(ex)
     } finally {
       Try {
         sink.close()
       }
+    }
+  }
+
+  /** The wrapping of the exception here is redundant since users already know that the sink has failed. But
+    * the behavior made configurable for backwards compatibility. */
+  private def getSinkException(cause: Throwable): Throwable = {
+    val wrapException = ConfigUtils.getOptionBoolean(workflowConf, Keys.WRAP_SINK_EXCEPTION).getOrElse(false)
+    if (wrapException) {
+      new IllegalStateException("Unable to write to the sink.", cause)
+    } else {
+      cause
     }
   }
 

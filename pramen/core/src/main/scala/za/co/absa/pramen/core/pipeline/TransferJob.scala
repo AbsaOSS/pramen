@@ -43,7 +43,8 @@ class TransferJob(operationDef: OperationDef,
                   sink: Sink,
                   specialCharacters: String,
                   tempDirectory: Option[String],
-                  disableCountQuery: Boolean)
+                  disableCountQuery: Boolean,
+                  workflowConf: Config)
                  (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable) {
 
@@ -57,7 +58,7 @@ class TransferJob(operationDef: OperationDef,
     }
   }
 
-  val sinkJob: SinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDate, bookkeepingMetaTable, sinkName, sink, TransferTableParser.getSinkTable(table))
+  val sinkJob: SinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDate, bookkeepingMetaTable, sinkName, sink, TransferTableParser.getSinkTable(table), workflowConf)
 
   override val scheduleStrategy: ScheduleStrategy = ingestionJob.scheduleStrategy
 
