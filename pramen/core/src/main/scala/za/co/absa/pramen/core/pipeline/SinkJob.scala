@@ -197,7 +197,7 @@ class SinkJob(operationDef: OperationDef,
     * the behavior made configurable for backwards compatibility. */
   private def getSinkException(cause: Throwable): Throwable = {
     val wrapException = ConfigUtils.getOptionBoolean(workflowConf, Keys.WRAP_SINK_EXCEPTION).getOrElse(false)
-    if (wrapException) {
+    if (wrapException || cause == null || (cause != null && cause.getStackTrace.isEmpty)) {
       new IllegalStateException("Unable to write to the sink.", cause)
     } else {
       cause
