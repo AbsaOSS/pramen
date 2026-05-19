@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.pipeline
 
-import com.typesafe.config.{ConfigFactory, ConfigValueFactory}
+import com.typesafe.config.{Config, ConfigFactory, ConfigValueFactory}
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{AnalysisException, DataFrame}
 import org.scalatest.wordspec.AnyWordSpec
@@ -221,7 +221,27 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       assert(ex.getCause.getMessage == "Dummy Exception")
     }
 
-    "throw an exception when write() throws" in {
+    "throw an exception when write() throws with wrapper" in {
+      val sink = new SinkSpy(writeException = new RuntimeException("Dummy Exception"))
+      val conf = ConfigFactory.parseString(
+        """
+          |pramen.internal.wrap.sink.exceptions = true
+          |""".stripMargin)
+
+      val (job, _) = getUseCase(tableDf = exampleDf, sink = sink, conf = conf)
+
+      val ex = intercept[RuntimeException] {
+        job.save(exampleDf, infoDate, runReason, conf, Instant.now(), Some(10L))
+      }
+
+      assert(sink.connectCalled == 1)
+      assert(sink.writeCalled == 1)
+      assert(sink.closeCalled == 1)
+      assert(ex.getMessage == "Unable to write to the sink.")
+      assert(ex.getCause.getMessage == "Dummy Exception")
+    }
+
+    "throw an exception when write() throws without wrapper" in {
       val sink = new SinkSpy(writeException = new RuntimeException("Dummy Exception"))
 
       val (job, _) = getUseCase(tableDf = exampleDf, sink = sink)
@@ -233,8 +253,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       assert(sink.connectCalled == 1)
       assert(sink.writeCalled == 1)
       assert(sink.closeCalled == 1)
-      assert(ex.getMessage == "Unable to write to the sink.")
-      assert(ex.getCause.getMessage == "Dummy Exception")
+      assert(ex.getMessage == "Dummy Exception")
     }
 
     "ignore if close() throws" in {
@@ -253,7 +272,8 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
   def getUseCase(sinkTable: SinkTable = SinkTableFactory.getDummySinkTable(),
                  tableDf: DataFrame = null,
                  tableException: Throwable = null,
-                 sink: Sink = SinkSpy(conf, "", spark)): (SinkJob, SyncBookkeeperMock) = {
+                 sink: Sink = SinkSpy(conf, "", spark),
+                 conf: Config = ConfigFactory.empty()): (SinkJob, SyncBookkeeperMock) = {
     val operation = OperationDefFactory.getDummyOperationDef(extraOptions = Map[String, String]("value" -> "7"))
 
     val bk = new SyncBookkeeperMock
@@ -262,7 +282,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
 
     val outputTable = MetaTableFactory.getDummyMetaTable(name = "table1->mysink")
 
-    (new SinkJob(operation, metastore, bk, Nil, None, outputTable, "sink_name", sink, sinkTable, ConfigFactory.empty()), bk)
+    (new SinkJob(operation, metastore, bk, Nil, None, outputTable, "sink_name", sink, sinkTable, conf), bk)
   }
 
 }
