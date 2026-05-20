@@ -49,9 +49,9 @@ object ExternalChannelFactoryReflect {
     }
 
     factory match {
-      case fv2: ExternalChannelFactoryV2[T] =>
+      case fv2: ExternalChannelFactoryV2[T @unchecked] =>
         fv2.apply(conf, workflowConfig, parentPath, spark)
-      case fv1: ExternalChannelFactory[T] =>
+      case fv1: ExternalChannelFactory[T @unchecked] =>
         fv1.apply(conf, parentPath, spark)
     }
   }
