@@ -91,7 +91,6 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
 
   override def getProperties: Properties = {
     val properties = new Properties()
-    properties.put("driver", jdbcConfig.driver)
     jdbcConfig.user.foreach(db => properties.put("user", db))
     jdbcConfig.password.foreach(db => properties.put("password", db))
     jdbcConfig.database.foreach(db => properties.put("database", db))
