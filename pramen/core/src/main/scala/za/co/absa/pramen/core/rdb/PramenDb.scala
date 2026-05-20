@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.rdb
 
 import org.slf4j.LoggerFactory
 import slick.jdbc.JdbcBackend.Database
-import slick.jdbc.{JdbcBackend, JdbcProfile}
+import slick.jdbc._
 import slick.util.AsyncExecutor
 import za.co.absa.pramen.api.Pramen
 import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTable, MetadataTable, OffsetTable, SchemaTable}
@@ -171,9 +171,27 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     try {
       val quotedTable = slickProfile.quoteIdentifier(table)
       val quotedColumnName = slickProfile.quoteIdentifier(columnName)
-      slickDb.run(
-        sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName TYPE #$columnType"
-      ).execute()
+      slickProfile match {
+        case _: SQLiteProfile =>
+          log.warn(s"SQLite does not support altering column types. Column '$columnName' in table '$table' will remain with the original type for the url: $activeUrl")
+        case _: MySQLProfile =>
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable MODIFY COLUMN #$quotedColumnName #$columnType"
+          ).execute()
+        case _: OracleProfile    =>
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable MODIFY (#$quotedColumnName #$columnType)"
+          ).execute()
+        case _: SQLServerProfile | HsqldbProfile =>
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName #$columnType"
+          ).execute()
+        case _                              =>
+          // PostgreSQL, H2, and other profiles that support ALTER COLUMN ... TYPE
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName TYPE #$columnType"
+          ).execute()
+      }
     } catch {
       case NonFatal(ex) =>
         throw new RuntimeException(s"Unable to alter column: '$columnName $columnType' in table: '$table' for the url: $activeUrl", ex)
