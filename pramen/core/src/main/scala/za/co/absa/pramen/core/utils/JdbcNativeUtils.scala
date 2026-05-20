@@ -190,10 +190,7 @@ object JdbcNativeUtils {
   }
 
   private[core] def getJdbcConnection(jdbcConfig: JdbcConfig, url: String): Connection = {
-    Class.forName(jdbcConfig.driver)
-
     val properties = new Properties()
-    properties.put("driver", jdbcConfig.driver)
     jdbcConfig.user.foreach(db => properties.put("user", db))
     jdbcConfig.password.foreach(db => properties.put("password", db))
     jdbcConfig.database.foreach(db => properties.put("database", db))
@@ -204,7 +201,21 @@ object JdbcNativeUtils {
 
     DriverManager.setLoginTimeout(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))
 
-    val connection = DriverManager.getConnection(url, properties)
+    val connection = try {
+      // Trying using default class loader
+      Class.forName(jdbcConfig.driver)
+      DriverManager.getConnection(url, properties)
+    } catch {
+      case ex: ClassNotFoundException =>
+        // Trying using the class loader set by the thread context in case the driver is dynamically loaded
+        log.info(s"Unable to initialize the driver ${jdbcConfig.driver} using the default class loader. Trying to use the local thread class loader instead", ex)
+        val loader = Thread.currentThread().getContextClassLoader
+        Class.forName(jdbcConfig.driver, true, loader)
+        val driverClass = loader.loadClass(jdbcConfig.driver)
+        val driver = driverClass.getDeclaredConstructor().newInstance().asInstanceOf[Driver]
+        DriverManager.registerDriver(driver)
+        driver.connect(url, properties)
+    }
 
     jdbcConfig.autoCommit.foreach { autoCommit =>
       try {
