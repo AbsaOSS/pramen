@@ -134,11 +134,11 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
 
     if (0 < dbVersion && dbVersion < 12) {
-      alterColumn(bookkeepingTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)")
-      alterColumn(offsetTable.records.baseTableRow.tableName, "table_name", "varchar(600)")
-      alterColumn(journalTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)")
-      alterColumn(metadataTable.records.baseTableRow.tableName, "table_name", "varchar(255)")
-      alterColumn(schemaTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)")
+      alterColumn(bookkeepingTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)", nullable = false)
+      alterColumn(offsetTable.records.baseTableRow.tableName, "table_name", "varchar(600)", nullable = false)
+      alterColumn(journalTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)", nullable = false)
+      alterColumn(metadataTable.records.baseTableRow.tableName, "table_name", "varchar(255)", nullable = false)
+      alterColumn(schemaTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)", nullable = false)
     }
   }
 
@@ -167,7 +167,8 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
-  private def alterColumn(table: String, columnName: String, columnType: String): Unit = {
+  private def alterColumn(table: String, columnName: String, columnType: String, nullable: Boolean): Unit = {
+    val nullSuffix = if (nullable) " NOT NULL" else ""
     try {
       val quotedTable = slickProfile.quoteIdentifier(table)
       val quotedColumnName = slickProfile.quoteIdentifier(columnName)
@@ -176,7 +177,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
           log.warn(s"SQLite does not support altering column types. Column '$columnName' in table '$table' will remain with the original type for the url: $activeUrl")
         case _: MySQLProfile =>
           slickDb.run(
-            sqlu"ALTER TABLE #$quotedTable MODIFY COLUMN #$quotedColumnName #$columnType"
+            sqlu"ALTER TABLE #$quotedTable MODIFY COLUMN #$quotedColumnName #$columnType $nullSuffix"
           ).execute()
         case _: OracleProfile    =>
           slickDb.run(
@@ -184,7 +185,7 @@ class PramenDb(val jdbcConfig: JdbcConfig,
           ).execute()
         case _: SQLServerProfile | HsqldbProfile =>
           slickDb.run(
-            sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName #$columnType"
+            sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName #$columnType $nullSuffix"
           ).execute()
         case _                              =>
           // PostgreSQL, H2, and other profiles that support ALTER COLUMN ... TYPE
