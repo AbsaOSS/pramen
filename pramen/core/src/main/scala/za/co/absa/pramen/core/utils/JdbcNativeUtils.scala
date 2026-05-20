@@ -210,11 +210,14 @@ object JdbcNativeUtils {
         // Trying using the class loader set by the thread context in case the driver is dynamically loaded
         log.info(s"Unable to initialize the driver ${jdbcConfig.driver} using the default class loader. Trying to use the local thread class loader instead", ex)
         val loader = Thread.currentThread().getContextClassLoader
-        Class.forName(jdbcConfig.driver, true, loader)
-        val driverClass = loader.loadClass(jdbcConfig.driver)
+        val driverClass = Class.forName(jdbcConfig.driver, true, loader)
         val driver = driverClass.getDeclaredConstructor().newInstance().asInstanceOf[Driver]
         DriverManager.registerDriver(driver)
-        driver.connect(url, properties)
+        val conn = driver.connect(url, properties)
+        if (conn == null) {
+          throw new SQLException(s"Driver ${jdbcConfig.driver} returned null connection for URL: $url")
+        }
+        conn
     }
 
     jdbcConfig.autoCommit.foreach { autoCommit =>
