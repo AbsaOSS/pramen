@@ -132,6 +132,14 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     if (dbVersion == 10) {
       addColumn(executionsTable.records.baseTableRow.tableName, "number_of_tasks_completed", "bigint")
     }
+
+    if (0 < dbVersion && dbVersion < 12) {
+      alterColumn(bookkeepingTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)")
+      alterColumn(offsetTable.records.baseTableRow.tableName, "table_name", "varchar(600)")
+      alterColumn(journalTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)")
+      alterColumn(metadataTable.records.baseTableRow.tableName, "table_name", "varchar(255)")
+      alterColumn(schemaTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)")
+    }
   }
 
   private def initTable(schema: slickProfile.SchemaDescription): Unit = {
@@ -159,6 +167,19 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
+  private def alterColumn(table: String, columnName: String, columnType: String): Unit = {
+    try {
+      val quotedTable = slickProfile.quoteIdentifier(table)
+      val quotedColumnName = slickProfile.quoteIdentifier(columnName)
+      slickDb.run(
+        sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName TYPE #$columnType"
+      ).execute()
+    } catch {
+      case NonFatal(ex) =>
+        throw new RuntimeException(s"Unable to alter column: '$columnName $columnType' in table: '$table' for the url: $activeUrl", ex)
+    }
+  }
+
 
   override def close(): Unit = {
     try {
@@ -176,7 +197,7 @@ object PramenDb {
   private val log = LoggerFactory.getLogger(this.getClass)
   private val conf = Pramen.getConfig
 
-  val MODEL_VERSION = 11
+  val MODEL_VERSION = 12
   val DEFAULT_RETRIES: Int = conf.getInt("pramen.internal.connection.retries.default")
   val BACKOFF_MIN_MS: Int = conf.getInt("pramen.internal.connection.backoff.min.ms")
   val BACKOFF_MAX_MS: Int = conf.getInt("pramen.internal.connection.backoff.max.ms")

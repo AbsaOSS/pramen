@@ -23,7 +23,7 @@ trait OffsetTable {
   import profile.api._
 
   class OffsetRecords(tag: Tag) extends Table[OffsetRecord](tag, "offsets") {
-    def pramenTableName = column[String]("table_name", O.Length(256))
+    def pramenTableName = column[String]("table_name", O.Length(600))
     def infoDate = column[String]("info_date", O.Length(20))
     def dataType = column[String]("data_type", O.Length(20))
     def minOffset = column[String]("min_offset")

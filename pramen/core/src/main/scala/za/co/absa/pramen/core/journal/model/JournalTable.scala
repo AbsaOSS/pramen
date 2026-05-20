@@ -24,7 +24,7 @@ trait JournalTable {
 
   class JournalRecords(tag: Tag) extends Table[JournalTask](tag, "journal") {
     def jobName = column[String]("job_name", O.Length(200))
-    def pramenTableName = column[String]("watcher_table_name", O.Length(128))
+    def pramenTableName = column[String]("watcher_table_name", O.Length(255))
     def periodBegin = column[String]("period_begin", O.Length(20))
     def periodEnd = column[String]("period_end", O.Length(20))
     def informationDate = column[String]("information_date", O.Length(20))

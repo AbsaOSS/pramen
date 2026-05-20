@@ -23,7 +23,7 @@ trait BookkeepingTable {
   import profile.api._
 
   class BookkeepingRecords(tag: Tag) extends Table[BookkeepingRecord](tag, "bookkeeping") {
-    def pramenTableName      = column[String]("watcher_table_name", O.Length(128))
+    def pramenTableName      = column[String]("watcher_table_name", O.Length(255))
     def infoDate             = column[String]("info_date", O.Length(20))
     def infoDateBegin        = column[String]("info_date_begin", O.Length(20))
     def infoDateEnd          = column[String]("info_date_end", O.Length(20))

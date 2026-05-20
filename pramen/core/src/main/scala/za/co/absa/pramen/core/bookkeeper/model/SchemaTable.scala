@@ -23,7 +23,7 @@ trait SchemaTable {
   import profile.api._
 
   class SchemaRecords(tag: Tag) extends Table[SchemaRecord](tag, "schemas") {
-    def pramenTableName = column[String]("watcher_table_name", O.Length(128))
+    def pramenTableName = column[String]("watcher_table_name", O.Length(255))
     def infoDate = column[String]("info_date", O.Length(20))
     def schemaJson = column[String]("schema_json")
     def * = (pramenTableName, infoDate, schemaJson) <> (SchemaRecord.tupled, SchemaRecord.unapply)
