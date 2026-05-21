@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.bookkeeper
 
 import io.delta.tables.DeltaTable
 import org.apache.spark.sql.functions.{col, lit}
-import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
+import org.apache.spark.sql._
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
@@ -51,7 +51,19 @@ class BookkeeperDeltaTable(database: Option[String],
   init()
 
   override def getBkDf(filter: Column): Dataset[DataChunk] = {
-    val df = spark.table(recordsFullTableName).as[DataChunk]
+    val df = try {
+      spark.table(recordsFullTableName).as[DataChunk]
+    } catch {
+      case _: AnalysisException =>
+        // Spark 2 and 3
+        migrateModel()
+        spark.table(recordsFullTableName).as[DataChunk]
+
+      case ex: Throwable if ex.getMessage.contains("UNRESOLVED_COLUMN") =>
+        // Spark 3 and 4
+        migrateModel()
+        spark.table(recordsFullTableName).as[DataChunk]
+    }
 
     df.filter(filter)
       .orderBy(col("jobFinished"))
@@ -117,5 +129,19 @@ class BookkeeperDeltaTable(database: Option[String],
     if (!spark.catalog.tableExists(schemasFullTableName)) {
       writeEmptyDataset[TableSchemaJson](schemasFullTableName)
     }
+  }
+
+  private def migrateModel(): Unit = {
+    migrateModelViaEmptyDataset[DataChunk](recordsFullTableName)
+  }
+
+  private def migrateModelViaEmptyDataset[T <: Product : universe.TypeTag : ClassTag](pathOrTable: String): Unit = {
+    val df = Seq.empty[T].toDS
+
+    df.write
+      .format("delta")
+      .mode(SaveMode.Append)
+      .option("mergeSchema", "true")
+      .saveAsTable(pathOrTable)
   }
 }
