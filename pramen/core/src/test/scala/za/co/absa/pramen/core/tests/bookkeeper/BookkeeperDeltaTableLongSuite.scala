@@ -19,8 +19,10 @@ package za.co.absa.pramen.core.tests.bookkeeper
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDeltaTable
+import za.co.absa.pramen.core.model.DataChunk
 
 import java.io.File
+import java.time.LocalDate
 import scala.util.Random
 
 class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTestBase with BeforeAndAfter with BeforeAndAfterAll {
@@ -70,6 +72,28 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
 
       assert(spark.catalog.tableExists(s"${prefix}bookkeeping"))
       assert(spark.catalog.tableExists(s"${prefix}schemas"))
+    }
+
+    "test migrations work properly" in {
+      import spark.implicits._
+
+      assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+
+      val prefix = getNewTablePrefix
+      val bkTable = s"${prefix}bookkeeping"
+
+      val df = Seq.empty[DataChunk].toDS.toDF
+        .drop("batchId", "appendedRecordCount")
+
+      df.write
+        .format("delta")
+        .saveAsTable(bkTable)
+
+      assert(spark.catalog.tableExists(bkTable))
+
+      val bk = getBookkeeper(prefix, 123L)
+
+      bk.getDataChunks("table1", LocalDate.parse("2018-02-18"), Some(123L))
     }
   }
 

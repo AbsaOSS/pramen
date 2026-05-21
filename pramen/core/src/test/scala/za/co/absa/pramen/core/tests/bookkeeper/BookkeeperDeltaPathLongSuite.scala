@@ -21,7 +21,10 @@ import org.scalatest.BeforeAndAfter
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.BookkeeperDeltaPath
 import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.model.DataChunk
 import za.co.absa.pramen.core.utils.FsUtils
+
+import java.time.LocalDate
 
 class BookkeeperDeltaPathLongSuite extends BookkeeperCommonSuite with SparkTestBase with BeforeAndAfter with TempDirFixture {
   import za.co.absa.pramen.core.bookkeeper.BookkeeperDeltaPath._
@@ -50,6 +53,25 @@ class BookkeeperDeltaPathLongSuite extends BookkeeperCommonSuite with SparkTestB
         assert(fsUtils.exists(new Path(tmpDir, s"$bookkeepingRootPath/$recordsDirName")))
         assert(fsUtils.exists(new Path(tmpDir, locksDirName)))
       }
+    }
+
+    "test migrations work properly" in {
+      import spark.implicits._
+
+      assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+
+      val tmpDir2 = createTempDir("bkHadoopDeltaPathSuite_migration")
+      val recordsPath = new Path(tmpDir2, s"$bookkeepingRootPath/$recordsDirName").toString
+
+      Seq.empty[DataChunk].toDS.toDF
+        .drop("batchId", "appendedRecordCount")
+        .write
+        .format("delta")
+        .save(recordsPath)
+
+      val bk = new BookkeeperDeltaPath(tmpDir2, 234L)
+
+      bk.getDataChunks("table1", LocalDate.parse("2018-02-18"), Some(234L))
     }
 
     testBookKeeper(batchId => getBookkeeper(batchId))

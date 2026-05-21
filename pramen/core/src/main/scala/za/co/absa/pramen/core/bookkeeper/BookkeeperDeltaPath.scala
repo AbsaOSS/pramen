@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.bookkeeper
 import io.delta.tables.DeltaTable
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
+import org.apache.spark.sql._
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.utils.FsUtils
@@ -48,14 +48,28 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
   init()
 
   override def getBkDf(filter: Column): Dataset[DataChunk] = {
-    val df = spark
-      .read
-      .format("delta")
-      .load(recordsPath.toUri.toString)
+    def load(): Dataset[DataChunk] = {
+      spark
+        .read
+        .format("delta")
+        .load(recordsPath.toUri.toString)
+        .filter(filter)
+        .orderBy(col("jobFinished"))
+        .as[DataChunk]
+    }
+    try {
+      load()
+    } catch {
+      case _: AnalysisException =>
+        // Spark 2 and 3
+        migrateModel(recordsPath)
+        load()
 
-    df.filter(filter)
-      .orderBy(col("jobFinished"))
-      .as[DataChunk]
+      case ex: Throwable if ex.getMessage.contains("UNRESOLVED_COLUMN") =>
+        // Spark 3 and 4
+        migrateModel(recordsPath)
+        load()
+    }
   }
 
   override def saveRecordCountDelta(dataChunk: DataChunk): Unit = {
@@ -131,5 +145,19 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
       fsUtils.createDirectoryRecursive(path)
       writeEmptyDataset[TableSchemaJson](path.toUri.toString)
     }
+  }
+
+  private def migrateModel(path: Path): Unit = {
+    migrateModelViaEmptyDataset[DataChunk](path.toString)
+  }
+
+  private def migrateModelViaEmptyDataset[T <: Product : universe.TypeTag : ClassTag](pathOrTable: String): Unit = {
+    val df = Seq.empty[T].toDS
+
+    df.write
+      .mode(SaveMode.Append)
+      .format("delta")
+      .option("mergeSchema", "true")
+      .save(pathOrTable)
   }
 }
