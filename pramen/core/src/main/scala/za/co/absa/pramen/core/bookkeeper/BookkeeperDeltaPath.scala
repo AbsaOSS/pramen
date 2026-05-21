@@ -18,8 +18,8 @@ package za.co.absa.pramen.core.bookkeeper
 
 import io.delta.tables.DeltaTable
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions._
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.utils.FsUtils
@@ -60,7 +60,7 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
     try {
       load()
     } catch {
-      case _: AnalysisException =>
+      case ex: AnalysisException if ex.getMessage().contains("cannot resolve") =>
         // Spark 2 and 3
         migrateModel(recordsPath)
         load()
