@@ -53,7 +53,7 @@ class BookkeeperDeltaTable(database: Option[String],
     val df = try {
       spark.table(recordsFullTableName).as[DataChunk]
     } catch {
-      case _: AnalysisException =>
+      case ex: AnalysisException if ex.getMessage().contains("cannot resolve") =>
         // Spark 2 and 3
         migrateModel()
         spark.table(recordsFullTableName).as[DataChunk]

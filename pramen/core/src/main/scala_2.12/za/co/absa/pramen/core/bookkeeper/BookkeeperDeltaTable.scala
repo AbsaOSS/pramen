@@ -17,8 +17,8 @@
 package za.co.absa.pramen.core.bookkeeper
 
 import io.delta.tables.DeltaTable
-import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql._
+import org.apache.spark.sql.functions.{col, lit}
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
@@ -54,7 +54,7 @@ class BookkeeperDeltaTable(database: Option[String],
     val df = try {
       spark.table(recordsFullTableName).as[DataChunk]
     } catch {
-      case _: AnalysisException =>
+      case ex: AnalysisException if ex.getMessage().contains("cannot resolve") =>
         // Spark 2 and 3
         migrateModel()
         spark.table(recordsFullTableName).as[DataChunk]
