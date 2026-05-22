@@ -24,7 +24,7 @@ import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
-import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.core.samples.RdbExampleTable
@@ -152,7 +152,7 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   }
 
   private def debugSql(sql: String): Unit = {
-    JdbcNativeUtils.withResultSet(new JdbcUrlSelectorImpl(jdbcConfig), sql, 1) { rs =>
+    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), sql, 1) { rs =>
       val mt = rs.getMetaData
 
       for (i <- 1 to mt.getColumnCount) {
