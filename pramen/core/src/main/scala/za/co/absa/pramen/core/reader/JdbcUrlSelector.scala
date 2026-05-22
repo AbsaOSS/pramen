@@ -47,11 +47,15 @@ trait JdbcUrlSelector {
   /** Returns properties for the JDBC connection. */
   def getProperties: Properties
 
+  def jdbcDriverJarPath: Option[String]
+
   /** Returns an JDBC connection with the URL that has successfully connected. */
   @throws[SQLException]
   def getWorkingConnection(retriesLeft: Int): (Connection, String)
 }
 
 object JdbcUrlSelector {
-  def apply(jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(jdbcConfig)
+  def apply(jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(None, jdbcConfig)
+
+  def apply(jdbcDriverJarPath: Option[String], jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(jdbcDriverJarPath, jdbcConfig)
 }

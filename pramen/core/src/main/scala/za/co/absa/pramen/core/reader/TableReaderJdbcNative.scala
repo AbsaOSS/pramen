@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
-import za.co.absa.pramen.core.utils.{JdbcNativeUtils, JdbcSparkUtils, StringUtils, TimeUtils}
+import za.co.absa.pramen.core.utils._
 
 import java.time.{Instant, LocalDate}
 
@@ -31,7 +31,6 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
                             jdbcUrlSelector: JdbcUrlSelector,
                             conf: Config)
                            (implicit spark: SparkSession) extends TableReaderJdbcBase(jdbcReaderConfig, jdbcUrlSelector, conf) {
-  import TableReaderJdbcNative._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -40,6 +39,10 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
 
   logConfiguration()
+
+  private[core] def getJdbcSelector: JdbcUrlSelector = {
+    jdbcUrlSelector
+  }
 
   private[core] def getJdbcReaderConfig: TableReaderJdbcConfig = {
     jdbcReaderConfig.copy(jdbcConfig = jdbcConfig)
@@ -154,6 +157,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
 object TableReaderJdbcNative {
   val FETCH_SIZE_KEY = "option.fetchsize"
+  val DRIVER_JAR_PATH = "driver.jar.path"
 
   def apply(conf: Config,
             workflowConf: Config,
@@ -162,7 +166,8 @@ object TableReaderJdbcNative {
     val tableReaderJdbcOrig = TableReaderJdbcConfig.load(conf, workflowConf, parent)
     val jdbcConfig = getJdbcConfig(tableReaderJdbcOrig, conf)
     val tableReaderJdbc = tableReaderJdbcOrig.copy(jdbcConfig = jdbcConfig)
-    val urlSelector = JdbcUrlSelector(tableReaderJdbc.jdbcConfig)
+    val jdbcDriverJarPath = ConfigUtils.getOptionString(conf, DRIVER_JAR_PATH)
+    val urlSelector = JdbcUrlSelector(jdbcDriverJarPath, tableReaderJdbc.jdbcConfig)
 
     new TableReaderJdbcNative(tableReaderJdbc, urlSelector, conf)
   }

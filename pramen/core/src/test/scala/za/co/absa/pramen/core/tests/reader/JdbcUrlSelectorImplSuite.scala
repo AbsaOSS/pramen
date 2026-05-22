@@ -17,8 +17,8 @@
 package za.co.absa.pramen.core.tests.reader
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.reader.{JdbcUrlSelector, JdbcUrlSelectorImpl}
 
 class JdbcUrlSelectorImplSuite extends AnyWordSpec {
   "constructor" should {
@@ -144,6 +144,6 @@ class JdbcUrlSelectorImplSuite extends AnyWordSpec {
 
   private def getJdbcUrlSelector(primaryUrl: Option[String], fallbackUrls: Seq[String]): JdbcUrlSelectorImpl = {
     val conf = JdbcConfig("testDriver", primaryUrl, fallbackUrls, None, Some("testUser"), Some("testPassword"))
-    new JdbcUrlSelectorImpl(conf)
+    JdbcUrlSelector(conf).asInstanceOf[JdbcUrlSelectorImpl]
   }
 }

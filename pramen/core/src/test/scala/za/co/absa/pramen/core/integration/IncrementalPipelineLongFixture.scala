@@ -29,7 +29,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.OffsetManagerJdbc
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
-import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils, UsingUtils}
@@ -1451,7 +1451,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
   /* This method is used to inspect offsets after operations */
   private def debugOffsets(): Unit = {
-    JdbcNativeUtils.withResultSet(new JdbcUrlSelectorImpl(jdbcConfig), "SELECT * FROM \"offsets\"", 1) { rs =>
+    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), "SELECT * FROM \"offsets\"", 1) { rs =>
       val mt = rs.getMetaData
 
       for (i <- 1 to mt.getColumnCount) {

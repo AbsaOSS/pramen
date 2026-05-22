@@ -21,8 +21,10 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.core.reader.TableReaderJdbcNative.DRIVER_JAR_PATH
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.LocalDate
 
@@ -64,7 +66,8 @@ class JdbcSource(sourceConfig: Config,
   private[core] def getReader(query: Query, isCountQuery: Boolean): TableReader = {
     val jdbcConfig = TableReaderJdbcNative.getJdbcConfig(jdbcReaderConfig, sourceConfig)
     val jdbcReaderConfigNative = jdbcReaderConfig.copy(jdbcConfig = jdbcConfig)
-    val urlSelector = JdbcUrlSelector(jdbcConfig)
+    val jdbcDriverJarPath = ConfigUtils.getOptionString(sourceConfig, DRIVER_JAR_PATH)
+    val urlSelector = JdbcUrlSelector(jdbcDriverJarPath, jdbcConfig)
 
     query match {
       case Query.Table(dbTable) if jdbcReaderConfig.useJdbcNative && !isCountQuery =>

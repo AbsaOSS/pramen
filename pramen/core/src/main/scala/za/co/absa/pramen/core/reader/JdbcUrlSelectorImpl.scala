@@ -25,7 +25,7 @@ import java.sql.{Connection, SQLException}
 import java.util.Properties
 import scala.util.{Failure, Random, Success, Try}
 
-class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
+class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val BACKOFF_MIN_S = 1
