@@ -59,7 +59,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
         getCountForSql(sql)
       case Query.Sql(sql) =>
         log.info(s"JDBC Native count of a non-SELECT SQL statement: $sql")
-        JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
+        JdbcNativeUtils.getJdbcNativeRecordCount(jdbcUrlSelector, sql)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
@@ -101,7 +101,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   private[core] def getDataFrame(sql: String, tableOpt: Option[String]): DataFrame = {
     log.info(s"JDBC Query: $sql")
 
-    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcUrlSelector, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
@@ -112,7 +112,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
         case Some(table) => sqlGen.getSchemaQuery(table, Seq.empty)
         case _ => JdbcSparkUtils.getSchemaQuery(sql)
       }
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, schemaQuery) { (connection, _) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, _) =>
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>
             log.info(s"Reading JDBC metadata descriptions the table: $table")
@@ -135,7 +135,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
     log.info(s"JDBC Query: $sql")
 
-    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcUrlSelector, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
@@ -144,7 +144,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     if (jdbcReaderConfig.enableSchemaMetadata) {
       val schemaQuery = sqlGen.getSchemaQuery(tableName, columns)
 
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, schemaQuery) { (connection, _) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, _) =>
         log.info(s"Reading JDBC metadata descriptions the table: $tableName")
         df = spark.createDataFrame(df.rdd,
           JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, sqlGen.unquote(tableName), connection))

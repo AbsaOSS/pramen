@@ -185,7 +185,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
         case Some(table) => sqlGen.getSchemaQuery(table, Seq.empty)
         case _ => JdbcSparkUtils.getSchemaQuery(sql)
       }
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, schemaQuery) { (connection, jdbcMetadata) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, jdbcMetadata) =>
         val schemaWithMetadata = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>

@@ -18,7 +18,9 @@ package za.co.absa.pramen.core.reader
 
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-import java.sql.{Connection, SQLException}
+import java.io.File
+import java.net.URLClassLoader
+import java.sql.{Connection, Driver, SQLException}
 import java.util.Properties
 
 trait JdbcUrlSelector {
@@ -47,10 +49,17 @@ trait JdbcUrlSelector {
   /** Returns properties for the JDBC connection. */
   def getProperties: Properties
 
+  /** Returns the path to the Driver JAR if available. */
   def jdbcDriverJarPath: Option[String]
+
+  /** Returns a dynamically pre-loaded driver if available. */
+  def getLoadedDriver: Option[Driver]
 
   /** Returns an JDBC connection with the URL that has successfully connected. */
   @throws[SQLException]
+  def getWorkingConnection(): (Connection, String)
+
+  /** Returns an JDBC connection with the URL that has successfully connected. */
   def getWorkingConnection(retriesLeft: Int): (Connection, String)
 }
 
@@ -58,4 +67,19 @@ object JdbcUrlSelector {
   def apply(jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(None, jdbcConfig)
 
   def apply(jdbcDriverJarPath: Option[String], jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(jdbcDriverJarPath, jdbcConfig)
+
+  def loadDriver(driverJarPath: String, driverClassName: String): Driver = {
+    val jarFile = new File(driverJarPath)
+    val jarURL = jarFile.toURI.toURL
+
+    val loader = new URLClassLoader(
+      Array(jarURL),
+      this.getClass.getClassLoader
+    )
+
+    // Load driver class
+    val driverClass = loader.loadClass(driverClassName)
+    val driver = driverClass.getDeclaredConstructor().newInstance().asInstanceOf[Driver]
+    driver
+  }
 }

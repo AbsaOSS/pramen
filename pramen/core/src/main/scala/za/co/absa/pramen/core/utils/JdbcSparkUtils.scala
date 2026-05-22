@@ -20,6 +20,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types._
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.SparkUtils.{COMMENT_METADATA_KEY, MAX_LENGTH_METADATA_KEY}
 import za.co.absa.pramen.core.utils.impl.JdbcFieldMetadata
@@ -178,14 +179,14 @@ object JdbcSparkUtils {
     * Connects to a database and executes a raw SQL query using Java JDBC, and allows running a custom action on the
     * metadata of the query.
     *
-    * @param jdbcConfig  a JDBC configuration.
-    * @param schemaQuery a SQL query in the dialect native to the database which does not return records.
-    * @param action      the action to execute on a connection + resultset metadata.
+    * @param jdbcUrlSelector a JDBC URL slector.
+    * @param schemaQuery     a SQL query in the dialect native to the database which does not return records.
+    * @param action          the action to execute on a connection + resultset metadata.
     */
-  def withJdbcMetadata(jdbcConfig: JdbcConfig,
+  def withJdbcMetadata(jdbcUrlSelector: JdbcUrlSelector,
                        schemaQuery: String)
                       (action: (Connection, ResultSetMetaData) => Unit): Unit = {
-    val (_, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
+    val (connection, _) = jdbcUrlSelector.getWorkingConnection()
 
     log.info(s"Getting metadata for: $schemaQuery")
 
