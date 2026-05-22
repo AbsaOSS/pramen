@@ -60,7 +60,7 @@ class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark
     try {
       load()
     } catch {
-      case ex: AnalysisException if ex.getMessage().contains("cannot resolve") =>
+      case ex: AnalysisException if ex.getMessage().contains("cannot resolve") || ex.getMessage().contains("does not exist") =>
         // Spark 2 and 3
         migrateModel(recordsPath)
         load()

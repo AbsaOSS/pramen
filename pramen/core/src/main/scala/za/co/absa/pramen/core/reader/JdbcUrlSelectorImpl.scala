@@ -21,7 +21,7 @@ import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils}
 
-import java.sql.{Connection, SQLException}
+import java.sql.{Connection, Driver, SQLException}
 import java.util.Properties
 import scala.util.{Failure, Random, Success, Try}
 
@@ -33,6 +33,13 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
   private val allUrls = (jdbcConfig.primaryUrl ++ jdbcConfig.fallbackUrls).toSeq
   private val numberOfUrls = allUrls.size
   private var urlPool = allUrls
+
+  @transient
+  override val getLoadedDriver: Option[Driver] = {
+    jdbcDriverJarPath.map { driverPath =>
+      JdbcUrlSelector.loadDriver(driverPath, jdbcConfig.driver)
+    }
+  }
 
   validate()
 
@@ -102,10 +109,15 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
   }
 
   @throws[SQLException]
-  def getWorkingConnection(retriesLeft: Int): (Connection, String) = {
+  override def getWorkingConnection(): (Connection, String) = {
+    getWorkingConnection(jdbcConfig.retries.getOrElse(getNumberOfUrls))
+  }
+
+  @throws[SQLException]
+  override def getWorkingConnection(retriesLeft: Int): (Connection, String) = {
     val currentUrl = getUrl
     Try {
-      JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl)
+      JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl, getLoadedDriver)
     } match {
       case Success(connection) => (connection, currentUrl)
       case Failure(ex)         =>
@@ -168,5 +180,4 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
       throw new IllegalArgumentException(s"Empty string is not a valid JDBC URL.")
     }
   }
-
 }

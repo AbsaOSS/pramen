@@ -97,7 +97,7 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
     var count = 0L
     log.info(s"Executing: $countSql")
 
-    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql, jdbcRetries) { rs =>
+    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql) { rs =>
       if (!rs.next())
         throw new IllegalStateException(s"No rows returned by the count query: $countSql")
       else {

@@ -25,7 +25,7 @@ import java.sql.{Date, ResultSet, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
 import scala.collection.mutable
 
-class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrectDecimalsAsString: Boolean, arraysSupported: Boolean) extends Iterator[Row] {
+class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrectDecimalsAsString: Boolean, arraysSupported: Boolean) extends Iterator[Row] with AutoCloseable {
   import ResultSetToRowIterator._
 
   private var didHasNext = false
@@ -63,7 +63,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
     StructType(columns)
   }
 
-  def close(): Unit = {
+  override def close(): Unit = {
     rs.close()
   }
 

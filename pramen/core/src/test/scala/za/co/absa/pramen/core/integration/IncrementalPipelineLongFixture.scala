@@ -1451,7 +1451,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
   /* This method is used to inspect offsets after operations */
   private def debugOffsets(): Unit = {
-    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), "SELECT * FROM \"offsets\"", 1) { rs =>
+    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), "SELECT * FROM \"offsets\"") { rs =>
       val mt = rs.getMetaData
 
       for (i <- 1 to mt.getColumnCount) {

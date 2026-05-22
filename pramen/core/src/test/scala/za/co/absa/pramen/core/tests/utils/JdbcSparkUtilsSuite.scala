@@ -23,6 +23,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.JdbcSparkUtils
@@ -86,8 +87,9 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
         .load()
 
       var newSchema: StructType = null
+      val selector = JdbcUrlSelector(jdbcConfig)
 
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadataRs) =>
+      JdbcSparkUtils.withJdbcMetadata(selector, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadataRs) =>
         newSchema = JdbcSparkUtils.addColumnDescriptionsFromJdbc(
           JdbcSparkUtils.addMetadataFromJdbc(df.schema, metadataRs),
           RdbExampleTable.Company.tableName,
@@ -136,7 +138,8 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
   "withJdbcMetadata" should {
     "provide the metadata object for the query" in {
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadata) =>
+      val selector = JdbcUrlSelector(jdbcConfig)
+      JdbcSparkUtils.withJdbcMetadata(selector, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadata) =>
         assert(!connection.isClosed)
         assert(metadata.getColumnName(2) == "NAME")
       }

@@ -152,7 +152,7 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   }
 
   private def debugSql(sql: String): Unit = {
-    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), sql, 1) { rs =>
+    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), sql) { rs =>
       val mt = rs.getMetaData
 
       for (i <- 1 to mt.getColumnCount) {
