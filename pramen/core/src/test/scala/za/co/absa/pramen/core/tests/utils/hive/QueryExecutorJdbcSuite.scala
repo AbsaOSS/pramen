@@ -139,11 +139,11 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
     "handle retries" in {
       val baseSelector = JdbcUrlSelector(jdbcConfig)
-      val (conn, _) = baseSelector.getWorkingConnection(1)
+      val (conn, _) = baseSelector.getNewConnection(1)
       val sel = mock(classOf[JdbcUrlSelector])
 
       whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
-      whenMock(sel.getWorkingConnection(anyInt())).thenReturn((conn, "dummyurl"))
+      whenMock(sel.getNewConnection(anyInt())).thenReturn((conn, "dummyurl"))
 
       val qe = new QueryExecutorJdbc(sel, true)
       qe.execute("SELECT * FROM company")
@@ -168,11 +168,11 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
     "fail if retry fails" in {
       val baseSelector = JdbcUrlSelector(jdbcConfig)
-      val (conn, _) = baseSelector.getWorkingConnection(1)
+      val (conn, _) = baseSelector.getNewConnection(1)
       val sel = mock(classOf[JdbcUrlSelector])
 
       whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
-      whenMock(sel.getWorkingConnection(anyInt()))
+      whenMock(sel.getNewConnection(anyInt()))
         .thenReturn((conn, "dummyurl"))
         .thenThrow(new RuntimeException("fail the second time"))
 
@@ -202,11 +202,11 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
     "fail the first time when a connection selector can't select a connection" in {
       val baseSelector = JdbcUrlSelector(jdbcConfig)
-      val (conn, _) = baseSelector.getWorkingConnection(1)
+      val (conn, _) = baseSelector.getNewConnection(1)
       val sel = mock(classOf[JdbcUrlSelector])
 
       whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
-      whenMock(sel.getWorkingConnection(anyInt()))
+      whenMock(sel.getNewConnection(anyInt()))
         .thenThrow(new RuntimeException("fail the first time"))
         .thenThrow(new RuntimeException("fail the second time"))
         .thenReturn((conn, "dummyurl"))

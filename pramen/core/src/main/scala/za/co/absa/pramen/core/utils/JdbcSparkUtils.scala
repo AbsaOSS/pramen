@@ -186,16 +186,12 @@ object JdbcSparkUtils {
   def withJdbcMetadata(jdbcUrlSelector: JdbcUrlSelector,
                        schemaQuery: String)
                       (action: (Connection, ResultSetMetaData) => Unit): Unit = {
-    val (connection, _) = jdbcUrlSelector.getWorkingConnection()
+    val (connection, _) = jdbcUrlSelector.getConnection
 
     log.info(s"Getting metadata for: $schemaQuery")
 
-    try {
-      withMetadataResultSet(connection, schemaQuery) { rs =>
-        action(connection, rs.getMetaData)
-      }
-    } finally {
-      connection.close()
+    withMetadataResultSet(connection, schemaQuery) { rs =>
+      action(connection, rs.getMetaData)
     }
   }
 

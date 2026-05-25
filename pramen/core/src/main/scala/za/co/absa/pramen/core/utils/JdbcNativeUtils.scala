@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.utils
 
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
@@ -84,7 +85,6 @@ object JdbcNativeUtils {
   def getJdbcNativeDataFrame(urlSelector: JdbcUrlSelector,
                              query: String)
                             (implicit spark: SparkSession): DataFrame = {
-    // Executing the query
     val jdbcConfig = urlSelector.jdbcConfig
     val arraysSupported = DRIVERS_SUPPORT_ARRAYS.contains(jdbcConfig.driver)
     val rs = getResultSet(urlSelector, query)
@@ -95,8 +95,19 @@ object JdbcNativeUtils {
 
     val url = urlSelector.getUrl
 
+    getJdbcNativeDataFrameSerializable(schema, url, query, urlSelector.jdbcConfig, urlSelector.jdbcDriverJarPath, arraysSupported)
+  }
+
+  /** This method uses only serializable parameters because they are going to be passed to the RDD */
+  private def getJdbcNativeDataFrameSerializable(schema: StructType,
+                                         url: String,
+                                         query: String,
+                                         jdbcConfig: JdbcConfig,
+                                         jdbcDriverJarPath: Option[String],
+                                         arraysSupported: Boolean)
+                            (implicit spark: SparkSession): DataFrame = {
     val rdd = spark.sparkContext.parallelize(Seq(query)).flatMap(q => {
-      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q, urlSelector.jdbcDriverJarPath), jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
+      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q, jdbcDriverJarPath), jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
     })
 
     spark.createDataFrame(rdd, schema)
@@ -109,7 +120,7 @@ object JdbcNativeUtils {
 
     val retries = jdbcUrlSelector.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
 
-    val (conn, _) = jdbcUrlSelector.getWorkingConnection()
+    val (conn, _) = jdbcUrlSelector.getConnection
 
     for {
       connection <- conn
@@ -158,7 +169,7 @@ object JdbcNativeUtils {
 
   private[core] def getResultSet(urlSelector: JdbcUrlSelector,
                            query: String): ResultSet = {
-    val (connection, _) = urlSelector.getWorkingConnection()
+    val (connection, _) = urlSelector.getConnection
 
     getResultSet(connection, urlSelector.jdbcConfig, query)
   }

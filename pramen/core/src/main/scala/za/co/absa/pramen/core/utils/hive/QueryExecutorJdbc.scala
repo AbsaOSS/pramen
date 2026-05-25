@@ -120,7 +120,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     }
 
     if (connection == null || forceReconnect) {
-      val (newConnection, url) = jdbcUrlSelector.getWorkingConnection(retries)
+      val (newConnection, url) = jdbcUrlSelector.getNewConnection(retries)
       log.info(s"Selected query executor connection: $url")
       close()
       connection = newConnection

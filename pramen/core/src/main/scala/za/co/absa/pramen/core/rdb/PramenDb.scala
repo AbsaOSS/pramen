@@ -250,7 +250,7 @@ object PramenDb {
   def getConnection(jdbcConfig: JdbcConfig): (String, Connection) = {
     val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
     val selector = JdbcUrlSelector(jdbcConfig)
-    val (conn, url) = selector.getWorkingConnection(numberOfAttempts)
+    val (conn, url) = selector.getNewConnection(numberOfAttempts)
 
     (url, conn)
   }

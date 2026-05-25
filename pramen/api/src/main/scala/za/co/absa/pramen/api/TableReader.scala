@@ -21,7 +21,7 @@ import za.co.absa.pramen.api.offset.OffsetValue
 
 import java.time.LocalDate
 
-trait TableReader {
+trait TableReader extends AutoCloseable {
   def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long
 
   def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): DataFrame

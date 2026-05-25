@@ -36,8 +36,6 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private val jdbcConfig = jdbcReaderConfig.jdbcConfig
 
-  private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
-
   logConfiguration()
 
   private[core] def getJdbcSelector: JdbcUrlSelector = {
