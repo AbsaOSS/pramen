@@ -89,7 +89,7 @@ object RdbJdbc {
   def apply(jdbcConfig: JdbcConfig): RdbJdbc = {
     val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
     val selector = JdbcUrlSelector(jdbcConfig)
-    val (conn, _) = selector.getWorkingConnection(numberOfAttempts)
+    val (conn, _) = selector.getNewConnection(numberOfAttempts)
 
     new RdbJdbc(conn)
   }

@@ -44,13 +44,22 @@ class JdbcSource(sourceConfig: Config,
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val reader = getReader(query, isCountQuery = true)
 
-    reader.getRecordCount(query, infoDateBegin, infoDateEnd)
+    val count = try {
+      reader.getRecordCount(query, infoDateBegin, infoDateEnd)
+    } finally {
+      reader.close()
+    }
+    count
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
     val reader = getReader(query, isCountQuery = false)
 
-    val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
+    val df = try {
+      reader.getData(query, infoDateBegin, infoDateEnd, columns)
+    } finally {
+      reader.close()
+    }
 
     SourceResult(df)
   }
@@ -58,7 +67,11 @@ class JdbcSource(sourceConfig: Config,
   override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
     val reader = getReader(query, isCountQuery = false)
 
-    val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
+    val df =  try {
+      reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
+    } finally {
+      reader.close()
+    }
 
     SourceResult(df)
   }

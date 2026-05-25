@@ -23,7 +23,7 @@ import java.net.URLClassLoader
 import java.sql.{Connection, Driver, SQLException}
 import java.util.Properties
 
-trait JdbcUrlSelector {
+trait JdbcUrlSelector extends AutoCloseable {
   /** The JDBC configuration used for the selector. */
   def jdbcConfig: JdbcConfig
 
@@ -44,7 +44,7 @@ trait JdbcUrlSelector {
 
   /** Returns an url only if it can be successfully connected to. */
   @throws[SQLException]
-  def getWorkingUrl(retriesLeft: Int): String
+  def getWorkingUrl: String
 
   /** Returns properties for the JDBC connection. */
   def getProperties: Properties
@@ -55,12 +55,12 @@ trait JdbcUrlSelector {
   /** Returns a dynamically pre-loaded driver if available. */
   def getLoadedDriver: Option[Driver]
 
-  /** Returns an JDBC connection with the URL that has successfully connected. */
+  /** Returns an JDBC connection with the URL that has successfully connected. Can reuse existing connection */
   @throws[SQLException]
-  def getWorkingConnection(): (Connection, String)
+  def getConnection: (Connection, String)
 
-  /** Returns an JDBC connection with the URL that has successfully connected. */
-  def getWorkingConnection(retriesLeft: Int): (Connection, String)
+  /** Returns an new JDBC connection with the URL that has successfully connected. */
+  def getNewConnection(retriesLeft: Int): (Connection, String)
 }
 
 object JdbcUrlSelector {
