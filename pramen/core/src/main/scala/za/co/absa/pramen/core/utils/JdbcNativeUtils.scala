@@ -23,6 +23,7 @@ import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 
+import java.net.URLClassLoader
 import java.sql._
 import java.util.Properties
 import scala.util.Try
@@ -89,7 +90,7 @@ object JdbcNativeUtils {
     val arraysSupported = DRIVERS_SUPPORT_ARRAYS.contains(jdbcConfig.driver)
     val rs = getResultSet(urlSelector, query)
 
-    val schema = UsingUtils.using(new ResultSetToRowIterator(rs, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)) { driverIterator =>
+    val schema = UsingUtils.using(new ResultSetToRowIterator(rs, None, None, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)) { driverIterator =>
       JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
     }
 
@@ -107,7 +108,8 @@ object JdbcNativeUtils {
                                          arraysSupported: Boolean)
                             (implicit spark: SparkSession): DataFrame = {
     val rdd = spark.sparkContext.parallelize(Seq(query)).flatMap(q => {
-      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q, jdbcDriverJarPath), jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
+      val (rs, connection, classLoaderOpt) = getResultSetForRDD(jdbcConfig, url, q, jdbcDriverJarPath)
+      new ResultSetToRowIterator(rs, Option(connection), classLoaderOpt, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
     })
 
     spark.createDataFrame(rdd, schema)
@@ -123,8 +125,7 @@ object JdbcNativeUtils {
     val (conn, _) = jdbcUrlSelector.getConnection
 
     for {
-      connection <- conn
-      statement <- connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      statement <- conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
       resultSet <- executeQuery(statement, query, retries)
     } {
       action(resultSet)
@@ -174,14 +175,14 @@ object JdbcNativeUtils {
     getResultSet(connection, urlSelector.jdbcConfig, query)
   }
 
-  private[core] def getResultSet(jdbcConfig: JdbcConfig,
-                           url: String,
-                           query: String,
-                           jdbcDriverJarPath: Option[String]): ResultSet = {
-    val driverOpt = jdbcDriverJarPath.map(path => JdbcUrlSelector.loadDriver(path, jdbcConfig.driver))
-    val connection = getJdbcConnection(jdbcConfig, url, driverOpt)
-
-    getResultSet(connection, jdbcConfig, query)
+  private[core] def getResultSetForRDD(jdbcConfig: JdbcConfig,
+                                       url: String,
+                                       query: String,
+                                       jdbcDriverJarPath: Option[String]): (ResultSet, Connection, Option[URLClassLoader]) = {
+    val dynamicDriverOpt = jdbcDriverJarPath.map(path => JdbcUrlSelector.loadDriver(path, jdbcConfig.driver))
+    val connection = getJdbcConnection(jdbcConfig, url, dynamicDriverOpt.map(_.driver))
+    val rs = getResultSet(connection, jdbcConfig, query)
+    (rs, connection, dynamicDriverOpt.map(_.classLoader))
   }
 
   private[core] def getResultSet(connection: Connection,

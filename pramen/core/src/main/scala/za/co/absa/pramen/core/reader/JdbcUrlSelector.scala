@@ -53,7 +53,7 @@ trait JdbcUrlSelector extends AutoCloseable {
   def jdbcDriverJarPath: Option[String]
 
   /** Returns a dynamically pre-loaded driver if available. */
-  def getLoadedDriver: Option[Driver]
+  val loadedDriver: Option[DynamicDriver]
 
   /** Returns an JDBC connection with the URL that has successfully connected. Can reuse existing connection */
   @throws[SQLException]
@@ -68,7 +68,7 @@ object JdbcUrlSelector {
 
   def apply(jdbcDriverJarPath: Option[String], jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(jdbcDriverJarPath, jdbcConfig)
 
-  def loadDriver(driverJarPath: String, driverClassName: String): Driver = {
+  def loadDriver(driverJarPath: String, driverClassName: String): DynamicDriver = {
     val jarFile = new File(driverJarPath)
     val jarURL = jarFile.toURI.toURL
 
@@ -80,6 +80,6 @@ object JdbcUrlSelector {
     // Load driver class
     val driverClass = loader.loadClass(driverClassName)
     val driver = driverClass.getDeclaredConstructor().newInstance().asInstanceOf[Driver]
-    driver
+    DynamicDriver(driver, loader)
   }
 }
