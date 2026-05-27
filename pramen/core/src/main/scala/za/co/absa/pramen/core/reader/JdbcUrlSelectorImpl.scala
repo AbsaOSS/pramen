@@ -22,7 +22,7 @@ import za.co.absa.pramen.core.runner.task.ThreadClosableRegistry
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.{DEFAULT_CONNECTION_TIMEOUT_SECONDS, JDBC_WORDS_TO_REDACT}
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils}
 
-import java.sql.{Connection, Driver, SQLException}
+import java.sql.{Connection, SQLException}
 import java.util.Properties
 import scala.util.control.NonFatal
 import scala.util.{Failure, Random, Success, Try}
@@ -41,7 +41,7 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
   private var connection: Connection = _
 
   @transient
-  override val getLoadedDriver: Option[Driver] = {
+  override val loadedDriver: Option[DynamicDriver] = {
     jdbcDriverJarPath.map { driverPath =>
       JdbcUrlSelector.loadDriver(driverPath, jdbcConfig.driver)
     }
@@ -117,7 +117,20 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
     if (isClosed)
       throw new IllegalStateException("Cannot get a connection from a closed JdbcUrlSelector")
 
-    if (connection == null || connection.isClosed || !connection.isValid(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))) {
+    val isConnectionClosed = connection != null && connection.isClosed
+
+    if (connection == null || isConnectionClosed || !connection.isValid(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))) {
+      if (connection != null) {
+        ThreadClosableRegistry.unregisterCloseable(connection)
+        if (!isConnectionClosed) {
+          log.warn("Existing connection is not valid. Closing it and creating a new one.")
+          Try(connection.close()).failed.foreach { ex =>
+            log.warn("Failed to close the existing connection", ex)
+          }
+        }
+        connection = null
+      }
+
       val retries = jdbcConfig.retries.getOrElse(getNumberOfUrls)
       val (newConnection, url) = getNewConnection(retries)
       connection = newConnection
@@ -134,7 +147,7 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
       throw new IllegalStateException("Cannot get a connection from a closed JdbcUrlSelector")
     val currentUrl = getUrl
     Try {
-      JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl, getLoadedDriver)
+      JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl, loadedDriver.map(_.driver))
     } match {
       case Success(connection) => (connection, currentUrl)
       case Failure(ex)         =>
@@ -157,6 +170,9 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
       if (connection != null && !connection.isClosed) {
         try {
           connection.close()
+          loadedDriver.foreach { d =>
+            d.classLoader.close()
+          }
         } catch {
           case NonFatal(ex) => log.warn(s"Error while closing JDBC connection $currentUrl", ex)
         }

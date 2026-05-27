@@ -20,12 +20,43 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.types._
 
+import java.net.URLClassLoader
 import java.sql.Types._
-import java.sql.{Date, ResultSet, Timestamp}
+import java.sql.{Connection, Date, ResultSet, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
 import scala.collection.mutable
 
-class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrectDecimalsAsString: Boolean, arraysSupported: Boolean) extends Iterator[Row] with AutoCloseable {
+/**
+  * An iterator that wraps a JDBC ResultSet and converts each row into a Spark Row.
+  *
+  * This class provides a bridge between JDBC result sets and Spark's Row abstraction,
+  * enabling lazy iteration over database query results. It implements both
+  * `scala.collection.Iterator` for traversal and `java.lang.AutoCloseable` for
+  * proper resource management of the underlying JDBC connection and result set.
+  *
+  * The iterator supports a wide range of JDBC data types including primitive types,
+  * binary data, decimals, dates, timestamps, and arrays of various element types.
+  * Date and timestamp values are sanitized to ensure they fall within safe boundaries
+  * compatible with Spark's internal representation.
+  *
+  * The schema of the underlying result set can be retrieved as a Spark StructType
+  * via the `getSchema` method, which maps JDBC column types to their corresponding
+  * Spark SQL data types.
+  *
+  * Closing the iterator will release the underlying ResultSet, the optional JDBC
+  * connection, and the optional driver class loader. The iterator automatically
+  * closes these resources when all rows have been consumed.
+  *
+  * Note. Pass a connection and the class loader only if you want the iterator to own them as
+  * resources and close them automatically when the iterator is closed or the end of data is
+  * reached.
+  */
+final class ResultSetToRowIterator(rs: ResultSet,
+                                   connectionOpt: Option[Connection],
+                                   driverClassLoader: Option[URLClassLoader],
+                                   sanitizeDateTime: Boolean,
+                                   incorrectDecimalsAsString: Boolean,
+                                   arraysSupported: Boolean) extends Iterator[Row] with AutoCloseable {
   import ResultSetToRowIterator._
 
   private var didHasNext = false
@@ -65,6 +96,8 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
 
   override def close(): Unit = {
     rs.close()
+    connectionOpt.foreach(_.close())
+    driverClassLoader.foreach(_.close())
   }
 
   private[core] def fetchNext(): Unit = {
@@ -78,7 +111,7 @@ class ResultSetToRowIterator(rs: ResultSet, sanitizeDateTime: Boolean, incorrect
       }
       item = Some(new GenericRow(data))
     } else {
-      rs.close()
+      close()
       item = None
     }
   }
