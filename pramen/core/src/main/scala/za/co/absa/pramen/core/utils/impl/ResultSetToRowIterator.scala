@@ -19,12 +19,14 @@ package za.co.absa.pramen.core.utils.impl
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.expressions.GenericRow
 import org.apache.spark.sql.types._
+import org.slf4j.LoggerFactory
 
 import java.net.URLClassLoader
 import java.sql.Types._
-import java.sql.{Connection, Date, ResultSet, Timestamp}
+import java.sql.{Connection, Date, ResultSet, Statement, Timestamp}
 import java.time.{LocalDateTime, ZoneOffset}
 import scala.collection.mutable
+import scala.util.control.NonFatal
 
 /**
   * An iterator that wraps a JDBC ResultSet and converts each row into a Spark Row.
@@ -47,16 +49,19 @@ import scala.collection.mutable
   * connection, and the optional driver class loader. The iterator automatically
   * closes these resources when all rows have been consumed.
   *
-  * Note. Pass a connection and the class loader only if you want the iterator to own them as
-  * resources and close them automatically when the iterator is closed or the end of data is
-  * reached.
+  * Note. Pass a statement, a connection and the class loader only if you want the
+  * iterator to own them as resources and close them automatically when the iterator
+  * is closed or the end of data is reached.
   */
 final class ResultSetToRowIterator(rs: ResultSet,
+                                   statementOpt: Option[Statement],
                                    connectionOpt: Option[Connection],
                                    driverClassLoader: Option[URLClassLoader],
                                    sanitizeDateTime: Boolean,
                                    incorrectDecimalsAsString: Boolean,
                                    arraysSupported: Boolean) extends Iterator[Row] with AutoCloseable {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   import ResultSetToRowIterator._
 
   private var didHasNext = false
@@ -95,9 +100,18 @@ final class ResultSetToRowIterator(rs: ResultSet,
   }
 
   override def close(): Unit = {
-    rs.close()
-    connectionOpt.foreach(_.close())
-    driverClassLoader.foreach(_.close())
+    safeClose("result set")(rs.close())
+    statementOpt.foreach(s => safeClose("statement")(s.close()))
+    connectionOpt.foreach(c => safeClose("connection")(c.close()))
+    driverClassLoader.foreach(cl => safeClose("driver class loader")(cl.close()))
+  }
+
+  private def safeClose(name: String)(action: => Unit): Unit = {
+    try {
+      action
+    } catch {
+      case NonFatal(ex) => log.info(s"Error while closing $name: ${ex.getMessage}")
+    }
   }
 
   private[core] def fetchNext(): Unit = {

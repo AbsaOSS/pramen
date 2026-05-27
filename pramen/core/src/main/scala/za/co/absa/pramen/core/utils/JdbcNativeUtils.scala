@@ -78,8 +78,17 @@ object JdbcNativeUtils {
   /** Gets the number of records returned by a given query. */
   def getJdbcNativeRecordCount(urlSelector: JdbcUrlSelector,
                                query: String): Long = {
-    val resultSet = getResultSet(urlSelector, query)
-    getResultSetCount(resultSet)
+    val (resultSet, statement) = getResultSet(urlSelector, query)
+    try {
+      val count = getResultSetCount(resultSet)
+      count
+    } finally {
+      try {
+        statement.close()
+      } catch {
+        case NonFatal(ex) => log.warn("Failed to close the statement", ex)
+      }
+    }
   }
 
   /** Gets a dataframe given a JDBC query */
@@ -88,9 +97,9 @@ object JdbcNativeUtils {
                             (implicit spark: SparkSession): DataFrame = {
     val jdbcConfig = urlSelector.jdbcConfig
     val arraysSupported = DRIVERS_SUPPORT_ARRAYS.contains(jdbcConfig.driver)
-    val rs = getResultSet(urlSelector, query)
+    val (rs, statement) = getResultSet(urlSelector, query)
 
-    val schema = UsingUtils.using(new ResultSetToRowIterator(rs, None, None, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)) { driverIterator =>
+    val schema = UsingUtils.using(new ResultSetToRowIterator(rs, Option(statement), None, None, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)) { driverIterator =>
       JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
     }
 
@@ -108,8 +117,8 @@ object JdbcNativeUtils {
                                          arraysSupported: Boolean)
                             (implicit spark: SparkSession): DataFrame = {
     val rdd = spark.sparkContext.parallelize(Seq(query)).flatMap(q => {
-      val (rs, connection, classLoaderOpt) = getResultSetForRDD(jdbcConfig, url, q, jdbcDriverJarPath)
-      new ResultSetToRowIterator(rs, Option(connection), classLoaderOpt, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
+      val (rs, statement, connection, classLoaderOpt) = getResultSetForRDD(jdbcConfig, url, q, jdbcDriverJarPath)
+      new ResultSetToRowIterator(rs, Option(statement), Option(connection), classLoaderOpt, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
     })
 
     spark.createDataFrame(rdd, schema)
@@ -169,7 +178,7 @@ object JdbcNativeUtils {
   }
 
   private[core] def getResultSet(urlSelector: JdbcUrlSelector,
-                           query: String): ResultSet = {
+                           query: String): (ResultSet, Statement) = {
     val (connection, _) = urlSelector.getConnection
 
     getResultSet(connection, urlSelector.jdbcConfig, query)
@@ -178,16 +187,16 @@ object JdbcNativeUtils {
   private[core] def getResultSetForRDD(jdbcConfig: JdbcConfig,
                                        url: String,
                                        query: String,
-                                       jdbcDriverJarPath: Option[String]): (ResultSet, Connection, Option[URLClassLoader]) = {
+                                       jdbcDriverJarPath: Option[String]): (ResultSet, Statement, Connection, Option[URLClassLoader]) = {
     val dynamicDriverOpt = jdbcDriverJarPath.map(path => JdbcUrlSelector.loadDriver(path, jdbcConfig.driver))
     val connection = getJdbcConnection(jdbcConfig, url, dynamicDriverOpt.map(_.driver))
-    val rs = getResultSet(connection, jdbcConfig, query)
-    (rs, connection, dynamicDriverOpt.map(_.classLoader))
+    val (rs, statement) = getResultSet(connection, jdbcConfig, query)
+    (rs, statement, connection, dynamicDriverOpt.map(_.classLoader))
   }
 
   private[core] def getResultSet(connection: Connection,
                            jdbcConfig: JdbcConfig,
-                           query: String): ResultSet = {
+                           query: String): (ResultSet, Statement) = {
     val statement = try {
       if (jdbcConfig.driver == "org.postgresql.Driver")
         // Special handling of PostgreSQL driver that loads.
@@ -210,7 +219,7 @@ object JdbcNativeUtils {
       statement.setFetchSize(n)
     )
 
-    statement.executeQuery(query)
+    (statement.executeQuery(query), statement)
   }
 
   private[core] def getJdbcConnection(jdbcConfig: JdbcConfig, url: String, driverOpt: Option[Driver]): Connection = {
