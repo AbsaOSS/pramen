@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.SqlGeneratorDummy
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
-import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
+import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcBase, TableReaderJdbcNative}
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.sql.SqlGeneratorHsqlDb
 import za.co.absa.pramen.core.utils.SparkUtils.{COMMENT_METADATA_KEY, MAX_LENGTH_METADATA_KEY}
@@ -354,6 +354,21 @@ class TableReaderJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Spark
     }
 
     "getCount()" should {
+      "include source JDBC options in the native count connection config" in {
+        val readerConfig = conf.getConfig("reader")
+          .withValue("option.TrustServerCertificate", ConfigValueFactory.fromAnyRef(true))
+          .withValue("option.fetchsize", ConfigValueFactory.fromAnyRef(123))
+          .withValue("option.batchsize", ConfigValueFactory.fromAnyRef(456))
+
+        val jdbcTableReaderConfig = TableReaderJdbcConfig.load(readerConfig, readerConfig, "reader")
+        val nativeJdbcConfig = TableReaderJdbcBase.getNativeJdbcConfig(jdbcTableReaderConfig, readerConfig)
+
+        assert(nativeJdbcConfig.extraOptions("TrustServerCertificate") == "true")
+        assert(nativeJdbcConfig.fetchSize.contains(123))
+        assert(!nativeJdbcConfig.extraOptions.contains("fetchsize"))
+        assert(!nativeJdbcConfig.extraOptions.contains("batchsize"))
+      }
+
       "return count for a table snapshot-like query" in {
         val testConfig = conf
         val reader = TableReaderJdbc(testConfig.getConfig("reader"), testConfig.getConfig("reader"), "reader")
