@@ -209,7 +209,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
 
-      assert(customFields.contains("value integer"))
+      assert(customFields.contains("`value` integer"))
     }
 
     "correct decimal to long" in {
@@ -218,7 +218,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
 
-      assert(customFields.contains("value long"))
+      assert(customFields.contains("`value` long"))
     }
 
     "correct too big scale" in {
@@ -231,7 +231,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
 
-      assert(customFields.contains("value decimal(38, 18)"))
+      assert(customFields.contains("`value` decimal(38, 18)"))
     }
 
     "correct invalid precision" in {
@@ -244,7 +244,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
 
-      assert(customFields.contains("value decimal(38, 18)"))
+      assert(customFields.contains("`value` decimal(38, 18)"))
     }
 
     "correct invalid precision with small scale" in {
@@ -257,7 +257,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
 
-      assert(customFields.contains("value decimal(38, 16)"))
+      assert(customFields.contains("`value` decimal(38, 16)"))
     }
 
     "do nothing if the field is okay" in {
