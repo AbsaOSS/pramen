@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.tests.utils
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, Row}
 import org.apache.spark.sql.functions.to_timestamp
 import org.apache.spark.sql.types.{DecimalType, MetadataBuilder, StructField, StructType}
 import org.scalatest.BeforeAndAfterAll
@@ -258,6 +258,20 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
 
       assert(customFields.contains("value decimal(38, 16)"))
+    }
+
+    "escape special column names in custom schema" in {
+      val schema = StructType(Array(
+        StructField("PaidAmount(Incl VAT)", DecimalType(20, 2)),
+        StructField("VATAmount", DecimalType(20, 2)),
+        StructField("PaidAmount`Escaped", DecimalType(20, 2))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
+
+      assert(customFields.contains("`PaidAmount(Incl VAT)` decimal(22, 2), VATAmount decimal(22, 2), `PaidAmount``Escaped` decimal(22, 2)"))
     }
 
     "do nothing if the field is okay" in {

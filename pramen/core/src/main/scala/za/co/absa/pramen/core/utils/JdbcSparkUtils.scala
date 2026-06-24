@@ -274,21 +274,23 @@ object JdbcSparkUtils {
     val newSchema = new ListBuffer[String]
 
     df.schema.fields.foreach(field => {
+      val fieldName = escapeColumnNameForSparkDDL(field.name)
+
       field.dataType match {
         case t: DecimalType if t.scale == 0 && t.precision <= 9 =>
           log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to int")
-          newSchema += s"${field.name} integer"
+          newSchema += s"$fieldName integer"
         case t: DecimalType if t.scale == 0 && t.precision <= 18 =>
           log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to long")
-          newSchema += s"${field.name} long"
+          newSchema += s"$fieldName long"
         case t: DecimalType if t.scale > 18 =>
           log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to decimal(38, 18)")
-          newSchema += s"${field.name} decimal(38, 18)"
+          newSchema += s"$fieldName decimal(38, 18)"
         case t: DecimalType if fixPrecision && t.scale > 0 =>
           val fixedPrecision = if (t.precision + t.scale > 38) 38 else t.precision + t.scale
           if (fixedPrecision > t.precision) {
             log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to decimal($fixedPrecision, ${t.scale})")
-            newSchema += s"${field.name} decimal($fixedPrecision, ${t.scale})"
+            newSchema += s"$fieldName decimal($fixedPrecision, ${t.scale})"
           }
         case _ =>
           field
@@ -301,6 +303,14 @@ object JdbcSparkUtils {
       Some(customSchema)
     } else {
       None
+    }
+  }
+
+  private[core] def escapeColumnNameForSparkDDL(columnName: String): String = {
+    if (columnName.matches("[A-Za-z_][A-Za-z0-9_]*")) {
+      columnName
+    } else {
+      s"`${columnName.replace("`", "``")}`"
     }
   }
 
