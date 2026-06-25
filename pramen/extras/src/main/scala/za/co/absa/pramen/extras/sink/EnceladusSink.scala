@@ -21,7 +21,8 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.api.{ExternalChannelFactoryV2, MetastoreReader, Sink, SinkResult}
+import za.co.absa.pramen.core.config.Keys.NEVER_REPAIR_PARTITIONS
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates.TEMPLATES_DEFAULT_PREFIX
 import za.co.absa.pramen.core.utils.hive._
@@ -149,7 +150,8 @@ import scala.util.{Failure, Success, Try}
   */
 class EnceladusSink(sinkConfig: Config,
                     enceladusConfig: EnceladusConfig,
-                    hiveHelper: HiveHelper) extends Sink {
+                    hiveHelper: HiveHelper,
+                    neverRepairPartitions: Boolean) extends Sink {
 
   import za.co.absa.pramen.extras.sink.EnceladusSink._
 
@@ -449,7 +451,7 @@ class EnceladusSink(sinkConfig: Config,
 
       val schema = dfForHiveSchema.schema
 
-      hiveHelper.createOrUpdateHiveTable(publishBase, HiveFormat.Parquet, schema, Seq("enceladus_info_date", "enceladus_info_version"), enceladusConfig.hiveDatabase, hiveTable, neverRepairPartitions = false)
+      hiveHelper.createOrUpdateHiveTable(publishBase, HiveFormat.Parquet, schema, Seq("enceladus_info_date", "enceladus_info_version"), enceladusConfig.hiveDatabase, hiveTable, neverRepairPartitions)
     }
   }
 
@@ -486,7 +488,7 @@ class EnceladusSink(sinkConfig: Config,
   }
 }
 
-object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
+object EnceladusSink extends ExternalChannelFactoryV2[EnceladusSink] {
   val OUTPUT_PATH_KEY = "path"
   val INFO_VERSION_KEY = "info.version"
   val DATASET_NAME_KEY = "dataset.name"
@@ -500,7 +502,7 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
 
   val INFO_VERSION_AUTO_VALUE = "auto"
 
-  override def apply(conf: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
+  override def apply(conf: Config, workflowConfig: Config, parentPath: String, spark: SparkSession): EnceladusSink = {
     val enceladusConfig = EnceladusConfig.fromConfig(conf)
     val alwaysEscapeColumnNames = ConfigUtils.getOptionBoolean(conf, HIVE_ALWAYS_ESCAPE_COLUMN_NAMES).getOrElse(true)
 
@@ -508,7 +510,8 @@ object EnceladusSink extends ExternalChannelFactory[EnceladusSink] {
     val queryExecutor = QueryExecutorSpark(spark)
 
     val hiveHelper = new HiveHelperSql(queryExecutor, hiveTemplates, alwaysEscapeColumnNames)
+    val neverRepairPartitions = ConfigUtils.getOptionBoolean(workflowConfig, NEVER_REPAIR_PARTITIONS).getOrElse(false)
 
-    new EnceladusSink(conf, enceladusConfig, hiveHelper)
+    new EnceladusSink(conf, enceladusConfig, hiveHelper, neverRepairPartitions)
   }
 }

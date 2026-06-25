@@ -61,7 +61,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
       var sink: EnceladusSink = null
 
       "constructed from a config" in {
-        sink = EnceladusSink.apply(conf, "", spark)
+        sink = EnceladusSink.apply(conf, conf, "", spark)
 
         assert(sink.isInstanceOf[EnceladusSink])
       }
@@ -103,7 +103,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
     }
 
     "autoDetectVersionNumber" should {
-      val sink = EnceladusSink.apply(conf, "", spark)
+      val sink = EnceladusSink.apply(conf, conf, "", spark)
 
       withTempDirectory("enceladus_raw") { tempRaw =>
         withTempDirectory("enceladus_publish") { tempPublish =>
@@ -139,7 +139,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
 
       implicit val qe: QueryExecutorSpy = new QueryExecutorSpy
 
-      val sink = EnceladusSink.apply(conf, "", spark)
+      val sink = EnceladusSink.apply(conf, conf, "", spark)
 
       sink.runEnceladusIfNeeded("my_table",
         infoDate,
@@ -167,7 +167,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
 
       implicit val qe: QueryExecutorSpy = new QueryExecutorSpy(throwException = Some(new lang.IllegalStateException))
 
-      val sink = EnceladusSink.apply(conf, "", spark)
+      val sink = EnceladusSink.apply(conf, conf, "", spark)
 
       assertThrows[IllegalStateException] {
         sink.runEnceladusIfNeeded("my_table",
@@ -198,7 +198,7 @@ class EnceladusSinkSuite extends AnyWordSpec with SparkTestBase with TextCompari
 
       implicit val qe: QueryExecutorSpy = new QueryExecutorSpy
 
-      val sink = EnceladusSink.apply(conf, "", spark)
+      val sink = EnceladusSink.apply(conf, conf, "", spark)
 
       val ex = intercept[RuntimeException] {
         sink.runEnceladusIfNeeded("my_table",
