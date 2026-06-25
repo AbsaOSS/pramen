@@ -40,6 +40,7 @@ object Keys {
   val EXTRA_OPTIONS_PREFIX_V2 = "pramen.spark.conf"
 
   val ENABLE_HIVE_SUPPORT = "pramen.enable.hive"
+  val NEVER_REPAIR_PARTITIONS = "pramen.hive.never.repair.partitions"
 
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
 

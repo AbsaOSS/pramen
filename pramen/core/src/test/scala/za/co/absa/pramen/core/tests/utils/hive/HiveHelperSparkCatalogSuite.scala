@@ -38,12 +38,12 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1")
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1", neverRepairPartitions = false)
         assert(spark.catalog.tableExists("default.tbl1"))
 
         // If the table exists an exception should be thrown
         assertThrows[AnalysisException] {
-          hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1")
+          hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1", neverRepairPartitions = false)
         }
       }
     }
@@ -55,13 +55,13 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2")
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2", neverRepairPartitions = false)
         assert(hiveHelper.doesTableExist(Some("default"), "tbl2"))
 
         spark.sql(s"DROP TABLE default.tbl2").collect()
         assert(!hiveHelper.doesTableExist(Some("default"), "tbl2"))
 
-        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2")
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2", neverRepairPartitions = false)
         assert(hiveHelper.doesTableExist(Some("default"), "tbl2"))
       }
     }
@@ -73,7 +73,7 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl3")
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl3", neverRepairPartitions = false)
         assert(hiveHelper.doesTableExist(Some("default"), "tbl3"))
 
         assertThrows[AnalysisException] {
@@ -91,11 +91,11 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1", neverRepairPartitions = false)
         assert(spark.catalog.tableExists("default.tbl1"))
 
         // If the table exists it should be re-created
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1", neverRepairPartitions = false)
         assert(spark.catalog.tableExists("default.tbl1"))
       }
     }
@@ -107,13 +107,13 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2", neverRepairPartitions = false)
         assert(hiveHelper.doesTableExist(Some("default"),"tbl2"))
 
         spark.sql(s"DROP TABLE default.tbl2").collect()
         assert(!hiveHelper.doesTableExist(Some("default"),"tbl2"))
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2", neverRepairPartitions = false)
         assert(hiveHelper.doesTableExist(Some("default"),"tbl2"))
       }
     }
@@ -125,7 +125,7 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.format("delta").load(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Delta, schema, "b" :: Nil, Some("default"), "tbl3")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Delta, schema, "b" :: Nil, Some("default"), "tbl3", neverRepairPartitions = false)
         assert(hiveHelper.doesTableExist(Some("default"), "tbl3"))
 
         assert(spark.table("default.tbl3").count() == 3)
@@ -139,7 +139,7 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl4")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl4", neverRepairPartitions = true)
         assert(hiveHelper.doesTableExist(Some("default"), "tbl4"))
 
         hiveHelper.dropTable(Some("default"), "tbl4")
@@ -155,7 +155,7 @@ class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with Te
         val hiveHelper = new HiveHelperSparkCatalog(spark)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl5")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl5", neverRepairPartitions = false)
         assert(hiveHelper.doesTableExist(Some("default"),"tbl5"))
 
         val df = List(("D", 40)).toDF("a", "c")

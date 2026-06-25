@@ -32,13 +32,19 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
                                schema: StructType,
                                partitionBy: Seq[String],
                                databaseName: Option[String],
-                               tableName: String): Unit = {
+                               tableName: String,
+                               neverRepairPartitions: Boolean): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     createCatalogTable(fullTableName, path, format)
 
-    if (partitionBy.nonEmpty) {
+    if (partitionBy.nonEmpty && !neverRepairPartitions) {
       repairHiveTable(databaseName, tableName, format)
+    } else {
+      if (partitionBy.isEmpty)
+        log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
+      else
+        log.info(s"Skipping repairing partition for $fullTableName because repairing partitions is disabled.")
     }
 
     if (!doesTableExist(databaseName, tableName)) {
@@ -51,7 +57,8 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
                                        schema: StructType,
                                        partitionBy: Seq[String],
                                        databaseName: Option[String],
-                                       tableName: String): Unit = {
+                                       tableName: String,
+                                       neverRepairPartitions: Boolean): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     if (doesTableExist(databaseName, tableName)) {
@@ -61,8 +68,13 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
 
     createCatalogTable(fullTableName, path, format)
 
-    if (partitionBy.nonEmpty) {
+    if (partitionBy.nonEmpty && !neverRepairPartitions) {
       repairHiveTable(databaseName, tableName, format)
+    } else {
+      if (partitionBy.isEmpty)
+        log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
+      else
+        log.info(s"Skipping repairing partition for $fullTableName because repairing partitions is disabled.")
     }
 
     if (!doesTableExist(databaseName, tableName)) {

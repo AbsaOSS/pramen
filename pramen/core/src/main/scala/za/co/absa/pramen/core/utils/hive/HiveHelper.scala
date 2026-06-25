@@ -28,14 +28,16 @@ abstract class HiveHelper {
                       schema: StructType,
                       partitionBy: Seq[String],
                       databaseName: Option[String],
-                      tableName: String): Unit
+                      tableName: String,
+                      neverRepairPartitions: Boolean): Unit
 
   def createOrUpdateHiveTable(path: String,
                               format: HiveFormat,
                               schema: StructType,
                               partitionBy: Seq[String],
                               databaseName: Option[String],
-                              tableName: String): Unit
+                              tableName: String,
+                              neverRepairPartitions: Boolean): Unit
 
   def replaceHiveTableSchema(schema: StructType,
                              partitionBy: Seq[String],
