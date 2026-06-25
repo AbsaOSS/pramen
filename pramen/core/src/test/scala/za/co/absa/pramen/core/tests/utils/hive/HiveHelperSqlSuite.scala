@@ -55,7 +55,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, false)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl", neverRepairPartitions = false)
 
         qe.close()
 
@@ -86,7 +86,34 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", neverRepairPartitions = false)
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "execute expected queries for partitioned table without repair table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected =
+          s"""DROP TABLE IF EXISTS `db`.`tbl`
+             |CREATE EXTERNAL TABLE IF NOT EXISTS
+             |`db`.`tbl` ( `c` INT )
+             |PARTITIONED BY (`a` STRING,`b` INT)
+             |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+             |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+             |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+             |LOCATION '$path';
+             |""".stripMargin
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", neverRepairPartitions = true)
 
         val actual = qe.queries.mkString("\n")
 
@@ -114,7 +141,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", neverRepairPartitions = false)
 
         val actual = qe.queries.mkString("\n")
 

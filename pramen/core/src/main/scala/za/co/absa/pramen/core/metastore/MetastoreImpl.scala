@@ -30,6 +30,7 @@ import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.model.OffsetCommitRequest
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManagerUtils}
 import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.config.Keys.NEVER_REPAIR_PARTITIONS
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -56,6 +57,8 @@ class MetastoreImpl(appConfig: Config,
   private var tableDefs: Seq[MetaTable] = tableDefsIn
 
   private val incrementalTables = new mutable.HashSet[String]
+
+  private val neverRepairPartitions = ConfigUtils.getOptionBoolean(appConfig, NEVER_REPAIR_PARTITIONS).getOrElse(false)
 
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
 
@@ -203,7 +206,7 @@ class MetastoreImpl(appConfig: Config,
 
     if (recreate) {
       log.info(s"Recreating Hive table '$fullTableName'")
-      hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+      hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, neverRepairPartitions)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
         if (updateSchema) {
@@ -215,7 +218,7 @@ class MetastoreImpl(appConfig: Config,
           } catch {
             case NonFatal(ex) =>
               log.warn(s"Could not update Hive schema via ${hiveHelper.getClass.getName}. Recreating Hive table '$fullTableName'", ex)
-              hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+              hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, neverRepairPartitions)
           }
         } else {
           // Schema didn't change, but we need to add the new partition
@@ -223,7 +226,7 @@ class MetastoreImpl(appConfig: Config,
         }
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
-        hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+        hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, neverRepairPartitions)
       }
     }
 

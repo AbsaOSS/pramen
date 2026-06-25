@@ -449,7 +449,7 @@ class EnceladusSink(sinkConfig: Config,
 
       val schema = dfForHiveSchema.schema
 
-      hiveHelper.createOrUpdateHiveTable(publishBase, HiveFormat.Parquet, schema, Seq("enceladus_info_date", "enceladus_info_version"), enceladusConfig.hiveDatabase, hiveTable)
+      hiveHelper.createOrUpdateHiveTable(publishBase, HiveFormat.Parquet, schema, Seq("enceladus_info_date", "enceladus_info_version"), enceladusConfig.hiveDatabase, hiveTable, neverRepairPartitions = false)
     }
   }
 

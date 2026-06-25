@@ -30,12 +30,18 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                                schema: StructType,
                                partitionBy: Seq[String],
                                databaseName: Option[String],
-                               tableName: String): Unit = {
+                               tableName: String,
+                               neverRepairPartitions: Boolean): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = true)
-    if (partitionBy.nonEmpty) {
+    if (partitionBy.nonEmpty && !neverRepairPartitions) {
       repairHiveTable(fullTableName)
+    } else {
+      if (partitionBy.isEmpty)
+        log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
+      else
+        log.info(s"Skipping repairing partition for $fullTableName because repairing partitions is disabled.")
     }
   }
 
@@ -44,13 +50,19 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                                        schema: StructType,
                                        partitionBy: Seq[String],
                                        databaseName: Option[String],
-                                       tableName: String): Unit = {
+                                       tableName: String,
+                                       neverRepairPartitions: Boolean): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
     createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = false)
-    if (partitionBy.nonEmpty) {
+    if (partitionBy.nonEmpty && !neverRepairPartitions) {
       repairHiveTable(fullTableName)
+    } else {
+      if (partitionBy.isEmpty)
+        log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
+      else
+        log.info(s"Skipping repairing partition for $fullTableName because repairing partitions is disabled.")
     }
   }
 
