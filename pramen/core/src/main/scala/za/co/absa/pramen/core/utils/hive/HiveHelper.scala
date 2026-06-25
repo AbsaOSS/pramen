@@ -29,7 +29,7 @@ abstract class HiveHelper {
                       partitionBy: Seq[String],
                       databaseName: Option[String],
                       tableName: String,
-                      neverRepairPartitions: Boolean): Unit
+                      neverRepairPartitions: Boolean = false): Unit
 
   def createOrUpdateHiveTable(path: String,
                               format: HiveFormat,
@@ -37,7 +37,7 @@ abstract class HiveHelper {
                               partitionBy: Seq[String],
                               databaseName: Option[String],
                               tableName: String,
-                              neverRepairPartitions: Boolean): Unit
+                              neverRepairPartitions: Boolean = false): Unit
 
   def replaceHiveTableSchema(schema: StructType,
                              partitionBy: Seq[String],
