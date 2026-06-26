@@ -31,17 +31,17 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                                partitionBy: Seq[String],
                                databaseName: Option[String],
                                tableName: String,
-                               neverRepairPartitions: Boolean): Unit = {
+                               autoRepairPartitions: Boolean): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = true)
-    if (partitionBy.nonEmpty && !neverRepairPartitions) {
+    if (partitionBy.nonEmpty && autoRepairPartitions) {
       repairHiveTable(fullTableName)
     } else {
       if (partitionBy.isEmpty)
         log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
       else
-        log.info(s"Skipping repairing partition for $fullTableName because repairing partitions is disabled.")
+        log.info(s"Skipping repairing partition for $fullTableName as requested.")
     }
   }
 
@@ -51,18 +51,18 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                                        partitionBy: Seq[String],
                                        databaseName: Option[String],
                                        tableName: String,
-                                       neverRepairPartitions: Boolean): Unit = {
+                                       autoRepairPartitions: Boolean): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
     createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = false)
-    if (partitionBy.nonEmpty && !neverRepairPartitions) {
+    if (partitionBy.nonEmpty && autoRepairPartitions) {
       repairHiveTable(fullTableName)
     } else {
       if (partitionBy.isEmpty)
         log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
       else
-        log.info(s"Skipping repairing partition for $fullTableName because repairing partitions is disabled.")
+        log.info(s"Skipping repairing partition for $fullTableName as requested.")
     }
   }
 

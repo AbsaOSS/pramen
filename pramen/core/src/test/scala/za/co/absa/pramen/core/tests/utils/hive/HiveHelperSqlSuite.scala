@@ -55,7 +55,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, false)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl", neverRepairPartitions = false)
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl", autoRepairPartitions = false)
 
         qe.close()
 
@@ -86,7 +86,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", neverRepairPartitions = false)
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 
         val actual = qe.queries.mkString("\n")
 
@@ -113,7 +113,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", neverRepairPartitions = true)
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", autoRepairPartitions = false)
 
         val actual = qe.queries.mkString("\n")
 
@@ -141,7 +141,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", neverRepairPartitions = false)
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
 
         val actual = qe.queries.mkString("\n")
 

@@ -206,7 +206,7 @@ class MetastoreImpl(appConfig: Config,
 
     if (recreate) {
       log.info(s"Recreating Hive table '$fullTableName'")
-      hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, neverRepairPartitions)
+      hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, !neverRepairPartitions)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
         if (updateSchema) {
@@ -218,7 +218,7 @@ class MetastoreImpl(appConfig: Config,
           } catch {
             case NonFatal(ex) =>
               log.warn(s"Could not update Hive schema via ${hiveHelper.getClass.getName}. Recreating Hive table '$fullTableName'", ex)
-              hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, neverRepairPartitions)
+              hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, !neverRepairPartitions)
           }
         } else {
           // Schema didn't change, but we need to add the new partition
@@ -226,7 +226,7 @@ class MetastoreImpl(appConfig: Config,
         }
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
-        hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, neverRepairPartitions)
+        hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, !neverRepairPartitions)
       }
     }
 
