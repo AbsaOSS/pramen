@@ -234,8 +234,7 @@ class StandardizationSink(sinkConfig: Config,
           fullSchema,
           partitionBy,
           standardizationConfig.hiveDatabase,
-          hiveTable,
-          neverRepairPartitions = false)
+          hiveTable)
         (Seq.empty[String], Seq(fullTableName))
       } catch {
         case NonFatal(ex) =>
