@@ -167,6 +167,24 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
       }
     }
 
+    "execute expected query for replacing partition schema of a partitioned table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected = "ALTER TABLE `db`.`tbl` PARTITION (a='AA', b='22') REPLACE COLUMNS ( `c` INT )".stripMargin
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.replaceHivePartitionSchema(schema, "a" :: "b" :: Nil, Seq("AA", "22"), Some("db"), "tbl")
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
     "repair table with database" in {
       val expected = "MSCK REPAIR TABLE `db`.`tbl`"
 

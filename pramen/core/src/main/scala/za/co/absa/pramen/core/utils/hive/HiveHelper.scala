@@ -44,6 +44,12 @@ abstract class HiveHelper {
                              databaseName: Option[String],
                              tableName: String): Unit
 
+  def replaceHivePartitionSchema(schema: StructType,
+                                 partitionBy: Seq[String],
+                                 partitionValues: Seq[String],
+                                 databaseName: Option[String],
+                                 tableName: String): Unit
+
   def repairHiveTable(databaseName: Option[String],
                       tableName: String,
                       format: HiveFormat): Unit

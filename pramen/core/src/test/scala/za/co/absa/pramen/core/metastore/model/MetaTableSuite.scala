@@ -230,7 +230,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val defaultHiveConfig = HiveDefaultConfig(HiveApi.Sql,
         Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "create_only", "update", "repair", "add_partition", "drop")),
+        Map("parquet" -> HiveQueryTemplates("create", "create_only", "update", "update_part", "repair", "add_partition", "drop")),
         Some(JdbcConfig("driver", Some("url"),
           user = Some("user"),
           password = Some("pass")
@@ -301,7 +301,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "repair1", "add_partition1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "replace_part1", "repair1", "add_partition1", "drop1")),
         Some(JdbcConfig("driver1", Some("url1"),
           user = Some("user1"),
           password = Some("pass1")

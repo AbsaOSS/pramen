@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.utils.hive
 
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.execution.datasources.PartitioningUtils.PartitionValues
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.CatalogTable
@@ -97,6 +98,34 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
 
     val sql = HiveQueryTemplates.DEFAULT_REPLACE_SCHEMA_TEMPLATE
       .replace("@fullTableName", fullTableName)
+      .replace("@schema", schemaDDL)
+
+    log.info(s"Executing: $sql")
+    spark.sql(sql).collect()
+  }
+
+  override def replaceHivePartitionSchema(schema: StructType,
+                                          partitionBy: Seq[String],
+                                          partitionValues: Seq[String],
+                                          databaseName: Option[String],
+                                          tableName: String): Unit = {
+    if (partitionBy.length != partitionValues.length) {
+      throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
+    }
+
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+    val partitionClause = partitionBy.zip(partitionValues).map { case (col, value) => s"$col='$value'" }.mkString(", ")
+
+    val partitionColsLower = partitionBy.map(_.toLowerCase())
+    val nonPartitionFields = SparkUtils.transformSchemaForCatalog(schema)
+      .filter(field => !partitionColsLower.contains(field.name.toLowerCase()))
+      .filter(field => field.name.trim.nonEmpty)
+
+    val schemaDDL = SparkUtils.escapeColumnsSparkDDL(StructType(nonPartitionFields).toDDL)
+
+    val sql = HiveQueryTemplates.DEFAULT_REPLACE_PARTITION_SCHEMA
+      .replace("@fullTableName", fullTableName)
+      .replace("@partitionClause", partitionClause)
       .replace("@schema", schemaDDL)
 
     log.info(s"Executing: $sql")
