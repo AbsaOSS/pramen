@@ -23,6 +23,7 @@ case class HiveQueryTemplates(
                                createTableTemplate: String,
                                createOnlyTableTemplate: String,
                                replaceSchemaTemplate: String,
+                               replacePartitionSchemaTemplate: String,
                                repairTableTemplate: String,
                                addPartitionTemplate: String,
                                dropTableTemplate: String
@@ -54,6 +55,7 @@ object HiveQueryTemplates {
   val CREATE_TABLE_TEMPLATE_KEY = "create.table.template"
   val CREATE_ONLY_TABLE_TEMPLATE_KEY = "create.only.table.template"
   val REPLACE_SCHEMA_TEMPLATE_KEY = "replace.schema.template"
+  val REPLACE_PARTITION_SCHEMA_TEMPLATE_KEY = "replace.partition.schema.template"
   val REPAIR_TABLE_TEMPLATE_KEY = "repair.table.template"
   val ADD_PARTITION_TEMPLATE_KEY = "add.partition.template"
   val DROP_TABLE_TEMPLATE_KEY = "drop.table.template"
@@ -76,7 +78,9 @@ object HiveQueryTemplates {
       |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
       |LOCATION '@path';""".stripMargin
 
-  val DEFAULT_REPLACE_SCHEMA_TEMPLATE: String = "ALTER TABLE @fullTableName REPLACE COLUMNS ( @schema )"
+  val DEFAULT_REPLACE_SCHEMA_TEMPLATE: String = "ALTER TABLE @fullTableName REPLACE COLUMNS ( @schema ) CASCADE"
+
+  val DEFAULT_REPLACE_PARTITION_SCHEMA: String = "ALTER TABLE @fullTableName PARTITION (@partitionClause) REPLACE COLUMNS ( @schema )"
 
   val DEFAULT_REPAIR_TABLE_TEMPLATE: String = "MSCK REPAIR TABLE @fullTableName"
 
@@ -95,6 +99,9 @@ object HiveQueryTemplates {
     val replaceSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_SCHEMA_TEMPLATE_KEY)
       .getOrElse(DEFAULT_REPLACE_SCHEMA_TEMPLATE)
 
+    val replacePartitionSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_PARTITION_SCHEMA_TEMPLATE_KEY)
+      .getOrElse(DEFAULT_REPLACE_PARTITION_SCHEMA)
+
     val repairTableTemplate = ConfigUtils.getOptionString(conf, REPAIR_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_REPAIR_TABLE_TEMPLATE)
 
@@ -108,6 +115,7 @@ object HiveQueryTemplates {
       createTableTemplate = createTableTemplate,
       createOnlyTableTemplate = createOnlyTableTemplate,
       replaceSchemaTemplate = replaceSchemaTemplate,
+      replacePartitionSchemaTemplate = replacePartitionSchemaTemplate,
       repairTableTemplate = repairTableTemplate,
       addPartitionTemplate = addPartitionTemplate,
       dropTableTemplate = dropTableTemplate
@@ -119,6 +127,7 @@ object HiveQueryTemplates {
       createTableTemplate = DEFAULT_CREATE_TABLE_TEMPLATE,
       createOnlyTableTemplate = DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
       replaceSchemaTemplate = DEFAULT_REPLACE_SCHEMA_TEMPLATE,
+      replacePartitionSchemaTemplate = DEFAULT_REPLACE_PARTITION_SCHEMA,
       repairTableTemplate = DEFAULT_REPAIR_TABLE_TEMPLATE,
       addPartitionTemplate = DEFAULT_ADD_PARTITION_TEMPLATE,
       dropTableTemplate = DEFAULT_DROP_TABLE_TEMPLATE

@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.utils.hive
 
+import org.apache.spark.sql.execution.datasources.PartitioningUtils.PartitionValues
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.SparkUtils
@@ -84,6 +85,24 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     )
 
     queryExecutor.execute(sqlHiveCreate)
+  }
+
+  override def replaceHivePartitionSchema(schema: StructType,
+                                          partitionBy: Seq[String],
+                                          partitionValues: Seq[String],
+                                          databaseName: Option[String],
+                                          tableName: String): Unit = {
+    if (partitionBy.length != partitionValues.length) {
+      throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
+    }
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+    val partitionClause = partitionBy.zip(partitionValues).map { case (col, value) => s"$col='$value'" }.mkString(", ")
+    val schemaDDL = getTableDDL(schema, partitionBy)
+
+    log.info(s"Replacing partition schema for $fullTableName, partition: $partitionClause...")
+
+    val sql = applyPartitionTemplate(hiveConfig.replacePartitionSchemaTemplate, fullTableName, "", partitionClause, schemaDDL)
+    queryExecutor.execute(sql)
   }
 
   override def repairHiveTable(databaseName: Option[String],
@@ -213,10 +232,12 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
   private def applyPartitionTemplate(template: String,
                                      fullTableName: String,
                                      partitionPath: String = "",
-                                     partitionClause: String = ""
+                                     partitionClause: String = "",
+                                     schemaDDL: String = ""
                                     ): String = {
     template.replace("@fullTableName", fullTableName)
       .replace("@partitionPath", partitionPath)
       .replace("@partitionClause", partitionClause)
+      .replace("@schema", schemaDDL)
   }
 }

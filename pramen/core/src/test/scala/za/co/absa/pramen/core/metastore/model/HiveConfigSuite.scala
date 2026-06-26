@@ -29,7 +29,7 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.SparkCatalog,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "update1", "repair1", "add_partition1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "update1", "update_part1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = true,
         alwaysEscapeColumnNames = false,
@@ -80,7 +80,7 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "repair1", "add_partition1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "replace_part1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = false,
         alwaysEscapeColumnNames = false,
@@ -109,7 +109,7 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "create_only", "update", "repair", "add_partition1", "drop")),
+        Map("parquet" -> HiveQueryTemplates("create", "create_only", "update", "update_part", "repair", "add_partition1", "drop")),
         None,
         ignoreFailures = true,
         alwaysEscapeColumnNames = true,

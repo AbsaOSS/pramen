@@ -108,6 +108,9 @@ object HiveConfig {
     val replaceSchemaTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPLACE_SCHEMA_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.replaceSchemaTemplate)
 
+    val replacePartitionSchemaTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPLACE_PARTITION_SCHEMA_TEMPLATE_KEY")
+      .getOrElse(defaultTemplates.replacePartitionSchemaTemplate)
+
     val repairTableTemplate = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$REPAIR_TABLE_TEMPLATE_KEY")
       .getOrElse(defaultTemplates.repairTableTemplate)
 
@@ -123,7 +126,7 @@ object HiveConfig {
     HiveConfig(
       hiveApi = hiveApi,
       database = database,
-      templates = HiveQueryTemplates(createTableTemplate, createOnlyTableTemplate, replaceSchemaTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
+      templates = HiveQueryTemplates(createTableTemplate, createOnlyTableTemplate, replaceSchemaTemplate, replacePartitionSchemaTemplate, repairTableTemplate, addPartitionTableTemplate, dropTableTemplate),
       jdbcConfig = jdbcConfig,
       ignoreFailures,
       alwaysEscapeColumnNames,
@@ -147,7 +150,7 @@ object HiveConfig {
   def getNullConfig: HiveConfig = HiveConfig(
     HiveApi.Sql,
     None,
-    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_CREATE_ONLY_TABLE_TEMPLATE, DEFAULT_REPLACE_SCHEMA_TEMPLATE, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
+    HiveQueryTemplates(DEFAULT_CREATE_TABLE_TEMPLATE, DEFAULT_CREATE_ONLY_TABLE_TEMPLATE, DEFAULT_REPLACE_SCHEMA_TEMPLATE, DEFAULT_REPLACE_PARTITION_SCHEMA, DEFAULT_REPAIR_TABLE_TEMPLATE, DEFAULT_ADD_PARTITION_TEMPLATE, DEFAULT_DROP_TABLE_TEMPLATE),
     None,
     ignoreFailures = false,
     alwaysEscapeColumnNames = true,
