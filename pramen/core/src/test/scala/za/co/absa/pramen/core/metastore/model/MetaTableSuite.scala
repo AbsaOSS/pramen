@@ -247,6 +247,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create")
       assert(metaTable.hiveConfig.templates.createOnlyTableTemplate == "create_only")
       assert(metaTable.hiveConfig.templates.replaceSchemaTemplate == "update")
+      assert(metaTable.hiveConfig.templates.replacePartitionSchemaTemplate == "update_part")
       assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair")
       assert(metaTable.hiveConfig.templates.addPartitionTemplate == "add_partition")
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop")
@@ -291,6 +292,7 @@ class MetaTableSuite extends AnyWordSpec {
           |     create.table.template = "create2"
           |     create.only.table.template = "create_only2"
           |     replace.schema.template = "replace2"
+          |     replace.partition.schema.template = "replace_part2"
           |     repair.table.template = "repair2"
           |     add.partition.template = "add_partition2"
           |     drop.table.template = "drop2"
@@ -318,6 +320,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create2")
       assert(metaTable.hiveConfig.templates.createOnlyTableTemplate == "create_only2")
       assert(metaTable.hiveConfig.templates.replaceSchemaTemplate == "replace2")
+      assert(metaTable.hiveConfig.templates.replacePartitionSchemaTemplate == "replace_part2")
       assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair2")
       assert(metaTable.hiveConfig.templates.addPartitionTemplate == "add_partition2")
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop2")

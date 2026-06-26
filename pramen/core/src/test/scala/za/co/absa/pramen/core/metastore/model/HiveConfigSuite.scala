@@ -46,6 +46,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.templates.createTableTemplate.contains("create1"))
       assert(hiveConfig.templates.createOnlyTableTemplate.contains("create_only1"))
       assert(hiveConfig.templates.replaceSchemaTemplate.contains("update1"))
+      assert(hiveConfig.templates.replacePartitionSchemaTemplate.contains("update_part1"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair1"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop1"))
@@ -70,6 +71,7 @@ class HiveConfigSuite extends AnyWordSpec {
           |   create.table.template = "create2"
           |   create.only.table.template = "create_only2"
           |   replace.schema.template = "replace2"
+          |   replace.partition.schema.template = "replace_part2"
           |   repair.table.template = "repair2"
           |   add.partition.template = "add_partition2"
           |   drop.table.template = "drop2"
@@ -126,6 +128,7 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.templates.createTableTemplate.contains("create"))
       assert(hiveConfig.templates.createOnlyTableTemplate.contains("create_only"))
       assert(hiveConfig.templates.replaceSchemaTemplate.contains("update"))
+      assert(hiveConfig.templates.replacePartitionSchemaTemplate.contains("update_part"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop"))
