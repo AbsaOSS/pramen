@@ -58,22 +58,27 @@ class MetastorePersistenceIceberg(table: CatalogTable,
       case _ => (false, "Writing to")
     }
 
+    val writerOptionsWithAdditionalMetadata = writeOptions ++ Map(
+      s"snapshot-property.$infoDateColumn" -> infoDate.toString,
+      s"snapshot-property.$batchIdColumn" -> batchId.toString,
+    )
+
     val tableExists = CatalogUtils.doesTableExist(table)
 
     if (tableExists) {
       log.info(s"$operationStr to table $fullTableName...")
       if (isAppend) {
-        appendToTable(dfToSave, fullTableName, writeOptions)
+        appendToTable(dfToSave, fullTableName, writerOptionsWithAdditionalMetadata)
       } else {
         if (partitionScheme == PartitionScheme.Overwrite) {
-          overwriteFullTable(dfToSave, fullTableName, writeOptions)
+          overwriteFullTable(dfToSave, fullTableName, writerOptionsWithAdditionalMetadata)
         } else {
-          overwriteDailyPartition(infoDate, dfToSave, fullTableName, infoDateColumn, writeOptions)
+          overwriteDailyPartition(infoDate, dfToSave, fullTableName, infoDateColumn, writerOptionsWithAdditionalMetadata)
         }
       }
     } else {
       log.info(s"Creating Iceberg table ${table.getFullTableName}...")
-      createIcebergTable(dfToSave, fullTableName, infoDateColumn, location, description, partitionScheme, tableProperties, writeOptions)
+      createIcebergTable(dfToSave, fullTableName, infoDateColumn, location, description, partitionScheme, tableProperties, writerOptionsWithAdditionalMetadata)
     }
 
     getStats(infoDate, onlyForCurrentBatchId = false)
