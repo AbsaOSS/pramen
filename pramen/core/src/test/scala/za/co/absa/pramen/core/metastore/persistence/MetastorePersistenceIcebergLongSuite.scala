@@ -76,7 +76,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table1" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByDay)
+        val mt = getIcebergMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByDay)
 
         runBasicTests(mt)
 
@@ -88,6 +88,15 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assert(partitionColumns.length == 1)
         assert(partitionColumns.head == "info_date")
 
+        // Get all snapshot properties from the Iceberg table
+        val location = new Path(hadoopTempDir, s"pramen/iceberg_catalog/default/$tableName").toString
+        val ht = new HadoopTables
+        val table = ht.load(location)
+        val snapshotProperties = table.currentSnapshot().summary().asScala
+
+        assert(snapshotProperties("info_date") == infoDate2.toString)
+        assert(snapshotProperties("pramen_batchid") == "0")
+
         spark.sql(s"DELETE FROM $tableName").count()
         spark.sql(s"DROP TABLE IF EXISTS $tableName").count()
       }
@@ -96,7 +105,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table2" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByMonth("info_month", "info_year"))
+        val mt = getIcebergMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByMonth("info_month", "info_year"))
 
         runBasicTests(mt)
 
@@ -117,7 +126,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table3" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYearMonth("info_month"))
+        val mt = getIcebergMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYearMonth("info_month"))
 
         assertThrows[UnsupportedOperationException] {
           runBasicTests(mt)
@@ -128,7 +137,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table4" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYear("info_year"))
+        val mt = getIcebergMtPersistence(Query.Table(tableName), PartitionScheme.PartitionByYear("info_year"))
 
         runBasicTests(mt)
 
@@ -148,7 +157,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table5" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.NotPartitioned)
+        val mt = getIcebergMtPersistence(Query.Table(tableName), PartitionScheme.NotPartitioned)
 
         runBasicTests(mt)
 
@@ -167,7 +176,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Iceberg for Spark ${spark.version}")
 
         val tableName = "mt_iceberg_part_table6" + Math.abs(Random.nextInt()).toString
-        val mt = getDeltaMtPersistence(Query.Table(tableName), PartitionScheme.Overwrite)
+        val mt = getIcebergMtPersistence(Query.Table(tableName), PartitionScheme.Overwrite)
 
         runOverwritingTests(mt)
 
@@ -206,8 +215,8 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
       .toSeq*/
   }
 
-  def getDeltaMtPersistence(query: Query,
-                            partitionScheme: PartitionScheme = PartitionScheme.PartitionByDay): MetastorePersistence = {
+  def getIcebergMtPersistence(query: Query,
+                              partitionScheme: PartitionScheme = PartitionScheme.PartitionByDay): MetastorePersistence = {
     val catalogTable = CatalogTable(None, None, query.query)
     val mt = MetaTableFactory.getDummyMetaTable(name = "table1",
       format = DataFormat.Iceberg(catalogTable, None),
