@@ -1,0 +1,122 @@
+#
+# Copyright 2022 ABSA Group Limited
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+name: GitHub Draft Release
+on:
+  workflow_dispatch:
+    inputs:
+      tag-name:
+        description: 'Name of git tag to be created, and then draft release created. Syntax: "v[0-9]+.[0-9]+.[0-9]+".'
+        required: true
+      from-tag-name:
+        description: >-
+          Name of the git tag from which to detect changes from.
+          Default value: latest tag. Syntax: "v[0-9]+.[0-9]+.[0-9]+".
+        required: false
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: read
+
+jobs:
+  release-draft:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: '3.14'
+
+      - name: Check format of received target tag
+        id: check-version-tag
+        uses: AbsaOSS/version-tag-check@4145e48bf3f77a5afff2ec9afdd8afb6b53bce34 # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          github-repository: ${{ github.repository }}
+          version-tag: ${{ github.event.inputs.tag-name }}
+
+      - name: Check format of received from tag
+        if: ${{ github.event.inputs.from-tag-name }}
+        id: check-version-from-tag
+        uses: AbsaOSS/version-tag-check@4145e48bf3f77a5afff2ec9afdd8afb6b53bce34 # v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          github-repository: ${{ github.repository }}
+          version-tag: ${{ github.event.inputs.from-tag-name }}
+          should-exist: true
+
+      - name: Create and push tag
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        env:
+          TAG_NAME: ${{ github.event.inputs.tag-name }}
+        with:
+          script: |
+            const tag = process.env.TAG_NAME;
+            const ref = `refs/tags/${tag}`;
+            const sha = context.sha;
+
+            await github.rest.git.createRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: ref,
+              sha: sha
+            });
+
+            console.log(`Tag created: ${tag}`);
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate Release Notes
+        id: generate_release_notes
+        uses: AbsaOSS/generate-release-notes@26eca65fc504c088a7afd8b08545a738ad8b446b # v1.3.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          release-notes-title: "## [Rr]elease [Nn]otes"
+          tag-name: ${{ github.event.inputs.tag-name }}
+          from-tag-name: ${{ github.event.inputs.from-tag-name }}
+          chapters: |
+            - { title: Epics 🚀, label: Epic, order: 10 }
+            - { title: New Features 🎉, label: enhancement, order: 20 }
+            - { title: Bugfixes 🛠, label: bug, order: 30 }
+            - { title: CI/CD ⚙️, label: CI/CD, order: 40 }
+            - { title: DE 🔧, label: DE, order: 50 }
+            - { title: DS 📊, label: DS, order: 60 }
+            - { title: Pramen Scala 🔶, label: Pramen-Scala, order: 70 }
+            - { title: Pramen Python 🐍, label: Pramen-Py, order: 80 }
+            - { title: Entries to skip 🚫, labels: [duplicate, no RN], hidden: true, order: 99 }
+          warnings: true
+          print-empty-chapters: false
+          row-format-issue: '{type}: {number} _{title}_ by {developers} in {pull-requests}'
+          row-format-pr: '{number} _{title}_ by {developers}'
+
+      - name: Create draft release
+        uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: ${{ github.event.inputs.tag-name }}
+          body: ${{ steps.generate_release_notes.outputs.release-notes }}
+          tag_name: ${{ github.event.inputs.tag-name }}
+          draft: true
+          prerelease: false
