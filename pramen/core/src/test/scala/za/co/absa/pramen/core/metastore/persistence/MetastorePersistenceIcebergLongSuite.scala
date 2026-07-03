@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore.persistence
 
 import org.apache.hadoop.fs.Path
+import org.apache.iceberg.Table
 import org.apache.iceberg.hadoop.HadoopTables
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AnyWordSpec
@@ -89,10 +90,7 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
         assert(partitionColumns.head == "info_date")
 
         // Get all snapshot properties from the Iceberg table
-        val location = new Path(hadoopTempDir, s"pramen/iceberg_catalog/default/$tableName").toString
-        val ht = new HadoopTables
-        val table = ht.load(location)
-        val snapshotProperties = table.currentSnapshot().summary().asScala
+        val snapshotProperties = loadIcebergTable(tableName).currentSnapshot().summary().asScala
 
         assert(snapshotProperties("info_date") == infoDate2.toString)
         assert(snapshotProperties("pramen_batchid") == "0")
@@ -193,10 +191,13 @@ class MetastorePersistenceIcebergLongSuite extends AnyWordSpec
     }
   }
 
-  def getTablePartitions(tableName: String): Seq[String] = {
+  def loadIcebergTable(tableName: String): Table = {
     val location = new Path(hadoopTempDir, s"pramen/iceberg_catalog/default/$tableName").toString
-    val ht = new HadoopTables
-    val table = ht.load(location)
+    new HadoopTables().load(location)
+  }
+
+  def getTablePartitions(tableName: String): Seq[String] = {
+    val table = loadIcebergTable(tableName)
 
     table.spec()
       .fields()
