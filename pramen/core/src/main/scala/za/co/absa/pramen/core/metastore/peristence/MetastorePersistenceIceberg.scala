@@ -60,7 +60,7 @@ class MetastorePersistenceIceberg(table: CatalogTable,
 
     val writerOptionsWithAdditionalMetadata = writeOptions ++ Map(
       s"snapshot-property.$infoDateColumn" -> infoDate.toString,
-      s"snapshot-property.$batchIdColumn" -> batchId.toString,
+      s"snapshot-property.$batchIdColumn" -> batchId.toString
     )
 
     val tableExists = CatalogUtils.doesTableExist(table)
