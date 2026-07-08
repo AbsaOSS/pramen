@@ -19,26 +19,31 @@ package za.co.absa.pramen.core.utils
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.exceptions.TimeoutException
 import za.co.absa.pramen.core.runner.task.ThreadClosableRegistry
-import za.co.absa.pramen.core.utils.impl.ThreadWithException
+import za.co.absa.pramen.core.utils.impl.{DetachedRunService, ThreadWithException}
 
 import java.lang.Thread.UncaughtExceptionHandler
+import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success}
 
 object ThreadUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   /**
-    * Executes an action with a timeout. If the timeout is breached the task is killed (using Thread.interrupt())
+    * Executes an action with a timeout. If the timeout is breached, cleanup is performed
+    * (e.g. closing JDBC connections) and then the task is killed (using Thread.interrupt()).
     *
-    * If the task times out, an exception is thrown.
+    * If the task times out, a [[TimeoutException]] is thrown.
     *
-    * Any exception is passed to the caller.
+    * Any exception thrown by the action is re-thrown to the caller.
     *
-    * @param timeout The task timeout.
-    * @param action  An action to execute.
+    * @param timeout        The task timeout.
+    * @param cleanupTimeout The timeout for the cleanup operation before interrupting the thread.
+    * @param action         An action to execute.
+    * @throws TimeoutException if the action does not complete within the specified timeout.
     */
   @throws[TimeoutException]
-  def runWithTimeout(timeout: Duration)(action: => Unit): Unit = {
+  def runWithTimeout(timeout: Duration, cleanupTimeout: Duration = Duration(5, TimeUnit.MINUTES))(action: => Unit): Unit = {
     val thread = new ThreadWithException {
       override def run(): Unit = {
         action
@@ -58,13 +63,20 @@ object ThreadUtils {
 
     if (thread.isAlive) {
       val stackTrace = thread.getStackTrace
+      val threadId = thread.getId
 
-      try {
-        // Execute cleanup BEFORE interrupt - e.g. close the JDBC connection/statement
-        ThreadClosableRegistry.cleanupThread(thread.getId)
-      } catch {
-        case ex: Throwable =>
-          log.warn(s"Exception during timeout cleanup: ${ex.getMessage}")
+      // Execute cleanup BEFORE interrupt - e.g. close the JDBC connection/statement
+      val future = DetachedRunService.runWithTimeoutThenDetach[Unit](cleanupTimeout) {
+        ThreadClosableRegistry.cleanupThread(threadId)
+      }
+
+      future.value match {
+        case Some(Success(_))  =>
+          log.info(s"Cleanup for thread $threadId completed successfully. All SQL queries were cancelled and connections closed.")
+        case Some(Failure(ex)) =>
+          log.warn(s"Exception during thread $threadId cleanup: ${ex.getMessage}")
+        case None              =>
+          log.info(s"Timeout cleanup for thread $threadId is still running. Setting it to continue in a detached thread...")
       }
 
       thread.interrupt()

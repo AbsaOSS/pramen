@@ -26,6 +26,7 @@ import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.config.Keys.SQL_QUERY_CANCELLATION_TIMEOUT
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, LazyJobErrorWrapper, ReasonException}
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
@@ -63,6 +64,7 @@ abstract class TaskRunnerBase(conf: Config,
   implicit val localDateOrdering: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
 
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val sqlCancellationTimeoutSeconds = ConfigUtils.getOptionInt(conf, SQL_QUERY_CANCELLATION_TIMEOUT).getOrElse(300)
 
   /**
     * Runs tasks in parallel (if possible) and returns their futures. Subclasses should override this method.
@@ -148,7 +150,7 @@ abstract class TaskRunnerBase(conf: Config,
         @volatile var runStatus: RunStatus = null
 
         try {
-          ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
+          ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS), Duration(sqlCancellationTimeoutSeconds, TimeUnit.SECONDS)) {
             log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
             runStatus = doValidateOrSkipTask(task)
           }

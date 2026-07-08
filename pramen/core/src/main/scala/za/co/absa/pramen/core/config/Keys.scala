@@ -56,6 +56,8 @@ object Keys {
 
   val WRAP_SINK_EXCEPTION = "pramen.internal.wrap.sink.exceptions"
 
+  val SQL_QUERY_CANCELLATION_TIMEOUT = "pramen.internal.cancellation.timeout.seconds"
+
   final val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "api.key", "api_key", "session.token", "access_key", "session_token", "auth.user.info")
 
   final val CONFIG_KEYS_TO_REDACT = Set(

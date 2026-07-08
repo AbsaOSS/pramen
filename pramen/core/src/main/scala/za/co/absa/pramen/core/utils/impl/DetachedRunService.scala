@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.utils.impl
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 object DetachedRunService {
   /**
@@ -36,6 +37,31 @@ object DetachedRunService {
     val fut = thread.getFuture
     thread.setDaemon(true)
     thread.start()
+
+    fut
+  }
+
+  /**
+    * Executes the given action on a separate daemon thread, waiting up to the specified timeout
+    * for the result. If the action completes within the timeout, the result is returned in a
+    * completed Future. If the timeout elapses before the action completes, the thread continues
+    * running in a detached manner (as a daemon thread) and the returned Future will eventually
+    * be completed when the action finishes.
+    *
+    * @param timeout the maximum duration to wait for the action to complete before detaching
+    * @param action  the by-name computation to execute on a detached daemon thread
+    * @return a Future containing the result of the action, or a failed Future if the action throws an exception
+    */
+  def runWithTimeoutThenDetach[T](timeout: Duration)(action: => T): Future[T] = {
+    val thread = new ThreadWithResult[T] {
+      override def runWitResult(): T = action
+    }
+
+    val fut = thread.getFuture
+    thread.setDaemon(true)
+    thread.start()
+
+    thread.join(timeout.toMillis)
 
     fut
   }
