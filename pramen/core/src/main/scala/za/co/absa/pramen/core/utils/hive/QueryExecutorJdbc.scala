@@ -61,6 +61,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     log.info(s"Executing SQL: $query")
 
     executeActionOnConnection { conn =>
+      if (Thread.currentThread().isInterrupted) {
+        throw new InterruptedException(s"Current thread is interrupted. Aborting SQL execution: $query")
+      }
       val statement = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
 
       val autoCloseStatement: AutoCloseable = new AutoCloseable {
@@ -96,6 +99,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       try {
         connection.close()
       } catch {
+        case ex: InterruptedException => throw ex
         case NonFatal(ex) => log.warn("Failed to close JDBC connection", ex)
       }
     }
@@ -107,6 +111,8 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       action(currentConnection)
     } catch {
       case ex: SQLException =>
+        throw ex
+      case ex: InterruptedException =>
         throw ex
       case NonFatal(ex) =>
         log.warn(s"Got an error on existing connection. Retrying...", ex)
@@ -143,11 +149,16 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
 
       val table = getEscapedMetadataString(tableName, metadata)
 
-      for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
-        val exists = rs.next
-        exists
+      log.warn(s"Checking existence of table '$db.$tableName' using metadata query...")
+      val exists = for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
+        val r = rs.next
+        r
       }
+      log.warn(s"Table '$db.$tableName' exists = $exists")
+      exists
     } catch {
+      case ex: InterruptedException =>
+        throw ex
       case NonFatal(ex) =>
         log.warn(s"Metadata table existence check failed for '$tableName'. Falling back to DESCRIBE TABLE (${ex.getMessage}).")
         false
@@ -163,7 +174,12 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       execute(query)
     } match {
       case Failure(ex) =>
-        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
+        ex match {
+          case ex: InterruptedException =>
+            throw ex
+          case ex: Throwable =>
+            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
+        }
         false
       case _ =>
         true
@@ -178,7 +194,12 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       execute(query)
     } match {
       case Failure(ex) =>
-        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
+        ex match {
+          case ex: InterruptedException =>
+            throw ex
+          case ex: Throwable =>
+            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
+        }
         false
       case _ =>
         true

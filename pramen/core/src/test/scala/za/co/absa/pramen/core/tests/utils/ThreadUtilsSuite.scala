@@ -16,9 +16,12 @@
 
 package za.co.absa.pramen.core.tests.utils
 
+import com.github.yruslan.channel.{Channel, WriteChannel}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.runner.task.ThreadClosableRegistry
 import za.co.absa.pramen.core.utils.ThreadUtils
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
@@ -52,6 +55,63 @@ class ThreadUtilsSuite extends AnyWordSpec {
 
       assert(ex.getMessage == "test")
     }
+
+    "closable is called when registered" in {
+      val (closeable1, getCount1) = createCountingCloseable(0)
+
+      val timeout = Duration(1, TimeUnit.SECONDS)
+      val ex = intercept[RuntimeException] {
+        ThreadUtils.runWithTimeout(timeout, timeout) {
+          ThreadClosableRegistry.registerCloseable(closeable1)
+          Thread.sleep(10000)
+        }
+      }
+
+      assert(ex.getMessage.startsWith("Timeout expired"))
+      assert(getCount1() == 1)
+    }
+
+    "closable continues to run in detached thread when timed out" in {
+      val ch = Channel.make[Int]
+      val (closeable1, _) = createCountingCloseable(1000, Some(ch))
+
+      val start = Instant.now
+      val timeout = Duration(1, TimeUnit.SECONDS)
+      val closeTimeout = Duration(1, TimeUnit.MILLISECONDS)
+      val ex = intercept[RuntimeException] {
+        ThreadUtils.runWithTimeout(timeout, closeTimeout) {
+          ThreadClosableRegistry.registerCloseable(closeable1)
+          Thread.sleep(10000)
+        }
+      }
+
+      assert(ex.getMessage.startsWith("Timeout expired"))
+
+      val num = ch.recv()
+      assert(num == 2)
+
+      val finish = Instant.now
+      assert(java.time.Duration.between(start, finish).getSeconds < 10)
+    }
+  }
+
+  private def createCountingCloseable(waitTimeMs: Int, closingChannel: Option[WriteChannel[Int]] = None): (AutoCloseable, () => Int) = {
+    var count = 0
+    val closeable = new AutoCloseable {
+      override def close(): Unit = {
+        this.synchronized {
+          count += 1
+        }
+        if (waitTimeMs > 0) {
+          Thread.sleep(waitTimeMs)
+          this.synchronized {
+            count += 1
+          }
+          closingChannel.foreach(c => c.send(count) )
+        }
+      }
+    }
+    (closeable, () => count)
   }
 
 }
