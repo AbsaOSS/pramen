@@ -108,6 +108,48 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition2"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop2"))
     }
+
+    "return Sql Query table existence strategy when optimize.exist.query = false fallback" in {
+      val conf = ConfigFactory.parseString(
+        """api = spark_catalog
+          |database = mydb2
+          |
+          |ignore.failures = true
+          |escape.column.names = true
+          |
+          |jdbc {
+          |  driver = driver2
+          |  url = url2
+          |  user = user2
+          |  password = pass2
+          |}
+          |
+          |conf {
+          |   optimize.exist.query = false
+          |}
+          |""".stripMargin)
+
+      val defaultConfig = HiveDefaultConfig(
+        HiveApi.Sql,
+        Some("mydb1"),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "replace_part1", "repair1", "add_partition1", "drop1")),
+        None,
+        ignoreFailures = false,
+        alwaysEscapeColumnNames = false,
+        optimizeExistQuery = true,
+        tableExistenceCheckStrategy = None
+      )
+
+      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy"))
+
+      assert(hiveConfig.hiveApi == HiveApi.SparkCatalog)
+      assert(hiveConfig.database.contains("mydb2"))
+      assert(hiveConfig.jdbcConfig.nonEmpty)
+      assert(hiveConfig.jdbcConfig.map(_.driver).contains("driver2"))
+      assert(hiveConfig.ignoreFailures)
+      assert(hiveConfig.alwaysEscapeColumnNames)
+      assert(hiveConfig.existenceCheckStrategy == ExistenceCheckStrategy.SelectQuery)
+    }
   }
 
   "fromDefaults()" should {
