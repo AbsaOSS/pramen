@@ -72,6 +72,7 @@ object ThreadClosableRegistry {
     val threadCloseables = closeables.asScala.filter(_._1 == threadId).map(_._2).toList
     threadCloseables.reverse.foreach { closeable =>
       try {
+        log.info(s"Closing closable of type ${closeable.getClass.getCanonicalName} for the thread $threadId...")
         closeable.close()
       } catch {
         case NonFatal(ex) =>
