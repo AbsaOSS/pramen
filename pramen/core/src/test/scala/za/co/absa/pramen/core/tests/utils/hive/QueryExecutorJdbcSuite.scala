@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
-import za.co.absa.pramen.core.utils.hive.QueryExecutorJdbc
+import za.co.absa.pramen.core.utils.hive.{ExistenceCheckStrategy, QueryExecutorJdbc}
 
 import java.sql.SQLSyntaxErrorException
 
@@ -48,21 +48,21 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
   "QueryExecutorJdbc" should {
     "be constructed from JdbcConfig" in {
-      val qe = QueryExecutorJdbc.fromJdbcConfig(jdbcConfig, optimizedExistQuery = false)
+      val qe = QueryExecutorJdbc.fromJdbcConfig(jdbcConfig, existenceCheckStrategy = ExistenceCheckStrategy.SelectQuery)
 
       qe.execute("UPDATE company SET id = 200 WHERE id = 100")
       qe.close()
     }
 
     "execute JDBC queries" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.MetadataAndDescribeQuery)
 
       qe.execute("SELECT * FROM company")
       qe.close()
     }
 
     "execute CREATE TABLE queries" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.SelectQuery)
 
       qe.execute("CREATE TABLE my_table (id INT)")
 
@@ -74,7 +74,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "check table existence" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.MetadataAndDescribeQuery)
 
       qe.execute("CREATE TABLE MY_TABLE2 (id INT)")
 
@@ -88,7 +88,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "throw an exception on errors" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.SelectQuery)
 
       val ex = intercept[SQLSyntaxErrorException] {
         qe.execute("SELECT * FROM does_not_exist")
@@ -98,7 +98,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return true if the table is found" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.SelectQuery)
 
       val exist = qe.doesTableExist(None, "company")
 
@@ -108,7 +108,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return false if the table is not found" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = false)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.SelectQuery)
 
       val exist = qe.doesTableExist(Option(database), "does_not_exist")
 
@@ -118,7 +118,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return false if the table is not found in an optimized query" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.MetadataQuery)
 
       val exist = qe.doesTableExist(Option(database), "does_not_exist")
 
@@ -128,7 +128,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
     }
 
     "return false if the table is not found in an optimized query without a database" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.MetadataQuery)
 
       val exist = qe.doesTableExist(None, "does_not_exist")
 
@@ -145,7 +145,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       whenMock(sel.jdbcConfig).thenReturn(jdbcConfig)
       whenMock(sel.getNewConnection(anyInt())).thenReturn((conn, "dummyurl"))
 
-      val qe = new QueryExecutorJdbc(sel, true)
+      val qe = new QueryExecutorJdbc(sel, existenceCheckStrategy = ExistenceCheckStrategy.MetadataQuery)
       qe.execute("SELECT * FROM company")
 
       var execution = 0
@@ -176,7 +176,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
         .thenReturn((conn, "dummyurl"))
         .thenThrow(new RuntimeException("fail the second time"))
 
-      val qe = new QueryExecutorJdbc(sel, true)
+      val qe = new QueryExecutorJdbc(sel, existenceCheckStrategy = ExistenceCheckStrategy.MetadataQuery)
 
       var execution = 0
       var actionExecuted = false
@@ -211,7 +211,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
         .thenThrow(new RuntimeException("fail the second time"))
         .thenReturn((conn, "dummyurl"))
 
-      val qe = new QueryExecutorJdbc(sel, true)
+      val qe = new QueryExecutorJdbc(sel, existenceCheckStrategy = ExistenceCheckStrategy.MetadataQuery)
 
       var execution = 0
       var actionExecuted = false
@@ -235,7 +235,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
 
   "getEscapedMetadataString" should {
     "escape % and _" in {
-      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), optimizedExistQuery = true)
+      val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.MetadataQuery)
       val metadata = getConnection.getMetaData
 
       val actual = qe.getEscapedMetadataString("100% escaped_table", metadata)

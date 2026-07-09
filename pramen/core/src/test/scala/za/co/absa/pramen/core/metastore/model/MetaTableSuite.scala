@@ -234,7 +234,7 @@ class MetaTableSuite extends AnyWordSpec {
         Some(JdbcConfig("driver", Some("url"),
           user = Some("user"),
           password = Some("pass")
-        )), ignoreFailures = true, alwaysEscapeColumnNames = false, optimizeExistQuery = true)
+        )), ignoreFailures = true, alwaysEscapeColumnNames = false, optimizeExistQuery = true, None)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
@@ -307,7 +307,7 @@ class MetaTableSuite extends AnyWordSpec {
         Some(JdbcConfig("driver1", Some("url1"),
           user = Some("user1"),
           password = Some("pass1")
-        )), ignoreFailures = false, alwaysEscapeColumnNames = false, optimizeExistQuery = true)
+        )), ignoreFailures = false, alwaysEscapeColumnNames = false, optimizeExistQuery = true, None)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
