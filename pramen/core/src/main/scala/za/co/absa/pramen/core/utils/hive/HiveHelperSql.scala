@@ -16,7 +16,6 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-import org.apache.spark.sql.execution.datasources.PartitioningUtils.PartitionValues
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.SparkUtils
