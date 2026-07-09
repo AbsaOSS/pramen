@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.core.utils.hive
 
-trait ExistenceCheckStrategy
+sealed trait ExistenceCheckStrategy
 
 object ExistenceCheckStrategy {
   case object MetadataQuery extends ExistenceCheckStrategy
