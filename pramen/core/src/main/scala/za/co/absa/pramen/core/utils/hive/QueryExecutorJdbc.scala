@@ -154,12 +154,10 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
       val table = getEscapedMetadataString(tableName, metadata)
 
       log.info(s"Checking existence of table '$db.$tableName' using metadata query...")
-      val exists = for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
+      for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
         val r = rs.next
         r
       }
-      log.info(s"Table '$db.$tableName' exists = $exists")
-      exists
     } catch {
       case ex: InterruptedException =>
         throw ex
@@ -174,7 +172,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
 
     val query = s"DESCRIBE $fullTableName"
 
-    val exists = Try {
+    Try {
       log.info(s"Checking existence of table '$fullTableName' using DESCRIBE TABLE query...")
       execute(query)
     } match {
@@ -189,15 +187,13 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
       case _ =>
         true
     }
-    log.info(s"Table '$fullTableName' exists = $exists")
-    exists
   }
 
   def doesTableExistUsingSqlQuery(databaseNameOpt: Option[String], tableName: String): Boolean = {
     val fullTableName = HiveHelper.getFullTable(databaseNameOpt, tableName)
 
     val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
-    val exists = Try {
+    Try {
       log.info(s"Checking existence of table '$fullTableName' using the query: '$query'...")
       execute(query)
     } match {
@@ -212,8 +208,6 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
       case _ =>
         true
     }
-    log.info(s"Table '$fullTableName' exists = $exists")
-    exists
   }
 
   def getEscapedMetadataString(s: String, metaData: DatabaseMetaData): String = {
