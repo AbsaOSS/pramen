@@ -61,7 +61,10 @@ object DetachedRunService {
     thread.setDaemon(true)
     thread.start()
 
-    thread.join(timeout.toMillis)
+    val waitMillis = timeout.toMillis
+    if (waitMillis > 0) {
+      thread.join(waitMillis)
+    }
 
     fut
   }

@@ -149,12 +149,12 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
 
       val table = getEscapedMetadataString(tableName, metadata)
 
-      log.warn(s"Checking existence of table '$db.$tableName' using metadata query...")
+      log.info(s"Checking existence of table '$db.$tableName' using metadata query...")
       val exists = for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
         val r = rs.next
         r
       }
-      log.warn(s"Table '$db.$tableName' exists = $exists")
+      log.info(s"Table '$db.$tableName' exists = $exists")
       exists
     } catch {
       case ex: InterruptedException =>
