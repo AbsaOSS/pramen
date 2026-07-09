@@ -21,7 +21,8 @@ import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.core.metastore.model.HiveDefaultConfig._
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
+import za.co.absa.pramen.core.utils.hive.ExistenceCheckStrategy.SelectQuery
+import za.co.absa.pramen.core.utils.hive.{ExistenceCheckStrategy, HiveQueryTemplates}
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates._
 
 /**
@@ -58,7 +59,7 @@ import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates._
   * @param jdbcConfig              Hive JDBC configuration to use instead of Spark metastore if needed
   * @param ignoreFailures          Whether to ignore errors when creating or repairing tables. If true, only warnings will be emitted on Hive errors.
   * @param alwaysEscapeColumnNames If true, column names are always escaped when executing SQL against Hive.
-  * @param optimizeExistQuery      If true, Pramen uses Hive-specific SQL dialect to check table existence to ensure data won't be touched.
+  * @param existenceCheckStrategy  Specifies the strategy for checking Hive table existence. Different strategies could be more efficient depending on Hive version.
   */
 case class HiveConfig(
                        hiveApi: HiveApi,
@@ -67,7 +68,7 @@ case class HiveConfig(
                        jdbcConfig: Option[JdbcConfig],
                        ignoreFailures: Boolean,
                        alwaysEscapeColumnNames: Boolean,
-                       optimizeExistQuery: Boolean
+                       existenceCheckStrategy: ExistenceCheckStrategy
                      )
 
 object HiveConfig {
@@ -123,6 +124,19 @@ object HiveConfig {
     val hiveOptimizeExistQuery = ConfigUtils.getOptionBoolean(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$HIVE_OPTIMIZE_EXIST_QUERY_KEY")
       .getOrElse(defaults.optimizeExistQuery)
 
+    val hiveOptimizeExistQueryOpt = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$HIVE_TABLE_EXISTENCE_CHECK_STRATEGY_KEY")
+      .map(s => ExistenceCheckStrategy.fromString(s))
+      .orElse(defaults.tableExistenceCheckStrategy)
+
+    val hiveExistenceCheckStrategy = hiveOptimizeExistQueryOpt match {
+      case Some(st) => st
+      case None     =>
+        if (hiveOptimizeExistQuery)
+          ExistenceCheckStrategy.MetadataAndDescribeQuery
+        else
+          SelectQuery
+    }
+
     HiveConfig(
       hiveApi = hiveApi,
       database = database,
@@ -130,7 +144,7 @@ object HiveConfig {
       jdbcConfig = jdbcConfig,
       ignoreFailures,
       alwaysEscapeColumnNames,
-      hiveOptimizeExistQuery
+      hiveExistenceCheckStrategy
     )
   }
 
@@ -143,8 +157,9 @@ object HiveConfig {
     */
   def fromDefaults(defaults: HiveDefaultConfig, format: DataFormat): HiveConfig = {
     val templates = defaults.templates.getOrElse(format.name, HiveQueryTemplates.getDefaultQueryTemplates)
+    val strategy = defaults.tableExistenceCheckStrategy.getOrElse(ExistenceCheckStrategy.MetadataAndDescribeQuery)
 
-    HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures, alwaysEscapeColumnNames = true, optimizeExistQuery = true)
+    HiveConfig(defaults.hiveApi, defaults.database, templates, defaults.jdbcConfig, defaults.ignoreFailures, alwaysEscapeColumnNames = true, strategy)
   }
 
   def getNullConfig: HiveConfig = HiveConfig(
@@ -154,5 +169,5 @@ object HiveConfig {
     None,
     ignoreFailures = false,
     alwaysEscapeColumnNames = true,
-    optimizeExistQuery = true)
+    ExistenceCheckStrategy.MetadataAndDescribeQuery)
 }

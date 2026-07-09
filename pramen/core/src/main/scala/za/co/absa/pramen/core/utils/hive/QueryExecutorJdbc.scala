@@ -25,7 +25,7 @@ import java.sql._
 import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
 
-class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: Boolean) extends QueryExecutor {
+class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy: ExistenceCheckStrategy) extends QueryExecutor {
   import QueryExecutorJdbc._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -37,15 +37,19 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
     val fullTableName = HiveHelper.getFullTable(dbName, tableName)
 
-    val exists = if (optimizedExistQuery) {
-      if (doesTableExistUsingHiveMetadata(dbName, tableName)) {
-        true
-      } else {
-        log.info(s"Table $fullTableName is not in metadata. Checking via 'DESCRIBE TABLE'...")
+    val exists = existenceCheckStrategy match {
+      case ExistenceCheckStrategy.MetadataQuery =>
+        doesTableExistUsingHiveMetadata(dbName, tableName)
+      case ExistenceCheckStrategy.DescribeTable =>
         doesTableExistUsingDescribeTable(dbName, tableName)
-      }
-    } else {
-      doesTableExistUsingSqlQuery(dbName, tableName)
+      case ExistenceCheckStrategy.MetadataAndDescribeQuery =>
+        if (doesTableExistUsingHiveMetadata(dbName, tableName)) {
+          true
+        } else {
+          doesTableExistUsingDescribeTable(dbName, tableName)
+        }
+      case ExistenceCheckStrategy.SelectQuery =>
+        doesTableExistUsingSqlQuery(dbName, tableName)
     }
 
     if (exists)
@@ -170,7 +174,8 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
 
     val query = s"DESCRIBE $fullTableName"
 
-    Try {
+    val exists = Try {
+      log.info(s"Checking existence of table '$fullTableName' using DESCRIBE TABLE query...")
       execute(query)
     } match {
       case Failure(ex) =>
@@ -184,13 +189,16 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       case _ =>
         true
     }
+    log.info(s"Table '$fullTableName' exists = $exists")
+    exists
   }
 
   def doesTableExistUsingSqlQuery(databaseNameOpt: Option[String], tableName: String): Boolean = {
     val fullTableName = HiveHelper.getFullTable(databaseNameOpt, tableName)
 
     val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
-    Try {
+    val exists = Try {
+      log.info(s"Checking existence of table '$fullTableName' using the query: '$query'...")
       execute(query)
     } match {
       case Failure(ex) =>
@@ -204,6 +212,8 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       case _ =>
         true
     }
+    log.info(s"Table '$fullTableName' exists = $exists")
+    exists
   }
 
   def getEscapedMetadataString(s: String, metaData: DatabaseMetaData): String = {
@@ -218,9 +228,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
 object QueryExecutorJdbc {
   val HIVE_TABLE_TYPES = scala.Array[String]("TABLE", "VIEW", "MATERIALIZED VIEW")
 
-  def fromJdbcConfig(jdbcConfig: JdbcConfig, optimizedExistQuery: Boolean): QueryExecutorJdbc = {
+  def fromJdbcConfig(jdbcConfig: JdbcConfig, existenceCheckStrategy: ExistenceCheckStrategy): QueryExecutorJdbc = {
     val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
-    new QueryExecutorJdbc(jdbcUrlSelector, optimizedExistQuery)
+    new QueryExecutorJdbc(jdbcUrlSelector, existenceCheckStrategy)
   }
 }
