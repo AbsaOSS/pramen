@@ -185,9 +185,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
     } match {
       case Failure(ex) =>
         ex match {
-          case ex: InterruptedException =>
+          case _: InterruptedException =>
             throw ex
-          case ex: Throwable =>
+          case _: Throwable =>
             log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
         }
         false
@@ -206,9 +206,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
     } match {
       case Failure(ex) =>
         ex match {
-          case ex: InterruptedException =>
+          case _: InterruptedException =>
             throw ex
-          case ex: Throwable =>
+          case _: Throwable =>
             log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
         }
         false

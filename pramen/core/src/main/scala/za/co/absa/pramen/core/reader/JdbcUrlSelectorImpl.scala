@@ -152,9 +152,9 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
       case Success(connection) => (connection, currentUrl)
       case Failure(ex)         =>
         ex match {
-          case ex: InterruptedException =>
+          case _: InterruptedException =>
             throw ex
-          case ex: Throwable            =>
+          case _: Throwable            =>
             if (retriesLeft > 1) {
               val newUrl = getNextUrl
               val backoffS = Random.nextInt(BACKOFF_MAX_S - BACKOFF_MIN_S) + BACKOFF_MIN_S

@@ -45,16 +45,16 @@ object ThreadClosableRegistry {
   }
 
   /**
-    * Closes a closeable resource and unregisters is as an transactional atomic operation.
-    * The resource will be automatically closed when [[cleanupThread]] is called for this thread.
+    * Unregisters a closeable resource from the registry and then closes it.
+    * Close exceptions are logged and swallowed; they are not rethrown.
     *
-    * @param closeable The AutoCloseable resource to register
+    * @param closeable The AutoCloseable resource to close
     */
   def closeCloseable(closeable: AutoCloseable): Unit = {
     unregisterCloseable(closeable)
 
     try {
-      log.info(s"Closing closable of type ${closeable.getClass.getCanonicalName}...")
+      log.info(s"Closing closeable of type ${closeable.getClass.getCanonicalName}...")
       closeable.close()
     } catch {
       case NonFatal(ex) =>
