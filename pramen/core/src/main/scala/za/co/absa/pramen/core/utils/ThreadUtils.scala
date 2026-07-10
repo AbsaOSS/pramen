@@ -27,6 +27,8 @@ import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 object ThreadUtils {
+  val MIN_WAIT_AFTER_INTERRUPT_MS = 1000
+
   private val log = LoggerFactory.getLogger(this.getClass)
 
   /**
@@ -59,16 +61,26 @@ object ThreadUtils {
     thread.setUncaughtExceptionHandler(handler)
 
     thread.start()
+    val threadId = thread.getId
+    val closeWaitMillis = Math.max(cleanupTimeout.toMillis, MIN_WAIT_AFTER_INTERRUPT_MS)
     val waitMillis = timeout.toMillis
     if (waitMillis > 0) {
       thread.join(waitMillis)
     }
 
-    if (thread.isAlive) {
-      val stackTrace = thread.getStackTrace
-      val threadId = thread.getId
+    val isAlive = thread.isAlive
+    val stackTrace = if (isAlive) {
+      val st = thread.getStackTrace
+      thread.interrupt()
+      thread.join(closeWaitMillis)
+      st
+    } else
+      Array.empty[StackTraceElement]
 
-      // Execute cleanup BEFORE interrupt - e.g. close the JDBC connection/statement
+    val closeableCount = ThreadClosableRegistry.getCloseableCount(threadId)
+    if (closeableCount > 0) {
+      log.info(s"Found $closeableCount closeables for thread $threadId. Cleaning up...")
+
       val future = DetachedRunService.runWithTimeoutThenDetach[Unit](cleanupTimeout) {
         ThreadClosableRegistry.cleanupThread(threadId)
       }
@@ -81,9 +93,9 @@ object ThreadUtils {
         case None              =>
           log.info(s"Timeout cleanup for thread $threadId is still running. Setting it to continue in a detached thread...")
       }
+    }
 
-      thread.interrupt()
-
+    if (isAlive) {
       val prettyTimeout = TimeUtils.prettyPrintElapsedTimeShort(timeout.toMillis)
       val cause = new RuntimeException("The task has been interrupted by Pramen.")
       cause.setStackTrace(stackTrace)

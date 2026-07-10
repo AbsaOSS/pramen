@@ -98,10 +98,17 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
   }
 
   override def close(): Unit = {
-    if (connection != null) {
-      ThreadClosableRegistry.unregisterCloseable(connection)
+    val conn = this.synchronized {
+      connection
+    }
+
+    if (conn != null) {
       try {
-        connection.close()
+        log.info("Closing the JDBC connection to Hive...")
+        ThreadClosableRegistry.closeCloseable(conn)
+        this.synchronized {
+          connection = null
+        }
       } catch {
         case ex: InterruptedException => throw ex
         case NonFatal(ex) => log.warn("Failed to close JDBC connection", ex)

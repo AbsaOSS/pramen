@@ -151,15 +151,20 @@ class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig:
     } match {
       case Success(connection) => (connection, currentUrl)
       case Failure(ex)         =>
-        if (retriesLeft > 1) {
-          val newUrl = getNextUrl
-          val backoffS = Random.nextInt(BACKOFF_MAX_S - BACKOFF_MIN_S) + BACKOFF_MIN_S
-          log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying... in $backoffS seconds", ex)
-          Thread.sleep(backoffS * 1000)
-          log.info(s"Trying URL: $newUrl")
-          getNewConnection(retriesLeft - 1)
-        } else {
-          throw ex
+        ex match {
+          case ex: InterruptedException =>
+            throw ex
+          case ex: Throwable            =>
+            if (retriesLeft > 1) {
+              val newUrl = getNextUrl
+              val backoffS = Random.nextInt(BACKOFF_MAX_S - BACKOFF_MIN_S) + BACKOFF_MIN_S
+              log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying... in $backoffS seconds", ex)
+              Thread.sleep(backoffS * 1000)
+              log.info(s"Trying URL: $newUrl")
+              getNewConnection(retriesLeft - 1)
+            } else {
+              throw ex
+            }
         }
     }
   }
