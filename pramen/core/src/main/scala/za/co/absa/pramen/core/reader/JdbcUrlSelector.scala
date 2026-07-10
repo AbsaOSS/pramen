@@ -59,7 +59,7 @@ trait JdbcUrlSelector extends AutoCloseable {
   @throws[SQLException]
   def getConnection: (Connection, String)
 
-  /** Returns an new JDBC connection with the URL that has successfully connected. */
+  /** Returns a new JDBC connection with the URL that has successfully connected. */
   def getNewConnection(retriesLeft: Int): (Connection, String)
 }
 

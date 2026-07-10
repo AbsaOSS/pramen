@@ -45,6 +45,24 @@ object ThreadClosableRegistry {
   }
 
   /**
+    * Closes a closeable resource and unregisters is as an transactional atomic operation.
+    * The resource will be automatically closed when [[cleanupThread]] is called for this thread.
+    *
+    * @param closeable The AutoCloseable resource to register
+    */
+  def closeCloseable(closeable: AutoCloseable): Unit = {
+    unregisterCloseable(closeable)
+
+    try {
+      log.info(s"Closing closable of type ${closeable.getClass.getCanonicalName}...")
+      closeable.close()
+    } catch {
+      case NonFatal(ex) =>
+        log.warn(s"Error closing resource of type ${closeable.getClass.getCanonicalName}.", ex)
+    }
+  }
+
+  /**
     * Unregisters a closeable resource from the registry.
     * This removes the resource regardless of which thread it was registered from.
     *
@@ -68,18 +86,30 @@ object ThreadClosableRegistry {
     *
     * @param threadId The ID of the thread whose resources should be cleaned up
     */
-  def cleanupThread(threadId: Long): Unit = synchronized {
-    val threadCloseables = closeables.asScala.filter(_._1 == threadId).map(_._2).toList
+  def cleanupThread(threadId: Long): Unit = {
+    val threadCloseables = this.synchronized {
+      closeables.asScala.filter(_._1 == threadId).map(_._2).toList
+    }
+
     threadCloseables.reverse.foreach { closeable =>
+      unregisterCloseable(closeable)
       try {
         log.info(s"Closing closable of type ${closeable.getClass.getCanonicalName} for the thread $threadId...")
         closeable.close()
       } catch {
         case NonFatal(ex) =>
           log.warn(s"Error closing resource for thread $threadId.", ex)
-      } finally {
-        unregisterCloseable(closeable)
       }
     }
+  }
+
+  /**
+    * Returns the number of closeable resources currently registered for the specified thread.
+    *
+    * @param threadId The ID of the thread whose registered closeable count should be retrieved
+    * @return The number of closeable resources registered for the given thread
+    */
+  def getCloseableCount(threadId: Long): Int = synchronized {
+    closeables.asScala.count(_._1 == threadId)
   }
 }

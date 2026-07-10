@@ -129,6 +129,18 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
       getCount() shouldBe 1
     }
 
+    "do nothing when closeable was already closed by the thread" in {
+      val (closeable, getCount) = createCountingCloseable()
+
+      ThreadClosableRegistry.registerCloseable(closeable)
+      ThreadClosableRegistry.closeCloseable(closeable)
+      getCount() shouldBe 1
+
+      // Cleanup again - should not call close again
+      ThreadClosableRegistry.cleanupThread(currentThreadId)
+      getCount() shouldBe 1
+    }
+
     "close resources in LIFO order (last registered, first closed)" in {
       val closeOrder = mutable.ArrayBuffer[Int]()
 
