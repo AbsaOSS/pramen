@@ -26,6 +26,7 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Try}
 
 class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy: ExistenceCheckStrategy) extends QueryExecutor {
+
   import QueryExecutorJdbc._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -111,7 +112,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
         }
       } catch {
         case ex: InterruptedException => throw ex
-        case NonFatal(ex) => log.warn("Failed to close JDBC connection", ex)
+        case NonFatal(ex)             => log.warn("Failed to close JDBC connection", ex)
       }
     }
   }
@@ -149,10 +150,10 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
   def doesTableExistUsingHiveMetadata(databaseNameOpt: Option[String], tableName: String): Boolean = {
     import za.co.absa.pramen.core.utils.UsingUtils.Implicits._
 
-    try {
-      val conn = getConnection(false)
-      val metadata = conn.getMetaData
+    val conn = getConnection(false)
+    val metadata = conn.getMetaData
 
+    try {
       val db = databaseNameOpt match {
         case Some(s) => getEscapedMetadataString(s, metadata)
         case None => null
@@ -168,8 +169,8 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
     } catch {
       case ex: InterruptedException =>
         throw ex
-      case NonFatal(ex) =>
-        log.warn(s"Metadata table existence check failed for '$tableName'. Falling back to DESCRIBE TABLE (${ex.getMessage}).")
+      case NonFatal(ex)             =>
+        log.warn(s"Metadata table existence check failed for '$tableName'. Falling back to DESCRIBE TABLE (${ex.getClass.getCanonicalName}: ${ex.getMessage}).")
         false
     }
   }
@@ -178,6 +179,9 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
     val fullTableName = HiveHelper.getFullTable(databaseNameOpt, tableName)
 
     val query = s"DESCRIBE $fullTableName"
+
+    // Ensure the connection is available outside of Try
+    getConnection(false)
 
     Try {
       log.info(s"Checking existence of table '$fullTableName' using DESCRIBE TABLE query...")
@@ -188,7 +192,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
           case _: InterruptedException =>
             throw ex
           case _: Throwable =>
-            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
+            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getClass.getCanonicalName}: ${ex.getMessage}).")
         }
         false
       case _ =>
@@ -209,7 +213,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
           case _: InterruptedException =>
             throw ex
           case _: Throwable =>
-            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getMessage}).")
+            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getClass.getCanonicalName}: ${ex.getMessage}).")
         }
         false
       case _ =>
