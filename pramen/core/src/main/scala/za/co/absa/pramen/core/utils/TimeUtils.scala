@@ -119,6 +119,12 @@ object TimeUtils {
     }
   }
 
+  /**
+    * Executes the given block of code and returns the elapsed time in milliseconds.
+    *
+    * @param f the block of code to execute and measure
+    * @return the elapsed time in milliseconds it took to execute the block
+    */
   def withElapsedTimeMs(f: => Unit): Long = {
     val start = Instant.now()
     f
@@ -127,6 +133,12 @@ object TimeUtils {
     Duration.between(start, finish).toMillis
   }
 
+  /**
+    * Executes the given block of code and returns the elapsed time as a human-readable string.
+    *
+    * @param f the block of code to execute and measure
+    * @return the elapsed time in a human-readable format
+    */
   def withElapsedTimeStr(f: => Unit): String = {
     val start = Instant.now()
     f
@@ -135,6 +147,13 @@ object TimeUtils {
     getElapsedTimeStr(start, finish)
   }
 
+  /**
+    * Executes the given block of code, measures its elapsed time, and logs the result with the provided description.
+    *
+    * @param description a descriptive message to be logged alongside the elapsed time
+    * @param f           the block of code to execute and measure
+    * @return Unit
+    */
   def withElapsedTimeLogged(description: String)(f: => Unit): Unit = {
     val elapsedTimeStr = withElapsedTimeStr(f)
 
