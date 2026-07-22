@@ -133,12 +133,20 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
       val (closeable, getCount) = createCountingCloseable()
 
       ThreadClosableRegistry.registerCloseable(closeable)
-      ThreadClosableRegistry.closeCloseable(closeable)
       ThreadClosableRegistry.closeCloseable(closeable, "test")
       getCount() shouldBe 1
 
       // Cleanup again - should not call close again
       ThreadClosableRegistry.cleanupThread(currentThreadId)
+      getCount() shouldBe 1
+    }
+
+    "double close should invoke close only once" in {
+      val (closeable, getCount) = createCountingCloseable()
+
+      ThreadClosableRegistry.registerCloseable(closeable)
+      ThreadClosableRegistry.closeCloseable(closeable)
+      ThreadClosableRegistry.closeCloseable(closeable, "test")
       getCount() shouldBe 1
     }
 
