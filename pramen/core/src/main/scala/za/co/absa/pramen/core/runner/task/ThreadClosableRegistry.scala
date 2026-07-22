@@ -50,15 +50,24 @@ object ThreadClosableRegistry {
     *
     * @param closeable The AutoCloseable resource to close
     */
-  def closeCloseable(closeable: AutoCloseable): Unit = {
+  def closeCloseable(closeable: AutoCloseable, closeableType: String = ""): Unit = {
     unregisterCloseable(closeable)
 
+    val closeableTypeFixed = if (closeableType.isEmpty) {
+      val clazz = closeable.getClass
+      if (clazz.getCanonicalName != null)
+        clazz.getCanonicalName
+      else
+        clazz.getName
+    } else
+      closeableType
+
     try {
-      log.info(s"Closing closeable of type ${closeable.getClass.getCanonicalName}...")
+      log.info(s"Closing closeable of type $closeableTypeFixed...")
       closeable.close()
     } catch {
       case NonFatal(ex) =>
-        log.warn(s"Error closing resource of type ${closeable.getClass.getCanonicalName}.", ex)
+        log.warn(s"Error closing resource of type $closeableTypeFixed.", ex)
     }
   }
 

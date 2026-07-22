@@ -134,6 +134,7 @@ class ThreadClosableRegistrySuite extends AnyWordSpec with Matchers  {
 
       ThreadClosableRegistry.registerCloseable(closeable)
       ThreadClosableRegistry.closeCloseable(closeable)
+      ThreadClosableRegistry.closeCloseable(closeable, "test")
       getCount() shouldBe 1
 
       // Cleanup again - should not call close again

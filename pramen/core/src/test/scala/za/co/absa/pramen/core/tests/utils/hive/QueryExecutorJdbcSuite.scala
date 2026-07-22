@@ -238,7 +238,7 @@ class QueryExecutorJdbcSuite extends AnyWordSpec with BeforeAndAfterAll with Rel
       val qe = new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), existenceCheckStrategy = ExistenceCheckStrategy.MetadataQuery)
       val metadata = getConnection.getMetaData
 
-      val actual = qe.getEscapedMetadataString("100% escaped_table", metadata)
+      val actual = QueryExecutorJdbc.getEscapedMetadataString("100% escaped_table", metadata)
 
       qe.close()
 
