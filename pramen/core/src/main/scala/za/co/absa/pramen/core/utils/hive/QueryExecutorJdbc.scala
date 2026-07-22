@@ -92,8 +92,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
       try {
         statement.execute(query)
       } finally {
-        ThreadClosableRegistry.unregisterCloseable(autoCloseStatement)
-        autoCloseStatement.close()
+        ThreadClosableRegistry.closeCloseable(autoCloseStatement, s"java.sql.Statement(${query.take(5)}...)")
       }
     }
   }
@@ -106,7 +105,7 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
     if (conn != null) {
       try {
         log.info("Closing the JDBC connection to Hive...")
-        ThreadClosableRegistry.closeCloseable(conn)
+        ThreadClosableRegistry.closeCloseable(conn, "java.sql.Connection")
         this.synchronized {
           connection = null
         }
@@ -220,14 +219,6 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy
         true
     }
   }
-
-  def getEscapedMetadataString(s: String, metaData: DatabaseMetaData): String = {
-    val esc = metaData.getSearchStringEscape
-
-    s.replace(esc, s"${esc}$esc")
-      .replace("%", s"$esc%")
-      .replace("_", s"${esc}_")
-  }
 }
 
 object QueryExecutorJdbc {
@@ -237,5 +228,13 @@ object QueryExecutorJdbc {
     val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
     new QueryExecutorJdbc(jdbcUrlSelector, existenceCheckStrategy)
+  }
+
+  def getEscapedMetadataString(s: String, metaData: DatabaseMetaData): String = {
+    val esc = metaData.getSearchStringEscape
+
+    s.replace(esc, s"${esc}$esc")
+      .replace("%", s"$esc%")
+      .replace("_", s"${esc}_")
   }
 }
