@@ -55,14 +55,7 @@ object ThreadClosableRegistry {
     if (!found)
       return
 
-    val closeableTypeFixed = if (closeableType.isEmpty) {
-      val clazz = closeable.getClass
-      if (clazz.getCanonicalName != null)
-        clazz.getCanonicalName
-      else
-        clazz.getName
-    } else
-      closeableType
+    val closeableTypeFixed = getClassName(closeable, closeableType)
 
     try {
       log.info(s"Closing closeable of type $closeableTypeFixed...")
@@ -106,12 +99,15 @@ object ThreadClosableRegistry {
 
     threadCloseables.reverse.foreach { closeable =>
       unregisterCloseable(closeable)
+
+      val closeableTypeFixed = getClassName(closeable, "")
+
       try {
-        log.info(s"Closing closable of type ${closeable.getClass.getCanonicalName} for the thread $threadId...")
+        log.info(s"Closing closable of type $closeableTypeFixed for the thread $threadId...")
         closeable.close()
       } catch {
         case NonFatal(ex) =>
-          log.warn(s"Error closing resource for thread $threadId.", ex)
+          log.warn(s"Error closing resource of type $closeableTypeFixed for thread $threadId.", ex)
       }
     }
   }
@@ -124,5 +120,16 @@ object ThreadClosableRegistry {
     */
   def getCloseableCount(threadId: Long): Int = synchronized {
     closeables.asScala.count(_._1 == threadId)
+  }
+
+  private def getClassName(obj: AnyRef, providedType: String): String = {
+    if (providedType.isEmpty) {
+      val clazz = obj.getClass
+      if (clazz.getCanonicalName != null)
+        clazz.getCanonicalName
+      else
+        clazz.getName
+    } else
+      providedType
   }
 }
