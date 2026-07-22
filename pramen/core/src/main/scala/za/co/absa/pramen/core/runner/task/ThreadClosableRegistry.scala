@@ -51,7 +51,9 @@ object ThreadClosableRegistry {
     * @param closeable The AutoCloseable resource to close
     */
   def closeCloseable(closeable: AutoCloseable, closeableType: String = ""): Unit = {
-    unregisterCloseable(closeable)
+    val found = unregisterCloseable(closeable)
+    if (!found)
+      return
 
     val closeableTypeFixed = if (closeableType.isEmpty) {
       val clazz = closeable.getClass
@@ -75,17 +77,19 @@ object ThreadClosableRegistry {
     * Unregisters a closeable resource from the registry.
     * This removes the resource regardless of which thread it was registered from.
     *
-    * @param closeable The AutoCloseable resource to unregister
+    * @param closeable The AutoCloseable resource to unregister.
+    * @return True if the resource was found and unregistered, false otherwise.
     */
-  def unregisterCloseable(closeable: AutoCloseable): Unit = synchronized {
+  def unregisterCloseable(closeable: AutoCloseable): Boolean = synchronized {
     val iterator = closeables.iterator()
     while (iterator.hasNext) {
       val (_, c) = iterator.next()
       if (c == closeable) {
         iterator.remove()
-        return
+        return true
       }
     }
+    false
   }
 
   /**
