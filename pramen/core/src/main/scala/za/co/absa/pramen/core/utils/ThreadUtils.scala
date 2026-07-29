@@ -41,11 +41,15 @@ object ThreadUtils {
     *
     * @param timeout        The task timeout.
     * @param cleanupTimeout The timeout for the cleanup operation before interrupting the thread.
+    * @param threadName     The name for the thread executing the action. If empty, the default name will be used.
     * @param action         An action to execute.
     * @throws TimeoutException if the action does not complete within the specified timeout.
     */
   @throws[TimeoutException]
-  def runWithTimeout(timeout: Duration, cleanupTimeout: Duration = Duration(5, TimeUnit.MINUTES))(action: => Unit): Unit = {
+  def runWithTimeout(timeout: Duration,
+                     cleanupTimeout: Duration = Duration(5, TimeUnit.MINUTES),
+                     threadName: String = ""
+                    )(action: => Unit): Unit = {
     val thread = new ThreadWithException {
       override def run(): Unit = {
         action
@@ -54,8 +58,15 @@ object ThreadUtils {
 
     val handler = new UncaughtExceptionHandler {
       override def uncaughtException(t: Thread, ex: Throwable): Unit = {
-        thread.setException(ex)
+        t match {
+          case trd: ThreadWithException => trd.setException(ex)
+          case _ => // Nothing to do, should never happen
+        }
       }
+    }
+
+    if (threadName.nonEmpty) {
+      thread.setName(threadName)
     }
 
     thread.setUncaughtExceptionHandler(handler)
