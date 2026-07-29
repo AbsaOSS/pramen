@@ -149,8 +149,11 @@ abstract class TaskRunnerBase(conf: Config,
       case Some(timeout) if timeout > 0 =>
         @volatile var runStatus: RunStatus = null
 
+        val taskName = task.job.name.replace(' ', '_')
+        val threadName = s"pramen-worker-$taskName-${task.infoDate}"
+
         try {
-          ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS), Duration(sqlCancellationTimeoutSeconds, TimeUnit.SECONDS)) {
+          ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS), Duration(sqlCancellationTimeoutSeconds, TimeUnit.SECONDS), threadName = threadName) {
             log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
             runStatus = doValidateOrSkipTask(task)
           }
