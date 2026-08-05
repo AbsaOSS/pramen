@@ -79,14 +79,12 @@ object ThreadUtils {
       thread.join(waitMillis)
     }
 
+    val stackTrace = thread.getStackTrace
     val isAlive = thread.isAlive
-    val stackTrace = if (isAlive) {
-      val st = thread.getStackTrace
+    if (isAlive) {
       thread.interrupt()
       thread.join(closeWaitMillis)
-      st
-    } else
-      Array.empty[StackTraceElement]
+    }
 
     val closeableCount = ThreadClosableRegistry.getCloseableCount(threadId)
     if (closeableCount > 0) {
