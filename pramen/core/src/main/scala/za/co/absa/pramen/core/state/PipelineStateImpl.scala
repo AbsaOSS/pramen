@@ -21,7 +21,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.typesafe.config.Config
 import org.slf4j.{Logger, LoggerFactory}
 import sun.misc.Signal
-import za.co.absa.pramen.api.status.RunStatus.{NotRan, Succeeded}
+import za.co.absa.pramen.api.status.RunStatus.{NoData, NotRan, Succeeded}
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{NotificationBuilder, PipelineInfo, PipelineNotificationTarget, RunMode}
 import za.co.absa.pramen.core.app.config.RuntimeConfig.{DRY_RUN, EMAIL_IF_NO_CHANGES, UNDERCOVER}
@@ -489,7 +489,7 @@ object PipelineStateImpl {
       PipelineStatus.Success
     } else if (someTasksSucceeded && someTasksFailed && !strictFailures && !someCriticalTasksFailed) {
       PipelineStatus.PartialSuccess
-    } else if (someTasksSucceeded && !someTasksFailed && warningState) {
+    } else if (!someTasksFailed && warningState) {
       PipelineStatus.Warning
     } else {
       PipelineStatus.Failure
@@ -504,12 +504,15 @@ object PipelineStateImpl {
   }
 
   private def hasWarnings(taskResults: Seq[TaskResult], pipelineNotificationFailures: Seq[PipelineNotificationFailure]): Boolean = {
-    taskResults.exists{task =>
+    taskResults.exists { task =>
       val hasTaskWarnings = task.runStatus match {
         case succeeded: Succeeded =>
           val warnings = succeeded.warnings
             .filterNot(_.startsWith(SUPPRESS_WARNING_STARTING_WITH))
           warnings.nonEmpty
+        case noData: NoData =>
+          // The logic is this: if no data is not a failure, it is a warning.
+          !noData.isFailure
         case _ =>
           false
       }
