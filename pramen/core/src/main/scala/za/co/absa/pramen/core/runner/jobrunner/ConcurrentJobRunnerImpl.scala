@@ -167,7 +167,15 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
       case _ => // skip
     }
 
-    statuses.forall(s => !s.isFailure)
+    statuses.forall { status =>
+      // This is to allow critical ingestion jobs stop the pipeline while not cause it to fail when
+      // `fail.if.no.data` is set to 'false'
+      val hasNoDataAsNotFailure = status match {
+        case RunStatus.NoData(failure) if !failure => job.operation.isCritical
+        case _ => false
+      }
+      !status.isFailure && !hasNoDataAsNotFailure
+    }
   }
 
   private[core] def runLazyJob(job: Job): Boolean = {
