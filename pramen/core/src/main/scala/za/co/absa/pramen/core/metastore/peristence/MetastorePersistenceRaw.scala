@@ -59,7 +59,7 @@ class MetastorePersistenceRaw(path: String,
       throw new IllegalArgumentException("The 'raw' persistent format data frame should have 'path' column.")
     }
 
-    val files = df.select(RAW_PATH_FIELD_KEY).collect().map(_.getString(0))
+    val files = RawFile.fromDf(df)
 
     val outputDir = if (partitionScheme == PartitionScheme.Overwrite)
       new Path(path)
@@ -80,23 +80,30 @@ class MetastorePersistenceRaw(path: String,
 
     fsUtilsTrg.createDirectoryRecursive(outputDir)
 
-    var copiedSize = 0L
+    var processedSize = 0L
 
     val warnings: Seq[String] = if (files.isEmpty) {
       log.info("Nothing to save")
       Seq.empty[String]
     } else {
       files.flatMap { file =>
-        val srcPath = new Path(file)
-        val trgPath = new Path(outputDir, srcPath.getName)
+        val srcPath = new Path(file.filePath)
+
         val fsSrc = srcPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
 
-        log.info(s"Copying file from $srcPath to $trgPath")
+        processedSize += fsSrc.getContentSummary(srcPath).getLength
 
-        copiedSize += fsSrc.getContentSummary(srcPath).getLength
-        fsUtilsTrg.copyFileWithRetry(srcPath, trgPath) match {
-          case None => Seq.empty[String]
-          case Some(ex) if ex.getMessage != null => Seq(ex.getMessage)
+        if (file.needsCopying) {
+          val trgPath = new Path(outputDir, srcPath.getName)
+
+          log.info(s"Copying file from $srcPath to $trgPath")
+
+          fsUtilsTrg.copyFileWithRetry(srcPath, trgPath) match {
+            case None => Seq.empty[String]
+            case Some(ex) if ex.getMessage != null => Seq(ex.getMessage)
+          }
+        } else {
+          None
         }
       }
     }
@@ -105,25 +112,25 @@ class MetastorePersistenceRaw(path: String,
       val list = getListOfFilesRange(infoDate, infoDate)
       if (list.isEmpty) {
         MetaTableStats(
-          Option(copiedSize),
+          Option(processedSize),
           None,
-          Some(copiedSize),
+          Some(processedSize),
           warnings
         )
       } else {
         val totalSize = list.map(_.getLen).sum
         MetaTableStats(
           Option(totalSize),
-          Some(copiedSize),
+          Some(processedSize),
           Some(totalSize),
           warnings
         )
       }
     } else {
       MetaTableStats(
-        Option(copiedSize),
+        Option(processedSize),
         None,
-        Some(copiedSize),
+        Some(processedSize),
         warnings
       )
     }
@@ -230,5 +237,6 @@ class MetastorePersistenceRaw(path: String,
 
 object MetastorePersistenceRaw {
   val RAW_PATH_FIELD_KEY = "path"
+  val RAW_COPY_FIELD_KEY = "copy"
   val RAW_OFFSET_FIELD_KEY = "file_name"
 }
