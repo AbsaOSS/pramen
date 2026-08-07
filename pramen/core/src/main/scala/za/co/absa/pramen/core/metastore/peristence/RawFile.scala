@@ -41,7 +41,10 @@ object RawFile {
     }
 
     if (df.schema.exists(_.name == RAW_COPY_FIELD_KEY)) {
-      df.select(RAW_PATH_FIELD_KEY, RAW_COPY_FIELD_KEY).collect().map(row => RawFile(row.getString(0), row.getBoolean(1)))
+      df.select(RAW_PATH_FIELD_KEY, RAW_COPY_FIELD_KEY).collect().map { row =>
+        val needsCopying = if (row.isNullAt(1)) true else row.getBoolean(1)
+        RawFile(row.getString(0), needsCopying)
+      }
     } else {
       df.select(RAW_PATH_FIELD_KEY).collect().map(row => RawFile(row.getString(0), needsCopying = true))
     }
