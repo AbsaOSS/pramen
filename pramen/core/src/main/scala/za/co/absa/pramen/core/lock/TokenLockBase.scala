@@ -49,7 +49,7 @@ abstract class TokenLockBase(override val token: String) extends TokenLock {
 
   protected def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean
 
-  protected def releaseGuardLock(): Unit
+  protected def releaseGuardLock(evenNonOwned: Boolean): Unit
 
   protected def updateTicket(): Unit
 
@@ -101,7 +101,7 @@ abstract class TokenLockBase(override val token: String) extends TokenLock {
       watcherThreadOpt.foreach(_.interrupt())
       watcherThreadOpt = None
       try {
-        releaseGuardLock()
+        releaseGuardLock(evenNonOwned = false)
       } finally {
         JvmUtils.safeRemoveShutdownHook(shutdownHook)
         TokenLockRegistry.unregisterLock(this)
@@ -136,7 +136,7 @@ abstract class TokenLockBase(override val token: String) extends TokenLock {
       if (wasAcquired) {
         watcherThreadOpt.foreach(_.interrupt())
         watcherThreadOpt = None
-        releaseGuardLock()
+        releaseGuardLock(evenNonOwned = false)
       }
     }
   }

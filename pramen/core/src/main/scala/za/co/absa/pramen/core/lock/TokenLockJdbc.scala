@@ -56,9 +56,10 @@ class TokenLockJdbc(token: String, db: Database, slickProfile: JdbcProfile) exte
         val now = Instant.now().getEpochSecond
         if (expires < now) {
           log.warn(s"Taking over expired ticket $escapedToken ($expires < $now)")
-          releaseGuardLock()
+          releaseGuardLock(true)
           tryAcquireGuardLock(retries - 1, thisTry + 1)
         } else {
+          log.warn(s"The ticket for $escapedToken is still valid ($expires >= $now)")
           false
         }
       }
@@ -93,17 +94,22 @@ class TokenLockJdbc(token: String, db: Database, slickProfile: JdbcProfile) exte
   }
 
   /** Invoked from a synchronized block. */
-  override def releaseGuardLock(): Unit = {
+  override def releaseGuardLock(evenNonOwned: Boolean): Unit = {
     try {
       val now = Instant.now()
       val nowEpoch = now.getEpochSecond
       val hardExpireTickets = now.minus(TICKETS_HARD_EXPIRE_DAYS, ChronoUnit.DAYS).getEpochSecond
-      slickUtils.executeAction(
-        db,
-        lockTicketTable.records
-          .filter(ticket => (ticket.token === escapedToken && ticket.owner === owner) ||
-            (ticket.createdAt.isDefined && ticket.createdAt < hardExpireTickets && ticket.expires < nowEpoch)).delete
-      )
+
+      if (evenNonOwned) {
+        slickUtils.executeAction(db, lockTicketTable.records.filter(ticket => ticket.token === escapedToken).delete)
+      } else {
+        slickUtils.executeAction(
+          db,
+          lockTicketTable.records
+            .filter(ticket => (ticket.token === escapedToken && ticket.owner === owner) ||
+              (ticket.createdAt.isDefined && ticket.createdAt < hardExpireTickets && ticket.expires < nowEpoch)).delete
+        )
+      }
     } catch {
       case NonFatal(ex) => log.error(s"An error occurred when trying to release the lock: $escapedToken.", ex)
     }

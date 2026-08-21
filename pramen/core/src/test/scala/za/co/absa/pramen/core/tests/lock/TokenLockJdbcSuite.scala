@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.lock.{TokenLockBase, TokenLockJdbc, TokenLockRegistry}
 import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.UsingUtils
+import za.co.absa.pramen.core.utils.{SlickUtils, UsingUtils}
 
 import scala.concurrent.duration._
 
@@ -80,6 +80,23 @@ class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with Befor
 
       lock1.release()
       lock2.release()
+    }
+
+    "allow releasing locks for other owners if requested" in {
+      val lock1 = getLock("token1")
+      val lock2 = getLock("token2")
+
+      assert(lock1.tryAcquire())
+      assert(lock2.tryAcquire())
+
+      lock1.asInstanceOf[TokenLockJdbc].releaseGuardLock(evenNonOwned = false)
+      lock2.asInstanceOf[TokenLockJdbc].releaseGuardLock(evenNonOwned = true)
+
+      val slickUtils = new SlickUtils(pramenDb.slickProfile)
+
+      val recordCount = slickUtils.executeCount(pramenDb.slickDb, pramenDb.lockTicketTable.records.length)
+
+      assert(recordCount == 0)
     }
 
     "lock pramen should constantly update lock ticket" in {

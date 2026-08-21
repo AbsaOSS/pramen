@@ -78,7 +78,7 @@ class TokenLockDynamoDb(
 
         if (expires < now) {
           log.warn(s"Taking over expired ticket $escapedToken ($expires < $now)")
-          releaseGuardLock()
+          releaseGuardLock(evenNonOwned = true)
           tryAcquireGuardLock(retries - 1, thisTry + 1)
         } else {
           false
@@ -105,25 +105,34 @@ class TokenLockDynamoDb(
   }
 
   /** Invoked from a synchronized block. */
-  override def releaseGuardLock(): Unit = {
+  override def releaseGuardLock(evenNonOwned: Boolean): Unit = {
     try {
       val now = Instant.now()
       val nowEpoch = now.getEpochSecond
       val hardExpireTickets = now.minus(TICKETS_HARD_EXPIRE_DAYS, ChronoUnit.DAYS).getEpochSecond
 
       // Delete this ticket or any expired tickets
-      val deleteRequest = DeleteItemRequest.builder()
+      val deleteRequest = if (evenNonOwned) {
+        DeleteItemRequest.builder()
         .tableName(tableName)
         .key(Map(
           ATTR_TOKEN -> AttributeValue.builder().s(escapedToken).build()
         ).asJava)
-        .conditionExpression(s"$ATTR_OWNER = :jobOwner OR ($ATTR_EXPIRES < :now AND $ATTR_CREATED_AT < :hardExpire)")
-        .expressionAttributeValues(Map(
-          ":jobOwner" -> AttributeValue.builder().s(owner).build(),
-          ":now" -> AttributeValue.builder().n(nowEpoch.toString).build(),
-          ":hardExpire" -> AttributeValue.builder().n(hardExpireTickets.toString).build()
-        ).asJava)
         .build()
+      } else {
+        DeleteItemRequest.builder()
+          .tableName(tableName)
+          .key(Map(
+            ATTR_TOKEN -> AttributeValue.builder().s(escapedToken).build()
+          ).asJava)
+          .conditionExpression(s"$ATTR_OWNER = :jobOwner OR ($ATTR_EXPIRES < :now AND $ATTR_CREATED_AT < :hardExpire)")
+          .expressionAttributeValues(Map(
+            ":jobOwner" -> AttributeValue.builder().s(owner).build(),
+            ":now" -> AttributeValue.builder().n(nowEpoch.toString).build(),
+            ":hardExpire" -> AttributeValue.builder().n(hardExpireTickets.toString).build()
+          ).asJava)
+          .build()
+      }
 
       try {
         dynamoDbClient.deleteItem(deleteRequest)
