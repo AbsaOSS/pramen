@@ -40,7 +40,7 @@ class TokenLockHadoopPath(token: String,
   }
 
   /** Invoked from a synchronized block. */
-  override def releaseGuardLock(): Unit = {
+  override def releaseGuardLock(evenNonOwned: Boolean): Unit = {
     fileGuardOpt.foreach { fileGuard =>
       fsUtils.deleteFile(fileGuard)
       fileGuardOpt = None
