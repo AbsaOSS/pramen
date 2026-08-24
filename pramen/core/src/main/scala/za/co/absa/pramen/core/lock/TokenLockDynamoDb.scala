@@ -118,6 +118,10 @@ class TokenLockDynamoDb(
         .key(Map(
           ATTR_TOKEN -> AttributeValue.builder().s(escapedToken).build()
         ).asJava)
+        .conditionExpression(s"$ATTR_EXPIRES < :now")
+        .expressionAttributeValues(Map(
+          ":now" -> AttributeValue.builder().n(nowEpoch.toString).build()
+        ).asJava)
         .build()
       } else {
         DeleteItemRequest.builder()
