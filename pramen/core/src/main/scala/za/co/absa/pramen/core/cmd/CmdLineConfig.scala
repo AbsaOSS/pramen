@@ -43,6 +43,7 @@ case class CmdLineConfig(
                           dateFrom: Option[LocalDate] = None,
                           dateTo: Option[LocalDate] = None,
                           mode: Option[String] = None,
+                          bulkSize: Option[String] = None,
                           inverseOrder: Option[Boolean] = None,
                           verbose: Option[Boolean] = None,
                           overrideLogLevel: Option[String] = None,
@@ -129,6 +130,9 @@ object CmdLineConfig {
     for (mode <- cmd.mode)
       accumulatedConfig = accumulatedConfig.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(mode))
 
+    for (bulkSize <- cmd.bulkSize)
+      accumulatedConfig = accumulatedConfig.withValue(RUN_BULK_SIZE, ConfigValueFactory.fromAnyRef(bulkSize))
+
     for (logEffectiveConfig <- cmd.logEffectiveConfig)
       accumulatedConfig = accumulatedConfig.withValue(LOG_EFFECTIVE_CONFIG, ConfigValueFactory.fromAnyRef(logEffectiveConfig))
 
@@ -202,8 +206,14 @@ object CmdLineConfig {
           config.copy(mode = Option(value)))
           .text("Mode of processing for date ranges. One of 'fill_gaps', 'check_updates', 'force'")
           .validate(v =>
-            if (v == "fill_gaps" || v == "check_updates" || v == "force") success
-            else failure("Invalid run mode. Must be one of 'fill_gaps', 'check_updates', 'force'"))
+            if (v == "fill_gaps" || v == "check_updates" || v == "force" || v == "bulk") success
+            else failure("Invalid run mode. Must be one of 'fill_gaps', 'check_updates', 'force', 'bulk'")),
+        opt[String]("bulk-size").optional().action((value, config) =>
+            config.copy(bulkSize = Option(value)))
+          .text("The bulk size for processing date ranges.")
+          .validate(v =>
+            if (v == "monthly" || v == "quarterly" || v == "yearly") success
+            else failure("Invalid bulk size. Must be one of 'monthly', 'quarterly', 'yearly'"))
       )
 
     opt[Boolean]("inverse-order").optional().action((value, config) =>

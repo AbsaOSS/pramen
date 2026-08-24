@@ -243,6 +243,20 @@ class CmdLineConfigSuite extends AnyWordSpec {
       assert(config.getString(RUN_MODE) == "fill_gaps")
     }
 
+    "return a modified config if bulk mode for date-to override is specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date-to", "2020-08-15", "--inverse-order", "true", "--run-mode", "bulk", "--bulk-size", "yearly"))
+      val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
+
+      assert(config.hasPath(LOAD_DATE_TO))
+      assert(config.getString(LOAD_DATE_TO) == "2020-08-15")
+      assert(config.hasPath(TRACK_DAYS))
+      assert(config.getString(TRACK_DAYS) == "0")
+      assert(config.hasPath(IS_INVERSE_ORDER))
+      assert(config.getBoolean(IS_INVERSE_ORDER))
+      assert(config.getString(RUN_MODE) == "bulk")
+      assert(config.getString(RUN_BULK_SIZE) == "yearly")
+    }
+
     "return the original config if no cmd line arguments are provided" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--inverse-order", "false"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)

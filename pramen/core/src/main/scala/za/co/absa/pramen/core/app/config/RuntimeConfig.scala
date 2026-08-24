@@ -61,6 +61,7 @@ object RuntimeConfig {
   val IS_RERUN = "pramen.runtime.is.rerun"
   val IS_INVERSE_ORDER = "pramen.runtime.inverse.order"
   val RUN_MODE = "pramen.runtime.run.mode"
+  val RUN_BULK_SIZE = "pramen.runtime.run.bulk.size"
   val RUN_TABLES = "pramen.runtime.run.tables"
   val UNDERCOVER = "pramen.undercover"
   val USE_LOCK = "pramen.use.lock"
