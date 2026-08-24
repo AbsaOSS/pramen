@@ -56,7 +56,7 @@ class TokenLockJdbc(token: String, db: Database, slickProfile: JdbcProfile) exte
         val now = Instant.now().getEpochSecond
         if (expires < now) {
           log.warn(s"Taking over expired ticket $escapedToken ($expires < $now)")
-          releaseGuardLock(true)
+          releaseExpiredGuardLock(now)
           tryAcquireGuardLock(retries - 1, thisTry + 1)
         } else {
           log.warn(s"The ticket for $escapedToken is still valid ($expires >= $now)")
@@ -112,6 +112,22 @@ class TokenLockJdbc(token: String, db: Database, slickProfile: JdbcProfile) exte
       }
     } catch {
       case NonFatal(ex) => log.error(s"An error occurred when trying to release the lock: $escapedToken.", ex)
+    }
+  }
+
+  /**
+    * Invoked from a synchronized block.
+    * Removes the ticket only when both the token matches and the ticket is still expired.
+    */
+  private def releaseExpiredGuardLock(now: Long): Unit = {
+    try {
+      slickUtils.executeAction(
+        db,
+        lockTicketTable.records
+          .filter(ticket => ticket.token === escapedToken && ticket.expires < now).delete
+      )
+    } catch {
+      case NonFatal(ex) => log.error(s"An error occurred when trying to release the expired lock: $escapedToken.", ex)
     }
   }
 
