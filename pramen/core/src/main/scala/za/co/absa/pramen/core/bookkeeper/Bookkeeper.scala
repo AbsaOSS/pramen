@@ -22,6 +22,7 @@ import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.MetadataManager
 import za.co.absa.pramen.api.lock.TokenLockFactory
+import za.co.absa.pramen.bulkload.{BulkLoadStateManager, BulkLoadStateManagerJdbc, BulkLoadStateManagerNull}
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.journal._
@@ -84,7 +85,7 @@ object Bookkeeper {
   def fromConfig(bookkeepingConfig: BookkeeperConfig,
                  runtimeConfig: RuntimeConfig,
                  batchId: Long)
-                (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, MetadataManager, AutoCloseable) = {
+                (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, MetadataManager, BulkLoadStateManager, AutoCloseable) = {
     val mongoDbConnection = bookkeepingConfig.bookkeepingConnectionString.map { url =>
       MongoDbConnection.getConnection(url, bookkeepingConfig.bookkeepingDbName.get)
     }
@@ -235,6 +236,12 @@ object Bookkeeper {
       new MetadataManagerNull(isPersistenceEnabled = true)
     }
 
+    val bulkLoadStateManager = if (hasBookkeepingJdbc && bookkeepingConfig.bookkeepingEnabled) {
+      new BulkLoadStateManagerJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+    } else {
+      new BulkLoadStateManagerNull
+    }
+
     val closable = new AutoCloseable {
       override def close(): Unit = {
         mongoDbConnection.foreach(_.close())
@@ -245,6 +252,6 @@ object Bookkeeper {
       }
     }
 
-    (bookkeeper, tokenFactory, journal, metadataManager, closable)
+    (bookkeeper, tokenFactory, journal, metadataManager, bulkLoadStateManager, closable)
   }
 }
