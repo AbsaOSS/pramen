@@ -62,7 +62,7 @@ object AppContextImpl {
     val allowLocalBookkepingStorage = SparkUtils.isDriverRunningOnEdgeNode(SparkUtils.getSparkMaster)
     val appConfig = AppConfig.fromConfig(conf, allowLocalBookkepingStorage)
 
-    val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
+    val (bookkeeper, tokenLockFactory, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
 
     val metastore: Metastore = MetastoreImpl.fromConfig(conf, appConfig.runtimeConfig, appConfig.infoDateDefaults, bookkeeper, metadataManager, batchId)
 
