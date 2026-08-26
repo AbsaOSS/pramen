@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.bulkload
 
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.bulkload.BulkLoadDateUtils.getBulkLoadDates
-import za.co.absa.pramen.bulkload.model.BulkLoadSize
+import za.co.absa.pramen.bulkload.model.BulkBatchSize
 
 import java.time.LocalDate
 
@@ -26,7 +26,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
   "getBulkLoadDates" should {
     "monthly" when {
       "return proper date range for strict month dates" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-01"), LocalDate.parse("2026-08-31"), BulkLoadSize.Monthly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-01"), LocalDate.parse("2026-08-31"), BulkBatchSize.Monthly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-01"))
@@ -36,7 +36,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
 
 
       "return proper date range for multiple months" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-01"), LocalDate.parse("2026-09-30"), BulkLoadSize.Monthly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-01"), LocalDate.parse("2026-09-30"), BulkBatchSize.Monthly)
 
         assert(dates.length == 2)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-01"))
@@ -48,7 +48,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for a days within a month" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-10"), BulkLoadSize.Monthly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-10"), BulkBatchSize.Monthly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -57,7 +57,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for a single day" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-05"), BulkLoadSize.Monthly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-05"), BulkBatchSize.Monthly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -66,7 +66,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for multiple non-strict months" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-10-10"), BulkLoadSize.Monthly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-10-10"), BulkBatchSize.Monthly)
 
         assert(dates.length == 3)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -85,14 +85,14 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
 
       "throw an exception if date range is incorrect" in {
         assertThrows[IllegalArgumentException] {
-          getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-04"), BulkLoadSize.Monthly)
+          getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-04"), BulkBatchSize.Monthly)
         }
       }
     }
     
     "quarterly" when {
       "return proper date range for strict quarter dates" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-07-01"), LocalDate.parse("2026-09-30"), BulkLoadSize.Quarterly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-07-01"), LocalDate.parse("2026-09-30"), BulkBatchSize.Quarterly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-07-01"))
@@ -101,7 +101,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for multiple quarters" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-07-01"), LocalDate.parse("2026-12-31"), BulkLoadSize.Quarterly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-07-01"), LocalDate.parse("2026-12-31"), BulkBatchSize.Quarterly)
 
         assert(dates.length == 2)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-07-01"))
@@ -113,7 +113,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for a days within a quarter" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-10"), BulkLoadSize.Quarterly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-10"), BulkBatchSize.Quarterly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -122,7 +122,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for a single day" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-05"), BulkLoadSize.Quarterly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-05"), BulkBatchSize.Quarterly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -131,7 +131,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for multiple non-strict quarters" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2027-02-10"), BulkLoadSize.Quarterly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2027-02-10"), BulkBatchSize.Quarterly)
 
         assert(dates.length == 3)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -147,14 +147,14 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
 
       "throw an exception if date range is incorrect" in {
         assertThrows[IllegalArgumentException] {
-          getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-04"), BulkLoadSize.Quarterly)
+          getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-04"), BulkBatchSize.Quarterly)
         }
       }
     }
 
     "yearly" when {
       "return proper date range for strict year dates" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-01-01"), LocalDate.parse("2026-12-31"), BulkLoadSize.Yearly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-01-01"), LocalDate.parse("2026-12-31"), BulkBatchSize.Yearly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-01-01"))
@@ -163,7 +163,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for multiple years" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-01-01"), LocalDate.parse("2027-12-31"), BulkLoadSize.Yearly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-01-01"), LocalDate.parse("2027-12-31"), BulkBatchSize.Yearly)
 
         assert(dates.length == 2)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-01-01"))
@@ -175,7 +175,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for a days within a year" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-10"), BulkLoadSize.Yearly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-10"), BulkBatchSize.Yearly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -184,7 +184,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for a single day" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-05"), BulkLoadSize.Yearly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-05"), BulkBatchSize.Yearly)
 
         assert(dates.length == 1)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -193,7 +193,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
       }
 
       "return proper date range for multiple non-strict years" in {
-        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2028-02-10"), BulkLoadSize.Yearly)
+        val dates = getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2028-02-10"), BulkBatchSize.Yearly)
 
         assert(dates.length == 3)
         assert(dates.head.outputInfoDate == LocalDate.parse("2026-08-05"))
@@ -209,7 +209,7 @@ class BulkLoadDateUtilsSuite extends AnyWordSpec {
 
       "throw an exception if date range is incorrect" in {
         assertThrows[IllegalArgumentException] {
-          getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-04"), BulkLoadSize.Yearly)
+          getBulkLoadDates(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-08-04"), BulkBatchSize.Yearly)
         }
       }
     }

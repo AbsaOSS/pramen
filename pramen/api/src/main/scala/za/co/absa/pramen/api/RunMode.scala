@@ -34,10 +34,16 @@ object RunMode {
     override val toString = "force"
   }
 
+  /** Runs in batches of full jobs */
+  case object Bulk extends RunMode {
+    override val toString = "bulk"
+  }
+
   def fromString(s: String): RunMode = s match {
     case "fill_gaps" => SkipAlreadyRan
     case "check_updates" => CheckUpdates
     case "force" => ForceRun
-    case _ => throw new IllegalArgumentException(s"Unknown historical run mode: $s (should be one of: 'fill_gaps', 'check_updates', 'force')")
+    case "bulk" => Bulk
+    case _ => throw new IllegalArgumentException(s"Unknown historical run mode: $s (should be one of: 'fill_gaps', 'check_updates', 'force', 'bulk')")
   }
 }

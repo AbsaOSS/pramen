@@ -254,7 +254,7 @@ class CmdLineConfigSuite extends AnyWordSpec {
       assert(config.hasPath(IS_INVERSE_ORDER))
       assert(config.getBoolean(IS_INVERSE_ORDER))
       assert(config.getString(RUN_MODE) == "bulk")
-      assert(config.getString(RUN_BULK_SIZE) == "yearly")
+      assert(config.getString(RUN_BULK_BATCH_SIZE) == "yearly")
     }
 
     "return the original config if no cmd line arguments are provided" in {

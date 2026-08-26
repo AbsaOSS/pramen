@@ -17,7 +17,8 @@
 package za.co.absa.pramen.core
 
 import za.co.absa.pramen.api.RunMode
-import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.bulkload.model.BulkBatchSize
+import za.co.absa.pramen.core.app.config.{BulkRunConfig, RuntimeConfig}
 
 import java.time.LocalDate
 
@@ -40,6 +41,8 @@ object RuntimeConfigFactory {
                             allowEmptyPipeline: Boolean = false,
                             alwaysAddBatchIdColumn: Boolean = false,
                             historicalRunMode: RunMode = RunMode.CheckUpdates,
+                            bulkBatchSize: BulkBatchSize = BulkBatchSize.Monthly,
+                            bulkLoadCurrent: Option[BulkRunConfig] = None,
                             sparkAppDescriptionTemplate: Option[String] = None,
                             attempt: Int = 1,
                             maxAttempts: Int = 1,
@@ -62,6 +65,8 @@ object RuntimeConfigFactory {
       allowEmptyPipeline,
       alwaysAddBatchIdColumn,
       historicalRunMode,
+      bulkBatchSize,
+      bulkLoadCurrent,
       sparkAppDescriptionTemplate,
       attempt,
       maxAttempts,
