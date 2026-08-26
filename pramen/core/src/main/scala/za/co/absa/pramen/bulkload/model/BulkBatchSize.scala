@@ -16,10 +16,19 @@
 
 package za.co.absa.pramen.bulkload.model
 
-sealed trait BulkLoadSize
+sealed trait BulkBatchSize
 
-object BulkLoadSize {
-  case object Monthly extends BulkLoadSize
-  case object Quarterly extends BulkLoadSize
-  case object Yearly extends BulkLoadSize
+object BulkBatchSize {
+  case object Monthly extends BulkBatchSize
+  case object Quarterly extends BulkBatchSize
+  case object Yearly extends BulkBatchSize
+
+  def fromString(bulkBatchSizeStr: String): BulkBatchSize = {
+    bulkBatchSizeStr.toLowerCase.trim match {
+      case "monthly" => Monthly
+      case "quarterly" => Quarterly
+      case "yearly" => Yearly
+      case _ => throw new IllegalArgumentException(s"Unknown bulk batch size: $bulkBatchSizeStr. Can be one of: 'monthly', 'quarterly', 'yearly'.")
+    }
+  }
 }

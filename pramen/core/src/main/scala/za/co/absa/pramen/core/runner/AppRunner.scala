@@ -16,10 +16,11 @@
 
 package za.co.absa.pramen.core.runner
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigValueFactory}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.Schedule
+import za.co.absa.pramen.bulkload.BulkLoadDateUtils
 import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
@@ -99,6 +100,31 @@ object AppRunner {
         log.error(s"$FAILURE The pipeline has failed with an exception.", ex)
         ERROR_CODE_FAILURE
     }
+  }
+
+  def runBulkPipelines(conf: Config): Int = {
+    val runtimeConfig = RuntimeConfig.fromConfig(conf)
+    if (runtimeConfig.runDateTo.isEmpty)
+      throw new IllegalArgumentException("Date range is not provided when running in bulk mode.")
+
+    val dates = BulkLoadDateUtils.getBulkLoadDates(runtimeConfig.runDate, runtimeConfig.runDateTo.get, runtimeConfig.bulkBatchSize)
+
+    var overallExitCode = 0
+
+    dates.foreach { bulkDate =>
+      log.info(s"Starting the pipeline for the range: ${bulkDate.dataDateFrom}..${bulkDate.dataFateTo} outputting to ${bulkDate.outputInfoDate}")
+
+      val currentConf = conf
+        .withValue(RuntimeConfig.BULK_CURRENT_DATE_FROM, ConfigValueFactory.fromAnyRef(bulkDate.dataDateFrom.toString))
+        .withValue(RuntimeConfig.BULK_CURRENT_DATE_TO, ConfigValueFactory.fromAnyRef(bulkDate.dataFateTo.toString))
+        .withValue(RuntimeConfig.BULK_CURRENT_OUTPUT_INFO_DATE, ConfigValueFactory.fromAnyRef(bulkDate.outputInfoDate.toString))
+        .withValue(RuntimeConfig.IS_RERUN, ConfigValueFactory.fromAnyRef(true))
+
+      val exitCode = AppRunner.runPipeline(currentConf)
+      overallExitCode |= exitCode
+    }
+
+    overallExitCode
   }
 
   private[core] def handleFailure[T](t: Try[T], state: PipelineState, stage: String): Try[T] = {

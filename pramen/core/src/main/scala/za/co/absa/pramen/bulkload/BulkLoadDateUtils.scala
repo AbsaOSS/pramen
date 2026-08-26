@@ -16,7 +16,7 @@
 
 package za.co.absa.pramen.bulkload
 
-import za.co.absa.pramen.bulkload.model.{BulkLoadDate, BulkLoadSize}
+import za.co.absa.pramen.bulkload.model.{BulkLoadDate, BulkBatchSize}
 
 import java.time.LocalDate
 import scala.collection.mutable.ListBuffer
@@ -38,7 +38,7 @@ object BulkLoadDateUtils {
     * @param mode     the granularity of the generated intervals, e.g. monthly, quarterly or yearly.
     * @return the sequence of bulk load intervals covering the requested date range.
     */
-  def getBulkLoadDates(dateFrom: LocalDate, dateTo: LocalDate, mode: BulkLoadSize): Seq[BulkLoadDate] = {
+  def getBulkLoadDates(dateFrom: LocalDate, dateTo: LocalDate, mode: BulkBatchSize): Seq[BulkLoadDate] = {
     if (dateFrom.isAfter(dateTo))
       throw new IllegalArgumentException("dateFrom must not be after dateTo")
 
@@ -47,19 +47,19 @@ object BulkLoadDateUtils {
 
     while (currentDate.isBefore(dateTo) || currentDate.isEqual(dateTo)) {
       mode match {
-        case BulkLoadSize.Monthly =>
+        case BulkBatchSize.Monthly   =>
           val lastDayOfMonth = currentDate.withDayOfMonth(currentDate.lengthOfMonth())
           val dateTo0 = if (lastDayOfMonth.isAfter(dateTo)) dateTo else lastDayOfMonth
           bulkLoadDates += BulkLoadDate(currentDate, currentDate, dateTo0)
           currentDate = lastDayOfMonth.plusDays(1)
-        case BulkLoadSize.Quarterly =>
+        case BulkBatchSize.Quarterly =>
           val lastMonthOfQuarter = ((currentDate.getMonthValue - 1) / 3) * 3 + 3
           val lastMonthDate = currentDate.withDayOfMonth(1).withMonth(lastMonthOfQuarter)
           val lastDayOfQuarter = lastMonthDate.withDayOfMonth(lastMonthDate.lengthOfMonth())
           val dateTo0 = if (lastDayOfQuarter.isAfter(dateTo)) dateTo else lastDayOfQuarter
           bulkLoadDates += BulkLoadDate(currentDate, currentDate, dateTo0)
           currentDate = lastDayOfQuarter.plusDays(1)
-        case BulkLoadSize.Yearly =>
+        case BulkBatchSize.Yearly    =>
           val lastDayOfYear = currentDate.withDayOfYear(currentDate.lengthOfYear())
           val dateTo0 = if (lastDayOfYear.isAfter(dateTo)) dateTo else lastDayOfYear
           bulkLoadDates += BulkLoadDate(currentDate, currentDate, dateTo0)

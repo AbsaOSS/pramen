@@ -131,7 +131,7 @@ object CmdLineConfig {
       accumulatedConfig = accumulatedConfig.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(mode))
 
     for (bulkSize <- cmd.bulkSize)
-      accumulatedConfig = accumulatedConfig.withValue(RUN_BULK_SIZE, ConfigValueFactory.fromAnyRef(bulkSize))
+      accumulatedConfig = accumulatedConfig.withValue(RUN_BULK_BATCH_SIZE, ConfigValueFactory.fromAnyRef(bulkSize))
 
     for (logEffectiveConfig <- cmd.logEffectiveConfig)
       accumulatedConfig = accumulatedConfig.withValue(LOG_EFFECTIVE_CONFIG, ConfigValueFactory.fromAnyRef(logEffectiveConfig))
