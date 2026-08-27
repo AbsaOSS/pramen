@@ -171,6 +171,7 @@ class BulkLoadLongSuite extends AnyWordSpec
          |  load.date.from = "2021-01-01"
          |  load.date.to = "2021-02-28"
          |  runtime.run.mode = bulk
+         |  runtime.inverse.order = true
          |
          |  bookkeeping.jdbc {
          |   driver = "$driver"
