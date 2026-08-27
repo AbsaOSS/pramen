@@ -36,7 +36,7 @@ class BulkLoadStateManagerJdbc(db: Database, slickProfile: JdbcProfile) extends 
     override val profile = slickProfile
   }
 
-  override def getState(pramenTableName: String, infoDate: LocalDate): BulkLoadState = {
+  override def getState(pramenTableName: String, infoDate: LocalDate): Option[BulkLoadState] = {
     val infoDateStr = infoDate.toString
 
     val records = try {
@@ -53,10 +53,7 @@ class BulkLoadStateManagerJdbc(db: Database, slickProfile: JdbcProfile) extends 
         throw new RuntimeException(s"Unable to read from the bulk_load_state table for the table '$pramenTableName' and the info date '$infoDateStr'.", ex)
     }
 
-    records.headOption match {
-      case Some(record) => BulkLoadState.fromSerialized(record)
-      case None         => throw new NoSuchElementException(s"No bulk load state found for the table '$pramenTableName' and the info date '$infoDateStr'.")
-    }
+    records.headOption.map(record => BulkLoadState.fromSerialized(record))
   }
 
   override def deleteState(pramenTableName: String, infoDate: LocalDate): Unit = {

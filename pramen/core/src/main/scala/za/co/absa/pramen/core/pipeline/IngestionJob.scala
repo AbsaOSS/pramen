@@ -154,7 +154,10 @@ class IngestionJob(operationDef: OperationDef,
                      conf: Config): DataFrame = {
     val dfTransformed = applyTransformations(df, sourceTable.transformations)
 
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    val (from, to) = bulkLoadCurrent match {
+      case Some(bulk) => (bulk.dateFrom, bulk.dateTo)
+      case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    }
 
     val dfFiltered = applyFilters(dfTransformed, sourceTable.filters, infoDate, from, to)
 
@@ -274,7 +277,10 @@ class IngestionJob(operationDef: OperationDef,
   }
 
   private def getSourcingResult(infoDate: LocalDate): SourceResult = {
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    val (from, to) = bulkLoadCurrent match {
+      case Some(bulk) => (bulk.dateFrom, bulk.dateTo)
+      case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    }
 
     if (disableCountQuery) {
       log.info(s"Getting cached data for '${sourceTable.query.query}' for $from..$to...")

@@ -24,6 +24,7 @@ import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.api.status.RunStatus.{Failed, NotRan, Skipped, Succeeded}
 import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{DataFormat, Reason}
+import za.co.absa.pramen.bulkload.BulkLoadStateManagerNull
 import za.co.absa.pramen.core
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -714,6 +715,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val bookkeeper = if (bookkeeperIn == null) new SyncBookkeeperMock else bookkeeperIn
     val journal = new JournalMock
+    val bulkLoadStateManager = new BulkLoadStateManagerNull
     val tokenLockFactory = new TokenLockFactoryMock
     val state = new PipelineStateSpy
     val killTimer = if (timeoutTask) Some(1) else None
@@ -738,7 +740,7 @@ class TaskRunnerBaseSuite extends AnyWordSpec with SparkTestBase with TextCompar
 
     val tasks = infoDates.map(d => core.pipeline.Task(job, d, TaskRunReason.New))
 
-    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
+    val runner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, bulkLoadStateManager, tokenLockFactory, state, runtimeConfig, "app_123")
 
     (runner, bookkeeper, journal, state, operationDef, tasks)
   }

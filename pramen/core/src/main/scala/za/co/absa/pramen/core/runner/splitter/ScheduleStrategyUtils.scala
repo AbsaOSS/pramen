@@ -20,6 +20,8 @@ import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.bulkload.BulkLoadStateManager
+import za.co.absa.pramen.bulkload.model.BulkLoadPhase.Pending
+import za.co.absa.pramen.bulkload.model.{BulkLoadPhase, BulkLoadState}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.pipeline
@@ -184,8 +186,34 @@ object ScheduleStrategyUtils {
               dataDateTo: LocalDate,
               outputInfoDate: LocalDate,
               bulkLoadStateManager: BulkLoadStateManager): List[TaskPreDef] = {
-    // ToDo: Check the status of the job first
+    val currentStateOpt = bulkLoadStateManager.getState(outputTable, outputInfoDate)
+
+    currentStateOpt match {
+      case Some(state) =>
+        if (!state.dataDateFrom.equals(dataDateFrom) || !state.dataDateTo.equals(dataDateTo)) {
+          throw new IllegalStateException(s"The job for table '$outputTable' and info date '$outputInfoDate' has different data date range.")
+        }
+        if (state.phase != Pending) {
+          return List(TaskPreDef(outputInfoDate, TaskRunReason.Skip("already processed")))
+        }
+      case None =>
+        // ToDo: Propagate info date column for the future repartitioning
+        val newState = BulkLoadState(outputTable, "", outputInfoDate, dataDateFrom, dataDateTo, Pending)
+        bulkLoadStateManager.addState(newState)
+    }
+
     List(TaskPreDef(outputInfoDate, TaskRunReason.Rerun))
+  }
+
+  def updateBulkLoadCompletion(outputTable: String,
+                               outputInfoDate: LocalDate,
+                               bulkLoadStateManager: BulkLoadStateManager,
+                               phase: BulkLoadPhase): Unit = {
+    val currentStateOpt = bulkLoadStateManager.getState(outputTable, outputInfoDate)
+
+    currentStateOpt.foreach { currentState =>
+      bulkLoadStateManager.updatePhase(currentState.copy(phase = phase))
+    }
   }
 
   private[core] def filterOutPastMinimumDates(dates: List[TaskPreDef], minimumDate: LocalDate): List[TaskPreDef] = {

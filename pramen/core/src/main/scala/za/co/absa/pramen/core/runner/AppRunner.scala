@@ -161,7 +161,7 @@ object AppRunner {
                                      appContext: AppContext,
                                      applicationId: String): Try[TaskRunner] = {
     handleFailure(Try {
-      new TaskRunnerMultithreaded(conf, appContext.bookkeeper, appContext.journal, appContext.tokenLockFactory, state, appContext.appConfig.runtimeConfig, applicationId)
+      new TaskRunnerMultithreaded(conf, appContext.bookkeeper, appContext.journal, appContext.bulkLoadStateManager, appContext.tokenLockFactory, state, appContext.appConfig.runtimeConfig, applicationId)
     }, state, "initialization of the task runner")
   }
 

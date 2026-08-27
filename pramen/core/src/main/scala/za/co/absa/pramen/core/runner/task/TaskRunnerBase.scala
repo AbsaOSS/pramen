@@ -24,6 +24,8 @@ import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status._
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
+import za.co.absa.pramen.bulkload.model.{BulkLoadPhase, BulkLoadState}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.SQL_QUERY_CANCELLATION_TIMEOUT
@@ -37,6 +39,7 @@ import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline.PipelineDef.{COUNTRY_KEY, ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
 import za.co.absa.pramen.core.pipeline._
+import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
@@ -54,6 +57,7 @@ import scala.util.{Failure, Success, Try}
 abstract class TaskRunnerBase(conf: Config,
                               bookkeeper: Bookkeeper,
                               journal: Journal,
+                              bulkLoadStateManager: BulkLoadStateManager,
                               lockFactory: TokenLockFactory,
                               runtimeConfig: RuntimeConfig,
                               pipelineState: PipelineState,
@@ -446,6 +450,10 @@ abstract class TaskRunnerBase(conf: Config,
           TaskRunReason.Update else task.reason
 
         val warnings = validationResult.warnings ++ runResult.warnings ++ saveResult.warnings ++ hiveWarnings
+
+        runtimeConfig.bulkLoadCurrent.foreach { state =>
+          ScheduleStrategyUtils.updateBulkLoadCompletion(task.job.outputTable.name, state.outputInfoDate, bulkLoadStateManager, BulkLoadPhase.Processed)
+        }
 
         TaskResult(task.job.taskDef,
           RunStatus.Succeeded(recordCountOldOpt,

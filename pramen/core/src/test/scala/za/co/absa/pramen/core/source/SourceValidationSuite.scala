@@ -157,7 +157,7 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
 
     val job = new IngestionJob(operationDef, metastore, bookkeeper, Nil, sourceName, source, sourceTable, metaTable, "", None, false, None)
 
-    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
+    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, bulkLoadStateManager, tokenLockFactory, state, runtimeConfig, "app_123")
 
     val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, bulkLoadStateManager, taskRunner, "app_123")
 

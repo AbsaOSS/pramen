@@ -20,6 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.status.{RunStatus, TaskRunReason}
 import za.co.absa.pramen.api.status.RunStatus.Failed
+import za.co.absa.pramen.bulkload.BulkLoadStateManagerNull
 import za.co.absa.pramen.core.RuntimeConfigFactory
 import za.co.absa.pramen.core.mocks.bookkeeper.SyncBookkeeperMock
 import za.co.absa.pramen.core.mocks.job.JobSpy
@@ -153,11 +154,12 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec {
     val conf = ConfigFactory.empty()
     val bk = new SyncBookkeeperMock
     val journal = new JournalMock
+    val bulkLoadStateManager = new BulkLoadStateManagerNull
     val lockFactory = new TokenLockFactoryMock
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(parallelTasks = parallelTasks)
     val pipelineState = new PipelineStateSpy
 
-    new TaskRunnerMultithreaded(conf, bk, journal, lockFactory, pipelineState, runtimeConfig, "abc123")
+    new TaskRunnerMultithreaded(conf, bk, journal, bulkLoadStateManager, lockFactory, pipelineState, runtimeConfig, "abc123")
   }
 
   def getTask: Task = {
