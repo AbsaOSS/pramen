@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.runner.splitter
 import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.TaskRunReason
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.pipeline
@@ -176,6 +177,15 @@ object ScheduleStrategyUtils {
     }
 
     filterOutPastMinimumDates(datesWithProperOrder, minimumDate)
+  }
+
+  def getBulk(outputTable: String,
+              dataDateFrom: LocalDate,
+              dataDateTo: LocalDate,
+              outputInfoDate: LocalDate,
+              bulkLoadStateManager: BulkLoadStateManager): List[TaskPreDef] = {
+    // ToDo: Check the status of the job first
+    List(TaskPreDef(outputInfoDate, TaskRunReason.Rerun))
   }
 
   private[core] def filterOutPastMinimumDates(dates: List[TaskPreDef], minimumDate: LocalDate): List[TaskPreDef] = {

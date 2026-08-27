@@ -23,6 +23,7 @@ import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
+import za.co.absa.pramen.core.app.config.{BulkRunConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
@@ -45,7 +46,8 @@ class IngestionJob(operationDef: OperationDef,
                    outputTable: MetaTable,
                    specialCharacters: String,
                    tempDirectory: Option[String],
-                   disableCountQuery: Boolean)
+                   disableCountQuery: Boolean,
+                   bulkLoadCurrent: Option[BulkRunConfig])
                   (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
@@ -84,7 +86,10 @@ class IngestionJob(operationDef: OperationDef,
 
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate)
 
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    val (from, to) = bulkLoadCurrent match {
+      case Some(bulk) => (bulk.dateFrom, bulk.dateTo)
+      case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    }
 
     val validationResult = source.validate(sourceTable.query, from, to)
 

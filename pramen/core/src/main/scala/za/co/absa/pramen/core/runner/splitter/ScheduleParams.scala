@@ -44,8 +44,20 @@ object ScheduleParams {
                          mode: RunMode
                        ) extends ScheduleParams
 
+  case class Bulk(
+                   dataDateFrom: LocalDate,
+                   dataDateTo: LocalDate,
+                   outputInfoDate: LocalDate
+                 ) extends ScheduleParams
+
   def fromRuntimeConfig(conf: RuntimeConfig, backfillDays: Int, trackDays: Int, delayDays: Int): ScheduleParams = {
-    if (conf.runDateTo.nonEmpty) {
+    if (conf.bulkLoadCurrent.isDefined) {
+      ScheduleParams.Bulk(
+        conf.bulkLoadCurrent.get.dateFrom,
+        conf.bulkLoadCurrent.get.dateTo,
+        conf.bulkLoadCurrent.get.outputInfoDate
+      )
+    } else if (conf.runDateTo.nonEmpty) {
       ScheduleParams.Historical(
         conf.runDate,
         conf.runDateTo.get,

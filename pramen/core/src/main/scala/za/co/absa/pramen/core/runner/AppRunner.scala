@@ -107,7 +107,12 @@ object AppRunner {
     if (runtimeConfig.runDateTo.isEmpty)
       throw new IllegalArgumentException("Date range is not provided when running in bulk mode.")
 
-    val dates = BulkLoadDateUtils.getBulkLoadDates(runtimeConfig.runDate, runtimeConfig.runDateTo.get, runtimeConfig.bulkBatchSize)
+    val dates0 = BulkLoadDateUtils.getBulkLoadDates(runtimeConfig.runDate, runtimeConfig.runDateTo.get, runtimeConfig.bulkBatchSize)
+
+    val dates = if (runtimeConfig.isRerun)
+      dates0.sortBy(d => -d.outputInfoDate.toEpochDay)
+    else
+      dates0.sortBy(d => d.outputInfoDate.toEpochDay)
 
     var overallExitCode = 0
 
@@ -347,7 +352,7 @@ object AppRunner {
                               spark: SparkSession): Try[Seq[Job]] = {
     handleFailure(Try {
       val isHistoricalRun = appContext.appConfig.runtimeConfig.runDateTo.nonEmpty
-      val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper, state.getBatchId)
+      val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper, appContext.appConfig.runtimeConfig.bulkLoadCurrent, state.getBatchId)
 
       if (isHistoricalRun)
         log.info("This is a historical run. Making all dependencies 'passive' for all jobs...")
@@ -446,6 +451,7 @@ object AppRunner {
       implicit val jobRunner: ConcurrentJobRunner = new ConcurrentJobRunnerImpl(
         appContext.appConfig.runtimeConfig,
         appContext.bookkeeper,
+        appContext.bulkLoadStateManager,
         taskRunner,
         spark.sparkContext.applicationId)
 

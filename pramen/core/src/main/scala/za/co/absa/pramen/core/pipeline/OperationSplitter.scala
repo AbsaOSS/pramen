@@ -21,6 +21,7 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.{Schedule, SinkTable, SourceTable, TransferTable}
 import za.co.absa.pramen.api.{DataFormat, Transformer}
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.config.Keys.{SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES, SPECIAL_CHARACTERS_IN_COLUMN_NAMES}
@@ -38,6 +39,7 @@ import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
                         bookkeeper: Bookkeeper,
+                        bulkLoadCurrent: Option[BulkRunConfig],
                         batchId: Long)(implicit spark: SparkSession) {
   private val log = LoggerFactory.getLogger(this.getClass)
 
@@ -73,9 +75,9 @@ class OperationSplitter(conf: Config,
 
       if (operationDef.schedule == Schedule.Incremental) {
         val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
-        new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, sourceTable, outputTable, specialCharacters)
+        new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, sourceTable, outputTable, specialCharacters, bulkLoadCurrent)
       } else {
-        new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery)
+        new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent)
       }
     })
   }
@@ -103,9 +105,9 @@ class OperationSplitter(conf: Config,
 
       if (operationDef.schedule == Schedule.Incremental) {
         val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
-        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, conf)
+        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent, conf)
       } else {
-        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, None, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, conf)
+        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, None, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent, conf)
       }
     })
   }

@@ -25,6 +25,7 @@ import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Source}
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager, OffsetManagerUtils}
 import za.co.absa.pramen.core.metastore.Metastore
@@ -45,9 +46,10 @@ class IncrementalIngestionJob(operationDef: OperationDef,
                               source: Source,
                               sourceTable: SourceTable,
                               outputTable: MetaTable,
-                              specialCharacters: String)
+                              specialCharacters: String,
+                              bulkLoadCurrent: Option[BulkRunConfig])
                              (implicit spark: SparkSession)
-  extends IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, None, false) {
+  extends IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, None, false, bulkLoadCurrent) {
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffsetIn.map(_.maximumInfoDate), source.hasInfoDateColumn(sourceTable.query))
 

@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.runner.jobrunner
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
@@ -38,6 +39,7 @@ import scala.util.control.NonFatal
 
 class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
                               bookkeeper: Bookkeeper,
+                              bulkLoadStateManager: BulkLoadStateManager,
                               taskRunner: TaskRunner,
                               applicationId: String) extends ConcurrentJobRunner {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -146,6 +148,7 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
       job.outputTable.name,
       job.operation.dependencies,
       bookkeeper,
+      bulkLoadStateManager,
       job.operation.outputInfoDateExpression,
       job.operation.schedule,
       scheduleParams,

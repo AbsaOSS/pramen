@@ -21,6 +21,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.status.RunStatus.{Failed, Succeeded}
+import za.co.absa.pramen.bulkload.BulkLoadStateManagerNull
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -184,6 +185,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn, parallelTasks = parallelTasks)
 
     val bookkeeper = new SyncBookkeeperMock
+    val bulkLoadStateManager = new BulkLoadStateManagerNull
     val journal = new JournalMock
     val tokenLockFactory = new TokenLockFactoryMock
 
@@ -198,7 +200,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
 
     val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
 
-    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner, "app_123")
+    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, bulkLoadStateManager, taskRunner, "app_123")
 
     (jobRunner, bookkeeper, state, job)
   }

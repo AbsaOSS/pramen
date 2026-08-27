@@ -35,7 +35,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(None, true)
         val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 1)
         assert(dates.head.infoDate == infoDate)
@@ -46,7 +46,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate), true)
         val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 1)
         assert(dates.head.infoDate == infoDate)
@@ -57,7 +57,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(10)), true)
         val params = ScheduleParams.Normal(infoDate, 0, 2, 0, newOnly = false, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 3)
         assert(dates.head.infoDate == infoDate.minusDays(2))
@@ -72,7 +72,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(3)), true)
         val params = ScheduleParams.Normal(infoDate, 0, -1, 0, newOnly = false, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 4)
         assert(dates.head.infoDate == infoDate.minusDays(3))
@@ -89,7 +89,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(3)), true)
         val params = ScheduleParams.Normal(infoDate, 0, -1, 0, newOnly = true, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 2)
         assert(dates.head.infoDate == infoDate.minusDays(1))
@@ -102,7 +102,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(3)), true)
         val params = ScheduleParams.Normal(infoDate, 0, -1, 0, newOnly = false, lateOnly = true)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 2)
         assert(dates.head.infoDate == infoDate.minusDays(3))
@@ -117,7 +117,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(None, false)
         val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 1)
         assert(dates.head.infoDate == infoDate)
@@ -128,7 +128,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate), false)
         val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 1)
         assert(dates.head.infoDate == infoDate)
@@ -139,7 +139,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
         val strategy = new ScheduleStrategyIncremental(Some(infoDate.minusDays(5)), false)
         val params = ScheduleParams.Normal(infoDate, 0, 0, 0, newOnly = false, lateOnly = false)
 
-        val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+        val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
         assert(dates.length == 1)
         assert(dates.head.infoDate == infoDate)
@@ -153,7 +153,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
       val strategy = new ScheduleStrategyIncremental(Some(infoDate.plusDays(5)), true)
       val params = ScheduleParams.Rerun(infoDate)
 
-      val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+      val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
       assert(dates.length == 1)
       assert(dates.head.infoDate == infoDate)
@@ -164,7 +164,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
       val strategy = new ScheduleStrategyIncremental(Some(infoDate.plusDays(5)), false)
       val params = ScheduleParams.Rerun(infoDate)
 
-      val dates = strategy.getDaysToRun("table1", Seq.empty, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
+      val dates = strategy.getDaysToRun("table1", Seq.empty, null, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
       assert(dates.length == 1)
       assert(dates.head.infoDate == infoDate)
@@ -179,7 +179,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
       val strategy = new ScheduleStrategyIncremental(Some(infoDate.plusDays(5)), true)
       val params = ScheduleParams.Historical(infoDate.minusDays(2), infoDate, inverseDateOrder = false, RunMode.ForceRun)
 
-      val dates = strategy.getDaysToRun("table1", Seq.empty, bk, "@runDate", Schedule.Incremental, params, null, minimumDate)
+      val dates = strategy.getDaysToRun("table1", Seq.empty, bk, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
       assert(dates.length == 3)
       assert(dates.head.infoDate == infoDate.minusDays(2))
@@ -194,7 +194,7 @@ class ScheduleStrategyIncrementalSuite extends AnyWordSpec {
       val strategy = new ScheduleStrategyIncremental(Some(infoDate.plusDays(5)), false)
       val params = ScheduleParams.Historical(infoDate.minusDays(2), infoDate, inverseDateOrder = true, RunMode.ForceRun)
 
-      val dates = strategy.getDaysToRun("table1", Seq.empty, bk, "@runDate", Schedule.Incremental, params, null, minimumDate)
+      val dates = strategy.getDaysToRun("table1", Seq.empty, bk, null, "@runDate", Schedule.Incremental, params, null, minimumDate)
 
       assert(dates.length == 3)
       assert(dates.head.infoDate == infoDate)
