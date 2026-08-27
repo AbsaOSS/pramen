@@ -109,7 +109,7 @@ object AppRunner {
 
     val dates0 = BulkLoadDateUtils.getBulkLoadDates(runtimeConfig.runDate, runtimeConfig.runDateTo.get, runtimeConfig.bulkBatchSize)
 
-    val dates = if (runtimeConfig.isRerun)
+    val dates = if (runtimeConfig.isInverseOrder)
       dates0.sortBy(d => -d.outputInfoDate.toEpochDay)
     else
       dates0.sortBy(d => d.outputInfoDate.toEpochDay)
