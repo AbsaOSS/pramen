@@ -72,6 +72,10 @@ class IncrementalIngestionJob(operationDef: OperationDef,
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
+    if (bulkLoadCurrent.nonEmpty) {
+      return Reason.NotReady("Incremental ingestion is not supported for bulk load operations at the moment.")
+    }
+
     val om = bookkeeper.getOffsetManager
     val sourceHasInfoDate = source.hasInfoDateColumn(sourceTable.query)
     val isReRun = runReason == TaskRunReason.Rerun

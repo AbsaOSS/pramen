@@ -21,7 +21,7 @@ import za.co.absa.pramen.bulkload.model.BulkLoadState
 import java.time.LocalDate
 
 class BulkLoadStateManagerNull extends BulkLoadStateManager {
-  override def getState(pramenTableName: String, infoDate: LocalDate): BulkLoadState = {
+  override def getState(pramenTableName: String, infoDate: LocalDate): Option[BulkLoadState] = {
     throw new IllegalArgumentException("This bookkeeping storage mechanism does not support bulk loads. Please, use JDBC for bookkeeping.")
   }
 

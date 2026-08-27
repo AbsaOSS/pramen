@@ -21,7 +21,7 @@ import za.co.absa.pramen.bulkload.model.BulkLoadState
 import java.time.LocalDate
 
 trait BulkLoadStateManager {
-  def getState(pramenTableName: String, infoDate: LocalDate): BulkLoadState
+  def getState(pramenTableName: String, infoDate: LocalDate): Option[BulkLoadState]
 
   def deleteState(pramenTableName: String, infoDate: LocalDate): Unit
 

@@ -145,8 +145,8 @@ class PramenDb(val jdbcConfig: JdbcConfig,
       alterColumn(schemaTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)", nullable = false)
     }
 
-    if (0 < dbVersion && dbVersion < 13) {
-      initTable(bookkeepingTable.records.schema)
+    if (dbVersion < 13) {
+      initTable(bulkLoadStateTable.records.schema)
     }
   }
 

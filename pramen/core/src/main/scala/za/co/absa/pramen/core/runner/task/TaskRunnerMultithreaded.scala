@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status.RunStatus
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
@@ -41,10 +42,11 @@ import scala.util.control.NonFatal
 class TaskRunnerMultithreaded(conf: Config,
                               bookkeeper: Bookkeeper,
                               journal: Journal,
+                              bulkLoadStateManager: BulkLoadStateManager,
                               lockFactory: TokenLockFactory,
                               pipelineState: PipelineState,
                               runtimeConfig: RuntimeConfig,
-                              applicationId: String) extends TaskRunnerBase(conf, bookkeeper, journal, lockFactory, runtimeConfig, pipelineState, applicationId) {
+                              applicationId: String) extends TaskRunnerBase(conf, bookkeeper, journal, bulkLoadStateManager, lockFactory, runtimeConfig, pipelineState, applicationId) {
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val executor: ExecutorService = newFixedThreadPool(runtimeConfig.parallelTasks)
