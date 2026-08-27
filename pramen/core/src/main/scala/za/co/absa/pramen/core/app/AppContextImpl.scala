@@ -20,6 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.MetadataManager
 import za.co.absa.pramen.api.lock.TokenLockFactory
+import za.co.absa.pramen.bulkload.{BulkLoadStateManager, BulkLoadStateManagerNull}
 import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
@@ -31,6 +32,7 @@ import za.co.absa.pramen.core.utils.SparkUtils
 
 class AppContextImpl(val appConfig: AppConfig,
                      val bookkeeper: Bookkeeper,
+                     val bulkLoadStateManager: BulkLoadStateManager,
                      val tokenLockFactory: TokenLockFactory,
                      val journal: Journal,
                      val metadataManager: MetadataManager,
@@ -73,6 +75,7 @@ object AppContextImpl {
     val appContext = new AppContextImpl(
       appConfig,
       bookkeeper,
+      bulkLoadStateManager,
       tokenLockFactory,
       journal,
       metadataManager,
@@ -98,6 +101,7 @@ object AppContextImpl {
     val appContext = new AppContextImpl(
       appConfig,
       bookkeeper,
+      new BulkLoadStateManagerNull,
       new TokenLockFactoryAllow,
       journal,
       new MetadataManagerNull(isPersistenceEnabled = false),

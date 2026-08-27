@@ -412,7 +412,8 @@ class IngestionJobSuite extends AnyWordSpec with SparkTestBase with TextComparis
       outputTable,
       specialCharacters,
       tempDirectory,
-      disableCountQuery)
+      disableCountQuery,
+      None)
 
     (bk, metastore, job)
   }

@@ -22,6 +22,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat
 import za.co.absa.pramen.api.status.RunStatus
+import za.co.absa.pramen.bulkload.BulkLoadStateManagerNull
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.fixtures.TempDirFixture
@@ -132,6 +133,7 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
 
     val metastore = new MetastoreSpy()
     val bookkeeper = new SyncBookkeeperMock
+    val bulkLoadStateManager = new BulkLoadStateManagerNull
     val journal = new JournalMock
     val tokenLockFactory = new TokenLockFactoryMock
 
@@ -153,11 +155,11 @@ class SourceValidationSuite extends AnyWordSpec with BeforeAndAfterAll with Temp
 
     val source = SourceManager.getSourceByName(sourceName, conf, None)
 
-    val job = new IngestionJob(operationDef, metastore, bookkeeper, Nil, sourceName, source, sourceTable, metaTable, "", None, false)
+    val job = new IngestionJob(operationDef, metastore, bookkeeper, Nil, sourceName, source, sourceTable, metaTable, "", None, false, None)
 
     val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
 
-    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner, "app_123")
+    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, bulkLoadStateManager, taskRunner, "app_123")
 
     (jobRunner, bookkeeper, state, job)
   }

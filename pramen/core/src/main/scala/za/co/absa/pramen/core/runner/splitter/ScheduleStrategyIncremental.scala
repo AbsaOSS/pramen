@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.runner.splitter
 
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.pipeline.TaskPreDef
@@ -32,6 +33,7 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
                              outputTable: String,
                              dependencies: Seq[MetastoreDependency],
                              bookkeeper: Bookkeeper,
+                             bulkLoadStateManager: BulkLoadStateManager,
                              infoDateExpression: String,
                              schedule: Schedule,
                              params: ScheduleParams,
@@ -85,6 +87,9 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
       case ScheduleParams.Historical(dateFrom, dateTo, inverseDateOrder, mode) =>
         log.info(s"Ranged strategy: from $dateFrom to $dateTo, mode = '${mode.toString}', minimumDate = $minimumDate")
         getHistorical(outputTable, dateFrom, dateTo, schedule, mode, infoDateExpression, minimumDate, inverseDateOrder, bookkeeper)
+      case ScheduleParams.Bulk(dataDateFrom, dataDateTo, outputInfoDate)                                                     =>
+        log.info(s"Bulk strategy: from $dataDateFrom to $dataDateTo, outputInfoDate = $outputInfoDate")
+        getBulk(outputTable, dataDateFrom, dataDateTo, outputInfoDate, bulkLoadStateManager)
     }
 
     filterOutPastMinimumDates(dates, minimumDate)
