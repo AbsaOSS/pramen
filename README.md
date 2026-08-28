@@ -1854,7 +1854,7 @@ pramen.operations = [
     info.date.expr = "@runDate"
 
     # If this is set Pramen won't save the output table and rely on the transformer doing this itself.
-    # This is helpful when a transformer is designed for parallel writes to a table and has it own way of
+    # This is helpful when a transformer is designed for parallel writes to a table and has its own way of
     # managing concurrency.
     #do.not.write.output = true
 

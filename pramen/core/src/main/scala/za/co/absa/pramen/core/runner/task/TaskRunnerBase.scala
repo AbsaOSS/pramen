@@ -428,8 +428,10 @@ abstract class TaskRunnerBase(conf: Config,
           log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
           SaveResult(MetaTableStats(Option(dfTransformed.count()), None, None))
         } else if (task.job.operation.doNotWriteOutput) {
+          val recordCount = dfTransformed.count()
           log.warn(s"The operation does not write to the output table using Pramen's mechanisms. No writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
-          SaveResult(MetaTableStats(Option(dfTransformed.count()), None, None))
+          bookkeeper.setRecordCount(task.job.outputTable.name, task.infoDate, validationResult.inputRecordsCount.getOrElse(recordCount), recordCount, None, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
+          SaveResult(MetaTableStats(Option(recordCount), None, None))
         } else {
           task.job.save(dfTransformed, task.infoDate, task.reason, conf, started, validationResult.inputRecordsCount)
         }
@@ -459,7 +461,9 @@ abstract class TaskRunnerBase(conf: Config,
         val warnings = validationResult.warnings ++ runResult.warnings ++ saveResult.warnings ++ hiveWarnings
 
         runtimeConfig.bulkLoadCurrent.foreach { state =>
-          ScheduleStrategyUtils.updateBulkLoadCompletion(task.job.outputTable.name, state.outputInfoDate, bulkLoadStateManager, BulkLoadPhase.Processed)
+          if (!runtimeConfig.isDryRun) {
+            ScheduleStrategyUtils.updateBulkLoadCompletion(task.job.outputTable.name, state.outputInfoDate, bulkLoadStateManager, BulkLoadPhase.Processed)
+          }
         }
 
         TaskResult(task.job.taskDef,

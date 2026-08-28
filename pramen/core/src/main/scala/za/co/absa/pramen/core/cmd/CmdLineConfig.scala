@@ -204,7 +204,7 @@ object CmdLineConfig {
       .children(
         opt[String]("run-mode").optional().action((value, config) =>
           config.copy(mode = Option(value)))
-          .text("Mode of processing for date ranges. One of 'fill_gaps', 'check_updates', 'force'")
+          .text("Mode of processing for date ranges. One of 'fill_gaps', 'check_updates', 'force', 'bulk")
           .validate(v =>
             if (v == "fill_gaps" || v == "check_updates" || v == "force" || v == "bulk") success
             else failure("Invalid run mode. Must be one of 'fill_gaps', 'check_updates', 'force', 'bulk'")),
