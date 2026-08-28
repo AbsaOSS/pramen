@@ -1853,6 +1853,11 @@ pramen.operations = [
     # Specifies an expression to calculate output information date based on the day at which the job has ran.
     info.date.expr = "@runDate"
 
+    # If this is set Pramen won't save the output table and rely on the transformer doing this itself.
+    # This is helpful when a transformer is designed for parallel writes to a table and has it own way of
+    # managing concurrency.
+    #do.not.write.output = true
+
     # Specifies which tables are inputs to the transformer and which date range input tables are expected to have input data.
     dependencies = [
       {
