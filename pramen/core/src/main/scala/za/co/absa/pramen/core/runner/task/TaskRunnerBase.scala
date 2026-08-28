@@ -191,11 +191,13 @@ abstract class TaskRunnerBase(conf: Config,
     val lock = taskLockFactory.getLock(getTokenName(task))
 
     try {
-      if (!lock.tryAcquire()) {
-        if (runtimeConfig.skipLocked) {
-          return skipTask(task, "Another instance is already running", isWarning = true)
-        } else {
-          throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+      if (!task.job.operation.doNotWriteOutput) {
+        if (!lock.tryAcquire()) {
+          if (runtimeConfig.skipLocked) {
+            return skipTask(task, "Another instance is already running", isWarning = true)
+          } else {
+            throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+          }
         }
       }
 
@@ -205,7 +207,9 @@ abstract class TaskRunnerBase(conf: Config,
       }
       onTaskCompletion(task, result, isLazy = false)
     } finally {
-      lock.release()
+      if (!task.job.operation.doNotWriteOutput) {
+        lock.release()
+      }
     }
   }
 
@@ -422,6 +426,9 @@ abstract class TaskRunnerBase(conf: Config,
 
         val saveResult = if (runtimeConfig.isDryRun) {
           log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
+          SaveResult(MetaTableStats(Option(dfTransformed.count()), None, None))
+        } else if (task.job.operation.doNotWriteOutput) {
+          log.warn(s"The operation does not write to the output table using Pramen's mechanisms. No writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
           SaveResult(MetaTableStats(Option(dfTransformed.count()), None, None))
         } else {
           task.job.save(dfTransformed, task.infoDate, task.reason, conf, started, validationResult.inputRecordsCount)
