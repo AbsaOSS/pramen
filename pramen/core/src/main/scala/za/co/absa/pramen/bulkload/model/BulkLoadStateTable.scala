@@ -27,9 +27,9 @@ trait BulkLoadStateTable {
     def infoDateColumn = column[String]("info_date_column", O.Length(255))
     def outputInfoDate = column[String]("output_info_date", O.Length(20))
     def dataDateFrom = column[String]("data_date_from", O.Length(20))
-    def dataFateTo = column[String]("data_date_to", O.Length(20))
+    def dataDateTo = column[String]("data_date_to", O.Length(20))
     def phase = column[String]("phase", O.Length(20))
-    def * = (pramenTableName, infoDateColumn, outputInfoDate, dataDateFrom, dataFateTo, phase) <> (BulkLoadStateSerialized.tupled, BulkLoadStateSerialized.unapply)
+    def * = (pramenTableName, infoDateColumn, outputInfoDate, dataDateFrom, dataDateTo, phase) <> (BulkLoadStateSerialized.tupled, BulkLoadStateSerialized.unapply)
     def idx1 = index("bulkload_offset_idx_1", (pramenTableName, outputInfoDate), unique = true)
   }
 

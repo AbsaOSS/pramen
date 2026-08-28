@@ -67,7 +67,7 @@ class BulkLoadStateManagerJdbc(db: Database, slickProfile: JdbcProfile) extends 
           .delete
       ).execute()
     } catch {
-      case NonFatal(ex) => log.error(s"Unable to delete from the bulk_load_state table for the table '$pramenTableName' and the info date '$infoDateStr'.", ex)
+      case NonFatal(ex) => throw new IllegalStateException(s"Unable to delete from the bulk_load_state table for the table '$pramenTableName' and the info date '$infoDateStr'.", ex)
     }
   }
 
