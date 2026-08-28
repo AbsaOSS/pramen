@@ -36,7 +36,7 @@ class ThreadUtilsSuite extends AnyWordSpec {
     "throw an exception when timeout is breached" in {
       val ex = intercept[RuntimeException] {
         ThreadUtils.runWithTimeout(Duration(1, TimeUnit.MILLISECONDS)) {
-          Thread.sleep(2000)
+          Thread.sleep(5000)
         }
       }
 
