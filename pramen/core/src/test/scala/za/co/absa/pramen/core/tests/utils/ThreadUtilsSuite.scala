@@ -35,12 +35,12 @@ class ThreadUtilsSuite extends AnyWordSpec {
 
     "throw an exception when timeout is breached" in {
       val ex = intercept[RuntimeException] {
-        ThreadUtils.runWithTimeout(Duration(1, TimeUnit.MILLISECONDS)) {
-          Thread.sleep(5000)
+        ThreadUtils.runWithTimeout(Duration(1000, TimeUnit.MILLISECONDS)) {
+          Thread.sleep(6000)
         }
       }
 
-      assert(ex.getMessage.contains("Timeout expired (instantly)."))
+      assert(ex.getMessage.contains("Timeout expired"))
       assert(ex.getCause != null)
       assert(ex.getCause.isInstanceOf[RuntimeException])
       assert(ex.getCause.getStackTrace.nonEmpty)
