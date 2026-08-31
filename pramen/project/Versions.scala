@@ -117,7 +117,7 @@ object Versions {
       case _ => "3.9.0"
     }
 
-    println(s"Using 'kafla-clients' version $kafkaClientsVersion")
+    println(s"Using 'kafka-clients' version $kafkaClientsVersion")
 
     "org.apache.kafka" % "kafka-clients" % kafkaClientsVersion
   }

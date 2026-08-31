@@ -131,13 +131,20 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
     val undercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
     val pipelineStatus = PipelineStateImpl.pipelineStatus(appException, taskResults.toSeq, pipelineNotificationFailures.toSeq, warningFlag, strictFailures)
 
+    val (runDateFrom, runDateTo) = runtimeConfig.bulkLoadCurrent match {
+      case Some(bulkLoad) =>
+        (bulkLoad.dateFrom, Option(bulkLoad.dateTo))
+      case None =>
+        (runtimeConfig.runDate, runtimeConfig.runDateTo)
+    }
+
     PipelineInfo(
       pipelineName,
       pipelineDefinitionId,
       environmentName,
       RuntimeInfo(
-        runtimeConfig.runDate,
-        runtimeConfig.runDateTo,
+        runDateFrom,
+        runDateTo,
         runtimeConfig.runDateTo.map(_ => runtimeConfig.historicalRunMode),
         runtimeConfig.isRerun,
         dryRun,

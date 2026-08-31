@@ -80,7 +80,7 @@ class BulkLoadStateManagerJdbc(db: Database, slickProfile: JdbcProfile) extends 
         bulkLoadStateTable.records += bulkLoadStateSerialized
       ).execute()
     } catch {
-      case NonFatal(ex) => log.error(s"Unable to write to the bulk_load_state table.", ex)
+      case NonFatal(ex) => throw new IllegalStateException(s"Unable to write to the bulk_load_state table.", ex)
     }
   }
 
@@ -96,7 +96,7 @@ class BulkLoadStateManagerJdbc(db: Database, slickProfile: JdbcProfile) extends 
           .update(bulkLoadStateSerialized.phase)
       ).execute()
     } catch {
-      case NonFatal(ex) => log.error(s"Unable to update the phase in the bulk_load_state table.", ex)
+      case NonFatal(ex) => throw new IllegalStateException(s"Unable to update the phase in the bulk_load_state table.", ex)
     }
   }
 }
