@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.api.status._
@@ -691,6 +692,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       val result = builder.renderExecutionInfo(
         LocalDate.parse("2022-02-18"),
         None,
+        None,
         isRerun = false,
         isNewOnly = false,
         isLateOnly = false,
@@ -712,6 +714,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       val result = builder.renderExecutionInfo(
         LocalDate.parse("2022-02-18"),
         None,
+        None,
         isRerun = false,
         isNewOnly = false,
         isLateOnly = false,
@@ -731,6 +734,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       val result = builder.renderExecutionInfo(
         LocalDate.parse("2022-02-18"),
         Some(LocalDate.parse("2022-02-25")),
+        Some(RunMode.CheckUpdates),
         isRerun = true,
         isNewOnly = false,
         isLateOnly = false,

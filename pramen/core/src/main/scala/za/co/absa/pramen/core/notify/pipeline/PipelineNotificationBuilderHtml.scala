@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.api.status.RunStatus._
 import za.co.absa.pramen.api.status._
-import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
+import za.co.absa.pramen.api.{FieldChange, RunMode, SchemaDifference}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
 import za.co.absa.pramen.core.exceptions.{CmdFailedException, LazyJobErrorWrapper, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
@@ -213,7 +213,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     introParagraph.withText(". ")
 
     runtimeInfo.foreach { c =>
-      val executionInfoParagraph = renderExecutionInfo(c.runDateFrom, c.runDateTo, c.isRerun, c.isNewOnly, c.isLateOnly, c.attempt, c.maxAttempts)
+      val executionInfoParagraph = renderExecutionInfo(c.runDateFrom, c.runDateTo, c.historicalRunMode, c.isRerun, c.isNewOnly, c.isLateOnly, c.attempt, c.maxAttempts)
         .withText(". ")
         .paragraph
       introParagraph
@@ -270,8 +270,18 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
+  private[core] def renderRunMode (runMode: RunMode): String = {
+    runMode match {
+      case RunMode.CheckUpdates => "check updates mode"
+      case RunMode.SkipAlreadyRan => "backfill mode"
+      case RunMode.ForceRun => "rerun mode"
+      case RunMode.Bulk => "bulk history load mode"
+    }
+  }
+
   private[core] def renderExecutionInfo(runDateFrom: LocalDate,
                                         runDateTo: Option[LocalDate],
+                                        historyMode: Option[RunMode],
                                         isRerun: Boolean,
                                         isNewOnly: Boolean,
                                         isLateOnly: Boolean,
@@ -279,8 +289,11 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
                                         maxAttempts: Int): ParagraphBuilder = {
     val executionStr = if (isRerun) "Re-run execution" else "Execution"
     val datesStr = runDateTo match {
-      case Some(dateTo) => s"the period from <b>$runDateFrom</b> to <b>$dateTo</b>"
-      case None => s"the run date <b>$runDateFrom</b>"
+      case Some(dateTo) =>
+        val modeStr = historyMode.map(m => s" (<b>${renderRunMode(m)}</b>)").getOrElse("")
+        s"the period from <b>$runDateFrom</b> to <b>$dateTo</b>$modeStr"
+      case None =>
+        s"the run date <b>$runDateFrom</b>"
     }
 
     val attemptDescription = if (maxAttempts > 1) s". Attempt <b>$attempt</b>/<b>$maxAttempts</b>" else ""
