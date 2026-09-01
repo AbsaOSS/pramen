@@ -22,6 +22,7 @@ import za.co.absa.pramen.api.status.TaskRunReason
 import za.co.absa.pramen.bulkload.BulkLoadStateManager
 import za.co.absa.pramen.bulkload.model.BulkLoadPhase.Pending
 import za.co.absa.pramen.bulkload.model.{BulkLoadPhase, BulkLoadState}
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.pipeline
@@ -182,27 +183,24 @@ object ScheduleStrategyUtils {
   }
 
   def getBulk(outputTable: String,
-              dataDateFrom: LocalDate,
-              dataDateTo: LocalDate,
-              outputInfoDate: LocalDate,
+              bulkRunConfig: BulkRunConfig,
               bulkLoadStateManager: BulkLoadStateManager): List[TaskPreDef] = {
-    val currentStateOpt = bulkLoadStateManager.getState(outputTable, outputInfoDate)
+    val currentStateOpt = bulkLoadStateManager.getState(outputTable, bulkRunConfig.outputInfoDate)
 
     currentStateOpt match {
       case Some(state) =>
-        if (!state.dataDateFrom.equals(dataDateFrom) || !state.dataDateTo.equals(dataDateTo)) {
-          throw new IllegalStateException(s"The job for table '$outputTable' and info date '$outputInfoDate' has different data date range.")
+        if (!state.dataDateFrom.equals(bulkRunConfig.dataDateFrom) || !state.dataDateTo.equals(bulkRunConfig.dataDateTo)) {
+          throw new IllegalStateException(s"The job for table '$outputTable' and info date '${bulkRunConfig.outputInfoDate}' has different data date range.")
         }
         if (state.phase != Pending) {
-          return List(TaskPreDef(outputInfoDate, TaskRunReason.Skip("already processed")))
+          return List(TaskPreDef(bulkRunConfig.outputInfoDate, TaskRunReason.Skip("already processed")))
         }
       case None =>
-        // ToDo: Propagate info date column for the future repartitioning
-        val newState = BulkLoadState(outputTable, "", outputInfoDate, dataDateFrom, dataDateTo, Pending)
+        val newState = BulkLoadState(outputTable, bulkRunConfig.infoDateColumn.getOrElse(""), bulkRunConfig.outputInfoDate, bulkRunConfig.dataDateFrom, bulkRunConfig.dataDateTo, Pending)
         bulkLoadStateManager.addState(newState)
     }
 
-    List(TaskPreDef(outputInfoDate, TaskRunReason.Rerun))
+    List(TaskPreDef(bulkRunConfig.outputInfoDate, TaskRunReason.Rerun))
   }
 
   def updateBulkLoadCompletion(outputTable: String,

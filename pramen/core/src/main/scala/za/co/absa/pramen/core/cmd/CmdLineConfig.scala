@@ -44,6 +44,7 @@ case class CmdLineConfig(
                           dateTo: Option[LocalDate] = None,
                           mode: Option[String] = None,
                           bulkSize: Option[String] = None,
+                          infoDateColumn: Option[String] = None,
                           inverseOrder: Option[Boolean] = None,
                           verbose: Option[Boolean] = None,
                           overrideLogLevel: Option[String] = None,
@@ -133,6 +134,9 @@ object CmdLineConfig {
     for (bulkSize <- cmd.bulkSize)
       accumulatedConfig = accumulatedConfig.withValue(RUN_BULK_BATCH_SIZE, ConfigValueFactory.fromAnyRef(bulkSize))
 
+    for (infoDateColumn <- cmd.infoDateColumn)
+      accumulatedConfig = accumulatedConfig.withValue(INFO_DATE_COLUMN, ConfigValueFactory.fromAnyRef(infoDateColumn))
+
     for (logEffectiveConfig <- cmd.logEffectiveConfig)
       accumulatedConfig = accumulatedConfig.withValue(LOG_EFFECTIVE_CONFIG, ConfigValueFactory.fromAnyRef(logEffectiveConfig))
 
@@ -213,7 +217,13 @@ object CmdLineConfig {
           .text("The bulk size for processing date ranges.")
           .validate(v =>
             if (v == "monthly" || v == "quarterly" || v == "yearly") success
-            else failure("Invalid bulk size. Must be one of 'monthly', 'quarterly', 'yearly'"))
+            else failure("Invalid bulk size. Must be one of 'monthly', 'quarterly', 'yearly'")),
+        opt[String]("info-date-column").optional().action((value, config) =>
+            config.copy(infoDateColumn = Option(value)))
+          .text("The information date column name to use for repartitioning.")
+          .validate(v =>
+            if (v.nonEmpty) success
+            else failure("Invalid information date column name. Must be a non-empty string."))
       )
 
     opt[Boolean]("inverse-order").optional().action((value, config) =>

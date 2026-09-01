@@ -87,7 +87,7 @@ class IngestionJob(operationDef: OperationDef,
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate)
 
     val (from, to) = bulkLoadCurrent match {
-      case Some(bulk) => (bulk.dateFrom, bulk.dateTo)
+      case Some(bulk) => (bulk.dataDateFrom, bulk.dataDateTo)
       case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
     }
 
@@ -155,7 +155,7 @@ class IngestionJob(operationDef: OperationDef,
     val dfTransformed = applyTransformations(df, sourceTable.transformations)
 
     val (from, to) = bulkLoadCurrent match {
-      case Some(bulk) => (bulk.dateFrom, bulk.dateTo)
+      case Some(bulk) => (bulk.dataDateFrom, bulk.dataDateTo)
       case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
     }
 
@@ -278,7 +278,7 @@ class IngestionJob(operationDef: OperationDef,
 
   private def getSourcingResult(infoDate: LocalDate): SourceResult = {
     val (from, to) = bulkLoadCurrent match {
-      case Some(bulk) => (bulk.dateFrom, bulk.dateTo)
+      case Some(bulk) => (bulk.dataDateFrom, bulk.dataDateTo)
       case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
     }
 

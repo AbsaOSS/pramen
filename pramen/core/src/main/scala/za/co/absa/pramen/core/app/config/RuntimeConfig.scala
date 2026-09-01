@@ -65,10 +65,11 @@ object RuntimeConfig {
   val IS_RERUN = "pramen.runtime.is.rerun"
   val IS_INVERSE_ORDER = "pramen.runtime.inverse.order"
   val RUN_MODE = "pramen.runtime.run.mode"
-  val RUN_BULK_BATCH_SIZE = "pramen.runtime.run.bulk.batch.size"
-  val BULK_CURRENT_DATE_FROM = "pramen.runtime.run.bulk.curreent.date.from"
-  val BULK_CURRENT_DATE_TO = "pramen.runtime.run.bulk.curreent.date.to"
-  val BULK_CURRENT_OUTPUT_INFO_DATE = "pramen.runtime.run.bulk.curreent.output.information.date"
+  val RUN_BULK_BATCH_SIZE = "pramen.runtime.bulk.batch.size"
+  val INFO_DATE_COLUMN = "pramen.runtime.info.date.column"
+  val BULK_CURRENT_DATE_FROM = "pramen.runtime.run.bulk.current.date.from"
+  val BULK_CURRENT_DATE_TO = "pramen.runtime.run.bulk.current.date.to"
+  val BULK_CURRENT_OUTPUT_INFO_DATE = "pramen.runtime.run.bulk.current.output.information.date"
   val RUN_TABLES = "pramen.runtime.run.tables"
   val UNDERCOVER = "pramen.undercover"
   val USE_LOCK = "pramen.use.lock"
@@ -161,9 +162,10 @@ object RuntimeConfig {
     val bulkCurrentDateFrom = ConfigUtils.getOptionString(conf, BULK_CURRENT_DATE_FROM).map(getDate)
     val bulkCurrentDateTo = ConfigUtils.getOptionString(conf, BULK_CURRENT_DATE_TO).map(getDate)
     val bulkCurrentOutputInfoDate = ConfigUtils.getOptionString(conf, BULK_CURRENT_OUTPUT_INFO_DATE).map(getDate)
+    val infoDateColumn= ConfigUtils.getOptionString(conf, INFO_DATE_COLUMN)
 
     val bulkLoadCurrent = if (bulkCurrentDateFrom.isDefined && bulkCurrentDateTo.isDefined && bulkCurrentOutputInfoDate.isDefined) {
-      Some(BulkRunConfig(bulkCurrentDateFrom.get, bulkCurrentDateTo.get, bulkCurrentOutputInfoDate.get))
+      Some(BulkRunConfig(bulkCurrentDateFrom.get, bulkCurrentDateTo.get, infoDateColumn, bulkCurrentOutputInfoDate.get))
     } else {
       None
     }

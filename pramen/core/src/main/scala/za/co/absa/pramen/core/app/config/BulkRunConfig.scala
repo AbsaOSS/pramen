@@ -19,7 +19,8 @@ package za.co.absa.pramen.core.app.config
 import java.time.LocalDate
 
 case class BulkRunConfig(
-                          dateFrom: LocalDate,
-                          dateTo: LocalDate,
+                          dataDateFrom: LocalDate,
+                          dataDateTo: LocalDate,
+                          infoDateColumn: Option[String],
                           outputInfoDate: LocalDate
                         )

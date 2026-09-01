@@ -133,7 +133,7 @@ class PipelineStateImpl(implicit conf: Config, notificationBuilder: Notification
 
     val (runDateFrom, runDateTo) = runtimeConfig.bulkLoadCurrent match {
       case Some(bulkLoad) =>
-        (bulkLoad.dateFrom, Option(bulkLoad.dateTo))
+        (bulkLoad.dataDateFrom, Option(bulkLoad.dataDateTo))
       case None =>
         (runtimeConfig.runDate, runtimeConfig.runDateTo)
     }

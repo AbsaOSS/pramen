@@ -222,7 +222,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
             Reason.Ready
           case None =>
             log.info(s"Offsets not found for '${outputTable.name}' at '$infoDate'.")
-            Reason.SkipOnce("No offsets registered")
+            Reason.SkipOnce(s"Unable to re-run: No offsets registered for $infoDate")
         }
       case (true, false) =>
         Reason.Ready
