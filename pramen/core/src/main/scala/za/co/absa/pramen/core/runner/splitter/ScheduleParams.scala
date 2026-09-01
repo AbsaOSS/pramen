@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.runner.splitter
 
 import za.co.absa.pramen.api.RunMode
-import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.core.app.config.{BulkRunConfig, RuntimeConfig}
 
 import java.time.LocalDate
 
@@ -44,19 +44,11 @@ object ScheduleParams {
                          mode: RunMode
                        ) extends ScheduleParams
 
-  case class Bulk(
-                   dataDateFrom: LocalDate,
-                   dataDateTo: LocalDate,
-                   outputInfoDate: LocalDate
-                 ) extends ScheduleParams
+  case class Bulk(bulkRunConfig: BulkRunConfig) extends ScheduleParams
 
   def fromRuntimeConfig(conf: RuntimeConfig, backfillDays: Int, trackDays: Int, delayDays: Int): ScheduleParams = {
     if (conf.bulkLoadCurrent.isDefined) {
-      ScheduleParams.Bulk(
-        conf.bulkLoadCurrent.get.dateFrom,
-        conf.bulkLoadCurrent.get.dateTo,
-        conf.bulkLoadCurrent.get.outputInfoDate
-      )
+      ScheduleParams.Bulk(conf.bulkLoadCurrent.get)
     } else if (conf.runDateTo.nonEmpty) {
       ScheduleParams.Historical(
         conf.runDate,
