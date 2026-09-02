@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DateType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{CatalogTable, PartitionScheme}
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -110,6 +111,29 @@ class MetastorePersistenceIceberg(table: CatalogTable,
                                queryExecutor: QueryExecutor,
                                hiveConfig: HiveConfig): Unit = {
     throw new UnsupportedOperationException("Iceberg only operates on tables in a catalog. Separate Hive options are not supported.")
+  }
+
+  override def isRepartitioningSupported: Boolean = true
+
+  override def repartitionPhase1(infoDateDataColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+     if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))
+       throw new IllegalArgumentException(s"Cannot repartition a table if the metastore info date column is the same as the data info date column ($infoDateDataColumn)")
+
+    val fullTableName = table.getFullTableName
+    val df = spark.table(fullTableName)
+      .filter(getFilter(Some(outputInfoDate), Some(outputInfoDate)))
+
+    log.info(s"Running Iceberg repartitioning: UPDATE $fullTableName SET $infoDateColumn = CAST($infoDateDataColumn AS DATE) " +
+      s"WHERE $infoDateColumn = '$outputInfoDate' AND $infoDateDataColumn >= '$infoDateFrom' AND $infoDateDataColumn <= '$infoDateTo'")
+
+    val dfToWrite = df.withColumn(infoDateColumn, col(infoDateDataColumn).cast(DateType))
+
+    writeRepartitionedDf(dfToWrite, fullTableName, infoDateColumn, infoDateFrom, infoDateTo, writeOptions)
+  }
+
+  override def repartitionPhase2(infoDateDataColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+    if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))
+      throw new IllegalArgumentException(s"Cannot repartition a table if the metastore info date column is the same as the data info date column ($infoDateDataColumn)")
   }
 
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {

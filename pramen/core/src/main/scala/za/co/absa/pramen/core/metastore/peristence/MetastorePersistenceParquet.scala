@@ -145,6 +145,8 @@ class MetastorePersistenceParquet(path: String,
     throw new UnsupportedOperationException("Parquet format does not support Hive tables at the moment.")
   }
 
+  override def isRepartitioningSupported: Boolean = false
+
   def loadPartitionDirectly(infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)
     val partitionPath = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)

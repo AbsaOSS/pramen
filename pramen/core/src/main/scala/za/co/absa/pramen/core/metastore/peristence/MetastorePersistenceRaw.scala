@@ -172,6 +172,8 @@ class MetastorePersistenceRaw(path: String,
     throw new UnsupportedOperationException("Raw format does not support Hive tables.")
   }
 
+  override def isRepartitioningSupported: Boolean = false
+
   private def getListOfFilesRange(infoDateFrom: LocalDate, infoDateTo: LocalDate): Seq[FileStatus] = {
     if (infoDateFrom.isAfter(infoDateTo))
       Seq.empty[FileStatus]

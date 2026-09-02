@@ -18,9 +18,10 @@ package za.co.absa.pramen.core.integration
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
-import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import org.apache.spark.sql.functions.col
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.base.SparkTestBase
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.core.base.SparkTestIcebergBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
@@ -28,10 +29,10 @@ import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.{FsUtils, ResourceUtils, UsingUtils}
 
-import java.time.LocalDate
+import scala.util.Random
 
 class BulkLoadLongSuite extends AnyWordSpec
-  with SparkTestBase
+  with SparkTestIcebergBase
   with TempDirFixture
   with RelationalDbFixture
   with BeforeAndAfter
@@ -40,8 +41,6 @@ class BulkLoadLongSuite extends AnyWordSpec
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
   var pramenDb: PramenDb = _
-
-  private val infoDate = LocalDate.of(2021, 2, 18)
 
   before {
     if (pramenDb != null) pramenDb.close()
@@ -126,47 +125,58 @@ class BulkLoadLongSuite extends AnyWordSpec
         |""".stripMargin
 
     "be able to access inner source configuration for strict months" in {
+      assume(spark.version.split('.').head.toInt >= 3, s"Ignored for too old Delta Lake for Spark ${spark.version}")
+
       withTempDirectory("integration_inner_source") { tempDir =>
+        val tableName = "mt_iceberg_bulktable1" + Math.abs(Random.nextInt()).toString
+
         val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
         val landingPath = new Path(tempDir, "landing")
 
         fsUtils.writeFile(new Path(landingPath, "landing_file1.csv"), csvData)
 
-        val conf = getConfig(tempDir)
+        val conf = getConfig(tempDir, tableName)
 
         val exitCode = AppRunner.runBulkPipelines(conf)
         assert(exitCode == 0)
 
-        val table2P = new Path(tempDir, "table2")
+        val table1P = new Path(tempDir, "table1")
 
-        val df = spark.read.parquet(table2P.toString)
+        val df = spark.read.parquet(table1P.toString)
         //df.show(1000, truncate = false)
 
-        val table2Path1 = new Path(new Path(tempDir, "table2"), s"pramen_info_date=2021-01-01")
-        val table2Path2 = new Path(new Path(tempDir, "table2"), s"pramen_info_date=2021-02-01")
+        val table1Path1 = new Path(new Path(tempDir, "table1"), s"pramen_info_date=2021-01-01")
+        val table1Path2 = new Path(new Path(tempDir, "table1"), s"pramen_info_date=2021-02-01")
 
-        assert(fsUtils.exists(table2Path1))
-        assert(fsUtils.exists(table2Path2))
+        assert(fsUtils.exists(table1Path1))
+        assert(fsUtils.exists(table1Path2))
 
         assert(df.count() == 59)
+
+        // For now...
+        assert(!df.filter(col("dt") =!= col("pramen_info_date")).isEmpty)
 
         // Running the job for the second time shouyld not change the output
         val exitCode2 = AppRunner.runBulkPipelines(conf)
         assert(exitCode2 == 0)
 
-        val df2 = spark.read.parquet(table2P.toString)
+        val df2 = spark.table(tableName)
         assert(df2.count() == 59)
+        assert(df2.filter(col("dt") =!= col("pramen_info_date")).isEmpty)
+
+        spark.sql(s"DELETE FROM $tableName").count()
       }
     }
   }
 
-  def getConfig(basePath: String): Config = {
+  def getConfig(basePath: String, icebergTableName: String): Config = {
     val configContents = ResourceUtils.getResourceString("/test/config/integration_bulk_load.conf")
     val basePathEscaped = basePath.replace("\\", "\\\\")
 
     val conf = ConfigFactory.parseString(
       s"""base.path = "$basePathEscaped"
+         |iceberg.table.name = "$icebergTableName"
          |pramen {
          |  load.date.from = "2021-01-01"
          |  load.date.to = "2021-02-28"

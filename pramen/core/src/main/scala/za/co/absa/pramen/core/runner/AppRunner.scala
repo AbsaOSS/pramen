@@ -30,6 +30,7 @@ import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, Transie
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
+import za.co.absa.pramen.core.runner.repartitioner.{JobRepartitioner, JobRepartitionerImpl, JobRepartitionerNull}
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl, SystemExitCatcherSecurityManager}
 import za.co.absa.pramen.core.utils.Emoji._
@@ -454,6 +455,11 @@ object AppRunner {
         appContext.bulkLoadStateManager,
         taskRunner,
         spark.sparkContext.applicationId)
+
+      implicit val repartitioner: JobRepartitioner = appContext.appConfig.runtimeConfig.bulkLoadCurrent match {
+        case Some(bulkConfig) => new JobRepartitionerImpl(bulkConfig, appContext.bulkLoadStateManager, appContext.metastore, conf, spark.sparkContext.applicationId, state.getBatchId)(spark)
+        case None => new JobRepartitionerNull
+      }
 
       TransientJobManager.setTaskRunner(taskRunner)
 

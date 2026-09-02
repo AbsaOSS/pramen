@@ -49,6 +49,7 @@ case class RuntimeConfig(
                           historicalRunMode: RunMode,
                           bulkBatchSize: BulkBatchSize,
                           bulkLoadCurrent: Option[BulkRunConfig],
+                          enableRepartitioning: Boolean,
                           sparkAppDescriptionTemplate: Option[String],
                           attempt: Int, // Current attempt number for the pipeline run (for auto-retry automation)
                           maxAttempts: Int, // Maximum number of attempts allowed for the pipeline run
@@ -66,6 +67,7 @@ object RuntimeConfig {
   val IS_INVERSE_ORDER = "pramen.runtime.inverse.order"
   val RUN_MODE = "pramen.runtime.run.mode"
   val RUN_BULK_BATCH_SIZE = "pramen.runtime.bulk.batch.size"
+  val RUN_ENABLE_REPARTITIONING = "pramen.runtime.enable.repartitioning"
   val INFO_DATE_COLUMN = "pramen.runtime.info.date.column"
   val BULK_CURRENT_DATE_FROM = "pramen.runtime.run.bulk.current.date.from"
   val BULK_CURRENT_DATE_TO = "pramen.runtime.run.bulk.current.date.to"
@@ -162,7 +164,8 @@ object RuntimeConfig {
     val bulkCurrentDateFrom = ConfigUtils.getOptionString(conf, BULK_CURRENT_DATE_FROM).map(getDate)
     val bulkCurrentDateTo = ConfigUtils.getOptionString(conf, BULK_CURRENT_DATE_TO).map(getDate)
     val bulkCurrentOutputInfoDate = ConfigUtils.getOptionString(conf, BULK_CURRENT_OUTPUT_INFO_DATE).map(getDate)
-    val infoDateColumn= ConfigUtils.getOptionString(conf, INFO_DATE_COLUMN)
+    val infoDateColumn = ConfigUtils.getOptionString(conf, INFO_DATE_COLUMN)
+    val enableRepartitioning = ConfigUtils.getOptionBoolean(conf, RUN_ENABLE_REPARTITIONING).getOrElse(false)
 
     val bulkLoadCurrent = if (bulkCurrentDateFrom.isDefined && bulkCurrentDateTo.isDefined && bulkCurrentOutputInfoDate.isDefined) {
       Some(BulkRunConfig(bulkCurrentDateFrom.get, bulkCurrentDateTo.get, infoDateColumn, bulkCurrentOutputInfoDate.get))
@@ -194,6 +197,7 @@ object RuntimeConfig {
       attempt = attempt,
       maxAttempts = maxAttempts,
       forceReCreateHiveTables =  ConfigUtils.getOptionBoolean(conf, FORCE_RECREATE_HIVE_TABLES).getOrElse(false),
+      enableRepartitioning = enableRepartitioning,
       executionOptions = executionOptions
     )
   }
@@ -219,6 +223,7 @@ object RuntimeConfig {
       historicalRunMode = RunMode.CheckUpdates,
       bulkBatchSize = Monthly,
       bulkLoadCurrent = None,
+      enableRepartitioning = false,
       sparkAppDescriptionTemplate = None,
       attempt = 1,
       maxAttempts = 1,
