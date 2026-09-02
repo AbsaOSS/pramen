@@ -215,6 +215,8 @@ class MetastorePersistenceDelta(query: Query,
     throw new UnsupportedOperationException("Delta format does not support Hive tables at the moment.")
   }
 
+  override def isRepartitioningSupported: Boolean = false
+
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
     if (partitionScheme == PartitionScheme.Overwrite) {
       if (infoDateFrom.isDefined || infoDateTo.isDefined) {

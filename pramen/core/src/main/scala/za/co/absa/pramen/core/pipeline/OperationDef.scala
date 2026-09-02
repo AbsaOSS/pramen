@@ -41,6 +41,7 @@ case class OperationDef(
                          ignoreSchemaChange: Boolean,
                          isCritical: Boolean,
                          doNotWriteOutput: Boolean,
+                         enableRepartitioning: Boolean,
                          consumeThreads: Int,
                          dependencies: Seq[MetastoreDependency],
                          outputInfoDateExpression: String,
@@ -69,6 +70,7 @@ object OperationDef {
   val IGNORE_SCHEMA_CHANGE_KEY = "ignore.schema.change"
   val IS_CRITICAL_KEY = "critical"
   val DO_NOT_WRITE_OUTPUT_KEY = "do.not.write.output"
+  val ENABLE_REPARTITIONING_KEY = "enable.repartitioning"
   val CONSUME_THREADS_KEY = "consume.threads"
   val DEPENDENCIES_KEY = "dependencies"
   val STRICT_DEPENDENCY_MANAGEMENT_KEY = "pramen.strict.dependency.management"
@@ -109,6 +111,7 @@ object OperationDef {
     val ignoreSchemaChange = ConfigUtils.getOptionBoolean(conf, IGNORE_SCHEMA_CHANGE_KEY).getOrElse(false)
     val isCritical = ConfigUtils.getOptionBoolean(conf, IS_CRITICAL_KEY).getOrElse(false)
     val doNotWriteOutput = ConfigUtils.getOptionBoolean(conf, DO_NOT_WRITE_OUTPUT_KEY).getOrElse(false)
+    val enableRepartitioning = ConfigUtils.getOptionBoolean(conf, ENABLE_REPARTITIONING_KEY).getOrElse(true)
     val alwaysAttempt = ConfigUtils.getOptionBoolean(conf, ALWAYS_ATTEMPT_KEY).getOrElse(false)
     val dependencies = getDependencies(conf, parent, strictDependencyManagement)
     val outputInfoDateExpressionOpt = ConfigUtils.getOptionString(conf, OUTPUT_INFO_DATE_EXPRESSION_KEY)
@@ -158,6 +161,7 @@ object OperationDef {
       ignoreSchemaChange,
       isCritical,
       doNotWriteOutput,
+      enableRepartitioning,
       consumeThreads,
       dependencies,
       outputInfoDateExpression,

@@ -86,4 +86,6 @@ class MetastorePersistenceTransientEager(tempPathOpt: Option[String],
                                hiveConfig: HiveConfig): Unit = {
     throw new UnsupportedOperationException("Transient format does not support Hive tables.")
   }
+
+  override def isRepartitioningSupported: Boolean = false
 }

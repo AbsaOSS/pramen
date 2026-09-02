@@ -40,6 +40,12 @@ trait MetastorePersistence {
   def repairHiveTable(hiveTableName: String,
                       queryExecutor: QueryExecutor,
                       hiveConfig: HiveConfig): Unit
+
+  def isRepartitioningSupported: Boolean
+
+  def repartitionPhase1(infoDateColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {}
+
+  def repartitionPhase2(infoDateColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {}
 }
 
 object MetastorePersistence {

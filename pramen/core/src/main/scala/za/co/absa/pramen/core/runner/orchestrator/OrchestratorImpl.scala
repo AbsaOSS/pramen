@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException
 import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.{Job, JobBase, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
+import za.co.absa.pramen.core.runner.repartitioner.JobRepartitioner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
 import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
@@ -57,6 +58,7 @@ class OrchestratorImpl extends Orchestrator {
                                        state: PipelineState,
                                        appContext: AppContext,
                                        jobRunner: ConcurrentJobRunner,
+                                       repartitioner: JobRepartitioner,
                                        spark: SparkSession): Unit = {
     val applicationId = spark.sparkContext.applicationId
     val allOutputTables = jobs.map(_.outputTable.name)
@@ -127,6 +129,21 @@ class OrchestratorImpl extends Orchestrator {
           val jobStarted = sendPendingJobs(runJobChannel, dependencyResolver)
           if (!jobStarted && runningJobs.isEmpty) {
             runJobChannel.close()
+          }
+        }
+      }
+
+      if (!hasFatalErrors && pendingJobs.isEmpty && appContext.appConfig.runtimeConfig.enableRepartitioning) {
+        log.info("Starting repartitioning of the completed jobs...")
+        appContext.appConfig.runtimeConfig.bulkLoadCurrent.foreach { bulkConfig =>
+          jobs.filter(job =>
+            !job.taskDef.outputTable.format.isLazy &&
+              !job.taskDef.outputTable.format.isTransient &&
+              !job.taskDef.outputTable.format.isRaw &&
+              job.operation.enableRepartitioning
+          ).foreach { job =>
+            val taskResults = repartitioner.repartition(job)
+            state.addTaskCompletion(taskResults)
           }
         }
       }

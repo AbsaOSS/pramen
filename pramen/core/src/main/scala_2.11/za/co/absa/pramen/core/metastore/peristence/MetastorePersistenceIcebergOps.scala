@@ -57,4 +57,14 @@ object MetastorePersistenceIcebergOps {
                     writerOptions: Map[String, String]): Unit = {
     throw new UnsupportedOperationException(s"Iceberg format is not supported in Scala 2.11")
   }
+
+  def writeRepartitionedDf(df: DataFrame,
+                           table: String,
+                           infoDateColumn: String,
+                           infoDateFrom: LocalDate,
+                           infoDateTo: LocalDate,
+                           writerOptions: Map[String, String]): Unit = {
+    throw new UnsupportedOperationException(s"Iceberg format is not supported in Scala 2.11")
+  }
+
 }

@@ -48,4 +48,6 @@ class MetastorePersistenceNull(implicit spark: SparkSession) extends MetastorePe
                                hiveConfig: HiveConfig): Unit = {
     throw new UnsupportedOperationException("Parquet format does not support Hive tables at the moment.")
   }
+
+  override def isRepartitioningSupported: Boolean = false
 }
