@@ -95,6 +95,7 @@ class OrchestratorImpl extends Orchestrator {
     jobRunner.startWorkerLoop(runJobChannel)
 
     val atLeastOneStarted = sendPendingJobs(runJobChannel, dependencyResolver)
+    var hasFailures = false
     var hasFatalErrors = false
     var hasCriticalJobFailures = false
 
@@ -102,6 +103,7 @@ class OrchestratorImpl extends Orchestrator {
       completedJobsChannel.foreach { case (finishedJob, taskResults, isSucceeded) =>
         runningJobs.remove(finishedJob)
 
+        hasFailures = hasFailures || !isSucceeded
         hasFatalErrors = hasFatalErrors || taskResults.exists(status => isFatalFailure(status.runStatus))
         hasCriticalJobFailures = hasCriticalJobFailures || TransientJobManager.hasCriticalLazyJobFailed || (!isSucceeded && finishedJob.operation.isCritical)
 
@@ -133,13 +135,12 @@ class OrchestratorImpl extends Orchestrator {
         }
       }
 
-      if (!hasFatalErrors && pendingJobs.isEmpty && appContext.appConfig.runtimeConfig.enableRepartitioning) {
+      if (!hasFailures && pendingJobs.isEmpty && appContext.appConfig.runtimeConfig.enableRepartitioning) {
         log.info("Starting repartitioning of the completed jobs...")
         appContext.appConfig.runtimeConfig.bulkLoadCurrent.foreach { bulkConfig =>
           jobs.filter(job =>
             !job.taskDef.outputTable.format.isLazy &&
               !job.taskDef.outputTable.format.isTransient &&
-              !job.taskDef.outputTable.format.isRaw &&
               job.operation.enableRepartitioning
           ).foreach { job =>
             val taskResults = repartitioner.repartition(job)
