@@ -34,16 +34,14 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
-  private val jdbcConfig = jdbcReaderConfig.jdbcConfig
-
   logConfiguration()
 
   private[core] def getJdbcSelector: JdbcUrlSelector = {
-    jdbcUrlSelector
+    nativeJdbcUrlSelector
   }
 
   private[core] def getJdbcReaderConfig: TableReaderJdbcConfig = {
-    jdbcReaderConfig.copy(jdbcConfig = jdbcConfig)
+    jdbcReaderConfig.copy(jdbcConfig = nativeJdbcConfig)
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
@@ -57,7 +55,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
         getCountForSql(sql)
       case Query.Sql(sql) =>
         log.info(s"JDBC Native count of a non-SELECT SQL statement: $sql")
-        JdbcNativeUtils.getJdbcNativeRecordCount(jdbcUrlSelector, sql)
+        JdbcNativeUtils.getJdbcNativeRecordCount(nativeJdbcUrlSelector, sql)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
@@ -99,7 +97,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   private[core] def getDataFrame(sql: String, tableOpt: Option[String]): DataFrame = {
     log.info(s"JDBC Query: $sql")
 
-    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcUrlSelector, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(nativeJdbcUrlSelector, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
@@ -110,7 +108,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
         case Some(table) => sqlGen.getSchemaQuery(table, Seq.empty)
         case _ => JdbcSparkUtils.getSchemaQuery(sql)
       }
-      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, _) =>
+      JdbcSparkUtils.withJdbcMetadata(nativeJdbcUrlSelector, schemaQuery) { (connection, _) =>
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>
             log.info(s"Reading JDBC metadata descriptions the table: $table")
@@ -133,7 +131,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
     log.info(s"JDBC Query: $sql")
 
-    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcUrlSelector, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(nativeJdbcUrlSelector, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
@@ -142,7 +140,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     if (jdbcReaderConfig.enableSchemaMetadata) {
       val schemaQuery = sqlGen.getSchemaQuery(tableName, columns)
 
-      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, _) =>
+      JdbcSparkUtils.withJdbcMetadata(nativeJdbcUrlSelector, schemaQuery) { (connection, _) =>
         log.info(s"Reading JDBC metadata descriptions the table: $tableName")
         df = spark.createDataFrame(df.rdd,
           JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, sqlGen.unquote(tableName), connection))
@@ -171,12 +169,7 @@ object TableReaderJdbcNative {
   }
 
   private[core] def getJdbcConfig(tableReaderJdbcConfig: TableReaderJdbcConfig, conf: Config): JdbcConfig = {
-    val originConfig = tableReaderJdbcConfig.jdbcConfig
-    if (conf.hasPath(FETCH_SIZE_KEY)) {
-      originConfig.copy(fetchSize = Option(conf.getInt(FETCH_SIZE_KEY)))
-    } else {
-      originConfig
-    }
+    TableReaderJdbcBase.getNativeJdbcConfig(tableReaderJdbcConfig, conf)
   }
 
   def applyInfoDateExpressionToQuery(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Query = {
