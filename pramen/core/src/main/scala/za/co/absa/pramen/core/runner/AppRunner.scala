@@ -130,6 +130,10 @@ object AppRunner {
       overallExitCode |= exitCode
     }
 
+    val emoji = if (overallExitCode == 0) SUCCESS else FAILURE
+
+    log.info(s"$emoji The bulk history load pipeline has finished. Exit code = $overallExitCode")
+
     overallExitCode
   }
 

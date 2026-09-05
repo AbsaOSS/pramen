@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.runner.repartitioner
 
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.RunStatus.Succeeded
 import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskDef, TaskResult}
 import za.co.absa.pramen.api.status.TaskRunReason.OnRequest
@@ -27,6 +28,7 @@ import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistence
 import za.co.absa.pramen.core.pipeline.Job
+import za.co.absa.pramen.core.utils.{Emoji, TimeUtils}
 
 import java.time.Instant
 import scala.util.control.NonFatal
@@ -37,17 +39,21 @@ class JobRepartitionerImpl(bulkLoadCurrent: BulkRunConfig,
                            appConfig: Config,
                            applicationId: String,
                            batchId: Long)(implicit spark: SparkSession) extends JobRepartitioner {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   def repartition(job: Job): Seq[TaskResult] = {
     val start = Instant.now()
     try {
       doRepartition(job)
     } catch {
       case NonFatal(ex) =>
+        val finish = Instant.now()
+        log.info(s"${Emoji.FAILURE} The repartition job has FAILED (${job.taskDef.outputTable.name} for ${bulkLoadCurrent.dataDateFrom}..${bulkLoadCurrent.dataDateTo}). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
         Seq(
           TaskResult(
             getRepartitionTaskDef(job),
             RunStatus.Failed(ex),
-            Some(RunInfo(bulkLoadCurrent.outputInfoDate, start, Instant.now())),
+            Some(RunInfo(bulkLoadCurrent.outputInfoDate, start, finish)),
             applicationId,
             isTransient = false,
             isRawFilesJob = false,
@@ -109,6 +115,7 @@ class JobRepartitionerImpl(bulkLoadCurrent: BulkRunConfig,
     val finish = Instant.now()
 
     if (finalPhase == BulkLoadPhase.Done) {
+      log.info(s"${Emoji.SUCCESS} The repartition job has SUCCEEDED ($outputTable for ${bulkLoadCurrent.dataDateFrom}..${bulkLoadCurrent.dataDateTo}). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
       val recordCount = metastore.getTable(outputTable, Some(bulkLoadCurrent.dataDateFrom), Some(bulkLoadCurrent.dataDateTo)).count()
       Seq(
         TaskResult(
