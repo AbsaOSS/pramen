@@ -50,6 +50,8 @@ trait Job {
 
   def trackDays: Int
 
+  def outputsToMetastore: Boolean
+
   /**
     * Checks pre-conditions for the job, such as data availability.
     */

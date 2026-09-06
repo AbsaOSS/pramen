@@ -193,7 +193,7 @@ object ScheduleStrategyUtils {
           throw new IllegalStateException(s"The job for table '$outputTable' and info date '${bulkRunConfig.outputInfoDate}' has different data date range.")
         }
         if (state.phase != Pending) {
-          return List(TaskPreDef(bulkRunConfig.outputInfoDate, TaskRunReason.Skip("already processed")))
+          return List(TaskPreDef(bulkRunConfig.outputInfoDate, TaskRunReason.Skip("Already processed", isWarning = false)))
         }
       case None =>
         val newState = BulkLoadState(outputTable, bulkRunConfig.infoDateColumn.getOrElse(""), bulkRunConfig.outputInfoDate, bulkRunConfig.dataDateFrom, bulkRunConfig.dataDateTo, Pending)
@@ -221,7 +221,7 @@ object ScheduleStrategyUtils {
       if (taskPreDef.infoDate.isAfter(dayBeforeMinimum)) {
         taskPreDef
       } else {
-        taskPreDef.copy(reason = TaskRunReason.Skip(s"The task date '${taskPreDef.infoDate}' is older than the minimum date '$dayBeforeMinimum'."))
+        taskPreDef.copy(reason = TaskRunReason.Skip(s"The task date '${taskPreDef.infoDate}' is older than the minimum date '$dayBeforeMinimum'.", isWarning = true))
       }
     }
   }

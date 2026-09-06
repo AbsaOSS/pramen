@@ -70,6 +70,8 @@ class IngestionJob(operationDef: OperationDef,
       0
   }
 
+  override val outputsToMetastore: Boolean = true
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     source.connect()
 

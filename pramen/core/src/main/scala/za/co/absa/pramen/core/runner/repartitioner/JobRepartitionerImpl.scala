@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.runner.repartitioner
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.status.RunStatus.Succeeded
+import za.co.absa.pramen.api.status.RunStatus.{Skipped, Succeeded}
 import za.co.absa.pramen.api.status.{RunInfo, RunStatus, TaskDef, TaskResult}
 import za.co.absa.pramen.api.status.TaskRunReason.OnRequest
 import za.co.absa.pramen.bulkload.BulkLoadStateManager
@@ -109,18 +109,80 @@ class JobRepartitionerImpl(bulkLoadCurrent: BulkRunConfig,
         BulkLoadPhase.Done
       }
     } else {
-      bulkLoadState.phase
+      secondStagePhase
     }
 
     val finish = Instant.now()
 
     if (finalPhase == BulkLoadPhase.Done) {
-      log.info(s"${Emoji.SUCCESS} The repartition job has SUCCEEDED ($outputTable for ${bulkLoadCurrent.dataDateFrom}..${bulkLoadCurrent.dataDateTo}). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
-      val recordCount = metastore.getTable(outputTable, Some(bulkLoadCurrent.dataDateFrom), Some(bulkLoadCurrent.dataDateTo)).count()
+      if (bulkLoadState.phase != BulkLoadPhase.Done) {
+        if (persistence.isRepartitioningSupported) {
+          log.info(s"${Emoji.SUCCESS} The repartition job has SUCCEEDED ($outputTable for ${bulkLoadCurrent.dataDateFrom}..${bulkLoadCurrent.dataDateTo}). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
+          val recordCount = metastore.getTable(outputTable, Some(bulkLoadCurrent.dataDateFrom), Some(bulkLoadCurrent.dataDateTo)).count()
+          Seq(
+            TaskResult(
+              getRepartitionTaskDef(job),
+              Succeeded(None, Some(recordCount), None, None, OnRequest, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
+              Some(RunInfo(bulkLoadCurrent.outputInfoDate, start, finish)),
+              applicationId,
+              isTransient = false,
+              isRawFilesJob = false,
+              newSchemaRegistered = false,
+              Seq.empty,
+              Seq.empty,
+              Seq.empty,
+              Map.empty
+            )
+          )
+        } else {
+          log.info(s"${Emoji.WARNING} The repartition job has SKIPPED because repartitioning is not supported ($outputTable for ${bulkLoadCurrent.dataDateFrom}..${bulkLoadCurrent.dataDateTo}). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
+          Seq(
+            TaskResult(
+              getRepartitionTaskDef(job),
+              Skipped("Not supported for this storage type", isWarning = true),
+              Some(RunInfo(bulkLoadCurrent.outputInfoDate, start, finish)),
+              applicationId,
+              isTransient = false,
+              isRawFilesJob = false,
+              newSchemaRegistered = false,
+              Seq.empty,
+              Seq.empty,
+              Seq.empty,
+              Map.empty
+            )
+          )
+        }
+      } else {
+        log.info(s"${Emoji.WARNING} The repartition job has SKIPPED because it was already processed ($outputTable for ${bulkLoadCurrent.dataDateFrom}..${bulkLoadCurrent.dataDateTo}). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}")
+        Seq(
+          TaskResult(
+            getRepartitionTaskDef(job),
+            Skipped("Already processed", isWarning = false),
+            Some(RunInfo(bulkLoadCurrent.outputInfoDate, start, finish)),
+            applicationId,
+            isTransient = false,
+            isRawFilesJob = false,
+            newSchemaRegistered = false,
+            Seq.empty,
+            Seq.empty,
+            Seq.empty,
+            Map.empty
+          )
+        )
+      }
+    } else {
+      val reason = if (finalPhase == BulkLoadPhase.Pending) {
+        "Main task is not finished"
+      } else if (finalPhase == BulkLoadPhase.Repartition1 || finalPhase == BulkLoadPhase.Repartition2) {
+        "Repartitioning has been done only partially"
+      } else {
+        "Failed to repartition"
+      }
+      log.info(s"${Emoji.WARNING} The repartition job has SKIPPED ($outputTable for ${bulkLoadCurrent.dataDateFrom}..${bulkLoadCurrent.dataDateTo}). Elapsed time: ${TimeUtils.getElapsedTimeStr(start, finish)}. Reason: $reason")
       Seq(
         TaskResult(
           getRepartitionTaskDef(job),
-          Succeeded(None, Some(recordCount), None, None, OnRequest, Seq.empty, Seq.empty, Seq.empty, Seq.empty),
+          Skipped(reason, isWarning = true),
           Some(RunInfo(bulkLoadCurrent.outputInfoDate, start, finish)),
           applicationId,
           isTransient = false,
@@ -132,9 +194,6 @@ class JobRepartitionerImpl(bulkLoadCurrent: BulkRunConfig,
           Map.empty
         )
       )
-
-    } else {
-      Seq.empty
     }
   }
 

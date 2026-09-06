@@ -35,7 +35,7 @@ object TaskRunReason {
     override def toString: String = "Late"
   }
 
-  case class Skip(reason: String) extends TaskRunReason {
+  case class Skip(reason: String, isWarning: Boolean) extends TaskRunReason {
     override def toString: String = "Skip"
   }
 
