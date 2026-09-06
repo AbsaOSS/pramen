@@ -178,9 +178,9 @@ abstract class TaskRunnerBase(conf: Config,
     val started = Instant.now()
 
     task.reason match {
-      case TaskRunReason.Skip(reason) =>
+      case TaskRunReason.Skip(reason, isWarning) =>
         // This skips tasks that were skipped based on strong date constraints (e.g. attempt to run before the minimum date)
-        skipTask(task, reason, isWarning = true)
+        skipTask(task, reason, isWarning)
       case _ => doValidateAndRunTask(task, started)
     }
   }

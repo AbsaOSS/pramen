@@ -78,6 +78,8 @@ class PythonTransformationJob(operationDef: OperationDef,
       new ScheduleStrategySourcing(true)
   }
 
+  override val outputsToMetastore: Boolean = true
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
       case Some(result) => result

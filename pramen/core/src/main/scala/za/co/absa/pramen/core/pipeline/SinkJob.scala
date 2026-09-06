@@ -60,6 +60,8 @@ class SinkJob(operationDef: OperationDef,
       new ScheduleStrategySourcing(true)
   }
 
+  override val outputsToMetastore: Boolean = false
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     val alreadyRanStatus = preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
     val readerMode = if (isIncremental) ReaderMode.IncrementalValidation else ReaderMode.Batch

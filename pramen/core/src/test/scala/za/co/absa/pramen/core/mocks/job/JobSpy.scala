@@ -36,6 +36,7 @@ class JobSpy(jobName: String = "Dummy Job",
              outputTableFormat: DataFormat = DataFormat.Parquet("/tmp/dummy"),
              hiveTable: Option[String] = None,
              operationDef: OperationDef = OperationDefFactory.getDummyOperationDef(),
+             outputsToMetastoreIn: Boolean = true,
              preRunCheckFunction: () => JobPreRunResult = () => JobPreRunResult(JobPreRunStatus.Ready, None, Nil, Nil),
              validationFunction: () => Reason = () => Reason.Ready,
              runFunction: () => RunResult = () => null,
@@ -69,6 +70,8 @@ class JobSpy(jobName: String = "Dummy Job",
   override val operation: OperationDef = operationDef
 
   override val scheduleStrategy: ScheduleStrategy = scheduleStrategyIn
+
+  override val outputsToMetastore: Boolean = outputsToMetastoreIn
 
   override def allowRunningTasksInParallel: Boolean = allowParallel && !hasSelfDependencies
 

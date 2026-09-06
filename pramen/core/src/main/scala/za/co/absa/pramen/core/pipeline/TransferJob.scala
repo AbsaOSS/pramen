@@ -70,6 +70,8 @@ class TransferJob(operationDef: OperationDef,
 
   override def trackDays: Int = ingestionJob.trackDays
 
+  override val outputsToMetastore: Boolean = false
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     ingestionJob.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)
   }

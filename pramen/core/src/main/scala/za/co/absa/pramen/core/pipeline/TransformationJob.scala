@@ -49,6 +49,8 @@ class TransformationJob(operationDef: OperationDef,
       new ScheduleStrategySourcing(true)
   }
 
+  override val outputsToMetastore: Boolean = true
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
   }

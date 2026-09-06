@@ -141,7 +141,8 @@ class OrchestratorImpl extends Orchestrator {
           jobs.filter(job =>
             !job.taskDef.outputTable.format.isLazy &&
               !job.taskDef.outputTable.format.isTransient &&
-              job.operation.enableRepartitioning
+              job.operation.enableRepartitioning &&
+              job.outputsToMetastore
           ).foreach { job =>
             val taskResults = repartitioner.repartition(job)
             state.addTaskCompletion(taskResults)
