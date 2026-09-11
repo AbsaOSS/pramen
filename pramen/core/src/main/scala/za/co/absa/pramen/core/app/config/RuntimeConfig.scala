@@ -69,6 +69,7 @@ object RuntimeConfig {
   val RUN_BULK_BATCH_SIZE = "pramen.runtime.bulk.batch.size"
   val RUN_ENABLE_REPARTITIONING = "pramen.runtime.enable.repartitioning"
   val INFO_DATE_COLUMN = "pramen.runtime.info.date.column"
+  val INFO_DATE_FORMAT = "pramen.runtime.info.date.format"
   val BULK_CURRENT_DATE_FROM = "pramen.runtime.run.bulk.current.date.from"
   val BULK_CURRENT_DATE_TO = "pramen.runtime.run.bulk.current.date.to"
   val BULK_CURRENT_OUTPUT_INFO_DATE = "pramen.runtime.run.bulk.current.output.information.date"
@@ -165,10 +166,11 @@ object RuntimeConfig {
     val bulkCurrentDateTo = ConfigUtils.getOptionString(conf, BULK_CURRENT_DATE_TO).map(getDate)
     val bulkCurrentOutputInfoDate = ConfigUtils.getOptionString(conf, BULK_CURRENT_OUTPUT_INFO_DATE).map(getDate)
     val infoDateColumn = ConfigUtils.getOptionString(conf, INFO_DATE_COLUMN)
+    val infoDateFormat2 = ConfigUtils.getOptionString(conf, INFO_DATE_FORMAT).getOrElse(infoDateFormat)
     val enableRepartitioning = ConfigUtils.getOptionBoolean(conf, RUN_ENABLE_REPARTITIONING).getOrElse(false)
 
     val bulkLoadCurrent = if (bulkCurrentDateFrom.isDefined && bulkCurrentDateTo.isDefined && bulkCurrentOutputInfoDate.isDefined) {
-      Some(BulkRunConfig(bulkCurrentDateFrom.get, bulkCurrentDateTo.get, infoDateColumn, bulkCurrentOutputInfoDate.get))
+      Some(BulkRunConfig(bulkCurrentDateFrom.get, bulkCurrentDateTo.get, infoDateColumn, infoDateFormat2, bulkCurrentOutputInfoDate.get))
     } else {
       None
     }
