@@ -45,6 +45,7 @@ case class CmdLineConfig(
                           mode: Option[String] = None,
                           bulkSize: Option[String] = None,
                           infoDateColumn: Option[String] = None,
+                          infoDateFormat: Option[String] = None,
                           inverseOrder: Option[Boolean] = None,
                           verbose: Option[Boolean] = None,
                           overrideLogLevel: Option[String] = None,
@@ -137,6 +138,9 @@ object CmdLineConfig {
     for (infoDateColumn <- cmd.infoDateColumn)
       accumulatedConfig = accumulatedConfig.withValue(INFO_DATE_COLUMN, ConfigValueFactory.fromAnyRef(infoDateColumn))
 
+    for (infoDateColumn <- cmd.infoDateFormat)
+      accumulatedConfig = accumulatedConfig.withValue(INFO_DATE_FORMAT, ConfigValueFactory.fromAnyRef(infoDateColumn))
+
     for (logEffectiveConfig <- cmd.logEffectiveConfig)
       accumulatedConfig = accumulatedConfig.withValue(LOG_EFFECTIVE_CONFIG, ConfigValueFactory.fromAnyRef(logEffectiveConfig))
 
@@ -223,7 +227,13 @@ object CmdLineConfig {
           .text("The information date column name to use for repartitioning.")
           .validate(v =>
             if (v.nonEmpty) success
-            else failure("Invalid information date column name. Must be a non-empty string."))
+            else failure("Invalid information date column name. Must be a non-empty string.")),
+        opt[String]("info-date-format").optional().action((value, config) =>
+            config.copy(infoDateFormat = Option(value)))
+          .text("The format of the information date column if it is not of date or datetime/timestamp type, for repartitioning.")
+          .validate(v =>
+            if (v.nonEmpty) success
+            else failure("Invalid information date format. Must be a non-empty string."))
       )
 
     opt[Boolean]("inverse-order").optional().action((value, config) =>

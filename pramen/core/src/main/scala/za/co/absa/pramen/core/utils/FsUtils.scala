@@ -466,6 +466,38 @@ class FsUtils(conf: Configuration, pathBase: String) {
     }
   }
 
+  /**
+    * Copies the contents of a directory to another location.
+    *
+    * The source directory must exist, otherwise an `IllegalArgumentException` is thrown.
+    * If the destination directory already exists, it is deleted recursively and
+    * recreated before the copy operation starts. Every file found directly in the
+    * source directory is then copied into the destination directory, keeping its
+    * original name, using a retrying copy operation to tolerate transient failures.
+    *
+    * @param srcDir the path of the existing directory whose files are copied
+    * @param dstDir the path of the target directory, recreated from scratch before copying
+    * @return nothing, the method is executed only for its side effects on the file system
+    * @throws IllegalArgumentException if the source path does not exist
+    */
+  def copyDirectory(srcDir: Path, dstDir: Path): Unit = {
+    if (!exists(srcDir))
+      throw new IllegalArgumentException("No data in the source path: " + srcDir)
+
+    if (exists(dstDir))
+      deleteDirectoryRecursively(dstDir)
+
+    createDirectoryRecursive(dstDir)
+
+    val listOfFiles = getHadoopFiles(srcDir, includeHiddenFiles = true)
+
+    listOfFiles.foreach(file => {
+      val srcPath = file.getPath
+      val dstFile = new Path(dstDir, srcPath.getName)
+      copyFileWithRetry(srcPath, dstFile)
+    })
+  }
+
   def copyToLocal(srcFile: Path, targetFile: Path, overwrite: Boolean = false): Unit = {
     if (!overwrite && fs.exists(targetFile)) {
       throw new IllegalStateException(s"Target file $targetFile already exists.")
