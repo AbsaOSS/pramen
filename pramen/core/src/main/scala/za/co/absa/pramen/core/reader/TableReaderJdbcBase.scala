@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.TableReader
 import za.co.absa.pramen.api.sql.SqlConfig
-import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
+import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
 import za.co.absa.pramen.core.sql.SqlGeneratorLoader
 import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils}
@@ -34,16 +34,27 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
 
   protected val jdbcRetries: Int = jdbcReaderConfig.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
   protected val extraOptions: Map[String, String] = ConfigUtils.getExtraOptions(conf, "option")
+  protected val nativeJdbcConfig: JdbcConfig = TableReaderJdbcBase.getNativeJdbcConfig(jdbcReaderConfig, conf)
+  protected val nativeJdbcUrlSelector: JdbcUrlSelector = {
+    if (nativeJdbcConfig == jdbcUrlSelector.jdbcConfig) {
+      jdbcUrlSelector
+    } else {
+      JdbcUrlSelector(jdbcUrlSelector.jdbcDriverJarPath, nativeJdbcConfig)
+    }
+  }
 
   override def close(): Unit = {
     jdbcUrlSelector.close()
+    if (nativeJdbcUrlSelector ne jdbcUrlSelector) {
+      nativeJdbcUrlSelector.close()
+    }
   }
 
   private[core] lazy val sqlGen = {
     val gen = SqlGeneratorLoader.getSqlGenerator(jdbcReaderConfig.jdbcConfig.driver, getSqlConfig)
 
     if (gen.requiresConnection) {
-      val (connection, _) = jdbcUrlSelector.getNewConnection(jdbcRetries)
+      val (connection, _) = nativeJdbcUrlSelector.getNewConnection(jdbcRetries)
       gen.setConnection(connection)
     }
     gen
@@ -101,7 +112,7 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
     var count = 0L
     log.info(s"Executing: $countSql")
 
-    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql) { rs =>
+    JdbcNativeUtils.withResultSet(nativeJdbcUrlSelector, countSql) { rs =>
       if (!rs.next())
         throw new IllegalStateException(s"No rows returned by the count query: $countSql")
       else {
@@ -112,5 +123,26 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
     }
 
     count
+  }
+}
+
+object TableReaderJdbcBase {
+  private val FetchSizeOption = "fetchsize"
+  private val BatchSizeOption = "batchsize"
+
+  private[core] def getNativeJdbcConfig(jdbcReaderConfig: TableReaderJdbcConfig, conf: Config): JdbcConfig = {
+    val extraOptions = ConfigUtils.getExtraOptions(conf, "option")
+    val fetchSize = extraOptions
+      .collectFirst { case (key, value) if key.equalsIgnoreCase(FetchSizeOption) => value.toInt }
+      .orElse(jdbcReaderConfig.jdbcConfig.fetchSize)
+    val connectionOptions = extraOptions.filterNot { case (key, _) =>
+      val normalizedKey = key.toLowerCase
+      normalizedKey == FetchSizeOption || normalizedKey == BatchSizeOption
+    }
+
+    jdbcReaderConfig.jdbcConfig.copy(
+      fetchSize = fetchSize,
+      extraOptions = jdbcReaderConfig.jdbcConfig.extraOptions ++ connectionOptions
+    )
   }
 }
