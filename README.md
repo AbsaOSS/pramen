@@ -3138,6 +3138,49 @@ pramen.operations = [
 ```
 </details>
 
+
+### (Experimental) Bulk load of historical data
+Sometimes data needs to be loaded and processed for historical periods that may span several years. You can, of course, 
+run Pramen with `--date-from` and `--date-to` to load such data, but for daily datasets this can take a long time because 
+each day is processed independently. Bulk loading allows data to be loaded in `monthly`, `quarterly`, or `yearly` chunks.
+
+Bulk loading works as follows:
+- Each month, quarter, or year is loaded into a single info date partition corresponding to the first info date of that
+  period.
+- Data is loaded for each period independently. Pramen tracks progress in the `bulk_loads` table. If a job is interrupted 
+  and later restarted, Pramen resumes processing from where it left off.
+- After all data for a period has been loaded, you can enable repartitioning so that `pramen_info_date` matches the
+  daily dates.
+
+Example configuration options:
+```hocon
+pramen {
+  # The period of data to load
+  load.date.from = "2000-01-01"
+  load.date.to = "2020-12-31"
+  
+  runtime.run.mode = bulk
+  runtime.run.bulk.batch.size = monthly # Can be quarterly or yearly as well
+  runtime.inverse.order = true
+  
+  runtime.info.date.column = "transaction_timestamp"
+  runtime.info.date.format = "yyyy-MM-dd" # Only is the info date column data type is not 'date' or 'timestamp'  
+  runtime.enable.repartitioning = true # This is false by default - please use with caustion since this is an experimental feature
+}
+```
+
+Alternatively, you can use command line to run bulk loads without changing the config like this:
+```
+--workflow "dummy.config" \
+--date-from "2000-01-01" \
+--date-to "2020-12-31" \
+--inverse-order "true" \
+--run-mode "bulk" \
+--bulk-size "yearly" \
+--info-date-column "info_date" \
+--info-date-format "yyyyMMdd"
+```
+
 ## Pipeline Notifications
 Custom pipeline notification targets allow execution arbitrary actions after the pipeline is finished. Usually, it is 
 used to send custom notifications to external systems. A pipeline notification target can be created by implementing
