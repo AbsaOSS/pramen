@@ -43,9 +43,9 @@ trait MetastorePersistence {
 
   def isRepartitioningSupported: Boolean
 
-  def repartitionPhase1(infoDateColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {}
+  def repartitionPhase1(infoDateColumn: String, infoDateFormat: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {}
 
-  def repartitionPhase2(infoDateColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {}
+  def repartitionPhase2(infoDateColumn: String, infoDateFormat: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {}
 }
 
 object MetastorePersistence {

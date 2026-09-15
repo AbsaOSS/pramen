@@ -22,5 +22,6 @@ case class BulkRunConfig(
                           dataDateFrom: LocalDate,
                           dataDateTo: LocalDate,
                           infoDateColumn: Option[String],
+                          infoDateFormat: String,
                           outputInfoDate: LocalDate
                         )

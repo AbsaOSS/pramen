@@ -154,10 +154,10 @@ class BulkLoadLongSuite extends AnyWordSpec
 
         assert(df.count() == 59)
 
-        // For now...
-        assert(!df.filter(col("dt") =!= col("pramen_info_date")).isEmpty)
+        // Ensure parquet directory was repartitioned
+        assert(df.filter(col("dt") =!= col("pramen_info_date")).isEmpty)
 
-        // Running the job for the second time shouyld not change the output
+        // Running the job for the second time should not change the output
         val exitCode2 = AppRunner.runBulkPipelines(conf)
         assert(exitCode2 == 0)
 

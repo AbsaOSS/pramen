@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.DateType
+import org.apache.spark.sql.types.{DateType, StringType, TimestampType}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{CatalogTable, PartitionScheme}
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -115,23 +115,37 @@ class MetastorePersistenceIceberg(table: CatalogTable,
 
   override def isRepartitioningSupported: Boolean = true
 
-  override def repartitionPhase1(infoDateDataColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+  override def repartitionPhase1(infoDateDataColumn: String, infoDateDataFormat: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
      if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))
        throw new IllegalArgumentException(s"Cannot repartition a table if the metastore info date column is the same as the data info date column ($infoDateDataColumn)")
+
+    if (partitionScheme == PartitionScheme.Overwrite)
+      throw new IllegalArgumentException(s"Repartitioning is not supported for this partition scheme: ${partitionScheme.getClass.getSimpleName}")
 
     val fullTableName = table.getFullTableName
     val df = spark.table(fullTableName)
       .filter(getFilter(Some(outputInfoDate), Some(outputInfoDate)))
 
+    val dataInfoDateType = df.schema.fields
+      .find(_.name.equalsIgnoreCase(infoDateDataColumn))
+      .map(_.dataType)
+      .getOrElse(StringType)
+
+    val castExpression = dataInfoDateType match {
+      case _: DateType      => col(infoDateDataColumn)
+      case _: TimestampType => col(infoDateDataColumn).cast(DateType)
+      case _                => to_date(col(infoDateDataColumn).cast(StringType), infoDateDataFormat)
+    }
+
     log.info(s"Running Iceberg repartitioning: UPDATE $fullTableName SET $infoDateColumn = CAST($infoDateDataColumn AS DATE) " +
       s"WHERE $infoDateColumn = '$outputInfoDate' AND $infoDateDataColumn >= '$infoDateFrom' AND $infoDateDataColumn <= '$infoDateTo'")
 
-    val dfToWrite = df.withColumn(infoDateColumn, col(infoDateDataColumn).cast(DateType))
+    val dfToWrite = df.withColumn(infoDateColumn, castExpression)
 
     writeRepartitionedDf(dfToWrite, fullTableName, infoDateColumn, infoDateFrom, infoDateTo, writeOptions)
   }
 
-  override def repartitionPhase2(infoDateDataColumn: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+  override def repartitionPhase2(infoDateDataColumn: String, infoDateDataFormat: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
     if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))
       throw new IllegalArgumentException(s"Cannot repartition a table if the metastore info date column is the same as the data info date column ($infoDateDataColumn)")
   }
