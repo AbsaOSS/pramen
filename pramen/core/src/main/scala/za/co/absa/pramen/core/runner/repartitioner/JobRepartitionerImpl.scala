@@ -85,7 +85,11 @@ class JobRepartitionerImpl(bulkLoadCurrent: BulkRunConfig,
       // Starting repartitioning phase 1
 
       if (persistence.isRepartitioningSupported) {
-        persistence.repartitionPhase1(infoDateColumn, bulkLoadCurrent.infoDateFormat, bulkLoadCurrent.outputInfoDate, bulkLoadCurrent.outputInfoDate, bulkLoadCurrent.outputInfoDate)
+        persistence.repartitionPhase1(infoDateColumn,
+          bulkLoadCurrent.infoDateFormat,
+          bulkLoadCurrent.dataDateFrom,
+          bulkLoadCurrent.dataDateTo,
+          bulkLoadCurrent.outputInfoDate)
         val updatedState = bulkLoadState.copy(phase = BulkLoadPhase.Repartition1)
         bulkLoadStateManager.updatePhase(updatedState)
 
@@ -101,7 +105,11 @@ class JobRepartitionerImpl(bulkLoadCurrent: BulkRunConfig,
       // Starting repartitioning phase 2
 
       if (persistence.isRepartitioningSupported) {
-        persistence.repartitionPhase2(infoDateColumn, bulkLoadCurrent.infoDateFormat, bulkLoadCurrent.outputInfoDate, bulkLoadCurrent.outputInfoDate, bulkLoadCurrent.outputInfoDate)
+        persistence.repartitionPhase2(infoDateColumn,
+          bulkLoadCurrent.infoDateFormat,
+          bulkLoadCurrent.dataDateFrom,
+          bulkLoadCurrent.dataDateTo,
+          bulkLoadCurrent.outputInfoDate)
         val updatedState = bulkLoadState.copy(phase = BulkLoadPhase.Done)
         bulkLoadStateManager.updatePhase(updatedState)
         BulkLoadPhase.Done

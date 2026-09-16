@@ -25,7 +25,7 @@ import za.co.absa.pramen.api.{PartitionInfo, PartitionScheme}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
-import za.co.absa.pramen.core.utils.Emoji.{PARALLEL, SUCCESS}
+import za.co.absa.pramen.core.utils.Emoji.SUCCESS
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils, SparkUtils, StringUtils}
 
@@ -146,7 +146,7 @@ class MetastorePersistenceParquet(path: String,
     throw new UnsupportedOperationException("Parquet format does not support Hive tables at the moment.")
   }
 
-  override def isRepartitioningSupported: Boolean = true
+  override def isRepartitioningSupported: Boolean = partitionScheme == PartitionScheme.PartitionByDay
 
   override def repartitionPhase1(infoDateDataColumn: String, infoDateDataFormat: String, infoDateDataFrom: LocalDate, infoDateDataTo: LocalDate, outputInfoDate: LocalDate): Unit = {
     ensureRepartitioningSupported(infoDateDataColumn)
@@ -178,7 +178,7 @@ class MetastorePersistenceParquet(path: String,
       throw new IllegalArgumentException(s"Path does not exist: $pathFrom")
     }
 
-    log.info(s"Repartitioning phase 2.1 - deleting data in the original partition ($pathFrom)...")
+    log.info(s"Repartitioning phase 2.1 - deleting data in the original partition ($pathTo)...")
     fsUtils.deleteDirectoryRecursively(pathTo)
 
     log.info(s"Repartitioning phase 2.2 - deleting data from target partitions ($infoDateDataFrom to $infoDateDataTo)...")
