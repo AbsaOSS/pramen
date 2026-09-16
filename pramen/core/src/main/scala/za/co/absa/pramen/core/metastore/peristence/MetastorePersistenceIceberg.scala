@@ -113,7 +113,7 @@ class MetastorePersistenceIceberg(table: CatalogTable,
     throw new UnsupportedOperationException("Iceberg only operates on tables in a catalog. Separate Hive options are not supported.")
   }
 
-  override def isRepartitioningSupported: Boolean = true
+  override def isRepartitioningSupported: Boolean = partitionScheme != PartitionScheme.NotPartitioned
 
   override def repartitionPhase1(infoDateDataColumn: String, infoDateDataFormat: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
      if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))

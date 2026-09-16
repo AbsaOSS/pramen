@@ -155,7 +155,7 @@ class BulkLoadLongSuite extends AnyWordSpec
         assert(df.count() == 59)
 
         // Ensure parquet directory was repartitioned
-        assert(df.filter(col("dt") =!= col("pramen_info_date")).isEmpty)
+        assert(df.filter(!(col("dt") <=> col("pramen_info_date"))).isEmpty)
 
         // Running the job for the second time should not change the output
         val exitCode2 = AppRunner.runBulkPipelines(conf)
@@ -163,7 +163,7 @@ class BulkLoadLongSuite extends AnyWordSpec
 
         val df2 = spark.table(tableName)
         assert(df2.count() == 59)
-        assert(df2.filter(col("dt") =!= col("pramen_info_date")).isEmpty)
+        assert(df2.filter(!(col("dt") <=> col("pramen_info_date"))).isEmpty)
 
         spark.sql(s"DELETE FROM $tableName").count()
       }
