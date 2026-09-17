@@ -27,7 +27,6 @@ import scala.util.{Failure, Success, Try}
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
-/** Runs an external command and captures its output. */
 class ProcessRunnerImpl(val includeOutputLines: Int,
                         val logStdOut: Boolean,
                         val logStdErr: Boolean,
