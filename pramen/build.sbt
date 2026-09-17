@@ -17,7 +17,6 @@
 import Dependencies._
 import Versions._
 import BuildInfoTemplateSettings._
-import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
 val scala212 = "2.12.20"
@@ -37,17 +36,6 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / autoScalaLibrary := false
 
 lazy val printSparkVersion = taskKey[Unit]("Print Spark version Pramen is building against.")
-
-lazy val commonJacocoReportSettings: JacocoReportSettings = JacocoReportSettings()
-  .withFormats(JacocoReportFormats.HTML, JacocoReportFormats.XML)
-  .withThresholds(JacocoThresholds(line = 60))
-
-lazy val commonJacocoExcludes: Seq[String] = Seq(
-  "za.co.absa.pramen.api.*",
-  "za.co.absa.pramen.buildinfo.*",
-  "za.co.absa.pramen.core.exceptions.*",
-  "za.co.absa.pramen.core.config.*"
-)
 
 val shadeBase = "za.co.absa.pramen.shaded"
 
@@ -143,12 +131,13 @@ lazy val core = (project in file("core"))
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     populateBuildInfoTemplate,
-    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
-    jacocoExcludes := commonJacocoExcludes,
+    jacocoReportName := "pramen:core Jacoco Report",
+    jacocoReportFormats := Set("html", "xml"),
     assemblySettingsRunner
   )
   .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
+  .enablePlugins(JacocoFilterPlugin)
 
 lazy val extras = (project in file("extras"))
   .configs( UnitTest )
@@ -173,12 +162,13 @@ lazy val extras = (project in file("extras"))
     (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
-    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
-    jacocoExcludes := commonJacocoExcludes,
+    jacocoReportName := "pramen-extras Jacoco Report",
+    jacocoReportFormats := Set("html", "xml"),
     assemblySettingsExtras
   )
   .dependsOn(core)
   .enablePlugins(AutomateHeaderPlugin)
+  .enablePlugins(JacocoFilterPlugin)
 
 def isFiltered(fileName: String): Boolean = {
   val filteredExtensions = ".a" :: ".dll" :: ".dylib" :: ".py" :: ".so" :: ".st" :: ".stg" :: Nil
@@ -306,4 +296,6 @@ addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bum
 addCommandAlias("t", "unit:test")
 addCommandAlias("utest", "unit:test")
 addCommandAlias("itTest", "integration:test")
-addCommandAlias("xcoverage", "jacoco")
+addCommandAlias("jacoco", "; jacocoOn; clean; test; jacocoReportAll; jacocoOff")
+addCommandAlias("jacocoOn", "; set every jacocoPluginEnabled := true")
+addCommandAlias("jacocoOff", "; set every jacocoPluginEnabled := false")

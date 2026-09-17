@@ -122,6 +122,10 @@ Pramen is built using SBT.
 - `sbt test` - runs all tests (unit and integration)
 - `sbt unit:test` - runs unit tests only
 - `sbt integration:test` - runs integration tests only
+- `sbt jacoco` - runs all tests with coverage and generates reports for `core` and `extras`
+
+Code coverage is measured by JaCoCo with method-level filtering of Scala boilerplate.
+Filter rules live in `pramen/jmf-rules.txt`.
 
 Install locally for `sbt` projects:
 ```
