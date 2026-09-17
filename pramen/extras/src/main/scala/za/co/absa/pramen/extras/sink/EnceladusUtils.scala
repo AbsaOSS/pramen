@@ -30,6 +30,7 @@ import scala.language.implicitConversions
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
+/** Helper methods for locating Enceladus raw/publish paths and info versions. */
 class EnceladusUtils(rawPartitionPattern: String,
                      publishPartitionPattern: String,
                      infoDateColumn: String)
