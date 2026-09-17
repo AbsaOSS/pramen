@@ -133,10 +133,12 @@
         <maven.scala.version>3.3.2</maven.scala.version>
         <maven.rat.plugin.version>0.16.1</maven.rat.plugin.version>
         <maven.scalatest.version>2.2.0</maven.scalatest.version>
-        <maven.scoverage.version>1.3.0</maven.scoverage.version>
         <maven.shade.version>3.5.3</maven.shade.version>
         <maven.sources.version>3.3.1</maven.sources.version>
         <maven.surefire.version>3.5.3</maven.surefire.version>
+        <jacoco.version>0.8.15</jacoco.version>
+        <jmf.version>2.5.0</jmf.version>
+        <maven-resource-plugin.version>3.5.0</maven-resource-plugin.version>
 
         <!-- Frameworks and libraries -->
         <scala_logging.version>3.7.2</scala_logging.version>
@@ -527,18 +529,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.scoverage</groupId>
-                <artifactId>scoverage-maven-plugin</artifactId>
-                <version>${maven.scoverage.version}</version>
-                <configuration>
-                    <scalaVersion>${scala.version}</scalaVersion>
-                    <aggregate>true</aggregate>
-                    <excludedPackages>.*examples.*;.*replication.*</excludedPackages>
-                    <excludedFiles>.*Example.*;Test.*</excludedFiles>
-                    <highlighting>true</highlighting>
-                </configuration>
-            </plugin>
-            <plugin>
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
                 <version>${maven.rat.plugin.version}</version>
@@ -581,6 +571,94 @@
             <properties>
                 <skip.long.tests>false</skip.long.tests>
             </properties>
+        </profile>
+        <profile>
+            <id>code-coverage</id>
+            <build>
+                <plugins>
+                    <!-- JaCoCo Maven Plugin (for agent) -->
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- JaCoCo Method Filter Plugin -->
+                    <plugin>
+                        <groupId>io.github.moranaapps</groupId>
+                        <artifactId>jacoco-method-filter-maven-plugin</artifactId>
+                        <version>${jmf.version}</version>
+                        <configuration>
+                            <!-- One shared rules file at the repo root, applied to every module. -->
+                            <localRules>${maven.multiModuleProjectDirectory}/jmf-rules.txt</localRules>
+                            <requireRules>true</requireRules>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>jmf-rewrite</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>rewrite</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>jmf-report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>report</goal>
+                                </goals>
+                                <configuration>
+                                    <reportName>${project.name} - scala:${scala.version}</reportName>
+                                    <reportFormats>html,xml</reportFormats>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Overlay filtered classes before tests -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>${maven-resource-plugin.version}</version>
+                        <executions>
+                            <execution>
+                                <id>overlay-filtered-classes</id>
+                                <phase>process-test-classes</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                                    <overwrite>true</overwrite>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.build.directory}/classes-filtered</directory>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <!-- Pass the JaCoCo agent ('argLine' set by prepare-agent) to the forked ScalaTest JVM -->
+                    <plugin>
+                        <groupId>org.scalatest</groupId>
+                        <artifactId>scalatest-maven-plugin</artifactId>
+                        <version>${maven.scalatest.version}</version>
+                        <configuration>
+                            <argLine>${argLine} -Xmx1024m</argLine>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 
