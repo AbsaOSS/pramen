@@ -62,7 +62,9 @@ jobs:
           filters: |
             scala:
               - 'pramen/**/*.scala'
-              - '!pramen/project/**'
+              - 'pramen/*/src/**'
+              - 'pramen/build.sbt'
+              - 'pramen/project/**'
               - 'pramen/jmf-rules.txt'
               - '.github/workflows/jacoco.yml'
 
