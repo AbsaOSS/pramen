@@ -14,22 +14,9 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.utils
+package za.co.absa.pramen.core.state
 
-object Emoji {
-  val SUCCESS = "\u2705"
-  val WARNING = "\u26A0\uFE0F"
-  val FAILURE = "\u274C"
-  val EXCLAMATION = s"\u2757"
-  val WRENCH = "\uD83D\uDD27"
-  val PARALLEL = "\u29B7"
-
-  val ROCKET = "\uD83D\uDE80"
-  val EMAIL1 = "\uD83D\uDCE7"
-  val EMAIL2 = "\uD83D\uDCE9"
-  val EMAIL3 = "\u2709"
-  val LIGHT_BULB = "\uD83D\uDCA1"
-  val STAR = "\u2B50"
-  val VOLTAGE = "\u26A1"
-  val HAMMER_AND_WRENCH = "\uD83D\uDEE0\uFE0F"
-}
+case class WorkerStatus(
+                         threadId: Long,
+                         status: String
+                       )
