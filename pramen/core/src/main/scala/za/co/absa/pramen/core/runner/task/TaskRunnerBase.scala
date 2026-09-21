@@ -40,7 +40,6 @@ import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline.PipelineDef.{COUNTRY_KEY, ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils
-import za.co.absa.pramen.core.state.PipelineState
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.hive.HiveHelper
@@ -149,28 +148,34 @@ abstract class TaskRunnerBase(conf: Config,
       spark.sparkContext.setJobDescription(description)
     }
 
-    task.job.operation.killMaxExecutionTimeSeconds match {
-      case Some(timeout) if timeout > 0 =>
-        @volatile var runStatus: RunStatus = null
+    try {
+      WorkerStatusManager.setStatus(s"Running '${task.job.name}' for '${task.infoDate}'")
+
+      task.job.operation.killMaxExecutionTimeSeconds match {
+        case Some(timeout) if timeout > 0 =>
+          @volatile var runStatus: RunStatus = null
 
         val taskName = task.job.name.replace(' ', '_')
         val threadName = s"pramen-worker-$taskName-${task.infoDate}"
 
-        try {
+          try {
           ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS), Duration(sqlCancellationTimeoutSeconds, TimeUnit.SECONDS), threadName = threadName) {
-            log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
-            runStatus = doValidateOrSkipTask(task)
+              log.info(s"Running '${task.job.name}' with the hard timeout = $timeout seconds.")
+              runStatus = doValidateOrSkipTask(task)
+            }
+            runStatus
+          } catch {
+            case NonFatal(ex) =>
+              failTask(task, started, ex)
           }
-          runStatus
-        } catch {
-          case NonFatal(ex) =>
-            failTask(task, started, ex)
-        }
-      case Some(timeout) =>
-        log.error(s"Incorrect timeout for the task: ${task.job.name}. Should be bigger than zero, got: $timeout.")
-        doValidateOrSkipTask(task)
-      case None =>
-        doValidateOrSkipTask(task)
+        case Some(timeout) =>
+          log.error(s"Incorrect timeout for the task: ${task.job.name}. Should be bigger than zero, got: $timeout.")
+          doValidateOrSkipTask(task)
+        case None =>
+          doValidateOrSkipTask(task)
+      }
+    } finally {
+      WorkerStatusManager.setFinished()
     }
   }
 
