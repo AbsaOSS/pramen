@@ -28,6 +28,7 @@ import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.peristence.TransientTableManager
 import za.co.absa.pramen.core.runner.splitter.{ScheduleStrategy, ScheduleStrategySourcing}
+import za.co.absa.pramen.core.state.WorkerStatusManager
 import za.co.absa.pramen.core.utils.ConfigUtils
 import za.co.absa.pramen.core.utils.Emoji.WARNING
 import za.co.absa.pramen.core.utils.SparkUtils._
@@ -167,9 +168,11 @@ class IngestionJob(operationDef: OperationDef,
                     conf: Config,
                     jobStarted: Instant,
                     inputRecordCount: Option[Long]): SaveResult = {
+    WorkerStatusManager.setStatus(s"Running '$name' for '$infoDate'. Writing data...")
     val stats = metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
 
     try {
+      WorkerStatusManager.setStatus(s"Running '$name' for '$infoDate'. Running post-processing...")
       source.postProcess(
         sourceTable.query,
         outputTable.name,
@@ -181,6 +184,7 @@ class IngestionJob(operationDef: OperationDef,
       case _: AbstractMethodError => log.warn(s"Sources were built using old version of Pramen that does not support post processing. Ignoring...")
     }
 
+    WorkerStatusManager.setStatus(s"Running '$name' for '$infoDate'. Finalizing...")
     source.close()
 
     val jobFinished = Instant.now
@@ -203,6 +207,7 @@ class IngestionJob(operationDef: OperationDef,
       log.info(s"Getting cached record count for '${query.query}' for $from..$to...")
       getCachedDataFrame(source, query, from, to).count()
     } else {
+      WorkerStatusManager.setStatus(s"Running '$name'. Getting record count for for '${query.query}' for $from..$to")
       source.getRecordCount(sourceTable.query, from, to)
     }
   }
