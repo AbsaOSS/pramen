@@ -14,22 +14,24 @@
  * limitations under the License.
  */
 
-package za.co.absa.pramen.core.utils
+package za.co.absa.pramen.core.state
 
-object Emoji {
-  val SUCCESS = "\u2705"
-  val WARNING = "\u26A0\uFE0F"
-  val FAILURE = "\u274C"
-  val EXCLAMATION = s"\u2757"
-  val WRENCH = "\uD83D\uDD27"
-  val PARALLEL = "\u29B7"
+import scala.collection.mutable
 
-  val ROCKET = "\uD83D\uDE80"
-  val EMAIL1 = "\uD83D\uDCE7"
-  val EMAIL2 = "\uD83D\uDCE9"
-  val EMAIL3 = "\u2709"
-  val LIGHT_BULB = "\uD83D\uDCA1"
-  val STAR = "\u2B50"
-  val VOLTAGE = "\u26A1"
-  val HAMMER_AND_WRENCH = "\uD83D\uDEE0\uFE0F"
+object WorkerStatusManager {
+  private val workerStatus = new mutable.HashMap[Long, String]()
+
+  def setStatus(status: String): Unit = synchronized {
+    val threadId = Thread.currentThread().getId
+    workerStatus(threadId) = status
+  }
+
+  def setFinished(): Unit = synchronized {
+    val threadId = Thread.currentThread().getId
+    workerStatus.remove(threadId)
+  }
+
+  def getStatuses: Seq[WorkerStatus] = synchronized {
+    workerStatus.map { case (threadId, status) => WorkerStatus(threadId, status) }.toSeq
+  }
 }
