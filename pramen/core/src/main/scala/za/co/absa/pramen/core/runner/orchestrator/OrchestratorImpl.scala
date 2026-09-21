@@ -28,7 +28,8 @@ import za.co.absa.pramen.core.pipeline.{Job, JobBase, JobDependency, OperationTy
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
 import za.co.absa.pramen.core.runner.repartitioner.JobRepartitioner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
-import za.co.absa.pramen.core.state.PipelineState
+import za.co.absa.pramen.core.state.{PipelineState, WorkerStatusManager}
+import za.co.absa.pramen.core.utils.Emoji
 import za.co.absa.pramen.core.utils.Emoji._
 
 import java.time.LocalDate
@@ -268,6 +269,18 @@ class OrchestratorImpl extends Orchestrator {
       }
 
       dependencyResolver.setFailedTable(outputTable.name)
+    }
+
+    if (!isLazy) {
+      val statuses = WorkerStatusManager.getStatuses
+      if (statuses.nonEmpty) {
+        this.synchronized{
+          log.info(s"${Emoji.HAMMER_AND_WRENCH} Statuses of other workers:")
+          statuses.foreach { status =>
+            log.info(s"Thread ${status.threadId}: $status")
+          }
+        }
+      }
     }
   }
 

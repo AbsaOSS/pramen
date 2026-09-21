@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.pipeline.Task
-import za.co.absa.pramen.core.state.PipelineState
+import za.co.absa.pramen.core.state.{PipelineState, WorkerStatusManager}
 import za.co.absa.pramen.core.utils.Emoji
 
 import java.util.concurrent.Executors.newFixedThreadPool
