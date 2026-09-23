@@ -139,7 +139,11 @@ abstract class TaskRunnerBase(conf: Config,
           try {
             ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
               log.info(s"Running '${task.job.name}' with the hard timeout = $timeout seconds.")
-              runStatus = doValidateOrSkipTask(task)
+              try {
+                runStatus = doValidateOrSkipTask(task)
+              } finally {
+                WorkerStatusManager.setFinished()
+              }
             }
             runStatus
           } catch {
