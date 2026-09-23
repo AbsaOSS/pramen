@@ -121,6 +121,18 @@ class OrchestratorImpl extends Orchestrator {
 
         state.addTaskCompletion(taskResults)
 
+        if (!isLazy) {
+          val statuses = WorkerStatusManager.getStatuses
+          if (statuses.nonEmpty) {
+            this.synchronized{
+              log.info(s"${Emoji.HAMMER_AND_WRENCH} Statuses of other workers:")
+              statuses.foreach { status =>
+                log.info(s"Thread ${status.threadId}: $status")
+              }
+            }
+          }
+        }
+
         if (hasFatalErrors || hasCriticalJobFailures) {
           // In case of a fatal error, we either need to interrupt running threads, or wait for them to return.
           // In the current implementation we wait for threads to finish, but not start new jobs in running threads.
@@ -269,18 +281,6 @@ class OrchestratorImpl extends Orchestrator {
       }
 
       dependencyResolver.setFailedTable(outputTable.name)
-    }
-
-    if (!isLazy) {
-      val statuses = WorkerStatusManager.getStatuses
-      if (statuses.nonEmpty) {
-        this.synchronized{
-          log.info(s"${Emoji.HAMMER_AND_WRENCH} Statuses of other workers:")
-          statuses.foreach { status =>
-            log.info(s"Thread ${status.threadId}: $status")
-          }
-        }
-      }
     }
   }
 
