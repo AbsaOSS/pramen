@@ -150,8 +150,6 @@ abstract class TaskRunnerBase(conf: Config,
     }
 
     try {
-      WorkerStatusManager.setStatus(s"Running '${task.job.name}' for '${task.infoDate}'")
-
       task.job.operation.killMaxExecutionTimeSeconds match {
         case Some(timeout) if timeout > 0 =>
           @volatile var runStatus: RunStatus = null
@@ -161,6 +159,7 @@ abstract class TaskRunnerBase(conf: Config,
 
           try {
             ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS), Duration(sqlCancellationTimeoutSeconds, TimeUnit.SECONDS), threadName = threadName) {
+              WorkerStatusManager.setStatus(s"Running '${task.job.name}' for '${task.infoDate}'")
               log.info(s"Running '${task.job.name}' with the hard timeout = $timeout seconds.")
               try {
                 runStatus = doValidateOrSkipTask(task)
@@ -175,8 +174,10 @@ abstract class TaskRunnerBase(conf: Config,
           }
         case Some(timeout)                =>
           log.error(s"Incorrect timeout for the task: ${task.job.name}. Should be bigger than zero, got: $timeout.")
+          WorkerStatusManager.setStatus(s"Running '${task.job.name}' for '${task.infoDate}'")
           doValidateOrSkipTask(task)
         case None                         =>
+          WorkerStatusManager.setStatus(s"Running '${task.job.name}' for '${task.infoDate}'")
           doValidateOrSkipTask(task)
       }
     } finally {
