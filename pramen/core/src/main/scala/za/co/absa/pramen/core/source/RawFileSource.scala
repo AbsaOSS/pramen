@@ -108,15 +108,21 @@ class RawFileSource(val sourceConfig: Config,
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    val sumFileSizes = getPaths(query, infoDateBegin, infoDateEnd)
+    val paths = getPaths(query, infoDateBegin, infoDateEnd)
+    val sumFileSizes = paths
       .map(_.getLen)
       .sum
 
-    if (sumFileSizes == 0 && ConfigUtils.getOptionBoolean(sourceConfig, ENABLE_NOTIFICATIONS_KEY).getOrElse(false)) {
+    if (paths.isEmpty && ConfigUtils.getOptionBoolean(sourceConfig, ENABLE_NOTIFICATIONS_KEY).getOrElse(false)) {
       addNoDataNotification(query, infoDateBegin, infoDateBegin, infoDateEnd)
     }
 
-    sumFileSizes
+    // If there are empty files, return 1 so that the pipeline may continue
+    if (paths.nonEmpty && sumFileSizes == 0) {
+      1
+    } else {
+      sumFileSizes
+    }
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
@@ -213,6 +219,7 @@ class RawFileSource(val sourceConfig: Config,
     val generalPattern = queryPath.path
     val specificPattern1 = getSpecificPathPattern(generalPattern, infoDateBegin, infoDateEnd)
     val specificPattern = if (specificPattern1.length > 255) s"${specificPattern1.substring(0, 255)}..." else specificPattern1
+    val displayedDate = if (infoDateBegin.isEqual(infoDateEnd)) infoDate.toString else s"$infoDateBegin–$infoDateEnd"
 
     val pramenOpt = Try {
       Pramen.instance
@@ -227,11 +234,11 @@ class RawFileSource(val sourceConfig: Config,
           )
         )
       )
-      Pramen.instance.notificationBuilder.addEntries(
+      pramen.notificationBuilder.addEntries(
         NotificationEntry.Paragraph(
           Seq(
             TextElement(s"No files found matching date "),
-            TextElement(s"'$infoDate'", Style.Bold),
+            TextElement(s"'$displayedDate'", Style.Bold),
             TextElement(s" at: "),
             TextElement(specificPattern, Style.Bold)
           )
