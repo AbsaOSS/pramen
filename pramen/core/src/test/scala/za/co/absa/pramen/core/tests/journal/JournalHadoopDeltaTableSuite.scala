@@ -59,7 +59,6 @@ class JournalHadoopDeltaTableSuite extends AnyWordSpec with BeforeAndAfterAll wi
           journal.addEntry(task2)
           journal.addEntry(task3)
 
-
           val entries = journal.getEntries(instant2, instant3).sortBy(_.informationDate.toString)
 
           assert(entries.nonEmpty)
@@ -76,13 +75,17 @@ class JournalHadoopDeltaTableSuite extends AnyWordSpec with BeforeAndAfterAll wi
   private def cleanUpWarehouse(): Unit = {
     val warehouseDir = new File("spark-warehouse")
     if (warehouseDir.exists()) {
-      warehouseDir.listFiles().foreach(f => {
-        if (f.isDirectory) {
-          f.listFiles().foreach(ff => ff.delete())
-        }
-        f.delete()
-      })
-      warehouseDir.delete()
+      deleteRecursively(warehouseDir)
     }
+  }
+
+  private def deleteRecursively(file: File): Unit = {
+    if (file.isDirectory) {
+      val children = file.listFiles()
+      if (children != null) {
+        children.foreach(deleteRecursively)
+      }
+    }
+    file.delete()
   }
 }

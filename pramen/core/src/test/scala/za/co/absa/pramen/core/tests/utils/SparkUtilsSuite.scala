@@ -19,7 +19,9 @@ package za.co.absa.pramen.core.tests.utils
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions.lit
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.{DataFrame, Row}
+import org.apache.spark.sql.{DataFrame, Row, SparkSession}
+import org.apache.spark.{SparkConf, SparkContext}
+import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.FieldChange._
 import za.co.absa.pramen.api.jobdef.TransformExpression
@@ -27,9 +29,9 @@ import za.co.absa.pramen.core.NestedDataFrameFactory
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.samples.SampleCaseClass2
-import za.co.absa.pramen.core.utils.SparkUtils
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.StringUtils.stripLineEndings
+import za.co.absa.pramen.core.utils.{SparkMaster, SparkUtils, YarnDeploymentMode}
 
 import java.time.LocalDate
 
@@ -103,19 +105,19 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
   }
 
   "sanitizeDfColumns()" should {
-    "rename spaces of input dataframe columns" in {
+    "trim leading and trailing spaces, and rename spaces in the middle of input dataframe columns" in {
       val expected =
       """[ {
         |  "a_a" : "A",
-        |  "_b_" : 1,
+        |  "b" : 1,
         |  "c" : 4
         |}, {
         |  "a_a" : "B",
-        |  "_b_" : 2,
+        |  "b" : 2,
         |  "c" : 5
         |}, {
         |  "a_a" : "C",
-        |  "_b_" : 3,
+        |  "b" : 3,
         |  "c" : 6
         |} ]"""
 
@@ -150,6 +152,38 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(stripLineEndings(actual) == stripLineEndings(expected))
     }
 
+    "add suffixes when there is a name collision" in {
+      val expected =
+        """[ {  "a_a" : "A",  "a_a_1" : 1,  "b_b_1" : 1,  "b_b" : 1,  "c_c" : 1,  "c_c_1" : 1,  "c_c_2" : 1}, {  "a_a" : "B",  "a_a_1" : 2,  "b_b_1" : 2,  "b_b" : 2,  "c_c" : 2,  "c_c_1" : 2,  "c_c_2" : 2}, {  "a_a" : "C",  "a_a_1" : 3,  "b_b_1" : 3,  "b_b" : 3,  "c_c" : 3,  "c_c_1" : 3,  "c_c_2" : 3} ]"""
+
+      val expectedMetadataField1 =
+        """{"original_name":"a:a","maxLength":10}"""
+
+      val expectedMetadataField2 =
+        """{"original_name":"a a"}"""
+
+      val df = List(("A", 1, 1, 1, 1, 1, 1), ("B", 2, 2, 2, 2, 2, 2), ("C", 3, 3, 3, 3, 3, 3)).toDF("a:a", "a a", "b<b", "b_b", "c_c", "c c", "c:c")
+
+      val field1 = df.schema.fields.head
+      val field1WIthMetadata = field1.copy(metadata = new MetadataBuilder().putLong("maxLength", 10).build())
+      val newSchema = StructType(field1WIthMetadata +: df.schema.fields.drop(1))
+      val df1 = spark.createDataFrame(df.rdd, newSchema)
+
+      val actualDf = sanitizeDfColumns(df1, " :<>")
+
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+
+      val metadataField1 = actualDf.schema.fields.head.metadata.json
+      val metadataField2 = actualDf.schema.fields(1).metadata.json
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+      assert(metadataField1 == expectedMetadataField1)
+      assert(metadataField2 == expectedMetadataField2)
+
+    }
+
     "rename columns that start with .tbl" in {
       val expected =
         """[ {  "a_a" : "A",  "b" : 1}, {  "a_a" : "B",  "b" : 2}, {  "a_a" : "C",  "b" : 3} ]"""
@@ -174,6 +208,47 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
 
       assert(stripLineEndings(actual) == stripLineEndings(expected))
+    }
+
+    "retain metadata and add the original_name metadata key" in {
+      val expected =
+        """[ {  "a_a" : "A",  "b" : 1}, {  "a_a" : "B",  "b" : 2}, {  "a_a" : "C",  "b" : 3} ]"""
+      val expectedMetadataField1 =
+        """{"original_name":"tbl.a a","maxLength":10}"""
+
+      val expectedMetadataField2 =
+        """{"original_name":"tbl.b","comment":"Test"}"""
+
+      val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("tbl.a a", "tbl.b")
+      val field1 = df.schema.fields.head
+      val field2 = df.schema.fields(1)
+      val field1WIthMetadata = field1.copy(metadata = new MetadataBuilder().putLong("maxLength", 10).build())
+      val field2WIthMetadata = field2.copy(metadata = new MetadataBuilder().putString("comment", "Test").build())
+      val newSchema = StructType(Seq(field1WIthMetadata, field2WIthMetadata))
+      val df1 = spark.createDataFrame(df.rdd, newSchema)
+
+      val actualDf = sanitizeDfColumns(df1, " ")
+      val metadataField1 = actualDf.schema.fields.head.metadata.json
+      val metadataField2 = actualDf.schema.fields(1).metadata.json
+
+      val actual = convertDataFrameToPrettyJSON(actualDf).stripMargin.linesIterator.mkString("").trim
+
+      assert(stripLineEndings(actual) == stripLineEndings(expected))
+      assert(metadataField1 == expectedMetadataField1)
+      assert(metadataField2 == expectedMetadataField2)
+    }
+
+    "handle case-insensitive name collisions" in {
+      val df = List(("A", 1, 2)).toDF("Test_Column", "test column", "TEST:COLUMN")
+
+      val actualDf = sanitizeDfColumns(df, " :")
+
+      // All three should produce unique names despite case differences
+      val colNames = actualDf.schema.fields.map(_.name)
+      assert(colNames.distinct.length == 3, "All columns should have unique names")
+      assert(colNames.head == "Test_Column")
+      assert(colNames(1) == "test_column_1")
+      assert(colNames(2) == "TEST_COLUMN_2")
     }
 
     "convert schema from Spark to Json and back should produce the same schema" in {
@@ -284,6 +359,68 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(diff.head.asInstanceOf[ChangedType].columnName == "a")
       assert(diff.head.asInstanceOf[ChangedType].oldType == "varchar(10)")
       assert(diff.head.asInstanceOf[ChangedType].newType == "varchar(15)")
+    }
+
+    "detect nested type changes" in {
+      val schema1 = StructType(Seq(
+        StructField("id", IntegerType, nullable = false),
+        StructField("name", StringType, nullable = true),
+        StructField("address", StructType(Seq(
+          StructField("street", StringType, nullable = true),
+          StructField("city", StringType, nullable = true)
+        ))),
+        StructField("tags", ArrayType(StringType, containsNull = true), nullable = true),
+        StructField("phones", ArrayType(StructType(Seq(
+          StructField("type", StringType, nullable = true),
+          StructField("number", IntegerType, nullable = true)
+        )), containsNull = true), nullable = true),
+        StructField("error_info", StructType(Seq(
+          StructField("reason", StringType, nullable = true),
+          StructField("value", StringType, nullable = true)
+        )))
+      ))
+
+      val schema2 = StructType(Seq(
+        StructField("Id", IntegerType, nullable = false),
+        StructField("name", StringType, nullable = true),
+        StructField("address", StructType(Seq(
+          StructField("street", StringType, nullable = true),
+          StructField("city", LongType, nullable = true),
+          StructField("state", StringType, nullable = true)
+        ))),
+        StructField("tags", ArrayType(IntegerType, containsNull = true), nullable = true),
+        StructField("phones", ArrayType(StructType(Seq(
+          StructField("type", StringType, nullable = true),
+          StructField("number", StringType, nullable = true),
+          StructField("country", StringType, nullable = true)
+        )), containsNull = true), nullable = true),
+        StructField("additional_properties", ArrayType(StructType(Seq(
+          StructField("key", StringType, nullable = true),
+          StructField("value", StringType, nullable = true)
+        )), containsNull = true), nullable = true)
+      ))
+
+      val diff = compareSchemas(schema1, schema2)
+
+      assert(diff.length == 9)
+      assert(diff.count(_.isInstanceOf[ChangedType]) == 3)
+      assert(diff.count(_.isInstanceOf[NewField]) == 4)
+      assert(diff.count(_.isInstanceOf[DeletedField]) == 2)
+
+      val changedTypes = diff.collect { case ct: ChangedType => ct }
+      assert(changedTypes.exists(c => c.columnName == "address.city" && c.oldType == "string" && c.newType == "long"))
+      assert(changedTypes.exists(c => c.columnName == "tags" && c.oldType == "array<string>" && c.newType == "array<integer>"))
+      assert(changedTypes.exists(c => c.columnName == "phones[].number" && c.oldType == "integer" && c.newType == "string"))
+
+      val newFields = diff.collect { case nf: NewField => nf }
+      assert(newFields.exists(n => n.columnName == "Id" && n.dataType == "integer"))
+      assert(newFields.exists(n => n.columnName == "address.state" && n.dataType == "string"))
+      assert(newFields.exists(n => n.columnName == "phones[].country" && n.dataType == "string"))
+      assert(newFields.exists(n => n.columnName == "additional_properties" && n.dataType == "array<struct<...>>"))
+
+      val deletedFields = diff.collect { case df: DeletedField => df }
+      assert(deletedFields.exists(d => d.columnName == "id" && d.dataType == "integer"))
+      assert(deletedFields.exists(d => d.columnName == "error_info" && d.dataType == "struct<...>"))
     }
   }
 
@@ -493,6 +630,24 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       assert(len.contains(10))
     }
 
+    "return length for string type 2" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(11)")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(11))
+    }
+
+    "return length for string type 3" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "CHAR(12)")
+
+      val len = SparkUtils.getLengthFromMetadata(metadata.build())
+
+      assert(len.contains(12))
+    }
+
     "return None for wrong type" in {
       val metadata = new MetadataBuilder
       metadata.putString(MAX_LENGTH_METADATA_KEY, "abc")
@@ -517,6 +672,108 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val len = SparkUtils.getLengthFromMetadata(metadata.build())
 
       assert(len.isEmpty)
+    }
+  }
+
+  "getStringTypeFromMetadata" should {
+    "return varchar type for long metadata type" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(10))
+    }
+
+    "return varchar type for string metadata type" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "10")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(10))
+    }
+
+    "return varchar type from CHAR_VARCHAR_METADATA_KEY with varchar" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(11)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(11))
+    }
+
+    "return char type from CHAR_VARCHAR_METADATA_KEY with char" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "CHAR(12)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(12))
+    }
+
+    "return varchar type and ignore case in CHAR_VARCHAR_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "VARCHAR(15)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(15))
+    }
+
+    "return None for wrong type in MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(MAX_LENGTH_METADATA_KEY, "abc")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "return None for double type in MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putDouble(MAX_LENGTH_METADATA_KEY, 12.25)
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "return None if metadata not specified" in {
+      val metadata = new MetadataBuilder
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "prioritize CHAR_VARCHAR_METADATA_KEY over MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(20)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(20))
+    }
+
+    "handle invalid CHAR_VARCHAR_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "varchar(10.1)")
+
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == StringType)
+    }
+
+    "handle malformed CHAR_VARCHAR_METADATA_KEY and fallback to MAX_LENGTH_METADATA_KEY" in {
+      val metadata = new MetadataBuilder
+      metadata.putLong(MAX_LENGTH_METADATA_KEY, 10L)
+      metadata.putString(CHAR_VARCHAR_METADATA_KEY, "invalid_format")
+  
+      val stringType = SparkUtils.getStringTypeFromMetadata(metadata.build())
+
+      assert(stringType == VarcharType(10))
     }
   }
 
@@ -793,6 +1050,223 @@ class SparkUtilsSuite extends AnyWordSpec with SparkTestBase with TempDirFixture
       val actualDDL = escapeColumnsSparkDDL(inputDDL)
 
       assert(actualDDL == expectedDDL)
+    }
+  }
+
+  "isDriverRunningOnEdgeNode" should {
+    "return true for local master" in {
+      assert(SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Local("local[2]")))
+    }
+
+    "return true for Yarn in client mode" in {
+      assert(SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Yarn(YarnDeploymentMode.Client)))
+    }
+
+    "return false for Yarn in cluster mode" in {
+      assert(!SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Yarn(YarnDeploymentMode.Cluster)))
+    }
+
+    "return false for Kubernetes in cluster mode" in {
+      assert(!SparkUtils.isDriverRunningOnEdgeNode(SparkMaster.Kubernetes("k8s://dummy")))
+    }
+  }
+
+  "getSparkMaster" should {
+    val sparkMock = mock(classOf[SparkSession])
+    val sparkContextMock = mock(classOf[SparkContext])
+    val confMock = mock(classOf[SparkConf])
+
+    when(sparkMock.sparkContext).thenReturn(sparkContextMock)
+    when(sparkContextMock.getConf).thenReturn(confMock)
+    when(confMock.getOption("spark.submit.deployMode")).thenReturn(None)
+    when(confMock.getOption("spark.databricks.clusterUsageTags.clusterName")).thenReturn(None)
+
+    "use Unknown when unrecognized" in {
+      when(confMock.getOption("spark.master")).thenReturn(Some("dummy://dummy"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Unknown])
+      assert(master.asInstanceOf[SparkMaster.Unknown].master == "dummy://dummy")
+    }
+
+    "recognize Local mode" in {
+      when(confMock.getOption("spark.master")).thenReturn(Some("local[*]"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Local])
+      assert(master.asInstanceOf[SparkMaster.Local].spec == "local[*]")
+    }
+
+    "recognize Standalone mode" in {
+      when(confMock.getOption("spark.master")).thenReturn(Some("spark://dummy"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Standalone])
+      assert(master.asInstanceOf[SparkMaster.Standalone].url == "spark://dummy")
+    }
+
+    "recognize Yarn mode with client deployment mode" in {
+      when(confMock.getOption("spark.master")).thenReturn(Some("yarn"))
+      when(confMock.getOption("spark.submit.deployMode")).thenReturn(Some("client"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Yarn])
+      assert(master.asInstanceOf[SparkMaster.Yarn].deploymentMode == YarnDeploymentMode.Client)
+    }
+
+    "recognize Yarn mode with cluster deployment mode" in {
+      when(confMock.getOption("spark.master")).thenReturn(Some("yarn"))
+      when(confMock.getOption("spark.submit.deployMode")).thenReturn(Some("cluster"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Yarn])
+      assert(master.asInstanceOf[SparkMaster.Yarn].deploymentMode == YarnDeploymentMode.Cluster)
+    }
+
+    "recognize Kubernetes mode" in {
+      when(confMock.getOption("spark.master")).thenReturn(Some("k8s://dummy"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master.isInstanceOf[SparkMaster.Kubernetes])
+      assert(master.asInstanceOf[SparkMaster.Kubernetes].url == "k8s://dummy")
+    }
+
+    "recognize Databricks mode" in {
+      when(confMock.getOption("spark.databricks.clusterUsageTags.clusterName")).thenReturn(Some("MyCluster"))
+
+      val master = SparkUtils.getSparkMaster(sparkMock)
+
+      assert(master == SparkMaster.Databricks)
+    }
+  }
+
+  "getTotalNumberOfColumns" should {
+    "return the number of columns for a flat schema" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("name", StringType),
+        StructField("age", IntegerType)
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 3)
+    }
+
+    "return the total number of columns including nested struct fields" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("address", StructType(Array(
+          StructField("street", StringType),
+          StructField("city", StringType),
+          StructField("zip", StringType)
+        )))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 5)
+    }
+
+    "return the total number of columns including array of structs" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("phones", ArrayType(StructType(Array(
+          StructField("type", StringType),
+          StructField("number", StringType)
+        ))))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 4)
+    }
+
+    "return the total number of columns for a deeply nested schema" in {
+      val schema = StructType(Array(
+        StructField("id", LongType),
+        StructField("level1", StructType(Array(
+          StructField("field1", StringType),
+          StructField("level2", StructType(Array(
+            StructField("field2", IntegerType),
+            StructField("level3", ArrayType(StructType(Array(
+              StructField("field3", StringType),
+              StructField("field4", DoubleType)
+            ))))
+          )))
+        )))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 8)
+    }
+
+    "return 0 for an empty schema" in {
+      val schema = StructType(Array.empty[StructField])
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 0)
+    }
+
+    "count array of primitives as a single column" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("tags", ArrayType(StringType)),
+        StructField("name", StringType)
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 3)
+    }
+
+    "handle multiple nested structs at the same level" in {
+      val schema = StructType(Array(
+        StructField("id", IntegerType),
+        StructField("struct1", StructType(Array(
+          StructField("a", StringType),
+          StructField("b", StringType)
+        ))),
+        StructField("struct2", StructType(Array(
+          StructField("c", IntegerType),
+          StructField("d", IntegerType),
+          StructField("e", IntegerType)
+        )))
+      ))
+
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], schema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 8)
+    }
+
+    "handle the test case schema from NestedDataFrameFactory" in {
+      val df = spark.createDataFrame(spark.sparkContext.emptyRDD[Row], NestedDataFrameFactory.testCaseSchema)
+
+      val actual = SparkUtils.getTotalNumberOfColumns(df.schema)
+
+      assert(actual == 29)
     }
   }
 

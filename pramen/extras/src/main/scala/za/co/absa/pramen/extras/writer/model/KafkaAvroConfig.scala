@@ -35,7 +35,7 @@ object KafkaAvroConfig {
   val SCHEMA_REGISTRY_URL = "schema.registry.url"
   val SCHEMA_REGISTRY_KEY_PREFIX = "schema.registry.key"
   val SCHEMA_REGISTRY_VALUE_PREFIX = "schema.registry.value"
-  val SCHEMA_EXTRA_OPTIONS = "schema.registry"
+  val SCHEMA_EXTRA_OPTIONS = "schema.registry.option"
   val KAFKA_EXTRA_OPTIONS = "kafka"
 
   def fromConfig(conf: Config): KafkaAvroConfig = {
@@ -58,9 +58,6 @@ object KafkaAvroConfig {
       }
 
     val schemaRegistryExtraProperties = ConfigUtils.getExtraOptions(conf, SCHEMA_EXTRA_OPTIONS)
-      .map {
-        case (k, v) => (s"$SCHEMA_EXTRA_OPTIONS.$k", v)
-      }
 
     KafkaAvroConfig(
       brokers = conf.getString(KAFKA_BROKERS_KEY),

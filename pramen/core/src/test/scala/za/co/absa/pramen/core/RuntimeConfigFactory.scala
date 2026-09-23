@@ -17,7 +17,8 @@
 package za.co.absa.pramen.core
 
 import za.co.absa.pramen.api.RunMode
-import za.co.absa.pramen.core.app.config.RuntimeConfig
+import za.co.absa.pramen.bulkload.model.BulkBatchSize
+import za.co.absa.pramen.core.app.config.{BulkRunConfig, RuntimeConfig}
 
 import java.time.LocalDate
 
@@ -40,7 +41,14 @@ object RuntimeConfigFactory {
                             allowEmptyPipeline: Boolean = false,
                             alwaysAddBatchIdColumn: Boolean = false,
                             historicalRunMode: RunMode = RunMode.CheckUpdates,
-                            sparkAppDescriptionTemplate: Option[String] = None): RuntimeConfig = {
+                            bulkBatchSize: BulkBatchSize = BulkBatchSize.Monthly,
+                            bulkLoadCurrent: Option[BulkRunConfig] = None,
+                            enableRepartitioning: Boolean = false,
+                            sparkAppDescriptionTemplate: Option[String] = None,
+                            attempt: Int = 1,
+                            maxAttempts: Int = 1,
+                            forceReCreateHiveTables: Boolean = false,
+                            executionOptions: Map[String, String] = Map.empty): RuntimeConfig = {
     RuntimeConfig(isDryRun,
       isRerun,
       runTables,
@@ -58,7 +66,14 @@ object RuntimeConfigFactory {
       allowEmptyPipeline,
       alwaysAddBatchIdColumn,
       historicalRunMode,
-      sparkAppDescriptionTemplate)
+      bulkBatchSize,
+      bulkLoadCurrent,
+      enableRepartitioning,
+      sparkAppDescriptionTemplate,
+      attempt,
+      maxAttempts,
+      forceReCreateHiveTables,
+      executionOptions)
   }
 
 }

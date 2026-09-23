@@ -16,16 +16,19 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
-import org.apache.spark.sql.Column
+import org.apache.spark.sql.catalyst.encoders.ExpressionEncoder
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.IntegerType
+import org.apache.spark.sql.{Column, Dataset}
+import za.co.absa.pramen.core.bookkeeper.model.{DataAvailability, DataAvailabilityAggregation}
 import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
 
 
-abstract class BookkeeperHadoop extends BookkeeperBase(true) {
-  private[core] def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate]): Column = {
-    (infoDateBegin, infoDateEnd) match {
+abstract class BookkeeperHadoop(batchId: Long) extends BookkeeperBase(true, batchId) {
+  private[core] def getFilter(tableName: String, infoDateBegin: Option[LocalDate], infoDateEnd: Option[LocalDate], batchId: Option[Long]): Column = {
+    val baseFilter = (infoDateBegin, infoDateEnd) match {
       case (Some(begin), Some(end)) =>
         val beginStr = getDateStr(begin)
         val endStr = getDateStr(end)
@@ -39,5 +42,26 @@ abstract class BookkeeperHadoop extends BookkeeperBase(true) {
       case (None, None) =>
         col("tableName") === tableName
     }
+
+    batchId match {
+      case Some(id) => baseFilter && col("batchId") === lit(id)
+      case None => baseFilter
+    }
+  }
+
+  private[core] def getDataAvailabilityFromDf(filteredChunkDf: Dataset[DataChunk]): Seq[DataAvailability] = {
+    implicit val encoder: ExpressionEncoder[DataAvailabilityAggregation] = ExpressionEncoder[DataAvailabilityAggregation]
+
+    val grouped = filteredChunkDf.groupBy("infoDate")
+      .agg(
+        count(lit(1)).cast(IntegerType).as("chunks"),
+        sum("outputRecordCount").as("totalRecords")
+      )
+      .orderBy(col("infoDate").asc)
+      .as[DataAvailabilityAggregation]
+
+    val tuples = grouped.collect()
+
+    tuples.map(t => DataAvailability(LocalDate.parse(t.infoDate, DataChunk.dateFormatter), t.chunks, t.totalRecords))
   }
 }

@@ -18,6 +18,8 @@ package za.co.absa.pramen.core.runner.splitter
 
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.pipeline.TaskPreDef
@@ -32,6 +34,7 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
                              outputTable: String,
                              dependencies: Seq[MetastoreDependency],
                              bookkeeper: Bookkeeper,
+                             bulkLoadStateManager: BulkLoadStateManager,
                              infoDateExpression: String,
                              schedule: Schedule,
                              params: ScheduleParams,
@@ -39,7 +42,7 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
                              minimumDate: LocalDate
                            ): Seq[TaskPreDef] = {
     val dates = params match {
-      case ScheduleParams.Normal(runDate, trackDays, _, newOnly, lateOnly) =>
+      case ScheduleParams.Normal(runDate, backfillDays, trackDays, _, newOnly, lateOnly) =>
         val infoDate = evaluateRunDate(runDate, infoDateExpression)
         log.info(s"Normal run strategy: runDate=$runDate, infoDate=$infoDate")
 
@@ -85,12 +88,16 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
       case ScheduleParams.Historical(dateFrom, dateTo, inverseDateOrder, mode) =>
         log.info(s"Ranged strategy: from $dateFrom to $dateTo, mode = '${mode.toString}', minimumDate = $minimumDate")
         getHistorical(outputTable, dateFrom, dateTo, schedule, mode, infoDateExpression, minimumDate, inverseDateOrder, bookkeeper)
+      case ScheduleParams.Bulk(bulkRunConfig: BulkRunConfig)                                                     =>
+        log.info(s"Bulk strategy: from $bulkRunConfig.dataDateFrom to $bulkRunConfig.dataDateTo, outputInfoDate = $bulkRunConfig.outputInfoDate")
+        getBulk(outputTable, bulkRunConfig, bulkLoadStateManager)
     }
 
     filterOutPastMinimumDates(dates, minimumDate)
   }
 
   private[core] def getLateDays(infoDate: LocalDate, lastInfoDate: LocalDate, trackDays: Int): Seq[TaskPreDef] = {
+    // The previous day is also considered new (not late) in incremental ingestion, that's why we decrement 1 day.
     val lastNewDate = infoDate.minusDays(1)
 
     if (lastInfoDate.isBefore(lastNewDate)) {
@@ -112,6 +119,7 @@ class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], h
         }
       }
 
+      // Minus one more day because incremental ingestion can cover previous day and not consider it late data.
       val potentialDates = getInfoDateRange(startDate, lastNewDate.minusDays(1), "@runDate", Schedule.Incremental)
       potentialDates.map(date => {
         TaskPreDef(date, TaskRunReason.Late)

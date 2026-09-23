@@ -28,6 +28,7 @@ import za.co.absa.pramen.core.mocks.runner.ConcurrentJobRunnerSpy
 import za.co.absa.pramen.core.mocks.state.PipelineStateSpy
 import za.co.absa.pramen.core.pipeline.OperationDef
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
+import za.co.absa.pramen.core.runner.repartitioner.JobRepartitionerNull
 
 class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFixture {
   "runJobs" should {
@@ -46,8 +47,9 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
 
         val orchestrator = new OrchestratorImpl()
         val runner = new ConcurrentJobRunnerSpy()
+        val repartitioner = new JobRepartitionerNull
 
-        orchestrator.runJobs(Seq.empty)(conf, null, appContext, runner, spark)
+        orchestrator.runJobs(Seq.empty)(conf, null, appContext, runner, repartitioner, spark)
       }
     }
 
@@ -57,9 +59,10 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
 
         val orchestrator = new OrchestratorImpl()
         val runner = new ConcurrentJobRunnerSpy()
+        val repartitioner = new JobRepartitionerNull
         val state = new PipelineStateSpy()
 
-        orchestrator.runJobs(Seq(job1, job2, job3))(conf, state, appContext, runner, spark)
+        orchestrator.runJobs(Seq(job1, job2, job3))(conf, state, appContext, runner, repartitioner, spark)
 
         assert(state.completedStatuses.length == 3)
 
@@ -80,8 +83,9 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
         val orchestrator = new OrchestratorImpl()
         val runner = new ConcurrentJobRunnerSpy(includeFails = true)
         val state = new PipelineStateSpy()
+        val repartitioner = new JobRepartitionerNull
 
-        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, spark)
+        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, repartitioner, spark)
 
         assert(state.completedStatuses.length == 4)
 
@@ -114,8 +118,9 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
         val orchestrator = new OrchestratorImpl()
         val runner = new ConcurrentJobRunnerSpy()
         val state = new PipelineStateSpy()
+        val repartitioner = new JobRepartitionerNull
 
-        orchestrator.runJobs(Seq(job1, job4))(conf, state, appContext, runner, spark)
+        orchestrator.runJobs(Seq(job1, job4))(conf, state, appContext, runner, repartitioner, spark)
 
         assert(state.completedStatuses.length == 2)
 
@@ -141,8 +146,9 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
         val orchestrator = new OrchestratorImpl()
         val runner = new ConcurrentJobRunnerSpy(includeFails = true)
         val state = new PipelineStateSpy()
+        val repartitioner = new JobRepartitionerNull
 
-        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, spark)
+        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, repartitioner, spark)
 
         assert(state.completedStatuses.length == 4)
 
@@ -172,8 +178,9 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
         val orchestrator = new OrchestratorImpl()
         val runner = new ConcurrentJobRunnerSpy(includeFails = true)
         val state = new PipelineStateSpy()
+        val repartitioner = new JobRepartitionerNull
 
-        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, spark)
+        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, repartitioner, spark)
 
         assert(state.completedStatuses.length == 4)
 
@@ -203,8 +210,9 @@ class OrchestratorSuite extends AnyWordSpec with SparkTestBase with AppContextFi
         val orchestrator = new OrchestratorImpl()
         val runner = new ConcurrentJobRunnerSpy(includeFails = true)
         val state = new PipelineStateSpy()
+        val repartitioner = new JobRepartitionerNull
 
-        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, spark)
+        orchestrator.runJobs(Seq(job1, job2, job3, job4))(conf, state, appContext, runner, repartitioner, spark)
 
         assert(state.completedStatuses.length == 4)
 

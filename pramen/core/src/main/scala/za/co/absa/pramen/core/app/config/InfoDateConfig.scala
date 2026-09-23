@@ -29,6 +29,7 @@ case class InfoDateConfig(
                            dateFormat: String,
                            partitionScheme: PartitionScheme,
                            startDate: LocalDate,
+                           defaultBackfillDays: Int,
                            defaultTrackDays: Int,
                            defaultDelayDays: Int,
                            expressionDaily: String,
@@ -59,6 +60,7 @@ object InfoDateConfig {
   val INITIAL_INFORMATION_DATE_EXPRESSION_MONTHLY_KEY = "pramen.initial.sourcing.date.monthly.expr"
 
   val TRACK_DAYS = "pramen.track.days"
+  val BACKFILL_DAYS = "pramen.backfill.days"
   val EXPECTED_DELAY_DAYS = "pramen.expected.delay.days"
 
   val defaultDateFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT)
@@ -78,6 +80,7 @@ object InfoDateConfig {
     val initialDateExprWeekly = conf.getString(INITIAL_INFORMATION_DATE_EXPRESSION_WEEKLY_KEY)
     val initialDateExprMonthly = conf.getString(INITIAL_INFORMATION_DATE_EXPRESSION_MONTHLY_KEY)
 
+    val defaultBackfillDays = conf.getInt(BACKFILL_DAYS)
     val defaultTrackDays = conf.getInt(TRACK_DAYS)
     val defaultDelayDays = conf.getInt(EXPECTED_DELAY_DAYS)
 
@@ -100,6 +103,7 @@ object InfoDateConfig {
       dateFormat,
       partitionScheme,
       startDate,
+      defaultBackfillDays,
       defaultTrackDays,
       defaultDelayDays,
       expressionDaily,

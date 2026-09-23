@@ -22,20 +22,22 @@ object Versions {
   val defaultSparkVersionForScala213 = "3.4.4"
 
   val typesafeConfigVersion = "1.4.3"
-  val postgreSqlDriverVersion = "42.7.7"
+  val postgreSqlDriverVersion = "42.7.9"
   val msSqlDriverVersion = "1.3.1"
-  val mongoDbScalaDriverVersion = "2.7.0"
+  val sqliteVersion = "3.51.3.0"
+  val mongoDbScalaDriverVersion = "2.9.0"
   val hsqlDbVersion = "2.7.1"
   val slickVersion = "3.3.3"
   val scoptVersion = "3.7.1"
   val channelVersion = "0.2.1"
   val requestsVersion = "0.8.0"
   val javaXMailVersion = "1.6.2"
-  val embeddedMongoDbVersion = "2.2.0"
+  val embeddedMongoDbVersion = "4.22.0"
   val scalaCompatColsVersion = "2.12.0"
   val scalatestVersion = "3.2.14"
   val mockitoVersion = "2.28.2"
   val httpClientVersion = "4.5.14"
+  val awsSdkVersion = "2.42.23"
 
   def sparkFallbackVersion(scalaVersion: String): String = {
     if (scalaVersion.startsWith("2.11.")) {
@@ -115,7 +117,7 @@ object Versions {
       case _ => "3.9.0"
     }
 
-    println(s"Using 'kafla-clients' version $kafkaClientsVersion")
+    println(s"Using 'kafka-clients' version $kafkaClientsVersion")
 
     "org.apache.kafka" % "kafka-clients" % kafkaClientsVersion
   }

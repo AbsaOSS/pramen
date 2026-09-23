@@ -19,6 +19,10 @@ package za.co.absa.pramen.core.runner.splitter
 import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.TaskRunReason
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
+import za.co.absa.pramen.bulkload.model.BulkLoadPhase.Pending
+import za.co.absa.pramen.bulkload.model.{BulkLoadPhase, BulkLoadState}
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.pipeline
@@ -51,7 +55,7 @@ object ScheduleStrategyUtils {
                              bookkeeper: Bookkeeper
                             ): List[TaskPreDef] = {
     if (schedule.isEnabled(runDate)) {
-      val infoDate = evaluateRunDate(runDate, infoDateExpression)
+      val infoDate = evaluateRunDate(runDate, infoDateExpression, logExpression = false)
 
       bookkeeper.getLatestDataChunk(outputTable, infoDate) match {
         case Some(_) =>
@@ -82,7 +86,7 @@ object ScheduleStrategyUtils {
                            infoDateExpression: String
                           ): Option[TaskPreDef] = {
     if (schedule.isEnabled(runDate)) {
-      val infoDate = evaluateRunDate(runDate, infoDateExpression)
+      val infoDate = evaluateRunDate(runDate, infoDateExpression, logExpression = false)
 
       log.info(s"For $outputTable $runDate is one of scheduled days. Adding infoDate = '$infoDateExpression' = $infoDate to check.")
 
@@ -178,6 +182,38 @@ object ScheduleStrategyUtils {
     filterOutPastMinimumDates(datesWithProperOrder, minimumDate)
   }
 
+  def getBulk(outputTable: String,
+              bulkRunConfig: BulkRunConfig,
+              bulkLoadStateManager: BulkLoadStateManager): List[TaskPreDef] = {
+    val currentStateOpt = bulkLoadStateManager.getState(outputTable, bulkRunConfig.outputInfoDate)
+
+    currentStateOpt match {
+      case Some(state) =>
+        if (!state.dataDateFrom.equals(bulkRunConfig.dataDateFrom) || !state.dataDateTo.equals(bulkRunConfig.dataDateTo)) {
+          throw new IllegalStateException(s"The job for table '$outputTable' and info date '${bulkRunConfig.outputInfoDate}' has different data date range.")
+        }
+        if (state.phase != Pending) {
+          return List(TaskPreDef(bulkRunConfig.outputInfoDate, TaskRunReason.Skip("Already processed", isWarning = false)))
+        }
+      case None =>
+        val newState = BulkLoadState(outputTable, bulkRunConfig.infoDateColumn.getOrElse(""), bulkRunConfig.outputInfoDate, bulkRunConfig.dataDateFrom, bulkRunConfig.dataDateTo, Pending)
+        bulkLoadStateManager.addState(newState)
+    }
+
+    List(TaskPreDef(bulkRunConfig.outputInfoDate, TaskRunReason.Rerun))
+  }
+
+  def updateBulkLoadCompletion(outputTable: String,
+                               outputInfoDate: LocalDate,
+                               bulkLoadStateManager: BulkLoadStateManager,
+                               phase: BulkLoadPhase): Unit = {
+    val currentStateOpt = bulkLoadStateManager.getState(outputTable, outputInfoDate)
+
+    currentStateOpt.foreach { currentState =>
+      bulkLoadStateManager.updatePhase(currentState.copy(phase = phase))
+    }
+  }
+
   private[core] def filterOutPastMinimumDates(dates: List[TaskPreDef], minimumDate: LocalDate): List[TaskPreDef] = {
     val dayBeforeMinimum = minimumDate.minusDays(1)
 
@@ -185,7 +221,7 @@ object ScheduleStrategyUtils {
       if (taskPreDef.infoDate.isAfter(dayBeforeMinimum)) {
         taskPreDef
       } else {
-        taskPreDef.copy(reason = TaskRunReason.Skip(s"The task date '${taskPreDef.infoDate}' is older than the minimum date '$dayBeforeMinimum'."))
+        taskPreDef.copy(reason = TaskRunReason.Skip(s"The task date '${taskPreDef.infoDate}' is older than the minimum date '$dayBeforeMinimum'.", isWarning = true))
       }
     }
   }
@@ -216,7 +252,7 @@ object ScheduleStrategyUtils {
       val end = dateTo.plusDays(1)
       while (date.isBefore(end)) {
         if (schedule.isEnabled(date)) {
-          val infoDate = evaluateRunDate(date, infoDateExpression)
+          val infoDate = evaluateRunDate(date, infoDateExpression, logExpression = false)
           if (uniqueInfoDates.add(infoDate)) {
             infoDates += infoDate
           }

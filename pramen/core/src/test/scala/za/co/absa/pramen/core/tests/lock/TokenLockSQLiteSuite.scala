@@ -1,0 +1,133 @@
+/*
+ * Copyright 2022 ABSA Group Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package za.co.absa.pramen.core.tests.lock
+
+import org.apache.commons.io.FileUtils
+import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.api.lock.TokenLock
+import za.co.absa.pramen.core.fixtures.TempDirFixture
+import za.co.absa.pramen.core.lock.TokenLockJdbc
+import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.SlickUtils
+
+import java.io.File
+
+class TokenLockSQLiteSuite extends AnyWordSpec with  BeforeAndAfter with BeforeAndAfterAll with TempDirFixture {
+  private var jdbcConfig: JdbcConfig = _
+  private var tempDir: String = _
+  private var pramenDb: PramenDb = _
+
+  before {
+    if (pramenDb != null) pramenDb.close()
+    val dbFile = new File(tempDir, "pramen.sqlite")
+    if (dbFile.exists()) {
+      dbFile.delete()
+    }
+    pramenDb = PramenDb(jdbcConfig)
+  }
+
+  override def beforeAll(): Unit = {
+    super.beforeAll()
+    tempDir = createTempDir("pramen_sqlite")
+    jdbcConfig = JdbcConfig("org.sqlite.JDBC", Some(s"jdbc:sqlite:$tempDir/pramen.sqlite"))
+  }
+
+  override def afterAll(): Unit = {
+    try {
+      if (pramenDb != null) pramenDb.close()
+    } finally {
+      FileUtils.deleteDirectory(new File(tempDir))
+      super.afterAll()
+    }
+  }
+
+  "Token lock" should {
+    "be able to acquire and release locks" in {
+      val lock1 = getLock("token1")
+
+      assert(lock1.tryAcquire())
+      assert(!lock1.tryAcquire())
+
+      val lock2 = getLock("token1")
+      assert(!lock2.tryAcquire())
+
+      lock1.release()
+
+      assert(lock2.tryAcquire())
+      assert(!lock2.tryAcquire())
+
+      lock2.release()
+    }
+
+    "multiple token locks should not affect each other" in {
+      val lock1 = getLock("token1")
+      val lock2 = getLock("token2")
+
+      assert(lock1.tryAcquire())
+      assert(lock2.tryAcquire())
+
+      assert(!lock1.tryAcquire())
+      assert(!lock2.tryAcquire())
+
+      lock1.release()
+
+      assert(lock1.tryAcquire())
+      assert(!lock2.tryAcquire())
+
+      lock1.release()
+      lock2.release()
+    }
+
+    "allow releasing locks for other owners if requested" in {
+      val lock1 = getLock("token1")
+      val lock2 = getLock("token2")
+
+      assert(lock1.tryAcquire())
+      assert(lock2.tryAcquire())
+
+      lock1.asInstanceOf[TokenLockJdbc].releaseGuardLock(evenNonOwned = false)
+      lock2.asInstanceOf[TokenLockJdbc].releaseGuardLock(evenNonOwned = true)
+
+      val slickUtils = new SlickUtils(pramenDb.slickProfile)
+
+      val recordCount = slickUtils.executeCount(pramenDb.slickDb, pramenDb.lockTicketTable.records.length)
+
+      assert(recordCount == 0)
+    }
+
+    "lock pramen should constantly update lock ticket" in {
+      val lock1 = new TokenLockJdbc("token1", pramenDb.slickDb, pramenDb.slickProfile) {
+        override val tokenExpiresSeconds = 2L
+      }
+      val lock2 = new TokenLockJdbc("token1", pramenDb.slickDb, pramenDb.slickProfile)
+      assert(lock1.tryAcquire())
+
+      try {
+        Thread.sleep(3000) // Wait past the 2-second expiry
+        assert(!lock2.tryAcquire())
+      } finally {
+        lock1.release()
+      }
+    }
+  }
+
+  private def getLock(token: String): TokenLock = {
+    new TokenLockJdbc(token, pramenDb.slickDb, pramenDb.slickProfile)
+  }
+}

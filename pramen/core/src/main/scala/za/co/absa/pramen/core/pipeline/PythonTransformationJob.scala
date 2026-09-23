@@ -78,6 +78,8 @@ class PythonTransformationJob(operationDef: OperationDef,
       new ScheduleStrategySourcing(true)
   }
 
+  override val outputsToMetastore: Boolean = true
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     validateTransformationAlreadyRanCases(infoDate, dependencyWarnings) match {
       case Some(result) => result
@@ -144,6 +146,7 @@ class PythonTransformationJob(operationDef: OperationDef,
         infoDate,
         recordCount,
         recordCount,
+        None,
         jobStarted.getEpochSecond,
         jobFinished.getEpochSecond,
         isTableTransient = false)
@@ -285,8 +288,9 @@ class PythonTransformationJob(operationDef: OperationDef,
         ""
       case PartitionInfo.Explicit(npp) =>
         s"\n  number_of_partitions: $npp"
-      case PartitionInfo.PerRecordCount(rpp) =>
-        s"\n  records_per_partition: $rpp"
+      case PartitionInfo.PerRecordCount(rpp, preferCoalesce) =>
+        s"""\n  records_per_partition: $rpp
+           |  prefer_coalesce: $preferCoalesce""".stripMargin
     }
   }
 

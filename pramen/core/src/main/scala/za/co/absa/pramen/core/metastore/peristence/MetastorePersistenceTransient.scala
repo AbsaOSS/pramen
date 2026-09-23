@@ -60,4 +60,6 @@ class MetastorePersistenceTransient(tempPath: Option[String],
   override def repairHiveTable(hiveTableName: String, queryExecutor: QueryExecutor, hiveConfig: HiveConfig): Unit = {
     throw new UnsupportedOperationException("The 'transient' format does not support Hive tables.")
   }
+
+  override def isRepartitioningSupported: Boolean = false
 }

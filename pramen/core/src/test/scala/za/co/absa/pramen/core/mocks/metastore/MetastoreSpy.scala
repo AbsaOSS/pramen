@@ -43,11 +43,12 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                    isTableEmpty: Boolean = false,
                    trackDays: Int = 0,
                    failHive: Boolean = false,
+                   batchIdIn: Long = 123L,
                    readOptions: Map[String, String] = Map.empty[String, String],
                    writeOptions: Map[String, String] = Map.empty[String, String]) extends Metastore {
 
   val saveTableInvocations = new ListBuffer[(String, LocalDate, DataFrame)]
-  var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean)]
+  var hiveCreationInvocations = new ListBuffer[(String, LocalDate, Option[StructType], Boolean, Boolean)]
   val queryExecutorMock = new QueryExecutorMock(true)
   val metadataManagerMock = new MetadataManagerNull(false)
   private val incrementalTables = new mutable.HashSet[String]
@@ -95,11 +96,12 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
                                        infoDate: LocalDate,
                                        schema: Option[StructType],
                                        hiveHelper: HiveHelper,
+                                       updateSchema: Boolean,
                                        recreate: Boolean): Unit = {
     if (failHive) {
       throw new RuntimeException("Test exception")
     } else
-      hiveCreationInvocations.append((tableName, infoDate, schema, recreate))
+      hiveCreationInvocations.append((tableName, infoDate, schema, updateSchema, recreate))
   }
 
   override def getStats(tableName: String, infoDate: LocalDate): MetaTableStats = {
@@ -163,9 +165,11 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
           table.writeOptions)
       }
 
-      override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = None
+      override def getTableRunInfo(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[MetaTableRunInfo] = Seq.empty
 
       override def getRunReason: TaskRunReason = TaskRunReason.New
+
+      override def isIncremental: Boolean = true
 
       override def metadataManager: MetadataManager = metadataManagerMock
 
@@ -178,6 +182,8 @@ class MetastoreSpy(registeredTables: Seq[String] = Seq("table1", "table2"),
       override def commitIncrementalOutputTable(tableName: String, trackingName: String): Unit = {}
 
       override def commitIncrementalStage(): Unit = {}
+
+      override def batchId: Long = batchIdIn
     }
   }
 

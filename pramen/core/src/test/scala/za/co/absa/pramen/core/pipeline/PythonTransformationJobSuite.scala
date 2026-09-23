@@ -411,6 +411,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  format: parquet
           |  path: /tmp/dummy
           |  records_per_partition: 100000
+          |  prefer_coalesce: true
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -422,6 +423,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  format: parquet
           |  path: /tmp/dummy
           |  records_per_partition: 100000
+          |  prefer_coalesce: true
           |  info_date_settings:
           |    column: INFO_DATE
           |    format: yyyy-MM-dd
@@ -430,7 +432,7 @@ class PythonTransformationJobSuite extends AnyWordSpec with BeforeAndAfterAll wi
           |  writer_options: {}
           |""".stripMargin
 
-      val (job, _, _, _) = getUseCase(partitionInfo = PartitionInfo.PerRecordCount(100000L))
+      val (job, _, _, _) = getUseCase(partitionInfo = PartitionInfo.PerRecordCount(100000L, preferCoalesce = true))
 
       val actual = job.getYamlConfig(infoDate)
 

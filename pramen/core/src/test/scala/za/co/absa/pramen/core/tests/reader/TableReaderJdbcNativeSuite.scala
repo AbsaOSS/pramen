@@ -85,6 +85,19 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
        |
        |  has.information.date.column = false
        |  limit.records = 100
+       |}
+       |reader_jar {
+       |  driver.jar.path = "test.jar"
+       |  jdbc {
+       |    driver = "$driver"
+       |    connection.string = "$url"
+       |    user = "$user"
+       |    password = "$password"
+       |    autocommit = false
+       |  }
+       |
+       |  has.information.date.column = false
+       |  limit.records = 100
        |}""".stripMargin)
 
   override protected def beforeAll(): Unit = {
@@ -126,6 +139,17 @@ class TableReaderJdbcNativeSuite extends AnyWordSpec with RelationalDbFixture wi
 
     "work with config with limits" in {
       val reader = TableReaderJdbcNative(conf.getConfig("reader_limit"), conf.getConfig("reader_limit"), "reader_limit")
+      assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-dd")
+      assert(reader.getJdbcReaderConfig.jdbcConfig.sanitizeDateTime)
+      assert(reader.getJdbcReaderConfig.jdbcConfig.autoCommit.contains(false))
+      assert(reader.getJdbcReaderConfig.jdbcConfig.fetchSize.isEmpty)
+      assert(reader.getJdbcReaderConfig.limitRecords.contains(100))
+    }
+
+    "work with driver JAR path" in {
+      val reader = TableReaderJdbcNative(conf.getConfig("reader_jar"), conf.getConfig("reader_jar"), "reader_jar")
+      val jdbcSelector = reader.getJdbcSelector
+      assert(jdbcSelector.jdbcDriverJarPath.contains("test.jar"))
       assert(reader.getJdbcReaderConfig.infoDateFormat == "yyyy-MM-dd")
       assert(reader.getJdbcReaderConfig.jdbcConfig.sanitizeDateTime)
       assert(reader.getJdbcReaderConfig.jdbcConfig.autoCommit.contains(false))

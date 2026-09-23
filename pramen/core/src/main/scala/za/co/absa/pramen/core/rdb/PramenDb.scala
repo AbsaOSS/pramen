@@ -17,86 +17,142 @@
 package za.co.absa.pramen.core.rdb
 
 import org.slf4j.LoggerFactory
-import slick.jdbc.H2Profile
-import slick.jdbc.H2Profile.api._
-import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingRecords, MetadataRecords, OffsetRecords, SchemaRecords}
-import za.co.absa.pramen.core.journal.model.JournalTasks
-import za.co.absa.pramen.core.lock.model.LockTickets
+import slick.jdbc.JdbcBackend.Database
+import slick.jdbc._
+import slick.util.AsyncExecutor
+import za.co.absa.pramen.api.Pramen
+import za.co.absa.pramen.bulkload.model.BulkLoadStateTable
+import za.co.absa.pramen.core.bookkeeper.model.{BookkeepingTable, MetadataTable, OffsetTable, SchemaTable}
+import za.co.absa.pramen.core.journal.model.{ExecutionsTable, JournalTable}
+import za.co.absa.pramen.core.lock.model.LockTicketTable
 import za.co.absa.pramen.core.rdb.PramenDb.MODEL_VERSION
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.{AlgorithmUtils, UsingUtils}
 
 import java.sql.Connection
+import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.Try
 import scala.util.control.NonFatal
 
 class PramenDb(val jdbcConfig: JdbcConfig,
                val activeUrl: String,
-               val jdbcConnection: Connection,
-               val slickDb: Database) extends AutoCloseable {
-
+               val slickDb: Database,
+               val slickProfile: JdbcProfile) extends AutoCloseable {
+  import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
 
+  val bookkeepingTable: BookkeepingTable = new BookkeepingTable {
+    override val profile = slickProfile
+  }
+  val schemaTable: SchemaTable = new SchemaTable {
+    override val profile = slickProfile
+  }
+  val offsetTable: OffsetTable = new OffsetTable {
+    override val profile = slickProfile
+  }
+  val journalTable: JournalTable = new JournalTable {
+    override val profile = slickProfile
+  }
+  val executionsTable: ExecutionsTable = new ExecutionsTable {
+    override val profile = slickProfile
+  }
+  val lockTicketTable: LockTicketTable = new LockTicketTable {
+    override val profile = slickProfile
+  }
+  val metadataTable: MetadataTable = new MetadataTable {
+    override val profile = slickProfile
+  }
+  val bulkLoadStateTable: BulkLoadStateTable = new BulkLoadStateTable {
+    override val profile = slickProfile
+  }
+
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val isClosed = new AtomicBoolean(false)
 
-  val rdb: Rdb = new RdbJdbc(jdbcConnection)
-
-  def db: Database = slickDb
-
-  def setupDatabase(): Unit = {
+  private def setupDatabase(jdbcConnection: Connection): Unit = {
     // Explicitly set auto-commit to true, overriding any user JDBC settings or PostgreSQL defaults
     Try(jdbcConnection.setAutoCommit(true)).recover {
       case NonFatal(e) => log.warn(s"Unable to set autoCommit=true for the bookkeeping database that uses the driver: ${jdbcConfig.driver}.")
     }
 
-    val dbVersion = rdb.getVersion()
-    if (dbVersion < MODEL_VERSION) {
-      initDatabase(dbVersion)
-      rdb.setVersion(MODEL_VERSION)
+    UsingUtils.using(new RdbJdbc(jdbcConnection)) { rdb =>
+      val dbVersion = rdb.getVersion()
+      if (dbVersion < MODEL_VERSION) {
+        initDatabase(dbVersion)
+        rdb.setVersion(MODEL_VERSION)
+      }
     }
   }
 
-  def initDatabase(dbVersion: Int): Unit = {
+  private def initDatabase(dbVersion: Int): Unit = {
     log.warn(s"Initializing new database at $activeUrl")
     if (dbVersion < 1) {
-      initTable(LockTickets.lockTickets.schema)
-      initTable(JournalTasks.journalTasks.schema)
-      initTable(BookkeepingRecords.records.schema)
+      initTable(lockTicketTable.records.schema)
+      initTable(journalTable.records.schema)
+      initTable(bookkeepingTable.records.schema)
     }
     if (dbVersion < 2) {
-      initTable(SchemaRecords.records.schema)
+      initTable(schemaTable.records.schema)
     }
     if (dbVersion < 3) {
-      initTable(MetadataRecords.records.schema)
+      initTable(metadataTable.records.schema)
     }
 
     if (0 < dbVersion && dbVersion < 4) {
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "spark_application_id", "varchar(128)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "pipelineId", "varchar(40)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "pipelineName", "varchar(200)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "environmentName", "varchar(128)")
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "tenant", "varchar(200)")
+      addColumn(journalTable.records.baseTableRow.tableName, "spark_application_id", "varchar(128)")
+      addColumn(journalTable.records.baseTableRow.tableName, "pipelineId", "varchar(40)")
+      addColumn(journalTable.records.baseTableRow.tableName, "pipelineName", "varchar(200)")
+      addColumn(journalTable.records.baseTableRow.tableName, "environmentName", "varchar(128)")
+      addColumn(journalTable.records.baseTableRow.tableName, "tenant", "varchar(200)")
     }
 
     if (dbVersion < 5) {
-      initTable(OffsetRecords.records.schema)
+      initTable(offsetTable.records.schema)
     }
 
     if (0 < dbVersion && dbVersion < 6) {
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "appended_record_count", "bigint")
+      addColumn(journalTable.records.baseTableRow.tableName, "appended_record_count", "bigint")
     }
 
     if (0 < dbVersion && dbVersion < 7) {
-      addColumn(LockTickets.lockTickets.baseTableRow.tableName, "created_at", "bigint")
+      addColumn(lockTicketTable.records.baseTableRow.tableName, "created_at", "bigint")
     }
+
     if (0 < dbVersion && dbVersion < 8) {
-      addColumn(JournalTasks.journalTasks.baseTableRow.tableName, "country", "varchar(50)")
+      addColumn(journalTable.records.baseTableRow.tableName, "country", "varchar(50)")
+    }
+
+    if (0 < dbVersion && dbVersion < 9) {
+      addColumn(bookkeepingTable.records.baseTableRow.tableName, "batch_id", "bigint")
+      addColumn(bookkeepingTable.records.baseTableRow.tableName, "appended_record_count", "bigint")
+      addColumn(journalTable.records.baseTableRow.tableName, "batch_id", "bigint")
+    }
+    
+    if (dbVersion < 10) {
+      initTable(executionsTable.records.schema)
+    }
+
+    if (dbVersion == 10) {
+      addColumn(executionsTable.records.baseTableRow.tableName, "number_of_tasks_completed", "bigint")
+    }
+
+    if (0 < dbVersion && dbVersion < 12) {
+      alterColumn(bookkeepingTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)", nullable = false)
+      alterColumn(offsetTable.records.baseTableRow.tableName, "table_name", "varchar(600)", nullable = false)
+      alterColumn(journalTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)", nullable = false)
+      alterColumn(metadataTable.records.baseTableRow.tableName, "table_name", "varchar(255)", nullable = false)
+      alterColumn(schemaTable.records.baseTableRow.tableName, "watcher_table_name", "varchar(255)", nullable = false)
+    }
+
+    if (dbVersion < 13) {
+      initTable(bulkLoadStateTable.records.schema)
     }
   }
 
-  def initTable(schema: H2Profile.SchemaDescription): Unit = {
+  private def initTable(schema: slickProfile.SchemaDescription): Unit = {
     try {
-      db.run(DBIO.seq(
+      slickDb.run(DBIO.seq(
         schema.createIfNotExists
       )).execute()
     } catch {
@@ -106,11 +162,11 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
-  def addColumn(table: String, columnName: String, columnType: String): Unit = {
+  private def addColumn(table: String, columnName: String, columnType: String): Unit = {
     try {
-      val quotedTable = s""""$table""""
-      val quotedColumnName = s""""$columnName""""
-      db.run(
+      val quotedTable = slickProfile.quoteIdentifier(table)
+      val quotedColumnName = slickProfile.quoteIdentifier(columnName)
+      slickDb.run(
           sqlu"ALTER TABLE #$quotedTable ADD #$quotedColumnName #$columnType"
         ).execute()
     } catch {
@@ -119,35 +175,110 @@ class PramenDb(val jdbcConfig: JdbcConfig,
     }
   }
 
+  private def alterColumn(table: String, columnName: String, columnType: String, nullable: Boolean): Unit = {
+    val nullSuffix = if (nullable) " NOT NULL" else ""
+    try {
+      val quotedTable = slickProfile.quoteIdentifier(table)
+      val quotedColumnName = slickProfile.quoteIdentifier(columnName)
+      slickProfile match {
+        case _: SQLiteProfile =>
+          log.warn(s"SQLite does not support altering column types. Column '$columnName' in table '$table' will remain with the original type for the url: $activeUrl")
+        case _: MySQLProfile =>
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable MODIFY COLUMN #$quotedColumnName #$columnType $nullSuffix"
+          ).execute()
+        case _: OracleProfile    =>
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable MODIFY (#$quotedColumnName #$columnType)"
+          ).execute()
+        case _: SQLServerProfile | HsqldbProfile =>
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName #$columnType $nullSuffix"
+          ).execute()
+        case _                              =>
+          // PostgreSQL, H2, and other profiles that support ALTER COLUMN ... TYPE
+          slickDb.run(
+            sqlu"ALTER TABLE #$quotedTable ALTER COLUMN #$quotedColumnName TYPE #$columnType"
+          ).execute()
+      }
+    } catch {
+      case NonFatal(ex) =>
+        throw new RuntimeException(s"Unable to alter column: '$columnName $columnType' in table: '$table' for the url: $activeUrl", ex)
+    }
+  }
+
 
   override def close(): Unit = {
-    jdbcConnection.close()
-    slickDb.close()
+    try {
+      if (isClosed.compareAndSet(false, true)) {
+        slickDb.close()
+      }
+    } catch {
+      case NonFatal(ex) =>
+        log.warn("Error closing the Pramen RDB database connection.", ex)
+    }
   }
 }
 
 object PramenDb {
-  val MODEL_VERSION = 8
-  val DEFAULT_RETRIES = 3
+  private val log = LoggerFactory.getLogger(this.getClass)
+  private val conf = Pramen.getConfig
+
+  val MODEL_VERSION = 13
+  val DEFAULT_RETRIES: Int = conf.getInt("pramen.internal.connection.retries.default")
+  val BACKOFF_MIN_MS: Int = conf.getInt("pramen.internal.connection.backoff.min.ms")
+  val BACKOFF_MAX_MS: Int = conf.getInt("pramen.internal.connection.backoff.max.ms")
 
   def apply(jdbcConfig: JdbcConfig): PramenDb = {
-    val (url, conn, database) = openDb(jdbcConfig)
+    val (url, connection) = getConnection(jdbcConfig)
 
-    new PramenDb(jdbcConfig, url, conn, database)
+    UsingUtils.using(connection) { conn =>
+      val (database, profile) = openDb(jdbcConfig, url)
+      val pramenDb = new PramenDb(jdbcConfig, url, database, profile)
+      pramenDb.setupDatabase(conn)
+      pramenDb
+    }
   }
 
-  private def openDb(jdbcConfig: JdbcConfig): (String, Connection, Database) = {
+  def getProfile(driver: String): JdbcProfile = {
+    driver match {
+      case "org.postgresql.Driver"      => slick.jdbc.PostgresProfile
+      case "org.hsqldb.jdbc.JDBCDriver" => slick.jdbc.HsqldbProfile
+      case "org.h2.Driver"              => slick.jdbc.H2Profile
+      case "org.sqlite.JDBC"            => slick.jdbc.SQLiteProfile
+      case "oracle.jdbc.OracleDriver" => slick.jdbc.OracleProfile
+      case "com.mysql.cj.jdbc.Driver" | "com.mysql.jdbc.Driver" =>
+        slick.jdbc.MySQLProfile
+      case "com.microsoft.sqlserver.jdbc.SQLServerDriver" | "net.sourceforge.jtds.jdbc.Driver" =>
+        slick.jdbc.SQLServerProfile
+      case other => throw new IllegalArgumentException(s"Unknown driver for the bookkeeping database: $other")
+    }
+  }
+
+  def getConnection(jdbcConfig: JdbcConfig): (String, Connection) = {
+    val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
     val selector = JdbcUrlSelector(jdbcConfig)
-    val (conn, url) = selector.getWorkingConnection(DEFAULT_RETRIES)
+    val (conn, url) = selector.getNewConnection(numberOfAttempts)
+
+    (url, conn)
+  }
+
+  def openDb(jdbcConfig: JdbcConfig, workingUrl: String): (Database, JdbcProfile) = {
+    val numberOfAttempts = jdbcConfig.retries.getOrElse(DEFAULT_RETRIES)
+    val selector = JdbcUrlSelector(jdbcConfig)
     val prop = selector.getProperties
 
-    val database = jdbcConfig.user match {
-      case Some(user) => Database.forURL(url = url, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
-      case None       => Database.forURL(url = url, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+    val slickProfile = getProfile(jdbcConfig.driver)
+
+    var database: JdbcBackend.DatabaseDef = null
+    AlgorithmUtils.actionWithRetry(numberOfAttempts, log, BACKOFF_MIN_MS, BACKOFF_MAX_MS) {
+      database = jdbcConfig.user match {
+        case Some(user) => Database.forURL(url = workingUrl, driver = jdbcConfig.driver, user = user, password = jdbcConfig.password.getOrElse(""), prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+        case None       => Database.forURL(url = workingUrl, driver = jdbcConfig.driver, prop = prop, executor = AsyncExecutor("Rdb", 2, 10))
+      }
     }
 
-    (url, conn, database)
+    (database, slickProfile)
   }
-
 }
 

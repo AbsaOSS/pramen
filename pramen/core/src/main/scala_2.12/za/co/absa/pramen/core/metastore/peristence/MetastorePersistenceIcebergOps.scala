@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.PartitionScheme
@@ -118,5 +119,17 @@ object MetastorePersistenceIcebergOps {
       .option("check-ordering", "false")
       .options(writerOptions)
       .append()
+  }
+
+  def writeRepartitionedDf(df: DataFrame,
+                            table: String,
+                            infoDateColumn: String,
+                            infoDateFrom: LocalDate,
+                            infoDateTo: LocalDate,
+                            writerOptions: Map[String, String]): Unit = {
+    df.writeTo(table)
+      .option("check-ordering", "false")
+      .options(writerOptions)
+      .overwrite(col(infoDateColumn) >= lit(Date.valueOf(infoDateFrom)) && col(infoDateColumn) <= lit(Date.valueOf(infoDateTo)))
   }
 }

@@ -23,12 +23,12 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.rdb.PramenDb
-import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.core.samples.RdbExampleTable
-import za.co.absa.pramen.core.utils.{JdbcNativeUtils, ResourceUtils}
+import za.co.absa.pramen.core.utils.{JdbcNativeUtils, ResourceUtils, UsingUtils}
 
 import java.sql.Date
 import java.time.LocalDate
@@ -42,7 +42,7 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   with TextComparisonFixture {
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   private val infoDate = LocalDate.of(2021, 2, 18)
 
@@ -50,13 +50,17 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   private val INFO_DATE_COLUMN = "pramen_info_date"
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase()
+    if (pramenDb != null) pramenDb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
+
     RdbExampleTable.IncrementalTable.initTable(getConnection)
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 
@@ -148,7 +152,7 @@ class IncrementalPipelineJdbcLongSuite extends AnyWordSpec
   }
 
   private def debugSql(sql: String): Unit = {
-    JdbcNativeUtils.withResultSet(new JdbcUrlSelectorImpl(jdbcConfig), sql, 1) { rs =>
+    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), sql) { rs =>
       val mt = rs.getMetaData
 
       for (i <- 1 to mt.getColumnCount) {

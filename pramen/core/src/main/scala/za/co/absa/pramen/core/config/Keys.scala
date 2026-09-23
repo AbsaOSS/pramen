@@ -17,6 +17,8 @@
 package za.co.absa.pramen.core.config
 
 object Keys {
+  val PIPELINE_DEFINITION_ID = "pramen.pipeline.definition.id"
+
   val INFORMATION_DATE_COLUMN = "pramen.information.date.column"
   val INFORMATION_DATE_FORMAT_APP = "pramen.information.date.format"
 
@@ -38,6 +40,7 @@ object Keys {
   val EXTRA_OPTIONS_PREFIX_V2 = "pramen.spark.conf"
 
   val ENABLE_HIVE_SUPPORT = "pramen.enable.hive"
+  val NEVER_REPAIR_PARTITIONS = "pramen.hive.never.repair.partitions"
 
   val STOP_SPARK_SESSION = "pramen.stop.spark.session"
 
@@ -50,6 +53,10 @@ object Keys {
 
   val LOG_EXECUTOR_NODES = "pramen.log.executor.nodes"
   val LOG_EFFECTIVE_CONFIG = "pramen.log.effective.config"
+
+  val WRAP_SINK_EXCEPTION = "pramen.internal.wrap.sink.exceptions"
+
+  val SQL_QUERY_CANCELLATION_TIMEOUT = "pramen.internal.cancellation.timeout.seconds"
 
   final val KEYS_TO_REDACT: Set[String] = Set("password", "secret", "pwd", "access.key", "api.key", "api_key", "session.token", "access_key", "session_token", "auth.user.info")
 

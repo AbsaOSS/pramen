@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.core.journal
 
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
+
 import java.time.Instant
 
 /**
@@ -25,6 +26,8 @@ import java.time.Instant
   */
 class JournalNull extends Journal {
   override def addEntry(entry: TaskCompleted): Unit = {}
+
+  override def addPipelineEntry(pipelineStatus: Execution): Unit = {}
 
   override def getEntries(from: Instant, to: Instant): Seq[TaskCompleted] = Nil
 }

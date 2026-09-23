@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.lock
 
+import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 import za.co.absa.pramen.core.mongo.MongoDbConnection
 
 class TokenLockFactoryMongoDb(mongoDbConnection: MongoDbConnection) extends TokenLockFactory {

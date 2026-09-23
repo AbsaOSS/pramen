@@ -1,0 +1,161 @@
+# jacoco-method-filter — Rules Template (Scala / sbt)
+# [jmf:1.0.0]
+#
+# Syntax reference, pitfalls, examples, and workflows: docs/rules-reference.md
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# HOW TO USE
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# 1) Review the GLOBAL RULES below — they cover compiler-generated boilerplate.
+# 2) Add project-specific patterns in the PROJECT RULES section.
+# 3) Keep rules narrow; add id: labels so logs are readable.
+#    Every rule must have an id:<label>. Unlabelled rules emit a [warn] at load
+#    time. CLI users: pass --strict to enforce id: as a hard CI requirement.
+#    (sbt/Maven plugins do not yet expose --strict as a configuration key.)
+# 4) Use --verify mode to confirm rules match before committing.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+# GLOBALS RULES
+# ─────────────────────────────────────────────────────────────────────────────
+# Global rules match ALL packages. Verify they do not suppress real logic.
+# See docs/rules-reference.md#global-rule-safety-warning for details.
+
+# Scala case class helpers
+*#canEqual(*)                                           id:case-canequal
+*#equals(*)                                             id:case-equals
+*#apply(*)                                              id:case-apply
+*#unapply(*)                                            id:case-unapply
+*#hashCode(*)                                           id:case-hashcode
+*#copy(*)                                               id:case-copy
+# Subsumed by gen-defaults below; kept for clarity. Safe to remove if gen-defaults is enabled.
+*#copy$default$*(*)                                     id:case-copy-defaults
+*#productElement()                                      id:case-prod-element
+*#productArity()                                        id:case-prod-arity
+*#productPrefix()                                       id:case-prod-prefix
+*#productIterator()                                     id:case-prod-iterator
+*#tupled()                                              id:case-tupled
+*#curried()                                             id:case-curried
+*#toString()                                            id:case-tostring
+# Scala 2.13+ case class boilerplate — safe to enable; no-op in 2.11/2.12
+# Note: unmatched (Pramen, Scala 2.12)
+#*#productElementName(*)                                 id:case-prod-element-name
+# Note: unmatched (Pramen, Scala 2.12)
+#*#productElementNames()                                 id:case-prod-element-names
+# WARNING: may collide with domain methods named `name` — rescue with + include rule if needed
+*#name()                                                id:case-name
+# WARNING: may collide with domain methods named `groups` — rescue with + include rule if needed
+# Note: unmatched (Pramen, Scala 2.12)
+#*#groups()                                              id:case-groups
+# WARNING: may collide with domain methods named `optionalAttributes` — rescue with + include rule if needed
+# Note: unmatched (Pramen, Scala 2.12)
+#*#optionalAttributes()                                  id:case-optionalAttributes
+
+# Companion objects, constructors, and static definitions
+*$#<init>(*)                                            id:gen-ctor
+*$#<clinit>()                                           id:gen-clinit
+
+# Companion objects and defaults
+*$*#apply(*)                                            id:comp-apply
+*$*#unapply(*)                                          id:comp-unapply
+*$*#toString(*)                                         id:comp-tostring
+*$*#readResolve(*)                                      id:comp-readresolve
+
+# Java serialization hook — compiler-generated on the case class itself (not the companion)
+# Body is a single expression returning a serialization proxy; no project logic.
+# WARNING: if a class overrides writeReplace with custom logic, rescue with + include rule.
+# Note: unmatched (Pramen, Scala 2.12)
+#*#writeReplace(*)                                       id:case-writereplace
+
+# anonymous class created by a macro expansion
+# Note: unmatched (Pramen, Scala 2.12)
+#*$macro$*#$anonfun$inst$macro$*                         id:macro-inst
+# Note: unmatched (Pramen, Scala 2.12)
+#*$macro$*#inst$macro$*                                  id:macro-inst
+
+# lambda
+*#*  synthetic name-contains:$anonfun$                  id:scala-anonfun
+
+# Lazy val compute — compiler-generated synchronization wrapper
+# Scala compiles `lazy val foo = expr` into an accessor + a `foo$lzycompute()` method.
+# The $lzycompute method body IS the lazy initializer (expr). If the initializer contains
+# real business logic, filtering this method hides it. Only enable when the lazy val is a
+# trivial constant, a boundary call not unit-testable, or an already-tested computation.
+# Rescue any lazy vals with real logic via + include rules.
+# DISABLED — enable with + include rules to rescue lazy vals whose initializer has real logic
+#*#*$lzycompute(*)                                      id:scala-lzycompute
+
+# Lambda serialization helper — compiler-generated private static method
+# Emitted by scalac/javac to support SerializedLambda deserialization.
+# NOT marked ACC_SYNTHETIC (unlike $anonfun$*), so the synthetic flag does not catch it.
+# Body contains only a series of instanceof/handle comparisons — no project logic.
+*#$deserializeLambda$(*)                                id:scala-deser-lambda
+
+# Value class companion extension bridges — compiler-generated identity operations
+# When a value class (AnyVal) is used in a boxed context, the Scala compiler emits
+# these *$extension methods on the companion object. Each is a single-expression
+# delegate to the unboxed static method; no project logic is present.
+# Note: unmatched (Pramen, Scala 2.12)
+#*#hashCode$extension(*)                                 id:valclass-hashcode-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#equals$extension(*)                                   id:valclass-equals-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#toString$extension(*)                                 id:valclass-tostring-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#canEqual$extension(*)                                 id:valclass-canequal-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#productIterator$extension(*)                          id:valclass-proditer-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#productElement$extension(*)                           id:valclass-prodelem-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#productArity$extension(*)                             id:valclass-prodarity-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#productPrefix$extension(*)                            id:valclass-prodprefix-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#copy$extension(*)                                     id:valclass-copy-ext
+# Note: unmatched (Pramen, Scala 2.12)
+#*#copy$default$*$extension(*)                           id:valclass-copydef-ext
+
+# Function1 trait mixin delegates — single-call forwarders to scala.Function1
+# These arise when a class mixes in Function1. Each is a one-liner forwarding to
+# the trait default. Rarely contain project logic.
+# CAUTION: if your code defines andThen/compose with custom logic in a non-Function1
+# class, rescue those methods with + include rules.
+*#andThen(*)                                            id:fn1-andthen
+*#compose(*)                                            id:fn1-compose
+
+# Default parameter accessors — compiler-generated constant-returning methods
+# The Scala compiler emits a $default$N method for every parameter with a default
+# value. Each method body returns the constant default expression; no logic.
+# This rule supersedes `case-copy-defaults` above; both are safe to keep active.
+*#*$default$*(*)                                        id:gen-defaults
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INCLUDE RULES (rescue methods from broad exclusions above)
+# ─────────────────────────────────────────────────────────────────────────────
+# Prefix a rule with "+" to rescue a method. Include always wins over exclude.
+#
+# RESCUE: domain factory methods that collide with the broad *#apply(*) / *$*#apply(*) rules.
+# These `apply` bodies contain real logic (config parsing, validation, branching, reflection).
+
++za.co.absa.pramen.api.common.BuildPropertiesRetriever$#apply(*)          id:keep-buildprops-apply
++za.co.absa.pramen.core.app.AppContextImpl$#apply(*)                      id:keep-appcontext-apply
++za.co.absa.pramen.core.app.config.HadoopFormat$#apply(*)                 id:keep-hadoopformat-apply
++za.co.absa.pramen.core.cmd.CmdLineConfig$#apply([Ljava/lang/String;)*   id:keep-cmdlineconfig-apply
++za.co.absa.pramen.core.metadata.MetadataTableKey$#apply(Ljava/lang/String;Ljava/time/LocalDate;)*  id:keep-metadatakey-apply
++za.co.absa.pramen.core.rdb.PramenDb$#apply(*)                            id:keep-pramendb-apply
++za.co.absa.pramen.core.rdb.RdbJdbc$#apply(*)                             id:keep-rdbjdbc-apply
++za.co.absa.pramen.core.reader.TableReaderJdbcNative$#apply(*)            id:keep-jdbcnative-apply
++za.co.absa.pramen.core.sink.CmdLineSink$#apply(*)                        id:keep-cmdlinesink-apply
++za.co.absa.pramen.core.sink.SparkSink$#apply(*)                          id:keep-sparksink-apply
++za.co.absa.pramen.core.source.LocalSparkSource$#apply(*)                 id:keep-localsparksource-apply
++za.co.absa.pramen.core.source.SparkSource$#apply(*)                      id:keep-sparksource-apply
++za.co.absa.pramen.extras.notification.HyperdriveNotificationTarget$#apply(*)  id:keep-hyperdrive-apply
++za.co.absa.pramen.extras.sink.EnceladusSink$#apply(*)                    id:keep-enceladussink-apply
++za.co.absa.pramen.extras.sink.StandardizationSink$#apply(*)              id:keep-standardizationsink-apply
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PROJECT RULES
+# ─────────────────────────────────────────────────────────────────────────────
+
+za.co.absa.pramen.core.exceptions.*#*                   id:pramen-core-exceptions

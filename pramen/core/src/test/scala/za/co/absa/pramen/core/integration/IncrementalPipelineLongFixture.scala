@@ -28,11 +28,11 @@ import za.co.absa.pramen.api.offset.OffsetType
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.OffsetManagerJdbc
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TempDirFixture, TextComparisonFixture}
-import za.co.absa.pramen.core.rdb.PramenDb
-import za.co.absa.pramen.core.reader.JdbcUrlSelectorImpl
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.runner.AppRunner
-import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils}
+import za.co.absa.pramen.core.utils.{FsUtils, JdbcNativeUtils, ResourceUtils, UsingUtils}
 
 import java.sql.Date
 import java.time.LocalDate
@@ -46,15 +46,18 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   with TextComparisonFixture {
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase()
+    if (pramenDb != null) pramenDb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 
@@ -210,7 +213,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       assert(batchIds.isEmpty)
 
-      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
       val offsets0 = om.getOffsets("table1", infoDate.minusDays(2))
       val offsets1 = om.getOffsets("table1", infoDate.minusDays(1))
       val offsets2 = om.getOffsets("table1", infoDate).map(_.asInstanceOf[CommittedOffset])
@@ -247,7 +250,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       assert(exitCode1 == 0)
 
       // Adding an uncommitted offset for 2021-02-17
-      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
       om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType)
       Thread.sleep(10)
 
@@ -694,7 +697,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   }
 
   def testOffsetOnlyDealWithUncommittedOffsetsWithNoPath(metastoreFormat: String): Assertion = {
-    val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+    val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
     om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
 
@@ -733,7 +736,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   }
 
   def testOffsetOnlyDealWithUncommittedOffsetsWithNoData(metastoreFormat: String): Assertion = {
-    val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+    val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
     om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
 
@@ -785,12 +788,12 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   }
 
   def testOffsetOnlyDealWithUncommittedOffsetsWithData(metastoreFormat: String): Assertion = {
-    val om1 = new OffsetManagerJdbc(pramenDb.db, 123L)
+    val om1 = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
     om1.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
 
     Thread.sleep(10)
 
-    val om2 = new OffsetManagerJdbc(pramenDb.db, 123L)
+    val om2 = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
     om2.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
 
     Thread.sleep(10)
@@ -863,7 +866,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   }
 
   def testOffsetOnlyFailWhenInputTableDoestHaveOffsetField(metastoreFormat: String): Assertion = {
-    val om1 = new OffsetManagerJdbc(pramenDb.db, 123L)
+    val om1 = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
     om1.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
 
     Thread.sleep(10)
@@ -1141,7 +1144,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       compareText(actualTable1After, expectedWithTimestamp2)
       compareText(actualTable2After, expectedWithTimestamp2)
 
-      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
       val offsets1 = om.getOffsets("table1", infoDate.minusDays(1)).map(_.asInstanceOf[CommittedOffset])
       assert(offsets1.isEmpty)
@@ -1195,7 +1198,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       compareText(actualTable1_2, expected)
       compareText(actualTable2_2, expected)
 
-      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
       val offsets1 = om.getOffsets("table1", infoDate.minusDays(1)).map(_.asInstanceOf[CommittedOffset])
       assert(offsets1.isEmpty)
@@ -1272,7 +1275,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
       compareText(actualTable1After, expectedWithInfoDateAll)
       compareText(actualTable2After, expectedWithInfoDateAll)
 
-      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
       val offsets = om.getOffsets("table1->table2", infoDate).map(_.asInstanceOf[CommittedOffset])
       assert(offsets.length == 1)
@@ -1327,7 +1330,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       assert(batchIds.length == 2)
 
-      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
       val offsets = om.getOffsets("table1->table2", infoDate).map(_.asInstanceOf[CommittedOffset])
       assert(offsets.length == 1)
@@ -1386,7 +1389,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       assert(batchIds.length == 2)
 
-      val om = new OffsetManagerJdbc(pramenDb.db, 123L)
+      val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
       val offsets = om.getOffsets("table1->table2", infoDate).map(_.asInstanceOf[CommittedOffset])
       assert(offsets.length == 1)
@@ -1448,7 +1451,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
   /* This method is used to inspect offsets after operations */
   private def debugOffsets(): Unit = {
-    JdbcNativeUtils.withResultSet(new JdbcUrlSelectorImpl(jdbcConfig), "SELECT * FROM \"offsets\"", 1) { rs =>
+    JdbcNativeUtils.withResultSet(JdbcUrlSelector(jdbcConfig), "SELECT * FROM \"offsets\"") { rs =>
       val mt = rs.getMetaData
 
       for (i <- 1 to mt.getColumnCount) {

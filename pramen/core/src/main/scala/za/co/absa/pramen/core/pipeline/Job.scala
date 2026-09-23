@@ -42,9 +42,15 @@ trait Job {
 
   def allowRunningTasksInParallel: Boolean
 
+  def isSelfDependent: Boolean
+
   def notificationTargets: Seq[JobNotificationTarget]
 
+  def backfillDays: Int
+
   def trackDays: Int
+
+  def outputsToMetastore: Boolean
 
   /**
     * Checks pre-conditions for the job, such as data availability.
@@ -98,8 +104,9 @@ trait Job {
     *
     * @param schema   The schema of the Hive table
     * @param infoDate The information date for which to update the Hive table
+    * @param updateSchema If true, the schema needs update
     * @param recreate Whether to force recreate the Hive table
     * @return The list of warnings if Hive errors are ignored.
     */
-  def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String]
+  def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, updateSchema: Boolean, recreate: Boolean): Seq[String]
 }

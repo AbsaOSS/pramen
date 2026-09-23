@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.tests.sql
 
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGeneratorBase}
+import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
 import za.co.absa.pramen.core.mocks.{DummySqlConfigFactory, SqlGeneratorDummy}
 import za.co.absa.pramen.core.samples.RdbExampleTable
@@ -52,6 +52,16 @@ class SqlGeneratorLoaderSuite extends AnyWordSpec with RelationalDbFixture {
   "loadSqlGenerator" should {
     "return an Oracle SQL generator" in {
       assert(getSqlGenerator("oracle.jdbc.OracleDriver", sqlConfigDate).isInstanceOf[SqlGeneratorOracle])
+    }
+
+    "return a PostgreSQL SQL generator" in {
+      assert(getSqlGenerator("org.postgresql.Driver", sqlConfigDate).isInstanceOf[SqlGeneratorPostgreSQL])
+    }
+
+    "return a RedShift SQL generator" in {
+      assert(getSqlGenerator("com.amazon.redshift.Driver", sqlConfigDate).isInstanceOf[SqlGeneratorPostgreSQL])
+      assert(getSqlGenerator("com.amazon.redshift.jdbc.Driver", sqlConfigDate).isInstanceOf[SqlGeneratorPostgreSQL])
+      assert(getSqlGenerator("com.amazon.redshift.jdbc42.Driver", sqlConfigDate).isInstanceOf[SqlGeneratorPostgreSQL])
     }
 
     "return a Microsoft SQL generator" in {

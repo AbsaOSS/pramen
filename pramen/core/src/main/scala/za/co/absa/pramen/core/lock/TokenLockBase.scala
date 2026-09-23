@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.lock
 
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.api.lock.TokenLock
 import za.co.absa.pramen.core.utils.{JvmUtils, StringUtils}
 
 import java.time.Instant
@@ -31,7 +32,7 @@ import scala.util.control.NonFatal
   *
   * @param token the unique identifier for the lock (across multiple JVM processes and Spark jobs).
   */
-abstract class TokenLockBase(token: String) extends TokenLock {
+abstract class TokenLockBase(override val token: String) extends TokenLock {
   import TokenLockBase._
 
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -48,7 +49,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
 
   protected def tryAcquireGuardLock(retries: Int, thisTry: Int): Boolean
 
-  protected def releaseGuardLock(): Unit
+  protected def releaseGuardLock(evenNonOwned: Boolean): Unit
 
   protected def updateTicket(): Unit
 
@@ -64,7 +65,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     *         Note: Unlike standard lock implementations, this returns false even when the current instance already owns the lock.
     */
   override def tryAcquire(): Boolean = synchronized {
-    if (lockAcquired) {
+    val isAcquired = if (lockAcquired) {
       false
     } else {
       if (tryAcquireGuardLock(lockAcquireRetries, 0)) {
@@ -78,6 +79,12 @@ abstract class TokenLockBase(token: String) extends TokenLock {
         false
       }
     }
+
+    if (isAcquired) {
+      TokenLockRegistry.registerLock(this)
+    }
+
+    isAcquired
   }
 
   override def release(): Unit = {
@@ -93,8 +100,12 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     if (wasAcquired) {
       watcherThreadOpt.foreach(_.interrupt())
       watcherThreadOpt = None
-      releaseGuardLock()
-      JvmUtils.safeRemoveShutdownHook(shutdownHook)
+      try {
+        releaseGuardLock(evenNonOwned = false)
+      } finally {
+        JvmUtils.safeRemoveShutdownHook(shutdownHook)
+        TokenLockRegistry.unregisterLock(this)
+      }
       log.info(s"Lock released: '$escapedToken'.")
     }
   }
@@ -103,7 +114,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
     release()
   }
 
-  protected def isAcquired: Boolean = synchronized {
+  private[core] def isAcquired: Boolean = synchronized {
     lockAcquired
   }
 
@@ -125,7 +136,7 @@ abstract class TokenLockBase(token: String) extends TokenLock {
       if (wasAcquired) {
         watcherThreadOpt.foreach(_.interrupt())
         watcherThreadOpt = None
-        releaseGuardLock()
+        releaseGuardLock(evenNonOwned = false)
       }
     }
   }

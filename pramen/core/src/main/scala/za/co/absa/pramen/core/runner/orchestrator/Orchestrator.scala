@@ -21,6 +21,7 @@ import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.pipeline.Job
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
+import za.co.absa.pramen.core.runner.repartitioner.JobRepartitioner
 import za.co.absa.pramen.core.state.PipelineState
 
 trait Orchestrator {
@@ -31,5 +32,6 @@ trait Orchestrator {
                               state: PipelineState,
                               appContext: AppContext,
                               jobRunner: ConcurrentJobRunner,
+                              repartitioner: JobRepartitioner,
                               spark: SparkSession): Unit
 }

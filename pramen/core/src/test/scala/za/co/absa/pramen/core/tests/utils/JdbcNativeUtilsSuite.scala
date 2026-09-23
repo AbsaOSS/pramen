@@ -21,6 +21,7 @@ import org.mockito.Mockito.{mock, when}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
@@ -68,7 +69,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     "select working connection when provided a connection pool" in {
       val jdbcConfig = JdbcConfig(driver, Some("bogus_url"), "bogus_url2" :: url :: Nil, None, Option(user), Option(password))
 
-      val (actualUrl, conn) = JdbcNativeUtils.getConnection(jdbcConfig)
+      val (actualUrl, conn) = JdbcNativeUtils.getConnection(jdbcConfig, None)
       conn.close()
 
       assert(actualUrl == url)
@@ -80,7 +81,8 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     val conf = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
 
     "return record count when data is available" in {
-      val count = JdbcNativeUtils.getJdbcNativeRecordCount(conf, conf.primaryUrl.get, s"SELECT id FROM $tableName WHERE id = 1")
+      val selector = JdbcUrlSelector(conf)
+      val count = JdbcNativeUtils.getJdbcNativeRecordCount(selector, s"SELECT id FROM $tableName WHERE id = 1")
 
       assert(count == 1)
     }
@@ -97,14 +99,16 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
 
     "throw an exception on error" in {
       intercept[SQLSyntaxErrorException] {
-        JdbcNativeUtils.getJdbcNativeRecordCount(conf, conf.primaryUrl.get, s"SELECT id FROM no_such_table")
+        val selector = JdbcUrlSelector(conf)
+        JdbcNativeUtils.getJdbcNativeRecordCount(selector, s"SELECT id FROM no_such_table")
       }
     }
   }
 
   "getJdbcNativeDataFrame()" should {
     "return proper schema from a JDBC query" in {
-      val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT * FROM $tableName WHERE id = 1")
+      val selector = JdbcUrlSelector(jdbcConfig)
+      val df = JdbcNativeUtils.getJdbcNativeDataFrame(selector, s"SELECT * FROM $tableName WHERE id = 1")
       val expected =
         """{
           |  "type" : "struct",
@@ -168,6 +172,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "return proper data from a JDBC query" in {
+      val selector = JdbcUrlSelector(jdbcConfig)
       val expected =
         """[ {
           |  "ID" : 1,
@@ -196,15 +201,16 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
           |  "FOUNDED" : "2016-12-31"
           |} ]""".stripMargin
 
-      val df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT id, name, email, founded, is_tax_free, tax_id FROM $tableName")
+      val df = JdbcNativeUtils.getJdbcNativeDataFrame(selector, s"SELECT id, name, email, founded, is_tax_free, tax_id FROM $tableName")
       val actual = SparkUtils.convertDataFrameToPrettyJSON(df)
 
       compareText(actual, expected)
     }
 
     "throw an exception on error" in {
+      val selector = JdbcUrlSelector(jdbcConfig)
       intercept[SQLSyntaxErrorException] {
-        JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, jdbcConfig.primaryUrl.get, s"SELECT id FROM no_such_table")
+        JdbcNativeUtils.getJdbcNativeDataFrame(selector, s"SELECT id FROM no_such_table")
       }
     }
   }
@@ -217,7 +223,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     when(resultSet.getMetaData).thenReturn(resultSetMetaData)
 
     "return normal decimal for correct precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+      val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
 
       assert(iterator.getDecimalSparkSchema(10, 0) == DecimalType(10, 0))
       assert(iterator.getDecimalSparkSchema(10, 2) == DecimalType(10, 2))
@@ -226,7 +232,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "return fixed decimal for incorrect precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+      val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
 
       assert(iterator.getDecimalSparkSchema(1, -1) == DecimalType(38, 18))
       assert(iterator.getDecimalSparkSchema(0, 0) == DecimalType(38, 18))
@@ -238,7 +244,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "return string type for incorrect precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = true, arraysSupported = true)
+      val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = true, arraysSupported = true)
 
       assert(iterator.getDecimalSparkSchema(1, -1) == StringType)
       assert(iterator.getDecimalSparkSchema(0, 0) == StringType)
@@ -258,7 +264,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     when(resultSet.getMetaData).thenReturn(resultSetMetaData)
 
     "return normal decimal for correct precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+      val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
       when(resultSetMetaData.getPrecision(0)).thenReturn(10)
       when(resultSetMetaData.getScale(0)).thenReturn(2)
 
@@ -266,7 +272,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "return fixed decimal for incorrect precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+      val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
       when(resultSetMetaData.getPrecision(0)).thenReturn(0)
       when(resultSetMetaData.getScale(0)).thenReturn(2)
 
@@ -274,7 +280,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
     }
 
     "return string type for incorrect precision and scale" in {
-      val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = true, arraysSupported = true)
+      val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = true, arraysSupported = true)
       when(resultSetMetaData.getPrecision(0)).thenReturn(0)
       when(resultSetMetaData.getScale(0)).thenReturn(2)
 
@@ -301,7 +307,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       val maxTimestamp = 253402300799999L
 
       "ignore null values" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
 
         val fixedTs = iterator.sanitizeTimestamp(null)
 
@@ -309,7 +315,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "convert PostgreSql positive infinity value" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
         val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_POSITIVE_INFINITY))
 
         val fixedTs = iterator.sanitizeTimestamp(timestamp)
@@ -318,7 +324,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "convert PostgreSql negative infinity value" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
         val timestamp = Timestamp.from(Instant.ofEpochMilli(POSTGRESQL_DATE_NEGATIVE_INFINITY))
 
         val fixedTs = iterator.sanitizeTimestamp(timestamp)
@@ -327,7 +333,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "convert overflowed value to the maximum value supported" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
         val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
 
         val actual = iterator.sanitizeTimestamp(timestamp)
@@ -341,7 +347,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "do nothing if the feature is turned off" in {
-        val iterator = new ResultSetToRowIterator(resultSet, false, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, false, incorrectDecimalsAsString = false, arraysSupported = true)
         val timestamp = Timestamp.from(Instant.ofEpochMilli(1000000000000000L))
 
         val actual = iterator.sanitizeTimestamp(timestamp)
@@ -361,7 +367,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       val maxDate = 253402214400000L
 
       "ignore null values" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
 
         val fixedDate = iterator.sanitizeDate(null)
 
@@ -369,7 +375,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "convert PostgreSql positive infinity value" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
         val date = new Date(POSTGRESQL_DATE_POSITIVE_INFINITY)
 
         val fixedDate = iterator.sanitizeDate(date)
@@ -378,7 +384,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "convert PostgreSql negative infinity value" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
         val date = new Date(POSTGRESQL_DATE_NEGATIVE_INFINITY)
 
         val fixedDate = iterator.sanitizeDate(date)
@@ -387,7 +393,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "convert overflowed value to the maximum value supported" in {
-        val iterator = new ResultSetToRowIterator(resultSet, true, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, true, incorrectDecimalsAsString = false, arraysSupported = true)
         val date = new Date(1000000000000000L)
 
         val actual = iterator.sanitizeDate(date)
@@ -401,7 +407,7 @@ class JdbcNativeUtilsSuite extends AnyWordSpec with RelationalDbFixture with Spa
       }
 
       "do nothing if the feature is turned off" in {
-        val iterator = new ResultSetToRowIterator(resultSet, false, incorrectDecimalsAsString = false, arraysSupported = true)
+        val iterator = new ResultSetToRowIterator(resultSet, None, None, None, false, incorrectDecimalsAsString = false, arraysSupported = true)
         val date = new Date(1000000000000000L)
 
         val actual = iterator.sanitizeDate(date)

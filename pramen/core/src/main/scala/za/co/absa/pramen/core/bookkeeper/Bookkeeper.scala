@@ -21,10 +21,13 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.MetadataManager
+import za.co.absa.pramen.api.lock.TokenLockFactory
+import za.co.absa.pramen.bulkload.{BulkLoadStateManager, BulkLoadStateManagerJdbc, BulkLoadStateManagerNull}
 import za.co.absa.pramen.core.app.config.{BookkeeperConfig, HadoopFormat, RuntimeConfig}
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.journal._
 import za.co.absa.pramen.core.lock._
-import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
+import za.co.absa.pramen.core.metadata.{MetadataManagerDynamoDb, MetadataManagerJdbc, MetadataManagerNull}
 import za.co.absa.pramen.core.model.DataChunk
 import za.co.absa.pramen.core.mongo.MongoDbConnection
 import za.co.absa.pramen.core.rdb.PramenDb
@@ -32,23 +35,41 @@ import za.co.absa.pramen.core.rdb.PramenDb
 import java.time.LocalDate
 
 /**
-  * A bookkeeper is responsible of querying and updating state of all tables related to an ingestion pipeline.
+  * A bookkeeper is responsible for querying and updating state of all tables related to an ingestion pipeline.
   */
-trait Bookkeeper {
+trait Bookkeeper extends AutoCloseable {
   val bookkeepingEnabled: Boolean
 
   def getLatestProcessedDate(table: String, until: Option[LocalDate] = None): Option[LocalDate]
 
   def getLatestDataChunk(table: String, infoDate: LocalDate): Option[DataChunk]
 
+  def getDataChunks(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk]
+
   def getDataChunksCount(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long
 
+  def getDataAvailability(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability]
+
   def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)]
+
+  /**
+    * Deletes tables matching the given wildcard pattern. The wildcard pattern is expected
+    * according to this syntax: 'my_table_prefix_*'. Only '*' is supported at the moment.
+    *
+    * The method deletes just the metadata about selected tables in every bookkeeping table except
+    * journal, which is used for logging only.
+    *
+    * @param tableWithWildcard A string representing the name or pattern of the tables
+    *                          to be deleted.
+    * @return A sequence of strings representing the names of the tables that were successfully deleted.
+    */
+  def deleteTable(tableWithWildcard: String): Seq[String]
 
   private[pramen] def setRecordCount(table: String,
                                      infoDate: LocalDate,
                                      inputRecordCount: Long,
                                      outputRecordCount: Long,
+                                     appendedRecordCount: Option[Long],
                                      jobStarted: Long,
                                      jobFinished: Long,
                                      isTableTransient: Boolean): Unit
@@ -64,24 +85,32 @@ object Bookkeeper {
   def fromConfig(bookkeepingConfig: BookkeeperConfig,
                  runtimeConfig: RuntimeConfig,
                  batchId: Long)
-                (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, MetadataManager, AutoCloseable) = {
+                (implicit spark: SparkSession): (Bookkeeper, TokenLockFactory, Journal, MetadataManager, BulkLoadStateManager, AutoCloseable) = {
     val mongoDbConnection = bookkeepingConfig.bookkeepingConnectionString.map { url =>
       MongoDbConnection.getConnection(url, bookkeepingConfig.bookkeepingDbName.get)
     }
 
     val hasBookkeepingJdbc = bookkeepingConfig.bookkeepingJdbcConfig.exists(_.primaryUrl.isDefined)
+    val hasBookkeepingDynamoDb = bookkeepingConfig.dynamoDbRegion.isDefined
 
     val dbOpt = if (hasBookkeepingJdbc) {
       val jdbcConfig = bookkeepingConfig.bookkeepingJdbcConfig.get
       val syncDb = PramenDb(jdbcConfig)
-      syncDb.setupDatabase()
       Option(syncDb)
     } else None
 
     val tokenFactory = if (runtimeConfig.useLocks && bookkeepingConfig.bookkeepingEnabled) {
       if (hasBookkeepingJdbc) {
         log.info(s"Using RDB for lock management.")
-        new TokenLockFactoryJdbc(dbOpt.get.slickDb)
+        new TokenLockFactoryJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+      } else if (hasBookkeepingDynamoDb) {
+        val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(BookkeeperDynamoDb.DEFAULT_TABLE_PREFIX)
+        log.info(s"Using DynamoDB for lock management in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+        TokenLockFactoryDynamoDb.builder
+          .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+          .withTablePrefix(tablePrefix)
+          .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+          .build()
       } else {
         mongoDbConnection match {
           case Some(connection) =>
@@ -109,28 +138,37 @@ object Bookkeeper {
       log.info(s"Bookkeeping is DISABLED. Updates won't be tracked")
       new BookkeeperNull()
     } else if (hasBookkeepingJdbc) {
-      new BookkeeperJdbc(dbOpt.get.slickDb, batchId)
+      BookkeeperJdbc.fromPramenDb(dbOpt.get, batchId)
+    } else if (hasBookkeepingDynamoDb) {
+      val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(BookkeeperDynamoDb.DEFAULT_TABLE_PREFIX)
+      log.info(s"Using DynamoDB for bookkeeping in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+      BookkeeperDynamoDb.builder
+        .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+        .withBatchId(batchId)
+        .withTablePrefix(tablePrefix)
+        .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+        .build()
     } else {
       mongoDbConnection match {
         case Some(connection) =>
           log.info(s"Using MongoDB for bookkeeping.")
-          new BookkeeperMongoDb(connection)
+          new BookkeeperMongoDb(connection, batchId)
         case None =>
           bookkeepingConfig.bookkeepingHadoopFormat match {
             case HadoopFormat.Text =>
               val path = bookkeepingConfig.bookkeepingLocation.get
               log.info(s"Using Hadoop (CSV for records, JSON for schemas) for bookkeeping at $path")
-              new BookkeeperText(path)
+              new BookkeeperText(path, batchId)
             case HadoopFormat.Delta =>
               bookkeepingConfig.deltaTablePrefix match {
                 case Some(tablePrefix) =>
                   val fullTableName = BookkeeperDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix, "*")
                   log.info(s"Using Delta Lake managed table '$fullTableName' for bookkeeping.")
-                  new BookkeeperDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix)
+                  new BookkeeperDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix, batchId)
                 case None =>
                   val path = bookkeepingConfig.bookkeepingLocation.get
                   log.info(s"Using Delta Lake for bookkeeping at $path")
-                  new BookkeeperDeltaPath(path)
+                  new BookkeeperDeltaPath(path, batchId)
               }
           }
       }
@@ -141,7 +179,15 @@ object Bookkeeper {
       new JournalNull()
     } else if (hasBookkeepingJdbc) {
       log.info(s"Using RDB to keep journal of executed jobs.")
-      new JournalJdbc(dbOpt.get.slickDb)
+      new JournalJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+    } else if (hasBookkeepingDynamoDb) {
+      val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(JournalDynamoDB.DEFAULT_TABLE_PREFIX)
+      log.info(s"Using DynamoDB for journal in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+      JournalDynamoDB.builder
+        .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+        .withTablePrefix(tablePrefix)
+        .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+        .build()
     } else {
       mongoDbConnection match {
         case Some(connection) =>
@@ -156,13 +202,15 @@ object Bookkeeper {
             case HadoopFormat.Delta =>
               bookkeepingConfig.deltaTablePrefix match {
                 case Some(tablePrefix) =>
-                  val fullTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix)
-                  log.info(s"Using Delta Lake managed table '$fullTableName' for the journal.")
+                  val journalTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix, "journal")
+                  val executionsTableName = JournalHadoopDeltaTable.getFullTableName(bookkeepingConfig.deltaDatabase, tablePrefix, "executions")
+                  log.info(s"Using Delta Lake managed table '$journalTableName' and '$executionsTableName' for the journal.")
                   new JournalHadoopDeltaTable(bookkeepingConfig.deltaDatabase, tablePrefix)
                 case None =>
-                  val path = bookkeepingConfig.bookkeepingLocation.get + "/journal"
-                  log.info(s"Using Delta Lake for the journal at $path")
-                  new JournalHadoopDeltaPath(path)
+                  val journalPath = bookkeepingConfig.bookkeepingLocation.get + "/journal"
+                  val executionsPath = bookkeepingConfig.bookkeepingLocation.get + "/executions"
+                  log.info(s"Using Delta Lake for the journal at '$journalPath' and '$executionsPath'")
+                  new JournalHadoopDeltaPath(journalPath, executionsPath)
               }
           }
 
@@ -174,19 +222,36 @@ object Bookkeeper {
       new MetadataManagerNull(isPersistenceEnabled = false)
     } else if (hasBookkeepingJdbc) {
       log.info(s"Using RDB to keep custom metadata.")
-      new MetadataManagerJdbc(dbOpt.get.slickDb)
+      new MetadataManagerJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+    } else if (hasBookkeepingDynamoDb) {
+      val tablePrefix = bookkeepingConfig.dynamoDbTablePrefix.getOrElse(MetadataManagerDynamoDb.DEFAULT_TABLE_PREFIX)
+      log.info(s"Using DynamoDB for metadata in region '${bookkeepingConfig.dynamoDbRegion.get}' with table prefix '$tablePrefix'")
+      MetadataManagerDynamoDb.builder
+        .withRegion(bookkeepingConfig.dynamoDbRegion.get)
+        .withTablePrefix(tablePrefix)
+        .withTableArn(bookkeepingConfig.dynamoDbTableArn)
+        .build()
     } else {
       log.info(s"The custom metadata management is not supported.")
       new MetadataManagerNull(isPersistenceEnabled = true)
+    }
+
+    val bulkLoadStateManager = if (hasBookkeepingJdbc && bookkeepingConfig.bookkeepingEnabled) {
+      new BulkLoadStateManagerJdbc(dbOpt.get.slickDb, dbOpt.get.slickProfile)
+    } else {
+      new BulkLoadStateManagerNull
     }
 
     val closable = new AutoCloseable {
       override def close(): Unit = {
         mongoDbConnection.foreach(_.close())
         dbOpt.foreach(_.close())
+        tokenFactory.close()
+        journal.close()
+        metadataManager.close()
       }
     }
 
-    (bookkeeper, tokenFactory, journal, metadataManager, closable)
+    (bookkeeper, tokenFactory, journal, metadataManager, bulkLoadStateManager, closable)
   }
 }

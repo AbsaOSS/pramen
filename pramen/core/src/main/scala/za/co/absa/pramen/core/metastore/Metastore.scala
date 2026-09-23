@@ -50,6 +50,7 @@ trait Metastore {
                               infoDate: LocalDate,
                               schema: Option[StructType],
                               hiveHelper: HiveHelper,
+                              updateSchema: Boolean,
                               recreate: Boolean): Unit
 
   def getStats(tableName: String, infoDate: LocalDate): MetaTableStats

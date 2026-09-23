@@ -19,6 +19,8 @@ package za.co.absa.pramen.core.app.config
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.RunMode
+import za.co.absa.pramen.bulkload.model.BulkBatchSize
+import za.co.absa.pramen.bulkload.model.BulkBatchSize.Monthly
 import za.co.absa.pramen.core.app.config.BookkeeperConfig.BOOKKEEPING_ENABLED
 import za.co.absa.pramen.core.app.config.InfoDateConfig.DEFAULT_DATE_FORMAT
 import za.co.absa.pramen.core.config.Keys
@@ -45,7 +47,14 @@ case class RuntimeConfig(
                           allowEmptyPipeline: Boolean,
                           alwaysAddBatchIdColumn: Boolean,
                           historicalRunMode: RunMode,
-                          sparkAppDescriptionTemplate: Option[String]
+                          bulkBatchSize: BulkBatchSize,
+                          bulkLoadCurrent: Option[BulkRunConfig],
+                          enableRepartitioning: Boolean,
+                          sparkAppDescriptionTemplate: Option[String],
+                          attempt: Int, // Current attempt number for the pipeline run (for auto-retry automation)
+                          maxAttempts: Int, // Maximum number of attempts allowed for the pipeline run
+                          forceReCreateHiveTables: Boolean,
+                          executionOptions: Map[String, String]
                         )
 
 object RuntimeConfig {
@@ -57,6 +66,13 @@ object RuntimeConfig {
   val IS_RERUN = "pramen.runtime.is.rerun"
   val IS_INVERSE_ORDER = "pramen.runtime.inverse.order"
   val RUN_MODE = "pramen.runtime.run.mode"
+  val RUN_BULK_BATCH_SIZE = "pramen.runtime.bulk.batch.size"
+  val RUN_ENABLE_REPARTITIONING = "pramen.runtime.enable.repartitioning"
+  val INFO_DATE_COLUMN = "pramen.runtime.info.date.column"
+  val INFO_DATE_FORMAT = "pramen.runtime.info.date.format"
+  val BULK_CURRENT_DATE_FROM = "pramen.runtime.run.bulk.current.date.from"
+  val BULK_CURRENT_DATE_TO = "pramen.runtime.run.bulk.current.date.to"
+  val BULK_CURRENT_OUTPUT_INFO_DATE = "pramen.runtime.run.bulk.current.output.information.date"
   val RUN_TABLES = "pramen.runtime.run.tables"
   val UNDERCOVER = "pramen.undercover"
   val USE_LOCK = "pramen.use.lock"
@@ -72,6 +88,11 @@ object RuntimeConfig {
   val ALLOW_EMPTY_PIPELINE = "pramen.allow.empty.pipeline"
   val ALWAYS_ADD_BATCHID_COLUMN = "pramen.always.add.batchid.column"
   val SPARK_APP_DESCRIPTION_TEMPLATE = "pramen.job.description.template"
+  val ATTEMPT = "pramen.runtime.attempt"
+  val MAX_ATTEMPTS = "pramen.runtime.max.attempts"
+  val FORCE_RECREATE_HIVE_TABLES = "pramen.runtime.hive.force.recreate"
+  val EXECUTION_EXTRA_OPTIONS_PREFIX = "pramen.execution.option"
+
 
   def fromConfig(conf: Config): RuntimeConfig = {
     val infoDateFormat = conf.getString(INFORMATION_DATE_FORMAT_APP)
@@ -136,6 +157,23 @@ object RuntimeConfig {
     val allowEmptyPipeline = ConfigUtils.getOptionBoolean(conf, ALLOW_EMPTY_PIPELINE).getOrElse(false)
     val alwaysAddBatchIdColumn = ConfigUtils.getOptionBoolean(conf, ALWAYS_ADD_BATCHID_COLUMN).getOrElse(false)
     val sparkAppDescriptionTemplate = ConfigUtils.getOptionString(conf, SPARK_APP_DESCRIPTION_TEMPLATE)
+    val attempt = ConfigUtils.getOptionInt(conf, ATTEMPT).getOrElse(1)
+    val maxAttempts = ConfigUtils.getOptionInt(conf, MAX_ATTEMPTS).getOrElse(1)
+    val executionOptions = ConfigUtils.getExtraOptions(conf, EXECUTION_EXTRA_OPTIONS_PREFIX)
+    val bulkBatchSizeStr = ConfigUtils.getOptionString(conf, RUN_BULK_BATCH_SIZE).getOrElse("monthly")
+    val bulkBatchSize = BulkBatchSize.fromString(bulkBatchSizeStr)
+    val bulkCurrentDateFrom = ConfigUtils.getOptionString(conf, BULK_CURRENT_DATE_FROM).map(getDate)
+    val bulkCurrentDateTo = ConfigUtils.getOptionString(conf, BULK_CURRENT_DATE_TO).map(getDate)
+    val bulkCurrentOutputInfoDate = ConfigUtils.getOptionString(conf, BULK_CURRENT_OUTPUT_INFO_DATE).map(getDate)
+    val infoDateColumn = ConfigUtils.getOptionString(conf, INFO_DATE_COLUMN)
+    val infoDateFormat2 = ConfigUtils.getOptionString(conf, INFO_DATE_FORMAT).getOrElse(infoDateFormat)
+    val enableRepartitioning = ConfigUtils.getOptionBoolean(conf, RUN_ENABLE_REPARTITIONING).getOrElse(false)
+
+    val bulkLoadCurrent = if (bulkCurrentDateFrom.isDefined && bulkCurrentDateTo.isDefined && bulkCurrentOutputInfoDate.isDefined) {
+      Some(BulkRunConfig(bulkCurrentDateFrom.get, bulkCurrentDateTo.get, infoDateColumn, infoDateFormat2, bulkCurrentOutputInfoDate.get))
+    } else {
+      None
+    }
 
     RuntimeConfig(
       isDryRun = isDryRun,
@@ -152,10 +190,17 @@ object RuntimeConfig {
       isInverseOrder = ConfigUtils.getOptionBoolean(conf, IS_INVERSE_ORDER).getOrElse(false),
       parallelTasks = parallelTasks,
       stopSparkSession = conf.getBoolean(STOP_SPARK_SESSION),
-      allowEmptyPipeline,
-      alwaysAddBatchIdColumn,
-      runMode,
-      sparkAppDescriptionTemplate
+      allowEmptyPipeline = allowEmptyPipeline,
+      alwaysAddBatchIdColumn = alwaysAddBatchIdColumn,
+      historicalRunMode = runMode,
+      bulkBatchSize = bulkBatchSize,
+      bulkLoadCurrent = bulkLoadCurrent,
+      sparkAppDescriptionTemplate = sparkAppDescriptionTemplate,
+      attempt = attempt,
+      maxAttempts = maxAttempts,
+      forceReCreateHiveTables =  ConfigUtils.getOptionBoolean(conf, FORCE_RECREATE_HIVE_TABLES).getOrElse(false),
+      enableRepartitioning = enableRepartitioning,
+      executionOptions = executionOptions
     )
   }
 
@@ -178,7 +223,14 @@ object RuntimeConfig {
       allowEmptyPipeline = false,
       alwaysAddBatchIdColumn = false,
       historicalRunMode = RunMode.CheckUpdates,
-      sparkAppDescriptionTemplate = None
+      bulkBatchSize = Monthly,
+      bulkLoadCurrent = None,
+      enableRepartitioning = false,
+      sparkAppDescriptionTemplate = None,
+      attempt = 1,
+      maxAttempts = 1,
+      forceReCreateHiveTables = false,
+      executionOptions = Map.empty
     )
   }
 }

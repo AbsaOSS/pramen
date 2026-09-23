@@ -37,12 +37,13 @@ abstract class JobBase(operationDef: OperationDef,
                        jobNotificationTargets: Seq[JobNotificationTarget],
                        outputTableDef: MetaTable
                       ) extends Job {
+  private var triggerUpdatesTables = Seq.empty[String]
   protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   def jobType: JobType
 
   override def taskDef: TaskDef = TaskDef(
-    name, jobType, MetaTable.getMetaTableDef(outputTableDef), operationDef.schedule, operationDef.operationConf
+    name, jobType, MetaTable.getMetaTableDef(outputTableDef), operationDef.schedule, operationDef.isCritical, operationDef.operationConf
   )
 
   override val name: String = operationDef.name
@@ -51,9 +52,13 @@ abstract class JobBase(operationDef: OperationDef,
 
   override val operation: OperationDef = operationDef
 
-  override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies
+  override val allowRunningTasksInParallel: Boolean = operationDef.allowParallel && !hasSelfDependencies(includeOptional = true)
+
+  override val isSelfDependent: Boolean = hasSelfDependencies(includeOptional = false)
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
+
+  override def backfillDays: Int = outputTable.backfillDays
 
   override def trackDays: Int = outputTable.trackDays
 
@@ -101,14 +106,14 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String] = {
+  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, updateSchema: Boolean, recreate: Boolean): Seq[String] = {
     if (outputTableDef.hiveTable.isEmpty)
       return Seq.empty
 
     val hiveHelper = metastore.getHiveHelper(outputTableDef.name)
 
     val attempt = Try {
-      metastore.repairOrCreateHiveTable(outputTableDef.name, infoDate, Option(schema), hiveHelper, recreate)
+      metastore.repairOrCreateHiveTable(outputTableDef.name, infoDate, Option(schema), hiveHelper, updateSchema, recreate)
     }
 
     attempt match {
@@ -154,11 +159,16 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
+  private def getTriggerUpdateTables: Seq[String] = synchronized {
+    triggerUpdatesTables
+  }
+
   private def getOutdatedTables(infoDate: LocalDate, targetJobFinishedSeconds: Long): Seq[String] = {
-    operationDef.dependencies
-      .filter(d => d.triggerUpdates)
-      .flatMap(_.tables)
-      .distinct
+    val tablesToCheck = getTriggerUpdateTables
+    if (tablesToCheck.nonEmpty) {
+      log.info(s"Checking for retrospective updates for ${outputTableDef.name} at '$infoDate' for dependent tables: ${tablesToCheck.mkString(", ")}")
+    }
+    tablesToCheck
       .filter { table =>
         bookkeeper.getLatestDataChunk(table, infoDate) match {
           case Some(chunk) if chunk.jobFinished >= targetJobFinishedSeconds =>
@@ -226,8 +236,15 @@ abstract class JobBase(operationDef: OperationDef,
     }
   }
 
-  private[core] def hasSelfDependencies: Boolean = {
-    operationDef.dependencies.exists(_.tables.contains(outputTableDef.name))
+  private[core] def setTriggerUpdatesTables(tables: Seq[String]): Unit = synchronized {
+    triggerUpdatesTables = tables
+  }
+
+  private[core] def hasSelfDependencies(includeOptional: Boolean): Boolean = {
+    if (includeOptional)
+      operationDef.dependencies.exists(_.tables.contains(outputTableDef.name))
+    else
+      operationDef.dependencies.filter(!_.isOptional).exists(_.tables.contains(outputTableDef.name))
   }
 
   private[core] def getInfoDateRange(infoDate: LocalDate, fromExpr: Option[String], toExpr: Option[String]): (LocalDate, LocalDate) = {

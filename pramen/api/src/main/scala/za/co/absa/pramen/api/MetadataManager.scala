@@ -18,7 +18,7 @@ package za.co.absa.pramen.api
 
 import java.time.LocalDate
 
-trait MetadataManager {
+trait MetadataManager extends AutoCloseable {
   /**
     * Get metadata value for a given table, date and key.
     *

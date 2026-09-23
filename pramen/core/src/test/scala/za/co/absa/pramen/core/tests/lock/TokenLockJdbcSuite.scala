@@ -19,24 +19,29 @@ package za.co.absa.pramen.core.tests.lock
 import org.scalatest.concurrent.Eventually._
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.api.lock.TokenLock
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.lock.{TokenLock, TokenLockJdbc}
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.lock.{TokenLockBase, TokenLockJdbc, TokenLockRegistry}
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.{SlickUtils, UsingUtils}
 
 import scala.concurrent.duration._
 
 class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase()
+    if (pramenDb != null) pramenDb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 
@@ -77,11 +82,28 @@ class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with Befor
       lock2.release()
     }
 
+    "allow releasing locks for other owners if requested" in {
+      val lock1 = getLock("token1")
+      val lock2 = getLock("token2")
+
+      assert(lock1.tryAcquire())
+      assert(lock2.tryAcquire())
+
+      lock1.asInstanceOf[TokenLockJdbc].releaseGuardLock(evenNonOwned = false)
+      lock2.asInstanceOf[TokenLockJdbc].releaseGuardLock(evenNonOwned = true)
+
+      val slickUtils = new SlickUtils(pramenDb.slickProfile)
+
+      val recordCount = slickUtils.executeCount(pramenDb.slickDb, pramenDb.lockTicketTable.records.length)
+
+      assert(recordCount == 0)
+    }
+
     "lock pramen should constantly update lock ticket" in {
-      val lock1 = new TokenLockJdbc("token1", pramenDb.slickDb) {
+      val lock1 = new TokenLockJdbc("token1", pramenDb.slickDb, pramenDb.slickProfile) {
         override val tokenExpiresSeconds = 2L
       }
-      val lock2 = new TokenLockJdbc("token1", pramenDb.slickDb)
+      val lock2 = new TokenLockJdbc("token1", pramenDb.slickDb, pramenDb.slickProfile)
       assert(lock1.tryAcquire())
 
       try {
@@ -93,9 +115,17 @@ class TokenLockJdbcSuite extends AnyWordSpec with RelationalDbFixture with Befor
         lock1.release()
       }
     }
+
+    "lock registry releases all locks" in {
+      val lock1 = getLock("token1")
+      assert(lock1.tryAcquire())
+
+      TokenLockRegistry.releaseAllLocks()
+      assert(!lock1.asInstanceOf[TokenLockBase].isAcquired)
+    }
   }
 
   private def getLock(token: String): TokenLock = {
-    new TokenLockJdbc(token, pramenDb.slickDb)
+    new TokenLockJdbc(token, pramenDb.slickDb, pramenDb.slickProfile)
   }
 }

@@ -148,6 +148,27 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
       }
     }
 
+    "do not copy files marked as not to copy" in {
+      withTempDirectory("metastore_raw") { tempDir =>
+        val file1 = new Path(tempDir, "1.dat")
+        val file2 = new Path(tempDir, "2.dat")
+
+        fsUtils.fs.create(file1).close()
+        fsUtils.fs.create(file2).close()
+
+        val files = Seq((file1.toUri.toString, false), (file2.toUri.toString, true)).toDF("path", "copy")
+
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite))
+
+        persistence.saveTable(infoDate, files, None)
+
+        val partitionPath = new Path(tempDir, s"$infoDateColumn=$infoDate")
+
+        assert(!fsUtils.exists(new Path(partitionPath, "1.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "2.dat")))
+      }
+    }
+
     "delete existing partition directory if it exists" in {
       withTempDirectory("metastore_raw") { tempDir =>
         val file1 = new Path(tempDir, "1.dat")

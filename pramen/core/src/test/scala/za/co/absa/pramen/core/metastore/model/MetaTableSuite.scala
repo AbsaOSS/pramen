@@ -160,7 +160,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 1, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
 
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "delta")
@@ -171,6 +171,7 @@ class MetaTableSuite extends AnyWordSpec {
       assert(metaTable.hiveConfig.jdbcConfig.isEmpty)
       assert(!metaTable.hiveConfig.ignoreFailures)
       assert(metaTable.hivePreferAddPartition)
+      assert(metaTable.backfillDays == 1)
       assert(metaTable.trackDays == 0)
       assert(metaTable.infoDateColumn == "INFO_DATE")
       assert(metaTable.infoDateFormat == "dd-MM-yyyy")
@@ -190,7 +191,7 @@ class MetaTableSuite extends AnyWordSpec {
 
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
 
       assert(metaTable.name == "my_table")
       assert(metaTable.format.name == "raw")
@@ -208,6 +209,7 @@ class MetaTableSuite extends AnyWordSpec {
           |name = my_table
           |format = parquet
           |path = /a/b/c
+          |prefer.coalesce = true
           |hive.table = my_hive_table
           |hive.path = /d/e/f
           |information.date.column = INFORMATION_DATE
@@ -228,30 +230,34 @@ class MetaTableSuite extends AnyWordSpec {
 
       val defaultHiveConfig = HiveDefaultConfig(HiveApi.Sql,
         Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "repair", "add_partition", "drop")),
+        Map("parquet" -> HiveQueryTemplates("create", "create_only", "update", "update_part", "repair", "add_partition", "drop")),
         Some(JdbcConfig("driver", Some("url"),
           user = Some("user"),
           password = Some("pass")
-        )), ignoreFailures = true, alwaysEscapeColumnNames = false, optimizeExistQuery = true)
+        )), ignoreFailures = true, alwaysEscapeColumnNames = false, optimizeExistQuery = true, None)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 2, 1, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
 
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.hiveApi == HiveApi.Sql)
       assert(metaTable.hiveConfig.database.contains("mydb"))
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver"))
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create")
+      assert(metaTable.hiveConfig.templates.createOnlyTableTemplate == "create_only")
+      assert(metaTable.hiveConfig.templates.replaceSchemaTemplate == "update")
+      assert(metaTable.hiveConfig.templates.replacePartitionSchemaTemplate == "update_part")
       assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair")
       assert(metaTable.hiveConfig.templates.addPartitionTemplate == "add_partition")
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop")
       assert(metaTable.hiveConfig.ignoreFailures)
       assert(metaTable.format.name == "parquet")
-      assert(metaTable.format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100))
+      assert(metaTable.format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100, preferCoalesce = true))
       assert(metaTable.hiveTable.contains("my_hive_table"))
       assert(metaTable.hivePath.contains("/d/e/f"))
       assert(!metaTable.hivePreferAddPartition)
+      assert(metaTable.backfillDays == 2)
       assert(metaTable.trackDays == 1)
       assert(metaTable.infoDateColumn == "INFORMATION_DATE")
       assert(metaTable.infoDateFormat == "yyyy-MM-dd")
@@ -284,6 +290,9 @@ class MetaTableSuite extends AnyWordSpec {
           |
           |  conf {
           |     create.table.template = "create2"
+          |     create.only.table.template = "create_only2"
+          |     replace.schema.template = "replace2"
+          |     replace.partition.schema.template = "replace_part2"
           |     repair.table.template = "repair2"
           |     add.partition.template = "add_partition2"
           |     drop.table.template = "drop2"
@@ -294,21 +303,24 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "add_partition1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "replace_part1", "repair1", "add_partition1", "drop1")),
         Some(JdbcConfig("driver1", Some("url1"),
           user = Some("user1"),
           password = Some("pass1")
-        )), ignoreFailures = false, alwaysEscapeColumnNames = false, optimizeExistQuery = true)
+        )), ignoreFailures = false, alwaysEscapeColumnNames = false, optimizeExistQuery = true, None)
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 1, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+      val metaTable = MetaTable.fromConfigSingleEntity(conf, appConf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, 1, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
 
       assert(metaTable.name == "my_table")
       assert(metaTable.hiveConfig.hiveApi == HiveApi.SparkCatalog)
       assert(metaTable.hiveConfig.database.contains("mydb2"))
       assert(metaTable.hiveConfig.jdbcConfig.exists(_.driver == "driver2"))
       assert(metaTable.hiveConfig.templates.createTableTemplate == "create2")
+      assert(metaTable.hiveConfig.templates.createOnlyTableTemplate == "create_only2")
+      assert(metaTable.hiveConfig.templates.replaceSchemaTemplate == "replace2")
+      assert(metaTable.hiveConfig.templates.replacePartitionSchemaTemplate == "replace_part2")
       assert(metaTable.hiveConfig.templates.repairTableTemplate == "repair2")
       assert(metaTable.hiveConfig.templates.addPartitionTemplate == "add_partition2")
       assert(metaTable.hiveConfig.templates.dropTableTemplate == "drop2")
@@ -328,7 +340,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Mandatory option missing: name"))
@@ -346,7 +358,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Unable to read data format from config for the metastore table: table1"))
@@ -364,7 +376,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Invalid or unsupported save mode: 'ignore' for table 'table1'."))
@@ -382,7 +394,7 @@ class MetaTableSuite extends AnyWordSpec {
       val defaultHiveConfig = HiveDefaultConfig.getNullConfig
 
       val ex = intercept[IllegalArgumentException] {
-        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+        MetaTable.fromConfigSingleEntity(conf, conf, "", "", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 0, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
       }
 
       assert(ex.getMessage.contains("Invalid or unsupported save mode: 'test' for table 'table1'."))

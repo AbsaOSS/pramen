@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 import org.apache.hadoop.fs.Path
 import org.scalatest.BeforeAndAfter
 import za.co.absa.pramen.core.base.SparkTestBase
-import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperText}
+import za.co.absa.pramen.core.bookkeeper.BookkeeperText
 import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.utils.FsUtils
 
@@ -41,52 +41,68 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
     deleteDir(tmpDir)
   }
 
-  def getBookkeeper: BookkeeperText = {
-    new BookkeeperText(tmpDir)
+  def getBookkeeper(batchId: Long): BookkeeperText = {
+    new BookkeeperText(tmpDir, batchId)
   }
 
   "BookkeeperHadoopText" when {
     "initialized" should {
       "Initialize bookkeeping directory" in {
-        getBookkeeper
+        getBookkeeper(123L)
 
         assert(fsUtils.exists(new Path(tmpDir, s"$bookkeepingRootPath/$recordsDirName")))
         assert(fsUtils.exists(new Path(tmpDir, locksDirName)))
       }
     }
 
-    testBookKeeper(() => getBookkeeper)
+    testBookKeeper(batchId => getBookkeeper(batchId))
   }
 
   "getFilter" should {
     "get a ranged filter" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
-      val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2))).toString()
+      val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2)), None).toString()
 
       assert(actual == "(((tableName = table1) AND (infoDate >= 2021-01-01)) AND (infoDate <= 2021-01-02))")
     }
 
-    "get a from filter" in {
-      val bk = getBookkeeper
+    "get a ranged filter with batch id" in {
+      val bk = getBookkeeper(123L)
 
-      val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), None).toString()
+      val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2)), Some(123L)).toString()
+
+      assert(actual == "((((tableName = table1) AND (infoDate >= 2021-01-01)) AND (infoDate <= 2021-01-02)) AND (batchId = 123))")
+    }
+
+    "get a from filter" in {
+      val bk = getBookkeeper(123L)
+
+      val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), None, None).toString()
 
       assert(actual == "((tableName = table1) AND (infoDate >= 2021-01-01))")
     }
 
     "get a to filter" in {
-      val bk = getBookkeeper
+      val bk = getBookkeeper(123L)
 
-      val actual = bk.getFilter("table1", None, Some(LocalDate.of(2021, 1, 2))).toString()
+      val actual = bk.getFilter("table1", None, Some(LocalDate.of(2021, 1, 2)), None).toString()
 
       assert(actual == "((tableName = table1) AND (infoDate <= 2021-01-02))")
     }
 
-    "get a table filter" in {
-      val bk = getBookkeeper
+    "get a batchid filter" in {
+      val bk = getBookkeeper(123L)
 
-      val actual = bk.getFilter("table1", None, None).toString()
+      val actual = bk.getFilter("table1", None, None, Some(123L)).toString()
+
+      assert(actual == "((tableName = table1) AND (batchId = 123))")
+    }
+
+    "get a table filter" in {
+      val bk = getBookkeeper(123L)
+
+      val actual = bk.getFilter("table1", None, None, None).toString()
 
       assert(actual == "(tableName = table1)")
     }

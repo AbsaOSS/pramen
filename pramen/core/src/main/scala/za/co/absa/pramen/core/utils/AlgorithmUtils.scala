@@ -18,8 +18,10 @@ package za.co.absa.pramen.core.utils
 
 import org.slf4j.Logger
 
+import java.time.{Duration, Instant}
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.util.Random
 
 object AlgorithmUtils {
   /** Finds which strings are encountered multiple times (case insensitive). */
@@ -69,7 +71,7 @@ object AlgorithmUtils {
   }
 
   @tailrec
-  final def actionWithRetry(attempts: Int, log: Logger)(action: => Unit): Unit = {
+  final def actionWithRetry(attempts: Int, log: Logger, backoffMinMs: Int = 0, backoffMaxMs: Int = 0)(action: => Unit): Unit = {
     def getErrorMessage(ex: Throwable): String = {
       if (ex.getCause == null) {
         ex.getMessage
@@ -87,9 +89,29 @@ object AlgorithmUtils {
         if (attemptsLeft < 1) {
           throw ex
         } else {
-          log.warn(s"Attempt failed: ${getErrorMessage(ex)}. Attempts left: $attemptsLeft. Retrying...")
-          actionWithRetry(attemptsLeft, log)(action)
+          if (backoffMaxMs > backoffMinMs && backoffMinMs > 0) {
+            val backoffMs = Random.nextInt(backoffMaxMs - backoffMinMs) + backoffMinMs
+            val backoffS = backoffMs / 1000
+            log.error(s"Attempt failed: ${getErrorMessage(ex)}. Attempts left: $attemptsLeft. Retrying in $backoffS seconds...")
+            Thread.sleep(backoffMs)
+          } else {
+            log.error(s"Attempt failed: ${getErrorMessage(ex)}. Attempts left: $attemptsLeft. Retrying...")
+          }
+
+          actionWithRetry(attemptsLeft, log, backoffMinMs, backoffMaxMs)(action)
         }
     }
+  }
+
+  final def runActionWithElapsedTimeEvent[R](maxTimeMs: Long)(action: => R)(onMaxTimeBreach: Long => Unit): R = {
+    val start = Instant.now
+    val result = action
+    val finish = Instant.now
+
+    val duration = Duration.between(start, finish).toMillis
+    if (duration > maxTimeMs) {
+      onMaxTimeBreach(duration)
+    }
+    result
   }
 }

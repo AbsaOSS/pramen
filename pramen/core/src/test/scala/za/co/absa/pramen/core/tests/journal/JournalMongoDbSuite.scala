@@ -30,21 +30,21 @@ class JournalMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAnd
 
   before {
     if (db != null) {
-      if (db.doesCollectionExists(collectionName)) {
-        db.dropCollection(collectionName)
+      if (db.doesCollectionExists(tasksCollectionName)) {
+        db.dropCollection(tasksCollectionName)
       }
       journal = new JournalMongoDb(connection)
     }
   }
 
-  if (db != null) {
+  if (mongoDbExecutable.nonEmpty) {
     "Journal/MongoDB" should {
       "Initialize an empty database" in {
         db.doesCollectionExists("collectionName")
 
-        assert(db.doesCollectionExists(collectionName))
+        assert(db.doesCollectionExists(tasksCollectionName))
 
-        val indexes = dbRaw.getCollection(collectionName).listIndexes().execute()
+        val indexes = dbRaw.getCollection(tasksCollectionName).listIndexes().execute()
         assert(indexes.size == 3)
       }
 

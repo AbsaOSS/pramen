@@ -122,6 +122,10 @@ Pramen is built using SBT.
 - `sbt test` - runs all tests (unit and integration)
 - `sbt unit:test` - runs unit tests only
 - `sbt integration:test` - runs integration tests only
+- `sbt jacoco` - runs all tests with coverage and generates reports for `core` and `extras`
+
+Code coverage is measured by JaCoCo with method-level filtering of Scala boilerplate.
+Filter rules live in `pramen/jmf-rules.txt`.
 
 Install locally for `sbt` projects:
 ```
@@ -157,13 +161,13 @@ API (for defining custom sources, transformers, and sinks):
 <tr><th>Scala 2.11</th><th>Scala 2.12</th><th>Scala 2.13</th></tr>
 <tr>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.11"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.11/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api_2.11"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-api_2.11" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.12"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.12/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api_2.12"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-api_2.12" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.13"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-api_2.13/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-api_2.13"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-api_2.13" alt="Maven Central"></a><br>
 </td>
 </tr>
 </table>
@@ -173,13 +177,13 @@ Framework core (for advanced usage):
 <tr><th>Scala 2.11</th><th>Scala 2.12</th><th>Scala 2.13</th></tr>
 <tr>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.11"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.11/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core_2.11"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-core_2.11" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.12"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.12/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core_2.12"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-core_2.12" alt="Maven Central"></a><br>
 </td>
 <td align="center">
-<a href = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.13"><img src = "https://maven-badges.herokuapp.com/maven-central/za.co.absa.pramen/pramen-core_2.13/badge.svg" alt="Maven Central"></a><br>
+<a href = "https://mvnrepository.com/artifact/za.co.absa.pramen/pramen-core_2.13"><img src = "https://img.shields.io/maven-central/v/za.co.absa.pramen/pramen-core_2.13" alt="Maven Central"></a><br>
 </td>
 </tr>
 </table>
@@ -263,6 +267,24 @@ pramen {
     password = "password"
   }
   temporary.directory = "s3://bucket/prefix/tmp/"
+}
+```
+
+When you start Pramen pipelines from edge nodes with local storage available, you can use an SQLite database for bookkeeping.
+This works well for exploration and test purposes so you don't have to provision a PostgreSQL database. The configuration
+looks like this:
+
+```hocon
+pramen {
+  environment.name = "DEV"
+  pipeline.name = "Test Pipeline"
+
+  bookkeeping.enabled = true
+  bookkeeping.jdbc {
+    driver = "org.sqlite.JDBC"
+    url = "jdbc:sqlite:pramen.sqlite"
+  }
+  temporary.directory = "/tmp"
 }
 ```
 
@@ -382,7 +404,13 @@ pramen.metastore {
       name = "table_name"
       format = "parquet"
       path = "hdfs://cluster/path/to/parquet/folder"
+      # You can specify the target nuber of records per partition
       records.per.partition = 1000000
+      # Or the excplicit partition count
+      #number.of.partitions
+
+      # If true, Pramen will use coalesce() instead of repartition() when `records.per.partition` is specified
+      #prefer.coalesce = true
       
       # (Experimental) Save mode to use when writing to partitions.
       # Supported: overwrite (default), append
@@ -429,6 +457,8 @@ Metastore table options:
 | `table`                                   | Delta Lake table name (if Delta Lake tables are the underlying storage).                                                                                                                                                                                            |
 | `cache.policy`                            | For `transient` format only. Cache policy defines how to store transient tables for the duration of the pipeline. Available options: `cache`, `no_cache`, `persist`.----                                                                                            |
 | `records.per.partition`                   | Number of records per partition (in order to avoid small files problem).                                                                                                                                                                                            |
+| `number.of.partitions`                    | Specify the number of partitions explicitly. Peamen is going to use `df.coalesce(x)` before writing to the metastore table.                                                                                                                                         |
+| `prefer.coalesce`                         | If true, Pramen will use coalesce() instead of repartition() when `records.per.partition` is specified.                                                                                                                                                             |
 | `information.date.column`                 | Name of the column that contains the information date. *                                                                                                                                                                                                            |
 | `information.date.format`                 | Format of the information date used for partitioning (in Java format notation). *                                                                                                                                                                                   |
 | `information.date.start`                  | The earliest date the table contains data for. *                                                                                                                                                                                                                    |
@@ -957,6 +987,14 @@ pramen.sources = [
       sasl.jaas.config = "..."
       sasl.mechanism = "..."
       security.protocol = "..."
+
+      ssl.truststore.location = "..."
+      ssl.truststore.password = "..."
+      ssl.truststore.type = "..."
+      ssl.keystore.location = "..."
+      ssl.keystore.password = "..."
+      ssl.keystore.type = "..."
+      ssl.key.password = "..."
     }
 
     schema.registry {
@@ -964,12 +1002,17 @@ pramen.sources = [
       value.naming.strategy = "topic.name"
       #key.naming.strategy = "topic.name"
 
-      # Arbitrary options for Schema registry
-      basic.auth.credentials.source = "..."
-      basic.auth.user.info = "..."
-      ssl.truststore.location = "..."
-      ssl.truststore.password = "..."
-      ssl.truststore.type = "..."
+      option {
+        # Arbitrary options for Schema registry
+        basic.auth.credentials.source = "..."
+        basic.auth.user.info = "..."
+        schema.registry.ssl.truststore.location = "..."
+        schema.registry.ssl.truststore.password = "..."
+        schema.registry.ssl.truststore.type = "..."
+        schema.registry.ssl.keystore.location = "..."
+        schema.registry.ssl.keystore.password = "..."
+        schema.registry.ssl.keystore.type = "..."
+      }
     }
   }
 ]
@@ -1031,18 +1074,31 @@ pramen.sinks = [
       sasl.jaas.config = "..."
       sasl.mechanism = "..."
       security.protocol = "..."
+
+      ssl.truststore.location = "..."
+      ssl.truststore.password = "..."
+      ssl.truststore.type = "..."
+      ssl.keystore.location = "..."
+      ssl.keystore.password = "..."
+      ssl.keystore.type = "..."
+      ssl.key.password = "..."
     }
 
     schema.registry {
       url = "https://my.schema.registry:8081"
       value.naming.strategy = "topic.name"
 
-      # Arbitrary options for Schema registry
-      basic.auth.credentials.source = "..."
-      basic.auth.user.info = "..."
-      ssl.truststore.location = "..."
-      ssl.truststore.password = "..."
-      ssl.truststore.type = "..."
+      option {
+        # Arbitrary options for Schema registry
+        basic.auth.credentials.source = "..."
+        basic.auth.user.info = "..."
+        schema.registry.ssl.truststore.location = "..."
+        schema.registry.ssl.truststore.password = "..."
+        schema.registry.ssl.truststore.type = "..."
+        schema.registry.ssl.keystore.location = "..."
+        schema.registry.ssl.keystore.password = "..."
+        schema.registry.ssl.keystore.type = "..."
+      }
     }
   }
 ]
@@ -1756,6 +1812,9 @@ pramen.operations = [
     # For monthly jobs the default is: "beginOfMonth(@runDate)"
     info.date.expr = "@runDate"
     
+    # If true, failure of this operation causes failure of the whole pipeline.
+    critical = false
+    
     # If true (default) jobs in this operation is allowed to run in parallel.
     # It makes sense to set it to false for jobs that take a lot of cluster resources.
     allow.parallel = true
@@ -1771,6 +1830,9 @@ pramen.operations = [
     # Thus, the task will take up multiple "slots" in 'pramen.parallel.tasks' setting.
     # This is useful if some tasks consume lot of memory and CPU and should not be running with other tasks in parallel.
     consume.threads = 2
+    
+    # When true, schema changes in the source are ignored and are not displayed in notifications.
+    ignore.schema.change = false
 
     tables = [
       {
@@ -1794,6 +1856,11 @@ pramen.operations = [
 
     # Specifies an expression to calculate output information date based on the day at which the job has ran.
     info.date.expr = "@runDate"
+
+    # If this is set Pramen won't save the output table and rely on the transformer doing this itself.
+    # This is helpful when a transformer is designed for parallel writes to a table and has its own way of
+    # managing concurrency.
+    #do.not.write.output = true
 
     # Specifies which tables are inputs to the transformer and which date range input tables are expected to have input data.
     dependencies = [
@@ -2277,7 +2344,7 @@ Here is a example:
   name = "My Scala Transformation"
   type = "transformer"
   class = "com.example.MyTransformer"
-  
+
   schedule.type = "daily"
   
   output.table = "my_output_table"
@@ -2319,6 +2386,25 @@ Here is a example:
   
   # Optional column selection
   columns = [ "A", "B", "C" ]
+
+  # [Optional] If true (default) jobs in this operation is allowed to run in parallel.
+  # It makes sense to set it to false for jobs that take a lot of cluster resources.
+  allow.parallel = true
+
+  # [Optional] If this is true, the operation will run regardless if dependent jobs had failed.
+  # This gives more responsibilities for validation to ensure that the job can run.
+  # Useful for transformations that should still run if they do not strongly need latest
+  # data from previous jobs.
+  always.attempt = false
+
+  # [Optional] You can determine number of tasks running in parallel with 'pramen.parallel.tasks' setting. 
+  # By setting 'consume.threads' to greater value than 1, the task will appear to require more than 1 thread to run. 
+  # Thus, the task will take up multiple "slots" in 'pramen.parallel.tasks' setting.
+  # This is useful if some tasks consume lot of memory and CPU and should not be running with other tasks in parallel.
+  consume.threads = 2
+
+  # [Optional] When true, schema changes in the source are ignored and are not displayed in notifications.
+  ignore.schema.change = false
 }
 ```
 
@@ -2490,6 +2576,34 @@ pramen {
     database = "mydb"
   }
 }
+```
+
+### (experimental) DynamoDB database
+Here is how you can use a DynamoDB database for storing bookkeeping information:
+
+```hocon
+pramen {
+  bookkeeping.enabled = "true"
+
+  bookkeeping.dynamodb {
+    region = "af-south-1"
+    table.prefix = "pramen_uat"
+  }
+}
+```
+
+DynamoDB tables are automatically created if they don't exist with default options. Use the prefix to create multiple
+Pramen bookeeping environments per AWS account.
+
+Note that the Pramen project that uses DynamoDB for bookeeping needs to add DynamoDB as a dependency if it is not provided
+by the Spark cluster (e.g. EMR).
+
+```xml
+<dependency>
+    <groupId>software.amazon.awssdk</groupId>
+    <artifactId>dynamodb</artifactId>
+    <version>${aws.sdk.version}</version>
+</dependency>
 ```
 
 ### Hadoop (CSV+JSON)
@@ -3028,6 +3142,49 @@ pramen.operations = [
 ```
 </details>
 
+
+### (Experimental) Bulk load of historical data
+Sometimes data needs to be loaded and processed for historical periods that may span several years. You can, of course, 
+run Pramen with `--date-from` and `--date-to` to load such data, but for daily datasets this can take a long time because 
+each day is processed independently. Bulk loading allows data to be loaded in `monthly`, `quarterly`, or `yearly` chunks.
+
+Bulk loading works as follows:
+- Each month, quarter, or year is loaded into a single info date partition corresponding to the first info date of that
+  period.
+- Data is loaded for each period independently. Pramen tracks progress in the `bulk_loads` table. If a job is interrupted 
+  and later restarted, Pramen resumes processing from where it left off.
+- After all data for a period has been loaded, you can enable repartitioning so that `pramen_info_date` matches the
+  daily dates.
+
+Example configuration options:
+```hocon
+pramen {
+  # The period of data to load
+  load.date.from = "2000-01-01"
+  load.date.to = "2020-12-31"
+  
+  runtime.run.mode = bulk
+  runtime.run.bulk.batch.size = monthly # Can be quarterly or yearly as well
+  runtime.inverse.order = true
+  
+  runtime.info.date.column = "transaction_timestamp"
+  runtime.info.date.format = "yyyy-MM-dd" # Only is the info date column data type is not 'date' or 'timestamp'  
+  runtime.enable.repartitioning = true # This is false by default - please use with caustion since this is an experimental feature
+}
+```
+
+Alternatively, you can use command line to run bulk loads without changing the config like this:
+```
+--workflow "dummy.config" \
+--date-from "2000-01-01" \
+--date-to "2020-12-31" \
+--inverse-order "true" \
+--run-mode "bulk" \
+--bulk-size "yearly" \
+--info-date-column "info_date" \
+--info-date-format "yyyyMMdd"
+```
+
 ## Pipeline Notifications
 Custom pipeline notification targets allow execution arbitrary actions after the pipeline is finished. Usually, it is 
 used to send custom notifications to external systems. A pipeline notification target can be created by implementing
@@ -3214,14 +3371,37 @@ pramen {
     }
 
     # Optional, use only if you want to override default templates
+    
     conf.parquet = {
-      create.table.template = "..."
-      repair.table.template = "..."
-     drop.table.template = "..."
+      create.table.template = """
+    CREATE EXTERNAL TABLE IF NOT EXISTS @fullTableName
+      ( @schema )
+    @partitionedBy
+    STORED AS PARQUET
+    LOCATION '@path'
+  """
+      create.only.table.template = """
+    CREATE EXTERNAL TABLE @fullTableName 
+      ( @schema )
+    @partitionedBy
+    ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+    STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+    OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+    LOCATION '@path'
+    """
+
+      add.partition.template = "ALTER TABLE @fullTableName ADD IF NOT EXISTS PARTITION (@partitionClause) LOCATION '@partitionPath'"
+
+      repair.table.template = "MSCK REPAIR TABLE @fullTableName"
+
+      drop.table.template = "DROP TABLE IF EXISTS @fullTableName"
     }
     conf.delta = {
+      # Create table if not exists query template
       create.table.template = "..."
-      repair.table.template = "..."
+      # Create table without checking for existence query template
+      create.only.table.template = "..."
+      # Drop table query template
       drop.table.template = "..."
     }
   }
@@ -3442,8 +3622,20 @@ execution Pramen will do the following:
 
 ![](resources/run_diagram.png)
 
+- Check for days where jobs didn't run or failed even though they were scheduled for these days, up to the maximum
+  defined in
+  the `backfill.days` global option or a metatable definition option. The option has the following meaning:
+    - `-1` means backfill up until the last successful attempt.
+    - `0` means never backfill.
+    - `1` means backfill only for the same info date.
+    - `2` means backfill for the info date and the date before.
 - Check for retrospective updates of the source data according to `track.days` of corresponding tables in the metastore.
   For this check Pramen will query sources for record counts for each of previous days.
+  - The option has the following meaning (similar to `backfill.days``):
+      - `-1` means backfill only up until the last successfull attempt. Never track retrospective updates.
+      - `0` means never track retrospective updates.
+      - `1` means track retrospective only for the same info date.
+      - `2` means track retrospective for the info date and the date before.
   - If a mismatch is found (as at `2020-07-16` on this diagram), the data is reloaded and dependent transformers are
     recomputed (if `trigger.updates = true`)
 - Check for late data by querying sources for records for previous days if none were loaded. If such data is found, it
@@ -3482,6 +3674,8 @@ Execution options:
 | --undercover               | `--undercover`              | If specified, Pramen will not update bookkeeper so any changes caused by the pipeline won't be recorded. Useful for re-running historical transformations without triggering execution of the rest of the pipeline. |
 | --use-lock <true \| false> | `--use-lock true`           | If true (default) a lock will be used to protect against parallel writes to the same partition. Bookkeeping storage or database will be used for locking across pipelines.                                          |
 | --skip-locked              | `--skip-locked`             | If specified, jobs that are already running (holding a lock) will be skipped. Otherwise, an error will be thrown.                                                                                                   |
+| --attempt                  | `--attempt 2`               | Specifies attempt number for the pipeline. This is only for notification purposes. Used together with `--max-attempts`.                                                                                             |
+| --max-attempts             | `--max-attempts 5`          | Specifies the number of attempts for the pipeline. This is only for notification purposes.                                                                                                                          |
 
 ### Command line examples
 

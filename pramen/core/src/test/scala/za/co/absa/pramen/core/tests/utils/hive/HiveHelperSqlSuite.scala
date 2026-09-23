@@ -20,7 +20,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions.lit
-import org.apache.spark.sql.types.{IntegerType, MetadataBuilder, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -55,7 +55,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, false)
         val schema = spark.read.parquet(path).schema
 
-        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl")
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("db"), "tbl", autoRepairPartitions = false)
 
         qe.close()
 
@@ -82,12 +82,102 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
              |MSCK REPAIR TABLE `db`.`tbl`
              |""".stripMargin
 
-
         val qe = new QueryExecutorMock(tableExists = false)
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
         hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "execute expected queries for partitioned table without repair table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected =
+          s"""DROP TABLE IF EXISTS `db`.`tbl`
+             |CREATE EXTERNAL TABLE IF NOT EXISTS
+             |`db`.`tbl` ( `c` INT )
+             |PARTITIONED BY (`a` STRING,`b` INT)
+             |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+             |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+             |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+             |LOCATION '$path';
+             |""".stripMargin
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createOrUpdateHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl", autoRepairPartitions = false)
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "execute expected creation only query for partitioned table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected =
+          s"""CREATE EXTERNAL TABLE
+             |`db`.`tbl` ( `c` INT )
+             |PARTITIONED BY (`a` STRING,`b` INT)
+             |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+             |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+             |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+             |LOCATION '$path';
+             |MSCK REPAIR TABLE `db`.`tbl`
+             |""".stripMargin
+
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "execute expected query for replacing schema of a partitioned table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected = "ALTER TABLE `db`.`tbl` REPLACE COLUMNS ( `c` INT ) CASCADE".stripMargin
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.replaceHiveTableSchema(schema, "a" :: "b" :: Nil, Some("db"), "tbl")
+
+        val actual = qe.queries.mkString("\n")
+
+        compareText(actual, expected)
+      }
+    }
+
+    "execute expected query for replacing partition schema of a partitioned table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val expected = "ALTER TABLE `db`.`tbl` PARTITION (a='AA', b='22') REPLACE COLUMNS ( `c` INT )".stripMargin
+
+        val qe = new QueryExecutorMock(tableExists = false)
+        val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.replaceHivePartitionSchema(schema, "a" :: "b" :: Nil, Seq("AA", "22"), Some("db"), "tbl")
 
         val actual = qe.queries.mkString("\n")
 

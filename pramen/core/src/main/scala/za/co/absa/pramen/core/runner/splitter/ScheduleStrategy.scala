@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.runner.splitter
 
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.MetastoreDependency
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.pipeline.TaskPreDef
 
@@ -29,6 +30,7 @@ trait ScheduleStrategy {
                     outputTable: String,
                     dependencies: Seq[MetastoreDependency],
                     bookkeeper: Bookkeeper,
+                    bulkLoadStateManager: BulkLoadStateManager,
                     infoDateExpression: String,
                     schedule: Schedule,
                     params: ScheduleParams,

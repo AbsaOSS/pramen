@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.api.{CachePolicy, CatalogTable, DataFormat, PartitionInfo, Query}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 object DataFormatParser {
@@ -33,24 +33,27 @@ object DataFormatParser {
   val TABLE_KEY = "table"
   val NUMBER_OF_PARTITIONS_KEY = "number.of.partitions"
   val RECORDS_PER_PARTITION_KEY = "records.per.partition"
+  val PREFER_COALESCE_KEY = "prefer.coalesce"
   val CACHE_POLICY_KEY = "cache.policy"
   val DEFAULT_FORMAT = "parquet"
 
   val DEFAULT_RECORDS_PER_PARTITION_KEY = "pramen.default.records.per.partition"
+  val DEFAULT_PREFER_COALESCE_KEY = "pramen.default.prefer.coalesce"
 
   def fromConfig(conf: Config, appConfig: Config): DataFormat = {
     val format = ConfigUtils.getOptionString(conf, FORMAT_KEY).getOrElse(DEFAULT_FORMAT)
 
     val defaultRecordsPerPartition = ConfigUtils.getOptionLong(appConfig, DEFAULT_RECORDS_PER_PARTITION_KEY)
+    val defaultPreferCoalesce = ConfigUtils.getOptionBoolean(appConfig, DEFAULT_PREFER_COALESCE_KEY).getOrElse(false)
 
     format match {
       case FORMAT_PARQUET =>
         val path = getPath(conf)
-        val partitionInfo = getPartitionInfo(conf, defaultRecordsPerPartition)
+        val partitionInfo = getPartitionInfo(conf, defaultRecordsPerPartition, defaultPreferCoalesce)
         DataFormat.Parquet(path, partitionInfo)
       case FORMAT_DELTA   =>
         val query = getQuery(conf)
-        val partitionInfo = getPartitionInfo(conf, defaultRecordsPerPartition)
+        val partitionInfo = getPartitionInfo(conf, defaultRecordsPerPartition, defaultPreferCoalesce)
         DataFormat.Delta(query, partitionInfo)
       case FORMAT_ICEBERG =>
         if (!conf.hasPath(TABLE_KEY)) throw new IllegalArgumentException(s"Mandatory option for a metastore table having 'iceberg' format: $TABLE_KEY")
@@ -72,9 +75,10 @@ object DataFormatParser {
     }
   }
 
-  private[core] def getPartitionInfo(conf: Config, defaultRecordsPerPartition: Option[Long]): PartitionInfo = {
+  private[core] def getPartitionInfo(conf: Config, defaultRecordsPerPartition: Option[Long], defaultPreferCoalesce: Boolean): PartitionInfo = {
     val numberOfPartitionsOpt = ConfigUtils.getOptionInt(conf, NUMBER_OF_PARTITIONS_KEY)
     val recordsPerPartitionOpt = ConfigUtils.getOptionLong(conf, RECORDS_PER_PARTITION_KEY)
+    val preferCoalesce = ConfigUtils.getOptionBoolean(conf, PREFER_COALESCE_KEY).getOrElse(defaultPreferCoalesce)
 
     (numberOfPartitionsOpt, recordsPerPartitionOpt) match {
       case (Some(_), Some(_)) =>
@@ -83,10 +87,10 @@ object DataFormatParser {
       case (Some(nop), None) =>
         PartitionInfo.Explicit(nop)
       case (None, Some(rpp)) =>
-        PartitionInfo.PerRecordCount(rpp)
+        PartitionInfo.PerRecordCount(rpp, preferCoalesce)
       case (None, None) =>
         defaultRecordsPerPartition match {
-          case Some(rpp) => PartitionInfo.PerRecordCount(rpp)
+          case Some(rpp) => PartitionInfo.PerRecordCount(rpp, preferCoalesce)
           case None => PartitionInfo.Default
         }
     }

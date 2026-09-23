@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.Query
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.core.expr.DateExprEvaluator
 import za.co.absa.pramen.core.reader.model.{JdbcConfig, TableReaderJdbcConfig}
-import za.co.absa.pramen.core.utils.{JdbcNativeUtils, JdbcSparkUtils, StringUtils, TimeUtils}
+import za.co.absa.pramen.core.utils._
 
 import java.time.{Instant, LocalDate}
 
@@ -31,15 +31,16 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
                             jdbcUrlSelector: JdbcUrlSelector,
                             conf: Config)
                            (implicit spark: SparkSession) extends TableReaderJdbcBase(jdbcReaderConfig, jdbcUrlSelector, conf) {
-  import TableReaderJdbcNative._
 
   private val log = LoggerFactory.getLogger(this.getClass)
 
   private val jdbcConfig = jdbcReaderConfig.jdbcConfig
 
-  private val url = jdbcUrlSelector.getWorkingUrl(jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls))
-
   logConfiguration()
+
+  private[core] def getJdbcSelector: JdbcUrlSelector = {
+    jdbcUrlSelector
+  }
 
   private[core] def getJdbcReaderConfig: TableReaderJdbcConfig = {
     jdbcReaderConfig.copy(jdbcConfig = jdbcConfig)
@@ -56,7 +57,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
         getCountForSql(sql)
       case Query.Sql(sql) =>
         log.info(s"JDBC Native count of a non-SELECT SQL statement: $sql")
-        JdbcNativeUtils.getJdbcNativeRecordCount(jdbcConfig, url, sql)
+        JdbcNativeUtils.getJdbcNativeRecordCount(jdbcUrlSelector, sql)
       case other =>
         throw new IllegalArgumentException(s"'${other.name}' is not supported by the JDBC reader. Use 'table' or 'sql' instead.")
     }
@@ -98,7 +99,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
   private[core] def getDataFrame(sql: String, tableOpt: Option[String]): DataFrame = {
     log.info(s"JDBC Query: $sql")
 
-    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcUrlSelector, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
@@ -109,7 +110,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
         case Some(table) => sqlGen.getSchemaQuery(table, Seq.empty)
         case _ => JdbcSparkUtils.getSchemaQuery(sql)
       }
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, schemaQuery) { (connection, _) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, _) =>
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>
             log.info(s"Reading JDBC metadata descriptions the table: $table")
@@ -132,7 +133,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
     log.info(s"JDBC Query: $sql")
 
-    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcConfig, url, sql)
+    var df = JdbcNativeUtils.getJdbcNativeDataFrame(jdbcUrlSelector, sql)
 
     if (log.isDebugEnabled) {
       log.debug(df.schema.treeString)
@@ -141,7 +142,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
     if (jdbcReaderConfig.enableSchemaMetadata) {
       val schemaQuery = sqlGen.getSchemaQuery(tableName, columns)
 
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, schemaQuery) { (connection, _) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, _) =>
         log.info(s"Reading JDBC metadata descriptions the table: $tableName")
         df = spark.createDataFrame(df.rdd,
           JdbcSparkUtils.addColumnDescriptionsFromJdbc(df.schema, sqlGen.unquote(tableName), connection))
@@ -154,6 +155,7 @@ class TableReaderJdbcNative(jdbcReaderConfig: TableReaderJdbcConfig,
 
 object TableReaderJdbcNative {
   val FETCH_SIZE_KEY = "option.fetchsize"
+  val DRIVER_JAR_PATH = "driver.jar.path"
 
   def apply(conf: Config,
             workflowConf: Config,
@@ -162,7 +164,8 @@ object TableReaderJdbcNative {
     val tableReaderJdbcOrig = TableReaderJdbcConfig.load(conf, workflowConf, parent)
     val jdbcConfig = getJdbcConfig(tableReaderJdbcOrig, conf)
     val tableReaderJdbc = tableReaderJdbcOrig.copy(jdbcConfig = jdbcConfig)
-    val urlSelector = JdbcUrlSelector(tableReaderJdbc.jdbcConfig)
+    val jdbcDriverJarPath = ConfigUtils.getOptionString(conf, DRIVER_JAR_PATH)
+    val urlSelector = JdbcUrlSelector(jdbcDriverJarPath, tableReaderJdbc.jdbcConfig)
 
     new TableReaderJdbcNative(tableReaderJdbc, urlSelector, conf)
   }

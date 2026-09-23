@@ -41,6 +41,7 @@ class DataFormatSuite extends AnyWordSpec {
         """format = parquet
           |path = /a/b/c
           |records.per.partition = 100
+          |prefer.coalesce = false
           |""".stripMargin)
 
       val format = DataFormatParser.fromConfig(conf, conf)
@@ -49,7 +50,24 @@ class DataFormatSuite extends AnyWordSpec {
       assert(!format.isTransient)
       assert(format.isInstanceOf[Parquet])
       assert(format.asInstanceOf[Parquet].path == "/a/b/c")
-      assert(format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100L))
+      assert(format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100L, preferCoalesce = false))
+    }
+
+    "use 'parquet' when rpp specified explicitly and prefer coalesce" in {
+      val conf = ConfigFactory.parseString(
+        """format = parquet
+          |path = /a/b/c
+          |records.per.partition = 100
+          |prefer.coalesce = true
+          |""".stripMargin)
+
+      val format = DataFormatParser.fromConfig(conf, conf)
+
+      assert(format.name == "parquet")
+      assert(!format.isTransient)
+      assert(format.isInstanceOf[Parquet])
+      assert(format.asInstanceOf[Parquet].path == "/a/b/c")
+      assert(format.asInstanceOf[Parquet].partitionInfo == PartitionInfo.PerRecordCount(100L, preferCoalesce = true))
     }
 
     "use 'parquet' when npp specified explicitly" in {
@@ -82,7 +100,7 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.isInstanceOf[Delta])
       assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
       assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
-      assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.PerRecordCount(200L))
+      assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.PerRecordCount(200L, preferCoalesce = false))
     }
 
     "use 'delta' when npp specified explicitly" in {
@@ -232,7 +250,7 @@ class DataFormatSuite extends AnyWordSpec {
       assert(format.isInstanceOf[Delta])
       assert(format.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
       assert(format.asInstanceOf[Delta].query.query == "/a/b/c")
-      assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.PerRecordCount(100))
+      assert(format.asInstanceOf[Delta].partitionInfo == PartitionInfo.PerRecordCount(100, preferCoalesce = false))
     }
 
     "throw an exception on unknown format" in {

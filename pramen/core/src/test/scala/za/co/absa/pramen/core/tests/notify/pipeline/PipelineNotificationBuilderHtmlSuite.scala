@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.tests.notify.pipeline
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.notification.NotificationEntry.Paragraph
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.api.status._
@@ -175,7 +176,7 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       builder.addCompletedTask(TaskResultFactory.getDummyTaskResult(
         runStatus = TestPrototypes.runStatusWarning,
         schemaDifferences = SchemaDifferenceFactory.getDummySchemaDifference() :: Nil,
-        notificationTargetErrors = Seq(NotificationFailure("table1", "my_tagret", LocalDate.parse("2020-02-18"), new RuntimeException("Target 1 exception"))))
+        notificationTargetErrors = Seq(NotificationFailure("table1", "my_target", LocalDate.parse("2020-02-18"), new RuntimeException("Target 1 exception"))))
       )
 
       val actual = builder.renderBody()
@@ -681,6 +682,70 @@ class PipelineNotificationBuilderHtmlSuite extends AnyWordSpec with TextComparis
       val actual = builder.getFailureReason(task)
 
       assert(actual == "Optional depend...")
+    }
+  }
+
+  "renderExecutionInfo" should {
+    "render execution info without attempt information when maxAttempts is 1" in {
+      val builder = getBuilder()
+
+      val result = builder.renderExecutionInfo(
+        LocalDate.parse("2022-02-18"),
+        None,
+        None,
+        isRerun = false,
+        isNewOnly = false,
+        isLateOnly = false,
+        attempt = 1,
+        maxAttempts = 1
+      )
+
+      val paragraph = result.paragraph
+
+      assert(paragraph.exists(_.text == "Execution"))
+      assert(paragraph.exists(_.text == " for "))
+      assert(paragraph.exists(_.text == "the run date <b>2022-02-18</b>"))
+      assert(!paragraph.exists(_.text.contains("attempt")))
+    }
+
+    "render execution info with attempt information when maxAttempts is greater than 1" in {
+      val builder = getBuilder()
+
+      val result = builder.renderExecutionInfo(
+        LocalDate.parse("2022-02-18"),
+        None,
+        None,
+        isRerun = false,
+        isNewOnly = false,
+        isLateOnly = false,
+        attempt = 2,
+        maxAttempts = 5
+      )
+
+      val paragraph = result.paragraph
+
+      assert(paragraph.exists(_.text == "Execution"))
+      assert(paragraph.exists(_.text.contains("Attempt <b>2</b>/<b>5</b>")))
+    }
+
+    "render execution info with attempt and period" in {
+      val builder = getBuilder()
+
+      val result = builder.renderExecutionInfo(
+        LocalDate.parse("2022-02-18"),
+        Some(LocalDate.parse("2022-02-25")),
+        Some(RunMode.CheckUpdates),
+        isRerun = true,
+        isNewOnly = false,
+        isLateOnly = false,
+        attempt = 1,
+        maxAttempts = 10
+      )
+
+      val paragraph = result.paragraph
+
+      assert(paragraph.exists(_.text == "Re-run execution"))
+      assert(paragraph.exists(_.text.contains("Attempt <b>1</b>/<b>10</b>")))
     }
   }
 

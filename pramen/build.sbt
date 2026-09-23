@@ -17,7 +17,6 @@
 import Dependencies._
 import Versions._
 import BuildInfoTemplateSettings._
-import com.github.sbt.jacoco.report.JacocoReportSettings
 
 val scala211 = "2.11.12"
 val scala212 = "2.12.20"
@@ -28,7 +27,8 @@ ThisBuild / organization := "za.co.absa.pramen"
 ThisBuild / scalaVersion := scala212
 ThisBuild / crossScalaVersions := Seq(scala211, scala212, scala213)
 
-ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation")
+ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation", "-target:jvm-1.8")
+ThisBuild / javacOptions := Seq("-source", "1.8", "-target", "1.8")
 
 ThisBuild / versionScheme := Some("early-semver")
 
@@ -36,17 +36,6 @@ ThisBuild / versionScheme := Some("early-semver")
 ThisBuild / autoScalaLibrary := false
 
 lazy val printSparkVersion = taskKey[Unit]("Print Spark version Pramen is building against.")
-
-lazy val commonJacocoReportSettings: JacocoReportSettings = JacocoReportSettings()
-  .withFormats(JacocoReportFormats.HTML, JacocoReportFormats.XML)
-  .withThresholds(JacocoThresholds(line = 60))
-
-lazy val commonJacocoExcludes: Seq[String] = Seq(
-  "za.co.absa.pramen.api.*",
-  "za.co.absa.pramen.buildinfo.*",
-  "za.co.absa.pramen.core.exceptions.*",
-  "za.co.absa.pramen.core.config.*"
-)
 
 val shadeBase = "za.co.absa.pramen.shaded"
 
@@ -142,12 +131,13 @@ lazy val core = (project in file("core"))
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
     populateBuildInfoTemplate,
-    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen:core Jacoco Report"),
-    jacocoExcludes := commonJacocoExcludes,
+    jacocoReportName := "pramen:core Jacoco Report",
+    jacocoReportFormats := Set("html", "xml"),
     assemblySettingsRunner
   )
   .dependsOn(api)
   .enablePlugins(AutomateHeaderPlugin)
+  .enablePlugins(JacocoFilterPlugin)
 
 lazy val extras = (project in file("extras"))
   .configs( UnitTest )
@@ -172,12 +162,13 @@ lazy val extras = (project in file("extras"))
     (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
-    jacocoReportSettings := commonJacocoReportSettings.withTitle("pramen-extras Jacoco Report"),
-    jacocoExcludes := commonJacocoExcludes,
+    jacocoReportName := "pramen-extras Jacoco Report",
+    jacocoReportFormats := Set("html", "xml"),
     assemblySettingsExtras
   )
   .dependsOn(core)
   .enablePlugins(AutomateHeaderPlugin)
+  .enablePlugins(JacocoFilterPlugin)
 
 def isFiltered(fileName: String): Boolean = {
   val filteredExtensions = ".a" :: ".dll" :: ".dylib" :: ".py" :: ".so" :: ".st" :: ".stg" :: Nil
@@ -191,6 +182,7 @@ lazy val assemblySettingsCommon = Seq(
     case "LICENSE"                                 => MergeStrategy.concat
     case "log4j.properties"                        => MergeStrategy.filterDistinctLines
     case x if x.endsWith("module-info.class")      => MergeStrategy.discard
+    case PathList("org", "sqlite", xs @ _*)        => MergeStrategy.first   // include native SQLite libraries
     case PathList("include", xs @ _*)              => MergeStrategy.discard
     case PathList("com", "ibm", "icu", xs @ _*)    => MergeStrategy.discard
     case PathList("common", "message", xs @ _*)    => MergeStrategy.discard
@@ -304,4 +296,8 @@ addCommandAlias("releaseNow", ";set releaseVersionBump := sbtrelease.Version.Bum
 addCommandAlias("t", "unit:test")
 addCommandAlias("utest", "unit:test")
 addCommandAlias("itTest", "integration:test")
-addCommandAlias("xcoverage", "jacoco")
+addCommandAlias("jacoco", "; jacocoOn; jacocoCore; jacocoExtras; jacocoOff")
+addCommandAlias("jacocoOn", "; set core / jacocoPluginEnabled := true; set extras / jacocoPluginEnabled := true")
+addCommandAlias("jacocoOff", "; set core / jacocoPluginEnabled := false; set extras / jacocoPluginEnabled := false")
+addCommandAlias("jacocoCore", "; project core; clean; test; jacocoReportAll")
+addCommandAlias("jacocoExtras", "; project extras; clean; test; jacocoReportAll")

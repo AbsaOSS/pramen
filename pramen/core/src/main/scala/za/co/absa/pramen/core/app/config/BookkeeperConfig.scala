@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.app.config
 
 import com.typesafe.config.Config
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
 
@@ -29,10 +30,15 @@ case class BookkeeperConfig(
                              bookkeepingJdbcConfig: Option[JdbcConfig],
                              deltaDatabase: Option[String],
                              deltaTablePrefix: Option[String],
-                             temporaryDirectory: Option[String]
+                             temporaryDirectory: Option[String],
+                             dynamoDbRegion: Option[String],
+                             dynamoDbTableArn: Option[String],
+                             dynamoDbTablePrefix: Option[String]
                             )
 
 object BookkeeperConfig {
+  private val log = LoggerFactory.getLogger(this.getClass)
+
   val BOOKKEEPING_PARENT = "pramen.bookkeeping"
   val BOOKKEEPING_ENABLED = "pramen.bookkeeping.enabled"
   val BOOKKEEPING_LOCATION = "pramen.bookkeeping.location"
@@ -41,9 +47,12 @@ object BookkeeperConfig {
   val BOOKKEEPING_DB_NAME = "pramen.bookkeeping.mongodb.database"
   val BOOKKEEPING_DELTA_DB_NAME = "pramen.bookkeeping.delta.database"
   val BOOKKEEPING_DELTA_TABLE_PREFIX = "pramen.bookkeeping.delta.table.prefix"
+  val BOOKKEEPING_DYNAMODB_REGION = "pramen.bookkeeping.dynamodb.region"
+  val BOOKKEEPING_DYNAMODB_TABLE_ARN = "pramen.bookkeeping.dynamodb.table.arn"
+  val BOOKKEEPING_DYNAMODB_TABLE_PREFIX = "pramen.bookkeeping.dynamodb.table.prefix"
   val BOOKKEEPING_TEMPORARY_DIRECTORY_KEY = "pramen.temporary.directory"
 
-  def fromConfig(conf: Config): BookkeeperConfig = {
+  def fromConfig(conf: Config, allowLocalBookkepingStorage: Boolean = false): BookkeeperConfig = {
     val bookkeepingEnabled = conf.getBoolean(BOOKKEEPING_ENABLED)
     val bookkeepingLocation = ConfigUtils.getOptionString(conf, BOOKKEEPING_LOCATION)
     val bookkeepingHadoopFormat = HadoopFormat(conf.getString(BOOKKEEPING_HADOOP_FORMAT))
@@ -53,6 +62,9 @@ object BookkeeperConfig {
     val temporaryDirectory = ConfigUtils.getOptionString(conf, BOOKKEEPING_TEMPORARY_DIRECTORY_KEY)
     val deltaDatabase = ConfigUtils.getOptionString(conf, BOOKKEEPING_DELTA_DB_NAME)
     val deltaTablePrefix = ConfigUtils.getOptionString(conf, BOOKKEEPING_DELTA_TABLE_PREFIX)
+    val dynamoDbRegion = ConfigUtils.getOptionString(conf, BOOKKEEPING_DYNAMODB_REGION)
+    val dynamoDbTableArn = ConfigUtils.getOptionString(conf, BOOKKEEPING_DYNAMODB_TABLE_ARN)
+    val dynamoDbTablePrefix = ConfigUtils.getOptionString(conf, BOOKKEEPING_DYNAMODB_TABLE_PREFIX)
 
     if (bookkeepingEnabled && bookkeepingJdbcConfig.isEmpty && bookkeepingHadoopFormat == HadoopFormat.Delta) {
       if (bookkeepingLocation.isEmpty && deltaTablePrefix.isEmpty) {
@@ -60,13 +72,38 @@ object BookkeeperConfig {
         s"Preferably $BOOKKEEPING_DELTA_DB_NAME should be defined as well for managed Delta Lake tables.")
       }
     } else {
-      if (bookkeepingEnabled && bookkeepingConnectionString.isEmpty && bookkeepingLocation.isEmpty && bookkeepingJdbcConfig.isEmpty) {
-        throw new RuntimeException(s"One of the following should be defined: $BOOKKEEPING_PARENT.jdbc.url, $BOOKKEEPING_CONNECTION_STRING or $BOOKKEEPING_LOCATION" +
-          s" when bookkeeping is enabled. You can disable bookkeeping by setting $BOOKKEEPING_ENABLED = false.")
+      if (bookkeepingEnabled && bookkeepingConnectionString.isEmpty && bookkeepingLocation.isEmpty && bookkeepingJdbcConfig.isEmpty && dynamoDbRegion.isEmpty) {
+        if (allowLocalBookkepingStorage) {
+          log.warn("Bookkeeping configuration is missing. Using the default SQLite database 'pramen.sqlite'")
+          return BookkeeperConfig(
+            bookkeepingEnabled = true,
+            None,
+            bookkeepingHadoopFormat,
+            None,
+            None,
+            Some(JdbcConfig(
+              driver = "org.sqlite.JDBC",
+              primaryUrl = Some("jdbc:sqlite:pramen.sqlite")
+            )),
+            None,
+            None,
+            temporaryDirectory,
+            None,
+            None,
+            None
+          )
+        } else {
+          throw new RuntimeException(s"One of the following should be defined: $BOOKKEEPING_PARENT.jdbc.url, $BOOKKEEPING_CONNECTION_STRING, $BOOKKEEPING_DYNAMODB_REGION, or $BOOKKEEPING_LOCATION" +
+            s" when bookkeeping is enabled. You can disable bookkeeping by setting $BOOKKEEPING_ENABLED = false.")
+        }
       }
 
       if (bookkeepingConnectionString.isDefined && bookkeepingDbName.isEmpty) {
         throw new RuntimeException(s"Database name is not defined. Please, define $BOOKKEEPING_DB_NAME.")
+      }
+
+      if (dynamoDbRegion.isDefined && dynamoDbTablePrefix.isEmpty) {
+        log.warn(s"DynamoDB table prefix is not defined. Using default prefix 'pramen'. You can define it with $BOOKKEEPING_DYNAMODB_TABLE_PREFIX.")
       }
     }
 
@@ -79,7 +116,10 @@ object BookkeeperConfig {
       bookkeepingJdbcConfig,
       deltaDatabase,
       deltaTablePrefix,
-      temporaryDirectory
+      temporaryDirectory,
+      dynamoDbRegion,
+      dynamoDbTableArn,
+      dynamoDbTablePrefix
     )
   }
 }

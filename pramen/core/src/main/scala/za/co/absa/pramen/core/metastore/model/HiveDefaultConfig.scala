@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.metastore.model
 import com.typesafe.config.Config
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.ConfigUtils
-import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
+import za.co.absa.pramen.core.utils.hive.{ExistenceCheckStrategy, HiveQueryTemplates}
 
 /**
   * Hive configuration for Pramen.
@@ -98,7 +98,8 @@ case class HiveDefaultConfig(
                               jdbcConfig: Option[JdbcConfig],
                               ignoreFailures: Boolean,
                               alwaysEscapeColumnNames: Boolean,
-                              optimizeExistQuery: Boolean
+                              optimizeExistQuery: Boolean,
+                              tableExistenceCheckStrategy: Option[ExistenceCheckStrategy]
                             )
 
 object HiveDefaultConfig {
@@ -110,6 +111,7 @@ object HiveDefaultConfig {
   val HIVE_ALWAYS_ESCAPE_COLUMN_NAMES = "escape.column.names"
   val HIVE_DATABASE_KEY = "database"
   val HIVE_OPTIMIZE_EXIST_QUERY_KEY = "optimize.exist.query"
+  val HIVE_TABLE_EXISTENCE_CHECK_STRATEGY_KEY = "table.existence.check.strategy"
 
   /**
     * Gets global Hive configuration and query templates for all supported formats.
@@ -140,7 +142,10 @@ object HiveDefaultConfig {
       (format, HiveQueryTemplates.fromConfig(ConfigUtils.getOptionConfig(conf, prefix)))
     }).toMap
 
-    HiveDefaultConfig(hiveApi, database, templates, jdbcConfig, ignoreFailures, alwaysEscapeColumnNames, hiveOptimizeExistQuery)
+    val hiveOptimizeExistQueryOpt = ConfigUtils.getOptionString(conf, s"$HIVE_TEMPLATE_CONFIG_PREFIX.$HIVE_TABLE_EXISTENCE_CHECK_STRATEGY_KEY")
+      .map(s => ExistenceCheckStrategy.fromString(s))
+
+    HiveDefaultConfig(hiveApi, database, templates, jdbcConfig, ignoreFailures, alwaysEscapeColumnNames, hiveOptimizeExistQuery, hiveOptimizeExistQueryOpt)
   }
 
   def getNullConfig: HiveDefaultConfig = HiveDefaultConfig(
@@ -150,6 +155,7 @@ object HiveDefaultConfig {
     None,
     ignoreFailures = false,
     alwaysEscapeColumnNames = true,
-    optimizeExistQuery = true
+    optimizeExistQuery = true,
+    None
   )
 }

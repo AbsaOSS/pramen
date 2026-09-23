@@ -18,6 +18,7 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{DateType, StringType, TimestampType}
 import org.apache.spark.sql.{Column, DataFrame, SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{PartitionInfo, PartitionScheme}
@@ -145,6 +146,87 @@ class MetastorePersistenceParquet(path: String,
     throw new UnsupportedOperationException("Parquet format does not support Hive tables at the moment.")
   }
 
+  override def isRepartitioningSupported: Boolean = partitionScheme == PartitionScheme.PartitionByDay
+
+  override def repartitionPhase1(infoDateDataColumn: String, infoDateDataFormat: String, infoDateDataFrom: LocalDate, infoDateDataTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+    ensureRepartitioningSupported(infoDateDataColumn)
+
+    val infoDateFrom = outputInfoDate
+    val infoDateTo = outputInfoDate.plusYears(1000)
+    val pathFrom = SparkUtils.getPartitionPath(infoDateFrom, infoDateColumn, infoDateFormat, path)
+    val pathTo = SparkUtils.getPartitionPath(infoDateTo, infoDateColumn, infoDateFormat, path)
+
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+
+    log.info(s"Repartitioning phase 1.1 - copying files to a temporary location ($pathTo)...")
+    fsUtils.copyDirectory(pathFrom, pathTo)
+    val sizeFrom = fsUtils.getDirectorySize(pathFrom.toUri.toString)
+    val sizeTo = fsUtils.getDirectorySize(pathTo.toUri.toString)
+    if (sizeFrom != sizeTo) {
+      throw new IllegalStateException(s"Repartitioning failed: size mismatch between $pathFrom ($sizeFrom) and $pathTo ($sizeTo)")
+    }
+  }
+
+  override def repartitionPhase2(infoDateDataColumn: String, infoDateDataFormat: String, infoDateDataFrom: LocalDate, infoDateDataTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+    ensureRepartitioningSupported(infoDateDataColumn)
+
+    val infoDateFrom = outputInfoDate.plusYears(1000)
+    val pathFrom = SparkUtils.getPartitionPath(infoDateFrom, infoDateColumn, infoDateFormat, path)
+    val pathTo = SparkUtils.getPartitionPath(outputInfoDate, infoDateColumn, infoDateFormat, path)
+    val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, path)
+    if (!fsUtils.exists(pathFrom)) {
+      throw new IllegalArgumentException(s"Path does not exist: $pathFrom")
+    }
+
+    log.info(s"Repartitioning phase 2.1 - deleting data in the original partition ($pathTo)...")
+    fsUtils.deleteDirectoryRecursively(pathTo)
+
+    log.info(s"Repartitioning phase 2.2 - deleting data from target partitions ($infoDateDataFrom to $infoDateDataTo)...")
+    var date = infoDateDataFrom
+    while(date.isBefore(infoDateDataTo) || date.isEqual(infoDateDataTo)) {
+      val pathToDelete = SparkUtils.getPartitionPath(date, infoDateColumn, infoDateFormat, path)
+      fsUtils.deleteDirectoryRecursively(pathToDelete)
+      date = date.plusDays(1)
+    }
+
+    log.info(s"Repartitioning phase 2.3 - appending data to target partitions ($infoDateDataFrom to $infoDateDataTo)...")
+    val df = spark.read
+      .format("parquet")
+      .options(readOptions)
+      .load(pathFrom.toUri.toString)
+
+    val dataInfoDateType = df.schema.fields
+      .find(_.name.equalsIgnoreCase(infoDateDataColumn))
+      .map(_.dataType)
+      .getOrElse(StringType)
+
+    val castExpression = dataInfoDateType match {
+      case _: DateType      => col(infoDateDataColumn)
+      case _: TimestampType => col(infoDateDataColumn).cast(DateType)
+      case _                => to_date(col(infoDateDataColumn).cast(StringType), infoDateDataFormat)
+    }
+
+    df.withColumn(infoDateColumn, castExpression)
+      .write
+      .format("parquet")
+      .mode(SaveMode.Append)
+      .partitionBy(infoDateColumn)
+      .options(writeOptions)
+      .save(path)
+
+    log.info(s"Repartitioning phase 2.4 - deleting data from the temporary location ($pathFrom)...")
+    fsUtils.deleteDirectoryRecursively(pathFrom)
+  }
+
+  private def ensureRepartitioningSupported(infoDateDataColumn: String): Unit = {
+    if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))
+      throw new IllegalArgumentException(s"Cannot repartition a table if the metastore info date column is the same as the data info date column ($infoDateDataColumn)")
+
+    if (partitionScheme != PartitionScheme.PartitionByDay)
+      throw new IllegalArgumentException(s"Repartitioning is not supported for this partition scheme: ${partitionScheme.getClass.getSimpleName}")
+  }
+
+
   def loadPartitionDirectly(infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)
     val partitionPath = SparkUtils.getPartitionPath(infoDate, infoDateColumn, infoDateFormat, path)
@@ -234,13 +316,16 @@ class MetastorePersistenceParquet(path: String,
 object MetastorePersistenceParquet {
   def applyPartitioning(dfIn: DataFrame, partitionInfo: PartitionInfo, recordCountEstimate: Option[Long]): DataFrame = {
     partitionInfo match {
-      case PartitionInfo.Default => dfIn
-      case PartitionInfo.Explicit(nop) =>
+      case PartitionInfo.Default                             => dfIn
+      case PartitionInfo.Explicit(nop)                       =>
         dfIn.coalesce(nop)
-      case PartitionInfo.PerRecordCount(rpp) =>
+      case PartitionInfo.PerRecordCount(rpp, preferCoalesce) =>
         val recordCount = recordCountEstimate.getOrElse(dfIn.count())
         val numPartitions = Math.max(1, Math.ceil(recordCount.toDouble / rpp)).toInt
-        dfIn.repartition(numPartitions)
+        if (preferCoalesce)
+          dfIn.coalesce(numPartitions)
+        else
+          dfIn.repartition(numPartitions)
     }
   }
 }

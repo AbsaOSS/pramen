@@ -20,6 +20,7 @@ import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.types._
 import org.slf4j.LoggerFactory
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.SparkUtils.{COMMENT_METADATA_KEY, MAX_LENGTH_METADATA_KEY}
 import za.co.absa.pramen.core.utils.impl.JdbcFieldMetadata
@@ -178,23 +179,19 @@ object JdbcSparkUtils {
     * Connects to a database and executes a raw SQL query using Java JDBC, and allows running a custom action on the
     * metadata of the query.
     *
-    * @param jdbcConfig  a JDBC configuration.
-    * @param schemaQuery a SQL query in the dialect native to the database which does not return records.
-    * @param action      the action to execute on a connection + resultset metadata.
+    * @param jdbcUrlSelector a JDBC URL slector.
+    * @param schemaQuery     a SQL query in the dialect native to the database which does not return records.
+    * @param action          the action to execute on a connection + resultset metadata.
     */
-  def withJdbcMetadata(jdbcConfig: JdbcConfig,
+  def withJdbcMetadata(jdbcUrlSelector: JdbcUrlSelector,
                        schemaQuery: String)
                       (action: (Connection, ResultSetMetaData) => Unit): Unit = {
-    val (_, connection) = JdbcNativeUtils.getConnection(jdbcConfig)
+    val (connection, _) = jdbcUrlSelector.getConnection
 
     log.info(s"Getting metadata for: $schemaQuery")
 
-    try {
-      withMetadataResultSet(connection, schemaQuery) { rs =>
-        action(connection, rs.getMetaData)
-      }
-    } finally {
-      connection.close()
+    withMetadataResultSet(connection, schemaQuery) { rs =>
+      action(connection, rs.getMetaData)
     }
   }
 
@@ -274,24 +271,29 @@ object JdbcSparkUtils {
     * @return An optional custom schema string that can be applied when reading the JDBC source.
     */
   def getCorrectedDecimalsSchema(df: DataFrame, fixPrecision: Boolean): Option[String] = {
+    def escapeColumn(name: String): String = {
+      val escapedName = name.replace("`", "``")
+      s"`$escapedName`"
+    }
+
     val newSchema = new ListBuffer[String]
 
     df.schema.fields.foreach(field => {
       field.dataType match {
         case t: DecimalType if t.scale == 0 && t.precision <= 9 =>
           log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to int")
-          newSchema += s"${field.name} integer"
+          newSchema += s"${escapeColumn(field.name)} integer"
         case t: DecimalType if t.scale == 0 && t.precision <= 18 =>
           log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to long")
-          newSchema += s"${field.name} long"
+          newSchema += s"${escapeColumn(field.name)} long"
         case t: DecimalType if t.scale > 18 =>
           log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to decimal(38, 18)")
-          newSchema += s"${field.name} decimal(38, 18)"
+          newSchema += s"${escapeColumn(field.name)} decimal(38, 18)"
         case t: DecimalType if fixPrecision && t.scale > 0 =>
           val fixedPrecision = if (t.precision + t.scale > 38) 38 else t.precision + t.scale
           if (fixedPrecision > t.precision) {
             log.info(s"Correct '${field.name}' (prec=${t.precision}, scale=${t.scale}) to decimal($fixedPrecision, ${t.scale})")
-            newSchema += s"${field.name} decimal($fixedPrecision, ${t.scale})"
+            newSchema += s"${escapeColumn(field.name)} decimal($fixedPrecision, ${t.scale})"
           }
         case _ =>
           field

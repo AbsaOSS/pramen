@@ -16,8 +16,6 @@
 
 package za.co.absa.pramen.core.journal
 
-import java.time.Instant
-
 import org.bson.codecs.configuration.CodecRegistries.{fromProviders, fromRegistries}
 import org.bson.codecs.configuration.CodecRegistry
 import org.mongodb.scala.bson.codecs.DEFAULT_CODEC_REGISTRY
@@ -25,13 +23,15 @@ import org.mongodb.scala.bson.codecs.Macros._
 import org.mongodb.scala.model.Filters
 import za.co.absa.pramen.core.dao.MongoDb
 import za.co.absa.pramen.core.dao.model.{ASC, IndexField}
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
 import za.co.absa.pramen.core.mongo.MongoDbConnection
 
+import java.time.Instant
 import scala.util.control.NonFatal
 
 object JournalMongoDb {
-  val collectionName = "journal"
+  val tasksCollectionName = "journal"
+  val executionsCollectionName = "executions"
 }
 
 class JournalMongoDb(mongoDbConnection: MongoDbConnection) extends Journal {
@@ -39,15 +39,20 @@ class JournalMongoDb(mongoDbConnection: MongoDbConnection) extends Journal {
   import JournalMongoDb._
   import za.co.absa.pramen.core.dao.ScalaMongoImplicits._
 
-  private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[TaskCompleted]), DEFAULT_CODEC_REGISTRY)
+  private val codecRegistry: CodecRegistry = fromRegistries(fromProviders(classOf[TaskCompleted], classOf[Execution]), DEFAULT_CODEC_REGISTRY)
   private val db = mongoDbConnection.getDatabase
 
   initCollection()
 
-  private val collection = db.getCollection[TaskCompleted](collectionName).withCodecRegistry(codecRegistry)
+  private val tasksCollection = db.getCollection[TaskCompleted](tasksCollectionName).withCodecRegistry(codecRegistry)
+  private val executionsCollection = db.getCollection[Execution](executionsCollectionName).withCodecRegistry(codecRegistry)
 
   override def addEntry(entry: TaskCompleted): Unit = {
-    collection.insertOne(entry).execute()
+    tasksCollection.insertOne(entry).execute()
+  }
+
+  override def addPipelineEntry(execution: Execution): Unit = {
+    executionsCollection.insertOne(execution).execute()
   }
 
   override def getEntries(from: Instant, to: Instant): Seq[TaskCompleted] = {
@@ -59,17 +64,26 @@ class JournalMongoDb(mongoDbConnection: MongoDbConnection) extends Journal {
       Filters.gte("finishedAt", instant0.getEpochSecond),
       Filters.lte("finishedAt", instant1.getEpochSecond)
     )
-    collection.find(filter).execute()
+    tasksCollection.find(filter).execute()
   }
 
   private def initCollection(): Unit = {
     try {
       val d = new MongoDb(db)
-      if (!d.doesCollectionExists(collectionName)) {
-        d.createCollection(collectionName)
-        d.createIndex(collectionName, IndexField("startedAt", ASC) :: Nil)
-        d.createIndex(collectionName, IndexField("finishedAt", ASC) :: Nil)
+      if (!d.doesCollectionExists(tasksCollectionName)) {
+        d.createCollection(tasksCollectionName)
+        d.createIndex(tasksCollectionName, IndexField("startedAt", ASC) :: Nil)
+        d.createIndex(tasksCollectionName, IndexField("finishedAt", ASC) :: Nil)
       }
+      if (!d.doesCollectionExists(executionsCollectionName)) {
+        d.createCollection(executionsCollectionName)
+        d.createIndex(executionsCollectionName, IndexField("startedAt", ASC) :: Nil)
+        d.createIndex(executionsCollectionName, IndexField("finishedAt", ASC) :: Nil)
+        d.createIndex(executionsCollectionName, IndexField("batchId", ASC) :: Nil)
+        d.createIndex(executionsCollectionName, IndexField("computeEngineId", ASC) :: Nil)
+        d.createIndex(executionsCollectionName, IndexField("pipelineId", ASC) :: Nil)
+      }
+
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to connect to MongoDb instance: ${mongoDbConnection.getConnectionString}", ex)
     }

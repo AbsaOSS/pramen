@@ -23,12 +23,32 @@ import za.co.absa.pramen.core.metastore.model.{HiveApi, HiveConfig}
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 
 abstract class HiveHelper {
+  def createHiveTable(path: String,
+                      format: HiveFormat,
+                      schema: StructType,
+                      partitionBy: Seq[String],
+                      databaseName: Option[String],
+                      tableName: String,
+                      autoRepairPartitions: Boolean = true): Unit
+
   def createOrUpdateHiveTable(path: String,
                               format: HiveFormat,
                               schema: StructType,
                               partitionBy: Seq[String],
                               databaseName: Option[String],
-                              tableName: String): Unit
+                              tableName: String,
+                              autoRepairPartitions: Boolean = true): Unit
+
+  def replaceHiveTableSchema(schema: StructType,
+                             partitionBy: Seq[String],
+                             databaseName: Option[String],
+                             tableName: String): Unit
+
+  def replaceHivePartitionSchema(schema: StructType,
+                                 partitionBy: Seq[String],
+                                 partitionValues: Seq[String],
+                                 databaseName: Option[String],
+                                 tableName: String): Unit
 
   def repairHiveTable(databaseName: Option[String],
                       tableName: String,
@@ -57,7 +77,7 @@ object HiveHelper {
         val queryExecutor = hiveConfig.jdbcConfig match {
           case Some(jdbcConfig) =>
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via JDBC.")
-            new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), hiveConfig.optimizeExistQuery)
+            new QueryExecutorJdbc(JdbcUrlSelector(jdbcConfig), hiveConfig.existenceCheckStrategy)
           case None             =>
             log.info(s"Using Hive SQL API by connecting to the Hive metastore via Spark.")
             new QueryExecutorSpark()

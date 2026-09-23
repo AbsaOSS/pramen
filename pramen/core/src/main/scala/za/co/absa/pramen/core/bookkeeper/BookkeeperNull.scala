@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.bookkeeper
 
 import org.apache.spark.sql.types.StructType
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.model.DataChunk
 
 import java.time.LocalDate
@@ -26,23 +27,32 @@ import java.time.LocalDate
   * this bookkeeper implementation is used. It always returns the state as if every table is new and no information is
   * available.
   */
-class BookkeeperNull() extends BookkeeperBase(false) {
+class BookkeeperNull() extends BookkeeperBase(false, 0L) {
   override val bookkeepingEnabled: Boolean = false
 
   override def getLatestProcessedDateFromStorage(table: String, until: Option[LocalDate]): Option[LocalDate] = None
 
   override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = None
 
+  override def getDataChunksFromStorage(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = Nil
+
   override def getDataChunksCountFromStorage(table: String, dateBeginOpt: Option[LocalDate], dateEndOpt: Option[LocalDate]): Long = 0
+
+  override def getDataAvailabilityFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = Seq.empty
 
   private[pramen] override def saveRecordCountToStorage(table: String,
                                                         infoDate: LocalDate,
                                                         inputRecordCount: Long,
                                                         outputRecordCount: Long,
+                                                        recordsAppended: Option[Long],
                                                         jobStarted: Long,
                                                         jobFinished: Long): Unit = {}
 
   override def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)] = None
 
   override def saveSchema(table: String, infoDate: LocalDate, schema: StructType): Unit = {}
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {}
+
+  override def deleteTable(tableWithWildcard: String): Seq[String] = Seq.empty
 }

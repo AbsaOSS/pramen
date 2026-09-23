@@ -17,9 +17,11 @@
 package za.co.absa.pramen.core.mocks.state
 
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
+import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.mocks.{PipelineInfoFactory, PipelineStateSnapshotFactory}
 import za.co.absa.pramen.core.state.PipelineState
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 class PipelineStateSpy extends PipelineState {
@@ -32,6 +34,14 @@ class PipelineStateSpy extends PipelineState {
   val completedStatuses = new ListBuffer[TaskResult]
   var closeCalled = 0
   var sparkAppId: Option[String] = None
+  var journalOpt: Option[Journal] = None
+  val executionAdditionalOptions: mutable.Map[String, String] = new mutable.HashMap[String, String]
+  var computeEngineId: Option[String] = None
+  var numberOfExecutorsMin: Option[Int] = None
+  var numberOfExecutorsMax: Option[Int] = None
+  var executorType: Option[String] = None
+  var numberOfRecordsIngested: Option[Long] = None
+  var maxNumberOfColumns: Option[Long] = None
 
   override def getState: PipelineStateSnapshot = {
     PipelineStateSnapshotFactory.getDummyPipelineStateSnapshot(PipelineInfoFactory.getDummyPipelineInfo(sparkApplicationId = sparkAppId),
@@ -60,6 +70,48 @@ class PipelineStateSpy extends PipelineState {
 
   override def setSparkAppId(sparkAppId: String): Unit = synchronized {
     this.sparkAppId = Option(sparkAppId)
+  }
+
+  override def setJournal(journal: Journal): Unit = synchronized {
+    this.journalOpt = Option(journal)
+  }
+
+  override def setComputeEngineId(computeEngineIdIn: String): Unit = synchronized {
+    computeEngineId = Option(computeEngineIdIn)
+  }
+
+  override def setNumberOfExecutorsMin(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMin = Option(nIn)
+    if (numberOfExecutorsMax.exists(_ < nIn)) {
+      numberOfExecutorsMax = Option(nIn)
+    }
+  }
+
+  override def setNumberOfExecutorsMax(nIn: Int): Unit = synchronized {
+    numberOfExecutorsMax = Option(nIn)
+    if (numberOfExecutorsMin.exists(_ > nIn)) {
+      numberOfExecutorsMin = Option(nIn)
+    }
+  }
+
+  override def setExecutorType(executorTypeIn: String): Unit = synchronized {
+    executorType = Option(executorTypeIn)
+  }
+
+  override def setNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(count)
+  }
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = synchronized {
+    numberOfRecordsIngested = Option(numberOfRecordsIngested.getOrElse(0L) + count)
+  }
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = synchronized {
+    maxNumberOfColumns = Option(Math.max(maxNumberOfColumns.getOrElse(0L), count))
+  }
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = synchronized {
+    executionAdditionalOptions.put(key, value)
   }
 
   override def addTaskCompletion(statuses: Seq[TaskResult]): Unit = synchronized {

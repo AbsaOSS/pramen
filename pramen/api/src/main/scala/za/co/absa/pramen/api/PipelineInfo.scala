@@ -22,6 +22,7 @@ import java.time.Instant
 
 case class PipelineInfo(
                          pipelineName: String,
+                         pipelineDefinitionId: String,
                          environment: String,
                          runtimeInfo: RuntimeInfo,
                          startedAt: Instant,
@@ -33,5 +34,6 @@ case class PipelineInfo(
                          pipelineNotificationFailures: Seq[PipelineNotificationFailure],
                          pipelineId: String,
                          tenant: Option[String],
-                         country: Option[String]
+                         country: Option[String],
+                         batchId: Long
                        )

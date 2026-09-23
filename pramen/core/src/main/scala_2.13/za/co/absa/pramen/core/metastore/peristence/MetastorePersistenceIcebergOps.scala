@@ -119,4 +119,16 @@ object MetastorePersistenceIcebergOps {
       .options(writerOptions)
       .append()
   }
+
+  def writeRepartitionedDf(df: DataFrame,
+                           table: String,
+                           infoDateColumn: String,
+                           infoDateFrom: LocalDate,
+                           infoDateTo: LocalDate,
+                           writerOptions: Map[String, String]): Unit = {
+    df.writeTo(table)
+      .option("check-ordering", "false")
+      .options(writerOptions)
+      .overwrite(col(infoDateColumn) >= lit(Date.valueOf(infoDateFrom)) && col(infoDateColumn) <= lit(Date.valueOf(infoDateTo)))
+  }
 }

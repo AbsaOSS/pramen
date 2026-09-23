@@ -21,7 +21,7 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import za.co.absa.pramen.core.app.config.InfoDateConfig
-import za.co.absa.pramen.core.journal.model.{TaskCompleted, TaskCompletedCsv}
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted, TaskCompletedCsv}
 import za.co.absa.pramen.core.utils.{CsvUtils, FsUtils, SparkUtils}
 
 import java.time.{Instant, LocalDate}
@@ -88,9 +88,15 @@ class JournalHadoopCsv(journalPath: String)
         pipelineName = v.pipelineName,
         environmentName = v.environmentName,
         tenant = v.tenant,
-        country = v.country
+        country = v.country,
+        batchId = v.batchId.getOrElse(0L)
       ))
   }
+
+  override def addPipelineEntry(execution: Execution): Unit = {
+    // ToDo add the implementation for CSV
+  }
+
 
   private def serializeCompletedTaskCsv(t: TaskCompleted): String = {
     val periodBegin = t.periodBegin.format(dateFormatter)
@@ -125,6 +131,7 @@ class JournalHadoopCsv(journalPath: String)
       t.environmentName.getOrElse("") ::
       t.tenant.getOrElse("") ::
       t.country.getOrElse("") ::
+      t.batchId ::
       Nil
     record.mkString("", s"$separator", "\n")
   }

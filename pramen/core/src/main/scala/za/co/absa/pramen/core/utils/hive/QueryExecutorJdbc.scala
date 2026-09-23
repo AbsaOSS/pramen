@@ -19,12 +19,16 @@ package za.co.absa.pramen.core.utils.hive
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.runner.task.ThreadClosableRegistry
 
-import java.sql.{Connection, ResultSet, SQLException, SQLSyntaxErrorException}
-import scala.util.{Failure, Try}
+import java.sql._
 import scala.util.control.NonFatal
+import scala.util.{Failure, Try}
 
-class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: Boolean) extends QueryExecutor {
+class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, existenceCheckStrategy: ExistenceCheckStrategy) extends QueryExecutor {
+
+  import QueryExecutorJdbc._
+
   private val log = LoggerFactory.getLogger(this.getClass)
   private var connection: Connection = _
   private val defaultRetries = jdbcUrlSelector.getNumberOfUrls
@@ -34,22 +38,27 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
   override def doesTableExist(dbName: Option[String], tableName: String): Boolean = {
     val fullTableName = HiveHelper.getFullTable(dbName, tableName)
 
-    val query = if (optimizedExistQuery) {
-      s"DESCRIBE $fullTableName"
-    } else {
-      s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
+    val exists = existenceCheckStrategy match {
+      case ExistenceCheckStrategy.MetadataQuery =>
+        doesTableExistUsingHiveMetadata(dbName, tableName)
+      case ExistenceCheckStrategy.DescribeTable =>
+        doesTableExistUsingDescribeTable(dbName, tableName)
+      case ExistenceCheckStrategy.MetadataAndDescribeQuery =>
+        if (doesTableExistUsingHiveMetadata(dbName, tableName)) {
+          true
+        } else {
+          doesTableExistUsingDescribeTable(dbName, tableName)
+        }
+      case ExistenceCheckStrategy.SelectQuery =>
+        doesTableExistUsingSqlQuery(dbName, tableName)
     }
 
-    Try {
-      execute(query)
-    } match {
-      case Failure(ex) =>
-        log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist" + ex.getMessage)
-        false
-      case _ =>
-        log.info(s"Table $fullTableName exists.")
-        true
+    if (exists)
+      log.info(s"Table $fullTableName exists.")
+    else {
+      log.info(s"Table $fullTableName does not exist.")
     }
+    exists
   }
 
   @throws[SQLSyntaxErrorException]
@@ -57,17 +66,55 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     log.info(s"Executing SQL: $query")
 
     executeActionOnConnection { conn =>
+      if (Thread.currentThread().isInterrupted) {
+        throw new InterruptedException(s"Current thread is interrupted. Aborting SQL execution: $query")
+      }
       val statement = conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+
+      val autoCloseStatement: AutoCloseable = new AutoCloseable {
+        val statementClosed = new java.util.concurrent.atomic.AtomicBoolean(false)
+
+        override def close(): Unit = {
+          if (statementClosed.compareAndSet(false, true)) {
+            try {
+              log.debug(s"Cancelling SQL statement: $query")
+              statement.cancel()
+            } finally {
+              log.debug(s"Closing the SQL statement...")
+              statement.close()
+            }
+          }
+        }
+      }
+
+      ThreadClosableRegistry.registerCloseable(autoCloseStatement)
 
       try {
         statement.execute(query)
       } finally {
-        statement.close()
+        ThreadClosableRegistry.closeCloseable(autoCloseStatement, s"java.sql.Statement(${query.take(5)}...)")
       }
     }
   }
 
-  override def close(): Unit = if (connection != null) connection.close()
+  override def close(): Unit = {
+    val conn = this.synchronized {
+      connection
+    }
+
+    if (conn != null) {
+      try {
+        log.info("Closing the JDBC connection to Hive...")
+        ThreadClosableRegistry.closeCloseable(conn, "java.sql.Connection")
+        this.synchronized {
+          connection = null
+        }
+      } catch {
+        case ex: InterruptedException => throw ex
+        case NonFatal(ex)             => log.warn("Failed to close JDBC connection", ex)
+      }
+    }
+  }
 
   private[core] def executeActionOnConnection(action: Connection => Boolean): Boolean = {
     val currentConnection = getConnection(forceReconnect = false)
@@ -75,6 +122,8 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
       action(currentConnection)
     } catch {
       case ex: SQLException =>
+        throw ex
+      case ex: InterruptedException =>
         throw ex
       case NonFatal(ex) =>
         log.warn(s"Got an error on existing connection. Retrying...", ex)
@@ -88,18 +137,104 @@ class QueryExecutorJdbc(jdbcUrlSelector: JdbcUrlSelector, optimizedExistQuery: B
     }
 
     if (connection == null || forceReconnect) {
-      val (newConnection, url) = jdbcUrlSelector.getWorkingConnection(retries)
+      val (newConnection, url) = jdbcUrlSelector.getNewConnection(retries)
       log.info(s"Selected query executor connection: $url")
+      close()
       connection = newConnection
+      ThreadClosableRegistry.registerCloseable(connection)
     }
     connection
+  }
+
+  def doesTableExistUsingHiveMetadata(databaseNameOpt: Option[String], tableName: String): Boolean = {
+    import za.co.absa.pramen.core.utils.UsingUtils.Implicits._
+
+    val conn = getConnection(false)
+    val metadata = conn.getMetaData
+
+    try {
+      val db = databaseNameOpt match {
+        case Some(s) => getEscapedMetadataString(s, metadata)
+        case None => null
+      }
+
+      val table = getEscapedMetadataString(tableName, metadata)
+
+      log.info(s"Checking existence of table '$db.$tableName' using metadata query...")
+      for (rs <- metadata.getTables(null, db, table, HIVE_TABLE_TYPES)) yield {
+        val r = rs.next
+        r
+      }
+    } catch {
+      case ex: InterruptedException =>
+        throw ex
+      case NonFatal(ex)             =>
+        log.warn(s"Metadata table existence check failed for '$tableName'. Falling back to DESCRIBE TABLE (${ex.getClass.getCanonicalName}: ${ex.getMessage}).")
+        false
+    }
+  }
+
+  def doesTableExistUsingDescribeTable(databaseNameOpt: Option[String], tableName: String): Boolean = {
+    val fullTableName = HiveHelper.getFullTable(databaseNameOpt, tableName)
+
+    val query = s"DESCRIBE $fullTableName"
+
+    // Ensure the connection is available outside of Try
+    getConnection(false)
+
+    Try {
+      log.info(s"Checking existence of table '$fullTableName' using DESCRIBE TABLE query...")
+      execute(query)
+    } match {
+      case Failure(ex) =>
+        ex match {
+          case _: InterruptedException =>
+            throw ex
+          case _: Throwable =>
+            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getClass.getCanonicalName}: ${ex.getMessage}).")
+        }
+        false
+      case _ =>
+        true
+    }
+  }
+
+  def doesTableExistUsingSqlQuery(databaseNameOpt: Option[String], tableName: String): Boolean = {
+    val fullTableName = HiveHelper.getFullTable(databaseNameOpt, tableName)
+
+    val query = s"SELECT 1 FROM $fullTableName WHERE 0 = 1"
+    Try {
+      log.info(s"Checking existence of table '$fullTableName' using the query: '$query'...")
+      execute(query)
+    } match {
+      case Failure(ex) =>
+        ex match {
+          case _: InterruptedException =>
+            throw ex
+          case _: Throwable =>
+            log.info(s"The query resulted in an error, assuming the table $fullTableName does not exist (${ex.getClass.getCanonicalName}: ${ex.getMessage}).")
+        }
+        false
+      case _ =>
+        true
+    }
   }
 }
 
 object QueryExecutorJdbc {
-  def fromJdbcConfig(jdbcConfig: JdbcConfig, optimizedExistQuery: Boolean): QueryExecutorJdbc = {
+  val HIVE_TABLE_TYPES = scala.Array[String]("TABLE", "VIEW", "MATERIALIZED VIEW")
+
+  def fromJdbcConfig(jdbcConfig: JdbcConfig, existenceCheckStrategy: ExistenceCheckStrategy): QueryExecutorJdbc = {
     val jdbcUrlSelector = JdbcUrlSelector(jdbcConfig)
 
-    new QueryExecutorJdbc(jdbcUrlSelector, optimizedExistQuery)
+    new QueryExecutorJdbc(jdbcUrlSelector, existenceCheckStrategy)
+  }
+
+  def getEscapedMetadataString(s: String, metaData: DatabaseMetaData): String = {
+    val esc = metaData.getSearchStringEscape
+
+    s.replace(esc, s"${esc}$esc")
+      .replace("%", s"$esc%")
+      .replace("_", s"${esc}_")
   }
 }

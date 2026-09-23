@@ -21,8 +21,9 @@ import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
-import za.co.absa.pramen.api.{Query, Reason, Source, SourceResult}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.app.config.GeneralConfig.TEMPORARY_DIRECTORY_KEY
+import za.co.absa.pramen.core.app.config.{BulkRunConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.Metastore
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
@@ -34,6 +35,7 @@ import za.co.absa.pramen.core.utils.Emoji.WARNING
 import za.co.absa.pramen.core.utils.SparkUtils._
 
 import java.time.{Instant, LocalDate}
+import scala.util.Try
 
 class IngestionJob(operationDef: OperationDef,
                    metastore: Metastore,
@@ -45,7 +47,8 @@ class IngestionJob(operationDef: OperationDef,
                    outputTable: MetaTable,
                    specialCharacters: String,
                    tempDirectory: Option[String],
-                   disableCountQuery: Boolean)
+                   disableCountQuery: Boolean,
+                   bulkLoadCurrent: Option[BulkRunConfig])
                   (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
@@ -54,20 +57,21 @@ class IngestionJob(operationDef: OperationDef,
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategySourcing(source.hasInfoDateColumn(sourceTable.query))
 
-  override def trackDays: Int = {
-    val hasInfoDate = try {
-      source.hasInfoDateColumn(sourceTable.query)
-    } catch {
-      case _: AbstractMethodError =>
-        log.warn(s"Sources were built using old version of Pramen that does not support track days handling for snapshot tables. Ignoring...")
-        true
-    }
+  override def backfillDays: Int = {
+    if (hasInfoDate)
+      outputTable.backfillDays
+    else
+      0
+  }
 
+  override def trackDays: Int = {
     if (supportsTrackDays(hasInfoDate))
       outputTable.trackDays
     else
       0
   }
+
+  override val outputsToMetastore: Boolean = true
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     source.connect()
@@ -85,7 +89,10 @@ class IngestionJob(operationDef: OperationDef,
 
     val dataChunk = bookkeeper.getLatestDataChunk(sourceTable.metaTableName, infoDate)
 
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    val (from, to) = bulkLoadCurrent match {
+      case Some(bulk) => (bulk.dataDateFrom, bulk.dataDateTo)
+      case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    }
 
     val validationResult = source.validate(sourceTable.query, from, to)
 
@@ -119,7 +126,7 @@ class IngestionJob(operationDef: OperationDef,
           JobPreRunResult(JobPreRunStatus.AlreadyRan, Some(recordCount), dependencyWarnings, warnings)
         } else {
           if (recordCount >= minimumRecordsOpt.getOrElse(MINIMUM_RECORDS_DEFAULT)) {
-            log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs re-sourced.")
+            log.warn(s"$WARNING Table '${outputTable.name}' for $infoDate has $recordCount != ${chunk.inputRecordCount} records. The table needs re-sourced for '$infoDate'.")
             JobPreRunResult(JobPreRunStatus.NeedsUpdate, Some(recordCount), dependencyWarnings, warnings)
           } else {
             processInsufficientDataCase(infoDate, dependencyWarnings, recordCount, failIfNoData, minimumRecordsOpt, Some(chunk.inputRecordCount))
@@ -150,7 +157,10 @@ class IngestionJob(operationDef: OperationDef,
                      conf: Config): DataFrame = {
     val dfTransformed = applyTransformations(df, sourceTable.transformations)
 
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    val (from, to) = bulkLoadCurrent match {
+      case Some(bulk) => (bulk.dataDateFrom, bulk.dataDateTo)
+      case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    }
 
     val dfFiltered = applyFilters(dfTransformed, sourceTable.filters, infoDate, from, to)
 
@@ -170,6 +180,16 @@ class IngestionJob(operationDef: OperationDef,
                     inputRecordCount: Option[Long]): SaveResult = {
     WorkerStatusManager.setStatus(s"Running '$name' for '$infoDate'. Writing data...")
     val stats = metastore.saveTable(outputTable.name, infoDate, df, inputRecordCount)
+
+    if (!outputTable.format.isRaw) {
+      val pramenOpt = Try {
+        Pramen.instance
+      }.toOption
+
+      pramenOpt.foreach { pramen =>
+        pramen.addNumberOfRecordsIngested(stats.recordCount.getOrElse(0L))
+      }
+    }
 
     try {
       WorkerStatusManager.setStatus(s"Running '$name' for '$infoDate'. Running post-processing...")
@@ -192,6 +212,16 @@ class IngestionJob(operationDef: OperationDef,
 
     val warnings = stats.warnings ++ tooLongWarnings
     SaveResult(stats, warnings = warnings)
+  }
+
+  private def hasInfoDate: Boolean = {
+    try {
+      source.hasInfoDateColumn(sourceTable.query)
+    } catch {
+      case _: AbstractMethodError =>
+        log.warn(s"Sources were built using old version of Pramen that does not support track days handling for snapshot tables. Ignoring...")
+        true
+    }
   }
 
   private def supportsTrackDays(hasInfoDate: Boolean): Boolean = {
@@ -254,7 +284,10 @@ class IngestionJob(operationDef: OperationDef,
   }
 
   private def getSourcingResult(infoDate: LocalDate): SourceResult = {
-    val (from, to) = getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    val (from, to) = bulkLoadCurrent match {
+      case Some(bulk) => (bulk.dataDateFrom, bulk.dataDateTo)
+      case None => getInfoDateRange(infoDate, sourceTable.rangeFromExpr, sourceTable.rangeToExpr)
+    }
 
     if (disableCountQuery) {
       log.info(s"Getting cached data for '${sourceTable.query.query}' for $from..$to...")

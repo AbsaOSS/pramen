@@ -21,7 +21,7 @@ import org.apache.spark.sql.functions.{col, lit}
 import org.apache.spark.sql.{AnalysisException, DataFrame, SaveMode}
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.api.{CachePolicy, DataFormat, PartitionInfo, PartitionScheme, Query}
+import za.co.absa.pramen.api._
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, MetastorePersistenceDelta, MetastorePersistenceParquet, MetastorePersistenceTransientEager}
@@ -749,7 +749,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
 
       "support records per partition" in {
         withTempDirectory("mt_persist") { tempDir =>
-          testRecordsPerPartition(s"$tempDir/parquet/info_date=2021-10-12", "*.parquet", getParquetMtPersistence(tempDir, partitionInfo = PartitionInfo.PerRecordCount(2)))
+          testRecordsPerPartition(s"$tempDir/parquet/info_date=2021-10-12", "*.parquet", getParquetMtPersistence(tempDir, partitionInfo = PartitionInfo.PerRecordCount(2, preferCoalesce = false)))
         }
       }
 
@@ -919,7 +919,7 @@ class MetastorePersistenceSuite extends AnyWordSpec with SparkTestBase with Temp
 
       "supports records per partition" in {
         withTempDirectory("mt_persist") { tempDir =>
-          testRecordsPerPartition(s"$tempDir/delta/info_date=2021-10-12", "*.parquet", getDeltaMtPersistence(tempDir, partitionInfo = PartitionInfo.PerRecordCount(2)))
+          testRecordsPerPartition(s"$tempDir/delta/info_date=2021-10-12", "*.parquet", getDeltaMtPersistence(tempDir, partitionInfo = PartitionInfo.PerRecordCount(2, preferCoalesce = false)))
         }
       }
 

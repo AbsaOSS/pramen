@@ -36,13 +36,16 @@ class JobSpy(jobName: String = "Dummy Job",
              outputTableFormat: DataFormat = DataFormat.Parquet("/tmp/dummy"),
              hiveTable: Option[String] = None,
              operationDef: OperationDef = OperationDefFactory.getDummyOperationDef(),
+             outputsToMetastoreIn: Boolean = true,
              preRunCheckFunction: () => JobPreRunResult = () => JobPreRunResult(JobPreRunStatus.Ready, None, Nil, Nil),
              validationFunction: () => Reason = () => Reason.Ready,
              runFunction: () => RunResult = () => null,
              scheduleStrategyIn: ScheduleStrategy = new ScheduleStrategySourcing(true),
              allowParallel: Boolean = true,
+             hasSelfDependencies: Boolean = false,
              saveStats: MetaTableStats = MetaTableStats(Some(0)),
              jobNotificationTargets: Seq[JobNotificationTarget] = Seq.empty,
+             jobBackfillDays: Int = 0,
              jobTrackDays: Int = 0
             ) extends Job {
   var getDatesToRunCount = 0
@@ -53,6 +56,8 @@ class JobSpy(jobName: String = "Dummy Job",
   var saveCount = 0
   var saveDf: DataFrame = _
   var createHiveTableCount = 0
+  var updateSchemaHiveTable = false
+  var recreateHiveTable = false
 
   override def taskDef: TaskDef = TaskDefFactory.getDummyTaskNotification(outputTable = MetaTable.getMetaTableDef(outputTable))
 
@@ -66,9 +71,15 @@ class JobSpy(jobName: String = "Dummy Job",
 
   override val scheduleStrategy: ScheduleStrategy = scheduleStrategyIn
 
-  override def allowRunningTasksInParallel: Boolean = allowParallel
+  override val outputsToMetastore: Boolean = outputsToMetastoreIn
+
+  override def allowRunningTasksInParallel: Boolean = allowParallel && !hasSelfDependencies
+
+  override def isSelfDependent: Boolean = hasSelfDependencies
 
   override def notificationTargets: Seq[JobNotificationTarget] = jobNotificationTargets
+
+  override def backfillDays: Int = jobBackfillDays
 
   override def trackDays: Int = jobTrackDays
 
@@ -101,8 +112,10 @@ class JobSpy(jobName: String = "Dummy Job",
     SaveResult(saveStats)
   }
 
-  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, recreate: Boolean): Seq[String] = {
+  override def createOrRefreshHiveTable(schema: StructType, infoDate: LocalDate, updateSchema: Boolean, recreate: Boolean): Seq[String] = {
     createHiveTableCount += 1
+    updateSchemaHiveTable = updateSchema
+    recreateHiveTable = recreate
     Nil
   }
 }

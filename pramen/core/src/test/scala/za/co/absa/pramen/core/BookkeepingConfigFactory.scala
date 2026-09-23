@@ -28,7 +28,10 @@ object BookkeepingConfigFactory {
                                 bookkeepingJdbcConfig: Option[JdbcConfig] = None,
                                 deltaDatabase: Option[String] = None,
                                 deltaTablePrefix: Option[String] = None,
-                                temporaryDirectory: Option[String] = None): BookkeeperConfig = {
+                                temporaryDirectory: Option[String] = None,
+                                dynamoDbRegion: Option[String] = None,
+                                dynamoDbTableArn: Option[String] = None,
+                                dynamoDbTablePrefix: Option[String] = None): BookkeeperConfig = {
     BookkeeperConfig(
       bookkeepingEnabled,
       bookkeepingLocation,
@@ -38,7 +41,10 @@ object BookkeepingConfigFactory {
       bookkeepingJdbcConfig,
       deltaDatabase,
       deltaTablePrefix,
-      temporaryDirectory
+      temporaryDirectory,
+      dynamoDbRegion,
+      dynamoDbTableArn,
+      dynamoDbTablePrefix
     )
   }
 

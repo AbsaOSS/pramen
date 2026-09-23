@@ -17,8 +17,9 @@
 package za.co.absa.pramen.core.tests.utils.hive
 
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.SaveMode
 import org.apache.spark.sql.functions.lit
+import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{AnalysisException, SaveMode}
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -28,6 +29,59 @@ import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelperSparkCatalog}
 class HiveHelperSparkCatalogSuite extends AnyWordSpec with SparkTestBase with TempDirFixture with TextComparisonFixture {
 
   import spark.implicits._
+
+  "createHiveTable()" should {
+    "create a non-partitioned Parquet table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val hiveHelper = new HiveHelperSparkCatalog(spark)
+        val schema = spark.read.parquet(path).schema
+
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1")
+        assert(spark.catalog.tableExists("default.tbl1"))
+
+        // If the table exists an exception should be thrown
+        assertThrows[AnalysisException] {
+          hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, Nil, Some("default"), "tbl1")
+        }
+      }
+    }
+
+    "create a partitioned Parquet table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val hiveHelper = new HiveHelperSparkCatalog(spark)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2")
+        assert(hiveHelper.doesTableExist(Some("default"), "tbl2"))
+
+        spark.sql(s"DROP TABLE default.tbl2").collect()
+        assert(!hiveHelper.doesTableExist(Some("default"), "tbl2"))
+
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl2")
+        assert(hiveHelper.doesTableExist(Some("default"), "tbl2"))
+      }
+    }
+
+    "replace schema of a partitioned Parquet table" in {
+      withTempDirectory("hive_test") { tempDir =>
+        val path = getParquetPath(tempDir)
+
+        val hiveHelper = new HiveHelperSparkCatalog(spark)
+        val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
+
+        hiveHelper.createHiveTable(path, HiveFormat.Parquet, schema, "a" :: "b" :: Nil, Some("default"), "tbl3")
+        assert(hiveHelper.doesTableExist(Some("default"), "tbl3"))
+
+        assertThrows[AnalysisException] {
+          hiveHelper.replaceHiveTableSchema(StructType(schema.drop(1)), "a" :: "b" :: Nil, Some("default"), "tbl3")
+        }
+      }
+    }
+  }
 
   "createOrUpdateHiveTable()" should {
     "create a non-partitioned Parquet table" in {

@@ -17,6 +17,7 @@
 package za.co.absa.pramen.core.mocks.bookkeeper
 
 import org.apache.spark.sql.types.{DataType, StructType}
+import za.co.absa.pramen.core.bookkeeper.model.DataAvailability
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
@@ -24,7 +25,7 @@ import java.time.LocalDate
 import scala.collection.mutable
 import scala.util.Try
 
-class SyncBookkeeperMock extends Bookkeeper {
+class SyncBookkeeperMock(batchId: Long = 123L) extends Bookkeeper {
   private val chunks = new mutable.HashMap[(String, LocalDate), DataChunk]()
   private val schemas = new mutable.ListBuffer[(String, (LocalDate, TableSchema))]()
 
@@ -53,15 +54,14 @@ class SyncBookkeeperMock extends Bookkeeper {
   }
 
   override def getLatestDataChunk(table: String, infoDate: LocalDate): Option[DataChunk] = {
-    getDataChunks(table, infoDate, infoDate).lastOption
+    getDataChunks(table, infoDate, None).lastOption
   }
 
-  def getDataChunks(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataChunk] = {
-    chunks.toList.flatMap { case ((tblName, infoDate), chunk) =>
-      val isInsidePeriod = tblName == table && (infoDate.isAfter(dateBegin) || infoDate.equals(dateBegin)) &&
-        (infoDate.isBefore(dateEnd) || infoDate.equals(dateEnd))
+  override def getDataChunks(table: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+    chunks.toList.flatMap { case ((tblName, date), chunk) =>
+      val isInsidePeriod = tblName == table && date.equals(infoDate)
       if (isInsidePeriod) {
-        Some(chunk)
+        if (batchId.forall(chunk.batchId.contains)) Some(chunk) else None
       } else {
         None
       }
@@ -83,13 +83,39 @@ class SyncBookkeeperMock extends Bookkeeper {
     }.size
   }
 
+  override def getDataAvailability(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    if (dateBegin.isAfter(dateEnd)) return Seq.empty
+    val dateEndPlus = dateEnd.plusDays(1)
+    var date = dateBegin
+
+    val foundDataAvailable = new mutable.ListBuffer[DataAvailability]
+
+    while (date.isBefore(dateEndPlus)) {
+      val chunksForDate = getDataChunks(table, date, None)
+      if (chunksForDate.nonEmpty) {
+        val totalRecordCount = chunksForDate.map(_.outputRecordCount).sum
+
+        foundDataAvailable += DataAvailability(
+          date,
+          chunksForDate.size,
+          totalRecordCount
+        )
+      }
+
+      date = date.plusDays(1)
+    }
+
+    foundDataAvailable.toList
+  }
+
   private[pramen] override def setRecordCount(table: String,
-                                               infoDate: LocalDate,
-                                               inputRecordCount: Long,
-                                               outputRecordCount: Long,
-                                               jobStarted: Long,
-                                               jobFinished: Long,
-                                               isTableTransient: Boolean): Unit = {
+                                              infoDate: LocalDate,
+                                              inputRecordCount: Long,
+                                              outputRecordCount: Long,
+                                              recordsAppended: Option[Long],
+                                              jobStarted: Long,
+                                              jobFinished: Long,
+                                              isTableTransient: Boolean): Unit = {
     val dateStr = DataChunk.dateFormatter.format(infoDate)
 
     val chunk = DataChunk(table,
@@ -99,7 +125,9 @@ class SyncBookkeeperMock extends Bookkeeper {
       inputRecordCount,
       outputRecordCount,
       jobStarted,
-      jobFinished)
+      jobFinished,
+      Option(batchId),
+      recordsAppended)
 
     chunks += (table, infoDate) -> chunk
   }
@@ -128,5 +156,29 @@ class SyncBookkeeperMock extends Bookkeeper {
     schemas += table -> (infoDate, tableSchema)
   }
 
+  override def deleteTable(tableName: String): Seq[String] = {
+    val hasWildcard = tableName.contains("*")
+    val tableNameEscaped = if (hasWildcard)
+      tableName.trim.replace(".", "\\.").replace("%", ".*").replace("*", ".*")
+    else
+      tableName.trim.replace(".", "\\.").replace("%", "\\%").replace("*", "\\*")
+
+    val likePattern = if (!hasWildcard)
+      tableNameEscaped + "->*."
+    else
+      tableNameEscaped
+
+
+    val keysToDelete = chunks.keys.filter { case (tblName, _) =>
+      tblName.matches(likePattern) || tblName.matches(tableNameEscaped)
+    }.toList
+
+    keysToDelete.foreach(chunks.remove)
+
+    keysToDelete.map(_._1).distinct
+  }
+
   override private[pramen] def getOffsetManager: OffsetManager = null
+
+  override def close(): Unit = {}
 }

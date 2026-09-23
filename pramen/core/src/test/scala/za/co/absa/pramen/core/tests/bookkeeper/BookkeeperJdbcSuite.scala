@@ -16,43 +16,85 @@
 
 package za.co.absa.pramen.core.tests.bookkeeper
 
+import org.apache.spark.sql.types.StructType
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, BookkeeperJdbc}
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.UsingUtils
+
+import java.time.LocalDate
 
 class BookkeeperJdbcSuite extends BookkeeperCommonSuite with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
+  private val infoDate = LocalDate.of(2021, 2, 18)
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase()
+    if (pramenDb != null) pramenDb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 
-  def getBookkeeper: Bookkeeper = {
-    new BookkeeperJdbc(pramenDb.slickDb, 0L)
+  def getBookkeeper(batchId: Long): Bookkeeper = {
+    BookkeeperJdbc.fromPramenDb(pramenDb, batchId)
   }
 
   "BookkeeperJdbc" when {
     "initialized" should {
       "Initialize an empty database" in {
-        getBookkeeper
+        getBookkeeper(0L)
 
         assert(getTables.exists(_.equalsIgnoreCase("bookkeeping")))
         assert(getTables.exists(_.equalsIgnoreCase("schemas")))
         assert(getTables.exists(_.equalsIgnoreCase("metadata")))
         assert(getTables.exists(_.equalsIgnoreCase("offsets")))
       }
+
+      "delete a set of tables by the table prefix name" in {
+        val bk = getBookkeeper(0L)
+
+        bk.saveSchema("test_table", infoDate, StructType.fromDDL("id INT, name STRING"))
+        bk.setRecordCount("test_table", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+        bk.setRecordCount("test_table2", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+        bk.setRecordCount("test_table->sink1", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+        bk.setRecordCount("test_table->sink2", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+
+        bk.deleteTable("test_table")
+
+        assert(bk.getLatestSchema("test_table", infoDate.plusDays(1)).isEmpty)
+        assert(bk.getDataChunksCount("test_table2", None, None) == 1)
+        assert(bk.getDataChunksCount("test_table", None, None) == 0)
+        assert(bk.getDataChunksCount("test_table->sink2", None, None) == 0)
+      }
+
+      "delete a set of tables by the table wildcard name" in {
+        val bk = getBookkeeper(0L)
+
+        bk.saveSchema("test_table", infoDate, StructType.fromDDL("id INT, name STRING"))
+        bk.setRecordCount("test_table", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+        bk.setRecordCount("test_table2", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+        bk.setRecordCount("test_table->sink1", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+        bk.setRecordCount("test_table->sink2", infoDate, 1, 1, None, 1, 1, isTableTransient = false)
+
+        bk.deleteTable("test_table*")
+
+        assert(bk.getLatestSchema("test_table", infoDate.plusDays(1)).isEmpty)
+        assert(bk.getDataChunksCount("test_table2", None, None) == 0)
+        assert(bk.getDataChunksCount("test_table", None, None) == 0)
+        assert(bk.getDataChunksCount("test_table->sink2", None, None) == 0)
+      }
     }
 
-    testBookKeeper(() => getBookkeeper)
+    testBookKeeper(batchId => getBookkeeper(batchId))
   }
 }

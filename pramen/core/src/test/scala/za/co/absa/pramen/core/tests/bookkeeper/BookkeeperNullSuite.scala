@@ -69,9 +69,9 @@ class BookkeeperNullSuite extends AnyWordSpec {
 
   def getBookkeeper: BookkeeperBase = {
     val bk = new BookkeeperNull
-    bk.saveRecordCountToStorage("table", infoDate2, 100, 10, 1597318830, 1597318835)
-    bk.saveRecordCountToStorage("table", infoDate3, 200, 20, 1597318830, 1597318835)
-    bk.saveRecordCountToStorage("table", infoDate1, 400, 40, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate2, 100, 10, None, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate3, 200, 20, None, 1597318830, 1597318835)
+    bk.saveRecordCountToStorage("table", infoDate1, 400, 40, None, 1597318830, 1597318835)
     bk
   }
 }

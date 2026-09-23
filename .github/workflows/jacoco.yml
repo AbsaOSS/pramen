@@ -19,53 +19,102 @@ name: JaCoCo
 on:
   pull_request:
     branches: [ main ]
-    paths:
-      - "pramen/**"
-      - ".github/workflows/scala.yml"
-      - ".github/workflows/jacoco.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jacoco-report-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SCALA_VERSION: 2.12.20
+  SPARK_VERSION: 3.4.4
+
+  # hint: "group thresholds" are in format: 'overall*changed-files-average*per-changed-file'
+  REPORT_GROUPS: |
+    - name: pramen-core
+      paths:
+        - 'pramen/core/target/**/jacoco-report/jacoco.xml'
+      thresholds: '74*90*60'
+    - name: pramen-extras
+      paths:
+        - 'pramen/extras/target/**/jacoco-report/jacoco.xml'
+      thresholds: '61*80*60'
 
 jobs:
-  coverage:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - scala: 2.12.18
-            scala_short: 2.12
-            spark: 3.4.1
-            overall: 80.0
-            changed: 80.0
-    name: Test Coverage on Scala ${{matrix.scala}}
+  detect:
+    name: Detect Changed Files
+    runs-on: ubuntu-22.04
+    timeout-minutes: 2
+    outputs:
+      scala_changed: ${{ steps.filter.outputs.scala }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Setup Scala
-        uses: olafurpg/setup-scala@v10
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          java-version: "adopt@1.8"
-      - name: Build and run tests
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        with:
+          token: ""
+          filters: |
+            scala:
+              - 'pramen/**/*.scala'
+              - 'pramen/*/src/**'
+              - 'pramen/build.sbt'
+              - 'pramen/project/**'
+              - 'pramen/jmf-rules.txt'
+              - '.github/workflows/jacoco.yml'
+
+  jacoco-report:
+    name: JaCoCo Report
+    needs: detect
+    if: needs.detect.outputs.scala_changed == 'true'
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup JDK
+        uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: 8
+          cache: sbt
+
+      - name: Build and run tests with coverage
         working-directory: ./pramen
-        run: sbt -DSPARK_VERSION=${{matrix.spark}} ++${{matrix.scala}} jacoco
-      - name: Add coverage to PR
-        id: jacoco
-        uses: madrapps/jacoco-report@v1.7.1
+        run: sbt -DSPARK_VERSION=${{ env.SPARK_VERSION }} ++${{ env.SCALA_VERSION }} jacoco
+
+      - name: Setup Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          paths: >
-            ${{ github.workspace }}/pramen/core/target/scala-${{ matrix.scala_short }}/jacoco/report/jacoco.xml,
-            ${{ github.workspace }}/pramen/extras/target/scala-${{ matrix.scala_short }}/jacoco/report/jacoco.xml
+          python-version: '3.14'
+
+      - name: Add JaCoCo Report in PR comments
+        uses: MoranaApps/jacoco-report@3575c005e31adda0bf6868b69d48a0114e912845 # v3.3.0
+        with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: ${{ matrix.overall }}
-          min-coverage-changed-files: ${{ matrix.changed }}
-          title: Unit Test Coverage
-          update-comment: true
-          #debug-mode: true
-      - name: Get the Coverage info
-        run: |
-          echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
-          echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
-      - name: Fail PR if unit test coverage is less than ${{ matrix.overall }}%
-        if: (steps.jacoco.outputs.coverage-overall < matrix.overall)
-        uses: actions/github-script@v6
-        with:
-          script: |
-            core.setFailed('Unit test coverage is less than ${{ matrix.overall }}%!')
+          global-thresholds: '73*80'
+          report-thresholds-default: '61*80*60'
+          skip-unchanged: 'true'
+          evaluate-unchanged: 'true'
+          report-groups: ${{ env.REPORT_GROUPS }}
+
+  noop:
+    name: No Operation
+    needs: detect
+    if: needs.detect.outputs.scala_changed != 'true'
+    runs-on: ubuntu-22.04
+    steps:
+      - run: echo "No changes in Scala related files — passing."

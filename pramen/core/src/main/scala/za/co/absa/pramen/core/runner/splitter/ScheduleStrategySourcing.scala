@@ -18,6 +18,8 @@ package za.co.absa.pramen.core.runner.splitter
 
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.pipeline
 import za.co.absa.pramen.core.pipeline.TaskPreDef
@@ -41,6 +43,7 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
                              outputTable: String,
                              dependencies: Seq[MetastoreDependency],
                              bookkeeper: Bookkeeper,
+                             bulkLoadStateManager: BulkLoadStateManager,
                              infoDateExpression: String,
                              schedule: Schedule,
                              params: ScheduleParams,
@@ -48,7 +51,7 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
                              minimumDate: LocalDate
                            ): Seq[TaskPreDef] = {
     val dates = params match {
-      case ScheduleParams.Normal(runDate, trackDays, delayDays, newOnly, lateOnly)                      =>
+      case ScheduleParams.Normal(runDate, backfillDays, trackDays, delayDays, newOnly, lateOnly)                      =>
         val infoDate = evaluateRunDate(runDate, infoDateExpression)
         log.info(s"Normal run strategy: runDate=$runDate, trackDays=$trackDays, delayDays=$delayDays, newOnly=$newOnly, lateOnly=$lateOnly, infoDate=$infoDate")
         val trackedDays = if (!lateOnly && !newOnly) {
@@ -61,6 +64,15 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
         val lastProcessedDate = bookkeeper.getLatestProcessedDate(outputTable, Option(infoDate))
         lastProcessedDate.foreach(d => log.info(s"Last processed info date: $d"))
 
+        val backfillDates = if (lateOnly) {
+          val lateDaysToCheck = Math.max(backfillDays, trackDays)
+          getBackFillDays(outputTable, runDate, lateDaysToCheck, 0, schedule, infoDateExpression, bookkeeper)
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
+        } else {
+          getBackFillDays(outputTable, runDate, backfillDays, trackDays, schedule, infoDateExpression, bookkeeper)
+            .map(d => pipeline.TaskPreDef(d, TaskRunReason.Late))
+        }
+
         val newDaysOrig = if (!lateOnly) {
           getNew(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression).toList
         } else {
@@ -72,7 +84,7 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
           case _                            => newDaysOrig
         }
 
-        val lateDaysOrig = if (!newOnly) {
+        val lateDaysOrig = if (!newOnly && (backfillDays == -1 || lastProcessedDate.isEmpty)) {
           getLate(outputTable, runDate.minusDays(delayDays), schedule, infoDateExpression, initialSourcingDateExpr, lastProcessedDate)
         } else {
           Nil
@@ -88,20 +100,54 @@ class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrat
           }
         }
 
+        log.info(s"Backfill days: ${backfillDates.map(_.infoDate).mkString(", ")}")
         log.info(s"Tracked days: ${trackedDays.map(_.infoDate).mkString(", ")}")
         log.info(s"Late days: ${lateDays.map(_.infoDate).mkString(", ")}")
         log.info(s"New days: ${newDaysOrig.map(_.infoDate).mkString(", ")}")
         log.info(s"New days not ran already: ${newDays.map(_.infoDate).mkString(", ")}")
 
-        (trackedDays ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
+        (backfillDates ++ trackedDays ++ lateDays ++ newDays).groupBy(_.infoDate).map(d => d._2.head).toList.sortBy(a => a.infoDate.toEpochDay)
       case ScheduleParams.Rerun(runDate)                                                     =>
         log.info(s"Rerun strategy for a single day: $runDate")
         getRerun(outputTable, runDate, schedule, infoDateExpression, bookkeeper)
       case ScheduleParams.Historical(dateFrom, dateTo, inverseDateOrder, mode) =>
         log.info(s"Ranged strategy: from $dateFrom to $dateTo, mode = '${mode.toString}', minimumDate = $minimumDate")
         getHistorical(outputTable, dateFrom, dateTo, schedule, mode, infoDateExpression, minimumDate, inverseDateOrder, bookkeeper)
+      case ScheduleParams.Bulk(bulkRunConfig: BulkRunConfig)                                                     =>
+        log.info(s"Bulk strategy: from ${bulkRunConfig.dataDateFrom} to ${bulkRunConfig.dataDateTo}, outputInfoDate = ${bulkRunConfig.outputInfoDate}")
+        getBulk(outputTable, bulkRunConfig, bulkLoadStateManager)
     }
 
     filterOutPastMinimumDates(dates, minimumDate)
+  }
+
+  def getBackFillDays(outputTable: String,
+                      runDate: LocalDate,
+                      backfillDays: Int,
+                      trackDays: Int,
+                      schedule: Schedule,
+                      initialSourcingDateExpr: String,
+                      bookkeeper: Bookkeeper): Seq[LocalDate] = {
+    // If backfillDays == 0, backfill is disabled
+    // If trackDays > backfillDays, track days supersede backfill with checks for retrospective updates
+    if (backfillDays <= 0 || (backfillDays > 0 && trackDays > backfillDays)) return Seq.empty
+
+    val backfillStart = runDate.minusDays(backfillDays - 1)
+
+    if (backfillStart.isEqual(runDate)) return Seq.empty
+
+    val trackDaysBehind = if (trackDays > 0) trackDays - 1 else 0
+    val backfillEnd = runDate.minusDays(trackDaysBehind) // the end backfill date is exclusive
+
+    if (backfillEnd.isBefore(backfillStart) || backfillEnd.isEqual(backfillStart)) return Seq.empty
+
+    val potentialDates = getInfoDateRange(backfillStart, backfillEnd.minusDays(1), initialSourcingDateExpr, schedule)
+    if (potentialDates.nonEmpty) {
+      val dataAvailability = bookkeeper.getDataAvailability(outputTable, backfillStart, backfillEnd.minusDays(1))
+        .map(d => (d.infoDate, d.chunks)).toMap
+      potentialDates.filterNot(d => dataAvailability.contains(d))
+    } else {
+      potentialDates
+    }
   }
 }

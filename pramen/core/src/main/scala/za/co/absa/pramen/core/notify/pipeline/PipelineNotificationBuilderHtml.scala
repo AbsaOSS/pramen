@@ -21,9 +21,9 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification._
 import za.co.absa.pramen.api.status.RunStatus._
 import za.co.absa.pramen.api.status._
-import za.co.absa.pramen.api.{FieldChange, SchemaDifference}
+import za.co.absa.pramen.api.{FieldChange, RunMode, SchemaDifference}
 import za.co.absa.pramen.core.config.Keys.TIMEZONE
-import za.co.absa.pramen.core.exceptions.{CmdFailedException, ProcessFailedException}
+import za.co.absa.pramen.core.exceptions.{CmdFailedException, LazyJobErrorWrapper, ProcessFailedException}
 import za.co.absa.pramen.core.notify.message._
 import za.co.absa.pramen.core.state.PipelineStateImpl
 import za.co.absa.pramen.core.state.PipelineStateImpl.NOTIFICATION_STRICT_FAILURES_KEY
@@ -213,7 +213,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     introParagraph.withText(". ")
 
     runtimeInfo.foreach { c =>
-      val executionInfoParagraph = renderExecutionInfo(c.runDateFrom, c.runDateTo, c.isRerun, c.isNewOnly, c.isLateOnly)
+      val executionInfoParagraph = renderExecutionInfo(c.runDateFrom, c.runDateTo, c.historicalRunMode, c.isRerun, c.isNewOnly, c.isLateOnly, c.attempt, c.maxAttempts)
         .withText(". ")
         .paragraph
       introParagraph
@@ -270,27 +270,47 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
     }
   }
 
+  private[core] def renderRunMode (runMode: RunMode): String = {
+    runMode match {
+      case RunMode.CheckUpdates => "check updates mode"
+      case RunMode.SkipAlreadyRan => "backfill mode"
+      case RunMode.ForceRun => "rerun mode"
+      case RunMode.Bulk => "bulk history load mode"
+    }
+  }
+
   private[core] def renderExecutionInfo(runDateFrom: LocalDate,
                                         runDateTo: Option[LocalDate],
+                                        historyMode: Option[RunMode],
                                         isRerun: Boolean,
                                         isNewOnly: Boolean,
-                                        isLateOnly: Boolean): ParagraphBuilder = {
+                                        isLateOnly: Boolean,
+                                        attempt: Int,
+                                        maxAttempts: Int): ParagraphBuilder = {
     val executionStr = if (isRerun) "Re-run execution" else "Execution"
     val datesStr = runDateTo match {
-      case Some(dateTo) => s"the period from <b>$runDateFrom</b> to <b>$dateTo</b>"
-      case None => s"the run date <b>$runDateFrom</b>"
+      case Some(dateTo) =>
+        val modeStr = historyMode.map(m => s" (<b>${renderRunMode(m)}</b>)").getOrElse("")
+        s"the period from <b>$runDateFrom</b> to <b>$dateTo</b>$modeStr"
+      case None =>
+        s"the run date <b>$runDateFrom</b>"
     }
 
+    val attemptDescription = if (maxAttempts > 1) s". Attempt <b>$attempt</b>/<b>$maxAttempts</b>" else ""
     val newOnlyDescription = if (isNewOnly) " (only new data)" else ""
     val lateOnlyDescription = if (isLateOnly) " (only late data)" else ""
 
     ParagraphBuilder()
       .withText(executionStr)
       .withText(" for ")
-      .withText(datesStr + newOnlyDescription + lateOnlyDescription)
+      .withText(datesStr + attemptDescription + newOnlyDescription + lateOnlyDescription)
   }
 
   private[core] def renderJobException(builder: MessageBuilder, taskResult: TaskResult, ex: Throwable): MessageBuilder = {
+    // Do not include lazy job stack traces because they are already included in actual lazy jobs.
+    if (ex.isInstanceOf[LazyJobErrorWrapper])
+      return builder
+
     val paragraphBuilder = ParagraphBuilder()
       .withText("Job ", Style.Exception)
       .withText(taskResult.taskDef.name, Style.Error)
@@ -664,6 +684,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private[core] def getStatus(task: TaskResult): TextElement = {
     val successStyle = if (task.dependencyWarnings.nonEmpty) Style.Warning else Style.Success
+    val errorStyle = if (task.taskDef.isCritical) Style.Exception else Style.Warning
 
     task.runStatus match {
       case s: Succeeded           => getSuccessTextElement(s, task.dependencyWarnings.nonEmpty)
@@ -671,7 +692,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
       case NoData(isFailure)      => TextElement("No Data", if (isFailure) Style.Exception else Style.Warning)
       case s: Skipped             => getSkippedTextElement(s, successStyle)
       case NotRan                 => TextElement("Skipped", Style.Warning)
-      case _: ValidationFailed    => TextElement("Validation failed", Style.Warning)
+      case _: ValidationFailed    => TextElement("Validation failed", errorStyle)
       case _: MissingDependencies => TextElement("Skipped", Style.Warning)
       case _: FailedDependencies  => TextElement("Skipped", Style.Warning)
       case _                      => TextElement("Failed", Style.Exception)
@@ -746,18 +767,18 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
       val oldColumnCell = change match {
         case _: FieldChange.NewField     => TextElement("")
-        case c: FieldChange.DeletedField => TextElement(s"<b>${c.columnName}</b> (${c.dataType})")
-        case c: FieldChange.ChangedType  => TextElement(s"<b>${c.columnName}</b> (${c.oldType})")
+        case c: FieldChange.DeletedField => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.dataType)})")
+        case c: FieldChange.ChangedType  => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.oldType)})")
       }
 
       val newColumnCell = change match {
-        case c: FieldChange.NewField     => TextElement(s"<b>${c.columnName}</b> (${c.dataType})")
+        case c: FieldChange.NewField     => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.dataType)})")
         case _: FieldChange.DeletedField => TextElement("")
-        case c: FieldChange.ChangedType  => TextElement(s"<b>${c.columnName}</b> (${c.newType})")
+        case c: FieldChange.ChangedType  => TextElement(s"<b>${StringUtils.escapeHTML(c.columnName)}</b> (${StringUtils.escapeHTML(c.newType)})")
       }
 
       tableBuilder.withRow(Seq(
-        TextElement(diff.tableName),
+        TextElement(StringUtils.escapeHTML(diff.tableName)),
         changeCell,
         oldColumnCell,
         newColumnCell,

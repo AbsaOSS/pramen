@@ -22,6 +22,8 @@ import za.co.absa.pramen.api.jobdef.SinkTable
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{DataFormat, MetastoreReader, Reason, Sink}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
+import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.exceptions.LazyJobErrorWrapper
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode}
 import za.co.absa.pramen.core.metastore.{MetaTableStats, Metastore, MetastoreReaderIncremental}
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus.Ready
@@ -41,7 +43,8 @@ class SinkJob(operationDef: OperationDef,
               outputTable: MetaTable,
               sinkName: String,
               sink: Sink,
-              sinkTable: SinkTable)
+              sinkTable: SinkTable,
+              workflowConf: Config)
              (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, outputTable) {
   import JobBase._
@@ -56,6 +59,8 @@ class SinkJob(operationDef: OperationDef,
     else
       new ScheduleStrategySourcing(true)
   }
+
+  override val outputsToMetastore: Boolean = false
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     val alreadyRanStatus = preRunTransformationCheck(infoDate, runReason, dependencyWarnings)
@@ -166,6 +171,7 @@ class SinkJob(operationDef: OperationDef,
         infoDate,
         inputRecordCount.getOrElse(sinkResult.recordsSent),
         sinkResult.recordsSent,
+        Option(sinkResult.recordsSent),
         jobStarted.getEpochSecond,
         jobFinished.getEpochSecond,
         isTransient
@@ -180,11 +186,23 @@ class SinkJob(operationDef: OperationDef,
       val stats = MetaTableStats(Option(sinkResult.recordsSent))
       SaveResult(stats, sinkResult.filesSent, sinkResult.hiveTables, sinkResult.warnings ++ tooLongWarnings)
     } catch {
-      case NonFatal(ex) => throw new IllegalStateException("Unable to write to the sink.", ex)
+      case NonFatal(ex) =>
+        throw getSinkException(ex)
     } finally {
       Try {
         sink.close()
       }
+    }
+  }
+
+  /** The wrapping of the exception here is redundant since users already know that the sink has failed. But
+    * the behavior made configurable for backwards compatibility. */
+  private def getSinkException(cause: Throwable): Throwable = {
+    val wrapException = ConfigUtils.getOptionBoolean(workflowConf, Keys.WRAP_SINK_EXCEPTION).getOrElse(false)
+    if (wrapException || cause == null || (cause != null && cause.getStackTrace.isEmpty)) {
+      new IllegalStateException("Unable to write to the sink.", cause)
+    } else {
+      cause
     }
   }
 
@@ -197,6 +215,7 @@ class SinkJob(operationDef: OperationDef,
         metastore.getTable(sinkTable.metaTableName, Option(from), Option(to))
       }
     } catch {
+      case ex: LazyJobErrorWrapper => throw new LazyJobErrorWrapper(s"Unable to read input table ${sinkTable.metaTableName} for $infoDate.", ex)
       case NonFatal(ex) => throw new IllegalStateException(s"Unable to read input table ${sinkTable.metaTableName} for $infoDate.", ex)
     }
   }

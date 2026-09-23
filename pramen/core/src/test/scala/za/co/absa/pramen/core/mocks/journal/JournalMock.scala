@@ -17,15 +17,18 @@
 package za.co.absa.pramen.core.mocks.journal
 
 import za.co.absa.pramen.core.journal.Journal
-import za.co.absa.pramen.core.journal.model.TaskCompleted
+import za.co.absa.pramen.core.journal.model.{Execution, TaskCompleted}
 
 import java.time.Instant
 import scala.collection.mutable.ListBuffer
 
 class JournalMock extends Journal {
   val entries: ListBuffer[TaskCompleted] = new ListBuffer[TaskCompleted]
+  val executions: ListBuffer[Execution] = new ListBuffer[Execution]
 
   override def addEntry(entry: TaskCompleted): Unit = entries += entry
+
+  override def addPipelineEntry(execution: Execution): Unit = executions += execution
 
   override def getEntries(from: Instant, to: Instant): Seq[TaskCompleted] =
     entries.filter(e => e.finishedAt >= from.getEpochSecond && e.finishedAt <= to.getEpochSecond).toSeq

@@ -27,19 +27,27 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.TransformExpression
 import za.co.absa.pramen.api.{CatalogTable, FieldChange}
 import za.co.absa.pramen.core.expr.DateExprEvaluator
+import za.co.absa.pramen.core.utils.JdbcSparkUtils.MAXIMUM_VARCHAR_LENGTH
+import za.co.absa.pramen.core.utils.SparkMaster.Databricks
 
 import java.io.ByteArrayOutputStream
 import java.time.format.DateTimeFormatter
 import java.time.{Instant, LocalDate}
-import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
+import scala.collection.mutable.{ArrayBuffer, ListBuffer}
 import scala.reflect.runtime.universe._
+import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 object SparkUtils {
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val charVarcharTypePattern = """(?i)\s*(char|varchar)\((\d+)\)\s*""".r
+  private val charVarcharLengthPattern = """(?:char|varchar)\((\d+)\)""".r
 
   val MAX_LENGTH_METADATA_KEY = "maxLength"
+  val CHAR_VARCHAR_METADATA_KEY = "__CHAR_VARCHAR_TYPE_STRING"
   val COMMENT_METADATA_KEY = "comment"
+  val ORIGINAL_NAME_METADATA_KEY = "original_name"
 
   // This seems to be limitation for multiple catalogs, like Glue and Hive.
   val MAX_COMMENT_LENGTH = 255
@@ -47,14 +55,26 @@ object SparkUtils {
   /** Get Spark StructType from a case class. */
   def getStructType[T: TypeTag]: StructType = ScalaReflection.schemaFor[T].dataType.asInstanceOf[StructType]
 
+  /**
+    * Converts a given DataFrame into a formatted JSON string.
+    *
+    * @param df The DataFrame to be converted to JSON format.
+    * @return A JSON string representation of the input DataFrame, formatted for readability.
+    */
   def dataFrameToJson(df: DataFrame): String = {
     prettyJSON(df.toJSON
       .collect()
       .mkString("[", ",", "]"))
   }
 
-  // This is taken from
-  // https://github.com/AbsaOSS/cobrix/blob/master/spark-cobol/src/main/scala/za/co/absa/cobrix/spark/cobol/utils/SparkUtils.scala */
+  /**
+    * Converts a DataFrame to a formatted JSON string with pretty-printing.
+    *
+    * @param df    The input DataFrame to be converted into JSON format.
+    * @param takeN The number of rows to include in the JSON output.
+    *              If set to 0 or less, all rows are included.
+    * @return A formatted JSON string representing the DataFrame content.
+    */
   def convertDataFrameToPrettyJSON(df: DataFrame, takeN: Int = 0): String = {
     val collected = if (takeN <= 0) {
       df.toJSON.collect().mkString("\n")
@@ -67,6 +87,12 @@ object SparkUtils {
     prettyJSON(json)
   }
 
+  /**
+    * Formats a given JSON string into a more human-readable, pretty-printed format.
+    *
+    * @param jsonIn the input JSON string to be formatted. Must be a valid JSON.
+    * @return a pretty-printed JSON string, with consistent indentation and line breaks.
+    */
   def prettyJSON(jsonIn: String): String = {
     val mapper = new ObjectMapper()
 
@@ -84,6 +110,9 @@ object SparkUtils {
     * @param characters A set of characters considered special
     */
   def sanitizeDfColumns(df: DataFrame, characters: String): DataFrame = {
+    val namesLowercase = new mutable.HashSet[String]
+    namesLowercase ++= df.schema.fields.map(_.name.toLowerCase)
+
     def replaceSpecialChars(s: String): String = {
       s.map(c => if (characters.contains(c)) '_' else c)
     }
@@ -102,14 +131,39 @@ object SparkUtils {
       }.distinct.length == 1
     }
 
+    def getUniqueName(baseName: String): String = {
+      var uniqueName = baseName
+      var counter = 1
+      while (namesLowercase.contains(uniqueName.toLowerCase)) {
+        uniqueName = s"${baseName}_$counter"
+        counter += 1
+      }
+      uniqueName
+    }
+
     val hasTablePrefix = hasUniformTablePrefix(df.schema.fields)
 
     val fieldsToSelect = df.schema.fields.map(field => {
       val srcName = field.name
-      val trgName = replaceSpecialChars(if(hasTablePrefix) removeTablePrefix(srcName) else srcName)
+      val trgName = replaceSpecialChars(if (hasTablePrefix) removeTablePrefix(srcName.trim) else srcName.trim)
       if (srcName != trgName) {
-        log.info(s"Renamed column: $srcName -> $trgName")
-        col(s"`$srcName`").as(trgName)
+        val uniqueName = if (namesLowercase.contains(trgName.toLowerCase)) {
+          val newName = getUniqueName(trgName)
+          namesLowercase.remove(srcName.toLowerCase)
+          namesLowercase.add(newName.toLowerCase)
+          newName
+        } else {
+          namesLowercase.remove(srcName.toLowerCase)
+          namesLowercase.add(trgName.toLowerCase)
+          trgName
+        }
+
+        log.info(s"Renamed column: '$srcName' -> '$uniqueName'")
+        val newMetadata = new MetadataBuilder()
+          .withMetadata(field.metadata)
+          .putString(ORIGINAL_NAME_METADATA_KEY, srcName)
+          .build()
+        col(s"`$srcName`").as(uniqueName, newMetadata)
       } else {
         col(s"`$srcName`")
       }
@@ -136,45 +190,84 @@ object SparkUtils {
   }
 
   /**
-    * Compares 2 schemas.
+    * Compares two schemas represented as `StructType` and identifies the differences
+    * between them, such as newly added fields, deleted fields, or fields with changed types.
+    *
+    * @param schemaA the first schema to compare
+    * @param schemaB the second schema to compare
+    * @return a list of `FieldChange` that represents the differences between the two schemas
     */
-  def compareSchemas(schema1: StructType, schema2: StructType): List[FieldChange] = {
+  def compareSchemas(schemaA: StructType, schemaB: StructType): List[FieldChange] = {
+    val newFields = new ListBuffer[FieldChange]
+    val deletedFields = new ListBuffer[FieldChange]
+    val changedFields = new ListBuffer[FieldChange]
+
     def dataTypeToString(dt: DataType, metadata: Metadata): String = {
       val maxLength = getLengthFromMetadata(metadata).getOrElse(0)
 
       dt match {
-        case _: StructType | _: ArrayType    => dt.simpleString
-        case _: StringType if maxLength > 0  => s"varchar($maxLength)"
-        case _                               => dt.typeName
+        case a: ArrayType if a.elementType.isInstanceOf[StructType] => "array<struct<...>>"
+        case a: ArrayType                                           => s"array<${a.elementType.typeName}>"
+        case _: StructType                                          => "struct<...>"
+        case _: StringType if maxLength > 0                         => s"varchar($maxLength)"
+        case _                                                      => dt.typeName
       }
     }
 
-    val fields1 = schema1.fields.map(f => (f.name, f)).toMap
-    val fields2 = schema2.fields.map(f => (f.name, f)).toMap
+    def processStruct(schema1: StructType, schema2: StructType, path: String = ""): Unit = {
+      val fields1 = schema1.fields.map(f => (f.name, f)).toMap
+      val fields2 = schema2.fields.map(f => (f.name, f)).toMap
 
-    val newColumns: Array[FieldChange] = schema2.fields
-      .filter(f => !fields1.contains(f.name))
-      .map(f => FieldChange.NewField(f.name, dataTypeToString(f.dataType, f.metadata)))
+      val newColumns: Array[FieldChange] = schema2.fields
+        .filter(f => !fields1.contains(f.name))
+        .map(f => FieldChange.NewField(s"$path${f.name}", dataTypeToString(f.dataType, f.metadata)))
+      newFields ++= newColumns
 
-    val deletedColumns: Array[FieldChange] = schema1.fields
-      .filter(f => !fields2.contains(f.name))
-      .map(f => FieldChange.DeletedField(f.name, dataTypeToString(f.dataType, f.metadata)))
+      val deletedColumns: Array[FieldChange] = schema1.fields
+        .filter(f => !fields2.contains(f.name))
+        .map(f => FieldChange.DeletedField(s"$path${f.name}", dataTypeToString(f.dataType, f.metadata)))
+      deletedFields ++= deletedColumns
 
-    val changedType: Array[FieldChange] = schema1.fields
-      .filter(f => fields2.contains(f.name))
-      .flatMap(f1 => {
-        val dt1 = dataTypeToString(f1.dataType, f1.metadata)
-        val f2 = fields2(f1.name)
-        val dt2 = dataTypeToString(f2.dataType, f2.metadata)
+      schema1.fields
+        .filter(f => fields2.contains(f.name))
+        .foreach(f1 => {
+          val f2 = fields2(f1.name)
 
-        if (dt1 == dt2) {
-          Seq.empty[FieldChange]
-        } else {
-          Seq(FieldChange.ChangedType(f1.name, dt1, dt2))
-        }
-      })
+          (f1.dataType, f2.dataType) match {
+            case (st1: StructType, st2: StructType) =>
+              processStruct(st1, st2, s"$path${f1.name}.")
+            case (ar1: ArrayType, ar2: ArrayType) =>
+              processArray(ar1, ar2, f1.metadata, f2.metadata, s"$path${f1.name}")
+            case _ =>
+              val dt1 = dataTypeToString(f1.dataType, f1.metadata)
+              val dt2 = dataTypeToString(f2.dataType, f2.metadata)
 
-    (newColumns ++ deletedColumns ++ changedType).toList
+              if (dt1 != dt2) {
+                changedFields += FieldChange.ChangedType(s"$path${f1.name}", dt1, dt2)
+              }
+          }
+        })
+    }
+
+    def processArray(array1: ArrayType, array2: ArrayType, metadata1: Metadata, metadata2: Metadata, path: String = ""): Unit = {
+      (array1.elementType, array2.elementType) match {
+        case (st1: StructType, st2: StructType) =>
+          processStruct(st1, st2, s"$path[].")
+        case (ar1: ArrayType, ar2: ArrayType) =>
+          processArray(ar1, ar2, metadata1, metadata2, s"$path[]")
+        case _ =>
+          val dt1 = dataTypeToString(array1, metadata1)
+          val dt2 = dataTypeToString(array2, metadata2)
+
+          if (dt1 != dt2) {
+            changedFields += FieldChange.ChangedType(path, dt1, dt2)
+          }
+      }
+    }
+
+    processStruct(schemaA, schemaB)
+    val allChanges = newFields ++ deletedFields ++ changedFields
+    allChanges.toList
   }
 
   /**
@@ -210,6 +303,16 @@ object SparkUtils {
     })
   }
 
+  /**
+    * Applies a series of string-based filters to a DataFrame within a specific date range.
+    *
+    * @param df       The input DataFrame to be filtered.
+    * @param filters  A sequence of filter expressions to be applied.
+    * @param infoDate The reference date to be used in filter expressions.
+    * @param dateFrom The starting date of the date range for filtering.
+    * @param dateTo   The ending date of the date range for filtering.
+    * @return A DataFrame with the applied filters.
+    */
   def applyFilters(df: DataFrame, filters: Seq[String], infoDate: LocalDate, dateFrom: LocalDate, dateTo: LocalDate): DataFrame = {
     filters.foldLeft(df)((df, filter) => {
       val exprEvaluator = new DateExprEvaluator()
@@ -257,10 +360,7 @@ object SparkUtils {
     def transformPrimitive(dataType: DataType, field: StructField): DataType = {
       dataType match {
         case _: StringType =>
-          getLengthFromMetadata(field.metadata) match {
-            case Some(n) => VarcharType(n)
-            case None => StringType
-          }
+          getStringTypeFromMetadata(field.metadata)
         case _ =>
           dataType
       }
@@ -281,8 +381,15 @@ object SparkUtils {
     transformStruct(schema)
   }
 
+  /**
+    * Extracts the maximum length value from the provided metadata if it exists.
+    *
+    * @param metadata the metadata object from which the length value should be retrieved
+    * @return an `Option` containing the length as an `Int` if the key exists and can be parsed,
+    *         otherwise `None`
+    */
   def getLengthFromMetadata(metadata: Metadata): Option[Int] = {
-    if (metadata.contains(MAX_LENGTH_METADATA_KEY)) {
+    val proposedLength = if (metadata.contains(MAX_LENGTH_METADATA_KEY)) {
       val try1 = Try {
         val length = metadata.getLong(MAX_LENGTH_METADATA_KEY).toInt
         Option(length)
@@ -296,10 +403,56 @@ object SparkUtils {
         try1
       }
       try2.getOrElse(None)
+    } else if (metadata.contains(CHAR_VARCHAR_METADATA_KEY)) {
+      val typeString = metadata.getString(CHAR_VARCHAR_METADATA_KEY).toLowerCase
+      try {
+        charVarcharLengthPattern.findFirstMatchIn(typeString).map(_.group(1).toInt)
+      } catch {
+        case NonFatal(_) => None
+      }
     } else {
       None
     }
+
+    proposedLength.filter(length => length < MAXIMUM_VARCHAR_LENGTH && length > 0)
   }
+
+  /**
+    * Extracts a string-based data type (VarcharType or StringType) from field metadata.
+    *
+    * First checks for the presence of char/varchar type metadata key. If found, parses the metadata
+    * value using a pattern to extract the length. Both CHAR and VARCHAR metadata are mapped to VarcharType.
+    * If the metadata key is not present, attempts to extract a length value from metadata and creates
+    * a VarcharType if successful. Falls back to StringType if no specific type information is found
+    * or if the metadata cannot be parsed.
+    *
+    * @param metadata the metadata object containing type information for a field
+    * @return the resolved string-based DataType, which can be VarcharType or StringType
+    */
+  def getStringTypeFromMetadata(metadata: Metadata): DataType = {
+    def getLength(lenStr: String): Option[Int] = {
+      Try {
+        lenStr.toInt
+      }.toOption
+        .filter(len => len > 0 && len < MAXIMUM_VARCHAR_LENGTH)
+    }
+
+    if (metadata.contains(CHAR_VARCHAR_METADATA_KEY)) {
+      metadata.getString(CHAR_VARCHAR_METADATA_KEY) match {
+        case charVarcharTypePattern(_, len) =>
+          val lenOpt = getLength(len)
+          lenOpt match {
+            case Some(l) => VarcharType(l)
+            case None => StringType
+          }
+        case _ =>
+          getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
+      }
+    } else {
+      getLengthFromMetadata(metadata).map(VarcharType.apply).getOrElse(StringType)
+    }
+  }
+
 
   /**
     * Sanitizes a comment for Hive DDL. Ideally this should be done by Spark, but because there are meny versions
@@ -363,6 +516,18 @@ object SparkUtils {
     StructType(schema.fields.map(transformRootField))
   }
 
+  /**
+    * Checks whether there is valid data in the specified partition.
+    * A partition exists and contains data files if it is neither empty
+    * nor contains only hidden files (starting with "_" or ".").
+    *
+    * @param infoDate       The specific date for which partition data is checked.
+    * @param infoDateColumn The name of the date column used to define the partition.
+    * @param infoDateFormat The format of the date in the partition path.
+    * @param basePath       The base path of the data being checked for the partition.
+    * @param spark          The implicit SparkSession needed for filesystem operations.
+    * @return `true` if the partition exists and contains at least one valid data file; `false` otherwise.
+    */
   def hasDataInPartition(infoDate: LocalDate,
                          infoDateColumn: String,
                          infoDateFormat: String,
@@ -392,6 +557,15 @@ object SparkUtils {
     }
   }
 
+  /**
+    * Constructs a partition path based on the provided information date, column name, date format, and base path.
+    *
+    * @param infoDate       The information date used to generate the partition path.
+    * @param infoDateColumn The name of the column that represents the information date.
+    * @param infoDateFormat The date format of the information date, used for formatting.
+    * @param basePath       The base path to which the partition path will be appended.
+    * @return The constructed partition path as a Path object.
+    */
   def getPartitionPath(infoDate: LocalDate,
                        infoDateColumn: String,
                        infoDateFormat: String,
@@ -402,6 +576,20 @@ object SparkUtils {
     new Path(basePath, partition)
   }
 
+  /**
+    * Adds a processing timestamp column to the given DataFrame.
+    * If the specified timestamp column already exists in the DataFrame, no
+    * changes are made, and a warning is logged.
+    *
+    * The processing time is determined at the executor node at the time the record
+    * was actually processed, in comparison to `current_timestamp()` which is determined
+    * at the driver node.
+    *
+    * @param df           The input DataFrame to which the timestamp column will be added.
+    * @param timestampCol The name of the column to be added as the processing timestamp.
+    * @return A new DataFrame with the processing timestamp column added, or the original DataFrame
+    *         if the specified column already exists.
+    */
   def addProcessingTimestamp(df: DataFrame, timestampCol: String): DataFrame = {
     if (df.schema.exists(_.name == timestampCol)) {
       log.warn(s"Column $timestampCol already exists. Won't add it.")
@@ -427,6 +615,15 @@ object SparkUtils {
     new String(outCapture.toByteArray).replace("\r\n", "\n")
   }
 
+  /**
+    * Collects data from a DataFrame and returns it as a two-dimensional array of strings.
+    * The first row contains the column names (headers) and the subsequent rows contain the data.
+    * The number of rows collected can be limited by specifying a maximum number of records.
+    *
+    * @param df         The input DataFrame to collect data from.
+    * @param maxRecords The maximum number of rows to collect. If set to 0 or less, all rows are collected. Default is 200.
+    * @return A two-dimensional array of strings where the first row contains headers, and each subsequent row contains the data.
+    */
   def collectTable(df: DataFrame, maxRecords: Int = 200): Array[Array[String]] = {
     val collected = if (maxRecords > 0) {
       df.take(maxRecords)
@@ -578,6 +775,15 @@ object SparkUtils {
     output.toString()
   }
 
+  /**
+    * Determines whether a specified catalog table exists within the Spark session.
+    * Takes into account Iceberg and Glue Catalog specifics.
+    *
+    * @param table The `CatalogTable` object representing the table to check for existence.
+    * @param spark The implicit `SparkSession` in which the catalog and table existence checks will be performed.
+    * @return `true` if the table exists in the specified catalog and database; otherwise, `false`.
+    *         Throws an `IllegalArgumentException` if the database does not exist or if there are issues with the table's catalog context.
+    */
   def doesCatalogTableExist(table: CatalogTable)(implicit spark: SparkSession): Boolean = {
     try {
       table.database match {
@@ -615,6 +821,16 @@ object SparkUtils {
     }
   }
 
+  /**
+    * Retrieves a nested field from a given StructType schema based on the provided dot-separated field name.
+    *
+    * @param schema    The root StructType schema to search for the nested field.
+    * @param fieldName A dot-separated string representing the hierarchical path to the desired field.
+    * @return The StructField corresponding to the specified nested field name.
+    * @throws IllegalArgumentException If the field name is invalid,
+    *                                  the field cannot be found in the schema,
+    *                                  or a non-struct field is encountered along the path.
+    */
   def getNestedField(schema: StructType, fieldName: String): StructField = {
     def getNestedFieldInArray(schema: StructType, fieldNames: Array[String]): StructField = {
       val rootFieldName = fieldNames.head
@@ -645,6 +861,99 @@ object SparkUtils {
     }
 
     getNestedFieldInArray(schema, fieldNames)
+  }
+
+  /**
+    * Determines if the Spark driver is running on an edge node.
+    *
+    * This method evaluates the current Spark master and deployment mode to check if the driver
+    * is running locally or in a YARN client deployment mode. If the Spark master is `local` or
+    * if the deployment mode is `client` in a YARN environment, the method returns true,
+    * indicating the driver is running on an edge node. Otherwise, it returns false.
+    *
+    * @param master The Spark master definition.
+    * @return A boolean value where `true` indicates the driver is running on an edge node
+    *         and `false` otherwise.
+    */
+  def isDriverRunningOnEdgeNode(master: SparkMaster): Boolean = {
+    master match {
+      case _: SparkMaster.Local                                                 => true
+      case m: SparkMaster.Yarn if m.deploymentMode == YarnDeploymentMode.Client => true
+      case _                                                                    => false
+    }
+  }
+
+  /**
+    * Determines the type of Spark master and its deployment mode currently being used in the Spark session.
+    *
+    * The method examines the configuration of the provided Spark session to identify the Spark master
+    * and its deployment mode, supporting various environments such as local, standalone, YARN, Kubernetes,
+    * and Databricks. If none of these can be determined, the master type is categorized as unknown.
+    *
+    * @param spark The implicit Spark session whose configuration is used to determine the Spark master.
+    * @return The Spark master, represented as a `SparkMaster` instance, describing the execution environment
+    *         and potentially its deployment mode.
+    */
+  def getSparkMaster(implicit spark: SparkSession): SparkMaster = {
+    val conf = spark.sparkContext.getConf
+
+    val master = conf.getOption("spark.master").map(_.toLowerCase).getOrElse("unknown")
+    val deployMode = conf.getOption("spark.submit.deployMode").getOrElse("client").toLowerCase
+
+    val isDatabricks = sys.env.contains("DATABRICKS_RUNTIME_VERSION") ||
+      conf.getOption("spark.databricks.clusterUsageTags.clusterName").isDefined
+
+    if (isDatabricks) return Databricks
+
+    val masterType =
+      if (master.startsWith("local")) "local"
+      else if (master.startsWith("spark://")) "standalone"
+      else if (master == "yarn") "yarn"
+      else if (master.startsWith("k8s://")) "kubernetes"
+      else master
+
+    (masterType, deployMode) match {
+      case ("local", _) =>
+        SparkMaster.Local(master)
+      case ("standalone", _) =>
+        SparkMaster.Standalone(master)
+      case ("yarn", "cluster") =>
+        SparkMaster.Yarn(YarnDeploymentMode.Cluster)
+      case ("yarn", "client") =>
+        SparkMaster.Yarn(YarnDeploymentMode.Client)
+      case ("kubernetes", _) =>
+        SparkMaster.Kubernetes(master)
+      case _ =>
+        SparkMaster.Unknown(master)
+    }
+  }
+
+  /**
+    * Calculates the total number of columns in a given schema, including all nested columns
+    * within struct types. Array types are traversed to count any nested struct columns within
+    * their element types, but the array itself is not counted as an additional column beyond
+    * its top-level entry.
+    *
+    * @param schema the StructType representing the schema whose columns are to be counted
+    * @return the total number of columns, including all columns found in nested struct types
+    */
+  def getTotalNumberOfColumns(schema: StructType): Int = {
+    def countNestedColumns(dataType: DataType): Int = {
+      dataType match {
+        case struct: StructType =>
+          struct.fields.foldLeft(0) { (count, field) =>
+            count + 1 + countNestedColumns(field.dataType)
+          }
+        case arr: ArrayType     =>
+          countNestedColumns(arr.elementType)
+        case _                  =>
+          0
+      }
+    }
+
+    schema.fields.foldLeft(0) { (count, field) =>
+      count + 1 + countNestedColumns(field.dataType)
+    }
   }
 
   private def getActualProcessingTimeUdf: UserDefinedFunction = {

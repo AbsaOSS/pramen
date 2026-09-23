@@ -43,10 +43,16 @@ case class CmdLineConfig(
                           dateFrom: Option[LocalDate] = None,
                           dateTo: Option[LocalDate] = None,
                           mode: Option[String] = None,
+                          bulkSize: Option[String] = None,
+                          infoDateColumn: Option[String] = None,
+                          infoDateFormat: Option[String] = None,
                           inverseOrder: Option[Boolean] = None,
                           verbose: Option[Boolean] = None,
                           overrideLogLevel: Option[String] = None,
-                          logEffectiveConfig: Option[Boolean] = None
+                          logEffectiveConfig: Option[Boolean] = None,
+                          attempt: Option[Int] = None,
+                          maxAttempts: Option[Int] = None,
+                          forceReCreateHiveTables: Option[Boolean] = None
                         )
 
 object CmdLineConfig {
@@ -126,8 +132,26 @@ object CmdLineConfig {
     for (mode <- cmd.mode)
       accumulatedConfig = accumulatedConfig.withValue(RUN_MODE, ConfigValueFactory.fromAnyRef(mode))
 
+    for (bulkSize <- cmd.bulkSize)
+      accumulatedConfig = accumulatedConfig.withValue(RUN_BULK_BATCH_SIZE, ConfigValueFactory.fromAnyRef(bulkSize))
+
+    for (infoDateColumn <- cmd.infoDateColumn)
+      accumulatedConfig = accumulatedConfig.withValue(INFO_DATE_COLUMN, ConfigValueFactory.fromAnyRef(infoDateColumn))
+
+    for (infoDateColumn <- cmd.infoDateFormat)
+      accumulatedConfig = accumulatedConfig.withValue(INFO_DATE_FORMAT, ConfigValueFactory.fromAnyRef(infoDateColumn))
+
     for (logEffectiveConfig <- cmd.logEffectiveConfig)
       accumulatedConfig = accumulatedConfig.withValue(LOG_EFFECTIVE_CONFIG, ConfigValueFactory.fromAnyRef(logEffectiveConfig))
+
+    for (attempt <- cmd.attempt)
+      accumulatedConfig = accumulatedConfig.withValue(ATTEMPT, ConfigValueFactory.fromAnyRef(attempt))
+
+    for (maxAttempts <- cmd.maxAttempts)
+      accumulatedConfig = accumulatedConfig.withValue(MAX_ATTEMPTS, ConfigValueFactory.fromAnyRef(maxAttempts))
+
+    for (forceReCreateHiveTables <- cmd.forceReCreateHiveTables)
+      accumulatedConfig = accumulatedConfig.withValue(FORCE_RECREATE_HIVE_TABLES, ConfigValueFactory.fromAnyRef(forceReCreateHiveTables))
 
     accumulatedConfig
   }
@@ -188,10 +212,28 @@ object CmdLineConfig {
       .children(
         opt[String]("run-mode").optional().action((value, config) =>
           config.copy(mode = Option(value)))
-          .text("Mode of processing for date ranges. One of 'fill_gaps', 'check_updates', 'force'")
+          .text("Mode of processing for date ranges. One of 'fill_gaps', 'check_updates', 'force', 'bulk'")
           .validate(v =>
-            if (v == "fill_gaps" || v == "check_updates" || v == "force") success
-            else failure("Invalid run mode. Must be one of 'fill_gaps', 'check_updates', 'force'"))
+            if (v == "fill_gaps" || v == "check_updates" || v == "force" || v == "bulk") success
+            else failure("Invalid run mode. Must be one of 'fill_gaps', 'check_updates', 'force', 'bulk'")),
+        opt[String]("bulk-size").optional().action((value, config) =>
+            config.copy(bulkSize = Option(value)))
+          .text("The bulk size for processing date ranges.")
+          .validate(v =>
+            if (v == "monthly" || v == "quarterly" || v == "yearly") success
+            else failure("Invalid bulk size. Must be one of 'monthly', 'quarterly', 'yearly'")),
+        opt[String]("info-date-column").optional().action((value, config) =>
+            config.copy(infoDateColumn = Option(value)))
+          .text("The information date column name to use for repartitioning.")
+          .validate(v =>
+            if (v.nonEmpty) success
+            else failure("Invalid information date column name. Must be a non-empty string.")),
+        opt[String]("info-date-format").optional().action((value, config) =>
+            config.copy(infoDateFormat = Option(value)))
+          .text("The format of the information date column if it is not of date or datetime/timestamp type, for repartitioning.")
+          .validate(v =>
+            if (v.nonEmpty) success
+            else failure("Invalid information date format. Must be a non-empty string."))
       )
 
     opt[Boolean]("inverse-order").optional().action((value, config) =>
@@ -205,6 +247,14 @@ object CmdLineConfig {
     opt[Unit]("dry-run").optional().action((_, config) =>
       config.copy(dryRun = Some(true)))
       .text("If true, no actual data processing will be done.")
+
+    opt[Int]("attempt").optional().action((value, config) =>
+        config.copy(attempt = Option(value)))
+      .text("The attempt number for notification purposes (default 1).")
+
+    opt[Int]("max-attempts").optional().action((value, config) =>
+        config.copy(maxAttempts = Option(value)))
+      .text("The maximum number of attempts for notification purposes (default 1).")
 
     opt[Boolean]("use-lock").optional().action((value, config) =>
       config.copy(useLock = Option(value)))
@@ -237,6 +287,10 @@ object CmdLineConfig {
     opt[Boolean]("log-config").optional().action((value, config) =>
         config.copy(logEffectiveConfig = Option(value)))
       .text("When true (default), Pramen logs the effective configuration.")
+
+    opt[Unit]("force-recreate-hive-tables").optional().action((_, config) =>
+        config.copy(forceReCreateHiveTables = Some(true)))
+      .text("When specified, Hive tables configured for metastore tables will be re-created, and partitions repaired.")
 
     help("help").text("prints this usage text")
   }

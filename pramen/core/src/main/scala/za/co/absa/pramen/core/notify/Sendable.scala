@@ -84,7 +84,7 @@ trait Sendable {
 
     // Send it
     try {
-      ThreadUtils.runWithTimeout(SEND_TIMEOUT_SECONDS) {
+      ThreadUtils.runWithTimeout(SEND_TIMEOUT_SECONDS, threadName = "EmailSenderThread") {
         Transport.send(message)
         log.info(s"$ROCKET An email has been sent successfully.")
       }

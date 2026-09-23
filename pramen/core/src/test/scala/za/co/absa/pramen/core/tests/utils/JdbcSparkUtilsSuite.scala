@@ -23,6 +23,7 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.fixtures.{RelationalDbFixture, TextComparisonFixture}
+import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.samples.RdbExampleTable
 import za.co.absa.pramen.core.utils.JdbcSparkUtils
@@ -86,8 +87,9 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
         .load()
 
       var newSchema: StructType = null
+      val selector = JdbcUrlSelector(jdbcConfig)
 
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadataRs) =>
+      JdbcSparkUtils.withJdbcMetadata(selector, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadataRs) =>
         newSchema = JdbcSparkUtils.addColumnDescriptionsFromJdbc(
           JdbcSparkUtils.addMetadataFromJdbc(df.schema, metadataRs),
           RdbExampleTable.Company.tableName,
@@ -136,7 +138,8 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
   "withJdbcMetadata" should {
     "provide the metadata object for the query" in {
-      JdbcSparkUtils.withJdbcMetadata(jdbcConfig, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadata) =>
+      val selector = JdbcUrlSelector(jdbcConfig)
+      JdbcSparkUtils.withJdbcMetadata(selector, s"SELECT * FROM ${RdbExampleTable.Company.tableName}") { (connection, metadata) =>
         assert(!connection.isClosed)
         assert(metadata.getColumnName(2) == "NAME")
       }
@@ -206,7 +209,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
 
-      assert(customFields.contains("value integer"))
+      assert(customFields.contains("`value` integer"))
     }
 
     "correct decimal to long" in {
@@ -215,7 +218,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
 
-      assert(customFields.contains("value long"))
+      assert(customFields.contains("`value` long"))
     }
 
     "correct too big scale" in {
@@ -228,7 +231,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = false)
 
-      assert(customFields.contains("value decimal(38, 18)"))
+      assert(customFields.contains("`value` decimal(38, 18)"))
     }
 
     "correct invalid precision" in {
@@ -241,7 +244,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
 
-      assert(customFields.contains("value decimal(38, 18)"))
+      assert(customFields.contains("`value` decimal(38, 18)"))
     }
 
     "correct invalid precision with small scale" in {
@@ -254,7 +257,7 @@ class JdbcSparkUtilsSuite extends AnyWordSpec with BeforeAndAfterAll with SparkT
 
       val customFields = JdbcSparkUtils.getCorrectedDecimalsSchema(df, fixPrecision = true)
 
-      assert(customFields.contains("value decimal(38, 16)"))
+      assert(customFields.contains("`value` decimal(38, 16)"))
     }
 
     "do nothing if the field is okay" in {

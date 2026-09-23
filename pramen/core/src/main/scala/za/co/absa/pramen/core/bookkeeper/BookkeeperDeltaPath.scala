@@ -16,14 +16,15 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
+import io.delta.tables.DeltaTable
 import org.apache.hadoop.fs.Path
+import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{Column, Dataset, SaveMode, SparkSession}
 import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 import za.co.absa.pramen.core.utils.FsUtils
 
-import java.time.Instant
+import java.time.{Instant, LocalDate}
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
 
@@ -34,7 +35,7 @@ object BookkeeperDeltaPath {
   val locksDirName = "locks"
 }
 
-class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession) extends BookkeeperDeltaBase {
+class BookkeeperDeltaPath(bookkeepingPath: String, batchId: Long)(implicit spark: SparkSession) extends BookkeeperDeltaBase(batchId) {
   import BookkeeperDeltaPath._
   import spark.implicits._
 
@@ -47,14 +48,28 @@ class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession)
   init()
 
   override def getBkDf(filter: Column): Dataset[DataChunk] = {
-    val df = spark
-      .read
-      .format("delta")
-      .load(recordsPath.toUri.toString)
+    def load(): Dataset[DataChunk] = {
+      spark
+        .read
+        .format("delta")
+        .load(recordsPath.toUri.toString)
+        .filter(filter)
+        .orderBy(col("jobFinished"))
+        .as[DataChunk]
+    }
+    try {
+      load()
+    } catch {
+      case ex: AnalysisException if ex.getMessage().contains("cannot resolve") || ex.getMessage().contains("does not exist") =>
+        // Spark 2 and 3
+        migrateModel(recordsPath)
+        load()
 
-    df.filter(filter)
-      .orderBy(col("jobFinished"))
-      .as[DataChunk]
+      case ex: Throwable if ex.getMessage.contains("UNRESOLVED_COLUMN") =>
+        // Spark 3 and 4
+        migrateModel(recordsPath)
+        load()
+    }
   }
 
   override def saveRecordCountDelta(dataChunk: DataChunk): Unit = {
@@ -65,6 +80,14 @@ class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession)
       .format("delta")
       .option("mergeSchema", "true")
       .save(recordsPath.toUri.toString)
+  }
+
+  override def deleteNonCurrentBatchRecords(table: String, infoDate: LocalDate): Unit = {
+    val infoDateStr = DataChunk.dateFormatter.format(infoDate)
+    val filter = (col("tableName") === lit(table)) && (col("infoDate") === lit(infoDateStr)) && (col("batchId") =!= lit(batchId))
+
+    val deltaTable = DeltaTable.forPath(spark, recordsPath.toUri.toString)
+    deltaTable.delete(filter)
   }
 
   override def getSchemasDeltaDf: Dataset[TableSchemaJson] = {
@@ -96,6 +119,8 @@ class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession)
       .save(pathOrTable)
   }
 
+  override def deleteTable(tableWithWildcard: String): Seq[String] = ???
+
   private def init(): Unit = {
     initRecordsDirectory(recordsPath)
     initSchemasDirectory(schemasPath)
@@ -120,5 +145,19 @@ class BookkeeperDeltaPath(bookkeepingPath: String)(implicit spark: SparkSession)
       fsUtils.createDirectoryRecursive(path)
       writeEmptyDataset[TableSchemaJson](path.toUri.toString)
     }
+  }
+
+  private def migrateModel(path: Path): Unit = {
+    migrateModelViaEmptyDataset[DataChunk](path.toString)
+  }
+
+  private def migrateModelViaEmptyDataset[T <: Product : universe.TypeTag : ClassTag](pathOrTable: String): Unit = {
+    val df = Seq.empty[T].toDS
+
+    df.write
+      .mode(SaveMode.Append)
+      .format("delta")
+      .option("mergeSchema", "true")
+      .save(pathOrTable)
   }
 }

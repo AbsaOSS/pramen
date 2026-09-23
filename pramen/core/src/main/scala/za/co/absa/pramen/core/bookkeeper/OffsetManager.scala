@@ -33,7 +33,7 @@ import java.time.LocalDate
   * The startWriteOffsets() together with commitOffsets() and rollbackOffsets() provide mechanisms to ensure consistency
   * with data.
   */
-trait OffsetManager {
+trait OffsetManager extends AutoCloseable {
   /**
     * Returns offsets for an information date.
     *

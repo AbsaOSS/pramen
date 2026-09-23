@@ -22,8 +22,8 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.fixtures.MongoDbFixture
 import za.co.absa.pramen.core.lock.TokenLockMongoDb
 import za.co.absa.pramen.core.lock.TokenLockMongoDb.collectionName
+
 import scala.concurrent.duration._
-import org.scalatest.concurrent.Eventually._
 
 class TokenLockMongoDbSuite extends AnyWordSpec with MongoDbFixture with BeforeAndAfter {
   before {

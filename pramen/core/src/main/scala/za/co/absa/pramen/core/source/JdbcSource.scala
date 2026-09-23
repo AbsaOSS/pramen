@@ -21,8 +21,10 @@ import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
+import za.co.absa.pramen.core.reader.TableReaderJdbcNative.DRIVER_JAR_PATH
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.reader.{JdbcUrlSelector, TableReaderJdbc, TableReaderJdbcNative}
+import za.co.absa.pramen.core.utils.ConfigUtils
 
 import java.time.LocalDate
 
@@ -42,13 +44,22 @@ class JdbcSource(sourceConfig: Config,
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
     val reader = getReader(query, isCountQuery = true)
 
-    reader.getRecordCount(query, infoDateBegin, infoDateEnd)
+    val count = try {
+      reader.getRecordCount(query, infoDateBegin, infoDateEnd)
+    } finally {
+      reader.close()
+    }
+    count
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
     val reader = getReader(query, isCountQuery = false)
 
-    val df = reader.getData(query, infoDateBegin, infoDateEnd, columns)
+    val df = try {
+      reader.getData(query, infoDateBegin, infoDateEnd, columns)
+    } finally {
+      reader.close()
+    }
 
     SourceResult(df)
   }
@@ -56,7 +67,11 @@ class JdbcSource(sourceConfig: Config,
   override def getDataIncremental(query: Query, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): SourceResult = {
     val reader = getReader(query, isCountQuery = false)
 
-    val df = reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
+    val df =  try {
+      reader.getIncrementalData(query, onlyForInfoDate, offsetFrom, offsetTo, columns)
+    } finally {
+      reader.close()
+    }
 
     SourceResult(df)
   }
@@ -64,7 +79,8 @@ class JdbcSource(sourceConfig: Config,
   private[core] def getReader(query: Query, isCountQuery: Boolean): TableReader = {
     val jdbcConfig = TableReaderJdbcNative.getJdbcConfig(jdbcReaderConfig, sourceConfig)
     val jdbcReaderConfigNative = jdbcReaderConfig.copy(jdbcConfig = jdbcConfig)
-    val urlSelector = JdbcUrlSelector(jdbcConfig)
+    val jdbcDriverJarPath = ConfigUtils.getOptionString(sourceConfig, DRIVER_JAR_PATH)
+    val urlSelector = JdbcUrlSelector(jdbcDriverJarPath, jdbcConfig)
 
     query match {
       case Query.Table(dbTable) if jdbcReaderConfig.useJdbcNative && !isCountQuery =>

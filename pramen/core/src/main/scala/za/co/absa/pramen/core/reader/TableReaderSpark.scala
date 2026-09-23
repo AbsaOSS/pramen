@@ -114,6 +114,8 @@ class TableReaderSpark(formatOpt: Option[String],
     }
   }
 
+  override def close(): Unit = {}
+
   private[core] def getDailyDataFrame(query: Query, infoDate: LocalDate): DataFrame = {
     val dateStr = dateFormatter.format(infoDate)
 

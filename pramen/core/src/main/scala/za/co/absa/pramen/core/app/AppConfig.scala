@@ -17,7 +17,7 @@
 package za.co.absa.pramen.core.app
 
 import com.typesafe.config.Config
-import za.co.absa.pramen.core.app.config.{BookkeeperConfig, GeneralConfig, HookConfig, InfoDateConfig, RuntimeConfig}
+import za.co.absa.pramen.core.app.config._
 
 case class AppConfig(
                       generalConfig: GeneralConfig,
@@ -28,9 +28,9 @@ case class AppConfig(
                     )
 
 object AppConfig {
-  def fromConfig(conf: Config): AppConfig = {
+  def fromConfig(conf: Config, allowLocalBookkepingStorage: Boolean): AppConfig = {
     val generalConfig = GeneralConfig.fromConfig(conf)
-    val bookkeepingConfig = BookkeeperConfig.fromConfig(conf)
+    val bookkeepingConfig = BookkeeperConfig.fromConfig(conf, allowLocalBookkepingStorage)
     val runtimeConfig = RuntimeConfig.fromConfig(conf)
     val infoDateDefaults = InfoDateConfig.fromConfig(conf)
     val hookConfig = HookConfig.fromConfig(conf)

@@ -16,9 +16,9 @@
 
 package za.co.absa.pramen.core.mocks.lock
 
-import za.co.absa.pramen.core.lock.TokenLock
+import za.co.absa.pramen.api.lock.TokenLock
 
-class TokenLockMock extends TokenLock {
+class TokenLockMock(override val token: String = "mock") extends TokenLock {
   var acquired = false
 
   override def tryAcquire(): Boolean = this.synchronized {

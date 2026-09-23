@@ -21,15 +21,41 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 
 case class HiveQueryTemplates(
                                createTableTemplate: String,
+                               createOnlyTableTemplate: String,
+                               replaceSchemaTemplate: String,
+                               replacePartitionSchemaTemplate: String,
                                repairTableTemplate: String,
                                addPartitionTemplate: String,
                                dropTableTemplate: String
                              )
 
+/**
+  * This object defines the default SQL templates used for Hive DDL operations such as creating, altering,
+  * repairing, and dropping tables, as well as adding partitions. Templates use placeholder variables
+  * (e.g., `@fullTableName`, `@schema`, `@partitionedBy`, `@path`, `@partitionClause`, `@partitionPath`)
+  * which are substituted at runtime with actual values.
+  *
+  * Templates can be customized via a Typesafe [[com.typesafe.config.Config]] using the following keys
+  * (relative to the configuration prefix):
+  *  - `create.table.template` - Template for `CREATE EXTERNAL TABLE IF NOT EXISTS` statements.
+  *  - `create.only.table.template` - Template for `CREATE EXTERNAL TABLE` statements (without `IF NOT EXISTS`).
+  *  - `replace.schema.template` - Template for `ALTER TABLE ... REPLACE COLUMNS` statements.
+  *  - `repair.table.template` - Template for `MSCK REPAIR TABLE` statements.
+  *  - `add.partition.template` - Template for `ALTER TABLE ... ADD ... PARTITION` statements.
+  *  - `drop.table.template` - Template for `DROP TABLE IF EXISTS` statements.
+  *
+  * If a key is not present in the configuration, the corresponding default template is used.
+  *
+  * @see [[HiveHelper]] for usage of these templates in Hive operations.
+  * @see [[za.co.absa.pramen.core.metastore.Metastore]] for metastore integration that leverages Hive helpers.
+  */
 object HiveQueryTemplates {
   val TEMPLATES_DEFAULT_PREFIX = "hive.conf"
 
   val CREATE_TABLE_TEMPLATE_KEY = "create.table.template"
+  val CREATE_ONLY_TABLE_TEMPLATE_KEY = "create.only.table.template"
+  val REPLACE_SCHEMA_TEMPLATE_KEY = "replace.schema.template"
+  val REPLACE_PARTITION_SCHEMA_TEMPLATE_KEY = "replace.partition.schema.template"
   val REPAIR_TABLE_TEMPLATE_KEY = "repair.table.template"
   val ADD_PARTITION_TEMPLATE_KEY = "add.partition.template"
   val DROP_TABLE_TEMPLATE_KEY = "drop.table.template"
@@ -43,6 +69,19 @@ object HiveQueryTemplates {
       |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
       |LOCATION '@path';""".stripMargin
 
+  val DEFAULT_CREATE_ONLY_TABLE_TEMPLATE: String =
+    """CREATE EXTERNAL TABLE
+      |@fullTableName ( @schema )
+      |@partitionedBy
+      |ROW FORMAT SERDE 'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe'
+      |STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat'
+      |OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+      |LOCATION '@path';""".stripMargin
+
+  val DEFAULT_REPLACE_SCHEMA_TEMPLATE: String = "ALTER TABLE @fullTableName REPLACE COLUMNS ( @schema ) CASCADE"
+
+  val DEFAULT_REPLACE_PARTITION_SCHEMA: String = "ALTER TABLE @fullTableName PARTITION (@partitionClause) REPLACE COLUMNS ( @schema )"
+
   val DEFAULT_REPAIR_TABLE_TEMPLATE: String = "MSCK REPAIR TABLE @fullTableName"
 
   val DEFAULT_ADD_PARTITION_TEMPLATE: String =
@@ -53,6 +92,15 @@ object HiveQueryTemplates {
   def fromConfig(conf: Config): HiveQueryTemplates = {
     val createTableTemplate = ConfigUtils.getOptionString(conf, CREATE_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_CREATE_TABLE_TEMPLATE)
+
+    val createOnlyTableTemplate = ConfigUtils.getOptionString(conf, CREATE_ONLY_TABLE_TEMPLATE_KEY)
+      .getOrElse(DEFAULT_CREATE_ONLY_TABLE_TEMPLATE)
+
+    val replaceSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_SCHEMA_TEMPLATE_KEY)
+      .getOrElse(DEFAULT_REPLACE_SCHEMA_TEMPLATE)
+
+    val replacePartitionSchemaTemplate = ConfigUtils.getOptionString(conf, REPLACE_PARTITION_SCHEMA_TEMPLATE_KEY)
+      .getOrElse(DEFAULT_REPLACE_PARTITION_SCHEMA)
 
     val repairTableTemplate = ConfigUtils.getOptionString(conf, REPAIR_TABLE_TEMPLATE_KEY)
       .getOrElse(DEFAULT_REPAIR_TABLE_TEMPLATE)
@@ -65,6 +113,9 @@ object HiveQueryTemplates {
 
     HiveQueryTemplates(
       createTableTemplate = createTableTemplate,
+      createOnlyTableTemplate = createOnlyTableTemplate,
+      replaceSchemaTemplate = replaceSchemaTemplate,
+      replacePartitionSchemaTemplate = replacePartitionSchemaTemplate,
       repairTableTemplate = repairTableTemplate,
       addPartitionTemplate = addPartitionTemplate,
       dropTableTemplate = dropTableTemplate
@@ -74,6 +125,9 @@ object HiveQueryTemplates {
   def getDefaultQueryTemplates: HiveQueryTemplates = {
     HiveQueryTemplates(
       createTableTemplate = DEFAULT_CREATE_TABLE_TEMPLATE,
+      createOnlyTableTemplate = DEFAULT_CREATE_ONLY_TABLE_TEMPLATE,
+      replaceSchemaTemplate = DEFAULT_REPLACE_SCHEMA_TEMPLATE,
+      replacePartitionSchemaTemplate = DEFAULT_REPLACE_PARTITION_SCHEMA,
       repairTableTemplate = DEFAULT_REPAIR_TABLE_TEMPLATE,
       addPartitionTemplate = DEFAULT_ADD_PARTITION_TEMPLATE,
       dropTableTemplate = DEFAULT_DROP_TABLE_TEMPLATE

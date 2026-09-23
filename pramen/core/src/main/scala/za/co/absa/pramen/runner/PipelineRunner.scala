@@ -19,6 +19,7 @@ package za.co.absa.pramen.runner
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.RunnerCommons._
+import za.co.absa.pramen.core.app.config.RuntimeConfig.RUN_MODE
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.runner.AppRunner
 import za.co.absa.pramen.core.state.PipelineStateImpl
@@ -42,13 +43,19 @@ object PipelineRunner {
 
     configs.foreach { conf =>
       val needLogEffectiveConfig = ConfigUtils.getOptionBoolean(conf, Keys.LOG_EFFECTIVE_CONFIG).getOrElse(true)
+      val runModeOpt = ConfigUtils.getOptionString(conf, RUN_MODE)
       if (needLogEffectiveConfig) {
         ConfigUtils.logEffectiveConfigProps(conf, Keys.CONFIG_KEYS_TO_REDACT, Keys.KEYS_TO_REDACT)
       } else {
         log.info(s"Logging of the effective configuration is disabled by ${Keys.LOG_EFFECTIVE_CONFIG}=false.")
       }
 
-      val exitCode = AppRunner.runPipeline(conf)
+      val exitCode = if (runModeOpt.map(_.toLowerCase.trim).contains("bulk")) {
+        AppRunner.runBulkPipelines(conf)
+      } else {
+        AppRunner.runPipeline(conf)
+      }
+
       workflowExitCodes.append(exitCode)
       overallExitCode |= exitCode
     }

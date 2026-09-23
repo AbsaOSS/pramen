@@ -35,11 +35,15 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
   protected val jdbcRetries: Int = jdbcReaderConfig.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
   protected val extraOptions: Map[String, String] = ConfigUtils.getExtraOptions(conf, "option")
 
+  override def close(): Unit = {
+    jdbcUrlSelector.close()
+  }
+
   private[core] lazy val sqlGen = {
     val gen = SqlGeneratorLoader.getSqlGenerator(jdbcReaderConfig.jdbcConfig.driver, getSqlConfig)
 
     if (gen.requiresConnection) {
-      val (connection, _) = jdbcUrlSelector.getWorkingConnection(jdbcRetries)
+      val (connection, _) = jdbcUrlSelector.getNewConnection(jdbcRetries)
       gen.setConnection(connection)
     }
     gen
@@ -97,7 +101,7 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
     var count = 0L
     log.info(s"Executing: $countSql")
 
-    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql, jdbcRetries) { rs =>
+    JdbcNativeUtils.withResultSet(jdbcUrlSelector, countSql) { rs =>
       if (!rs.next())
         throw new IllegalStateException(s"No rows returned by the count query: $countSql")
       else {

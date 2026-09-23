@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.tests.bookkeeper
 import org.apache.commons.io.FileUtils
 import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
+import za.co.absa.pramen.bulkload.{BulkLoadStateManagerJdbc, BulkLoadStateManagerNull}
 import za.co.absa.pramen.core.app.config.{HadoopFormat, RuntimeConfig}
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper._
@@ -26,8 +27,9 @@ import za.co.absa.pramen.core.fixtures.{MongoDbFixture, RelationalDbFixture, Tem
 import za.co.absa.pramen.core.journal._
 import za.co.absa.pramen.core.lock.{TokenLockFactoryAllow, TokenLockFactoryHadoopPath, TokenLockFactoryJdbc, TokenLockFactoryMongoDb}
 import za.co.absa.pramen.core.metadata.{MetadataManagerJdbc, MetadataManagerNull}
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.UsingUtils
 import za.co.absa.pramen.core.{BookkeepingConfigFactory, RuntimeConfigFactory}
 
 import java.nio.file.Paths
@@ -43,11 +45,14 @@ class BookkeeperSuite extends AnyWordSpec
   import za.co.absa.pramen.core.bookkeeper.BookkeeperMongoDb._
 
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Option(user), Option(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase()
+    if (pramenDb != null) pramenDb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
 
     if (db != null) {
       if (db.doesCollectionExists(collectionName)) {
@@ -59,6 +64,10 @@ class BookkeeperSuite extends AnyWordSpec
     }
   }
 
+  override def afterAll(): Unit = {
+    if (pramenDb != null) pramenDb.close()
+    super.afterAll()
+  }
 
   val runtimeConfig: RuntimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(
     useLocks = true
@@ -71,16 +80,17 @@ class BookkeeperSuite extends AnyWordSpec
         bookkeepingJdbcConfig = Some(jdbcConfig)
       )
 
-      val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
+      val (bk, tf, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
       assert(bk.isInstanceOf[BookkeeperJdbc])
       assert(tf.isInstanceOf[TokenLockFactoryJdbc])
       assert(journal.isInstanceOf[JournalJdbc])
       assert(metadataManager.isInstanceOf[MetadataManagerJdbc])
+      assert(bulkLoadStateManager.isInstanceOf[BulkLoadStateManagerJdbc])
       closable.close()
     }
 
-    if (db != null) {
+    if (mongoDbExecutable.nonEmpty) {
       "build bookkeeper, token lock, journal, and closable object for MongoDB" in {
         val bookkeepingConfig = BookkeepingConfigFactory.getDummyBookkeepingConfig(
           bookkeepingEnabled = true,
@@ -88,12 +98,13 @@ class BookkeeperSuite extends AnyWordSpec
           bookkeepingDbName = Some(dbName)
         )
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
+        val (bk, tf, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperMongoDb])
         assert(tf.isInstanceOf[TokenLockFactoryMongoDb])
         assert(journal.isInstanceOf[JournalMongoDb])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        assert(bulkLoadStateManager.isInstanceOf[BulkLoadStateManagerNull])
         closable.close()
       }
     } else {
@@ -109,12 +120,13 @@ class BookkeeperSuite extends AnyWordSpec
           bookkeepingLocation = Some(tempDir)
         )
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
+        val (bk, tf, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperText])
         assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])
         assert(journal.isInstanceOf[JournalHadoopCsv])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        assert(bulkLoadStateManager.isInstanceOf[BulkLoadStateManagerNull])
         closable.close()
       }
     }
@@ -127,12 +139,13 @@ class BookkeeperSuite extends AnyWordSpec
           bookkeepingHadoopFormat = HadoopFormat.Delta
         )
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
+        val (bk, tf, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperDeltaPath])
         assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])
         assert(journal.isInstanceOf[JournalHadoopDeltaPath])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        assert(bulkLoadStateManager.isInstanceOf[BulkLoadStateManagerNull])
         closable.close()
       }
     }
@@ -149,12 +162,13 @@ class BookkeeperSuite extends AnyWordSpec
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl1bookkeeping").toFile)
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl1schemas").toFile)
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
+        val (bk, tf, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperDeltaTable])
         assert(tf.isInstanceOf[TokenLockFactoryAllow])
         assert(journal.isInstanceOf[JournalHadoopDeltaTable])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        assert(bulkLoadStateManager.isInstanceOf[BulkLoadStateManagerNull])
         closable.close()
 
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl1bookkeeping").toFile)
@@ -175,12 +189,13 @@ class BookkeeperSuite extends AnyWordSpec
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl2bookkeeping").toFile)
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl2schemas").toFile)
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
+        val (bk, tf, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperDeltaTable])
         assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])
         assert(journal.isInstanceOf[JournalHadoopDeltaTable])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        assert(bulkLoadStateManager.isInstanceOf[BulkLoadStateManagerNull])
         closable.close()
 
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl2bookkeeping").toFile)
@@ -201,12 +216,13 @@ class BookkeeperSuite extends AnyWordSpec
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl3bookkeeping").toFile)
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl3schemas").toFile)
 
-        val (bk, tf, journal, metadataManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
+        val (bk, tf, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(bookkeepingConfig, runtimeConfig, 0L)
 
         assert(bk.isInstanceOf[BookkeeperDeltaTable])
         assert(tf.isInstanceOf[TokenLockFactoryHadoopPath])
         assert(journal.isInstanceOf[JournalHadoopDeltaTable])
         assert(metadataManager.isInstanceOf[MetadataManagerNull])
+        assert(bulkLoadStateManager.isInstanceOf[BulkLoadStateManagerNull])
         closable.close()
 
         FileUtils.deleteDirectory(Paths.get("spark-warehouse", "my_tbl3bookkeeping").toFile)

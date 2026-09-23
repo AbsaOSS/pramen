@@ -19,6 +19,7 @@ package za.co.absa.pramen.core
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.app.PramenFactory
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
+import za.co.absa.pramen.api.lock.{TokenLock, TokenLockFactory}
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen}
 import za.co.absa.pramen.core.state.{NotificationBuilderImpl, PipelineState}
@@ -32,6 +33,8 @@ class PramenImpl extends Pramen {
   private var _metadataManager: Option[MetadataManager] = None
 
   private var _pipelineState: Option[PipelineState] = None
+
+  private var _tokenLockFactory: Option[TokenLockFactory] = None
 
   override def buildProperties: BuildPropertiesRetriever = BuildPropertyUtils.instance
 
@@ -79,6 +82,26 @@ class PramenImpl extends Pramen {
     pipelineState.setWarningFlag()
   }
 
+  override def tokenLockFactory: TokenLockFactory = _tokenLockFactory.getOrElse(
+    throw new IllegalStateException("Token lock factory is not available at the context.")
+  )
+
+  override def setComputeEngineId(computeEngineId: String): Unit = _pipelineState.foreach(_.setComputeEngineId(computeEngineId))
+
+  override def setNumberOfExecutorsMin(n: Int): Unit = _pipelineState.foreach(_.setNumberOfExecutorsMin(n))
+
+  override def setNumberOfExecutorsMax(n: Int): Unit = _pipelineState.foreach(_.setNumberOfExecutorsMax(n))
+
+  override def setExecutorType(executorType: String): Unit = _pipelineState.foreach(_.setExecutorType(executorType))
+
+  override def setNumberOfRecordsIngested(count: Long): Unit = _pipelineState.foreach(_.setNumberOfRecordsIngested(count))
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = _pipelineState.foreach(_.addNumberOfRecordsIngested(count))
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = _pipelineState.foreach(_.setMaximumNumberOfColumns(count))
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = _pipelineState.foreach(_.setExecutionAdditionalOption(key, value))
+
   private[core] def setWorkflowConfig(config: Config): Unit = synchronized {
     _workflowConfig = Option(config)
   }
@@ -89,6 +112,22 @@ class PramenImpl extends Pramen {
 
   private[core] def setPipelineState(s: PipelineState): Unit = synchronized {
     _pipelineState = Option(s)
+  }
+
+  private[core] def setTokenLockFactory(f: TokenLockFactory): Unit = synchronized {
+    if (f == null) {
+      _tokenLockFactory = None
+    } else {
+      val customTokenLockFactory = new TokenLockFactory {
+        private val underlyingTokenLockFactory = f
+        override def getLock(token: String): TokenLock = {
+          val sep = "$"
+          val keyWithPrefix = s"custom$sep$token"
+          underlyingTokenLockFactory.getLock(keyWithPrefix)
+        }
+      }
+      _tokenLockFactory = Some(customTokenLockFactory)
+    }
   }
 
   private[core] def reset(): Unit = synchronized {

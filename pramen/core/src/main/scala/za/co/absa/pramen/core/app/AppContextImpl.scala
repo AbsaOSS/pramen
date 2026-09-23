@@ -19,16 +19,20 @@ package za.co.absa.pramen.core.app
 import com.typesafe.config.Config
 import org.apache.spark.sql.SparkSession
 import za.co.absa.pramen.api.MetadataManager
+import za.co.absa.pramen.api.lock.TokenLockFactory
+import za.co.absa.pramen.bulkload.{BulkLoadStateManager, BulkLoadStateManagerNull}
 import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.journal.Journal
-import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
+import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreImpl}
+import za.co.absa.pramen.core.utils.SparkUtils
 
 class AppContextImpl(val appConfig: AppConfig,
                      val bookkeeper: Bookkeeper,
+                     val bulkLoadStateManager: BulkLoadStateManager,
                      val tokenLockFactory: TokenLockFactory,
                      val journal: Journal,
                      val metadataManager: MetadataManager,
@@ -39,7 +43,11 @@ class AppContextImpl(val appConfig: AppConfig,
 
   override def close(): Unit = synchronized {
     if (closable != null) {
-      closable.close()
+      try {
+        bookkeeper.close()
+      } finally {
+        closable.close()
+      }
       closable = null
     }
 
@@ -53,18 +61,21 @@ class AppContextImpl(val appConfig: AppConfig,
 object AppContextImpl {
   def apply(conf: Config, batchId: Long)(implicit spark: SparkSession): AppContextImpl = {
 
-    val appConfig = AppConfig.fromConfig(conf)
+    val allowLocalBookkepingStorage = SparkUtils.isDriverRunningOnEdgeNode(SparkUtils.getSparkMaster)
+    val appConfig = AppConfig.fromConfig(conf, allowLocalBookkepingStorage)
 
-    val (bookkeeper, tokenLockFactory, journal, metadataManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
+    val (bookkeeper, tokenLockFactory, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
 
     val metastore: Metastore = MetastoreImpl.fromConfig(conf, appConfig.runtimeConfig, appConfig.infoDateDefaults, bookkeeper, metadataManager, batchId)
 
     PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
     PramenImpl.instance.asInstanceOf[PramenImpl].setWorkflowConfig(conf)
+    PramenImpl.instance.asInstanceOf[PramenImpl].setTokenLockFactory(tokenLockFactory)
 
     val appContext = new AppContextImpl(
       appConfig,
       bookkeeper,
+      bulkLoadStateManager,
       tokenLockFactory,
       journal,
       metadataManager,
@@ -80,7 +91,7 @@ object AppContextImpl {
               infoDateConfig: InfoDateConfig,
               bookkeeper: Bookkeeper,
               journal: Journal)(implicit spark: SparkSession): AppContextImpl = {
-    val appConfig = AppConfig.fromConfig(conf)
+    val appConfig = AppConfig.fromConfig(conf, allowLocalBookkepingStorage = false)
 
     val metadataManager = new MetadataManagerNull(isPersistenceEnabled = false)
     val runtimeConfig = RuntimeConfig.default
@@ -90,6 +101,7 @@ object AppContextImpl {
     val appContext = new AppContextImpl(
       appConfig,
       bookkeeper,
+      new BulkLoadStateManagerNull,
       new TokenLockFactoryAllow,
       journal,
       new MetadataManagerNull(isPersistenceEnabled = false),

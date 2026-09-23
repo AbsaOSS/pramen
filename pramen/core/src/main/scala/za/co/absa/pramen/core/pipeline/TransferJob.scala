@@ -21,6 +21,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import za.co.absa.pramen.api.jobdef.{Schedule, TransferTable}
 import za.co.absa.pramen.api.status.{DependencyWarning, JobType, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Sink, Source}
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.bookkeeper.model.DataOffsetAggregated
 import za.co.absa.pramen.core.metastore.Metastore
@@ -43,7 +44,9 @@ class TransferJob(operationDef: OperationDef,
                   sink: Sink,
                   specialCharacters: String,
                   tempDirectory: Option[String],
-                  disableCountQuery: Boolean)
+                  disableCountQuery: Boolean,
+                  bulkLoadCurrent: Option[BulkRunConfig],
+                  workflowConf: Config)
                  (implicit spark: SparkSession)
   extends JobBase(operationDef, metastore, bookkeeper, notificationTargets, bookkeepingMetaTable) {
 
@@ -51,17 +54,23 @@ class TransferJob(operationDef: OperationDef,
 
   val ingestionJob: IngestionJob = {
     if (operationDef.schedule == Schedule.Incremental) {
-      new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsetIn, batchId, sourceName, source, TransferTableParser.getSourceTable(table), outputTable, specialCharacters)
+      new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsetIn, batchId, sourceName, source, TransferTableParser.getSourceTable(table), outputTable, specialCharacters, bulkLoadCurrent)
     } else {
-      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, TransferTableParser.getSourceTable(table), bookkeepingMetaTable, specialCharacters, tempDirectory, disableCountQuery)
+      new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, TransferTableParser.getSourceTable(table), bookkeepingMetaTable, specialCharacters, tempDirectory, disableCountQuery, bulkLoadCurrent)
     }
   }
 
-  val sinkJob: SinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDate, bookkeepingMetaTable, sinkName, sink, TransferTableParser.getSinkTable(table))
+  val sinkJob: SinkJob = new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDate, bookkeepingMetaTable, sinkName, sink, TransferTableParser.getSinkTable(table), workflowConf)
 
   override val scheduleStrategy: ScheduleStrategy = ingestionJob.scheduleStrategy
 
   override val jobType: JobType = JobType.Transfer(sourceName, source.config, sinkName, sink.config, table)
+
+  override def backfillDays: Int = ingestionJob.backfillDays
+
+  override def trackDays: Int = ingestionJob.trackDays
+
+  override val outputsToMetastore: Boolean = false
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     ingestionJob.preRunCheckJob(infoDate, runReason, jobConfig, dependencyWarnings)

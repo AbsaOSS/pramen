@@ -16,10 +16,11 @@
 
 package za.co.absa.pramen.core.runner
 
-import com.typesafe.config.Config
+import com.typesafe.config.{Config, ConfigValueFactory}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.Schedule
+import za.co.absa.pramen.bulkload.BulkLoadDateUtils
 import za.co.absa.pramen.core.PramenImpl
 import za.co.absa.pramen.core.app.config.{HookConfig, RuntimeConfig}
 import za.co.absa.pramen.core.app.{AppContext, AppContextImpl}
@@ -29,6 +30,7 @@ import za.co.absa.pramen.core.metastore.peristence.{TransientJobManager, Transie
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.runner.jobrunner.{ConcurrentJobRunner, ConcurrentJobRunnerImpl}
 import za.co.absa.pramen.core.runner.orchestrator.OrchestratorImpl
+import za.co.absa.pramen.core.runner.repartitioner.{JobRepartitioner, JobRepartitionerImpl, JobRepartitionerNull}
 import za.co.absa.pramen.core.runner.task.{TaskRunner, TaskRunnerMultithreaded}
 import za.co.absa.pramen.core.state.{PipelineState, PipelineStateImpl, SystemExitCatcherSecurityManager}
 import za.co.absa.pramen.core.utils.Emoji._
@@ -70,6 +72,7 @@ object AppRunner {
       _          <- logBanner(spark)
       _          <- logExecutorNodes(conf, state, spark)
       appContext <- createAppContext(conf, state, spark)
+      _          <- Try { state.setJournal(appContext.journal) }
       taskRunner <- createTaskRunner(conf, state, appContext, spark.sparkContext.applicationId)
       pipeline   <- getPipelineDef(conf, state, appContext)
       _          <- addSinkTables(state, pipeline, appContext)
@@ -98,6 +101,40 @@ object AppRunner {
         log.error(s"$FAILURE The pipeline has failed with an exception.", ex)
         ERROR_CODE_FAILURE
     }
+  }
+
+  def runBulkPipelines(conf: Config): Int = {
+    val runtimeConfig = RuntimeConfig.fromConfig(conf)
+    if (runtimeConfig.runDateTo.isEmpty)
+      throw new IllegalArgumentException("Date range is not provided when running in bulk mode.")
+
+    val dates0 = BulkLoadDateUtils.getBulkLoadDates(runtimeConfig.runDate, runtimeConfig.runDateTo.get, runtimeConfig.bulkBatchSize)
+
+    val dates = if (runtimeConfig.isInverseOrder)
+      dates0.sortBy(d => -d.outputInfoDate.toEpochDay)
+    else
+      dates0.sortBy(d => d.outputInfoDate.toEpochDay)
+
+    var overallExitCode = 0
+
+    dates.foreach { bulkDate =>
+      log.info(s"Starting the pipeline for the range: ${bulkDate.dataDateFrom}..${bulkDate.dataFateTo} outputting to ${bulkDate.outputInfoDate}")
+
+      val currentConf = conf
+        .withValue(RuntimeConfig.BULK_CURRENT_DATE_FROM, ConfigValueFactory.fromAnyRef(bulkDate.dataDateFrom.toString))
+        .withValue(RuntimeConfig.BULK_CURRENT_DATE_TO, ConfigValueFactory.fromAnyRef(bulkDate.dataFateTo.toString))
+        .withValue(RuntimeConfig.BULK_CURRENT_OUTPUT_INFO_DATE, ConfigValueFactory.fromAnyRef(bulkDate.outputInfoDate.toString))
+        .withValue(RuntimeConfig.IS_RERUN, ConfigValueFactory.fromAnyRef(true))
+
+      val exitCode = AppRunner.runPipeline(currentConf)
+      overallExitCode |= exitCode
+    }
+
+    val emoji = if (overallExitCode == 0) SUCCESS else FAILURE
+
+    log.info(s"$emoji The bulk history load pipeline has finished. Exit code = $overallExitCode")
+
+    overallExitCode
   }
 
   private[core] def handleFailure[T](t: Try[T], state: PipelineState, stage: String): Try[T] = {
@@ -129,7 +166,7 @@ object AppRunner {
                                      appContext: AppContext,
                                      applicationId: String): Try[TaskRunner] = {
     handleFailure(Try {
-      new TaskRunnerMultithreaded(conf, appContext.bookkeeper, appContext.journal, appContext.tokenLockFactory, state, appContext.appConfig.runtimeConfig, applicationId)
+      new TaskRunnerMultithreaded(conf, appContext.bookkeeper, appContext.journal, appContext.bulkLoadStateManager, appContext.tokenLockFactory, state, appContext.appConfig.runtimeConfig, applicationId)
     }, state, "initialization of the task runner")
   }
 
@@ -157,6 +194,9 @@ object AppRunner {
 
         hosts.foreach(host => log.info(s"Executor node: $host"))
       }
+      setExecutorNodeType(spark, state)
+      setMinMaxExecutors(spark, state)
+      setExecutionAdditionalProperties(spark, state)
     }, state, "Spark List of executor nodes")
   }
 
@@ -168,15 +208,115 @@ object AppRunner {
     data.mapPartitions { _ => Iterable(java.net.InetAddress.getLocalHost.getHostName).iterator }.collect().distinct.sorted
   }
 
+  private[core] def setMinMaxExecutors(implicit spark: SparkSession, state: PipelineState): Unit = {
+    val executors = spark.sparkContext.getExecutorMemoryStatus.keySet
+        .filter(_ != "driver")
+
+    val maxNumExecutors = spark.conf.getOption("spark.dynamicAllocation.maxExecutors").orElse(
+      spark.conf.getOption("spark.executor.instances")) match {
+      case Some(s) => Try(s.toInt).toOption.getOrElse(executors.size)
+      case None    => executors.size
+    }
+
+    state.setNumberOfExecutorsMax(maxNumExecutors)
+
+    val dynamicAllocEnabled = spark.conf.get("spark.dynamicAllocation.enabled", "false").toBoolean
+
+    val minNumExecutors = if (dynamicAllocEnabled) {
+      spark.conf.getOption("spark.dynamicAllocation.minExecutors") match {
+        case Some(s) => Try(s.toInt).toOption.getOrElse(1)
+        case None    => 1
+      }
+    } else {
+      maxNumExecutors
+    }
+
+    state.setNumberOfExecutorsMin(minNumExecutors)
+  }
+
+  private[core] def getNumberOfExecutorCores(spark: SparkSession): Int = {
+    spark.conf.getOption("spark.executor.cores") match {
+      case Some(s) => Try(s.toInt).toOption.getOrElse(Runtime.getRuntime.availableProcessors())
+      case None    => Runtime.getRuntime.availableProcessors()
+    }
+  }
+
+  private[core] def getNumberOfExecutorMemoryGb(spark: SparkSession): Int = {
+    val memAttempt1 = spark.conf.getOption("spark.executor.memory") match {
+      case Some(s) => parseMemorySizeInGb(s)
+      case None => None
+    }
+
+    memAttempt1.getOrElse {
+      val executorMemoryStatus = spark.sparkContext.getExecutorMemoryStatus
+      val executorEntries = executorMemoryStatus.filterKeys(_ != "driver")
+
+      if (executorEntries.nonEmpty) {
+        val (_, (maxMemory, _)) = executorEntries.head
+        val memoryGb = maxMemory / (1024L * 1024L * 1024L)
+        memoryGb.toInt
+      } else {
+        log.warn("No executors found to determine the amount of memory of the executor")
+        0
+      }
+    }
+  }
+
+  private[core] def parseMemorySizeInGb(s: String): Option[Int] = {
+    val trimmed = s.trim.toLowerCase
+    val memoryGb = Try {
+      if (trimmed.endsWith("g")) {
+        trimmed.dropRight(1).toDouble
+      } else if (trimmed.endsWith("m")) {
+        trimmed.dropRight(1).toDouble / 1024.0
+      } else if (trimmed.endsWith("k")) {
+        trimmed.dropRight(1).toDouble / (1024.0 * 1024.0)
+      } else if (trimmed.endsWith("t")) {
+        trimmed.dropRight(1).toDouble * 1024.0
+      } else {
+        trimmed.toDouble / (1024.0 * 1024.0 * 1024.0)
+      }
+    }
+    memoryGb.map(Math.round(_).toInt).toOption
+  }
+
+  private[core] def setExecutionAdditionalProperties(implicit spark: SparkSession, state: PipelineState): Unit = {
+    spark.conf.getOption("spark.glue.JOB_RUN_ID").foreach { glueId =>
+      state.setComputeEngineId(glueId)
+    }
+
+    spark.conf.getOption("spark.glue.GLUE_VERSION").foreach { glueVersion =>
+      state.setExecutionAdditionalOption("glue_version", glueVersion)
+    }
+
+    spark.conf.getOption("spark.glue.accountId").foreach { awsAccount =>
+      state.setExecutionAdditionalOption("aws_account_id", awsAccount)
+    }
+
+    spark.conf.getOption("spark.glue.JOB_NAME").foreach { glueJobName =>
+      state.setExecutionAdditionalOption("glue_job_name", glueJobName)
+    }
+  }
+
+  private[core] def setExecutorNodeType(implicit spark: SparkSession, state: PipelineState): Unit = {
+    // Get first executor and construct a string like:
+    // C32M64 meaning 32 virtual CPUs and 64 GB of memory
+    val cpus = getNumberOfExecutorCores(spark)
+    val memoryGb = getNumberOfExecutorMemoryGb(spark)
+
+    state.setExecutorType(s"C${cpus}M$memoryGb")    
+  }
+
   private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {
     if (!bannerShown) {
       Try {
+        val cpuArchitecture = getArchitecture.map(s => s", Driver CPU architecture: $s").getOrElse("")
         bannerShown = true
         val version = BuildPropertyUtils.instance.getFullVersion
         val banner = ResourceUtils.getResourceString("/pramen_banner.txt")
           .replace("""project_version""", version)
         log.info(s"\n$banner")
-        log.info(s"Runtime Spark version: ${spark.version}")
+        log.info(s"Runtime Spark version: ${spark.version}$cpuArchitecture")
 
         spark.sparkContext.uiWebUrl.foreach(url => log.info(s"Spark URL: $url"))
       }
@@ -184,6 +324,14 @@ object AppRunner {
       Success(()) // Short version of the Darth Vader ship? (-()-)
     }
   }
+  
+  private[core] def getArchitecture: Option[String] = {
+    Try(System.getProperty("os.arch"))
+      .toOption
+      .flatMap(Option(_))
+      .map(_.trim.toLowerCase)
+  }
+    
 
   private[core] def getPipelineDef(implicit conf: Config, state: PipelineState, appContext: AppContext): Try[PipelineDef] = {
     handleFailure(Try {
@@ -218,7 +366,7 @@ object AppRunner {
                               spark: SparkSession): Try[Seq[Job]] = {
     handleFailure(Try {
       val isHistoricalRun = appContext.appConfig.runtimeConfig.runDateTo.nonEmpty
-      val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper, state.getBatchId)
+      val splitter = new OperationSplitter(conf, appContext.metastore, appContext.bookkeeper, appContext.appConfig.runtimeConfig.bulkLoadCurrent, state.getBatchId)
 
       if (isHistoricalRun)
         log.info("This is a historical run. Making all dependencies 'passive' for all jobs...")
@@ -317,8 +465,14 @@ object AppRunner {
       implicit val jobRunner: ConcurrentJobRunner = new ConcurrentJobRunnerImpl(
         appContext.appConfig.runtimeConfig,
         appContext.bookkeeper,
+        appContext.bulkLoadStateManager,
         taskRunner,
         spark.sparkContext.applicationId)
+
+      implicit val repartitioner: JobRepartitioner = appContext.appConfig.runtimeConfig.bulkLoadCurrent match {
+        case Some(bulkConfig) => new JobRepartitionerImpl(bulkConfig, appContext.bulkLoadStateManager, appContext.metastore, conf, spark.sparkContext.applicationId, state.getBatchId)(spark)
+        case None => new JobRepartitionerNull
+      }
 
       TransientJobManager.setTaskRunner(taskRunner)
 

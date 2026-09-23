@@ -36,6 +36,8 @@ class JobBaseDummy(operationDef: OperationDef,
   extends JobBase(operationDef, metastore, bookkeeper, jobNotificationTargets, outputTableDef) {
   override def jobType: JobType = JobType.Transformation("dummy_class")
 
+  override val outputsToMetastore: Boolean = true
+
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     JobPreRunResult(null, None, dependencyWarnings, Seq.empty[String])
   }

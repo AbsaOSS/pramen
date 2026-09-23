@@ -16,12 +16,14 @@
 
 package za.co.absa.pramen.core.utils
 
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.JdbcUrlSelector
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.impl.ResultSetToRowIterator
 
+import java.net.URLClassLoader
 import java.sql._
 import java.util.Properties
 import scala.util.Try
@@ -49,13 +51,13 @@ object JdbcNativeUtils {
   final val DRIVERS_SUPPORT_ARRAYS = Set("org.postgresql.Driver", "org.hsqldb.jdbc.JDBCDriver")
 
   /** Returns a JDBC URL and connection by a config. */
-  def getConnection(jdbcConfig: JdbcConfig): (String, Connection) = {
+  def getConnection(jdbcConfig: JdbcConfig, driverOpt: Option[Driver]): (String, Connection) = {
     val urlSelector = JdbcUrlSelector(jdbcConfig)
 
     def getConnectionWithRetries(jdbcConfig: JdbcConfig, retriesLeft: Int): (String, Connection) = {
       val currentUrl = urlSelector.getUrl
       try {
-        val connection = getJdbcConnection(jdbcConfig, currentUrl)
+        val connection = getJdbcConnection(jdbcConfig, currentUrl, driverOpt)
 
         (currentUrl, connection)
       } catch {
@@ -74,70 +76,86 @@ object JdbcNativeUtils {
   }
 
   /** Gets the number of records returned by a given query. */
-  def getJdbcNativeRecordCount(jdbcConfig: JdbcConfig,
-                               url: String,
+  def getJdbcNativeRecordCount(urlSelector: JdbcUrlSelector,
                                query: String): Long = {
-    val resultSet = getResultSet(jdbcConfig, url, query)
-    getResultSetCount(resultSet)
+    val (resultSet, statement) = getResultSet(urlSelector, query)
+    try {
+      val count = getResultSetCount(resultSet)
+      count
+    } finally {
+      try {
+        statement.close()
+      } catch {
+        case NonFatal(ex) => log.warn("Failed to close the statement", ex)
+      }
+    }
   }
 
   /** Gets a dataframe given a JDBC query */
-  def getJdbcNativeDataFrame(jdbcConfig: JdbcConfig,
-                             url: String,
+  def getJdbcNativeDataFrame(urlSelector: JdbcUrlSelector,
                              query: String)
                             (implicit spark: SparkSession): DataFrame = {
-
-    // Executing the query
+    val jdbcConfig = urlSelector.jdbcConfig
     val arraysSupported = DRIVERS_SUPPORT_ARRAYS.contains(jdbcConfig.driver)
-    val rs = getResultSet(jdbcConfig, url, query)
-    val driverIterator = new ResultSetToRowIterator(rs, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
-    val schema = JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
+    val (rs, statement) = getResultSet(urlSelector, query)
 
-    driverIterator.close()
+    val schema = UsingUtils.using(new ResultSetToRowIterator(rs, Option(statement), None, None, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)) { driverIterator =>
+      JdbcSparkUtils.addMetadataFromJdbc(driverIterator.getSchema, rs.getMetaData)
+    }
 
+    val url = urlSelector.getUrl
+
+    getJdbcNativeDataFrameSerializable(schema, url, query, urlSelector.jdbcConfig, urlSelector.jdbcDriverJarPath, arraysSupported)
+  }
+
+  /** This method uses only serializable parameters because they are going to be passed to the RDD */
+  private def getJdbcNativeDataFrameSerializable(schema: StructType,
+                                         url: String,
+                                         query: String,
+                                         jdbcConfig: JdbcConfig,
+                                         jdbcDriverJarPath: Option[String],
+                                         arraysSupported: Boolean)
+                            (implicit spark: SparkSession): DataFrame = {
     val rdd = spark.sparkContext.parallelize(Seq(query)).flatMap(q => {
-      new ResultSetToRowIterator(getResultSet(jdbcConfig, url, q), jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
+      val (rs, statement, connection, classLoaderOpt) = getResultSetForRDD(jdbcConfig, url, q, jdbcDriverJarPath)
+      new ResultSetToRowIterator(rs, Option(statement), Option(connection), classLoaderOpt, jdbcConfig.sanitizeDateTime, jdbcConfig.incorrectDecimalsAsString, arraysSupported)
     })
 
     spark.createDataFrame(rdd, schema)
   }
 
   def withResultSet(jdbcUrlSelector: JdbcUrlSelector,
-                    query: String,
-                    retries: Int)
+                    query: String)
                    (action: ResultSet => Unit): Unit = {
-    val (connection, _) = jdbcUrlSelector.getWorkingConnection(retries)
+    import UsingUtils.Implicits._
 
-    try {
-      val statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+    val retries = jdbcUrlSelector.jdbcConfig.retries.getOrElse(jdbcUrlSelector.getNumberOfUrls)
 
-      try {
-        val resultSet = executeQuery(statement, query, retries)
-        try {
-          action(resultSet)
-        } finally {
-          resultSet.close()
-        }
-      } finally {
-        statement.close()
-      }
-    } finally {
-      connection.close()
+    val (conn, _) = jdbcUrlSelector.getConnection
+
+    for {
+      statement <- conn.createStatement(ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      resultSet <- executeQuery(statement, query, retries)
+    } {
+      action(resultSet)
     }
   }
 
   private[core] def executeQuery(statement: Statement, query: String, retriesLeft: Int): ResultSet = {
-    try {
-      statement.executeQuery(query)
-    } catch {
-      // This is a workaround for an intermittent issue with the Hive JDBC driver that occasionally throws an index-related exception.
-      // Retrying the query has proven to resolve the issue.
-      case ex: SQLException if retriesLeft > 0 && ex.getMessage.contains("Index: 1, Size: 1") =>
-        log.error(s"Error executing query. Retries left = $retriesLeft. Retrying...", ex)
-        executeQuery(statement, query, retriesLeft - 1)
-      case ex: Throwable =>
-        throw ex
+    var remainingRetries = retriesLeft
+
+    while (true) {
+      try {
+        return statement.executeQuery(query)
+      } catch {
+        case ex: SQLException if remainingRetries > 0 && ex.getMessage.contains("Index: 1, Size: 1") =>
+          log.error(s"Error executing query. Retries left = $remainingRetries. Retrying...", ex)
+          remainingRetries -= 1
+        case ex: Throwable  =>
+          throw ex
+      }
     }
+    throw new IllegalStateException("Unreachable")
   }
 
   private[core] def getResultSetCount(resultSet: ResultSet): Long = {
@@ -159,11 +177,26 @@ object JdbcNativeUtils {
     count
   }
 
-  private def getResultSet(jdbcConfig: JdbcConfig,
-                           url: String,
-                           query: String): ResultSet = {
-    val connection = getJdbcConnection(jdbcConfig, url)
+  private[core] def getResultSet(urlSelector: JdbcUrlSelector,
+                           query: String): (ResultSet, Statement) = {
+    val (connection, _) = urlSelector.getConnection
 
+    getResultSet(connection, urlSelector.jdbcConfig, query)
+  }
+
+  private[core] def getResultSetForRDD(jdbcConfig: JdbcConfig,
+                                       url: String,
+                                       query: String,
+                                       jdbcDriverJarPath: Option[String]): (ResultSet, Statement, Connection, Option[URLClassLoader]) = {
+    val dynamicDriverOpt = jdbcDriverJarPath.map(path => JdbcUrlSelector.loadDriver(path, jdbcConfig.driver))
+    val connection = getJdbcConnection(jdbcConfig, url, dynamicDriverOpt.map(_.driver))
+    val (rs, statement) = getResultSet(connection, jdbcConfig, query)
+    (rs, statement, connection, dynamicDriverOpt.map(_.classLoader))
+  }
+
+  private[core] def getResultSet(connection: Connection,
+                           jdbcConfig: JdbcConfig,
+                           query: String): (ResultSet, Statement) = {
     val statement = try {
       if (jdbcConfig.driver == "org.postgresql.Driver")
         // Special handling of PostgreSQL driver that loads.
@@ -186,14 +219,11 @@ object JdbcNativeUtils {
       statement.setFetchSize(n)
     )
 
-    statement.executeQuery(query)
+    (statement.executeQuery(query), statement)
   }
 
-  private[core] def getJdbcConnection(jdbcConfig: JdbcConfig, url: String): Connection = {
-    Class.forName(jdbcConfig.driver)
-
+  private[core] def getJdbcConnection(jdbcConfig: JdbcConfig, url: String, driverOpt: Option[Driver]): Connection = {
     val properties = new Properties()
-    properties.put("driver", jdbcConfig.driver)
     jdbcConfig.user.foreach(db => properties.put("user", db))
     jdbcConfig.password.foreach(db => properties.put("password", db))
     jdbcConfig.database.foreach(db => properties.put("database", db))
@@ -202,9 +232,23 @@ object JdbcNativeUtils {
         properties.put(k, v)
     }
 
+    def getConnectionFromDriver(driver: Driver): Connection = {
+      val conn = driver.connect(url, properties)
+      if (conn == null) {
+        throw new SQLException(s"Driver ${jdbcConfig.driver} returned null connection for URL: $url")
+      }
+      conn
+    }
+
     DriverManager.setLoginTimeout(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))
 
-    val connection = DriverManager.getConnection(url, properties)
+    val connection = driverOpt match {
+      case Some(driver) =>
+        getConnectionFromDriver(driver)
+      case None =>
+        Class.forName(jdbcConfig.driver)
+        DriverManager.getConnection(url, properties)
+    }
 
     jdbcConfig.autoCommit.foreach { autoCommit =>
       try {

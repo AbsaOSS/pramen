@@ -25,6 +25,7 @@ import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType}
 import za.co.absa.pramen.api.status.{DependencyWarning, TaskRunReason}
 import za.co.absa.pramen.api.{Reason, Source}
+import za.co.absa.pramen.core.app.config.BulkRunConfig
 import za.co.absa.pramen.core.bookkeeper.model.{DataOffsetAggregated, DataOffsetRequest}
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManager, OffsetManagerUtils}
 import za.co.absa.pramen.core.metastore.Metastore
@@ -45,19 +46,36 @@ class IncrementalIngestionJob(operationDef: OperationDef,
                               source: Source,
                               sourceTable: SourceTable,
                               outputTable: MetaTable,
-                              specialCharacters: String)
+                              specialCharacters: String,
+                              bulkLoadCurrent: Option[BulkRunConfig])
                              (implicit spark: SparkSession)
-  extends IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, None, false) {
+  extends IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, None, false, bulkLoadCurrent) {
 
   override val scheduleStrategy: ScheduleStrategy = new ScheduleStrategyIncremental(latestOffsetIn.map(_.maximumInfoDate), source.hasInfoDateColumn(sourceTable.query))
 
-  override def trackDays: Int = 0
+  override def backfillDays: Int = {
+    if (source.hasInfoDateColumn(sourceTable.query))
+      outputTable.backfillDays
+    else
+      0
+  }
+
+  override def trackDays: Int = {
+    if (source.hasInfoDateColumn(sourceTable.query))
+      outputTable.trackDays
+    else
+      0
+  }
 
   override def preRunCheckJob(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config, dependencyWarnings: Seq[DependencyWarning]): JobPreRunResult = {
     JobPreRunResult(JobPreRunStatus.Ready, None, dependencyWarnings, Nil)
   }
 
   override def validate(infoDate: LocalDate, runReason: TaskRunReason, jobConfig: Config): Reason = {
+    if (bulkLoadCurrent.nonEmpty) {
+      return Reason.NotReady("Incremental ingestion is not supported for bulk load operations at the moment.")
+    }
+
     val om = bookkeeper.getOffsetManager
     val sourceHasInfoDate = source.hasInfoDateColumn(sourceTable.query)
     val isReRun = runReason == TaskRunReason.Rerun
@@ -204,7 +222,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
             Reason.Ready
           case None =>
             log.info(s"Offsets not found for '${outputTable.name}' at '$infoDate'.")
-            Reason.SkipOnce("No offsets registered")
+            Reason.SkipOnce(s"Unable to re-run: No offsets registered for $infoDate")
         }
       case (true, false) =>
         Reason.Ready

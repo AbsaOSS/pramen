@@ -22,23 +22,29 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.jobdef.Schedule
+import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status._
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
+import za.co.absa.pramen.bulkload.model.{BulkLoadPhase, BulkLoadState}
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
-import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ReasonException}
+import za.co.absa.pramen.core.config.Keys.SQL_QUERY_CANCELLATION_TIMEOUT
+import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, LazyJobErrorWrapper, ReasonException}
 import za.co.absa.pramen.core.journal.Journal
 import za.co.absa.pramen.core.journal.model.TaskCompleted
-import za.co.absa.pramen.core.lock.{TokenLockFactory, TokenLockFactoryAllow}
+import za.co.absa.pramen.core.lock.TokenLockFactoryAllow
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.MetaTable
+import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
 import za.co.absa.pramen.core.pipeline.JobPreRunStatus._
 import za.co.absa.pramen.core.pipeline.PipelineDef.{COUNTRY_KEY, ENVIRONMENT_NAME, PIPELINE_NAME_KEY, TENANT_KEY}
 import za.co.absa.pramen.core.pipeline._
 import za.co.absa.pramen.core.state.{PipelineState, WorkerStatusManager}
+import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils
 import za.co.absa.pramen.core.utils.Emoji._
 import za.co.absa.pramen.core.utils.SparkUtils._
 import za.co.absa.pramen.core.utils.hive.HiveHelper
-import za.co.absa.pramen.core.utils.{ConfigUtils, ThreadUtils, TimeUtils}
+import za.co.absa.pramen.core.utils.{ConfigUtils, SparkUtils, ThreadUtils, TimeUtils}
 
 import java.sql.Date
 import java.time.{Instant, LocalDate}
@@ -51,6 +57,7 @@ import scala.util.{Failure, Success, Try}
 abstract class TaskRunnerBase(conf: Config,
                               bookkeeper: Bookkeeper,
                               journal: Journal,
+                              bulkLoadStateManager: BulkLoadStateManager,
                               lockFactory: TokenLockFactory,
                               runtimeConfig: RuntimeConfig,
                               pipelineState: PipelineState,
@@ -61,6 +68,7 @@ abstract class TaskRunnerBase(conf: Config,
   implicit val localDateOrdering: Ordering[LocalDate] = Ordering.by(_.toEpochDay)
 
   private val log = LoggerFactory.getLogger(this.getClass)
+  private val sqlCancellationTimeoutSeconds = ConfigUtils.getOptionInt(conf, SQL_QUERY_CANCELLATION_TIMEOUT).getOrElse(300)
 
   /**
     * Runs tasks in parallel (if possible) and returns their futures. Subclasses should override this method.
@@ -91,14 +99,25 @@ abstract class TaskRunnerBase(conf: Config,
   }
 
   override def runLazyTask(job: Job, infoDate: LocalDate): RunStatus = {
-    val started = Instant.now()
-    val task = Task(job, infoDate, TaskRunReason.OnRequest)
-    val result: TaskResult = validate(task, started) match {
-      case Left(failedResult) => failedResult
-      case Right(validationResult) => run(task, started, validationResult)
-    }
+    if (TransientJobManager.hasCriticalLazyJobFailed) {
+      RunStatus.NotRan
+    } else {
+      val started = Instant.now()
+      val task = Task(job, infoDate, TaskRunReason.OnRequest)
+      val result: TaskResult = validate(task, started) match {
+        case Left(failedResult) => failedResult
+        case Right(validationResult) => run(task, started, validationResult)
+      }
 
-    onTaskCompletion(task, result, isLazy = true)
+      val runStatus = onTaskCompletion(task, result, isLazy = true)
+
+      if (job.operation.isCritical && result.runStatus.isFailure) {
+        // Set the flag that a critical job has failed to fail early
+        TransientJobManager.setCriticalLazyJobFailed(true)
+      }
+
+      runStatus
+    }
   }
 
   /** Runs multiple tasks in the single thread in the order of info dates. If one task fails, the rest will be skipped. */
@@ -106,17 +125,18 @@ abstract class TaskRunnerBase(conf: Config,
     val sortedTasks = tasks.sortBy(_.infoDate)
     var failedInfoDate: Option[LocalDate] = None
 
-    sortedTasks.map(task =>
+    sortedTasks.map { task =>
+      val selfDependent = task.job.isSelfDependent
       failedInfoDate match {
-        case Some(failedDate) =>
+        case Some(failedDate) if selfDependent =>
           skipTask(task, s"Due to failure for $failedDate", isWarning = true)
-        case None =>
+        case _ =>
           val status = runTask(task)
           if (status.isFailure)
             failedInfoDate = Option(task.infoDate)
           status
       }
-    )
+    }
   }
 
   /** Runs a task in the single thread. Performs all task logging and notification sending activities. */
@@ -136,15 +156,13 @@ abstract class TaskRunnerBase(conf: Config,
         case Some(timeout) if timeout > 0 =>
           @volatile var runStatus: RunStatus = null
 
-          try {
-            ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS)) {
-              log.info(s"Running '${task.job.name}' with the hard timeout = $timeout seconds.")
-              runStatus = doValidateOrSkipTask(task)
-            }
-            runStatus
-          } catch {
-            case NonFatal(ex) =>
-              failTask(task, started, ex)
+        val taskName = task.job.name.replace(' ', '_')
+        val threadName = s"pramen-worker-$taskName-${task.infoDate}"
+
+        try {
+          ThreadUtils.runWithTimeout(Duration(timeout, TimeUnit.SECONDS), Duration(sqlCancellationTimeoutSeconds, TimeUnit.SECONDS), threadName = threadName) {
+            log.info(s"Running ${task.job.name} with the hard timeout = $timeout seconds.")
+            runStatus = doValidateOrSkipTask(task)
           }
         case Some(timeout) =>
           log.error(s"Incorrect timeout for the task: ${task.job.name}. Should be bigger than zero, got: $timeout.")
@@ -161,9 +179,9 @@ abstract class TaskRunnerBase(conf: Config,
     val started = Instant.now()
 
     task.reason match {
-      case TaskRunReason.Skip(reason) =>
+      case TaskRunReason.Skip(reason, isWarning) =>
         // This skips tasks that were skipped based on strong date constraints (e.g. attempt to run before the minimum date)
-        skipTask(task, reason, isWarning = true)
+        skipTask(task, reason, isWarning)
       case _ => doValidateAndRunTask(task, started)
     }
   }
@@ -174,11 +192,13 @@ abstract class TaskRunnerBase(conf: Config,
     val lock = taskLockFactory.getLock(getTokenName(task))
 
     try {
-      if (!lock.tryAcquire()) {
-        if (runtimeConfig.skipLocked) {
-          return skipTask(task, "Another instance is already running", isWarning = true)
-        } else {
-          throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+      if (!task.job.operation.doNotWriteOutput) {
+        if (!lock.tryAcquire()) {
+          if (runtimeConfig.skipLocked) {
+            return skipTask(task, "Another instance is already running", isWarning = true)
+          } else {
+            throw new IllegalStateException(s"Another instance is already running for ${task.job.outputTable.name} for ${task.infoDate}")
+          }
         }
       }
 
@@ -188,7 +208,9 @@ abstract class TaskRunnerBase(conf: Config,
       }
       onTaskCompletion(task, result, isLazy = false)
     } finally {
-      lock.release()
+      if (!task.job.operation.doNotWriteOutput) {
+        lock.release()
+      }
     }
   }
 
@@ -265,7 +287,7 @@ abstract class TaskRunnerBase(conf: Config,
             log.info(s"The table needs update: $outputTableName for date: ${task.infoDate}.")
             Right(validationResult)
           case NoData(isFailure) =>
-            log.info(s"NO DATA available for the task: $outputTableName for date: ${task.infoDate}.")
+            log.info(s"NO DATA available for the task: $outputTableName for date: ${task.infoDate}. isFailure = $isFailure")
             Left(TaskResult(task.job.taskDef, RunStatus.NoData(isFailure), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, validationResult.dependencyWarnings, Nil, options))
           case InsufficientData(actual, expected, oldRecordCount) =>
             log.info(s"INSUFFICIENT DATA available for the task: $outputTableName for date: ${task.infoDate}. Expected = $expected, actual = $actual")
@@ -332,7 +354,7 @@ abstract class TaskRunnerBase(conf: Config,
                 log.info(s"SKIP validation failure for the task: $outputTableName for date: ${task.infoDate}. Reason: $msg")
                 if (bookkeeper.getLatestDataChunk(outputTableName, task.infoDate).isEmpty) {
                   val isTransient = task.job.outputTable.format.isTransient
-                  bookkeeper.setRecordCount(outputTableName, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
+                  bookkeeper.setRecordCount(outputTableName, task.infoDate, status.inputRecordsCount.getOrElse(0L), 0, None, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
                 }
                 Left(TaskResult(task.job.taskDef, RunStatus.Skipped(msg), getRunInfo(task.infoDate, started), applicationId, isTransient, isRawFileBased, newSchemaRegistered = false, Nil, status.dependencyWarnings, Nil, options))
               case Reason.SkipOnce(msg) =>
@@ -364,7 +386,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         val runResult = task.job.run(task.infoDate, task.reason, conf)
 
-        val (newSchemaRegistered, schemaChangesBeforeTransform) = handleSchemaChange(runResult.data, task.job.outputTable, task.infoDate)
+        val (newSchemaRegistered, schemaChangesBeforeTransform) = handleSchemaChange(runResult.data, task.job.outputTable, task.job.operation, task.infoDate)
 
         val dfWithTimestamp = task.job.operation.processingTimestampColumn match {
           case Some(timestampCol) => addProcessingTimestamp(runResult.data, timestampCol)
@@ -398,7 +420,7 @@ abstract class TaskRunnerBase(conf: Config,
 
         val (newSchemaRegisteredAfterTransform, schemaChangesAfterTransform) = if (task.job.operation.schemaTransformations.nonEmpty) {
           val transformedTable = task.job.outputTable.copy(name = s"${task.job.outputTable.name}_transformed")
-          handleSchemaChange(dfTransformed, transformedTable, task.infoDate)
+          handleSchemaChange(dfTransformed, transformedTable, task.job.operation, task.infoDate)
         } else {
           (false, Nil)
         }
@@ -406,6 +428,11 @@ abstract class TaskRunnerBase(conf: Config,
         val saveResult = if (runtimeConfig.isDryRun) {
           log.warn(s"$WARNING DRY RUN mode, no actual writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
           SaveResult(MetaTableStats(Option(dfTransformed.count()), None, None))
+        } else if (task.job.operation.doNotWriteOutput) {
+          val recordCount = dfTransformed.count()
+          log.warn(s"The operation does not write to the output table using Pramen's mechanisms. No writes to ${task.job.outputTable.name} for ${task.infoDate} will be performed.")
+          bookkeeper.setRecordCount(task.job.outputTable.name, task.infoDate, validationResult.inputRecordsCount.getOrElse(recordCount), recordCount, None, started.getEpochSecond, Instant.now().getEpochSecond, isTransient)
+          SaveResult(MetaTableStats(Option(recordCount), None, None))
         } else {
           task.job.save(dfTransformed, task.infoDate, task.reason, conf, started, validationResult.inputRecordsCount)
         }
@@ -415,8 +442,8 @@ abstract class TaskRunnerBase(conf: Config,
         }
 
         val hiveWarnings = if (task.job.outputTable.hiveTable.nonEmpty) {
-          val recreate = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || task.reason == TaskRunReason.Rerun
-          task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, recreate)
+          val updateSchema = schemaChangesBeforeTransform.nonEmpty || schemaChangesAfterTransform.nonEmpty || newSchemaRegisteredAfterTransform
+          task.job.createOrRefreshHiveTable(dfTransformed.schema, task.infoDate, updateSchema, runtimeConfig.forceReCreateHiveTables)
         } else {
           Seq.empty
         }
@@ -424,14 +451,21 @@ abstract class TaskRunnerBase(conf: Config,
         val outputMetastoreHiveTable = task.job.outputTable.hiveTable.map(table => HiveHelper.getFullTable(task.job.outputTable.hiveConfig.database, table))
         val hiveTableUpdates = (saveResult.hiveTablesUpdates ++ outputMetastoreHiveTable).distinct
 
-        val stats = saveResult.stats
+        pipelineState.setMaximumNumberOfColumns(SparkUtils.getTotalNumberOfColumns(dfTransformed.schema))
 
+        val stats = saveResult.stats
         val finished = Instant.now()
 
         val completionReason = if (validationResult.status == NeedsUpdate || (validationResult.status == AlreadyRan && task.reason != TaskRunReason.Rerun))
           TaskRunReason.Update else task.reason
 
         val warnings = validationResult.warnings ++ runResult.warnings ++ saveResult.warnings ++ hiveWarnings
+
+        runtimeConfig.bulkLoadCurrent.foreach { state =>
+          if (!runtimeConfig.isDryRun) {
+            ScheduleStrategyUtils.updateBulkLoadCompletion(task.job.outputTable.name, state.outputInfoDate, bulkLoadStateManager, BulkLoadPhase.Processed)
+          }
+        }
 
         TaskResult(task.job.taskDef,
           RunStatus.Succeeded(recordCountOldOpt,
@@ -490,8 +524,11 @@ abstract class TaskRunnerBase(conf: Config,
 
     logTaskResult(updatedResult, isLazy)
     val wasInterrupted = isTaskInterrupted(task, taskResult)
+    val isFailedBecauseOfALazyJob = isFailureOfLazyJob(updatedResult.runStatus)
     if (wasInterrupted) {
       log.warn("Skipping the interrupted exception of the killed task.")
+    } else if (isFailedBecauseOfALazyJob) {
+      log.warn("Skipping the caller of the lazy task.")
     } else {
       pipelineState.addTaskCompletion(Seq(updatedResult))
       if (taskResult.runStatus != RunStatus.NotRan)
@@ -499,6 +536,17 @@ abstract class TaskRunnerBase(conf: Config,
     }
 
     updatedResult.runStatus
+  }
+
+  private def isFailureOfLazyJob(runStatus: RunStatus): Boolean = {
+    runStatus match {
+      case RunStatus.ValidationFailed(ex) if ex.isInstanceOf[LazyJobErrorWrapper] =>
+        true
+      case RunStatus.Failed(ex) if ex.isInstanceOf[LazyJobErrorWrapper] =>
+        true
+      case _ =>
+        false
+    }
   }
 
   private def isTaskInterrupted(task: Task, taskResult: TaskResult): Boolean = {
@@ -575,9 +623,10 @@ abstract class TaskRunnerBase(conf: Config,
     }
   }
 
-  private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, infoDate: LocalDate): (Boolean, List[SchemaDifference]) = {
-    if (table.format.isRaw) {
-      // Raw tables do need schema check
+  private[core] def handleSchemaChange(df: DataFrame, table: MetaTable, operationDef: OperationDef, infoDate: LocalDate): (Boolean, List[SchemaDifference]) = {
+    if (table.format.isRaw || operationDef.ignoreSchemaChange) {
+      // Raw tables do not need schema check
+      // When schema changes are explicitly ignored - return no changes
       return (false, List.empty[SchemaDifference])
     }
 

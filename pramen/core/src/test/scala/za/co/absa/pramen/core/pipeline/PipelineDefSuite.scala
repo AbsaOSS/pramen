@@ -35,6 +35,7 @@ class PipelineDefSuite extends AnyWordSpec with SparkTestBase with TempDirFixtur
     "yyyy-MM-dd",
     partitionScheme = PartitionScheme.PartitionByDay,
     LocalDate.of(2022, 1, 1),
+    5,
     4,
     0,
     "@date",

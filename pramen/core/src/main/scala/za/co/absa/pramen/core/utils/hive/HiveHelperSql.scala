@@ -25,19 +25,83 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                     alwaysEscapeColumnNames: Boolean) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  override def createHiveTable(path: String,
+                               format: HiveFormat,
+                               schema: StructType,
+                               partitionBy: Seq[String],
+                               databaseName: Option[String],
+                               tableName: String,
+                               autoRepairPartitions: Boolean): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = true)
+    if (partitionBy.nonEmpty && autoRepairPartitions) {
+      repairHiveTable(fullTableName)
+    } else {
+      if (partitionBy.isEmpty)
+        log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
+      else
+        log.info(s"Skipping repairing partition for $fullTableName as requested.")
+    }
+  }
+
   override def createOrUpdateHiveTable(path: String,
                                        format: HiveFormat,
                                        schema: StructType,
                                        partitionBy: Seq[String],
                                        databaseName: Option[String],
-                                       tableName: String): Unit = {
+                                       tableName: String,
+                                       autoRepairPartitions: Boolean): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
 
     dropHiveTable(fullTableName)
-    createHiveTable(fullTableName, path, format, schema, partitionBy)
-    if (partitionBy.nonEmpty) {
+    createHiveTable(fullTableName, path, format, schema, partitionBy, failIfExists = false)
+    if (partitionBy.nonEmpty && autoRepairPartitions) {
       repairHiveTable(fullTableName)
+    } else {
+      if (partitionBy.isEmpty)
+        log.info(s"Skipping repairing partition for $fullTableName because the table is not partitioned.")
+      else
+        log.info(s"Skipping repairing partition for $fullTableName as requested.")
     }
+  }
+
+  override def replaceHiveTableSchema(schema: StructType,
+                                      partitionBy: Seq[String],
+                                      databaseName: Option[String],
+                                      tableName: String): Unit = {
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+
+    log.info(s"Updating schema Hive table: $fullTableName...")
+
+    val sqlHiveCreate = applyTemplate(
+      hiveConfig.replaceSchemaTemplate,
+      fullTableName,
+      "",
+      HiveFormat.Parquet,
+      getTableDDL(schema, partitionBy),
+      getPartitionDDL(schema, partitionBy)
+    )
+
+    queryExecutor.execute(sqlHiveCreate)
+  }
+
+  override def replaceHivePartitionSchema(schema: StructType,
+                                          partitionBy: Seq[String],
+                                          partitionValues: Seq[String],
+                                          databaseName: Option[String],
+                                          tableName: String): Unit = {
+    if (partitionBy.length != partitionValues.length) {
+      throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
+    }
+    val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
+    val partitionClause = partitionBy.zip(partitionValues).map { case (col, value) => s"$col='$value'" }.mkString(", ")
+    val schemaDDL = getTableDDL(schema, partitionBy)
+
+    log.info(s"Replacing partition schema for $fullTableName, partition: $partitionClause...")
+
+    val sql = applyPartitionTemplate(hiveConfig.replacePartitionSchemaTemplate, fullTableName, "", partitionClause, schemaDDL)
+    queryExecutor.execute(sql)
   }
 
   override def repairHiveTable(databaseName: Option[String],
@@ -87,13 +151,19 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                               path: String,
                               format: HiveFormat,
                               schema: StructType,
-                              partitionBy: Seq[String]
+                              partitionBy: Seq[String],
+                              failIfExists: Boolean
                              ): Unit = {
 
     log.info(s"Creating Hive table: $fullTableName...")
 
+    val sqlTemplate = if (failIfExists)
+      hiveConfig.createOnlyTableTemplate
+    else
+      hiveConfig.createTableTemplate
+
     val sqlHiveCreate = applyTemplate(
-      hiveConfig.createTableTemplate,
+      sqlTemplate,
       fullTableName,
       path,
       format,
@@ -161,10 +231,12 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
   private def applyPartitionTemplate(template: String,
                                      fullTableName: String,
                                      partitionPath: String = "",
-                                     partitionClause: String = ""
+                                     partitionClause: String = "",
+                                     schemaDDL: String = ""
                                     ): String = {
     template.replace("@fullTableName", fullTableName)
       .replace("@partitionPath", partitionPath)
       .replace("@partitionClause", partitionClause)
+      .replace("@schema", schemaDDL)
   }
 }

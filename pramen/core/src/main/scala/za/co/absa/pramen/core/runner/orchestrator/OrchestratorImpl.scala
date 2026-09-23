@@ -23,8 +23,10 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
 import za.co.absa.pramen.core.app.AppContext
 import za.co.absa.pramen.core.exceptions.{FatalErrorWrapper, ValidationException}
-import za.co.absa.pramen.core.pipeline.{Job, JobDependency, OperationType}
+import za.co.absa.pramen.core.metastore.peristence.TransientJobManager
+import za.co.absa.pramen.core.pipeline.{Job, JobBase, JobDependency, OperationType}
 import za.co.absa.pramen.core.runner.jobrunner.ConcurrentJobRunner
+import za.co.absa.pramen.core.runner.repartitioner.JobRepartitioner
 import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils.evaluateRunDate
 import za.co.absa.pramen.core.state.{PipelineState, WorkerStatusManager}
 import za.co.absa.pramen.core.utils.Emoji
@@ -57,6 +59,7 @@ class OrchestratorImpl extends Orchestrator {
                                        state: PipelineState,
                                        appContext: AppContext,
                                        jobRunner: ConcurrentJobRunner,
+                                       repartitioner: JobRepartitioner,
                                        spark: SparkSession): Unit = {
     val applicationId = spark.sparkContext.applicationId
     val allOutputTables = jobs.map(_.outputTable.name)
@@ -72,6 +75,20 @@ class OrchestratorImpl extends Orchestrator {
     val dependencies = getDependencies(jobs)
     val dependencyResolver = new DependencyResolverImpl(dependencies, enableMultipleJobsPerTable)
 
+    jobs.foreach { j =>
+      if (j.taskDef.outputTable.format.isLazy)
+        dependencyResolver.setLazyTable(j.taskDef.outputTable.name, isLazy = true)
+    }
+
+    jobs.foreach { j =>
+      if (!j.taskDef.outputTable.format.isLazy) {
+        j match {
+          case jobBase: JobBase => jobBase.setTriggerUpdatesTables(dependencyResolver.getTablesForRetrospectiveUpdateCheck(j.taskDef.outputTable.name))
+          case _ => // Do nothing
+        }
+      }
+    }
+
     log.info(s"Starting execution of the pipeline: \n${dependencyResolver.getDag(allOutputTables)}")
 
     val runJobChannel = Channel.make[Job](jobs.length)
@@ -79,13 +96,17 @@ class OrchestratorImpl extends Orchestrator {
     jobRunner.startWorkerLoop(runJobChannel)
 
     val atLeastOneStarted = sendPendingJobs(runJobChannel, dependencyResolver)
+    var hasFailures = false
     var hasFatalErrors = false
+    var hasCriticalJobFailures = false
 
     if (atLeastOneStarted) {
       completedJobsChannel.foreach { case (finishedJob, taskResults, isSucceeded) =>
         runningJobs.remove(finishedJob)
 
+        hasFailures = hasFailures || !isSucceeded
         hasFatalErrors = hasFatalErrors || taskResults.exists(status => isFatalFailure(status.runStatus))
+        hasCriticalJobFailures = hasCriticalJobFailures || TransientJobManager.hasCriticalLazyJobFailed || (!isSucceeded && finishedJob.operation.isCritical)
 
         val hasAnotherUnfinishedJob = hasAnotherJobWithSameOutputTable(finishedJob.outputTable.name)
         if (hasAnotherUnfinishedJob) {
@@ -100,7 +121,7 @@ class OrchestratorImpl extends Orchestrator {
 
         state.addTaskCompletion(taskResults)
 
-        if (hasFatalErrors) {
+        if (hasFatalErrors || hasCriticalJobFailures) {
           // In case of a fatal error, we either need to interrupt running threads, or wait for them to return.
           // In the current implementation we wait for threads to finish, but not start new jobs in running threads.
           // This can be also reconsidered if there are issues with the current solutions observed.
@@ -114,32 +135,48 @@ class OrchestratorImpl extends Orchestrator {
           }
         }
       }
+
+      if (!hasFailures && pendingJobs.isEmpty && appContext.appConfig.runtimeConfig.enableRepartitioning) {
+        log.info("Starting repartitioning of the completed jobs...")
+        appContext.appConfig.runtimeConfig.bulkLoadCurrent.foreach { bulkConfig =>
+          jobs.filter(job =>
+            !job.taskDef.outputTable.format.isLazy &&
+              !job.taskDef.outputTable.format.isTransient &&
+              job.operation.enableRepartitioning &&
+              job.outputsToMetastore
+          ).foreach { job =>
+            val taskResults = repartitioner.repartition(job)
+            state.addTaskCompletion(taskResults)
+          }
+        }
+      }
     }
 
     pendingJobs.foreach(job => {
       log.warn(s"$WARNING Job '${job.name}' outputting to '${job.outputTable.name}' is SKIPPED.")
       log.warn(s"Dependencies: ${dependencyResolver.getDag(job.outputTable.name :: Nil)}")
 
-      val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
+      if (!hasFatalErrors && !hasCriticalJobFailures) {
+        val missingTables = dependencyResolver.getMissingDependencies(job.outputTable.name)
+        val isTransient = job.outputTable.format.isTransient
+        val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
 
-      val isTransient = job.outputTable.format.isTransient
-      val isFailure = hasNonPassiveNonOptionalDeps(job, missingTables)
+        val taskResult = TaskResult(
+          job.taskDef,
+          RunStatus.MissingDependencies(isFailure, missingTables),
+          None,
+          applicationId,
+          isTransient,
+          job.outputTable.format.isRaw,
+          newSchemaRegistered = false,
+          Nil,
+          Nil,
+          Nil,
+          job.operation.extraOptions
+        )
 
-      val taskResult = TaskResult(
-        job.taskDef,
-        RunStatus.MissingDependencies(isFailure, missingTables),
-        None,
-        applicationId,
-        isTransient,
-        job.outputTable.format.isRaw,
-        newSchemaRegistered = false,
-        Nil,
-        Nil,
-        Nil,
-        job.operation.extraOptions
-      )
-
-      state.addTaskCompletion(taskResult :: Nil)
+        state.addTaskCompletion(taskResult :: Nil)
+      }
     })
 
     jobRunner.shutdown()
@@ -186,7 +223,7 @@ class OrchestratorImpl extends Orchestrator {
   def getDependencies(jobs: Seq[Job]): Seq[JobDependency] = {
     jobs.flatMap(job => {
       val inputDependencies = job.operation.dependencies.map { d =>
-        JobDependency(d.tables, job.outputTable.name, d.isPassive || d.isOptional)
+        JobDependency(d.tables, job.outputTable.name, d.isPassive || d.isOptional, d.triggerUpdates)
       }
 
       job.operation.operationType match {
@@ -203,7 +240,7 @@ class OrchestratorImpl extends Orchestrator {
           // If there are no dependencies, adding a dependency for the output table not depending on any input tables.
           // This is the requirement for the orchestrator.
           if (inputDependencies.isEmpty)
-            Seq(JobDependency(Seq.empty, job.outputTable.name, isPassive = true))
+            Seq(JobDependency(Seq.empty, job.outputTable.name, isPassive = true, triggerUpdates = false))
           else
             inputDependencies
       }
@@ -225,7 +262,12 @@ class OrchestratorImpl extends Orchestrator {
 
       dependencyResolver.setAvailableTable(outputTable.name)
     } else {
-      log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED.")
+      if (job.operation.isCritical) {
+        log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED (critical).")
+      } else {
+        log.warn(s"$FAILURE Job '${job.name}' outputting to '${outputTable.name}' has FAILED.")
+      }
+
       dependencyResolver.setFailedTable(outputTable.name)
     }
 
@@ -265,7 +307,7 @@ class OrchestratorImpl extends Orchestrator {
     val infoDates = jobs.flatMap { job =>
       if (job.operation.schedule.isEnabled(runDate)) {
         val infoDateExpression = job.operation.outputInfoDateExpression
-        val infoDate = evaluateRunDate(runDate, infoDateExpression).toString
+        val infoDate = evaluateRunDate(runDate, infoDateExpression, logExpression = false).toString
         Option(infoDate)
       } else {
         None

@@ -19,7 +19,7 @@ package za.co.absa.pramen.core.metastore.model
 import com.typesafe.config.ConfigFactory
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat
-import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
+import za.co.absa.pramen.core.utils.hive.{ExistenceCheckStrategy, HiveQueryTemplates}
 
 class HiveConfigSuite extends AnyWordSpec {
   "fromConfigWithDefaults()" should {
@@ -29,11 +29,12 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.SparkCatalog,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "add_partition1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "update1", "update_part1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = true,
         alwaysEscapeColumnNames = false,
-        optimizeExistQuery = true)
+        optimizeExistQuery = true,
+        tableExistenceCheckStrategy = None)
 
       val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy"))
 
@@ -42,8 +43,11 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.jdbcConfig.isEmpty)
       assert(hiveConfig.ignoreFailures)
       assert(!hiveConfig.alwaysEscapeColumnNames)
-      assert(hiveConfig.optimizeExistQuery)
+      assert(hiveConfig.existenceCheckStrategy == ExistenceCheckStrategy.MetadataAndDescribeQuery)
       assert(hiveConfig.templates.createTableTemplate.contains("create1"))
+      assert(hiveConfig.templates.createOnlyTableTemplate.contains("create_only1"))
+      assert(hiveConfig.templates.replaceSchemaTemplate.contains("update1"))
+      assert(hiveConfig.templates.replacePartitionSchemaTemplate.contains("update_part1"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair1"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop1"))
@@ -66,21 +70,27 @@ class HiveConfigSuite extends AnyWordSpec {
           |
           |conf {
           |   create.table.template = "create2"
+          |   create.only.table.template = "create_only2"
+          |   replace.schema.template = "replace2"
+          |   replace.partition.schema.template = "replace_part2"
           |   repair.table.template = "repair2"
           |   add.partition.template = "add_partition2"
           |   drop.table.template = "drop2"
           |   optimize.exist.query = false
+          |   table.existence.check.strategy = "describe_table"
           |}
           |""".stripMargin)
 
       val defaultConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb1"),
-        Map("parquet" -> HiveQueryTemplates("create1", "repair1", "add_partition1", "drop1")),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "replace_part1", "repair1", "add_partition1", "drop1")),
         None,
         ignoreFailures = false,
         alwaysEscapeColumnNames = false,
-        optimizeExistQuery = true)
+        optimizeExistQuery = true,
+        tableExistenceCheckStrategy = None
+      )
 
       val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy"))
 
@@ -90,11 +100,55 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.jdbcConfig.map(_.driver).contains("driver2"))
       assert(hiveConfig.ignoreFailures)
       assert(hiveConfig.alwaysEscapeColumnNames)
-      assert(!hiveConfig.optimizeExistQuery)
+      assert(hiveConfig.existenceCheckStrategy == ExistenceCheckStrategy.DescribeTable)
       assert(hiveConfig.templates.createTableTemplate.contains("create2"))
+      assert(hiveConfig.templates.createOnlyTableTemplate.contains("create_only2"))
+      assert(hiveConfig.templates.replaceSchemaTemplate.contains("replace2"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair2"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition2"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop2"))
+    }
+
+    "return Sql Query table existence strategy when optimize.exist.query = false fallback" in {
+      val conf = ConfigFactory.parseString(
+        """api = spark_catalog
+          |database = mydb2
+          |
+          |ignore.failures = true
+          |escape.column.names = true
+          |
+          |jdbc {
+          |  driver = driver2
+          |  url = url2
+          |  user = user2
+          |  password = pass2
+          |}
+          |
+          |conf {
+          |   optimize.exist.query = false
+          |}
+          |""".stripMargin)
+
+      val defaultConfig = HiveDefaultConfig(
+        HiveApi.Sql,
+        Some("mydb1"),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "replace1", "replace_part1", "repair1", "add_partition1", "drop1")),
+        None,
+        ignoreFailures = false,
+        alwaysEscapeColumnNames = false,
+        optimizeExistQuery = true,
+        tableExistenceCheckStrategy = None
+      )
+
+      val hiveConfig = HiveConfig.fromConfigWithDefaults(conf, defaultConfig, DataFormat.Parquet("dummy"))
+
+      assert(hiveConfig.hiveApi == HiveApi.SparkCatalog)
+      assert(hiveConfig.database.contains("mydb2"))
+      assert(hiveConfig.jdbcConfig.nonEmpty)
+      assert(hiveConfig.jdbcConfig.map(_.driver).contains("driver2"))
+      assert(hiveConfig.ignoreFailures)
+      assert(hiveConfig.alwaysEscapeColumnNames)
+      assert(hiveConfig.existenceCheckStrategy == ExistenceCheckStrategy.SelectQuery)
     }
   }
 
@@ -103,11 +157,12 @@ class HiveConfigSuite extends AnyWordSpec {
       val defaultConfig = HiveDefaultConfig(
         HiveApi.Sql,
         Some("mydb"),
-        Map("parquet" -> HiveQueryTemplates("create", "repair", "add_partition1", "drop")),
+        Map("parquet" -> HiveQueryTemplates("create", "create_only", "update", "update_part", "repair", "add_partition1", "drop")),
         None,
         ignoreFailures = true,
         alwaysEscapeColumnNames = true,
-        optimizeExistQuery = true)
+        optimizeExistQuery = true,
+        tableExistenceCheckStrategy = Some(ExistenceCheckStrategy.DescribeTable))
 
       val hiveConfig = HiveConfig.fromDefaults(defaultConfig, DataFormat.Parquet("dummy"))
 
@@ -116,11 +171,42 @@ class HiveConfigSuite extends AnyWordSpec {
       assert(hiveConfig.jdbcConfig.isEmpty)
       assert(hiveConfig.ignoreFailures)
       assert(hiveConfig.alwaysEscapeColumnNames)
-      assert(hiveConfig.optimizeExistQuery)
+      assert(hiveConfig.existenceCheckStrategy == ExistenceCheckStrategy.DescribeTable)
       assert(hiveConfig.templates.createTableTemplate.contains("create"))
+      assert(hiveConfig.templates.createOnlyTableTemplate.contains("create_only"))
+      assert(hiveConfig.templates.replaceSchemaTemplate.contains("update"))
+      assert(hiveConfig.templates.replacePartitionSchemaTemplate.contains("update_part"))
       assert(hiveConfig.templates.repairTableTemplate.contains("repair"))
       assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
       assert(hiveConfig.templates.dropTableTemplate.contains("drop"))
+    }
+
+    "return the default existence strategy" in {
+      val defaultConfig = HiveDefaultConfig(
+        HiveApi.Sql,
+        Some("mydb"),
+        Map("parquet" -> HiveQueryTemplates("create1", "create_only1", "update1", "update_part1", "repair1", "add_partition1", "drop1")),
+        None,
+        ignoreFailures = true,
+        alwaysEscapeColumnNames = true,
+        optimizeExistQuery = true,
+        tableExistenceCheckStrategy = None)
+
+      val hiveConfig = HiveConfig.fromDefaults(defaultConfig, DataFormat.Parquet("dummy"))
+
+      assert(hiveConfig.hiveApi == HiveApi.Sql)
+      assert(hiveConfig.database.contains("mydb"))
+      assert(hiveConfig.jdbcConfig.isEmpty)
+      assert(hiveConfig.ignoreFailures)
+      assert(hiveConfig.alwaysEscapeColumnNames)
+      assert(hiveConfig.existenceCheckStrategy == ExistenceCheckStrategy.MetadataAndDescribeQuery)
+      assert(hiveConfig.templates.createTableTemplate.contains("create1"))
+      assert(hiveConfig.templates.createOnlyTableTemplate.contains("create_only1"))
+      assert(hiveConfig.templates.replaceSchemaTemplate.contains("update1"))
+      assert(hiveConfig.templates.replacePartitionSchemaTemplate.contains("update_part1"))
+      assert(hiveConfig.templates.repairTableTemplate.contains("repair1"))
+      assert(hiveConfig.templates.addPartitionTemplate.contains("add_partition1"))
+      assert(hiveConfig.templates.dropTableTemplate.contains("drop1"))
     }
   }
 

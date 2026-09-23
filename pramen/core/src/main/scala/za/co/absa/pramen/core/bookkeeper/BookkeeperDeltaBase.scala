@@ -19,15 +19,14 @@ package za.co.absa.pramen.core.bookkeeper
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{Column, Dataset}
-import za.co.absa.pramen.core.bookkeeper.model.TableSchemaJson
+import za.co.absa.pramen.core.bookkeeper.model.{DataAvailability, TableSchemaJson}
 import za.co.absa.pramen.core.model.{DataChunk, TableSchema}
 
 import java.time.LocalDate
 import scala.reflect.ClassTag
 import scala.reflect.runtime.universe
 
-abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
-
+abstract class BookkeeperDeltaBase(batchId: Long) extends BookkeeperHadoop(batchId) {
   def getBkDf(filter: Column): Dataset[DataChunk]
 
   def saveRecordCountDelta(dataChunk: DataChunk): Unit
@@ -60,30 +59,43 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
   }
 
   final override def getLatestDataChunkFromStorage(table: String, infoDate: LocalDate): Option[DataChunk] = {
-    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate))
+    val infoDateFilter = getFilter(table, Option(infoDate), Option(infoDate), None)
 
     getBkData(infoDateFilter).lastOption
   }
 
-  final def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
-    getBkDf(getFilter(table, dateBegin, dateEnd)).count()
+  final override def getDataChunksFromStorage(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[DataChunk] = {
+    val infoDateFilter = getFilter(tableName, Option(infoDate), Option(infoDate), batchId)
+
+    getBkAllData(infoDateFilter)
+  }
+
+  final override def getDataChunksCountFromStorage(table: String, dateBegin: Option[LocalDate], dateEnd: Option[LocalDate]): Long = {
+    getBkDf(getFilter(table, dateBegin, dateEnd, None)).count()
+  }
+
+  final override def getDataAvailabilityFromStorage(table: String, dateBegin: LocalDate, dateEnd: LocalDate): Seq[DataAvailability] = {
+    val infoDateFilter = getFilter(table, Option(dateBegin), Option(dateEnd), None)
+
+    getDataAvailabilityFromDf(getBkDf(infoDateFilter))
   }
 
   final private[pramen] override def saveRecordCountToStorage(table: String,
-                                                        infoDate: LocalDate,
-                                                        inputRecordCount: Long,
-                                                        outputRecordCount: Long,
-                                                        jobStarted: Long,
-                                                        jobFinished: Long): Unit = {
+                                                              infoDate: LocalDate,
+                                                              inputRecordCount: Long,
+                                                              outputRecordCount: Long,
+                                                              recordsAppended: Option[Long],
+                                                              jobStarted: Long,
+                                                              jobFinished: Long): Unit = {
     val dateStr = getDateStr(infoDate)
 
-    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished)
+    val chunk = DataChunk(table, dateStr, dateStr, dateStr, inputRecordCount, outputRecordCount, jobStarted, jobFinished, Option(batchId), recordsAppended)
 
     saveRecordCountDelta(chunk)
   }
 
   final override def getLatestSchema(table: String, until: LocalDate): Option[(StructType, LocalDate)] = {
-    val filter = getFilter(table, None, Option(until))
+    val filter = getFilter(table, None, Option(until), None)
 
     val df = getSchemasDeltaDf
 
@@ -101,6 +113,12 @@ abstract class BookkeeperDeltaBase extends BookkeeperHadoop {
     val tableSchema = TableSchema(table, infoDate.toString, schema.json)
 
     saveSchemaDelta(tableSchema)
+  }
+
+  private[core] def getBkAllData(filter: Column): Seq[DataChunk] = {
+    getBkDf(filter)
+      .collect()
+      .sortBy(_.jobFinished)
   }
 
   private[core] def getBkData(filter: Column): Seq[DataChunk] = {

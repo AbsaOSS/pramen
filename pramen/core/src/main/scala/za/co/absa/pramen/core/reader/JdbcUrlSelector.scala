@@ -18,10 +18,12 @@ package za.co.absa.pramen.core.reader
 
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 
-import java.sql.{Connection, SQLException}
+import java.io.File
+import java.net.URLClassLoader
+import java.sql.{Connection, Driver, SQLException}
 import java.util.Properties
 
-trait JdbcUrlSelector {
+trait JdbcUrlSelector extends AutoCloseable {
   /** The JDBC configuration used for the selector. */
   def jdbcConfig: JdbcConfig
 
@@ -42,16 +44,42 @@ trait JdbcUrlSelector {
 
   /** Returns an url only if it can be successfully connected to. */
   @throws[SQLException]
-  def getWorkingUrl(retriesLeft: Int): String
+  def getWorkingUrl: String
 
   /** Returns properties for the JDBC connection. */
   def getProperties: Properties
 
-  /** Returns an JDBC connection with the URL that has successfully connected. */
+  /** Returns the path to the Driver JAR if available. */
+  def jdbcDriverJarPath: Option[String]
+
+  /** Returns a dynamically pre-loaded driver if available. */
+  val loadedDriver: Option[DynamicDriver]
+
+  /** Returns an JDBC connection with the URL that has successfully connected. Can reuse existing connection */
   @throws[SQLException]
-  def getWorkingConnection(retriesLeft: Int): (Connection, String)
+  def getConnection: (Connection, String)
+
+  /** Returns a new JDBC connection with the URL that has successfully connected. */
+  def getNewConnection(retriesLeft: Int): (Connection, String)
 }
 
 object JdbcUrlSelector {
-  def apply(jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(jdbcConfig)
+  def apply(jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(None, jdbcConfig)
+
+  def apply(jdbcDriverJarPath: Option[String], jdbcConfig: JdbcConfig): JdbcUrlSelector = new JdbcUrlSelectorImpl(jdbcDriverJarPath, jdbcConfig)
+
+  def loadDriver(driverJarPath: String, driverClassName: String): DynamicDriver = {
+    val jarFile = new File(driverJarPath)
+    val jarURL = jarFile.toURI.toURL
+
+    val loader = new URLClassLoader(
+      Array(jarURL),
+      this.getClass.getClassLoader
+    )
+
+    // Load driver class
+    val driverClass = loader.loadClass(driverClassName)
+    val driver = driverClass.getDeclaredConstructor().newInstance().asInstanceOf[Driver]
+    DynamicDriver(driver, loader)
+  }
 }

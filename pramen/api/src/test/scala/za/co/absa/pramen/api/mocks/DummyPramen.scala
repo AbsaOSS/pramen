@@ -18,6 +18,7 @@ package za.co.absa.pramen.api.mocks
 
 import com.typesafe.config.Config
 import za.co.absa.pramen.api.common.BuildPropertiesRetriever
+import za.co.absa.pramen.api.lock.TokenLockFactory
 import za.co.absa.pramen.api.status.{PipelineStateSnapshot, TaskResult}
 import za.co.absa.pramen.api.{MetadataManager, NotificationBuilder, PipelineInfo, Pramen}
 
@@ -37,4 +38,22 @@ class DummyPramen extends Pramen {
   override def getCompletedTasks: Seq[TaskResult] = null
 
   override def setWarningFlag(): Unit = null
+
+  override def tokenLockFactory: TokenLockFactory = null
+
+  override def setComputeEngineId(computeEngineId: String): Unit = {}
+
+  override def setNumberOfExecutorsMin(n: Int): Unit = {}
+
+  override def setNumberOfExecutorsMax(n: Int): Unit = {}
+
+  override def setExecutorType(executorType: String): Unit = {}
+
+  override def setNumberOfRecordsIngested(count: Long): Unit = {}
+
+  override def addNumberOfRecordsIngested(count: Long): Unit = {}
+
+  override def setMaximumNumberOfColumns(count: Long): Unit = {}
+
+  override def setExecutionAdditionalOption(key: String, value: String): Unit = {}
 }

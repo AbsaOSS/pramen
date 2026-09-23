@@ -20,24 +20,28 @@ import org.scalatest.wordspec.AnyWordSpec
 import org.scalatest.{BeforeAndAfter, BeforeAndAfterAll}
 import za.co.absa.pramen.api.MetadataValue
 import za.co.absa.pramen.core.fixtures.RelationalDbFixture
-import za.co.absa.pramen.core.rdb.PramenDb
+import za.co.absa.pramen.core.rdb.{PramenDb, RdbJdbc}
 import za.co.absa.pramen.core.reader.model.JdbcConfig
+import za.co.absa.pramen.core.utils.UsingUtils
 
 import java.time.{LocalDate, ZoneOffset}
 
 class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with BeforeAndAfter with BeforeAndAfterAll {
   val jdbcConfig: JdbcConfig = JdbcConfig(driver, Some(url), Nil, None, Some(user), Some(password))
-  lazy val pramenDb: PramenDb = PramenDb(jdbcConfig)
+  var pramenDb: PramenDb = _
   private val infoDate = LocalDate.of(2021, 2, 18)
   private val exampleInstant = infoDate.atStartOfDay().toInstant(ZoneOffset.UTC)
 
   before {
-    pramenDb.rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
-    pramenDb.setupDatabase()
+    if (pramenDb != null) pramenDb.close()
+    UsingUtils.using(RdbJdbc(jdbcConfig)) { rdb =>
+      rdb.executeDDL("DROP SCHEMA PUBLIC CASCADE;")
+    }
+    pramenDb = PramenDb(jdbcConfig)
   }
 
   override def afterAll(): Unit = {
-    pramenDb.close()
+    if (pramenDb != null) pramenDb.close()
     super.afterAll()
   }
 
@@ -72,7 +76,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors when querying a key" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.getMetadataFromStorage("table1", infoDate, "key1")
@@ -82,7 +86,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors when querying a table" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.getMetadataFromStorage("table1", infoDate)
@@ -107,7 +111,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
       val v = MetadataValue("value1", exampleInstant)
 
       val ex = intercept[RuntimeException] {
@@ -155,7 +159,7 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
     }
 
     "throw an exception on connection errors when deleting a key" in {
-      val metadata = new MetadataManagerJdbc(null)
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.deleteMetadataFromStorage("table1", infoDate, "key1")
@@ -164,8 +168,8 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
       assert(ex.getMessage.contains("Unable to delete from the metadata table."))
     }
 
-    "throw an exception on connection errors when deleting metadata from a partision" in {
-      val metadata = new MetadataManagerJdbc(null)
+    "throw an exception on connection errors when deleting metadata from a partition" in {
+      val metadata = new MetadataManagerJdbc(null, pramenDb.slickProfile)
 
       val ex = intercept[RuntimeException] {
         metadata.deleteMetadataFromStorage("table1", infoDate)
@@ -176,6 +180,6 @@ class MetadataManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with
   }
 
   def getMetadataManager: MetadataManagerJdbc = {
-    new MetadataManagerJdbc(pramenDb.slickDb)
+    new MetadataManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile)
   }
 }

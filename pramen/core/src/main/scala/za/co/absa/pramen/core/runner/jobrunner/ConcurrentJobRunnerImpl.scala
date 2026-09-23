@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.runner.jobrunner
 import com.github.yruslan.channel.{Channel, ReadChannel}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.status.{RunStatus, TaskResult}
+import za.co.absa.pramen.bulkload.BulkLoadStateManager
 import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.exceptions.FatalErrorWrapper
@@ -38,6 +39,7 @@ import scala.util.control.NonFatal
 
 class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
                               bookkeeper: Bookkeeper,
+                              bulkLoadStateManager: BulkLoadStateManager,
                               taskRunner: TaskRunner,
                               applicationId: String) extends ConcurrentJobRunner {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -136,15 +138,17 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
   }
 
   private[core] def runEagerJob(job: Job): Boolean = {
+    val backfillDays = job.backfillDays
     val trackDays = job.trackDays
     log.info(s"Effective track days for ${job.name} outputting to ${job.outputTable.name} = $trackDays")
 
-    val scheduleParams = ScheduleParams.fromRuntimeConfig(runtimeConfig, trackDays, job.operation.expectedDelayDays)
+    val scheduleParams = ScheduleParams.fromRuntimeConfig(runtimeConfig, backfillDays, trackDays, job.operation.expectedDelayDays)
 
     val taskDefs = job.scheduleStrategy.getDaysToRun(
       job.outputTable.name,
       job.operation.dependencies,
       bookkeeper,
+      bulkLoadStateManager,
       job.operation.outputInfoDateExpression,
       job.operation.schedule,
       scheduleParams,
@@ -166,7 +170,15 @@ class ConcurrentJobRunnerImpl(runtimeConfig: RuntimeConfig,
       case _ => // skip
     }
 
-    statuses.forall(s => !s.isFailure)
+    statuses.forall { status =>
+      // This is to allow critical ingestion jobs stop the pipeline while not cause it to fail when
+      // `fail.if.no.data` is set to 'false'
+      val hasNoDataAsNotFailure = status match {
+        case RunStatus.NoData(failure) if !failure => job.operation.isCritical
+        case _ => false
+      }
+      !status.isFailure && !hasNoDataAsNotFailure
+    }
   }
 
   private[core] def runLazyJob(job: Job): Boolean = {

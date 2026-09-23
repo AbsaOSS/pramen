@@ -30,6 +30,7 @@ abstract class MetastoreReaderBase(metastore: Metastore,
                                    bookkeeper: Bookkeeper,
                                    tables: Seq[String],
                                    infoDate: LocalDate,
+                                   val batchId: Long,
                                    runReason: TaskRunReason) extends MetastoreReader {
   override def getTable(tableName: String, infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): DataFrame = {
     validateTable(tableName)
@@ -69,10 +70,19 @@ abstract class MetastoreReaderBase(metastore: Metastore,
     MetaTable.getMetaTableDef(metastore.getTableDef(tableName))
   }
 
-  override def getTableRunInfo(tableName: String, infoDate: LocalDate): Option[MetaTableRunInfo] = {
-    bookkeeper.getLatestDataChunk(tableName, infoDate)
+  override def getTableRunInfo(tableName: String, infoDate: LocalDate, batchId: Option[Long]): Seq[MetaTableRunInfo] = {
+    bookkeeper.getDataChunks(tableName, infoDate, batchId)
       .map(chunk =>
-        MetaTableRunInfo(tableName, LocalDate.parse(chunk.infoDate), chunk.inputRecordCount, chunk.outputRecordCount, Instant.ofEpochSecond(chunk.jobStarted), Instant.ofEpochSecond(chunk.jobFinished))
+        MetaTableRunInfo(
+          tableName,
+          LocalDate.parse(chunk.infoDate),
+          chunk.batchId.getOrElse(0L),
+          chunk.inputRecordCount,
+          chunk.outputRecordCount,
+          chunk.appendedRecordCount,
+          Instant.ofEpochSecond(chunk.jobStarted),
+          Instant.ofEpochSecond(chunk.jobFinished)
+        )
       )
   }
 

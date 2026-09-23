@@ -17,12 +17,11 @@
 package za.co.absa.pramen.core.utils
 
 import java.util.concurrent.TimeUnit
-
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.{Duration, FiniteDuration}
 import scala.concurrent.{Await, Future}
 
 object FutureImplicits {
-  private val executionTimeout = Duration(300, TimeUnit.SECONDS)
+  val executionTimeout: FiniteDuration = Duration(300, TimeUnit.SECONDS)
 
   implicit class FutureExecutor[T](future: Future[T]) {
     def execute(): T = Await.result(future, executionTimeout)

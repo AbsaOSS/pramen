@@ -21,6 +21,7 @@ import com.typesafe.config.ConfigFactory
 import org.apache.spark.sql.DataFrame
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.status.RunStatus.{Failed, Succeeded}
+import za.co.absa.pramen.bulkload.BulkLoadStateManagerNull
 import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.bookkeeper.Bookkeeper
 import za.co.absa.pramen.core.metastore.MetaTableStats
@@ -61,7 +62,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
     }
 
     "handle a successful multiple task job parallel execution" in {
-      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1))
+      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1), backfillDays = 2)
 
       runner.runJob(job)
 
@@ -83,11 +84,11 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
       assert(results.head.runStatus.isInstanceOf[Failed])
       assert(results.head.runInfo.get.infoDate == runDate)
 
-      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", runDate, runDate).isEmpty)
+      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", runDate, None).isEmpty)
     }
 
     "handle a successful multiple task job sequential execution" in {
-      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1), allowParallel = false)
+      val (runner, bk, state, job) = getUseCase(runDate.plusDays(1), allowParallel = false, backfillDays = 2)
 
       runner.runJob(job)
 
@@ -109,7 +110,7 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
       assert(results.head.runStatus.isInstanceOf[Failed])
       assert(results.head.runInfo.get.infoDate == runDate)
 
-      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", runDate, runDate).isEmpty)
+      assert(bk.asInstanceOf[SyncBookkeeperMock].getDataChunks("table_out", runDate, None).isEmpty)
     }
 
     "run job even if it is asking for more resources than maximum available" in {
@@ -176,28 +177,30 @@ class TaskRunnerMultithreadedSuite extends AnyWordSpec with SparkTestBase {
                  runFunction: () => RunResult = () => RunResult(exampleDf),
                  consumeThreads: Int = 1,
                  allowParallel: Boolean = true,
-                 parallelTasks: Int = 1
+                 parallelTasks: Int = 1,
+                 backfillDays: Int = 1
                 ): (ConcurrentJobRunnerImpl, Bookkeeper, PipelineStateSpy, Job) = {
     val conf = ConfigFactory.empty()
 
     val runtimeConfig = RuntimeConfigFactory.getDummyRuntimeConfig(isRerun = isRerun, runDate = runDateIn, parallelTasks = parallelTasks)
 
     val bookkeeper = new SyncBookkeeperMock
+    val bulkLoadStateManager = new BulkLoadStateManagerNull
     val journal = new JournalMock
     val tokenLockFactory = new TokenLockFactoryMock
 
     val state = new PipelineStateSpy
 
-    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), 1, 1, 0, 0, isTableTransient = false)
+    bookkeeper.setRecordCount("table_out", runDate.minusDays(1), 1, 1, None, 0, 0, isTableTransient = false)
 
     val stats = MetaTableStats(Some(2), None, Some(100))
 
     val operationDef = OperationDefFactory.getDummyOperationDef(consumeThreads = consumeThreads)
-    val job = new JobSpy(runFunction = runFunction, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)
+    val job = new JobSpy(runFunction = runFunction, jobBackfillDays = backfillDays, saveStats = stats, operationDef = operationDef, allowParallel = allowParallel)
 
-    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, tokenLockFactory, state, runtimeConfig, "app_123")
+    val taskRunner = new TaskRunnerMultithreaded(conf, bookkeeper, journal, bulkLoadStateManager, tokenLockFactory, state, runtimeConfig, "app_123")
 
-    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, taskRunner, "app_123")
+    val jobRunner = new ConcurrentJobRunnerImpl(runtimeConfig, bookkeeper, bulkLoadStateManager, taskRunner, "app_123")
 
     (jobRunner, bookkeeper, state, job)
   }

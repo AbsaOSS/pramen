@@ -99,6 +99,13 @@ class CmdLineConfigSuite extends AnyWordSpec {
         assert(cmd.get.checkOnlyNewData.get)
       }
 
+      "parse attempts" in {
+        val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--attempt", "2", "--max-attempts", "5"))
+        assert(cmd.nonEmpty)
+        assert(cmd.get.maxAttempts.get == 5)
+        assert(cmd.get.attempt.get == 2)
+      }
+
       "return None when wrong date format is passed to --date" in {
         val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date", "16/08/2020"))
         assert(cmd.isEmpty)
@@ -236,6 +243,22 @@ class CmdLineConfigSuite extends AnyWordSpec {
       assert(config.getString(RUN_MODE) == "fill_gaps")
     }
 
+    "return a modified config if bulk mode for date-to override is specified" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--date-to", "2020-08-15", "--inverse-order", "true", "--run-mode", "bulk", "--bulk-size", "yearly", "--info-date-column", "info_date", "--info-date-format", "yyyyMMdd"))
+      val config = CmdLineConfig.applyCmdLineToConfig(emptyConfig, cmd.get)
+
+      assert(config.hasPath(LOAD_DATE_TO))
+      assert(config.getString(LOAD_DATE_TO) == "2020-08-15")
+      assert(config.hasPath(TRACK_DAYS))
+      assert(config.getString(TRACK_DAYS) == "0")
+      assert(config.hasPath(IS_INVERSE_ORDER))
+      assert(config.getBoolean(IS_INVERSE_ORDER))
+      assert(config.getString(RUN_MODE) == "bulk")
+      assert(config.getString(RUN_BULK_BATCH_SIZE) == "yearly")
+      assert(config.getString(INFO_DATE_COLUMN) == "info_date")
+      assert(config.getString(INFO_DATE_FORMAT) == "yyyyMMdd")
+    }
+
     "return the original config if no cmd line arguments are provided" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--inverse-order", "false"))
       val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
@@ -270,6 +293,17 @@ class CmdLineConfigSuite extends AnyWordSpec {
 
       assert(config.getBoolean(UNDERCOVER))
     }
+
+    "return the modified config with attempts" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--attempt", "2", "--max-attempts", "5"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(ATTEMPT))
+      assert(config.getInt(ATTEMPT) == 2)
+      assert(config.hasPath(MAX_ATTEMPTS))
+      assert(config.getInt(MAX_ATTEMPTS) == 5)
+    }
+
 
     "return the modified config if useLock = true" in {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--use-lock", "true"))
@@ -347,6 +381,14 @@ class CmdLineConfigSuite extends AnyWordSpec {
       val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--run-mode", "fill_gaps"))
 
       assert(cmd.isEmpty)
+    }
+
+    "return the modified config if force-recreate-hive-tables = true" in {
+      val cmd = CmdLineConfig.parseCmdLine(Array("--workflow", "dummy.config", "--force-recreate-hive-tables"))
+      val config = CmdLineConfig.applyCmdLineToConfig(populatedConfig, cmd.get)
+
+      assert(config.hasPath(FORCE_RECREATE_HIVE_TABLES))
+      assert(config.getBoolean(FORCE_RECREATE_HIVE_TABLES))
     }
   }
 

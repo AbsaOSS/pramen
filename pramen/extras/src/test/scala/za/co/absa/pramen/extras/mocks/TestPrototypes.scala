@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.mocks
 
 import com.typesafe.config.ConfigFactory
 import za.co.absa.pramen.api.jobdef.Schedule
-import za.co.absa.pramen.api.status.{JobType, RunInfo, RunStatus, TaskDef, TaskResult, TaskRunReason}
+import za.co.absa.pramen.api.status._
 import za.co.absa.pramen.api.{DataFormat, MetaTableDef, PartitionScheme}
 import za.co.absa.pramen.extras.utils.httpclient.SimpleHttpResponse
 
@@ -52,6 +52,7 @@ object TestPrototypes {
       JobType.Transformation("dummy_class"),
       metaTableDef,
       Schedule.EveryDay(),
+      isCritical = false,
       ConfigFactory.empty()
     ),
     taskStatus,

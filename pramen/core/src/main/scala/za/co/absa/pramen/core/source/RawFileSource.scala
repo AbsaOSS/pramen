@@ -22,6 +22,7 @@ import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, Row, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api._
+import za.co.absa.pramen.api.notification.{NotificationEntry, Style, TextElement}
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceRaw.{RAW_OFFSET_FIELD_KEY, RAW_PATH_FIELD_KEY}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
@@ -30,6 +31,7 @@ import java.io.FileNotFoundException
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
@@ -89,6 +91,8 @@ class RawFileSource(val sourceConfig: Config,
   import RawFileSource._
   import spark.implicits._
 
+  private val ENABLE_NOTIFICATIONS_KEY = "enable.notifications"
+
   private[core] val caseSensitivePattern = ConfigUtils.getOptionBoolean(sourceConfig, FILE_PATTERN_CASE_SENSITIVE_KEY).getOrElse(true)
 
   override val config: Config = sourceConfig
@@ -104,9 +108,21 @@ class RawFileSource(val sourceConfig: Config,
   }
 
   override def getRecordCount(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Long = {
-    getPaths(query, infoDateBegin, infoDateEnd)
+    val paths = getPaths(query, infoDateBegin, infoDateEnd)
+    val sumFileSizes = paths
       .map(_.getLen)
       .sum
+
+    if (paths.isEmpty && ConfigUtils.getOptionBoolean(sourceConfig, ENABLE_NOTIFICATIONS_KEY).getOrElse(false)) {
+      addNoDataNotification(query, infoDateBegin, infoDateBegin, infoDateEnd)
+    }
+
+    // If there are empty files, return 1 so that the pipeline may continue
+    if (paths.nonEmpty && sumFileSizes == 0) {
+      1
+    } else {
+      sumFileSizes
+    }
   }
 
   override def getData(query: Query, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String]): SourceResult = {
@@ -176,6 +192,59 @@ class RawFileSource(val sourceConfig: Config,
       getEmptyRawDf
     else
       list.toDF(RAW_PATH_FIELD_KEY, RAW_OFFSET_FIELD_KEY)
+  }
+
+  private[source] def getSpecificPathPattern(pathPattern: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate): String = {
+    if (!pathPattern.contains("{{") || infoDateBegin.isEqual(infoDateEnd)) {
+      getGlobPattern(pathPattern, infoDateBegin)
+    } else {
+      if (infoDateBegin.isAfter(infoDateEnd)) {
+        getGlobPattern(pathPattern, infoDateBegin)
+      }
+      val patterns = new ListBuffer[String]
+      var date = infoDateBegin
+      while (date.isBefore(infoDateEnd) || date.isEqual(infoDateEnd)) {
+        patterns += getGlobPattern(pathPattern, date)
+        date = date.plusDays(1)
+      }
+      patterns.mkString(", ")
+    }
+  }
+
+  private[source] def addNoDataNotification(query: Query, infoDate: LocalDate, infoDateBegin: LocalDate, infoDateEnd: LocalDate): Unit = {
+    if (!query.isInstanceOf[Query.Path])
+      return
+    val queryPath = query.asInstanceOf[Query.Path]
+
+    val generalPattern = queryPath.path
+    val specificPattern1 = getSpecificPathPattern(generalPattern, infoDateBegin, infoDateEnd)
+    val specificPattern = if (specificPattern1.length > 255) s"${specificPattern1.substring(0, 255)}..." else specificPattern1
+    val displayedDate = if (infoDateBegin.isEqual(infoDateEnd)) infoDate.toString else s"$infoDateBegin–$infoDateEnd"
+
+    val pramenOpt = Try {
+      Pramen.instance
+    }.toOption
+
+    pramenOpt.foreach { pramen =>
+      pramen.notificationBuilder.addEntries(
+        NotificationEntry.Paragraph(
+          Seq(
+            TextElement(s"File pattern used: "),
+            TextElement(generalPattern, Style.Bold)
+          )
+        )
+      )
+      pramen.notificationBuilder.addEntries(
+        NotificationEntry.Paragraph(
+          Seq(
+            TextElement(s"No files found matching date "),
+            TextElement(s"'$displayedDate'", Style.Bold),
+            TextElement(s" at: "),
+            TextElement(specificPattern, Style.Bold)
+          )
+        )
+      )
+    }
   }
 }
 

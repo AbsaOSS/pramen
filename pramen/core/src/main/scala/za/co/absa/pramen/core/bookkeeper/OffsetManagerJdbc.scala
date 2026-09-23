@@ -16,7 +16,8 @@
 
 package za.co.absa.pramen.core.bookkeeper
 
-import slick.jdbc.H2Profile.api._
+import slick.jdbc.JdbcBackend.Database
+import slick.jdbc.JdbcProfile
 import za.co.absa.pramen.api.offset.DataOffset.UncommittedOffset
 import za.co.absa.pramen.api.offset.{DataOffset, OffsetType, OffsetValue}
 import za.co.absa.pramen.core.bookkeeper.model._
@@ -25,8 +26,11 @@ import za.co.absa.pramen.core.utils.SlickUtils
 import java.time.{Instant, LocalDate}
 import scala.util.control.NonFatal
 
-class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
+class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, offsetTable: OffsetTable, batchId: Long) extends OffsetManager {
+  import slickProfile.api._
   import za.co.absa.pramen.core.utils.FutureImplicits._
+
+  private val slickUtils = new SlickUtils(slickProfile)
 
   override def getOffsets(table: String, infoDate: LocalDate): Array[DataOffset] = {
     val offsets = getOffsetRecords(table, infoDate)
@@ -42,16 +46,16 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
     val query = onlyForInfoDate match {
       case Some(infoDate) =>
         val infoDateStr = infoDate.toString
-        OffsetRecords.records
+        offsetTable.records
           .filter(r => r.pramenTableName === table && r.infoDate === infoDateStr && r.committedAt.isEmpty)
           .sorted(r => r.infoDate)
       case None =>
-        OffsetRecords.records
+        offsetTable.records
           .filter(r => r.pramenTableName === table && r.committedAt.isEmpty)
           .sorted(r => r.infoDate)
     }
 
-    SlickUtils.executeQuery[OffsetRecords, OffsetRecord](db, query)
+    slickUtils.executeQuery(db, query)
       .toArray[OffsetRecord]
       .map(record => OffsetRecordConverter.toDataOffset(record).asInstanceOf[UncommittedOffset])
   }
@@ -73,8 +77,9 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
     val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, "", "", batchId, createdAt.toEpochMilli, None)
 
+    slickUtils.ensureDbConnected(db)
     db.run(
-      OffsetRecords.records += record
+      offsetTable.records += record
     ).execute()
 
     DataOffsetRequest(table, infoDate, batchId, createdAt)
@@ -83,8 +88,9 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   override def commitOffsets(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
     val committedAt = Instant.now().toEpochMilli
 
+    slickUtils.ensureDbConnected(db)
     db.run(
-      OffsetRecords.records
+      offsetTable.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
         .map(r => (r.minOffset, r.maxOffset, r.committedAt))
         .update((minOffset.valueString, maxOffset.valueString, Some(committedAt)))
@@ -98,18 +104,16 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
     val committedAt = Instant.now().toEpochMilli
 
+    slickUtils.ensureDbConnected(db)
     db.run(
-      OffsetRecords.records
+      offsetTable.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
         .map(r => (r.minOffset, r.maxOffset, r.committedAt))
         .update((minOffset.valueString, maxOffset.valueString, Some(committedAt)))
-    ).execute()
-
-    // Cleaning up previous batches
-    db.run(
-      OffsetRecords.records
-        .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt =!= request.createdAt.toEpochMilli)
-        .delete
+        .andThen(offsetTable.records
+          .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt =!= request.createdAt.toEpochMilli)
+          .delete
+        ).transactionally
     ).execute()
   }
 
@@ -121,15 +125,16 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
       OffsetRecord(req.table, req.infoDate.toString, req.minOffset.dataType.dataTypeString, req.minOffset.valueString, req.maxOffset.valueString, batchId, req.createdAt.toEpochMilli, Some(committedAtMilli))
     }
 
+    slickUtils.ensureDbConnected(db)
     db.run(
-      OffsetRecords.records ++= records
+      offsetTable.records ++= records
     ).execute()
 
     commitRequests.map(r => (r.table, r.infoDate))
       .distinct
       .foreach { case (table, infoDate) =>
         db.run(
-          OffsetRecords.records
+          offsetTable.records
             .filter(r => r.pramenTableName === table && r.infoDate === infoDate.toString && r.committedAt =!= committedAtMilli)
             .delete
         ).execute()
@@ -137,20 +142,24 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
   }
 
   override def rollbackOffsets(request: DataOffsetRequest): Unit = {
+    slickUtils.ensureDbConnected(db)
     db.run(
-      OffsetRecords.records
+      offsetTable.records
         .filter(r => r.pramenTableName === request.tableName && r.infoDate === request.infoDate.toString && r.createdAt === request.createdAt.toEpochMilli)
         .delete
     ).execute()
   }
 
+  /** This class does not own the database connection. It is responsibility of the DB connection owner to close it. */
+  override def close(): Unit = {}
+
   private[core] def getMaximumInfoDate(table: String): Option[LocalDate] = {
-    val query = OffsetRecords.records
+    val query = offsetTable.records
       .filter(r => r.pramenTableName === table)
       .map(_.infoDate).max
 
     try {
-      SlickUtils.executeMaxString(db, query)
+      slickUtils.executeMaxString(db, query)
         .map(LocalDate.parse)
     } catch {
       case NonFatal(ex) => throw new RuntimeException(s"Unable to read from the offset table.", ex)
@@ -159,10 +168,10 @@ class OffsetManagerJdbc(db: Database, batchId: Long) extends OffsetManager {
 
   private[core] def getOffsetRecords(table: String, infoDate: LocalDate): Array[OffsetRecord] = {
     val infoDateStr = infoDate.toString
-    val query = OffsetRecords.records
+    val query = offsetTable.records
       .filter(r => r.pramenTableName === table && r.infoDate === infoDateStr)
 
-    SlickUtils.executeQuery[OffsetRecords, OffsetRecord](db, query)
+    slickUtils.executeQuery(db, query)
       .toArray[OffsetRecord]
   }
 

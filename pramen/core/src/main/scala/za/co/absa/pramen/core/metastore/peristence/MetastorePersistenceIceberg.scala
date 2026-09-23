@@ -18,10 +18,12 @@ package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{DateType, StringType, TimestampType}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{CatalogTable, PartitionScheme}
 import za.co.absa.pramen.core.metastore.MetaTableStats
 import za.co.absa.pramen.core.metastore.model.HiveConfig
+import za.co.absa.pramen.core.utils.CatalogUtils
 import za.co.absa.pramen.core.utils.hive.QueryExecutor
 
 import java.sql.Date
@@ -57,22 +59,27 @@ class MetastorePersistenceIceberg(table: CatalogTable,
       case _ => (false, "Writing to")
     }
 
-    val tableExists = doesTableExist(table)
+    val writerOptionsWithAdditionalMetadata = writeOptions ++ Map(
+      s"snapshot-property.$infoDateColumn" -> infoDate.toString,
+      s"snapshot-property.$batchIdColumn" -> batchId.toString
+    )
+
+    val tableExists = CatalogUtils.doesTableExist(table)
 
     if (tableExists) {
       log.info(s"$operationStr to table $fullTableName...")
       if (isAppend) {
-        appendToTable(dfToSave, fullTableName, writeOptions)
+        appendToTable(dfToSave, fullTableName, writerOptionsWithAdditionalMetadata)
       } else {
         if (partitionScheme == PartitionScheme.Overwrite) {
-          overwriteFullTable(dfToSave, fullTableName, writeOptions)
+          overwriteFullTable(dfToSave, fullTableName, writerOptionsWithAdditionalMetadata)
         } else {
-          overwriteDailyPartition(infoDate, dfToSave, fullTableName, infoDateColumn, writeOptions)
+          overwriteDailyPartition(infoDate, dfToSave, fullTableName, infoDateColumn, writerOptionsWithAdditionalMetadata)
         }
       }
     } else {
       log.info(s"Creating Iceberg table ${table.getFullTableName}...")
-      createIcebergTable(dfToSave, fullTableName, infoDateColumn, location, description, partitionScheme, tableProperties, writeOptions)
+      createIcebergTable(dfToSave, fullTableName, infoDateColumn, location, description, partitionScheme, tableProperties, writerOptionsWithAdditionalMetadata)
     }
 
     getStats(infoDate, onlyForCurrentBatchId = false)
@@ -106,27 +113,41 @@ class MetastorePersistenceIceberg(table: CatalogTable,
     throw new UnsupportedOperationException("Iceberg only operates on tables in a catalog. Separate Hive options are not supported.")
   }
 
-  def doesTableExist(catalogTable: CatalogTable)(implicit spark: SparkSession): Boolean = {
-    getExistingTable(catalogTable).isDefined
+  override def isRepartitioningSupported: Boolean = partitionScheme != PartitionScheme.NotPartitioned
+
+  override def repartitionPhase1(infoDateDataColumn: String, infoDateDataFormat: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+     if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))
+       throw new IllegalArgumentException(s"Cannot repartition a table if the metastore info date column is the same as the data info date column ($infoDateDataColumn)")
+
+    if (partitionScheme == PartitionScheme.Overwrite)
+      throw new IllegalArgumentException(s"Repartitioning is not supported for this partition scheme: ${partitionScheme.getClass.getSimpleName}")
+
+    val fullTableName = table.getFullTableName
+    val df = spark.table(fullTableName)
+      .filter(getFilter(Some(outputInfoDate), Some(outputInfoDate)))
+
+    val dataInfoDateType = df.schema.fields
+      .find(_.name.equalsIgnoreCase(infoDateDataColumn))
+      .map(_.dataType)
+      .getOrElse(StringType)
+
+    val castExpression = dataInfoDateType match {
+      case _: DateType      => col(infoDateDataColumn)
+      case _: TimestampType => col(infoDateDataColumn).cast(DateType)
+      case _                => to_date(col(infoDateDataColumn).cast(StringType), infoDateDataFormat)
+    }
+
+    log.info(s"Running Iceberg repartitioning: UPDATE $fullTableName SET $infoDateColumn = CAST($infoDateDataColumn AS DATE) " +
+      s"WHERE $infoDateColumn = '$outputInfoDate' AND $infoDateDataColumn >= '$infoDateFrom' AND $infoDateDataColumn <= '$infoDateTo'")
+
+    val dfToWrite = df.withColumn(infoDateColumn, castExpression)
+
+    writeRepartitionedDf(dfToWrite, fullTableName, infoDateColumn, infoDateFrom, infoDateTo, writeOptions)
   }
 
-  def getExistingTable(catalogTable: CatalogTable)(implicit spark: SparkSession): Option[DataFrame] = {
-    try {
-      val df = spark.table(catalogTable.getFullTableName)
-      // Force analysis to surface TABLE_OR_VIEW_NOT_FOUND at this point.
-      // Technically, not needed, but Spark can potentially skip analysis until the schema is requested.
-      val _ = df.schema
-      Some(df)
-    } catch {
-      // This is a common error
-      case ex: AnalysisException if ex.getMessage().contains("Table or view not found") || ex.getMessage().contains("TABLE_OR_VIEW_NOT_FOUND") =>
-        None
-      // This is the exception, needs to be re-thrown.
-      case ex: AnalysisException if ex.getMessage().contains("TableType cannot be null for table:") =>
-        throw new IllegalArgumentException("Attempt to use a catalog not supported by the file format. " +
-          "Ensure you are using the iceberg catalog and/or it is set as the default catalog with (spark.sql.defaultCatalog) " +
-          "or the catalog is specified explicitly as the table name.", ex)
-    }
+  override def repartitionPhase2(infoDateDataColumn: String, infoDateDataFormat: String, infoDateFrom: LocalDate, infoDateTo: LocalDate, outputInfoDate: LocalDate): Unit = {
+    if (infoDateColumn.equalsIgnoreCase(infoDateDataColumn))
+      throw new IllegalArgumentException(s"Cannot repartition a table if the metastore info date column is the same as the data info date column ($infoDateDataColumn)")
   }
 
   def getFilter(infoDateFrom: Option[LocalDate], infoDateTo: Option[LocalDate]): Column = {
@@ -187,5 +208,4 @@ object MetastorePersistenceIceberg {
         throw new UnsupportedOperationException(s"Partition scheme $partitionScheme is not supported for adding generated columns.")
     }
   }
-
 }

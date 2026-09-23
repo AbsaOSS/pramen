@@ -23,6 +23,7 @@ import java.time.{Instant, LocalDate}
 
 object PipelineInfoFactory {
   def getDummyPipelineInfo(pipelineName: String = "Dummy Pipeline",
+                           pipelineDefinitionId: String = "",
                            environment: String = "DEV",
                            runtimeInfo: RuntimeInfo = RuntimeInfo(LocalDate.parse("2022-02-18")),
                            startedAt: Instant = Instant.ofEpochSecond(1718609409),
@@ -34,7 +35,8 @@ object PipelineInfoFactory {
                            pipelineNotificationFailures: Seq[PipelineNotificationFailure] = Seq.empty,
                            pipelineId: String = "dummy_pipeline_id",
                            tenant:  Option[String] = Some("Dummy tenant"),
-                           country:  Option[String] = Some("noname")): PipelineInfo = {
-    PipelineInfo(pipelineName, environment, runtimeInfo, startedAt, finishedAt, warningFlag, sparkApplicationId, pipelineStatus, failureException, pipelineNotificationFailures, pipelineId, tenant, country)
+                           country:  Option[String] = Some("noname"),
+                           batchId: Long = 123L): PipelineInfo = {
+    PipelineInfo(pipelineName, pipelineDefinitionId, environment, runtimeInfo, startedAt, finishedAt, warningFlag, sparkApplicationId, pipelineStatus, failureException, pipelineNotificationFailures, pipelineId, tenant, country, batchId)
   }
 }

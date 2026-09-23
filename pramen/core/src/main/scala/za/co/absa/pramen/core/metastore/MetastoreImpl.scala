@@ -30,6 +30,7 @@ import za.co.absa.pramen.core.app.config.{InfoDateConfig, RuntimeConfig}
 import za.co.absa.pramen.core.bookkeeper.model.OffsetCommitRequest
 import za.co.absa.pramen.core.bookkeeper.{Bookkeeper, OffsetManagerUtils}
 import za.co.absa.pramen.core.config.Keys
+import za.co.absa.pramen.core.config.Keys.NEVER_REPAIR_PARTITIONS
 import za.co.absa.pramen.core.metastore.model.{MetaTable, ReaderMode, TrackingTable}
 import za.co.absa.pramen.core.metastore.peristence.{MetastorePersistence, TransientJobManager}
 import za.co.absa.pramen.core.utils.ConfigUtils
@@ -38,6 +39,7 @@ import za.co.absa.pramen.core.utils.hive.{HiveFormat, HiveHelper}
 import java.time.{Instant, LocalDate}
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
+import scala.util.control.NonFatal
 
 class MetastoreImpl(appConfig: Config,
                     tableDefsIn: Seq[MetaTable],
@@ -55,6 +57,8 @@ class MetastoreImpl(appConfig: Config,
   private var tableDefs: Seq[MetaTable] = tableDefsIn
 
   private val incrementalTables = new mutable.HashSet[String]
+
+  private val neverRepairPartitions = ConfigUtils.getOptionBoolean(appConfig, NEVER_REPAIR_PARTITIONS).getOrElse(false)
 
   override def getRegisteredTables: Seq[String] = tableDefs.map(_.name)
 
@@ -140,7 +144,13 @@ class MetastoreImpl(appConfig: Config,
 
     stats.recordCount.foreach{recordCount =>
       if (!skipBookKeepingUpdates && !nothingAppended) {
-        bookkeeper.setRecordCount(tableName, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, start, finish, isTransient)
+        val overwrite = saveModeOverride.contains(SaveMode.Overwrite)
+        val recordsAppended = if (overwrite)
+          None
+        else
+          stats.recordCountAppended
+        log.info(s"Updating bookkeeping for '$tableName', overwrite=$overwrite, stats = $stats, recordsAppended=$recordsAppended.")
+        bookkeeper.setRecordCount(tableName, infoDate, inputRecordCount.getOrElse(recordCount), recordCount, recordsAppended, start, finish, isTransient)
       }
     }
 
@@ -157,6 +167,7 @@ class MetastoreImpl(appConfig: Config,
                                        infoDate: LocalDate,
                                        schema: Option[StructType],
                                        hiveHelper: HiveHelper,
+                                       updateSchema: Boolean,
                                        recreate: Boolean): Unit = {
     val mt = getTableDef(tableName)
     val hiveTable = mt.hiveTable match {
@@ -191,22 +202,42 @@ class MetastoreImpl(appConfig: Config,
     val fullTableName = HiveHelper.getFullTable(mt.hiveConfig.database, hiveTable)
     val effectivePath = mt.hivePath.getOrElse(path)
 
+    var needAddPartition = false
+
     if (recreate) {
       log.info(s"Recreating Hive table '$fullTableName'")
-      hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+      hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, !neverRepairPartitions)
     } else {
       if (hiveHelper.doesTableExist(mt.hiveConfig.database, hiveTable)) {
-        if (mt.hivePreferAddPartition && mt.format.isInstanceOf[DataFormat.Parquet]) {
-          val location = new Path(effectivePath, s"${mt.infoDateColumn}=${infoDate}")
-          log.info(s"The table '$fullTableName' exists. Adding partition '$location'...")
-          hiveHelper.addPartition(mt.hiveConfig.database, hiveTable, Seq(mt.infoDateColumn), Seq(infoDate.toString), location.toString)
+        if (updateSchema) {
+          try {
+            log.info(s"The table '$fullTableName' exists. Updating schema of the Hive table '$fullTableName'")
+            hiveHelper.replaceHiveTableSchema(effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+            // Schema changed in-place. We still need to add the new partition
+            needAddPartition = true
+          } catch {
+            case NonFatal(ex) =>
+              log.warn(s"Could not update Hive schema via ${hiveHelper.getClass.getName}. Recreating Hive table '$fullTableName'", ex)
+              hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, !neverRepairPartitions)
+          }
         } else {
-          log.info(s"The table '$fullTableName' exists. Repairing it.")
-          hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
+          // Schema didn't change, but we need to add the new partition
+          needAddPartition = true
         }
       } else {
         log.info(s"The table '$fullTableName' does not exist. Creating it.")
-        hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable)
+        hiveHelper.createOrUpdateHiveTable(effectivePath, format, effectiveSchema, Seq(mt.infoDateColumn), mt.hiveConfig.database, hiveTable, !neverRepairPartitions)
+      }
+    }
+
+    if (needAddPartition) {
+      if (mt.hivePreferAddPartition && mt.format.isInstanceOf[DataFormat.Parquet]) {
+        val location = new Path(effectivePath, s"${mt.infoDateColumn}=${infoDate}")
+        log.info(s"The table '$fullTableName' exists. Adding partition '$location'...")
+        hiveHelper.addPartition(mt.hiveConfig.database, hiveTable, Seq(mt.infoDateColumn), Seq(infoDate.toString), location.toString)
+      } else {
+        log.info(s"The table '$fullTableName' exists. Repairing it.")
+        hiveHelper.repairHiveTable(mt.hiveConfig.database, hiveTable, format)
       }
     }
   }
@@ -219,9 +250,9 @@ class MetastoreImpl(appConfig: Config,
 
   override def getMetastoreReader(tables: Seq[String], outputTable: String, infoDate: LocalDate, runReason: TaskRunReason, readMode: ReaderMode): MetastoreReader = {
     if (readMode == ReaderMode.Batch)
-      new MetastoreReaderBatchImpl(this, metadata, bookkeeper, tables, infoDate, runReason)
+      new MetastoreReaderBatchImpl(this, metadata, bookkeeper, tables, infoDate, batchId, runReason)
     else
-      new MetastoreReaderIncrementalImpl(this, metadata, bookkeeper, tables, outputTable, infoDate, runReason, readMode, isRerun)
+      new MetastoreReaderIncrementalImpl(this, metadata, bookkeeper, tables, outputTable, infoDate, batchId, runReason, readMode, isRerun)
   }
 
   override def setTableIncremental(table: String): Unit = {

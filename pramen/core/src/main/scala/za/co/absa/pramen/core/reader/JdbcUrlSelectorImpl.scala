@@ -18,18 +18,34 @@ package za.co.absa.pramen.core.reader
 
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.reader.model.JdbcConfig
-import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
+import za.co.absa.pramen.core.runner.task.ThreadClosableRegistry
+import za.co.absa.pramen.core.utils.JdbcNativeUtils.{DEFAULT_CONNECTION_TIMEOUT_SECONDS, JDBC_WORDS_TO_REDACT}
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils}
 
 import java.sql.{Connection, SQLException}
 import java.util.Properties
+import scala.util.control.NonFatal
 import scala.util.{Failure, Random, Success, Try}
 
-class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
+class JdbcUrlSelectorImpl(val jdbcDriverJarPath: Option[String], val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
   private val log = LoggerFactory.getLogger(this.getClass)
+
+  private val BACKOFF_MIN_S = 1
+  private val BACKOFF_MAX_S = 10
   private val allUrls = (jdbcConfig.primaryUrl ++ jdbcConfig.fallbackUrls).toSeq
   private val numberOfUrls = allUrls.size
   private var urlPool = allUrls
+  private var isClosed = false
+
+  @transient
+  private var connection: Connection = _
+
+  @transient
+  override val loadedDriver: Option[DynamicDriver] = {
+    jdbcDriverJarPath.map { driverPath =>
+      JdbcUrlSelector.loadDriver(driverPath, jdbcConfig.driver)
+    }
+  }
 
   validate()
 
@@ -80,15 +96,12 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
   }
 
   @throws[SQLException]
-  def getWorkingUrl(retriesLeft: Int): String = {
-    val (connection, url) = getWorkingConnection(retriesLeft)
-    connection.close()
-    url
+  def getWorkingUrl: String = {
+    getConnection._2
   }
 
   override def getProperties: Properties = {
     val properties = new Properties()
-    properties.put("driver", jdbcConfig.driver)
     jdbcConfig.user.foreach(db => properties.put("user", db))
     jdbcConfig.password.foreach(db => properties.put("password", db))
     jdbcConfig.database.foreach(db => properties.put("database", db))
@@ -100,23 +113,78 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
   }
 
   @throws[SQLException]
-  def getWorkingConnection(retriesLeft: Int): (Connection, String) = {
-    val currentUrl = getUrl
+  override def getConnection: (Connection, String) = {
+    if (isClosed)
+      throw new IllegalStateException("Cannot get a connection from a closed JdbcUrlSelector")
 
+    val isConnectionClosed = connection != null && connection.isClosed
+
+    if (connection == null || isConnectionClosed || !connection.isValid(jdbcConfig.connectionTimeoutSeconds.getOrElse(DEFAULT_CONNECTION_TIMEOUT_SECONDS))) {
+      if (connection != null) {
+        ThreadClosableRegistry.unregisterCloseable(connection)
+        if (!isConnectionClosed) {
+          log.warn("Existing connection is not valid. Closing it and creating a new one.")
+          Try(connection.close()).failed.foreach { ex =>
+            log.warn("Failed to close the existing connection", ex)
+          }
+        }
+        connection = null
+      }
+
+      val retries = jdbcConfig.retries.getOrElse(getNumberOfUrls)
+      val (newConnection, url) = getNewConnection(retries)
+      connection = newConnection
+      ThreadClosableRegistry.registerCloseable(connection)
+      (connection, url)
+    } else {
+      (connection, currentUrl)
+    }
+  }
+
+  @throws[SQLException]
+  override def getNewConnection(retriesLeft: Int): (Connection, String) = {
+    if (isClosed)
+      throw new IllegalStateException("Cannot get a connection from a closed JdbcUrlSelector")
+    val currentUrl = getUrl
     Try {
-      JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl)
+      JdbcNativeUtils.getJdbcConnection(jdbcConfig, currentUrl, loadedDriver.map(_.driver))
     } match {
       case Success(connection) => (connection, currentUrl)
       case Failure(ex)         =>
-        if (retriesLeft > 1) {
-          val newUrl = getNextUrl
-          log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying...", ex)
-          log.info(s"Trying URL: $newUrl")
-          getWorkingConnection(retriesLeft - 1)
-        } else {
-          throw ex
+        ex match {
+          case _: InterruptedException =>
+            throw ex
+          case _: Throwable            =>
+            if (retriesLeft > 1) {
+              val newUrl = getNextUrl
+              val backoffS = Random.nextInt(BACKOFF_MAX_S - BACKOFF_MIN_S) + BACKOFF_MIN_S
+              log.error(s"JDBC connection error for $currentUrl. Retries left: ${retriesLeft - 1}. Retrying... in $backoffS seconds", ex)
+              Thread.sleep(backoffS * 1000)
+              log.info(s"Trying URL: $newUrl")
+              getNewConnection(retriesLeft - 1)
+            } else {
+              throw ex
+            }
         }
     }
+  }
+
+  override def close(): Unit = {
+    if (!isClosed) {
+      isClosed = true
+      if (connection != null && !connection.isClosed) {
+        try {
+          connection.close()
+          loadedDriver.foreach { d =>
+            d.classLoader.close()
+          }
+        } catch {
+          case NonFatal(ex) => log.warn(s"Error while closing JDBC connection $currentUrl", ex)
+        }
+        connection = null
+      }
+    }
+
   }
 
   private def getFirstUrl: String = {
@@ -165,5 +233,4 @@ class JdbcUrlSelectorImpl(val jdbcConfig: JdbcConfig) extends JdbcUrlSelector{
       throw new IllegalArgumentException(s"Empty string is not a valid JDBC URL.")
     }
   }
-
 }

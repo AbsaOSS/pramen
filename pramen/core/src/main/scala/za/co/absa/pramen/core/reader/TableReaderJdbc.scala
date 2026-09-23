@@ -162,18 +162,18 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
       .load()
 
     if (jdbcReaderConfig.correctDecimalsInSchema || jdbcReaderConfig.correctDecimalsFixPrecision) {
-      if (isDataQuery) {
-        df = SparkUtils.sanitizeDfColumns(df, jdbcReaderConfig.specialCharacters)
-      }
-
-      JdbcSparkUtils.getCorrectedDecimalsSchema(df, jdbcReaderConfig.correctDecimalsFixPrecision).foreach(schema =>
+      JdbcSparkUtils.getCorrectedDecimalsSchema(df, jdbcReaderConfig.correctDecimalsFixPrecision).foreach { schema =>
         df = spark
           .read
           .format("jdbc")
           .options(connectionOptions)
           .option("customSchema", schema)
           .load()
-      )
+      }
+
+      if (isDataQuery) {
+        df = SparkUtils.sanitizeDfColumns(df, jdbcReaderConfig.specialCharacters)
+      }
     }
 
     if (jdbcReaderConfig.saveTimestampsAsDates) {
@@ -185,7 +185,7 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
         case Some(table) => sqlGen.getSchemaQuery(table, Seq.empty)
         case _ => JdbcSparkUtils.getSchemaQuery(sql)
       }
-      JdbcSparkUtils.withJdbcMetadata(jdbcReaderConfig.jdbcConfig, schemaQuery) { (connection, jdbcMetadata) =>
+      JdbcSparkUtils.withJdbcMetadata(jdbcUrlSelector, schemaQuery) { (connection, jdbcMetadata) =>
         val schemaWithMetadata = JdbcSparkUtils.addMetadataFromJdbc(df.schema, jdbcMetadata)
         val schemaWithColumnDescriptions = tableOpt match {
           case Some(table) =>

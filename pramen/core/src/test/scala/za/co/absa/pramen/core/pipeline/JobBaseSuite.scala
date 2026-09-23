@@ -217,7 +217,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "do nothing if Hive table is not defined" in {
       val job = getUseCase()
 
-      val warnings = job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+      val warnings = job.createOrRefreshHiveTable(null, infoDate, updateSchema = false, recreate = false)
 
       assert(warnings.isEmpty)
 
@@ -226,7 +226,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "return an empty seq of warnings when the operation succeeded" in {
       val job = getUseCase(hiveTable = Some("test_hive_table"))
 
-      val warnings = job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+      val warnings = job.createOrRefreshHiveTable(null, infoDate, updateSchema = false, recreate = false)
 
       assert(warnings.isEmpty)
     }
@@ -234,7 +234,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "return warnings if ignore failures enabled" in {
       val job = getUseCase(hiveTable = Some("test_hive_table"), hiveFailure = true, ignoreHiveFailures = true)
 
-      val warnings = job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+      val warnings = job.createOrRefreshHiveTable(null, infoDate, updateSchema = false, recreate = false)
 
       assert(warnings.nonEmpty)
       assert(warnings.head == "Failed to create or update Hive table 'test_hive_table': Test exception")
@@ -244,7 +244,7 @@ class JobBaseSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
       val job = getUseCase(hiveTable = Some("test_hive_table"), hiveFailure = true)
 
       val ex = intercept[RuntimeException] {
-        job.createOrRefreshHiveTable(null, infoDate, recreate = false)
+        job.createOrRefreshHiveTable(null, infoDate, updateSchema = false, recreate = false)
       }
 
       assert(ex.getMessage == "Test exception")
