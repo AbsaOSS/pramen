@@ -251,9 +251,9 @@ class StringUtilsSuite extends AnyWordSpec {
       val actual = renderThreadDumps(ex.threadStackTraces)
 
       assert(actual.startsWith("Stack trace of threads at the moment of the interruption:"))
-      assert(actual.contains("  Thread 0"))
+      assert(actual.contains("Thread 0"))
       assert(actual.contains("(ScalaTest-dispatcher)"))
-      assert(actual.contains("    java.lang.Thread.dumpThreads(Native Method)"))
+      assert(actual.contains("java.lang.Thread.dumpThreads(Native Method)"))
     }
   }
 

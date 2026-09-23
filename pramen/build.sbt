@@ -18,17 +18,16 @@ import Dependencies._
 import Versions._
 import BuildInfoTemplateSettings._
 
-val scala211 = "2.11.12"
 val scala212 = "2.12.20"
-val scala213 = "2.13.16"
+val scala213 = "2.13.18"
 
 ThisBuild / organization := "za.co.absa.pramen"
 
 ThisBuild / scalaVersion := scala212
-ThisBuild / crossScalaVersions := Seq(scala211, scala212, scala213)
+ThisBuild / crossScalaVersions := Seq(scala212, scala213)
 
 ThisBuild / scalacOptions := Seq("-unchecked", "-deprecation", "-target:jvm-1.8")
-ThisBuild / javacOptions := Seq("-source", "1.8", "-target", "1.8")
+ThisBuild / javacOptions := Seq("-source", "1.8", "-target", "1.8", "--release", "8")
 
 ThisBuild / versionScheme := Some("early-semver")
 
@@ -58,6 +57,32 @@ def runnerSparkVersionSuffix(moduleName: String, scalaVersion: String, includeDe
   } else ""
 }
 
+val projectJavaOptions = Seq(
+  "-XX:+IgnoreUnrecognizedVMOptions",
+  "-Xmx2048m",
+  "--add-modules=jdk.incubator.vector",
+  "--add-opens=java.base/java.lang=ALL-UNNAMED",
+  "--add-opens=java.base/java.lang.invoke=ALL-UNNAMED",
+  "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
+  "--add-opens=java.base/java.io=ALL-UNNAMED",
+  "--add-opens=java.base/java.net=ALL-UNNAMED",
+  "--add-opens=java.base/java.nio=ALL-UNNAMED",
+  "--add-opens=java.base/java.util=ALL-UNNAMED",
+  "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED",
+  "--add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED",
+  "--add-opens=java.base/jdk.internal.ref=ALL-UNNAMED",
+  "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
+  "--add-opens=java.base/sun.nio.cs=ALL-UNNAMED",
+  "--add-opens=java.base/sun.security.action=ALL-UNNAMED",
+  "--add-opens=java.base/sun.util.calendar=ALL-UNNAMED",
+  "--add-opens=java.base/sun.net.www.protocol.jar=ALL-UNNAMED",
+  "-Djdk.reflect.useDirectMethodHandle=false",
+  "-Dio.netty.tryReflectionSetAccessible=true",
+  "-Dio.netty.allocator.type=pooled",
+  "-Dio.netty.handler.ssl.defaultEndpointVerificationAlgorithm=NONE",
+  "--enable-native-access=ALL-UNNAMED"
+)
+
 val assemblyFeatures = settingKey[Seq[String]]("Define assembly scope")
 
 lazy val UnitTest = config("unit") extend Test
@@ -67,7 +92,7 @@ lazy val pramen = (project in file("."))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
     name := "pramen",
-    crossScalaVersions := List(scala211, scala212, scala213),
+    crossScalaVersions := List(scala212, scala213),
 
     // No need to publish the aggregation [empty] artifact
     publishArtifact := false,
@@ -85,7 +110,7 @@ lazy val api = (project in file("api"))
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-api",
-    crossScalaVersions := List(scala211, scala212, scala213),
+    crossScalaVersions := List(scala212, scala213),
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
@@ -106,7 +131,7 @@ lazy val core = (project in file("core"))
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-core",
-    crossScalaVersions := List(scala211, scala212, scala213),
+    crossScalaVersions := List(scala212, scala213),
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
@@ -116,20 +141,19 @@ lazy val core = (project in file("core"))
     Compile / unmanagedSourceDirectories += {
       val sourceDir = (Compile / sourceDirectory).value
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, n)) if n == 11 => sourceDir / "scala_2.11"
         case Some((2, n)) if n == 12 => sourceDir / "scala_2.12"
         case Some((2, n)) if n == 13 => sourceDir / "scala_2.13"
         case _ => throw new RuntimeException("Unsupported Scala version")
       }
     },
     assemblyFeatures := sys.props.getOrElse("assembly.features", "").split(',').toSeq,
-    libraryDependencies ++= CoreDependencies(scalaVersion.value, assemblyFeatures.value.contains("includeDelta"))  ++
-      getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
+    libraryDependencies ++= CoreDependencies(scalaVersion.value, assemblyFeatures.value.contains("includeDelta"))  :+
       getScalaDependency(scalaVersion.value),
     (Test / testOptions) := Seq(Tests.Filter(allFilter)),
     (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
+    Test / javaOptions ++= projectJavaOptions,
     populateBuildInfoTemplate,
     jacocoReportName := "pramen:core Jacoco Report",
     jacocoReportFormats := Set("html", "xml"),
@@ -146,7 +170,7 @@ lazy val extras = (project in file("extras"))
   .settings( inConfig(IntegrationTest)(Defaults.testTasks) : _*)
   .settings(
     name := "pramen-extras",
-    crossScalaVersions := List(scala211, scala212, scala213),
+    crossScalaVersions := List(scala212, scala213),
     printSparkVersion := {
       val log = streams.value.log
       log.info(s"Building with Spark ${sparkVersion(scalaVersion.value)}, Scala ${scalaVersion.value}")
@@ -154,14 +178,14 @@ lazy val extras = (project in file("extras"))
     },
     (Compile / compile) := ((Compile / compile) dependsOn printSparkVersion).value,
     assemblyFeatures := sys.props.getOrElse("assembly.features", "").split(',').toSeq,
-    libraryDependencies ++= ExtrasJobsDependencies(scalaVersion.value) ++
-      getSparkVersionRelatedDeps(sparkVersion(scalaVersion.value)) :+
+    libraryDependencies ++= ExtrasJobsDependencies(scalaVersion.value) :+
       getScalaDependency(scalaVersion.value),
     resolvers += "confluent" at "https://packages.confluent.io/maven/",
     (Test / testOptions) := Seq(Tests.Filter(allFilter)),
     (UnitTest / testOptions) := Seq(Tests.Filter(unitFilter)),
     (IntegrationTest / testOptions) := Seq(Tests.Filter(itFilter)),
     Test / fork := true,
+    Test / javaOptions ++= projectJavaOptions,
     jacocoReportName := "pramen-extras Jacoco Report",
     jacocoReportFormats := Set("html", "xml"),
     assemblySettingsExtras

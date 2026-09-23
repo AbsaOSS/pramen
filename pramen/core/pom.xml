@@ -27,7 +27,7 @@
     <parent>
         <groupId>za.co.absa.pramen</groupId>
         <artifactId>pramen</artifactId>
-        <version>1.14.9-SNAPSHOT</version>
+        <version>1.15.0-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -128,7 +128,7 @@
             <artifactId>javax.mail</artifactId>
         </dependency>
 
-        <!-- https://search.maven.org/artifact/com.github.yruslan/channel_scala_2.11 -->
+        <!-- https://search.maven.org/artifact/com.github.yruslan/channel_scala_2.12 -->
         <dependency>
             <groupId>com.lihaoyi</groupId>
             <artifactId>requests_${scala.compat.version}</artifactId>
