@@ -310,12 +310,13 @@ object AppRunner {
   private[core] def logBanner(implicit spark: SparkSession): Try[Unit] = {
     if (!bannerShown) {
       Try {
+        val cpuArchitecture = getArchitecture.map(s => s", Driver CPU architecture: $s").getOrElse("")
         bannerShown = true
         val version = BuildPropertyUtils.instance.getFullVersion
         val banner = ResourceUtils.getResourceString("/pramen_banner.txt")
           .replace("""project_version""", version)
         log.info(s"\n$banner")
-        log.info(s"Runtime Spark version: ${spark.version}")
+        log.info(s"Runtime Spark version: ${spark.version}$cpuArchitecture")
 
         spark.sparkContext.uiWebUrl.foreach(url => log.info(s"Spark URL: $url"))
       }
@@ -323,6 +324,14 @@ object AppRunner {
       Success(()) // Short version of the Darth Vader ship? (-()-)
     }
   }
+  
+  private[core] def getArchitecture: Option[String] = {
+    Try(System.getProperty("os.arch"))
+      .toOption
+      .flatMap(Option(_))
+      .map(_.trim.toLowerCase)
+  }
+    
 
   private[core] def getPipelineDef(implicit conf: Config, state: PipelineState, appContext: AppContext): Try[PipelineDef] = {
     handleFailure(Try {
