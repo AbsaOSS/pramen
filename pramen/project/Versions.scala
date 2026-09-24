@@ -17,7 +17,7 @@
 import sbt.*
 
 object Versions {
-  val defaultSparkVersionForScala212 = "3.3.4"
+  val defaultSparkVersionForScala212 = "3.5.5"
   val defaultSparkVersionForScala213 = "4.1.2"
 
   val typesafeConfigVersion = "1.4.3"
@@ -68,8 +68,8 @@ object Versions {
       case version if version.startsWith("3.3.") => ("delta-core", "2.2.0")
       case version if version.startsWith("3.4.") => ("delta-core", "2.4.0")
       case version if version.startsWith("3.5.") => ("delta-spark", "3.0.0")  // 'delta-core' was renamed to 'delta-spark' since 3.0.0.
-      case version if version.startsWith("4.0.") => ("delta-spark", "4.0.0")
-      case version if version.startsWith("4.1.") => ("delta-spark", "4.1.0")
+      case version if version.startsWith("4.0.") => ("delta-spark", "4.1.0")
+      case version if version.startsWith("4.1.") => ("delta-spark", "4.3.1")
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
     if (isTest) {

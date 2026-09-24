@@ -83,7 +83,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     }
 
     "return Skip when the data frame is empty" in {
-      val (job, _) = getUseCase(tableDf = exampleDf.filter(col("b") > 10))
+      val (job, _) = getUseCase(tableDf = exampleDf.filter(col("a") > 10))
 
       val result = job.validate(infoDate, runReason, conf)
 
