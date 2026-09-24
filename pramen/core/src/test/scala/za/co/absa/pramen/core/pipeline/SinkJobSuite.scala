@@ -42,7 +42,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
   private val conf = ConfigFactory.empty()
   private val runReason: TaskRunReason = TaskRunReason.New
 
-  private def exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
+  private def exampleDf: DataFrame = List(("A", 1), ("B", 2), ("C", 3)).toDF("b", "a")
 
   "preRunCheckJob" should {
     "return Ready when the input table is available" in {
@@ -83,7 +83,7 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     }
 
     "return Skip when the data frame is empty" in {
-      val (job, _) = getUseCase(tableDf = exampleDf.filter(col("b") > 10))
+      val (job, _) = getUseCase(tableDf = exampleDf.filter(col("a") > 10))
 
       val result = job.validate(infoDate, runReason, conf)
 
@@ -138,16 +138,16 @@ class SinkJobSuite extends AnyWordSpec with SparkTestBase with TextComparisonFix
     "apply transformations, filters and projections" in {
       val expectedData =
         """[ {
-          |  "a" : "B",
-          |  "b1" : "2"
+          |  "a" : 2,
+          |  "b1" : "B"
           |}, {
-          |  "a" : "C",
-          |  "b1" : "3"
+          |  "a" : 3,
+          |  "b1" : "C"
           |} ]""".stripMargin
 
       val sinkTable = SinkTableFactory.getDummySinkTable(
         transformations = Seq(TransformExpression("b1", Some("cast(b as string)"), None)),
-        filters = Seq("b > 1"),
+        filters = Seq("a > 1"),
         columns = Seq("a", "b1")
       )
 

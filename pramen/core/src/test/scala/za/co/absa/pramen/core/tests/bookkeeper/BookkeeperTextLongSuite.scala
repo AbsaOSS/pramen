@@ -64,7 +64,10 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
 
       val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2)), None).toString()
 
-      assert(actual == "(((tableName = table1) AND (infoDate >= 2021-01-01)) AND (infoDate <= 2021-01-02))")
+      val possible1 = "(((tableName = table1) AND (infoDate >= 2021-01-01)) AND (infoDate <= 2021-01-02))"
+      val possible2 = "and(and(=(tableName, 'table1'), >=(infoDate, '2021-01-01')), <=(infoDate, '2021-01-02'))"
+
+      assert(actual == possible1 || actual == possible2)
     }
 
     "get a ranged filter with batch id" in {
@@ -72,7 +75,10 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
 
       val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), Some(LocalDate.of(2021, 1, 2)), Some(123L)).toString()
 
-      assert(actual == "((((tableName = table1) AND (infoDate >= 2021-01-01)) AND (infoDate <= 2021-01-02)) AND (batchId = 123))")
+      val possible1 = "((((tableName = table1) AND (infoDate >= 2021-01-01)) AND (infoDate <= 2021-01-02)) AND (batchId = 123))"
+      val possible2 = "and(and(and(=(tableName, 'table1'), >=(infoDate, '2021-01-01')), <=(infoDate, '2021-01-02')), =(batchId, 123L))"
+
+      assert(actual == possible1 || actual == possible2)
     }
 
     "get a from filter" in {
@@ -80,7 +86,10 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
 
       val actual = bk.getFilter("table1", Some(LocalDate.of(2021, 1, 1)), None, None).toString()
 
-      assert(actual == "((tableName = table1) AND (infoDate >= 2021-01-01))")
+      val possible1 = "((tableName = table1) AND (infoDate >= 2021-01-01))"
+      val possible2 = "and(=(tableName, 'table1'), >=(infoDate, '2021-01-01'))"
+
+      assert(actual == possible1 || actual == possible2)
     }
 
     "get a to filter" in {
@@ -88,7 +97,10 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
 
       val actual = bk.getFilter("table1", None, Some(LocalDate.of(2021, 1, 2)), None).toString()
 
-      assert(actual == "((tableName = table1) AND (infoDate <= 2021-01-02))")
+      val possible1 = "((tableName = table1) AND (infoDate <= 2021-01-02))"
+      val possible2 = "and(=(tableName, 'table1'), <=(infoDate, '2021-01-02'))"
+
+      assert(actual == possible1 || actual == possible2)
     }
 
     "get a batchid filter" in {
@@ -96,7 +108,10 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
 
       val actual = bk.getFilter("table1", None, None, Some(123L)).toString()
 
-      assert(actual == "((tableName = table1) AND (batchId = 123))")
+      val possible1 = "((tableName = table1) AND (batchId = 123))"
+      val possible2 = "and(=(tableName, 'table1'), =(batchId, 123L))"
+
+      assert(actual == possible1 || actual == possible2)
     }
 
     "get a table filter" in {
@@ -104,7 +119,10 @@ class BookkeeperTextLongSuite extends BookkeeperCommonSuite with SparkTestBase w
 
       val actual = bk.getFilter("table1", None, None, None).toString()
 
-      assert(actual == "(tableName = table1)")
+      val possible1 = "(tableName = table1)"
+      val possible2 = "=(tableName, 'table1')"
+
+      assert(actual == possible1 || actual == possible2)
     }
   }
 }

@@ -16,7 +16,7 @@ ME=`basename "$0" .sh`
 
 cd $(dirname $(readlink -f $0))
 
-SCALA_VERSION="2.11"
+SCALA_VERSION="2.12"
 
 EXTRAS_JAR="pramen-extras_${SCALA_VERSION}-1.0.0.jar"
 RUNNER_JAR="pramen-runner_${SCALA_VERSION}-1.0.0.jar"

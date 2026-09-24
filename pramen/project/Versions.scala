@@ -17,9 +17,8 @@
 import sbt.*
 
 object Versions {
-  val defaultSparkVersionForScala211 = "2.4.8"
-  val defaultSparkVersionForScala212 = "3.3.4"
-  val defaultSparkVersionForScala213 = "3.4.4"
+  val defaultSparkVersionForScala212 = "3.5.5"
+  val defaultSparkVersionForScala213 = "4.1.2"
 
   val typesafeConfigVersion = "1.4.3"
   val postgreSqlDriverVersion = "42.7.9"
@@ -41,7 +40,7 @@ object Versions {
 
   def sparkFallbackVersion(scalaVersion: String): String = {
     if (scalaVersion.startsWith("2.11.")) {
-      defaultSparkVersionForScala211
+      throw new IllegalArgumentException(s"Scala 2.11 not supported.")
     } else if (scalaVersion.startsWith("2.12.")) {
       defaultSparkVersionForScala212
     } else if (scalaVersion.startsWith("2.13.")) {
@@ -59,17 +58,6 @@ object Versions {
     fullVersion.split('.').take(2).mkString(".")
   }
 
-  def getSparkVersionRelatedDeps(sparkVersion: String): Seq[ModuleID] = {
-    if (sparkVersion.startsWith("2.")) {
-      // Seq("com.fasterxml.jackson.core" % "jackson-databind" % "2.6.7.3")
-      Nil
-    } else if (sparkVersion.startsWith("3.")) {
-      Nil
-    } else {
-      throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
-    }
-  }
-
   def getDeltaDependency(sparkVersion: String, isCompile: Boolean, isTest: Boolean): ModuleID = {
     // According to this: https://docs.delta.io/latest/releases.html
     val (deltaArtifact, deltaVersion) = sparkVersion match {
@@ -80,6 +68,8 @@ object Versions {
       case version if version.startsWith("3.3.") => ("delta-core", "2.2.0")
       case version if version.startsWith("3.4.") => ("delta-core", "2.4.0")
       case version if version.startsWith("3.5.") => ("delta-spark", "3.0.0")  // 'delta-core' was renamed to 'delta-spark' since 3.0.0.
+      case version if version.startsWith("4.0.") => ("delta-spark_4.0", "4.3.1")
+      case version if version.startsWith("4.1.") => ("delta-spark", "4.3.1")
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
     if (isTest) {
@@ -104,6 +94,8 @@ object Versions {
         case version if version.startsWith("3.3.") => ("1.6.1", "3.3")
         case version if version.startsWith("3.4.") => ("1.6.1", "3.4")
         case version if version.startsWith("3.5.") => ("1.6.1", "3.5")
+        case version if version.startsWith("4.0.") => ("1.10.1", "4.0")
+        case version if version.startsWith("4.1.") => ("1.11.0", "4.1")
         case _ => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
       }
 
@@ -130,6 +122,7 @@ object Versions {
       case version if version.startsWith("3.1.") => "5.1.1"
       case version if version         == "3.2.0" => "6.1.1"
       case version if version.startsWith("3.")   => "6.4.1"
+      case version if version.startsWith("4.")   => "7.0.0-RC1"
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported for Abris dependency.")
     }
 

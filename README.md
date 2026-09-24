@@ -85,7 +85,7 @@ In addition to basic error notification, typical operational warnings are genera
    ```sh
    git clone https://github.com/AbsaOSS/pramen
    cd pramen
-   sbt -DSPARK_VERSION="3.3.4" ++2.12.18 assembly 
+   sbt -DSPARK_VERSION="3.5.5" ++2.12.21 assembly 
    ```
    (You need JDK 1.8 installed to run this)
  
@@ -203,15 +203,15 @@ Pramen for Python transformers is available in PyPi: [![PyPI](https://badge.fury
 Pramen is released as a set of thin JAR libraries. When running on a specific environment you might want to include all
 dependencies in an uber jar that you can build for your Scala version. You can do that by either 
 - Downloading pre-compiled version of Pramen runners at the [Releases](https://github.com/AbsaOSS/pramen/releases) section of the project.
-- Or by building Pramen from source and creating an uber JAR file that contains all dependencies required to run the pipeline on a Spark cluster (see below).
+- Or by building Pramen from source and creating an uber JAR file that contains all dependencies required to run the 
+  pipeline on a Spark cluster (see below).
 
 ### Building a Pramen runner JAR from sources
 
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
-sbt ++2.11.12 assembly 
-sbt ++2.12.20 assembly
-sbt ++2.13.16 assembly
+sbt ++2.12.21 assembly
+sbt ++2.13.18 assembly
 ```
 
 You can collect the uber jar of Pramen either at
@@ -222,14 +222,13 @@ Since `1.7.0` Pramen runner bundle does not include Delta Lake format classes si
 Spark distributions. This makes the runner independent of Spark version. But if you want to include Delta Lake files
 in your bundle, use one of example commands specifying your Spark version:
 ```sh
-sbt -DSPARK_VERSION="2.4.8" -Dassembly.features="includeDelta" ++2.11.12 assembly 
-sbt -DSPARK_VERSION="3.3.4" -Dassembly.features="includeDelta" ++2.12.20 assembly
-sbt -DSPARK_VERSION="3.5.5" -Dassembly.features="includeDelta" ++2.13.16 assembly
+sbt -DSPARK_VERSION="3.5.5" -Dassembly.features="includeDelta" ++2.12.21 assembly
+sbt -DSPARK_VERSION="4.1.2" -Dassembly.features="includeDelta" ++2.13.18 assembly
 ```
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
 ```sh
-$ spark-shell --jars pramen-runner_2.12-1.7.5-SNAPSHOT.jar
+$ spark-shell --jars pramen-runner_2.12-1.15.1-SNAPSHOT.jar
 ```
 
 # Creating a data pipeline

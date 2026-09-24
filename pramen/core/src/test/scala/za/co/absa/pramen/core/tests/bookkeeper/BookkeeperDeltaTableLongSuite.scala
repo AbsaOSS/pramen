@@ -59,11 +59,7 @@ class BookkeeperDeltaTableLongSuite extends BookkeeperCommonSuite with SparkTest
 
   "BookkeeperHadoopDeltaTable" when {
     testBookKeeper { batchId =>
-      if (spark.version.startsWith("2.")) {
-        getBookkeeper(getNewTablePrefix, batchId)
-      } else {
-        getBookkeeper(bookkeepingTablePrefix, batchId)
-      }
+      getBookkeeper(bookkeepingTablePrefix, batchId)
     }
 
     "test tables are created properly" in {

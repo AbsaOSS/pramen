@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.abris.avro.functions.to_avro
 import za.co.absa.abris.avro.read.confluent.SchemaManagerFactory
 import za.co.absa.abris.config.{AbrisConfig, ToAvroConfig}
+import za.co.absa.pramen.core.utils.SparkCompatUtils
 import za.co.absa.pramen.extras.avro.AvroUtils.{convertSparkToAvroSchema, fixNullableFields}
 import za.co.absa.pramen.extras.source.KafkaAvroSource.KAFKA_TOKENS_TO_REDACT
 import za.co.absa.pramen.extras.utils.ConfigUtils
@@ -102,7 +103,7 @@ class TableWriterKafka(topicName: String,
                                       namingStrategy: NamingStrategy,
                                       isKey: Boolean): Int = {
     // generate schema
-    val expression = columns.expr
+    val expression = SparkCompatUtils.col2expr(columns)
     val schema = fixNullableFields(
       convertSparkToAvroSchema(expression.dataType)
     )

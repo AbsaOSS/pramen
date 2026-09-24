@@ -18,6 +18,7 @@ package za.co.absa.pramen.extras.avro
 
 import org.apache.spark.sql.functions.struct
 import org.scalatest.wordspec.AnyWordSpec
+import za.co.absa.pramen.core.utils.SparkCompatUtils
 import za.co.absa.pramen.extras.NestedDataFrameFactory
 import za.co.absa.pramen.extras.base.SparkTestBase
 import za.co.absa.pramen.extras.fixtures.TextComparisonFixture
@@ -29,11 +30,13 @@ class AvroUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
   "convertSparkToAvroSchema" should {
     "convert basic schema with nullable values" in {
+      assume(spark.version.split('.').head.toInt < 4, s"Ignored for Spark ${spark.version}")
+
       val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
       val allColumns = struct(df.columns.map(c => df(c)): _*)
 
-      val avro = AvroUtils.convertSparkToAvroSchema(allColumns.expr.dataType)
+      val avro = AvroUtils.convertSparkToAvroSchema(SparkCompatUtils.col2expr(allColumns).dataType)
 
       val avroWithNullsFixed = AvroUtils.fixNullableFields(avro)
 
@@ -49,11 +52,13 @@ class AvroUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     }
 
     "convert nested schema with nullable values" in {
+      assume(spark.version.split('.').head.toInt < 4, s"Ignored for Spark ${spark.version}")
+
       val df = NestedDataFrameFactory.getNestedTestCase
 
       val allColumns = struct(df.columns.map(c => df(c)): _*)
 
-      val avro = AvroUtils.convertSparkToAvroSchema(allColumns.expr.dataType)
+      val avro = AvroUtils.convertSparkToAvroSchema(SparkCompatUtils.col2expr(allColumns).dataType)
 
       val avroWithNullsFixed = AvroUtils.fixNullableFields(avro)
 
@@ -68,11 +73,13 @@ class AvroUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     }
 
     "convert nested schema with a map" in {
+      assume(spark.version.split('.').head.toInt < 4, s"Ignored for Spark ${spark.version}")
+
       val df = NestedDataFrameFactory.getMapTestCase
 
       val allColumns = struct(df.columns.map(c => df(c)): _*)
 
-      val avro = AvroUtils.convertSparkToAvroSchema(allColumns.expr.dataType)
+      val avro = AvroUtils.convertSparkToAvroSchema(SparkCompatUtils.col2expr(allColumns).dataType)
 
       val avroWithNullsFixed = AvroUtils.fixNullableFields(avro)
 

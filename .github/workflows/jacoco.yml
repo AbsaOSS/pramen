@@ -28,8 +28,8 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SCALA_VERSION: 2.12.20
-  SPARK_VERSION: 3.4.4
+  SCALA_VERSION: 2.12.21
+  SPARK_VERSION: 3.5.5
 
   # hint: "group thresholds" are in format: 'overall*changed-files-average*per-changed-file'
   REPORT_GROUPS: |
@@ -89,7 +89,7 @@ jobs:
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
-          java-version: 8
+          java-version: 17
           cache: sbt
 
       - name: Build and run tests with coverage
