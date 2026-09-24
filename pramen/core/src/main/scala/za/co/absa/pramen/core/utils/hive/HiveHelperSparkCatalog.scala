@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core.utils.hive
 
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.execution.datasources.PartitioningUtils.PartitionValues
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.CatalogTable
@@ -108,7 +107,8 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
                                           partitionBy: Seq[String],
                                           partitionValues: Seq[String],
                                           databaseName: Option[String],
-                                          tableName: String): Unit = {
+                                          tableName: String,
+                                          location: String): Unit = {
     if (partitionBy.length != partitionValues.length) {
       throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
     }
@@ -128,8 +128,22 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
       .replace("@partitionClause", partitionClause)
       .replace("@schema", schemaDDL)
 
-    log.info(s"Executing: $sql")
-    spark.sql(sql).collect()
+    try {
+      log.info(s"Executing: $sql")
+      spark.sql(sql).collect()
+    } catch {
+      case ex: Throwable if ex.getMessage != null && ex.getMessage.toLowerCase.contains("partition not found")  =>
+        log.info(s"Partition not found for $fullTableName, partition: $partitionClause. Adding partition...")
+        try {
+          addPartition(databaseName, tableName, partitionBy, partitionValues, location)
+        } catch {
+          case NonFatal(ex) =>
+            log.warn(s"Failed to add partition for $fullTableName, partition: $partitionClause", ex)
+        }
+
+        log.info(s"Executing: $sql")
+        spark.sql(sql).collect()
+    }
   }
 
   override def repairHiveTable(databaseName: Option[String],

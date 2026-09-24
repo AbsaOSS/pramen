@@ -177,7 +177,7 @@ class HiveHelperSqlSuite extends AnyWordSpec with SparkTestBase with TempDirFixt
         val hiveHelper = new HiveHelperSql(qe, defaultHiveConfig, true)
         val schema = spark.read.parquet(path).withColumn("b", lit(1)).schema
 
-        hiveHelper.replaceHivePartitionSchema(schema, "a" :: "b" :: Nil, Seq("AA", "22"), Some("db"), "tbl")
+        hiveHelper.replaceHivePartitionSchema(schema, "a" :: "b" :: Nil, Seq("AA", "22"), Some("db"), "tbl", "")
 
         val actual = qe.queries.mkString("\n")
 
