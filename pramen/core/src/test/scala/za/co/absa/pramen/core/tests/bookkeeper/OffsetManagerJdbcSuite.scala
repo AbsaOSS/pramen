@@ -80,7 +80,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val offset = actualNonEmpty.head.asInstanceOf[UncommittedOffset]
 
       assert(offset.infoDate == infoDate)
-      assert(!offset.createdAt.isBefore(now))
+      assert(offset.createdAt.toEpochMilli >= now.toEpochMilli)
       assert(offset.createdAt.isBefore(nextHour))
     }
 

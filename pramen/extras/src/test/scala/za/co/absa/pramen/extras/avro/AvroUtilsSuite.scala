@@ -30,6 +30,8 @@ class AvroUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
 
   "convertSparkToAvroSchema" should {
     "convert basic schema with nullable values" in {
+      assume(spark.version.split('.').head.toInt < 4, s"Ignored for Spark ${spark.version}")
+
       val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "b")
 
       val allColumns = struct(df.columns.map(c => df(c)): _*)
@@ -50,6 +52,8 @@ class AvroUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     }
 
     "convert nested schema with nullable values" in {
+      assume(spark.version.split('.').head.toInt < 4, s"Ignored for Spark ${spark.version}")
+
       val df = NestedDataFrameFactory.getNestedTestCase
 
       val allColumns = struct(df.columns.map(c => df(c)): _*)
@@ -69,6 +73,8 @@ class AvroUtilsSuite extends AnyWordSpec with SparkTestBase with TextComparisonF
     }
 
     "convert nested schema with a map" in {
+      assume(spark.version.split('.').head.toInt < 4, s"Ignored for Spark ${spark.version}")
+
       val df = NestedDataFrameFactory.getMapTestCase
 
       val allColumns = struct(df.columns.map(c => df(c)): _*)

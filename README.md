@@ -210,8 +210,8 @@ dependencies in an uber jar that you can build for your Scala version. You can d
 Creating an uber jar for Pramen is very easy. Just clone the repository and run one of the following commands:
 ```sh
 sbt ++2.11.12 assembly 
-sbt ++2.12.20 assembly
-sbt ++2.13.16 assembly
+sbt ++2.12.21 assembly
+sbt ++2.13.18 assembly
 ```
 
 You can collect the uber jar of Pramen either at
@@ -223,8 +223,8 @@ Spark distributions. This makes the runner independent of Spark version. But if 
 in your bundle, use one of example commands specifying your Spark version:
 ```sh
 sbt -DSPARK_VERSION="2.4.8" -Dassembly.features="includeDelta" ++2.11.12 assembly 
-sbt -DSPARK_VERSION="3.3.4" -Dassembly.features="includeDelta" ++2.12.20 assembly
-sbt -DSPARK_VERSION="3.5.5" -Dassembly.features="includeDelta" ++2.13.16 assembly
+sbt -DSPARK_VERSION="3.3.4" -Dassembly.features="includeDelta" ++2.12.21 assembly
+sbt -DSPARK_VERSION="3.5.5" -Dassembly.features="includeDelta" ++2.13.18 assembly
 ```
 
 Then, run `spark-shell` or `spark-submit` adding the fat jar as the option.
