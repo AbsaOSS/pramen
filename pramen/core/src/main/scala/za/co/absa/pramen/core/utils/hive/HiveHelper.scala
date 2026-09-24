@@ -48,7 +48,8 @@ abstract class HiveHelper {
                                  partitionBy: Seq[String],
                                  partitionValues: Seq[String],
                                  databaseName: Option[String],
-                                 tableName: String): Unit
+                                 tableName: String,
+                                 location: String): Unit
 
   def repairHiveTable(databaseName: Option[String],
                       tableName: String,
