@@ -60,6 +60,7 @@ object Versions {
 
   def getDeltaDependency(sparkVersion: String, isCompile: Boolean, isTest: Boolean): ModuleID = {
     // According to this: https://docs.delta.io/latest/releases.html
+    // and https://central.sonatype.com/search?q=delta-spark
     val (deltaArtifact, deltaVersion) = sparkVersion match {
       case version if version.startsWith("2.")   => ("delta-core", "0.6.1")
       case version if version.startsWith("3.0.") => ("delta-core", "0.8.0")
@@ -69,7 +70,8 @@ object Versions {
       case version if version.startsWith("3.4.") => ("delta-core", "2.4.0")
       case version if version.startsWith("3.5.") => ("delta-spark", "3.0.0")  // 'delta-core' was renamed to 'delta-spark' since 3.0.0.
       case version if version.startsWith("4.0.") => ("delta-spark_4.0", "4.3.1")
-      case version if version.startsWith("4.1.") => ("delta-spark", "4.3.1")
+      case version if version.startsWith("4.1.") => ("delta-spark_4.1", "4.4.0")
+      case version if version.startsWith("4.2.") => ("delta-spark_4.2", "4.4.0")
       case _                                     => throw new IllegalArgumentException(s"Spark $sparkVersion not supported.")
     }
     if (isTest) {
