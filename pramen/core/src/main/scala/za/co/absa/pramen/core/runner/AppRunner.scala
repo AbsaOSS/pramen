@@ -139,8 +139,9 @@ object AppRunner {
 
   private[core] def handleFailure[T](t: Try[T], state: PipelineState, stage: String): Try[T] = {
     t.recoverWith { case ex: Throwable =>
-      state.setFailure(stage, ex)
-      Failure(new RuntimeException(s"An error occurred during $stage.", ex))
+      val failEx = new RuntimeException(s"An error occurred during $stage.", ex)
+      state.setFailure(stage, failEx)
+      Failure(failEx)
     }
   }
 
