@@ -36,6 +36,8 @@ import za.co.absa.pramen.core.sink.SinkManager
 import za.co.absa.pramen.core.source.SourceManager
 import za.co.absa.pramen.core.utils.{ClassLoaderUtils, ConfigUtils}
 
+import scala.util.control.NonFatal
+
 class OperationSplitter(conf: Config,
                         metastore: Metastore,
                         bookkeeper: Bookkeeper,
@@ -60,24 +62,29 @@ class OperationSplitter(conf: Config,
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
 
     sourceTables.map(sourceTable => {
-      val source = SourceManager.getSourceByName(sourceName, conf, sourceTable.overrideConf)
+      try {
+        val source = SourceManager.getSourceByName(sourceName, conf, sourceTable.overrideConf)
 
-      val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
+        val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
 
-      if (specialCharacters != globalSpecialCharacters)
-        log.info(s"Effective special characters: '$specialCharacters'")
+        if (specialCharacters != globalSpecialCharacters)
+          log.info(s"Effective special characters: '$specialCharacters'")
 
-      val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
-      val outputTable = metastore.getTableDef(sourceTable.metaTableName)
+        val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
+        val outputTable = metastore.getTableDef(sourceTable.metaTableName)
 
-      val notificationTargets = operationDef.notificationTargets
-        .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
+        val notificationTargets = operationDef.notificationTargets
+          .map(targetName => getNotificationTarget(conf, targetName, sourceTable.conf))
 
-      if (operationDef.schedule == Schedule.Incremental) {
-        val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
-        new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, sourceTable, outputTable, specialCharacters, bulkLoadCurrent)
-      } else {
-        new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent)
+        if (operationDef.schedule == Schedule.Incremental) {
+          val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
+          new IncrementalIngestionJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, sourceTable, outputTable, specialCharacters, bulkLoadCurrent)
+        } else {
+          new IngestionJob(operationDef, metastore, bookkeeper, notificationTargets, sourceName, source, sourceTable, outputTable, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent)
+        }
+      } catch {
+        case NonFatal(ex) =>
+          throw new IllegalStateException(s"An error occurred while creating an ingestion job '${operationDef.name}' for source table ${sourceTable.metaTableName}", ex)
       }
     })
   }
@@ -90,24 +97,29 @@ class OperationSplitter(conf: Config,
     val temporaryDirectory = ConfigUtils.getOptionString(conf, TEMPORARY_DIRECTORY_KEY)
 
     tables.map(transferTable => {
-      val source = SourceManager.getSourceByName(sourceName, conf, transferTable.sourceOverrideConf)
-      val sink = SinkManager.getSinkByName(sinkName, conf, transferTable.sinkOverrideConf)
-      val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
+      try {
+        val source = SourceManager.getSourceByName(sourceName, conf, transferTable.sourceOverrideConf)
+        val sink = SinkManager.getSinkByName(sinkName, conf, transferTable.sinkOverrideConf)
+        val specialCharacters = ConfigUtils.getOptionString(source.config, SOURCE_SPECIAL_CHARACTERS_IN_COLUMN_NAMES).getOrElse(globalSpecialCharacters)
 
-      if (specialCharacters != globalSpecialCharacters)
-        log.info(s"Effective special characters: '$specialCharacters'")
+        if (specialCharacters != globalSpecialCharacters)
+          log.info(s"Effective special characters: '$specialCharacters'")
 
-      val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
-      val outputTable = TransferTableParser.getMetaTable(transferTable)
+        val disableCountQuery = ConfigUtils.getOptionBoolean(source.config, DISABLE_COUNT_QUERY).getOrElse(false)
+        val outputTable = TransferTableParser.getMetaTable(transferTable)
 
-      val notificationTargets = operationDef.notificationTargets
-        .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
+        val notificationTargets = operationDef.notificationTargets
+          .map(targetName => getNotificationTarget(conf, targetName, transferTable.conf))
 
-      if (operationDef.schedule == Schedule.Incremental) {
-        val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
-        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent, conf)
-      } else {
-        new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, None, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent, conf)
+        if (operationDef.schedule == Schedule.Incremental) {
+          val latestOffsets = bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable.name, None)
+          new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, latestOffsets, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent, conf)
+        } else {
+          new TransferJob(operationDef, metastore, bookkeeper, notificationTargets, None, batchId, sourceName, source, transferTable, outputTable, sinkName, sink, specialCharacters, temporaryDirectory, disableCountQuery, bulkLoadCurrent, conf)
+        }
+      } catch {
+        case NonFatal(ex) =>
+          throw new IllegalStateException(s"An error occurred while creating a transfer job '${operationDef.name}' for '${transferTable.query.query}'", ex)
       }
     })
   }
@@ -115,42 +127,52 @@ class OperationSplitter(conf: Config,
   def createTransformation(operationDef: OperationDef,
                            clazz: String,
                            outputTable: String)(implicit spark: SparkSession): Seq[Job] = {
-    val transformer = ClassLoaderUtils.loadEntityConfigurableClass[Transformer](clazz, operationDef.operationConf, conf)
+    try {
+      val transformer = ClassLoaderUtils.loadEntityConfigurableClass[Transformer](clazz, operationDef.operationConf, conf)
 
-    val outputMetaTable = metastore.getTableDef(outputTable)
+      val outputMetaTable = metastore.getTableDef(outputTable)
 
-    val notificationTargets = operationDef.notificationTargets
-      .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
+      val notificationTargets = operationDef.notificationTargets
+        .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
-    val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
-      bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable, None).map(_.maximumInfoDate)
-    } else None
+      val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
+        bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable, None).map(_.maximumInfoDate)
+      } else None
 
-    Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, clazz, transformer, latestInfoDateOpt))
+      Seq(new TransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, clazz, transformer, latestInfoDateOpt))
+    } catch {
+      case NonFatal(ex) =>
+        throw new IllegalStateException(s"An error occurred while creating a transformation job '${operationDef.name}' for '${outputTable}'", ex)
+    }
   }
 
   def createPythonTransformation(operationDef: OperationDef,
                                  pythonClass: String,
                                  outputTable: String)(implicit spark: SparkSession): Seq[Job] = {
-    val outputMetaTable = metastore.getTableDef(outputTable)
+    try {
+      val outputMetaTable = metastore.getTableDef(outputTable)
 
-    val keepLogLines = conf.getInt(KEEP_LOG_LINES_KEY)
+      val keepLogLines = conf.getInt(KEEP_LOG_LINES_KEY)
 
-    val processRunner = ProcessRunner(keepLogLines,
-      stdOutLogPrefix = "Pramen-Py(out)",
-      stdErrLogPrefix = "Pramen-Py(err)")
+      val processRunner = ProcessRunner(keepLogLines,
+        stdOutLogPrefix = "Pramen-Py(out)",
+        stdErrLogPrefix = "Pramen-Py(err)")
 
-    val databricksClientOpt = getDatabricksClient(conf)
-    val pramenPyConfig = getPramenPyCmdlineConfig(conf)
+      val databricksClientOpt = getDatabricksClient(conf)
+      val pramenPyConfig = getPramenPyCmdlineConfig(conf)
 
-    val notificationTargets = operationDef.notificationTargets
-      .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
+      val notificationTargets = operationDef.notificationTargets
+        .map(targetName => getNotificationTarget(conf, targetName, operationDef.operationConf))
 
-    val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
-      bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable, None).map(_.maximumInfoDate)
-    } else None
+      val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
+        bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTable, None).map(_.maximumInfoDate)
+      } else None
 
-    Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner, databricksClientOpt, latestInfoDateOpt))
+      Seq(new PythonTransformationJob(operationDef, metastore, bookkeeper, notificationTargets, outputMetaTable, pythonClass, pramenPyConfig, processRunner, databricksClientOpt, latestInfoDateOpt))
+    } catch {
+      case NonFatal(ex) =>
+        throw new IllegalStateException(s"An error occurred while creating a Python transformation job '${operationDef.name}' for '$outputTable'", ex)
+    }
   }
 
   def createSink(operationDef: OperationDef,
@@ -158,22 +180,27 @@ class OperationSplitter(conf: Config,
                  sinkTables: Seq[SinkTable])
                 (implicit spark: SparkSession): Seq[Job] = {
     sinkTables.map(sinkTable => {
-      val inputTable = metastore.getTableDef(sinkTable.metaTableName)
+      try {
+        val inputTable = metastore.getTableDef(sinkTable.metaTableName)
 
-      val sink = SinkManager.getSinkByName(sinkName, conf, sinkTable.overrideConf)
+        val sink = SinkManager.getSinkByName(sinkName, conf, sinkTable.overrideConf)
 
-      val outputTableName = sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->$sinkName")
+        val outputTableName = sinkTable.outputTableName.getOrElse(s"${sinkTable.metaTableName}->$sinkName")
 
-      val outputTable = inputTable.copy(name = outputTableName, format = DataFormat.Null(), hiveTable = None)
+        val outputTable = inputTable.copy(name = outputTableName, format = DataFormat.Null(), hiveTable = None)
 
-      val notificationTargets = operationDef.notificationTargets
-        .map(targetName => getNotificationTarget(conf, targetName, sinkTable.conf))
+        val notificationTargets = operationDef.notificationTargets
+          .map(targetName => getNotificationTarget(conf, targetName, sinkTable.conf))
 
-      val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
-        bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTableName, None).map(_.maximumInfoDate)
-      } else None
+        val latestInfoDateOpt = if (operationDef.schedule == Schedule.Incremental) {
+          bookkeeper.getOffsetManager.getMaxInfoDateAndOffset(outputTableName, None).map(_.maximumInfoDate)
+        } else None
 
-      new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDateOpt, outputTable, sinkName, sink, sinkTable, conf)
+        new SinkJob(operationDef, metastore, bookkeeper, notificationTargets, latestInfoDateOpt, outputTable, sinkName, sink, sinkTable, conf)
+      } catch {
+        case NonFatal(ex) =>
+          throw new IllegalStateException(s"An error occurred while creating a sink job '${operationDef.name}' for table ${sinkTable.metaTableName}", ex)
+      }
     })
   }
 }
