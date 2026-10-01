@@ -18,7 +18,6 @@ package za.co.absa.pramen.core.tests.notify
 
 import com.typesafe.config.{Config, ConfigFactory}
 import org.scalatest.wordspec.AnyWordSpec
-import za.co.absa.pramen.core.RuntimeConfigFactory
 import za.co.absa.pramen.core.mocks.PipelineNotificationFactory
 import za.co.absa.pramen.core.notify.pipeline.PipelineNotificationEmail
 
@@ -205,6 +204,7 @@ class PipelineNotificationEmailSuite extends AnyWordSpec {
       assert(PipelineNotificationEmail.isEmailDomainAllowed("test1@test.com", Seq("test.com")))
       assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+-345.abc1234@TEST123.COM", Seq("test123.com", "test.com")))
       assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+-345.abc1234@ABSA.CO.ZA", Seq("absa.co.za")))
+      assert(PipelineNotificationEmail.isEmailDomainAllowed("123test_%+-345.abc1234@GROUP.ABSA.CO.ZA", Seq("absa.co.za")))
     }
 
     "return true for not allowed domains" in {

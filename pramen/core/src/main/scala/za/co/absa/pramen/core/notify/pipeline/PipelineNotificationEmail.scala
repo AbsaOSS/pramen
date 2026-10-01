@@ -19,7 +19,6 @@ package za.co.absa.pramen.core.notify.pipeline
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.notification.NotificationEntry
-import za.co.absa.pramen.core.app.config.RuntimeConfig
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.notify.Sendable
 import za.co.absa.pramen.core.utils.{ConfigUtils, Emoji}
@@ -153,7 +152,7 @@ object PipelineNotificationEmail {
       true
     } else {
       val domain = email.split("@").last.toLowerCase
-      allowedDomains.contains(domain)
+      allowedDomains.contains(domain) || allowedDomains.exists(d => domain.endsWith("." + d))
     }
   }
 }
