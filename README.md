@@ -2934,6 +2934,8 @@ pramen.metastore {
       name = "table1_raw"
       description = "Table 1 (file based)"
       format = "raw"
+      # [Optional] You can specify if you want files to be copied on the driver or on executors (parallel) 
+      # copy.on.driver = true
       path = /my_metastore/raw/table1
     },
     {

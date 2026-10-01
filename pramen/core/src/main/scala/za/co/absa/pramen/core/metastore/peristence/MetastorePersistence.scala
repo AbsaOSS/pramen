@@ -66,7 +66,8 @@ object MetastorePersistence {
           table, location, metaTable.description, metaTable.infoDateColumn, metaTable.batchIdColumn, batchId, metaTable.partitionScheme, saveModeOpt, metaTable.writeOptions, metaTable.tableProperties
         )
       case DataFormat.Raw(path)                          =>
-        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.partitionScheme, saveModeOpt)
+        val writeOnDriverOpt = metaTable.writeOptions.get("copy.on.driver").map(_.toBoolean)
+        new MetastorePersistenceRaw(path, metaTable.infoDateColumn, metaTable.infoDateFormat, metaTable.partitionScheme, saveModeOpt, writeOnDriverOpt)
       case DataFormat.TransientEager(cachePolicy)             =>
         new MetastorePersistenceTransientEager(TransientTableManager.getTempDirectory(cachePolicy, conf), metaTable.name, cachePolicy)
       case DataFormat.Transient(cachePolicy) =>
