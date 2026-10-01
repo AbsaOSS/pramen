@@ -49,7 +49,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.fs.create(new Path(dataPath, "1.dat")).close()
         fsUtils.fs.create(new Path(dataPath, "2.dat")).close()
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, None)
 
         val actual = persistence.loadTable(Some(infoDate), Some(infoDate)).orderBy("path").collect().map(_.getString(0))
 
@@ -70,7 +70,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.fs.create(new Path(dataPath1, "1.dat")).close()
         fsUtils.fs.create(new Path(dataPath2, "2.dat")).close()
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, None)
 
         val actual = persistence.loadTable(Some(infoDate), Some(infoDateTo)).orderBy("path").collect().map(_.getString(0))
 
@@ -89,7 +89,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.fs.create(new Path(dataPath, "1.dat")).close()
         fsUtils.fs.create(new Path(dataPath, "2.dat")).close()
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, None)
 
         val actual = persistence.loadTable(Some(infoDate.plusDays(1)), Some(infoDate)).orderBy("path").collect().map(_.getString(0))
 
@@ -104,7 +104,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         fsUtils.createDirectoryRecursive(dataPath)
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, None)
 
         assertThrows[IllegalArgumentException] {
           persistence.loadTable(None, None)
@@ -116,7 +116,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
   "saveTable()" should {
     "do nothing on an empty dataset" in {
       withTempDirectory("metastore_raw") { tempDir =>
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, None)
 
         persistence.saveTable(infoDate, Seq.empty[String].toDF("path"), None)
 
@@ -127,7 +127,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
       }
     }
 
-    "copy files to the target directory" in {
+    "copy files on driver to the target directory" in {
       withTempDirectory("metastore_raw") { tempDir =>
         val file1 = new Path(tempDir, "1.dat")
         val file2 = new Path(tempDir, "2.dat")
@@ -137,7 +137,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         val files = Seq(file1, file2).map(_.toUri.toString).toDF("path")
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite))
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite), Some(true))
 
         persistence.saveTable(infoDate, files, None)
 
@@ -147,6 +147,79 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         assert(fsUtils.exists(new Path(partitionPath, "2.dat")))
       }
     }
+
+    "copy files on executors to the target directory" in {
+      withTempDirectory("metastore_raw") { tempDir =>
+        val file1 = new Path(tempDir, "3.dat")
+        val file2 = new Path(tempDir, "4.dat")
+
+        fsUtils.fs.create(file1).close()
+        fsUtils.fs.create(file2).close()
+
+        val files = Seq(file1, file2).map(_.toUri.toString).toDF("path")
+
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite), Some(false))
+
+        persistence.saveTable(infoDate, files, None)
+
+        val partitionPath = new Path(tempDir, s"$infoDateColumn=$infoDate")
+
+        assert(fsUtils.exists(new Path(partitionPath, "3.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "4.dat")))
+      }
+    }
+
+    "copy files on the driver to the target directory (auto-decided)" in {
+      withTempDirectory("metastore_raw") { tempDir =>
+        val file1 = new Path(tempDir, "5.dat")
+        val file2 = new Path(tempDir, "6.dat")
+
+        fsUtils.fs.create(file1).close()
+        fsUtils.fs.create(file2).close()
+
+        val files = Seq(file1, file2).map(_.toUri.toString).toDF("path")
+
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite), None)
+
+        persistence.saveTable(infoDate, files, None)
+
+        val partitionPath = new Path(tempDir, s"$infoDateColumn=$infoDate")
+
+        assert(fsUtils.exists(new Path(partitionPath, "5.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "6.dat")))
+      }
+    }
+
+    "copy files on executors to the target directory (auto-decided)" in {
+      withTempDirectory("metastore_raw") { tempDir =>
+        val file1 = new Path(tempDir, "10.dat")
+        val file2 = new Path(tempDir, "11.dat")
+        val file3 = new Path(tempDir, "12.dat")
+        val file4 = new Path(tempDir, "13.dat")
+        val file5 = new Path(tempDir, "14.dat")
+
+        fsUtils.fs.create(file1).close()
+        fsUtils.fs.create(file2).close()
+        fsUtils.fs.create(file3).close()
+        fsUtils.fs.create(file4).close()
+        fsUtils.fs.create(file5).close()
+
+        val files = Seq(file1, file2, file3, file4, file5).map(_.toUri.toString).toDF("path")
+
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite), None)
+
+        persistence.saveTable(infoDate, files, None)
+
+        val partitionPath = new Path(tempDir, s"$infoDateColumn=$infoDate")
+
+        assert(fsUtils.exists(new Path(partitionPath, "10.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "11.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "12.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "13.dat")))
+        assert(fsUtils.exists(new Path(partitionPath, "14.dat")))
+      }
+    }
+
 
     "do not copy files marked as not to copy" in {
       withTempDirectory("metastore_raw") { tempDir =>
@@ -158,7 +231,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         val files = Seq((file1.toUri.toString, false), (file2.toUri.toString, true)).toDF("path", "copy")
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite))
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Overwrite), Some(true))
 
         persistence.saveTable(infoDate, files, None)
 
@@ -183,7 +256,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         fsUtils.fs.create(new Path(partitionPath, "3.dat"))
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, None)
 
         persistence.saveTable(infoDate, files, None)
 
@@ -211,7 +284,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
         fsUtils.fs.create(new Path(partitionPath, "3.dat"))
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Append))
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, Some(SaveMode.Append), Some(true))
 
         persistence.saveTable(infoDate, files, None)
 
@@ -230,7 +303,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
     "throw an exception if the dataframe does not contain the required column" in {
       withTempDirectory("metastore_raw") { tempDir =>
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, None)
 
         assertThrows[IllegalArgumentException] {
           persistence.saveTable(infoDate, spark.emptyDataFrame, None)
@@ -240,7 +313,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
   }
 
   "getStats" should {
-    "return the number of files and the total size" in {
+    "return the number of files on the driver and the total size" in {
       withTempDirectory("metastore_raw") { tempDir =>
         val partitionPath = new Path(tempDir, s"$infoDateColumn=$infoDate")
 
@@ -250,7 +323,26 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
         fsUtils.writeFile(file1, "123")
         fsUtils.writeFile(file2, "4567")
 
-        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None)
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, Some(true))
+
+        val stats = persistence.getStats(infoDate, onlyForCurrentBatchId = false)
+
+        assert(stats.recordCount.contains(2))
+        assert(stats.dataSizeBytes.contains(7L))
+      }
+    }
+
+    "return the number of files on executors and the total size" in {
+      withTempDirectory("metastore_raw") { tempDir =>
+        val partitionPath = new Path(tempDir, s"$infoDateColumn=$infoDate")
+
+        val file1 = new Path(partitionPath, "3.dat")
+        val file2 = new Path(partitionPath, "4.dat")
+
+        fsUtils.writeFile(file1, "123")
+        fsUtils.writeFile(file2, "4567")
+
+        val persistence = new MetastorePersistenceRaw(tempDir, infoDateColumn, infoDateFormat, PartitionScheme.PartitionByDay, None, Some(false))
 
         val stats = persistence.getStats(infoDate, onlyForCurrentBatchId = false)
 
@@ -262,7 +354,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
   "createOrUpdateHiveTable" should {
     "throw the unsupported exception" in {
-      val persistence = new MetastorePersistenceRaw("", "", "", PartitionScheme.PartitionByDay, None)
+      val persistence = new MetastorePersistenceRaw("", "", "", PartitionScheme.PartitionByDay, None, None)
       assertThrows[UnsupportedOperationException] {
         persistence.createOrUpdateHiveTable(infoDate, "table", null, null)
       }
@@ -271,7 +363,7 @@ class MetastorePersistenceRawSuite extends AnyWordSpec with SparkTestBase with T
 
   "repairHiveTable" should {
     "throw the unsupported exception" in {
-      val persistence = new MetastorePersistenceRaw("", "", "", PartitionScheme.PartitionByDay, None)
+      val persistence = new MetastorePersistenceRaw("", "", "", PartitionScheme.PartitionByDay, None, None)
       assertThrows[UnsupportedOperationException] {
         persistence.repairHiveTable("table", null, null)
       }
