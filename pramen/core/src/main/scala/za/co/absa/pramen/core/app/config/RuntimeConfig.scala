@@ -101,9 +101,9 @@ object RuntimeConfig {
       convertStrToDate(dateStr, DEFAULT_DATE_FORMAT, infoDateFormat)
     }
 
-    val runMode = ConfigUtils.getOptionString(conf, RUN_MODE)
+    val runMode0 = ConfigUtils.getOptionString(conf, RUN_MODE)
       .map(RunMode.fromString)
-      .getOrElse(RunMode.CheckUpdates)
+      .getOrElse(RunMode.Default)
 
     val isDryRun = conf.getBoolean(DRY_RUN)
     val isUndercover = ConfigUtils.getOptionBoolean(conf, UNDERCOVER).getOrElse(false)
@@ -122,7 +122,7 @@ object RuntimeConfig {
       throw new RuntimeException(s"Cannot run negative (or zero) number of tasks in parallel. The '${Keys.PARALLEL_TASKS}' option should be non-negative.")
     }
 
-    val isRerun = ConfigUtils.getOptionBoolean(conf, IS_RERUN).getOrElse(false) || runMode == RunMode.ForceRun
+    val isRerun = ConfigUtils.getOptionBoolean(conf, IS_RERUN).getOrElse(false) || runMode0 == RunMode.ForceRun
 
     val currentDate = ConfigUtils.getOptionString(conf, CURRENT_DATE).map(getDate).getOrElse(LocalDate.now())
     val dateFromOpt = ConfigUtils.getOptionString(conf, LOAD_DATE_FROM).map(getDate)
@@ -130,13 +130,27 @@ object RuntimeConfig {
 
     val (dateFrom, dateTo) = (dateFromOpt, dateToOpt) match {
       case (Some(from), Some(to)) =>
-        (from, Some(to))
+        if (from == to) {
+          if (runMode0 == RunMode.Default || runMode0 == RunMode.ForceRun) {
+            (from, None)
+          } else {
+            (from, Some(to))
+          }
+        } else
+          (from, Some(to))
       case (Some(from), None)     =>
         (from, None)
       case (None, Some(to))       =>
         (to, None)
       case (None, None)           =>
         (currentDate, None)
+    }
+
+    // History load default mode is 'check_updates'
+    val runMode = if (dateTo.isDefined && runMode0 == RunMode.Default) {
+      RunMode.CheckUpdates
+    } else {
+      runMode0
     }
 
     val bookkeepingEnabled = conf.getBoolean(BOOKKEEPING_ENABLED)

@@ -272,6 +272,7 @@ class PipelineNotificationBuilderHtml(implicit conf: Config) extends PipelineNot
 
   private[core] def renderRunMode (runMode: RunMode): String = {
     runMode match {
+      case RunMode.Default => "default mode"
       case RunMode.CheckUpdates => "check updates mode"
       case RunMode.SkipAlreadyRan => "backfill mode"
       case RunMode.ForceRun => "rerun mode"

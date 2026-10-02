@@ -29,6 +29,12 @@ object RunMode {
     override val toString = "check_updates"
   }
 
+  /** Default mode is used in single day execution only and uses track.days, backfill.days.
+    * For multi-day load it is the same as CheckUpdates */
+  case object Default extends RunMode {
+    override val toString = "default"
+  }
+
   /** Reruns all eligible information dates for the specified period, even if already ran. */
   case object ForceRun extends RunMode {
     override val toString = "force"
@@ -44,6 +50,7 @@ object RunMode {
     case "check_updates" => CheckUpdates
     case "force" => ForceRun
     case "bulk" => Bulk
-    case _ => throw new IllegalArgumentException(s"Unknown historical run mode: $s (should be one of: 'fill_gaps', 'check_updates', 'force', 'bulk')")
+    case "default" => Default
+    case _ => throw new IllegalArgumentException(s"Unknown historical run mode: $s (should be one of: 'fill_gaps', 'check_updates', 'force', 'bulk', 'default')")
   }
 }
