@@ -113,6 +113,24 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.runDateTo.isEmpty)
     }
 
+    "deserialize the fill_gaps for a single day" in {
+      val configStr =
+        s"""pramen {
+           |  load.date.from = 2020-12-31
+           |  load.date.to = 2020-12-31
+           |  runtime.run.mode = fill_gaps
+           |}
+           |""".stripMargin
+
+      val config = getUseCase(configStr)
+
+      val runtimeConfig = RuntimeConfig.fromConfig(config)
+
+      assert(!runtimeConfig.isRerun)
+      assert(runtimeConfig.runDate.toString == "2020-12-31")
+      assert(runtimeConfig.runDateTo.get.toString == "2020-12-31")
+    }
+
     "deserialize the config with rerun specified as run mode" in {
       val configStr =
         s"""pramen {
@@ -147,7 +165,7 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(!runtimeConfig.isRerun)
       assert(!runtimeConfig.isInverseOrder)
       assert(runtimeConfig.runDate.toString == "2020-12-31")
-      assert(runtimeConfig.runDateTo.isEmpty)
+      assert(runtimeConfig.runDateTo.get.toString == "2020-12-31")
     }
   }
 
