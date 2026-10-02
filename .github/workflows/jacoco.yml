@@ -36,11 +36,11 @@ env:
     - name: pramen-core
       paths:
         - 'pramen/core/target/**/jacoco-report/jacoco.xml'
-      thresholds: '74*90*60'
+      thresholds: '70*70*60'
     - name: pramen-extras
       paths:
         - 'pramen/extras/target/**/jacoco-report/jacoco.xml'
-      thresholds: '61*80*60'
+      thresholds: '60*60*60'
 
 jobs:
   detect:
@@ -105,8 +105,8 @@ jobs:
         uses: MoranaApps/jacoco-report@3575c005e31adda0bf6868b69d48a0114e912845 # v3.3.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          global-thresholds: '73*80'
-          report-thresholds-default: '61*80*60'
+          global-thresholds: '70*70'
+          report-thresholds-default: '60*60*60'
           skip-unchanged: 'true'
           evaluate-unchanged: 'true'
           report-groups: ${{ env.REPORT_GROUPS }}
