@@ -93,6 +93,62 @@ class RuntimeConfigSuite extends AnyWordSpec {
       assert(runtimeConfig.attempt == 1)
       assert(runtimeConfig.maxAttempts == 1)
     }
+
+    "deserialize the config with history load for a single day" in {
+      val configStr =
+        s"""pramen {
+           |  load.date.from = 2020-12-31
+           |  load.date.to = 2020-12-31
+           |  runtime.run.mode = force
+           |}
+           |""".stripMargin
+
+      val config = getUseCase(configStr)
+
+      val runtimeConfig = RuntimeConfig.fromConfig(config)
+
+      assert(runtimeConfig.isRerun)
+      assert(!runtimeConfig.isInverseOrder)
+      assert(runtimeConfig.runDate.toString == "2020-12-31")
+      assert(runtimeConfig.runDateTo.isEmpty)
+    }
+
+    "deserialize the config with rerun specified as run mode" in {
+      val configStr =
+        s"""pramen {
+           |  current.date = "2020-12-31"
+           |  runtime.run.mode = force
+           |}
+           |""".stripMargin
+
+      val config = getUseCase(configStr)
+
+      val runtimeConfig = RuntimeConfig.fromConfig(config)
+
+      assert(runtimeConfig.isRerun)
+      assert(!runtimeConfig.isInverseOrder)
+      assert(runtimeConfig.runDate.toString == "2020-12-31")
+      assert(runtimeConfig.runDateTo.isEmpty)
+    }
+
+    "deserialize the config with a normal run as run mode" in {
+      val configStr =
+        s"""pramen {
+           |  load.date.from = 2020-12-31
+           |  load.date.to = 2020-12-31
+           |  runtime.run.mode = check_updates
+           |}
+           |""".stripMargin
+
+      val config = getUseCase(configStr)
+
+      val runtimeConfig = RuntimeConfig.fromConfig(config)
+
+      assert(!runtimeConfig.isRerun)
+      assert(!runtimeConfig.isInverseOrder)
+      assert(runtimeConfig.runDate.toString == "2020-12-31")
+      assert(runtimeConfig.runDateTo.isEmpty)
+    }
   }
 
   "throw RuntimeException when number of parallel tasks is negative" in {

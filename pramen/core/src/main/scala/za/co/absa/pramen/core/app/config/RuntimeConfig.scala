@@ -130,7 +130,10 @@ object RuntimeConfig {
 
     val (dateFrom, dateTo) = (dateFromOpt, dateToOpt) match {
       case (Some(from), Some(to)) =>
-        (from, Some(to))
+        if (from == to)
+          (from, None)
+        else
+          (from, Some(to))
       case (Some(from), None)     =>
         (from, None)
       case (None, Some(to))       =>
