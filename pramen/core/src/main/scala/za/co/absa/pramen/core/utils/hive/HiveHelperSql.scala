@@ -20,6 +20,7 @@ import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.core.utils.SparkUtils
 
+import java.sql.SQLException
 import scala.util.control.NonFatal
 
 class HiveHelperSql(val queryExecutor: QueryExecutor,
@@ -27,6 +28,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
                     alwaysEscapeColumnNames: Boolean) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  @throws[SQLException]
   override def createHiveTable(path: String,
                                format: HiveFormat,
                                schema: StructType,
@@ -47,6 +49,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
+  @throws[SQLException]
   override def createOrUpdateHiveTable(path: String,
                                        format: HiveFormat,
                                        schema: StructType,
@@ -68,6 +71,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
+  @throws[SQLException]
   override def replaceHiveTableSchema(schema: StructType,
                                       partitionBy: Seq[String],
                                       databaseName: Option[String],
@@ -88,12 +92,13 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     queryExecutor.execute(sqlHiveCreate)
   }
 
+  @throws[SQLException]
   override def replaceHivePartitionSchema(schema: StructType,
                                           partitionBy: Seq[String],
                                           partitionValues: Seq[String],
                                           databaseName: Option[String],
                                           tableName: String,
-                                          location: String): Unit = {
+                                          partitionPath: String): Unit = {
     if (partitionBy.length != partitionValues.length) {
       throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
     }
@@ -103,7 +108,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
 
     log.info(s"Replacing partition schema for $fullTableName, partition: $partitionClause...")
 
-    val sql = applyPartitionTemplate(hiveConfig.replacePartitionSchemaTemplate, fullTableName, location, partitionClause, schemaDDL)
+    val sql = applyPartitionTemplate(hiveConfig.replacePartitionSchemaTemplate, fullTableName, partitionPath, partitionClause, schemaDDL)
 
     try {
       queryExecutor.execute(sql)
@@ -111,7 +116,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
       case ex: Throwable if ex.getMessage != null && ex.getMessage.toLowerCase.contains("partition not found")  =>
         log.info(s"Partition not found for $fullTableName, partition: $partitionClause. Adding partition...")
         try {
-          addPartition(databaseName, tableName, partitionBy, partitionValues, location)
+          addPartition(databaseName, tableName, partitionBy, partitionValues, partitionPath)
         } catch {
           case NonFatal(ex) =>
             log.warn(s"Failed to add partition for $fullTableName, partition: $partitionClause", ex)
@@ -121,6 +126,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
+  @throws[SQLException]
   override def repairHiveTable(databaseName: Option[String],
                                tableName: String,
                                format: HiveFormat): Unit = {
@@ -131,6 +137,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     }
   }
 
+  @throws[SQLException]
   def addPartition(databaseName: Option[String],
                    tableName: String,
                    partitionBy: Seq[String],
@@ -146,8 +153,10 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
   }
 
 
+  @throws[SQLException]
   override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = queryExecutor.doesTableExist(databaseName, tableName)
 
+  @throws[SQLException]
   override def dropTable(databaseName: Option[String],
                          tableName: String): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
@@ -155,6 +164,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     dropHiveTable(fullTableName)
   }
 
+  @throws[SQLException]
   private def dropHiveTable(fullTableName: String): Unit = {
     val sqlHiveDrop = applyTemplate(
       hiveConfig.dropTableTemplate,
@@ -164,6 +174,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
     queryExecutor.execute(sqlHiveDrop)
   }
 
+  @throws[SQLException]
   private def createHiveTable(fullTableName: String,
                               path: String,
                               format: HiveFormat,
@@ -192,6 +203,7 @@ class HiveHelperSql(val queryExecutor: QueryExecutor,
   }
 
 
+  @throws[SQLException]
   private def repairHiveTable(fullTableName: String): Unit = {
     val sqlHiveRepair = applyTemplate(
       hiveConfig.repairTableTemplate,
