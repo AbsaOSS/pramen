@@ -125,8 +125,12 @@ abstract class HiveHelper {
     * the partition. If it does not conform to the Hive+Parquet schema on read compatibility matrix, Hive
     * clients can experience casting or serialization errors.
     *
-    * The table and the partition are expected to exist. If they do not, an exception will be thrown,
+    * The table is expected to exist. If it does not, an exception will be thrown,
     * usually `SQLException`, but this depends on the implementation.
+    *
+    * If partition replacement fails with an error message containing `partition not found`,
+    * the implementation attempts to add the partition and retry replacement. The call can
+    * still fail if the retry fails, usually with `SQLException`, but this depends on the implementation.
     *
     * @param schema          The new Spark schema of the data used to redefine the partition columns.
     * @param partitionBy     The list of columns the table is partitioned by.
