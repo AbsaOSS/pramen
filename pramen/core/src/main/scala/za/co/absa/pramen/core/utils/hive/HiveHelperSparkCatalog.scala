@@ -22,11 +22,13 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.CatalogTable
 import za.co.absa.pramen.core.utils.SparkUtils
 
+import java.sql.SQLException
 import scala.util.control.NonFatal
 
 class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
   private val log = LoggerFactory.getLogger(this.getClass)
 
+  @throws[SQLException]
   override def createHiveTable(path: String,
                                format: HiveFormat,
                                schema: StructType,
@@ -52,6 +54,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     }
   }
 
+  @throws[SQLException]
   override def createOrUpdateHiveTable(path: String,
                                        format: HiveFormat,
                                        schema: StructType,
@@ -82,6 +85,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     }
   }
 
+  @throws[SQLException]
   override def replaceHiveTableSchema(schema: StructType,
                                       partitionBy: Seq[String],
                                       databaseName: Option[String],
@@ -103,12 +107,13 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     spark.sql(sql).collect()
   }
 
+  @throws[SQLException]
   override def replaceHivePartitionSchema(schema: StructType,
                                           partitionBy: Seq[String],
                                           partitionValues: Seq[String],
                                           databaseName: Option[String],
                                           tableName: String,
-                                          location: String): Unit = {
+                                          partitionPath: String): Unit = {
     if (partitionBy.length != partitionValues.length) {
       throw new IllegalArgumentException(s"Partition columns and values must have the same length. Columns: $partitionBy, values: $partitionValues")
     }
@@ -135,7 +140,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
       case ex: Throwable if ex.getMessage != null && ex.getMessage.toLowerCase.contains("partition not found")  =>
         log.info(s"Partition not found for $fullTableName, partition: $partitionClause. Adding partition...")
         try {
-          addPartition(databaseName, tableName, partitionBy, partitionValues, location)
+          addPartition(databaseName, tableName, partitionBy, partitionValues, partitionPath)
         } catch {
           case NonFatal(ex) =>
             log.warn(s"Failed to add partition for $fullTableName, partition: $partitionClause", ex)
@@ -146,6 +151,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     }
   }
 
+  @throws[SQLException]
   override def repairHiveTable(databaseName: Option[String],
                                tableName: String,
                                format: HiveFormat): Unit = {
@@ -156,6 +162,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     }
   }
 
+  @throws[SQLException]
   def addPartition(databaseName: Option[String],
                    tableName: String,
                    partitionBy: Seq[String],
@@ -171,10 +178,12 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     spark.sql(sql).collect()
   }
 
+  @throws[SQLException]
   private def dropCatalogTable(fullTableName: String): Unit = {
     spark.sql(s"DROP TABLE $fullTableName").collect()
   }
 
+  @throws[SQLException]
   override def doesTableExist(databaseName: Option[String], tableName: String): Boolean = {
     val catalogTable = CatalogTable.fromComponents(None, databaseName, tableName)
     val exists = SparkUtils.doesCatalogTableExist(catalogTable)(spark)
@@ -187,6 +196,7 @@ class HiveHelperSparkCatalog(spark: SparkSession) extends HiveHelper {
     exists
   }
 
+  @throws[SQLException]
   override def dropTable(databaseName: Option[String],
                          tableName: String): Unit = {
     val fullTableName = HiveHelper.getFullTable(databaseName, tableName)
