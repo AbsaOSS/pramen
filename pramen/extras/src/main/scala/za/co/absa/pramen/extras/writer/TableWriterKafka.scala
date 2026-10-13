@@ -140,7 +140,7 @@ class TableWriterKafka(topicName: String,
 }
 
 object TableWriterKafka {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def apply(topicName: String, conf: Config)(implicit spark: SparkSession): TableWriterKafka = {
     val kafkaConfig = KafkaAvroWriterConfig.fromConfig(conf)

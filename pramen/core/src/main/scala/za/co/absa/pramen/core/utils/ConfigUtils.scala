@@ -31,7 +31,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object ConfigUtils {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def getOptionBoolean(conf: Config, path: String): Option[Boolean] = {
     if (conf.hasPath(path)) {

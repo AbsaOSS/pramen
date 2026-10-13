@@ -57,7 +57,7 @@ case class OperationDef(
                        )
 
 object OperationDef {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val NAME_KEY = "name"
   val TYPE_KEY = "type"

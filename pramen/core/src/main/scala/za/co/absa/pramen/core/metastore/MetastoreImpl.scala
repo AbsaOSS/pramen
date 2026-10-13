@@ -349,7 +349,7 @@ class MetastoreImpl(appConfig: Config,
 }
 
 object MetastoreImpl {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val METASTORE_KEY = "pramen.metastore.tables"
 

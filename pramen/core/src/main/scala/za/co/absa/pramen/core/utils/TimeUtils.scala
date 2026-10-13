@@ -24,7 +24,7 @@ import java.util.Locale
 object TimeUtils {
   import scala.math.Integral.Implicits._
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * Returns a pretty time description between 2 instances.

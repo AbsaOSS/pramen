@@ -18,7 +18,7 @@ package za.co.absa.pramen.core.pipeline
 
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
-import za.co.absa.pramen.api.jobdef.{SourceTable, TransformExpression}
+import za.co.absa.pramen.api.jobdef.SourceTable
 import za.co.absa.pramen.core.model.QueryBuilder
 import za.co.absa.pramen.core.pipeline.OperationDef.WARN_MAXIMUM_EXECUTION_TIME_SECONDS_KEY
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
@@ -26,7 +26,7 @@ import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 import scala.collection.JavaConverters._
 
 object SourceTableParser {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val METATABLE_TABLE_KEY = "output.metastore.table"
   val DATE_FROM_KEY = "date.from"

@@ -24,7 +24,7 @@ trait SimpleHttpClient extends AutoCloseable {
 }
 
 object SimpleHttpClient {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * This builds an instance of `SimpleHttpClient` that should be used in practice.

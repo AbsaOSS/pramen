@@ -29,7 +29,7 @@ import scala.util.{Failure, Success}
 object ThreadUtils {
   val MIN_WAIT_AFTER_INTERRUPT_MS = 1000
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * Executes an action with a timeout. If the timeout is breached, cleanup is performed

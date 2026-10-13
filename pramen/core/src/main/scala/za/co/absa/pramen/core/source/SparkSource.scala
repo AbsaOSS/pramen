@@ -24,9 +24,9 @@ import za.co.absa.pramen.api._
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlColumnType
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
-import za.co.absa.pramen.core.reader.{TableReaderJdbcNative, TableReaderSpark}
 import za.co.absa.pramen.core.reader.model.OffsetInfoParser
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig._
+import za.co.absa.pramen.core.reader.{TableReaderJdbcNative, TableReaderSpark}
 import za.co.absa.pramen.core.utils.{ConfigUtils, FsUtils}
 
 import java.time.LocalDate
@@ -126,7 +126,7 @@ class SparkSource(val format: Option[String],
 }
 
 object SparkSource extends ExternalChannelFactory[SparkSource] {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val FORMAT = "format"
   val SCHEMA = "schema"

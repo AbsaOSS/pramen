@@ -25,7 +25,7 @@ import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 import scala.collection.JavaConverters._
 
 object SinkTableParser {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val METATABLE_TABLE_KEY = "input.metastore.table"
   val JOB_METASTORE_OUTPUT_TABLE_KEY = "job.metastore.table"

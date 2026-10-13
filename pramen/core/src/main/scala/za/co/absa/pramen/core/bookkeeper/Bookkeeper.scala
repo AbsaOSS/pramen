@@ -80,7 +80,7 @@ trait Bookkeeper extends AutoCloseable {
 }
 
 object Bookkeeper {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def fromConfig(bookkeepingConfig: BookkeeperConfig,
                  runtimeConfig: RuntimeConfig,

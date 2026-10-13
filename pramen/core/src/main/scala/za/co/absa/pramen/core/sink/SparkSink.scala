@@ -22,7 +22,6 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{ExternalChannelFactory, MetastoreReader, Sink, SinkResult}
 import za.co.absa.pramen.core.config.Keys.KEYS_TO_REDACT
-import za.co.absa.pramen.core.reader.TableReaderJdbcNative
 import za.co.absa.pramen.core.sink.SparkSinkFormat.{ConnectionFormat, PathFormat, TableFormat}
 import za.co.absa.pramen.core.source.SparkSource.resolveQueryString
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils, FsUtils}
@@ -226,7 +225,7 @@ class SparkSink(format: String,
 }
 
 object SparkSink extends ExternalChannelFactory[SparkSink] {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val OUTPUT_PATH_KEY = "path"
   val OUTPUT_TABLE_KEY = "table"

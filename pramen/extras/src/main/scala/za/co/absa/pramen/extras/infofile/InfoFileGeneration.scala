@@ -18,7 +18,7 @@ package za.co.absa.pramen.extras.infofile
 
 import com.typesafe.config.Config
 import org.apache.hadoop.fs.Path
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.extras.utils.ConfigUtils
 
@@ -33,7 +33,7 @@ object InfoFileGeneration {
   val TIMESTAMP_FORMAT_KEY = "info.file.timestamp.format"
   val DATE_FORMAT_KEY = "info.file.date.format"
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def generateInfoFile(pramenVersion: String,
                        timezoneId: ZoneId,

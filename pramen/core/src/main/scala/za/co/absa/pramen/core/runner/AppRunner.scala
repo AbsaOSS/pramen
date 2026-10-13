@@ -43,7 +43,7 @@ object AppRunner {
   val ERROR_CODE_FAILURE = 1
   private var bannerShown = false
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * Runs the pipeline defined in the given config.

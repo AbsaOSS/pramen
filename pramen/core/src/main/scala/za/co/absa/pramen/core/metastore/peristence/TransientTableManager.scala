@@ -31,7 +31,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Random
 
 object TransientTableManager {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   private val rawDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()
   private val cachedDataframes = new mutable.HashMap[MetastorePartition, DataFrame]()

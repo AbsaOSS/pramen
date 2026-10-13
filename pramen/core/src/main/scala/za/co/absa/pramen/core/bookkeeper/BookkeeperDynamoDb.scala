@@ -809,7 +809,7 @@ object BookkeeperDynamoDb {
 
   val MODEL_VERSION = 1
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * Builder for creating BookkeeperDynamoDb instances.

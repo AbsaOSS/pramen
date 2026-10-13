@@ -40,7 +40,7 @@ import scala.util.control.NonFatal
 import scala.util.{Failure, Success, Try}
 
 object SparkUtils {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
   private val charVarcharTypePattern = """(?i)\s*(char|varchar)\((\d+)\)\s*""".r
   private val charVarcharLengthPattern = """(?:char|varchar)\((\d+)\)""".r
 

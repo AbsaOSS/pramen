@@ -210,7 +210,7 @@ object OperationSplitter {
   val NOTIFICATION_KEY = "notification"
   val DISABLE_COUNT_QUERY = "disable.count.query"
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   private[core] def getNotificationTarget(appConf: Config,
                                           targetName: String,

@@ -67,6 +67,7 @@ object Keys {
     "spark.yarn.dist.files",
     "spline.mongodb.url",
     "sun.boot.class.path",
-    "sun.java.command"
+    "sun.java.command",
+    "log4j2.discardThreshold" // This option is usually equals to ERROR and its presence confuses log error scanners
   )
 }

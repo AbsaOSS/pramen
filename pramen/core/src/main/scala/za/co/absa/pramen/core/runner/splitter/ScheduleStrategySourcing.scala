@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.runner.splitter
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.bulkload.BulkLoadStateManager
@@ -37,7 +38,7 @@ import java.time.LocalDate
   * @param hasInfoDateColumn If true, the output table has an info date column and is treated as a table containing immutable events.
   */
 class ScheduleStrategySourcing(hasInfoDateColumn: Boolean) extends ScheduleStrategy {
-  private val log = org.slf4j.LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   override def getDaysToRun(
                              outputTable: String,

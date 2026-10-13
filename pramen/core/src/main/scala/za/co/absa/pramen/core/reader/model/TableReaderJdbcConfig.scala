@@ -46,7 +46,7 @@ case class TableReaderJdbcConfig(
                                 )
 
 object TableReaderJdbcConfig {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val HAS_INFO_DATE = "has.information.date.column"
   val INFORMATION_DATE_COLUMN = "information.date.column"
