@@ -342,7 +342,7 @@ class MetastorePersistenceRaw(path: String,
 }
 
 object MetastorePersistenceRaw {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val MEGABYTE: Long = 1024L * 1024L
   val RAW_PATH_FIELD_KEY = "path"

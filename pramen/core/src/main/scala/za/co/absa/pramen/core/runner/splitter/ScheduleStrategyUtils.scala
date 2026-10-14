@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.runner.splitter
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.RunMode
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.TaskRunReason
@@ -33,7 +34,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 object ScheduleStrategyUtils {
-  private val log = org.slf4j.LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val RUN_DATE_VAR1 = "runDate"
   val RUN_DATE_VAR2 = "date"

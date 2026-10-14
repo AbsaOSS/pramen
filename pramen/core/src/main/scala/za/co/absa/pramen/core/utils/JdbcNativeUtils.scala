@@ -44,7 +44,7 @@ import scala.util.control.NonFatal
   *  change the state of the database and is not idempotent (inserts, updates, deletes).
   */
 object JdbcNativeUtils {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   final val DEFAULT_CONNECTION_TIMEOUT_SECONDS = 60
   final val JDBC_WORDS_TO_REDACT = Set("password", "secret", "pwd", "token", "key", "api_key")

@@ -23,7 +23,7 @@ import java.time.{Instant, LocalDate, ZoneId, ZonedDateTime}
 import scala.collection.mutable.ListBuffer
 
 object ScheduleUtils {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * Converts a moment in time into a date by applying local time zone.

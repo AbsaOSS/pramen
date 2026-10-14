@@ -31,7 +31,7 @@ object HookConfig {
   val STARTUP_HOOK_CLASS_KEY = "pramen.hook.startup.class"
   val SHUTDOWN_HOOK_CLASS_KEY = "pramen.hook.shutdown.class"
 
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def fromConfig(conf: Config): HookConfig = {
     val startupHookClass = ConfigUtils.getOptionString(conf, STARTUP_HOOK_CLASS_KEY).filter(_.nonEmpty)

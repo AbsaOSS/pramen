@@ -58,7 +58,7 @@ case class RuntimeConfig(
                         )
 
 object RuntimeConfig {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val INFORMATION_DATE_FORMAT_APP = "pramen.information.date.format"
 

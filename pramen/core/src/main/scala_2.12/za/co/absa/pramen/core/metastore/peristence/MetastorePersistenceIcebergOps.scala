@@ -17,7 +17,6 @@
 package za.co.absa.pramen.core.metastore.peristence
 
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.DateType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.PartitionScheme
@@ -27,7 +26,7 @@ import java.time.LocalDate
 import scala.collection.mutable
 
 object MetastorePersistenceIcebergOps {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def createIcebergTable(df: DataFrame,
                          table: String,

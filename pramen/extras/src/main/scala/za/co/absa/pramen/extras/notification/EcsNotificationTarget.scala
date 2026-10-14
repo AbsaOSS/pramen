@@ -60,7 +60,7 @@ class EcsNotificationTarget(conf: Config) extends NotificationTarget {
 }
 
 object EcsNotificationTarget {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val ECS_API_URL_KEY = "ecs.api.url"
   val ECS_API_SECRET_KEY = "ecs.api.key"

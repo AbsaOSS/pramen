@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.pipeline.PipelineDef.PIPELINE_NAME_KEY
 import za.co.absa.pramen.core.utils.ConfigUtils
 
 object PipelineSparkSessionBuilder {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val SPARK_APP_NAME_KEY = "pramen.spark.app.name"
 

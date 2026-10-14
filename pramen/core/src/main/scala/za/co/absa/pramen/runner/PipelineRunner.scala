@@ -28,7 +28,7 @@ import za.co.absa.pramen.core.utils.ConfigUtils
 import scala.collection.mutable.ListBuffer
 
 object PipelineRunner {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   private val workflowExitCodes = new ListBuffer[Int]
 

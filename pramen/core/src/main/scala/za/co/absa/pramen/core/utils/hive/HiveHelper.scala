@@ -221,7 +221,7 @@ abstract class HiveHelper {
 }
 
 object HiveHelper {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def fromHiveConfig(hiveConfig: HiveConfig)
                     (implicit spark: SparkSession): HiveHelper = {

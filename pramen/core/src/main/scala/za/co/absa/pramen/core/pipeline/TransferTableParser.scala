@@ -32,7 +32,7 @@ import java.time.LocalDate
 import scala.collection.JavaConverters._
 
 object TransferTableParser {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val JOB_METASTORE_OUTPUT_TABLE_KEY = "job.metastore.table"
   val DATE_FROM_KEY = "date.from"

@@ -75,7 +75,7 @@ case class MetaTable(
                     )
 
 object MetaTable {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val NAME_KEY = "name"
   val NAME_DESCRIPTION = "description"

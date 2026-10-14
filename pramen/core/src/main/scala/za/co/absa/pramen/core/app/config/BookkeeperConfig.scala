@@ -37,7 +37,7 @@ case class BookkeeperConfig(
                             )
 
 object BookkeeperConfig {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val BOOKKEEPING_PARENT = "pramen.bookkeeping"
   val BOOKKEEPING_ENABLED = "pramen.bookkeeping.enabled"

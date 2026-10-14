@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.runner.splitter
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.jobdef.Schedule
 import za.co.absa.pramen.api.status.{MetastoreDependency, TaskRunReason}
 import za.co.absa.pramen.bulkload.BulkLoadStateManager
@@ -28,7 +29,7 @@ import za.co.absa.pramen.core.runner.splitter.ScheduleStrategyUtils._
 import java.time.LocalDate
 
 class ScheduleStrategyIncremental(lastInfoDateProcessedOpt: Option[LocalDate], hasInfoDateColumn: Boolean) extends ScheduleStrategy {
-  private val log = org.slf4j.LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   override def getDaysToRun(
                              outputTable: String,

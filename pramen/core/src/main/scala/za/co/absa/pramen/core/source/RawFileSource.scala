@@ -249,7 +249,7 @@ class RawFileSource(val sourceConfig: Config,
 }
 
 object RawFileSource extends ExternalChannelFactory[RawFileSource] {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val FILE_PREFIX = "file"
   val FILE_PATTERN_CASE_SENSITIVE_KEY = "file.pattern.case.sensitive"

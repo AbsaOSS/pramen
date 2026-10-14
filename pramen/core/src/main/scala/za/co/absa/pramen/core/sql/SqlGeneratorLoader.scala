@@ -20,7 +20,7 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.sql.{SqlConfig, SqlGenerator}
 
 object SqlGeneratorLoader {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * Loads an SQL generator, If SQL configuration contains a generator class name, it will be loaded.

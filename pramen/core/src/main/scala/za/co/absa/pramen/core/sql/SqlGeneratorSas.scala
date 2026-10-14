@@ -29,7 +29,7 @@ import java.util.Locale
 import scala.collection.mutable.ListBuffer
 
 object SqlGeneratorSas {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * This is required for Spark to be able to handle data that comes from Sas JDBC drivers

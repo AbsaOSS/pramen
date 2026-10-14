@@ -24,7 +24,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
 object TokenLockRegistry {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
   private var currentLocks = new ListBuffer[TokenLock]
   private val registryLock = new ReentrantLock()
 

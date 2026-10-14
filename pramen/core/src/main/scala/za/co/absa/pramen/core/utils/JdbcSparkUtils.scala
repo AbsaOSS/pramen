@@ -29,7 +29,7 @@ import java.sql.{Connection, DatabaseMetaData, ResultSet, ResultSetMetaData}
 import scala.collection.mutable.ListBuffer
 
 object JdbcSparkUtils {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val MAXIMUM_VARCHAR_LENGTH = 8192
   val MAXIMUM_UUID_LENGTH = 50

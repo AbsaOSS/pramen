@@ -26,7 +26,7 @@ import de.flapdoodle.reverse.{StateID, TransitionWalker}
 import org.slf4j.{Logger, LoggerFactory}
 
 object MongoDbSingleton {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   lazy val embeddedMongoDb: (Option[RunningMongodProcess], Int) = startEmbeddedMongoDb()
 

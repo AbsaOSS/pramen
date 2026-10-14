@@ -30,7 +30,7 @@ import java.nio.file.{FileSystems, Files, Paths}
 import scala.util.Try
 
 object RunnerCommons {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   /**
     * The method parses command line parameters and returns workflow configs.

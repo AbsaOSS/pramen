@@ -22,7 +22,7 @@ import scala.collection.JavaConverters._
 import scala.util.control.NonFatal
 
 object ThreadClosableRegistry {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
   private val closeables = new java.util.LinkedList[(Long, AutoCloseable)]
 
   /**

@@ -402,7 +402,7 @@ class StandardizationSink(sinkConfig: Config,
 }
 
 object StandardizationSink extends ExternalChannelFactory[StandardizationSink] {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   val RAW_BASE_PATH_KEY = "raw.base.path"
   val PUBLISH_BASE_PATH_KEY = "publish.base.path"

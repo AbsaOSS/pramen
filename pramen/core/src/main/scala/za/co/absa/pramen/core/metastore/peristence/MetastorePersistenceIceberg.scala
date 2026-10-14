@@ -178,7 +178,7 @@ class MetastorePersistenceIceberg(table: CatalogTable,
 }
 
 object MetastorePersistenceIceberg {
-  private val log = LoggerFactory.getLogger(this.getClass)
+  private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
 
   def addGeneratedColumnPartition(table: String,
                                   infoDateColumn: String,
