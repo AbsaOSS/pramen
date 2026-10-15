@@ -121,7 +121,6 @@ class IncrementalIngestionJob(operationDef: OperationDef,
             throw new IllegalStateException(s"No offsets for '${outputTable.name}' for '$infoDate'. Cannot rerun.")
         }
       case (true, false) =>
-        val om = bookkeeper.getOffsetManager
         val infoDateLatestOffset = om.getMaxInfoDateAndOffset(outputTable.name, Some(infoDate))
         infoDateLatestOffset match {
           case Some(maxOffset) =>
@@ -158,6 +157,18 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     validateOffsetColumn(df, offsetInfo)
     val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType)
 
+    val currentMaxOffsetOpt = if (offsetInfo.offsetType == OffsetType.KafkaType) {
+      val isReRun = runReason == TaskRunReason.Rerun
+
+      if (isReRun) {
+        om.getMaxInfoDateAndOffset(outputTable.name, Option(infoDate)).map(_.maximumOffset)
+      } else {
+        om.getMaxInfoDateAndOffset(outputTable.name, None).map(_.maximumOffset)
+      }
+    } else {
+      None
+    }
+
     val stats = try {
       val saveMode = if (isRerun) SaveMode.Overwrite else SaveMode.Append
       val statsToReturn = metastore.saveTable(outputTable.name, infoDate, dfToSave, inputRecordCount, saveModeOverride = Some(saveMode))
@@ -167,7 +178,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       else
         metastore.getBatch(outputTable.name, infoDate, None)
 
-      OffsetManagerUtils.getMinMaxValueFromData(updatedDf, offsetInfo.offsetColumn, offsetInfo.offsetType) match {
+      OffsetManagerUtils.getMinMaxValueFromData(updatedDf, offsetInfo.offsetColumn, offsetInfo.offsetType, currentMaxOffsetOpt) match {
         case Some((minOffset, maxOffset)) =>
           if (isRerun) {
             om.commitRerun(req, minOffset, maxOffset)
@@ -278,7 +289,9 @@ class IncrementalIngestionJob(operationDef: OperationDef,
       throw new IllegalArgumentException(s"Offset column '${offsetInfo.offsetColumn}' not found in the output table '${outputTable.name}'. Cannot update uncommitted offsets.")
     }
 
-    val (newMinOffset, newMaxOffset) = OffsetManagerUtils.getMinMaxValueFromData(df, offsetInfo.offsetColumn, offsetInfo.offsetType).get
+    val minOffsets = uncommittedOffsets.flatMap(_.minOffsetOpt)
+    val maxOfMinOffsetsOpt = if (minOffsets.nonEmpty) Some(minOffsets.max) else None
+    val (newMinOffset, newMaxOffset) = OffsetManagerUtils.getMinMaxValueFromData(df, offsetInfo.offsetColumn, offsetInfo.offsetType, maxOfMinOffsetsOpt).get
 
     log.warn(s"Fixing uncommitted offsets. New offset to commit for ${outputTable.name} at $infoDate: " +
       s"min offset: ${newMinOffset.valueString}, max offset: ${newMaxOffset.valueString}.")

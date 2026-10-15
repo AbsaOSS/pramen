@@ -49,6 +49,7 @@ object DataOffset {
                                 infoDate: LocalDate,
                                 batchId: Long,
                                 offsetType: OffsetType,
+                                minOffsetOpt: Option[OffsetValue],
                                 createdAt: Instant
                               ) extends DataOffset {
 

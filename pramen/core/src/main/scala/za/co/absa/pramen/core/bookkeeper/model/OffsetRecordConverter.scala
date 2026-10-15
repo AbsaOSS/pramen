@@ -43,6 +43,7 @@ object OffsetRecordConverter {
         LocalDate.parse(r.infoDate),
         r.batchId,
         dataType,
+        minOffsetOpt,
         Instant.ofEpochMilli(r.createdAtMilli)
       )
     }
