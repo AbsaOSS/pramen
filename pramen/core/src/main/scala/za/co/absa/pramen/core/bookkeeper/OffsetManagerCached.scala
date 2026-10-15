@@ -57,8 +57,8 @@ class OffsetManagerCached(offsetManager: OffsetManager) extends OffsetManager {
     }
   }
 
-  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest = {
-    offsetManager.startWriteOffsets(table, infoDate, offsetType)
+  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType, minOffset: Option[OffsetValue]): DataOffsetRequest = {
+    offsetManager.startWriteOffsets(table, infoDate, offsetType, minOffset)
   }
 
   override def commitOffsets(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {

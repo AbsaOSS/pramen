@@ -132,10 +132,11 @@ class OffsetManagerDynamoDb(
     }
   }
 
-  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest = {
+  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType, minOffset: Option[OffsetValue]): DataOffsetRequest = {
     val createdAt = Instant.now()
     val createdAtMilli = createdAt.toEpochMilli
     val compositeKey = s"${infoDate.toString}#${createdAtMilli}"
+    val minOffsetStr = minOffset.map(_.valueString).getOrElse("")
 
     try {
       val putRequest = PutItemRequest.builder()
@@ -145,7 +146,7 @@ class OffsetManagerDynamoDb(
           ATTR_COMPOSITE_KEY -> AttributeValue.builder().s(compositeKey).build(),
           ATTR_INFO_DATE -> AttributeValue.builder().s(infoDate.toString).build(),
           ATTR_DATA_TYPE -> AttributeValue.builder().s(offsetType.dataTypeString).build(),
-          ATTR_MIN_OFFSET -> AttributeValue.builder().s("").build(),
+          ATTR_MIN_OFFSET -> AttributeValue.builder().s(minOffsetStr).build(),
           ATTR_MAX_OFFSET -> AttributeValue.builder().s("").build(),
           ATTR_BATCH_ID -> AttributeValue.builder().n(batchId.toString).build(),
           ATTR_CREATED_AT -> AttributeValue.builder().n(createdAtMilli.toString).build()

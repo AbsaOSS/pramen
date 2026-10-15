@@ -47,9 +47,11 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
         KafkaPartition(4, 50)
       ))
 
-      val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base)
+      val mered1 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = false)
+      val mered2 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = true)
 
-      assert(mered.value == primary.value)
+      assert(mered1.value == primary.value)
+      assert(mered2.value == primary.value)
     }
 
     "return correct offsets when primary offset has gaps" in {
@@ -59,7 +61,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
         KafkaPartition(4, 50)
       ))
 
-      val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base)
+      val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = false)
 
       assert(mered.value == Seq(
         KafkaPartition(0, 10),
@@ -76,14 +78,23 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
         KafkaPartition(3, 40)
       ))
 
-      val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base)
+      val mered1 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = false)
+      val mered2 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = true)
 
-      assert(mered.value == Seq(
+      assert(mered1.value == Seq(
         KafkaPartition(0, 11),
         KafkaPartition(1, 20),
         KafkaPartition(2, 31),
         KafkaPartition(3, 40),
         KafkaPartition(4, 51)
+      ))
+
+      assert(mered2.value == Seq(
+        KafkaPartition(0, 12),
+        KafkaPartition(1, 20),
+        KafkaPartition(2, 32),
+        KafkaPartition(3, 40),
+        KafkaPartition(4, 52)
       ))
     }
   }

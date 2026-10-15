@@ -155,7 +155,6 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     )
 
     validateOffsetColumn(df, offsetInfo)
-    val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType)
 
     val currentMaxOffsetOpt = if (offsetInfo.offsetType == OffsetType.KafkaType) {
       val isReRun = runReason == TaskRunReason.Rerun
@@ -168,6 +167,8 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     } else {
       None
     }
+
+    val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType, currentMaxOffsetOpt)
 
     val stats = try {
       val saveMode = if (isRerun) SaveMode.Overwrite else SaveMode.Append
@@ -296,7 +297,7 @@ class IncrementalIngestionJob(operationDef: OperationDef,
     log.warn(s"Fixing uncommitted offsets. New offset to commit for ${outputTable.name} at $infoDate: " +
       s"min offset: ${newMinOffset.valueString}, max offset: ${newMaxOffset.valueString}.")
 
-    val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType)
+    val req = om.startWriteOffsets(outputTable.name, infoDate, offsetInfo.offsetType, None)
     om.commitOffsets(req, newMinOffset, newMaxOffset)
 
     uncommittedOffsets.foreach { of =>

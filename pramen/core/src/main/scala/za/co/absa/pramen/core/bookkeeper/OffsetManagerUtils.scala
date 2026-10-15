@@ -29,10 +29,16 @@ object OffsetManagerUtils {
     * for a given increment ingestion job. But if data ingested does not cover all partitions, such partitions
     * might be missing in the list. In this case, values from the 'baseValue' are used.
     */
-  def mergeKafkaPartitions(primaryValue: OffsetValue.KafkaValue, baseValue: OffsetValue.KafkaValue): OffsetValue.KafkaValue = {
+  def mergeKafkaPartitions(primaryValue: OffsetValue.KafkaValue, baseValue: OffsetValue.KafkaValue, asMinimumOffset: Boolean): OffsetValue.KafkaValue = {
     val partitions1 = primaryValue.value.map(v => (v.partition, v.offset)).toMap
-    val partitions2 = baseValue.value.map(v => (v.partition, v.offset)).toMap
-    val maxPartition = Math.max(partitions1.keys.max, partitions2.keys.max)
+    val partitions02 = baseValue.value.map(v => (v.partition, v.offset)).toMap
+    val maxPartition = Math.max(partitions1.keys.max, partitions02.keys.max)
+
+    val partitions2 = if (asMinimumOffset) {
+      partitions02.map(o => (o._1, o._2 + 1))
+    } else {
+      partitions02
+    }
 
     val newPartitions = for (i <- 0 to maxPartition) yield  {
       if (partitions1.contains(i))
@@ -69,7 +75,7 @@ object OffsetManagerUtils {
         val maxValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](2))).toSeq)
 
         val (minValueMerged, maxValueMerged) = currentMaxOffset match {
-          case Some(value: OffsetValue.KafkaValue) => (mergeKafkaPartitions(minValue, value), mergeKafkaPartitions(maxValue, value))
+          case Some(value: OffsetValue.KafkaValue) => (mergeKafkaPartitions(minValue, value, asMinimumOffset = true), mergeKafkaPartitions(maxValue, value, asMinimumOffset = false))
           case _ => (minValue, maxValue)
         }
 
