@@ -65,7 +65,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
       val nextHour = now.plusSeconds(3600)
       val om = getOffsetManager
 
-      om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
 
       val actualNonEmpty = om.getOffsets("table1", infoDate)
       val actualEmpty1 = om.getOffsets("table1", infoDate.plusDays(1))
@@ -87,7 +87,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "return committed offsets" in {
       val om = getOffsetManager
 
-      val transactionReference = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val transactionReference = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       Thread.sleep(10)
       om.commitOffsets(transactionReference, OffsetValue.IntegralValue(1), OffsetValue.IntegralValue(100))
 
@@ -137,15 +137,15 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "return the maximum info date and offsets " in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(1), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t2, OffsetValue.IntegralValue(101), OffsetValue.IntegralValue(200))
       Thread.sleep(10)
 
-      val t3 = om.startWriteOffsets("table1", infoDate.plusDays(1), OffsetType.IntegralType)
+      val t3 = om.startWriteOffsets("table1", infoDate.plusDays(1), OffsetType.IntegralType, None)
       om.commitOffsets(t3, OffsetValue.IntegralValue(201), OffsetValue.IntegralValue(300))
 
       val summaryMultiDay = om.getMaxInfoDateAndOffset("table1", None)
@@ -175,7 +175,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work for empty offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(10), OffsetValue.IntegralValue(100))
 
       val offsets = om.getOffsets("table1", infoDate)
@@ -192,11 +192,11 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work for non-empty offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(10), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t2, OffsetValue.IntegralValue(101), OffsetValue.IntegralValue(200))
 
       val offsets = om.getOffsets("table1", infoDate)
@@ -223,15 +223,15 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work with reruns that do not change offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t2, OffsetValue.IntegralValue(101), OffsetValue.IntegralValue(200))
       Thread.sleep(10)
 
-      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitRerun(t3, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(200))
 
       val offsets = om.getOffsets("table1", infoDate)
@@ -250,15 +250,15 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work with reruns that do change offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t2, OffsetValue.IntegralValue(101), OffsetValue.IntegralValue(200))
       Thread.sleep(10)
 
-      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitRerun(t3, OffsetValue.IntegralValue(201), OffsetValue.IntegralValue(300))
 
       val offsets = om.getOffsets("table1", infoDate)
@@ -277,15 +277,15 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work with reruns that deletes all data and no previous offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t2, OffsetValue.IntegralValue(101), OffsetValue.IntegralValue(200))
       Thread.sleep(10)
 
-      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitRerun(t3, OffsetValue.IntegralValue(-1), OffsetValue.IntegralValue(-1))
 
       val offsets = om.getOffsets("table1", infoDate)
@@ -304,15 +304,15 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work with reruns that deletes all data and there are previous offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(Long.MinValue), OffsetValue.IntegralValue(0))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t2, OffsetValue.IntegralValue(1), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitRerun(t3, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(0))
 
       val offsets = om.getOffsets("table1", infoDate)
@@ -331,15 +331,15 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "throw an exception when offsets are incorrect" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(Long.MinValue), OffsetValue.IntegralValue(0))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t2, OffsetValue.IntegralValue(1), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t3 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       val ex = intercept[IllegalArgumentException] {
         om.commitRerun(t3, OffsetValue.IntegralValue(1), OffsetValue.IntegralValue(-1))
       }
@@ -380,7 +380,7 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work for empty offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.rollbackOffsets(t1)
 
       val offsets = om.getOffsets("table1", infoDate)
@@ -391,11 +391,11 @@ class OffsetManagerJdbcSuite extends AnyWordSpec with RelationalDbFixture with B
     "work for non-empty offsets" in {
       val om = getOffsetManager
 
-      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t1 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.commitOffsets(t1, OffsetValue.IntegralValue(0), OffsetValue.IntegralValue(100))
       Thread.sleep(10)
 
-      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+      val t2 = om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
       om.rollbackOffsets(t2)
 
       val offsets = om.getOffsets("table1", infoDate)

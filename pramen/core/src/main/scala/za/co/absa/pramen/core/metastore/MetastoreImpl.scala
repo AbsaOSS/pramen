@@ -403,6 +403,6 @@ object MetastoreImpl {
 
   private[core] def getMinMaxOffsetFromMetastoreDf(df: DataFrame, batchIdColumn: String, currentMax: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
     val offsetType = if (df.schema.fields.find(_.name == batchIdColumn).get.dataType == StringType) OffsetType.StringType else OffsetType.IntegralType
-    OffsetManagerUtils.getMinMaxValueFromData(df, batchIdColumn, offsetType)
+    OffsetManagerUtils.getMinMaxValueFromData(df, batchIdColumn, offsetType, currentMax)
   }
 }

@@ -72,10 +72,11 @@ class OffsetManagerJdbc(db: Database, slickProfile: JdbcProfile, offsetTable: Of
     }
   }
 
-  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest = {
+  override def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType, minOffset: Option[OffsetValue]): DataOffsetRequest = {
     val createdAt = Instant.now()
+    val minOffsetStr = minOffset.map(_.valueString).getOrElse("")
 
-    val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, "", "", batchId, createdAt.toEpochMilli, None)
+    val record = OffsetRecord(table, infoDate.toString, offsetType.dataTypeString, minOffsetStr, "", batchId, createdAt.toEpochMilli, None)
 
     slickUtils.ensureDbConnected(db)
     db.run(
