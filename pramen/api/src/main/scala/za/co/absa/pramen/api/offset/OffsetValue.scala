@@ -122,6 +122,10 @@ object OffsetValue {
     def increment: OffsetValue = {
       KafkaValue(value.map(p => p.copy(offset = p.offset + 1)))
     }
+
+    def decrement: OffsetValue = {
+      KafkaValue(value.map(p => p.copy(offset = p.offset - 1)))
+    }
   }
 
 
