@@ -35,7 +35,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
       KafkaPartition(1, 21),
       KafkaPartition(2, 31),
       KafkaPartition(3, 41),
-      KafkaPartition(4, 51),
+      KafkaPartition(4, 51)
     ))
 
     "return correct offsets when primary offset is complete" in {
@@ -44,7 +44,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
         KafkaPartition(1, 20),
         KafkaPartition(2, 30),
         KafkaPartition(3, 40),
-        KafkaPartition(4, 50),
+        KafkaPartition(4, 50)
       ))
 
       val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base)
@@ -56,7 +56,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
       val primary = OffsetValue.KafkaValue(Seq(
         KafkaPartition(0, 10),
         KafkaPartition(2, 30),
-        KafkaPartition(4, 50),
+        KafkaPartition(4, 50)
       ))
 
       val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base)
@@ -66,14 +66,14 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
         KafkaPartition(1, 21),
         KafkaPartition(2, 30),
         KafkaPartition(3, 41),
-        KafkaPartition(4, 50),
+        KafkaPartition(4, 50)
       ))
     }
 
     "return correct offsets when primary offset has missing first and last partitions" in {
       val primary = OffsetValue.KafkaValue(Seq(
         KafkaPartition(1, 20),
-        KafkaPartition(3, 40),
+        KafkaPartition(3, 40)
       ))
 
       val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base)
@@ -83,7 +83,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
         KafkaPartition(1, 20),
         KafkaPartition(2, 31),
         KafkaPartition(3, 40),
-        KafkaPartition(4, 51),
+        KafkaPartition(4, 51)
       ))
     }
   }
