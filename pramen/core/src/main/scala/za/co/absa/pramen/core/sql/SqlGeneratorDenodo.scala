@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.DenodoDialect
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalTime, ZonedDateTime}
+import java.time.{LocalDate, LocalTime, ZoneId, ZonedDateTime}
 
 object SqlGeneratorDenodo {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -76,6 +76,8 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
+  override def getServerTimezoneQuery: String = "SELECT CURRENT_TIMESTAMP AS ts, GETTIMEINMILLIS(CURRENT_TIMESTAMP) / 1000 AS epoch_sec"
+
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     if (sqlConfig.infoDateType == SqlColumnType.DATE && dateBegin == dateEnd) {
       val dateBeginLit = getDateLiteral(dateBegin)
@@ -107,10 +109,11 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     }
   }
 
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val zdt = ZonedDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
+        val zdt = ZonedDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampDbFormatter.format(zdt)
         s"$column $condition TIMESTAMP '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>

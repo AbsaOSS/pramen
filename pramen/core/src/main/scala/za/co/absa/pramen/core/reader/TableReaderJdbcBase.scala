@@ -26,6 +26,7 @@ import za.co.absa.pramen.core.utils.JdbcNativeUtils.JDBC_WORDS_TO_REDACT
 import za.co.absa.pramen.core.utils.{ConfigUtils, JdbcNativeUtils}
 
 import java.time.LocalDate
+import scala.util.{Failure, Success}
 
 abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
                                    jdbcUrlSelector: JdbcUrlSelector,
@@ -43,10 +44,28 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
     val gen = SqlGeneratorLoader.getSqlGenerator(jdbcReaderConfig.jdbcConfig.driver, getSqlConfig)
 
     if (gen.requiresConnection) {
-      val (connection, _) = jdbcUrlSelector.getNewConnection(jdbcRetries)
+      val (connection, _) = jdbcUrlSelector.getConnection
       gen.setConnection(connection)
     }
     gen
+  }
+
+  private[core] lazy val serverTimeZone = {
+    jdbcReaderConfig.serverTimeZone match {
+      case Some(tz) =>
+        log.info(s"The server timezone is specified explicitly: $tz")
+        tz
+      case None     =>
+        val (connection, _) = jdbcUrlSelector.getConnection
+        sqlGen.getServerTimezone(connection) match {
+          case Success(tz) =>
+            log.info(s"The server timezone is detected as: $tz")
+            tz
+          case Failure(ex) =>
+            log.warn(s"Failed to detect the server timezone: '${ex.getMessage}'. Using the default timezone: ${jdbcReaderConfig.defaultTimeZone}")
+            jdbcReaderConfig.defaultTimeZone
+        }
+    }
   }
 
   private[core] def getSqlConfig: SqlConfig = {
@@ -54,7 +73,7 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
       jdbcReaderConfig.infoDateType,
       jdbcReaderConfig.infoDateFormat,
       jdbcReaderConfig.offsetInfoOpt,
-      jdbcReaderConfig.serverTimeZone,
+      jdbcReaderConfig.defaultTimeZone,
       jdbcReaderConfig.identifierQuotingPolicy,
       jdbcReaderConfig.sqlGeneratorClass,
       ConfigUtils.getExtraConfig(conf, "sql"))

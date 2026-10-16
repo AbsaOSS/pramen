@@ -40,7 +40,8 @@ case class TableReaderJdbcConfig(
                                   enableSchemaMetadata: Boolean = false,
                                   useJdbcNative: Boolean = false,
                                   specialCharacters: String = " ",
-                                  serverTimeZone: ZoneId = ZoneId.systemDefault(),
+                                  serverTimeZone: Option[ZoneId] = None,
+                                  defaultTimeZone: ZoneId = ZoneId.systemDefault(),
                                   identifierQuotingPolicy: QuotingPolicy = QuotingPolicy.Auto,
                                   sqlGeneratorClass: Option[String] = None
                                 )
@@ -93,8 +94,8 @@ object TableReaderJdbcConfig {
 
     val offsetInfoOpt = OffsetInfoParser.fromConfig(conf)
 
-    val defaultTimezone = ConfigUtils.getOptionString(workflowConf, Keys.TIMEZONE).getOrElse("Africa/Johannesburg")
-    val serverTimezone = ZoneId.of(ConfigUtils.getOptionString(conf, SERVER_TIMEZONE).getOrElse(defaultTimezone))
+    val defaultTimezone = ZoneId.of(ConfigUtils.getOptionString(workflowConf, Keys.TIMEZONE).getOrElse("Africa/Johannesburg"))
+    val serverTimezone = ConfigUtils.getOptionString(conf, SERVER_TIMEZONE).map(z =>ZoneId.of(z))
 
     val identifierQuotingPolicy = ConfigUtils.getOptionString(conf, IDENTIFIER_QUOTING_POLICY)
       .map(s => QuotingPolicy.fromString(s))
@@ -131,6 +132,7 @@ object TableReaderJdbcConfig {
       useJdbcNative = useJdbcNative,
       specialCharacters,
       serverTimezone,
+      defaultTimezone,
       identifierQuotingPolicy = identifierQuotingPolicy,
       sqlGeneratorClass = ConfigUtils.getOptionString(conf, SQL_GENERATOR_CLASS_KEY)
     )

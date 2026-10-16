@@ -19,7 +19,8 @@ package za.co.absa.pramen.api.sql
 import za.co.absa.pramen.api.offset.OffsetValue
 
 import java.sql.Connection
-import java.time.LocalDate
+import java.time.{LocalDate, ZoneId}
+import scala.util.Try
 
 trait SqlGenerator {
   /**
@@ -76,7 +77,10 @@ trait SqlGenerator {
                               onlyForInfoDate: Option[LocalDate],
                               offsetFrom: Option[OffsetValue],
                               offsetTo: Option[OffsetValue],
-                              columns: Seq[String]): String
+                              columns: Seq[String],
+                              serverTimeZone: Option[ZoneId]): String
+
+  def getServerTimezone(connection: Connection): Try[ZoneId]
 
   /**
     * Returns WHERE condition for table that has the information date field given the time period.

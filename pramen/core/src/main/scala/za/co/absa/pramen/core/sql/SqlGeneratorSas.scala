@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.sql.dialects.SasDialect
 
 import java.sql.{Connection, ResultSet}
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, LocalDateTime, ZoneId}
 import java.util.Locale
 import scala.collection.mutable.ListBuffer
 
@@ -84,6 +84,8 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
     val where = getWhere(infoDateBegin, infoDateEnd)
     s"SELECT ${getColumnSql(tableName, columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit, hasWhere = true)}"
   }
+
+  override def getServerTimezoneQuery: String = "proc options option=timezone; run;"
 
   private def getColumnSql(tableName: String, columns: Seq[String]): String = {
     if (columns.isEmpty) {
@@ -189,10 +191,11 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
     limit.map(n => s" LIMIT $n").getOrElse("")
   }
 
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
+        val ldt = LocalDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampSasDbFormatter.format(ldt)
         s"$column $condition '$tsLiteral'dt"
       case OffsetValue.IntegralValue(value) =>

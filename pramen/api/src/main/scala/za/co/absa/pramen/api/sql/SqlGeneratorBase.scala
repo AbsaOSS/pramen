@@ -18,9 +18,11 @@ package za.co.absa.pramen.api.sql
 
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 
-import java.time.LocalDate
+import java.sql.Connection
 import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, ZoneId}
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 /**
   * This class contains implementation of methods that are common across all SQL dialects.
@@ -39,6 +41,11 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     *  - in MS SQL server square braces are used instead [my column].
     */
   def beginEndEscapeChars: (Char, Char)
+
+  /**
+    * Returns a query that returns the connection timezone
+    */
+  def getServerTimezoneQuery: String
 
   def quoteSingleIdentifier(identifier: String): String = {
     val (escapeBegin, escapeEnd) = beginEndEscapeChars
@@ -60,12 +67,48 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
-  def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String
+  def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String
 
   override def getSchemaQuery(tableName: String, columns: Seq[String]): String = {
     val dataQuery = getDataQuery(tableName, columns, None)
 
     s"$dataQuery WHERE 0=1"
+  }
+
+  /**
+    * Determines the timezone of the database server by executing the query returned by `getServerTimezoneQuery`
+    * against the given connection and parsing the first column of the first row as a timezone identifier.
+    *
+    * The statement and result set used to run the query are always closed, regardless of the outcome.
+    *
+    * @param connection An open JDBC connection to the database server whose timezone should be determined.
+    * @return A `Success` containing the server's `ZoneId` if the query returns a valid timezone identifier,
+    *         or a `Failure` if the query fails, returns no rows, returns NULL, or returns a value that cannot
+    *         be parsed as a `ZoneId`.
+    */
+  override def getServerTimezone(connection: Connection): Try[ZoneId] = {
+    Try {
+      val query = getServerTimezoneQuery
+      val statement = connection.createStatement()
+      try {
+        val resultSet = statement.executeQuery(query)
+        try {
+          if (resultSet.next()) {
+            val timezoneStr = resultSet.getString(1)
+            if (timezoneStr == null) {
+              throw new IllegalStateException(s"The server timezone query returned NULL: $query")
+            }
+            ZoneId.of(timezoneStr.trim)
+          } else {
+            throw new IllegalStateException(s"The server timezone query returned no rows: $query")
+          }
+        } finally {
+          resultSet.close()
+        }
+      } finally {
+        statement.close()
+      }
+    }
   }
 
   override def getAliasExpression(expression: String, alias: String): String = {
@@ -94,7 +137,8 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
                                        onlyForInfoDate: Option[LocalDate],
                                        offsetFromOpt: Option[OffsetValue],
                                        offsetToOpt: Option[OffsetValue],
-                                       columns: Seq[String]): String = {
+                                       columns: Seq[String],
+                                       serverTimeZone: Option[ZoneId]): String = {
     if (sqlConfig.offsetInfo.isEmpty)
       throw new IllegalArgumentException(s"Offset information is not configured for database table: $tableName.")
 
@@ -103,7 +147,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
       case None => getDataQuery(tableName, columns, None)
     }
 
-    val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)
+    val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt, serverTimeZone)
 
     if (offsetWhere.nonEmpty) {
       if (onlyForInfoDate.isEmpty) {
@@ -116,20 +160,20 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
-  def getOffsetWhereClause(offsetInfo: OffsetInfo, offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue]): String = {
+  def getOffsetWhereClause(offsetInfo: OffsetInfo, offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], serverTimeZone: Option[ZoneId]): String = {
     val offsetColumn = escape(offsetInfo.offsetColumn)
 
     (offsetFromOpt, offsetToOpt) match {
       case (Some(offsetFrom), Some(offsetTo)) =>
         validateOffsetValue(offsetFrom)
         validateOffsetValue(offsetTo)
-        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom, serverTimeZone)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo, serverTimeZone)}"
       case (Some(offsetFrom), None) =>
         validateOffsetValue(offsetFrom)
-        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom, serverTimeZone)}"
       case (None, Some(offsetTo)) =>
         validateOffsetValue(offsetTo)
-        s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+        s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo, serverTimeZone)}"
       case (None, None) =>
         ""
     }
