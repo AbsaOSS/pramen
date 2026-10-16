@@ -64,7 +64,7 @@ trait OffsetManager extends AutoCloseable {
     * Starts an uncommitted offset for an incremental ingestion for a day.
     * This can only be done for the latest information date.
     */
-  def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType): DataOffsetRequest
+  def startWriteOffsets(table: String, infoDate: LocalDate, offsetType: OffsetType, minOffset: Option[OffsetValue]): DataOffsetRequest
 
   /**
     * Commits changes to the table. If maxOffset is

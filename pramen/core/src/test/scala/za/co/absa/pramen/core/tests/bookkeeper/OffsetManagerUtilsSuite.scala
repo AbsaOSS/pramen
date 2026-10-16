@@ -29,11 +29,81 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
 
   import spark.implicits._
 
+  "mergeKafkaPartitions" should {
+    val base = OffsetValue.KafkaValue(Seq(
+      KafkaPartition(0, 11),
+      KafkaPartition(1, 21),
+      KafkaPartition(2, 31),
+      KafkaPartition(3, 41),
+      KafkaPartition(4, 51)
+    ))
+
+    "return correct offsets when primary offset is complete" in {
+      val primary = OffsetValue.KafkaValue(Seq(
+        KafkaPartition(0, 10),
+        KafkaPartition(1, 20),
+        KafkaPartition(2, 30),
+        KafkaPartition(3, 40),
+        KafkaPartition(4, 50)
+      ))
+
+      val mered1 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = false)
+      val mered2 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = true)
+
+      assert(mered1.value == primary.value)
+      assert(mered2.value == primary.value)
+    }
+
+    "return correct offsets when primary offset has gaps" in {
+      val primary = OffsetValue.KafkaValue(Seq(
+        KafkaPartition(0, 10),
+        KafkaPartition(2, 30),
+        KafkaPartition(4, 50)
+      ))
+
+      val mered = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = false)
+
+      assert(mered.value == Seq(
+        KafkaPartition(0, 10),
+        KafkaPartition(1, 21),
+        KafkaPartition(2, 30),
+        KafkaPartition(3, 41),
+        KafkaPartition(4, 50)
+      ))
+    }
+
+    "return correct offsets when primary offset has missing first and last partitions" in {
+      val primary = OffsetValue.KafkaValue(Seq(
+        KafkaPartition(1, 20),
+        KafkaPartition(3, 40)
+      ))
+
+      val mered1 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = false)
+      val mered2 = OffsetManagerUtils.mergeKafkaPartitions(primary, base, asMinimumOffset = true)
+
+      assert(mered1.value == Seq(
+        KafkaPartition(0, 11),
+        KafkaPartition(1, 20),
+        KafkaPartition(2, 31),
+        KafkaPartition(3, 40),
+        KafkaPartition(4, 51)
+      ))
+
+      assert(mered2.value == Seq(
+        KafkaPartition(0, 12),
+        KafkaPartition(1, 20),
+        KafkaPartition(2, 32),
+        KafkaPartition(3, 40),
+        KafkaPartition(4, 52)
+      ))
+    }
+  }
+
   "getMinMaxValueFromData" should {
     "work for an integral data type" in {
       val df = List(("A", 1), ("B", 2), ("C", 3)).toDF("a", "offset")
 
-      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "offset", OffsetType.IntegralType).get
+      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "offset", OffsetType.IntegralType, None).get
 
       assert(minValue == OffsetValue.IntegralValue(1))
       assert(maxValue == OffsetValue.IntegralValue(3))
@@ -42,7 +112,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
     "work for an string data type" in {
       val df = List(("A", 3), ("B", 1), ("C", 2)).toDF("offset", "b")
 
-      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "offset", OffsetType.StringType).get
+      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "offset", OffsetType.StringType, None).get
 
       assert(minValue == OffsetValue.StringValue("A"))
       assert(maxValue == OffsetValue.StringValue("C"))
@@ -63,7 +133,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
           col("kafka_partition").as("partition")
         ))
 
-      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "kafka", OffsetType.KafkaType).get
+      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "kafka", OffsetType.KafkaType, None).get
 
       assert(minValue == OffsetValue.KafkaValue(Seq(KafkaPartition(0, 1), KafkaPartition(1, 3), KafkaPartition(2, 1))))
       assert(maxValue == OffsetValue.KafkaValue(Seq(KafkaPartition(0, 2), KafkaPartition(1, 4), KafkaPartition(2, 3))))
@@ -74,7 +144,7 @@ class OffsetManagerUtilsSuite extends AnyWordSpec with SparkTestBase {
       val df = List(("A", baseTime), ("B", baseTime + 1000), ("C", baseTime + 1500)).toDF("a", "offset")
         .withColumn("offset", (col("offset") / 1000).cast(TimestampType))
 
-      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "offset", OffsetType.DateTimeType).get
+      val (minValue, maxValue) = OffsetManagerUtils.getMinMaxValueFromData(df, "offset", OffsetType.DateTimeType, None).get
 
       assert(minValue == OffsetValue.DateTimeValue(Instant.ofEpochMilli(baseTime)))
       assert(maxValue == OffsetValue.DateTimeValue(Instant.ofEpochMilli(baseTime + 1500)))

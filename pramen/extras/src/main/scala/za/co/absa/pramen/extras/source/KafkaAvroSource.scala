@@ -163,32 +163,40 @@ class KafkaAvroSource(sourceConfig: Config,
       .get("kafka.endingOffsets")
       .map(v => s"{$q$topic$q: $v}")
 
-    val startingOffsets = offsetFromOpt match {
-      case Some(offset) =>
-        // The starting offset is inclusive in Spark.
-        if (offset.dataType != OffsetType.KafkaType)
-          throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
+    val startingOffsets = proposedStartingOffset match {
+      case Some(offsets) => Map("startingOffsets" -> offsets)
+      case None          => offsetFromOpt match {
+        case Some(offset) =>
+          // The starting offset is inclusive in Spark.
+          if (offset.dataType != OffsetType.KafkaType)
+            throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
 
-        // If 'to' part of the interval is defined, use the closed interval min <= offset <= max, otherwise min < offset.
-        val offsetFrom = if (offsetToOpt.isDefined)
-          offset
-        else
-          offset.asInstanceOf[KafkaValue].increment
+          // If 'to' part of the interval is defined, use the closed interval min <= offset <= max, otherwise min < offset.
+          val offsetFrom = if (offsetToOpt.isDefined)
+            offset
+          else
+            offset.asInstanceOf[KafkaValue].increment
 
-        Map("startingOffsets" -> s"{$q$topic$q: ${offsetFrom.valueString}}")
-      case None         =>
-        Map("startingOffsets" -> proposedStartingOffset.getOrElse("earliest"))
+          Map("startingOffsets" -> s"{$q$topic$q: ${offsetFrom.valueString}}")
+        case None         =>
+          Map("startingOffsets" -> "earliest")
+      }
     }
 
-    val endingOffsets = offsetToOpt match {
-      case Some(offset) =>
-        // The ending offset is exclusive in Spark.
-        if (offset.dataType != OffsetType.KafkaType)
-          throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
-        val offsetTo = offset.asInstanceOf[KafkaValue].increment
-        Map("endingOffsets" -> s"{$q$topic$q: ${offsetTo.valueString}}")
-      case None         =>
-        Map("endingOffsets" -> proposedEndingOffset.getOrElse("latest"))
+    val endingOffsets = proposedEndingOffset match {
+      case Some(offsets) =>
+        Map("endingOffsets" -> offsets)
+      case None =>
+        offsetToOpt match {
+          case Some(offset) =>
+            // The ending offset is exclusive in Spark.
+            if (offset.dataType != OffsetType.KafkaType)
+              throw new IllegalArgumentException(s"KafkaAvroSource supports only 'kafka' offsets, got ${offset.dataType.dataTypeString}")
+            val offsetTo = offset.asInstanceOf[KafkaValue].increment
+            Map("endingOffsets" -> s"{$q$topic$q: ${offsetTo.valueString}}")
+          case None         =>
+            Map("endingOffsets" -> "latest")
+        }
     }
 
     val kafkaOptions = kafkaAvroConfig.extraOptions ++ startingOffsets ++ endingOffsets +

@@ -251,7 +251,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
       // Adding an uncommitted offset for 2021-02-17
       val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
-      om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType)
+      om.startWriteOffsets("table1", infoDate.minusDays(1), OffsetType.IntegralType, None)
       Thread.sleep(10)
 
       val table1Path = new Path(tempDir, "table1")
@@ -699,7 +699,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   def testOffsetOnlyDealWithUncommittedOffsetsWithNoPath(metastoreFormat: String): Assertion = {
     val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
-    om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+    om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
 
     Thread.sleep(10)
 
@@ -738,7 +738,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
   def testOffsetOnlyDealWithUncommittedOffsetsWithNoData(metastoreFormat: String): Assertion = {
     val om = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
 
-    om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+    om.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
 
     Thread.sleep(10)
 
@@ -789,12 +789,12 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
   def testOffsetOnlyDealWithUncommittedOffsetsWithData(metastoreFormat: String): Assertion = {
     val om1 = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
-    om1.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+    om1.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
 
     Thread.sleep(10)
 
     val om2 = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
-    om2.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+    om2.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
 
     Thread.sleep(10)
 
@@ -867,7 +867,7 @@ class IncrementalPipelineLongFixture extends AnyWordSpec
 
   def testOffsetOnlyFailWhenInputTableDoestHaveOffsetField(metastoreFormat: String): Assertion = {
     val om1 = new OffsetManagerJdbc(pramenDb.slickDb, pramenDb.slickProfile, pramenDb.offsetTable, 123L)
-    om1.startWriteOffsets("table1", infoDate, OffsetType.IntegralType)
+    om1.startWriteOffsets("table1", infoDate, OffsetType.IntegralType, None)
 
     Thread.sleep(10)
 

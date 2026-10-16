@@ -23,7 +23,43 @@ import za.co.absa.pramen.api.offset.{KafkaPartition, OffsetType, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlGeneratorBase
 
 object OffsetManagerUtils {
-  def getMinMaxValueFromData(df: DataFrame, offsetColumn: String, offsetType: OffsetType): Option[(OffsetValue, OffsetValue)] = {
+
+  /**
+    * Merges two Kafka partition sets in such a way that 'primaryValue' is considered a maximum offset
+    * for a given increment ingestion job. But if data ingested does not cover all partitions, such partitions
+    * might be missing in the list. In this case, values from the 'baseValue' are used.
+    */
+  def mergeKafkaPartitions(primaryValue: OffsetValue.KafkaValue, baseValue: OffsetValue.KafkaValue, asMinimumOffset: Boolean): OffsetValue.KafkaValue = {
+    val partitions1 = primaryValue.value.map(v => (v.partition, v.offset)).toMap
+    val partitions02 = baseValue.value.map(v => (v.partition, v.offset)).toMap
+    val allPartitions = partitions1.keys ++ partitions02.keys
+    if (allPartitions.isEmpty) return OffsetValue.KafkaValue(Seq.empty)
+    val maxPartition = allPartitions.max
+
+    val partitions2 = if (asMinimumOffset) {
+      partitions02.map(o => (o._1, o._2 + 1))
+    } else {
+      partitions02
+    }
+
+    val newPartitions = for (i <- 0 to maxPartition) yield  {
+      if (partitions1.contains(i))
+        KafkaPartition(i, partitions1(i))
+      else if (partitions2.contains(i))
+        KafkaPartition(i, partitions2(i))
+      else
+        KafkaPartition(i, 0)
+    }
+
+    OffsetValue.KafkaValue(newPartitions)
+  }
+
+
+  /**
+    *
+    */
+  def getMinMaxValueFromData(df: DataFrame, offsetColumn: String, offsetType: OffsetType, currentMaxOffset: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
+
     if (df.isEmpty) {
       None
     } else {
@@ -37,10 +73,15 @@ object OffsetManagerUtils {
             max(col(kafkaOffsetFieldName)).as("max_offset")
           ).orderBy(kafkaPartitionFieldName)
 
-        val minValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](1))).toSeq)
+        val minValue: OffsetValue.KafkaValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](1))).toSeq)
         val maxValue = OffsetValue.KafkaValue(aggregatedDf.collect().map(row => KafkaPartition(row.getAs[Int](0), row.getAs[Long](2))).toSeq)
 
-        Some(minValue, maxValue)
+        val (minValueMerged, maxValueMerged) = currentMaxOffset match {
+          case Some(value: OffsetValue.KafkaValue) => (mergeKafkaPartitions(minValue, value, asMinimumOffset = true), mergeKafkaPartitions(maxValue, value, asMinimumOffset = false))
+          case _ => (minValue, maxValue)
+        }
+
+        Some(minValueMerged, maxValueMerged)
       } else {
         val row = df.agg(min(offsetType.getSparkCol(col(offsetColumn)).cast(StringType)),
             max(offsetType.getSparkCol(col(offsetColumn))).cast(StringType))
