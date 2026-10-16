@@ -20,6 +20,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
+import za.co.absa.pramen.core.tests.sql.SqlGeneratorGenericSuite.testDefaultTz
 
 import java.time.{Instant, LocalDate}
 
@@ -163,21 +164,21 @@ class SqlGeneratorOracleSuite extends AnyWordSpec {
   "getOffsetWhereCondition" should {
     "return the correct condition for integral offsets" in {
       val actual = gen.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralValue(1))
+        .getOffsetWhereCondition("offset", "<", OffsetValue.IntegralValue(1), None)
 
       assert(actual == "offset < 1")
     }
 
     "return the correct condition for datetime offsets" in {
       val actual = gen.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeValue(Instant.ofEpochMilli(1727761000)))
+        .getOffsetWhereCondition("offset", ">", OffsetValue.DateTimeValue(Instant.ofEpochMilli(1727761000)), Some(testDefaultTz))
 
       assert(actual == "offset > TIMESTAMP '1970-01-21 01:56:01.000'")
     }
 
     "return the correct condition for string offsets" in {
       val actual = gen.asInstanceOf[SqlGeneratorBase]
-        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringValue("AAA"))
+        .getOffsetWhereCondition("offset", ">=", OffsetValue.StringValue("AAA"), None)
 
       assert(actual == "offset >= 'AAA'")
     }

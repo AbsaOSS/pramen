@@ -23,7 +23,7 @@ import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.DatabricksDialect
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, LocalDateTime, ZoneId}
 
 object SqlGeneratorDatabricks {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -71,6 +71,8 @@ class SqlGeneratorDatabricks(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
+  override def getServerTimezoneQuery: String = "SET spark.sql.session.timeZone"
+
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
@@ -108,10 +110,11 @@ class SqlGeneratorDatabricks(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
     }
   }
 
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
+        val ldt = LocalDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampGenericDbFormatter.format(ldt)
         s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>

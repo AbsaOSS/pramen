@@ -20,7 +20,7 @@ import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, LocalDateTime, ZoneId}
 
 class SqlGeneratorMySQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
@@ -57,6 +57,8 @@ class SqlGeneratorMySQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
+  override def getServerTimezoneQuery: String = "SELECT @@session.time_zone"
+
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     if (sqlConfig.infoDateType == SqlColumnType.DATETIME) {
       s"$infoDateColumn >= '$dateBegin 00:00:00' AND $infoDateColumn < '${dateEnd.plusDays(1)} 00:00:00'"
@@ -90,10 +92,11 @@ class SqlGeneratorMySQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig
   }
 
 
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
+        val ldt = LocalDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampGenericDbFormatter.format(ldt)
         s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
