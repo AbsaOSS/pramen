@@ -32,7 +32,9 @@ object OffsetManagerUtils {
   def mergeKafkaPartitions(primaryValue: OffsetValue.KafkaValue, baseValue: OffsetValue.KafkaValue, asMinimumOffset: Boolean): OffsetValue.KafkaValue = {
     val partitions1 = primaryValue.value.map(v => (v.partition, v.offset)).toMap
     val partitions02 = baseValue.value.map(v => (v.partition, v.offset)).toMap
-    val maxPartition = Math.max(partitions1.keys.max, partitions02.keys.max)
+    val allPartitions = partitions1.keys ++ partitions02.keys
+    if (allPartitions.isEmpty) return OffsetValue.KafkaValue(Seq.empty)
+    val maxPartition = allPartitions.max
 
     val partitions2 = if (asMinimumOffset) {
       partitions02.map(o => (o._1, o._2 + 1))

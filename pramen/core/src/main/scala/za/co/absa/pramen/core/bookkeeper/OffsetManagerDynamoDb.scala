@@ -189,7 +189,13 @@ class OffsetManagerDynamoDb(
   }
 
   override def commitRerun(request: DataOffsetRequest, minOffset: OffsetValue, maxOffset: OffsetValue): Unit = {
-    if (minOffset.compareTo(maxOffset) > 0) {
+    val minOffsetToCheck = if (minOffset.dataType == OffsetType.KafkaType) {
+      minOffset.asInstanceOf[OffsetValue.KafkaValue].decrement
+    } else {
+      minOffset
+    }
+
+    if (minOffsetToCheck.compareTo(maxOffset) > 0) {
       throw new IllegalArgumentException(s"minOffset is greater than maxOffset: ${minOffset.valueString} > ${maxOffset.valueString}")
     }
 

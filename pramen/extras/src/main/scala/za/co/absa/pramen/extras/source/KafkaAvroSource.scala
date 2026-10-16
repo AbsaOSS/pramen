@@ -164,7 +164,7 @@ class KafkaAvroSource(sourceConfig: Config,
       .map(v => s"{$q$topic$q: $v}")
 
     val startingOffsets = proposedStartingOffset match {
-      case Some(offsets) => Map("startingOffsets" -> s"{$q$topic$q: $offsets}")
+      case Some(offsets) => Map("startingOffsets" -> offsets)
       case None          => offsetFromOpt match {
         case Some(offset) =>
           // The starting offset is inclusive in Spark.
@@ -185,7 +185,7 @@ class KafkaAvroSource(sourceConfig: Config,
 
     val endingOffsets = proposedEndingOffset match {
       case Some(offsets) =>
-        Map("endingOffsets" -> s"{$q$topic$q: $offsets}")
+        Map("endingOffsets" -> offsets)
       case None =>
         offsetToOpt match {
           case Some(offset) =>
