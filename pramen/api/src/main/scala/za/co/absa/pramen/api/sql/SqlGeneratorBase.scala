@@ -81,8 +81,6 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     * Determines the timezone of the database server by executing the query returned by `getServerTimezoneQuery`
     * against the given connection and parsing the first column of the first row as a timezone identifier.
     *
-    * The statement and result set used to run the query are always closed, regardless of the outcome.
-    *
     * @param connection An open JDBC connection to the database server whose timezone should be determined.
     * @return A `Success` containing the server's `ZoneId` if the query returns a valid timezone identifier,
     *         or a `Failure` if the query fails, returns no rows, returns NULL, or returns a value that cannot
@@ -264,7 +262,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
     val ldt = LocalDateTime.ofInstant(ts, tz)
     val tsLiteral = timestampGenericDbFormatter.format(ldt)
-    log.info(s"Timestamp conversion for timezone '$tz': $ts -> '$tsLiteral'")
+    log.info(s"Timestamp conversion for timezone '$tz': ${ts.toEpochMilli}: $ts -> '$tsLiteral'")
     tsLiteral
   }
 }

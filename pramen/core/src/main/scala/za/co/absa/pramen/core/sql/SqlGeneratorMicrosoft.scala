@@ -229,7 +229,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
         val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
         val ldt = LocalDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampMsDbFormatter.format(ldt)
-        log.info(s"Timestamp conversion for timezone '$tz': $ts -> '$tsLiteral'")
+        log.info(s"Timestamp conversion for timezone '$tz': ${ts.toEpochMilli}: $ts -> '$tsLiteral'")
         s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"

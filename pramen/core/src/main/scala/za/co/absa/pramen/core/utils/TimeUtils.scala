@@ -18,8 +18,10 @@ package za.co.absa.pramen.core.utils
 
 import org.slf4j.LoggerFactory
 
-import java.time.{Duration, Instant}
+import java.time.format.DateTimeFormatter
+import java.time._
 import java.util.Locale
+import scala.util.Try
 
 object TimeUtils {
   import scala.math.Integral.Implicits._
@@ -160,8 +162,49 @@ object TimeUtils {
     log.info(s"$description $elapsedTimeStr")
   }
 
+  /**
+    * Extracts the timezone offset from a timestamp string and returns it as a ZoneId.
+    *
+    * Example input: "2026-10-16 15:02:28.436 +0200" will return ZoneId "+02:00".
+    * The milliseconds part is optional.
+    *
+    * @param tsStr the timestamp string containing a timezone offset.
+    * @return the zone offset as a ZoneId, or a failure if the string cannot be parsed.
+    */
+  def getTimezoneFromTimestampString(tsStr: String): Try[ZoneId] = {
+    Try {
+      val offsetDateTime = OffsetDateTime.parse(tsStr.trim, timestampWithOffsetFormatter)
+      offsetDateTime.getOffset: ZoneId
+    }
+  }
+
+  /**
+    * Extracts the timezone offset from a timestamp string and returns it as a ZoneId.
+    *
+    * Example input: "2026-10-16 14:56:28.038" and 1792155388 will return ZoneId "+02:00".
+    * The milliseconds part is optional.
+    * The calculated offset is rounded to the nearest 5 minutes.
+    *
+    * @param tsStr the timestamp string containing a timezone offset.
+    * @return the zone offset as a ZoneId, or a failure if the string cannot be parsed.
+    */
+  def getTimezoneFromTimestampStringAndEpochSeconds(tsStr: String, epochSeconds: Long): Try[ZoneId] = {
+    Try {
+      val localDateTime = LocalDateTime.parse(tsStr.trim, timestampWithoutOffsetFormatter)
+      val localEpochSeconds = localDateTime.toEpochSecond(ZoneOffset.UTC)
+      val diffSeconds = localEpochSeconds - epochSeconds
+      val roundingSeconds = 300L
+      val offsetSeconds = Math.round(diffSeconds.toDouble / roundingSeconds.toDouble) * roundingSeconds
+
+      ZoneOffset.ofTotalSeconds(offsetSeconds.toInt): ZoneId
+    }
+  }
+
   private val millisecondsPerSecond: Long = 1000
   private val millisecondsPerMinute: Long = millisecondsPerSecond * 60
   private val millisecondsPerHour: Long = millisecondsPerMinute * 60
   private val millisecondsPerDay: Long = millisecondsPerHour * 24
+
+  private val timestampWithOffsetFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS] Z", Locale.US)
+  private val timestampWithoutOffsetFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]", Locale.US)
 }
