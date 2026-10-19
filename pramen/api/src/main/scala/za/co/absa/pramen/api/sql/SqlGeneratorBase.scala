@@ -16,11 +16,12 @@
 
 package za.co.absa.pramen.api.sql
 
+import org.slf4j.{Logger, LoggerFactory}
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 
 import java.sql.Connection
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, ZoneId}
+import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
@@ -33,6 +34,7 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
   import SqlGeneratorBase._
 
   protected val timestampGenericDbFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
+  protected val log: Logger = LoggerFactory.getLogger(this.getClass)
 
   /**
     * This returns characters used for escaping into a mode that allows special characters in identifiers.
@@ -256,6 +258,14 @@ abstract class SqlGeneratorBase(sqlConfig: SqlConfig) extends SqlGenerator {
     */
   final protected def infoDateColumn: String = {
     escape(sqlConfig.infoDateColumn)
+  }
+
+  final protected def getGenericTimestampString(ts: Instant, serverTimeZone: Option[ZoneId]): String = {
+    val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
+    val ldt = LocalDateTime.ofInstant(ts, tz)
+    val tsLiteral = timestampGenericDbFormatter.format(ldt)
+    log.info(s"Timestamp conversion for timezone '$tz': $ts -> '$tsLiteral'")
+    tsLiteral
   }
 }
 

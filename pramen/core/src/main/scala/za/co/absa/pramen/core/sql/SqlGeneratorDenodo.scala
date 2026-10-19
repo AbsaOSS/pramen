@@ -115,6 +115,7 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
         val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
         val zdt = ZonedDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampDbFormatter.format(zdt)
+        log.info(s"Denodo: Timestamp conversion for timezone '$tz': $ts -> '$tsLiteral'")
         s"$column $condition TIMESTAMP '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
