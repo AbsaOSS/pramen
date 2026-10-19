@@ -21,9 +21,12 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.DenodoDialect
+import za.co.absa.pramen.core.utils.TimeUtils
 
+import java.sql.Connection
 import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalTime, ZoneId, ZonedDateTime}
+import scala.util.Try
 
 object SqlGeneratorDenodo {
   private val log = LoggerFactory.getLogger(this.getClass)
@@ -78,6 +81,41 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
 
   override def getServerTimezoneQuery: String = "SELECT CURRENT_TIMESTAMP AS ts, GETTIMEINMILLIS(CURRENT_TIMESTAMP) / 1000 AS epoch_sec"
 
+  /**
+    * Determines the timezone of the database server by executing the query returned by `getServerTimezoneQuery`
+    * against the given connection and parsing the offset of the returned timestamp.
+    *
+    * @param connection An open JDBC connection to the database server whose timezone should be determined.
+    * @return A `Success` containing the server's `ZoneId` if the query returns a valid timezone identifier,
+    *         or a `Failure` if the query fails, returns no rows, returns NULL, or returns a value that cannot
+    *         be parsed as a `ZoneId`.
+    */
+  override def getServerTimezone(connection: Connection): Try[ZoneId] = {
+    Try {
+      val query = getServerTimezoneQuery
+      val statement = connection.createStatement()
+      try {
+        val resultSet = statement.executeQuery(query)
+        try {
+          if (resultSet.next()) {
+            val currentTimestamp = resultSet.getString(1)
+            if (currentTimestamp == null) {
+              throw new IllegalStateException(s"The server timezone query returned NULL: $query")
+            }
+            TimeUtils.getTimezoneFromTimestampString(currentTimestamp).get
+          } else {
+            throw new IllegalStateException(s"The server timezone query returned no rows: $query")
+          }
+        } finally {
+          resultSet.close()
+        }
+      } finally {
+        statement.close()
+      }
+    }
+  }
+
+
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     if (sqlConfig.infoDateType == SqlColumnType.DATE && dateBegin == dateEnd) {
       val dateBeginLit = getDateLiteral(dateBegin)
@@ -115,7 +153,7 @@ class SqlGeneratorDenodo(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
         val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
         val zdt = ZonedDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampDbFormatter.format(zdt)
-        log.info(s"Denodo: Timestamp conversion for timezone '$tz': $ts -> '$tsLiteral'")
+        log.info(s"Denodo: Timestamp conversion for timezone '$tz': ${ts.toEpochMilli}: $ts -> '$tsLiteral'")
         s"$column $condition TIMESTAMP '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
