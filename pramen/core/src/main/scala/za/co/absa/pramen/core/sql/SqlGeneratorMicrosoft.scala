@@ -16,6 +16,7 @@
 
 package za.co.absa.pramen.core.sql
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdentifier, validateOffsetValue}
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGenerator}
@@ -31,6 +32,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
   private val timestampMsDbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
   private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   // 23 is "yyyy-MM-dd", see https://www.mssqltips.com/sqlservertip/1145/date-and-time-conversions-using-sql-server/
   private val isoFormatMsSqlRef = 23
@@ -227,6 +229,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
         val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
         val ldt = LocalDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampMsDbFormatter.format(ldt)
+        log.info(s"Timestamp conversion for timezone '$tz': $ts -> '$tsLiteral'")
         s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"

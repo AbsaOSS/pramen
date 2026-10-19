@@ -197,6 +197,7 @@ class SqlGeneratorSas(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
         val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
         val ldt = LocalDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampSasDbFormatter.format(ldt)
+        log.info(s"Timestamp conversion for timezone '$tz': $ts -> '$tsLiteral'")
         s"$column $condition '$tsLiteral'dt"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"
