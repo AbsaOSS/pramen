@@ -18,8 +18,8 @@ package za.co.absa.pramen.core.utils
 
 import org.slf4j.LoggerFactory
 
-import java.time.format.DateTimeFormatter
 import java.time._
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import scala.util.Try
 
@@ -205,6 +205,15 @@ object TimeUtils {
   private val millisecondsPerHour: Long = millisecondsPerMinute * 60
   private val millisecondsPerDay: Long = millisecondsPerHour * 24
 
-  private val timestampWithOffsetFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS] Z", Locale.US)
-  private val timestampWithoutOffsetFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]", Locale.US)
+  private val timestampWithoutOffsetFormatter: DateTimeFormatter = new java.time.format.DateTimeFormatterBuilder()
+      .appendPattern("yyyy-MM-dd HH:mm:ss")
+      .optionalStart()
+      .appendFraction(java.time.temporal.ChronoField.NANO_OF_SECOND, 0, 9, true)
+      .optionalEnd()
+      .toFormatter(Locale.US)
+
+  private val timestampWithOffsetFormatter: DateTimeFormatter = new java.time.format.DateTimeFormatterBuilder()
+     .append(timestampWithoutOffsetFormatter)
+     .appendPattern(" Z")
+     .toFormatter(Locale.US)
 }

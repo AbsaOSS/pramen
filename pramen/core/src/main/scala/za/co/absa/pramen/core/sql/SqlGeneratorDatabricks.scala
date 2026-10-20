@@ -71,7 +71,7 @@ class SqlGeneratorDatabricks(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
-  override def getServerTimezoneQuery: String = "SET spark.sql.session.timeZone"
+  override def getServerTimezoneQuery: String = "SELECT current_timezone()"
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)

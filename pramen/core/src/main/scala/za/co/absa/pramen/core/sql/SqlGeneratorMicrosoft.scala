@@ -24,7 +24,7 @@ import za.co.absa.pramen.core.utils.MutableStack
 
 import java.sql.Connection
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime, ZoneId}
+import java.time.{LocalDate, LocalDateTime, ZoneId, ZoneOffset}
 import scala.collection.mutable.ListBuffer
 import scala.util.Try
 
@@ -76,7 +76,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
     s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
   }
 
-  def getServerTimezoneQuery: String = "SELECT CURRENT_TIMEZONE()"
+  def getServerTimezoneQuery: String = "SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET())"
 
   /**
     * Determines the timezone of the database server by executing the query returned by `getServerTimezoneQuery`
@@ -97,11 +97,8 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
         val resultSet = statement.executeQuery(query)
         try {
           if (resultSet.next()) {
-            val timezoneStr = resultSet.getString(1)
-            if (timezoneStr == null) {
-              throw new IllegalStateException(s"The server timezone query returned NULL: $query")
-            }
-            ZoneId.of(timezoneStr.trim)
+            val timezoneMinutes = resultSet.getString(1).toInt
+            ZoneOffset.ofTotalSeconds(timezoneMinutes * 60): ZoneId
           } else {
             throw new IllegalStateException(s"The server timezone query returned no rows: $query")
           }

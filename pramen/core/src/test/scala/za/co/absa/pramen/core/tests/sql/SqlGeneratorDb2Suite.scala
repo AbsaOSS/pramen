@@ -20,6 +20,7 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{QuotingPolicy, SqlColumnType, SqlGenerator, SqlGeneratorBase}
 import za.co.absa.pramen.core.mocks.DummySqlConfigFactory
+import za.co.absa.pramen.core.sql.SqlGeneratorDb2._
 import za.co.absa.pramen.core.tests.sql.SqlGeneratorGenericSuite.testDefaultTz
 
 import java.time.{Instant, LocalDate}
@@ -139,6 +140,108 @@ class SqlGeneratorDb2Suite extends AnyWordSpec {
   "getCountQueryForSql" should {
     "generate count queries for an SQL subquery" in {
       assert(genDate.getCountQueryForSql("SELECT A FROM B") == "SELECT COUNT(*) FROM (SELECT A FROM B) AS query")
+    }
+  }
+  
+  //   /**
+  //    * Converts a DB2 timezone offset value into a Java `ZoneId`.
+  //    *
+  //    *  DB2 returns timezone as ±hhmmss
+  //    *  Examples:
+  //    *    20000  -> +02:00:00
+  //    *   -53000  -> -05:30:00
+  //    *
+  //    * @param db2Offset the timezone offset as returned by DB2, encoded as a signed integer in the `hhmmss` format
+  //    * @return a `ZoneOffset` (as a `ZoneId`) representing the same offset from UTC
+  //    * @throws java.time.DateTimeException if the decoded hours, minutes or seconds are outside the range supported by `ZoneOffset`
+  //    */
+  //  def convertDb2TzOffsets(db2Offset: Int): ZoneId = {
+  //    val sign = if (db2Offset < 0) -1 else 1
+  //    val abs = math.abs(db2Offset)
+  //
+  //    val hours = abs / 10000
+  //    val minutes = (abs % 10000) / 100
+  //    val seconds = abs % 100
+  //
+  //    ZoneOffset.ofHoursMinutesSeconds(
+  //      sign * hours,
+  //      sign * minutes,
+  //      sign * seconds
+  //    )
+  //  }
+  "convertDb2TzOffsets" should {
+    "convert zero offset to UTC" in {
+      assert(convertDb2TzOffsets(0) == java.time.ZoneOffset.UTC)
+    }
+
+    "convert positive whole hour offsets" in {
+      assert(convertDb2TzOffsets(20000) == java.time.ZoneOffset.ofHours(2))
+      assert(convertDb2TzOffsets(10000) == java.time.ZoneOffset.ofHours(1))
+    }
+
+    "convert negative whole hour offsets" in {
+      assert(convertDb2TzOffsets(-50000) == java.time.ZoneOffset.ofHours(-5))
+      assert(convertDb2TzOffsets(-120000) == java.time.ZoneOffset.ofHours(-12))
+    }
+
+    "convert positive offsets with minutes" in {
+      assert(convertDb2TzOffsets(53000) == java.time.ZoneOffset.ofHoursMinutes(5, 30))
+      assert(convertDb2TzOffsets(54500) == java.time.ZoneOffset.ofHoursMinutes(5, 45))
+    }
+
+    "convert negative offsets with minutes" in {
+      assert(convertDb2TzOffsets(-53000) == java.time.ZoneOffset.ofHoursMinutes(-5, -30))
+      assert(convertDb2TzOffsets(-33000) == java.time.ZoneOffset.ofHoursMinutes(-3, -30))
+    }
+
+    "convert offsets with seconds" in {
+      assert(convertDb2TzOffsets(53045) == java.time.ZoneOffset.ofHoursMinutesSeconds(5, 30, 45))
+      assert(convertDb2TzOffsets(-53045) == java.time.ZoneOffset.ofHoursMinutesSeconds(-5, -30, -45))
+    }
+
+    "convert offsets smaller than one hour" in {
+      assert(convertDb2TzOffsets(3000) == java.time.ZoneOffset.ofHoursMinutes(0, 30))
+      assert(convertDb2TzOffsets(-3000) == java.time.ZoneOffset.ofHoursMinutes(0, -30))
+      assert(convertDb2TzOffsets(15) == java.time.ZoneOffset.ofTotalSeconds(15))
+      assert(convertDb2TzOffsets(-15) == java.time.ZoneOffset.ofTotalSeconds(-15))
+    }
+
+    "convert boundary offsets" in {
+      assert(convertDb2TzOffsets(180000) == java.time.ZoneOffset.ofHours(18))
+      assert(convertDb2TzOffsets(-180000) == java.time.ZoneOffset.ofHours(-18))
+    }
+
+    "return a zone id with the expected id string" in {
+      assert(convertDb2TzOffsets(20000).getId == "+02:00")
+      assert(convertDb2TzOffsets(-53000).getId == "-05:30")
+      assert(convertDb2TzOffsets(53045).getId == "+05:30:45")
+    }
+
+    "throw an exception when hours are out of range" in {
+      intercept[java.time.DateTimeException] {
+        convertDb2TzOffsets(190000)
+      }
+      intercept[java.time.DateTimeException] {
+        convertDb2TzOffsets(-190000)
+      }
+    }
+
+    "throw an exception when minutes are out of range" in {
+      intercept[java.time.DateTimeException] {
+        convertDb2TzOffsets(6000)
+      }
+      intercept[java.time.DateTimeException] {
+        convertDb2TzOffsets(-16000)
+      }
+    }
+
+    "throw an exception when seconds are out of range" in {
+      intercept[java.time.DateTimeException] {
+        convertDb2TzOffsets(60)
+      }
+      intercept[java.time.DateTimeException] {
+        convertDb2TzOffsets(-10099)
+      }
     }
   }
 

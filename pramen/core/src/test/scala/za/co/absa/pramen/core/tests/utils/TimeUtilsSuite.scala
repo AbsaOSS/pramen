@@ -231,6 +231,14 @@ class TimeUtilsSuite extends AnyWordSpec {
       assert(result.get.toString == "+02:00")
     }
 
+    "extract a positive offset from a timestamp with milliseconds having 6 digits" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28.038123", 1792155388L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+      assert(result.get.toString == "+02:00")
+    }
+
     "extract a positive offset from a timestamp without milliseconds" in {
       val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28", 1792155388L)
 

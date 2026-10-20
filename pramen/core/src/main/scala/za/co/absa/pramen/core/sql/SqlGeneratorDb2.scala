@@ -19,8 +19,10 @@ package za.co.absa.pramen.core.sql
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
+import java.sql.Connection
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, ZoneId}
+import java.time.{LocalDate, ZoneId, ZoneOffset}
+import scala.util.Try
 
 class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
@@ -58,6 +60,28 @@ class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
   }
 
   override def getServerTimezoneQuery: String = "SELECT CURRENT TIMEZONE FROM SYSIBM.SYSDUMMY1"
+
+  override def getServerTimezone(connection: Connection): Try[ZoneId] = {
+    Try {
+      val query = getServerTimezoneQuery
+      val statement = connection.createStatement()
+      try {
+        val resultSet = statement.executeQuery(query)
+        try {
+          if (resultSet.next()) {
+            val timezoneRaw = resultSet.getBigDecimal(1).intValue()
+            SqlGeneratorDb2.convertDb2TzOffsets(timezoneRaw)
+          } else {
+            throw new IllegalStateException(s"The server timezone query returned no rows: $query")
+          }
+        } finally {
+          resultSet.close()
+        }
+      } finally {
+        statement.close()
+      }
+    }
+  }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
@@ -112,5 +136,34 @@ class SqlGeneratorDb2(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) 
 
   private def getLimit(limit: Option[Int]): String = {
     limit.map(n => s" LIMIT $n").getOrElse("")
+  }
+}
+
+object SqlGeneratorDb2 {
+  /**
+    * Converts a DB2 timezone offset value into a Java `ZoneId`.
+    *
+    *  DB2 returns timezone as ±hhmmss
+    *  Examples:
+    *    20000  -> +02:00:00
+    *   -53000  -> -05:30:00
+    *
+    * @param db2Offset the timezone offset as returned by DB2, encoded as a signed integer in the `hhmmss` format
+    * @return a `ZoneOffset` (as a `ZoneId`) representing the same offset from UTC
+    * @throws java.time.DateTimeException if the decoded hours, minutes or seconds are outside the range supported by `ZoneOffset`
+    */
+  def convertDb2TzOffsets(db2Offset: Int): ZoneId = {
+    val sign = if (db2Offset < 0) -1 else 1
+    val abs = math.abs(db2Offset)
+
+    val hours = abs / 10000
+    val minutes = (abs % 10000) / 100
+    val seconds = abs % 100
+
+    ZoneOffset.ofHoursMinutesSeconds(
+      sign * hours,
+      sign * minutes,
+      sign * seconds
+    )
   }
 }
