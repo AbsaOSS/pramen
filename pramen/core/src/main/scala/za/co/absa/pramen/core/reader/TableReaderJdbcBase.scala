@@ -73,7 +73,7 @@ abstract class TableReaderJdbcBase(jdbcReaderConfig: TableReaderJdbcConfig,
       jdbcReaderConfig.infoDateType,
       jdbcReaderConfig.infoDateFormat,
       jdbcReaderConfig.offsetInfoOpt,
-      jdbcReaderConfig.defaultTimeZone,
+      jdbcReaderConfig.serverTimeZone.getOrElse(jdbcReaderConfig.defaultTimeZone),
       jdbcReaderConfig.identifierQuotingPolicy,
       jdbcReaderConfig.sqlGeneratorClass,
       ConfigUtils.getExtraConfig(conf, "sql"))
