@@ -56,7 +56,22 @@ object OffsetManagerUtils {
 
 
   /**
+    * Computes the minimum and maximum offset values present in the given DataFrame for the specified offset column.
     *
+    * For Kafka offsets, the column is expected to be a struct containing `partition` and `offset` fields.
+    * The minimum and maximum offsets are calculated per partition. If a current maximum offset is provided,
+    * the resulting values are merged with it, so partitions missing from the data take their offsets from
+    * the current maximum offset.
+    *
+    * For other offset types (datetime, integral, string), the minimum and maximum values of the column are
+    * computed, parsed into offset values and validated.
+    *
+    * @param df               The DataFrame containing the ingested data.
+    * @param offsetColumn     The name of the column that holds offset values.
+    * @param offsetType       The type of the offset, which determines how values are aggregated and parsed.
+    * @param currentMaxOffset The current maximum offset, if any. For Kafka offsets it is used to fill in partitions not present in the data.
+    * @return `None` if the DataFrame is empty, otherwise `Some` tuple of the minimum and maximum offset values.
+    * @throws IllegalArgumentException if a non-Kafka offset value cannot be parsed or fails validation.
     */
   def getMinMaxValueFromData(df: DataFrame, offsetColumn: String, offsetType: OffsetType, currentMaxOffset: Option[OffsetValue]): Option[(OffsetValue, OffsetValue)] = {
 

@@ -20,7 +20,7 @@ import com.typesafe.config.Config
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.Query
-import za.co.absa.pramen.api.offset.OffsetValue
+import za.co.absa.pramen.api.offset.{OffsetType, OffsetValue}
 import za.co.absa.pramen.core.config.Keys
 import za.co.absa.pramen.core.reader.model.TableReaderJdbcConfig
 import za.co.absa.pramen.core.utils._
@@ -123,7 +123,12 @@ class TableReaderJdbc(jdbcReaderConfig: TableReaderJdbcConfig,
                                                offsetFrom: Option[OffsetValue],
                                                offsetTo: Option[OffsetValue],
                                                columns: Seq[String]): DataFrame = {
-    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns)
+    val tzOpt = if (offsetFrom.exists(_.dataType == OffsetType.DateTimeType) || offsetTo.exists(_.dataType == OffsetType.DateTimeType)) {
+      Option(serverTimeZone)
+    } else {
+      None
+    }
+    val sql = sqlGen.getDataQueryIncremental(tableName, onlyForInfoDate, offsetFrom, offsetTo, columns, tzOpt)
 
     log.info(s"JDBC Query: $sql")
 

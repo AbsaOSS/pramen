@@ -16,19 +16,23 @@
 
 package za.co.absa.pramen.core.sql
 
+import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.{OffsetInfo, OffsetValue}
 import za.co.absa.pramen.api.sql.SqlGeneratorBase.{needsEscaping, validateIdentifier, validateOffsetValue}
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGenerator}
 import za.co.absa.pramen.core.utils.MutableStack
 
+import java.sql.Connection
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, LocalDateTime, ZoneId, ZoneOffset}
 import scala.collection.mutable.ListBuffer
+import scala.util.Try
 
 class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
   private val timestampMsDbFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS")
   private val isIso = sqlConfig.dateFormatApp.toLowerCase.startsWith("yyyy-mm-dd")
+  private val log = LoggerFactory.getLogger(this.getClass)
 
   // 23 is "yyyy-MM-dd", see https://www.mssqltips.com/sqlservertip/1145/date-and-time-conversions-using-sql-server/
   private val isoFormatMsSqlRef = 23
@@ -70,6 +74,41 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = {
     val where = getWhere(infoDateBegin, infoDateEnd)
     s"SELECT ${getLimit(limit)}${columnExpr(columns)} FROM ${escape(tableName)} WITH (NOLOCK) WHERE $where"
+  }
+
+  def getServerTimezoneQuery: String = "SELECT DATEPART(TZOFFSET, SYSDATETIMEOFFSET())"
+
+  /**
+    * Determines the timezone of the database server by executing the query returned by `getServerTimezoneQuery`
+    * against the given connection and parsing the first column of the first row as a timezone identifier.
+    *
+    * The statement and result set used to run the query are always closed, regardless of the outcome.
+    *
+    * @param connection An open JDBC connection to the database server whose timezone should be determined.
+    * @return A `Success` containing the server's `ZoneId` if the query returns a valid timezone identifier,
+    *         or a `Failure` if the query fails, returns no rows, returns NULL, or returns a value that cannot
+    *         be parsed as a `ZoneId`.
+    */
+  override def getServerTimezone(connection: Connection): Try[ZoneId] = {
+    Try {
+      val query = getServerTimezoneQuery
+      val statement = connection.createStatement()
+      try {
+        val resultSet = statement.executeQuery(query)
+        try {
+          if (resultSet.next()) {
+            val timezoneMinutes = resultSet.getString(1).toInt
+            ZoneOffset.ofTotalSeconds(timezoneMinutes * 60): ZoneId
+          } else {
+            throw new IllegalStateException(s"The server timezone query returned no rows: $query")
+          }
+        } finally {
+          resultSet.close()
+        }
+      } finally {
+        statement.close()
+      }
+    }
   }
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
@@ -139,7 +178,8 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
                                        onlyForInfoDate: Option[LocalDate],
                                        offsetFromOpt: Option[OffsetValue],
                                        offsetToOpt: Option[OffsetValue],
-                                       columns: Seq[String]): String = {
+                                       columns: Seq[String],
+                                       serverTimeZone: Option[ZoneId]): String = {
     if (sqlConfig.offsetInfo.isEmpty)
       throw new IllegalArgumentException(s"Offset information is not configured for database table: $tableName.")
 
@@ -148,7 +188,7 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
       case None => getDataQuery(tableName, columns, None)
     }
 
-    val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt)
+    val offsetWhere = getOffsetWhereClause(sqlConfig.offsetInfo.get, offsetFromOpt, offsetToOpt, serverTimeZone)
 
     if (offsetWhere.nonEmpty) {
       if (onlyForInfoDate.isEmpty) {
@@ -161,30 +201,32 @@ class SqlGeneratorMicrosoft(sqlConfig: SqlConfig) extends SqlGenerator {
     }
   }
 
-  private[core] def getOffsetWhereClause(offsetInfo: OffsetInfo, offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue]): String = {
+  private[core] def getOffsetWhereClause(offsetInfo: OffsetInfo, offsetFromOpt: Option[OffsetValue], offsetToOpt: Option[OffsetValue], serverTimeZone: Option[ZoneId]): String = {
     val offsetColumn = escape(offsetInfo.offsetColumn)
 
     (offsetFromOpt, offsetToOpt) match {
       case (Some(offsetFrom), Some(offsetTo)) =>
         validateOffsetValue(offsetFrom)
         validateOffsetValue(offsetTo)
-        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">=", offsetFrom, serverTimeZone)} AND ${getOffsetWhereCondition(offsetColumn, "<=", offsetTo, serverTimeZone)}"
       case (Some(offsetFrom), None) =>
         validateOffsetValue(offsetFrom)
-        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom)}"
+        s"${getOffsetWhereCondition(offsetColumn, ">", offsetFrom, serverTimeZone)}"
       case (None, Some(offsetTo)) =>
         validateOffsetValue(offsetTo)
-        s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo)}"
+        s"${getOffsetWhereCondition(offsetColumn, "<=", offsetTo, serverTimeZone)}"
       case (None, None) =>
         ""
     }
   }
 
-  private[core] def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  private[core] def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
+        val tz = serverTimeZone.getOrElse(throw new IllegalArgumentException(s"Server time zone must be provided when offsets have 'datetime' type"))
+        val ldt = LocalDateTime.ofInstant(ts, tz)
         val tsLiteral = timestampMsDbFormatter.format(ldt)
+        log.info(s"Timestamp conversion for timezone '$tz': ${ts.toEpochMilli}: $ts -> '$tsLiteral'")
         s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"

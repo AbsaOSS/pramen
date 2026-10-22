@@ -21,9 +21,12 @@ import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 import za.co.absa.pramen.core.sql.dialects.HiveDialect
+import za.co.absa.pramen.core.utils.TimeUtils
 
+import java.sql.Connection
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, ZoneId}
+import scala.util.Try
 
 object SqlGeneratorHive {
   private val log = LoggerFactory.getLogger(this.getClass.getName.stripSuffix("$"))
@@ -71,6 +74,43 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
+  override def getServerTimezoneQuery: String = "SELECT current_timestamp AS ts, unix_timestamp() AS epoch_sec"
+
+  /**
+    * Determines the timezone of the database server by executing the query returned by `getServerTimezoneQuery`
+    * against the given connection and parsing both the current timestamp as string and as a epoch seconds.
+    *
+    * @param connection An open JDBC connection to the database server whose timezone should be determined.
+    * @return A `Success` containing the server's `ZoneId` if the query returns a valid timezone identifier,
+    *         or a `Failure` if the query fails, returns no rows, returns NULL, or returns a value that cannot
+    *         be parsed as a `ZoneId`.
+    */
+  override def getServerTimezone(connection: Connection): Try[ZoneId] = {
+    Try {
+      val query = getServerTimezoneQuery
+      val statement = connection.createStatement()
+      try {
+        val resultSet = statement.executeQuery(query)
+        try {
+          if (resultSet.next()) {
+            val currentTimestamp = resultSet.getString(1)
+            val currentEpochSeconds = resultSet.getLong(2)
+            if (currentTimestamp == null) {
+              throw new IllegalStateException(s"The server timezone query returned NULL: $query")
+            }
+            TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds(currentTimestamp, currentEpochSeconds).get
+          } else {
+            throw new IllegalStateException(s"The server timezone query returned no rows: $query")
+          }
+        } finally {
+          resultSet.close()
+        }
+      } finally {
+        statement.close()
+      }
+    }
+  }
+
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
     val dateEndLit = getDateLiteral(dateEnd)
@@ -108,11 +148,10 @@ class SqlGeneratorHive(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig)
     }
   }
 
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
-        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        val tsLiteral = getGenericTimestampString(ts, serverTimeZone)
         s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"

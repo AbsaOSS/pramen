@@ -20,7 +20,7 @@ import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, ZoneId}
 
 class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
@@ -57,6 +57,8 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
 
+  override def getServerTimezoneQuery: String = "SELECT current_setting('TIMEZONE') AS timezone"
+
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     if (sqlConfig.infoDateType == SqlColumnType.DATETIME) {
       s"$infoDateColumn >= '$dateBegin' AND $infoDateColumn < '${dateEnd.plusDays(1)}'"
@@ -89,12 +91,10 @@ class SqlGeneratorPostgreSQL(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlC
     }
   }
 
-
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
-        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        val tsLiteral = getGenericTimestampString(ts, serverTimeZone)
         s"$column $condition '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"

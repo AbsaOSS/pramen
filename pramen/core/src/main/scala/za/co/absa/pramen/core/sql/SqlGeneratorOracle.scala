@@ -20,7 +20,7 @@ import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, ZoneId}
 
 class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
@@ -57,6 +57,8 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit, hasWhere = true)}"
   }
 
+  override def getServerTimezoneQuery: String = "SELECT SESSIONTIMEZONE FROM dual"
+
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     require(!dateEnd.isBefore(dateBegin), s"infoDateEnd [$dateEnd] must be >= infoDateBegin [$dateBegin]")
 
@@ -87,11 +89,10 @@ class SqlGeneratorOracle(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     }
   }
 
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
-        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        val tsLiteral = getGenericTimestampString(ts, serverTimeZone)
         s"$column $condition TIMESTAMP '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"

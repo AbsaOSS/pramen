@@ -19,7 +19,9 @@ package za.co.absa.pramen.core.mocks
 import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlConfig, SqlGenerator}
 
-import java.time.LocalDate
+import java.sql.Connection
+import java.time.{LocalDate, ZoneId}
+import scala.util.Try
 
 class SqlGeneratorDummy(sqlConfig: SqlConfig) extends SqlGenerator {
   def getSqlConfig: SqlConfig = sqlConfig
@@ -38,7 +40,9 @@ class SqlGeneratorDummy(sqlConfig: SqlConfig) extends SqlGenerator {
 
   override def getDataQuery(tableName: String, infoDateBegin: LocalDate, infoDateEnd: LocalDate, columns: Seq[String], limit: Option[Int]): String = null
 
-  override def getDataQueryIncremental(tableName: String, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String]): String = null
+  override def getServerTimezone(connection: Connection): Try[ZoneId] = null
+
+  override def getDataQueryIncremental(tableName: String, onlyForInfoDate: Option[LocalDate], offsetFrom: Option[OffsetValue], offsetTo: Option[OffsetValue], columns: Seq[String], serverTimeZone: Option[ZoneId]): String = null
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = null
 

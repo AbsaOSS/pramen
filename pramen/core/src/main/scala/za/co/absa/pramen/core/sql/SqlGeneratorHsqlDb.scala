@@ -20,7 +20,7 @@ import za.co.absa.pramen.api.offset.OffsetValue
 import za.co.absa.pramen.api.sql.{SqlColumnType, SqlConfig, SqlGeneratorBase}
 
 import java.time.format.DateTimeFormatter
-import java.time.{LocalDate, LocalDateTime}
+import java.time.{LocalDate, ZoneId}
 
 class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfig) {
   private val dateFormatterApp = DateTimeFormatter.ofPattern(sqlConfig.dateFormatApp)
@@ -56,6 +56,8 @@ class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     val where = getWhere(infoDateBegin, infoDateEnd)
     s"SELECT ${columnExpr(columns)} FROM ${escape(tableName)} WHERE $where${getLimit(limit)}"
   }
+
+  override def getServerTimezoneQuery: String = "VALUES CURRENT_TIMESTAMP"
 
   override def getWhere(dateBegin: LocalDate, dateEnd: LocalDate): String = {
     val dateBeginLit = getDateLiteral(dateBegin)
@@ -94,11 +96,10 @@ class SqlGeneratorHsqlDb(sqlConfig: SqlConfig) extends SqlGeneratorBase(sqlConfi
     }
   }
 
-  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue): String = {
+  override def getOffsetWhereCondition(column: String, condition: String, offset: OffsetValue, serverTimeZone: Option[ZoneId]): String = {
     offset match {
       case OffsetValue.DateTimeValue(ts) =>
-        val ldt = LocalDateTime.ofInstant(ts, sqlConfig.serverTimeZone)
-        val tsLiteral = timestampGenericDbFormatter.format(ldt)
+        val tsLiteral = getGenericTimestampString(ts, serverTimeZone)
         s"$column $condition TIMESTAMP '$tsLiteral'"
       case OffsetValue.IntegralValue(value) =>
         s"$column $condition $value"

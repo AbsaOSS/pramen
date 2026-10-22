@@ -126,4 +126,225 @@ class TimeUtilsSuite extends AnyWordSpec {
     }
   }
 
+  "getTimezoneFromTimestampString" should {
+    "extract a positive offset from a timestamp with milliseconds" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-10-16 15:02:28.436 +0200")
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+      assert(result.get.toString == "+02:00")
+    }
+
+    "extract a positive offset from a timestamp without milliseconds" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-10-16 15:02:28 +0200")
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+      assert(result.get.toString == "+02:00")
+    }
+
+    "extract a negative offset with non-zero minutes" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-10-16 15:02:28.436 -0530")
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHoursMinutes(-5, -30))
+      assert(result.get.toString == "-05:30")
+    }
+
+    "extract a zero offset as UTC" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-10-16 15:02:28.436 +0000")
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.UTC)
+      assert(result.get.toString == "Z")
+    }
+
+    "ignore leading and trailing whitespace" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("   2026-10-16 15:02:28.436 +0200  ")
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+    }
+
+    "return the same offset regardless of the date and time part" in {
+      val result1 = TimeUtils.getTimezoneFromTimestampString("2020-01-01 00:00:00 +0300")
+      val result2 = TimeUtils.getTimezoneFromTimestampString("2025-12-31 23:59:59.999 +0300")
+
+      assert(result1.isSuccess)
+      assert(result2.isSuccess)
+      assert(result1.get == result2.get)
+      assert(result1.get == java.time.ZoneOffset.ofHours(3))
+    }
+
+    "return a failure for an empty string" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("")
+
+      assert(result.isFailure)
+    }
+
+    "return a failure for a blank string" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("    ")
+
+      assert(result.isFailure)
+    }
+
+    "return a failure when the offset is missing" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-10-16 15:02:28.436")
+
+      assert(result.isFailure)
+    }
+
+    "return a failure when only the date is provided" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-10-16")
+
+      assert(result.isFailure)
+    }
+
+    "return a failure for an invalid date" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-13-45 15:02:28.436 +0200")
+
+      assert(result.isFailure)
+    }
+
+    "return a failure for an out of range offset" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("2026-10-16 15:02:28.436 +2500")
+
+      assert(result.isFailure)
+    }
+
+    "return a failure for a completely invalid string" in {
+      val result = TimeUtils.getTimezoneFromTimestampString("not a timestamp")
+
+      assert(result.isFailure)
+    }
+  }
+  
+  "getTimezoneFromTimestampStringAndEpochSeconds" should {
+    // "2026-10-16 14:56:28" interpreted as UTC corresponds to 1792162588 epoch seconds
+    val localAsUtcEpochSeconds = 1792162588L
+
+    "extract a positive offset from a timestamp with milliseconds" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28.038", 1792155388L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+      assert(result.get.toString == "+02:00")
+    }
+
+    "extract a positive offset from a timestamp with milliseconds having 6 digits" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28.038123", 1792155388L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+      assert(result.get.toString == "+02:00")
+    }
+
+    "extract a positive offset from a timestamp without milliseconds" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28", 1792155388L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+      assert(result.get.toString == "+02:00")
+    }
+
+    "extract a zero offset as UTC" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28.038", localAsUtcEpochSeconds)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.UTC)
+      assert(result.get.toString == "Z")
+    }
+
+    "extract a negative offset with non-zero minutes" in {
+      val epochSeconds = localAsUtcEpochSeconds + 5 * 3600 + 30 * 60
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28.038", epochSeconds)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHoursMinutes(-5, -30))
+      assert(result.get.toString == "-05:30")
+    }
+
+    "extract a negative whole-hour offset" in {
+      val epochSeconds = localAsUtcEpochSeconds + 10 * 3600
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28", epochSeconds)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(-10))
+      assert(result.get.toString == "-10:00")
+    }
+
+    "round the offset to the nearest minute when epoch seconds is slightly ahead" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28.038", 1792155388L + 20L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+    }
+
+    "round the offset to the nearest minute when epoch seconds is slightly behind" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28.038", 1792155388L - 25L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+    }
+
+    "round the offset down to the nearest 5 minutes" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28", 1792155388L - 40L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHoursMinutes(2, 0))
+      assert(result.get.toString == "+02:00")
+    }
+
+    "round the offset up to the next 5 minutes when the difference is more than half of 5 minutes" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28", 1792155388L - 200L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHoursMinutes(2, 5))
+      assert(result.get.toString == "+02:05")
+    }
+
+    "ignore leading and trailing whitespace" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("   2026-10-16 14:56:28.038  ", 1792155388L)
+
+      assert(result.isSuccess)
+      assert(result.get == java.time.ZoneOffset.ofHours(2))
+    }
+
+    "return a failure for an empty string" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("", 1792155388L)
+
+      assert(result.isFailure)
+    }
+
+    "return a failure for a blank string" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("    ", 1792155388L)
+
+      assert(result.isFailure)
+    }
+
+    "return a failure when only the date is provided" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16", 1792155388L)
+
+      assert(result.isFailure)
+    }
+
+    "return a failure for an invalid date" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-13-45 14:56:28.038", 1792155388L)
+
+      assert(result.isFailure)
+    }
+
+    "return a failure for a completely invalid string" in {
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("not a timestamp", 1792155388L)
+
+      assert(result.isFailure)
+    }
+
+    "return a failure when the computed offset is out of range" in {
+      val epochSeconds = localAsUtcEpochSeconds - 20 * 3600
+      val result = TimeUtils.getTimezoneFromTimestampStringAndEpochSeconds("2026-10-16 14:56:28", epochSeconds)
+
+      assert(result.isFailure)
+    }
+  }
 }
