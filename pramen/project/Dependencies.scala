@@ -30,7 +30,7 @@ object Dependencies {
   def CoreDependencies(scalaVersion: String, isDeltaCompile: Boolean): Seq[ModuleID] = Seq(
     "org.apache.spark"       %% "spark-sql"                 % sparkVersion(scalaVersion) % Provided,
     "software.amazon.awssdk" %  "dynamodb"                  % awsSdkVersion              % Provided,
-    "org.xerial"             %  "sqlite-jdbc"               % sqliteVersion              % Compile classifier "without-natives",
+    "org.xerial"             %  "sqlite-jdbc"               % sqliteVersion              % Provided,
     "org.mongodb.scala"      %% "mongo-scala-driver"        % mongoDbScalaDriverVersion,
     "com.typesafe.slick"     %% "slick"                     % slickVersion,
     "com.typesafe.slick"     %% "slick-hikaricp"            % slickVersion,
