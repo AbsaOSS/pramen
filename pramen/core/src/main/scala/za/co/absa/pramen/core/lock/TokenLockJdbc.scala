@@ -78,10 +78,10 @@ class TokenLockJdbc(token: String, db: Database, slickProfile: JdbcProfile) exte
           tryAcquireExistingTicket()
         case Failure(_: org.postgresql.util.PSQLException) => // PostgreSQL
           tryAcquireExistingTicket()
-        case Failure(_: org.sqlite.SQLiteException) => // SQLite
-          tryAcquireExistingTicket()
         case Failure(sqlEx: java.sql.SQLException) if sqlEx.getSQLState != null && (sqlEx.getSQLState == "23505" || sqlEx.getSQLState == "23000") => // Conformant JDBC engines
           // 23505: unique violation; 23000: integrity constraint violation (common umbrella)
+          tryAcquireExistingTicket()
+        case Failure(ex) if ex.getMessage.contains("SQLITE_CONSTRAINT_PRIMARYKEY") => // SQLite
           tryAcquireExistingTicket()
         case Failure(ex) if ex.getMessage.contains("constraint") => // MS SQL Server
           tryAcquireExistingTicket()
