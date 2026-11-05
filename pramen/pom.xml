@@ -241,7 +241,7 @@
             <dependency>
                 <groupId>org.postgresql</groupId>
                 <artifactId>postgresql</artifactId>
-                <version>42.7.9</version>
+                <version>42.7.14</version>
             </dependency>
 
             <!-- My SQL JDBC driver (https://mvnrepository.com/artifact/com.mysql/mysql-connector-j) -->
@@ -255,7 +255,7 @@
             <dependency>
                 <groupId>org.xerial</groupId>
                 <artifactId>sqlite-jdbc</artifactId>
-                <version>3.51.1.0</version>
+                <version>3.54.1.0</version>
             </dependency>
 
             <!-- MS SQL JDBC driver (https://mvnrepository.com/artifact/com.microsoft.sqlserver/mssql-jdbc) -->
@@ -283,7 +283,7 @@
             <dependency>
                 <groupId>com.typesafe</groupId>
                 <artifactId>config</artifactId>
-                <version>1.4.3</version>
+                <version>1.4.9</version>
             </dependency>
 
             <!-- https://search.maven.org/artifact/com.sun.mail/javax.mail -->
