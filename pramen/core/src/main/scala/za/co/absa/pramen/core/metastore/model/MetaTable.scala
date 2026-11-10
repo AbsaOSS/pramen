@@ -157,7 +157,7 @@ object MetaTable {
     val format = FormatDetectors.detectFormat(formats) match {
       case Some(f) => f
       case None =>
-        log.info(s"The format of the data in '$name' cannot be determined for metatable '$name'. Using the first available format: ${formats.head.name}")
+        log.info(s"The format of the data in '$name' cannot be detected for metatable '$name'. Using the first available format: ${formats.head.name}")
         formats.head
     }
 

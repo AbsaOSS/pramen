@@ -19,6 +19,7 @@ package za.co.absa.pramen.core.integration
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.functions.lit
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.core.base.SparkTestIcebergBase
 import za.co.absa.pramen.core.fixtures.{TempDirFixture, TextComparisonFixture}
@@ -28,7 +29,7 @@ import za.co.absa.pramen.core.utils.ResourceUtils
 import java.time.LocalDate
 import scala.util.Random
 
-class FormatDetectionSuite extends AnyWordSpec with SparkTestIcebergBase with TempDirFixture with TextComparisonFixture {
+class FormatDetectionIcebergSuite extends AnyWordSpec with SparkTestIcebergBase with TempDirFixture with TextComparisonFixture {
   import spark.implicits._
 
   private val infoDate = LocalDate.of(2021, 2, 18)
@@ -38,7 +39,6 @@ class FormatDetectionSuite extends AnyWordSpec with SparkTestIcebergBase with Te
     "use parquet when no tables exist and parquet is the primary format" in {
       withTempDirectory("integration_file_based") { tempDir =>
         val tableName = "mt_iceberg_detect1" + Math.abs(Random.nextInt()).toString
-        //val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
         val conf = getConfig(tempDir, "parquet, iceberg", tableName)
 
@@ -46,8 +46,8 @@ class FormatDetectionSuite extends AnyWordSpec with SparkTestIcebergBase with Te
 
         assert(exitCode == 0)
 
-        val table2Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
-        val df = spark.read.parquet(table2Path.toString)
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+        val df = spark.read.parquet(table1Path.toString)
 
         assert(!df.isEmpty)
       }
@@ -56,7 +56,6 @@ class FormatDetectionSuite extends AnyWordSpec with SparkTestIcebergBase with Te
     "use delta when no tables exist and delta is the primary format" in {
       withTempDirectory("integration_file_based") { tempDir =>
         val tableName = "mt_iceberg_detect1" + Math.abs(Random.nextInt()).toString
-        //val fsUtils = new FsUtils(spark.sparkContext.hadoopConfiguration, tempDir)
 
         val conf = getConfig(tempDir, "delta, parquet", tableName)
 
@@ -64,8 +63,31 @@ class FormatDetectionSuite extends AnyWordSpec with SparkTestIcebergBase with Te
 
         assert(exitCode == 0)
 
-        val table2Path = new Path(tempDir, "table1")
-        val df = spark.read.format("delta").load(table2Path.toString)
+        val table1Path = new Path(tempDir, "table1")
+        val df = spark.read.format("delta").load(table1Path.toString)
+
+        assert(!df.isEmpty)
+      }
+    }
+
+    "use parquet when parquet table exists" in {
+      withTempDirectory("integration_file_based") { tempDir =>
+        val tableName = "mt_iceberg_detect1" + Math.abs(Random.nextInt()).toString
+        val table1Path = new Path(new Path(tempDir, "table1"), s"pramen_info_date=$infoDate")
+
+        exampleDf.filter(lit(false)).write.parquet(table1Path.toString)
+
+        val conf = getConfig(tempDir, "iceberg, parquet", tableName)
+
+        val exitCode = AppRunner.runPipeline(conf)
+
+        assert(exitCode == 0)
+
+        val fs = table1Path.getFileSystem(spark.sparkContext.hadoopConfiguration)
+        assert(!fs.exists(new Path(table1Path, "metadata")))
+        assert(!fs.exists(new Path(table1Path, "data")))
+        assert(!fs.exists(new Path(table1Path, "_delta_log")))
+        val df = spark.read.parquet(table1Path.toString)
 
         assert(!df.isEmpty)
       }
