@@ -17,11 +17,12 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.Config
-import org.apache.spark.sql.SaveMode
+import org.apache.spark.sql.{SaveMode, SparkSession}
 import org.slf4j.LoggerFactory
 import za.co.absa.pramen.api.{DataFormat, MetaTableDef, PartitionScheme}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
 import za.co.absa.pramen.core.config.InfoDateOverride
+import za.co.absa.pramen.core.metastore.FormatDetectors
 import za.co.absa.pramen.core.metastore.peristence.MetastorePersistenceRaw.RAW_OFFSET_FIELD_KEY
 import za.co.absa.pramen.core.utils.{AlgorithmUtils, ConfigUtils}
 
@@ -95,7 +96,7 @@ object MetaTable {
   val DEFAULT_BATCH_ID_COLUMN_KEY = "pramen.batchid.column.default"
   val DEFAULT_BATCH_ID_COLUMN_NAME = "pramen_batchid"
 
-  def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String): Seq[MetaTable] = {
+  def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String)(implicit spark: SparkSession): Seq[MetaTable] = {
     val defaultInfoDateColumnName = infoDateConfig.columnName
     val defaultInfoDateFormat = infoDateConfig.dateFormat
     val defaultPartitionSchemne = infoDateConfig.partitionScheme
@@ -133,7 +134,7 @@ object MetaTable {
                              defaultTrackDays: Int,
                              defaultHiveConfig: HiveDefaultConfig,
                              defaultPreferAddPartition: Boolean,
-                             defaultBatchIdColumn: String): MetaTable = {
+                             defaultBatchIdColumn: String)(implicit spark: SparkSession): MetaTable = {
     val name = ConfigUtils.getOptionString(conf, NAME_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $NAME_KEY"))
     val description = ConfigUtils.getOptionString(conf, NAME_DESCRIPTION).getOrElse("")
     val infoDateOverride = InfoDateOverride.fromConfig(conf)
@@ -146,11 +147,18 @@ object MetaTable {
     val trackDays = ConfigUtils.getOptionInt(conf, TRACK_DAYS_KEY).getOrElse(defaultTrackDays)
     val trackDaysExplicitlySet = conf.hasPath(TRACK_DAYS_KEY)
 
-    val format = Try {
-      DataFormatParser.fromConfig(conf, appConf)
+    val formats = Try {
+      DataFormatParser.formatsFromConfig(conf, appConf)
     } match {
       case Success(f) => f
       case Failure(ex) => throw new IllegalArgumentException(s"Unable to read data format from config for the metastore table: $name", ex)
+    }
+
+    val format = FormatDetectors.detectFormat(formats) match {
+      case Some(f) => f
+      case None =>
+        log.info(s"The format of the data in '$name' cannot be determined for metatable '$name'. Using the first available format: ${formats.head.name}")
+        formats.head
     }
 
     val batchIdColumn = if (format.isRaw) {

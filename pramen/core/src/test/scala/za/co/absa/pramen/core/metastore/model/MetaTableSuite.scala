@@ -22,12 +22,13 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat.Parquet
 import za.co.absa.pramen.api.{DataFormat, PartitionInfo, PartitionScheme}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
 
 import java.time.LocalDate
 
-class MetaTableSuite extends AnyWordSpec {
+class MetaTableSuite extends AnyWordSpec with SparkTestBase {
   "fromConfig()" should {
     "be able to parse multiple tables" in {
       val conf = ConfigFactory.parseString(
