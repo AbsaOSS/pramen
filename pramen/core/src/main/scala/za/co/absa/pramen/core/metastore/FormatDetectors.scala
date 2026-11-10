@@ -137,7 +137,7 @@ object FormatDetectors {
         log.info(s"Path '$pathStr' detected as Parquet format.")
         Some(DataFormatKind.Parquet)
       } else {
-        log.info(s"The format of the data in '$pathStr' cannot be determined.")
+        log.info(s"The format of the data in '$pathStr' cannot be detected.")
         None
       }
     }
