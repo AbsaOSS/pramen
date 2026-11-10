@@ -40,9 +40,7 @@ object DataFormatParser {
   val DEFAULT_RECORDS_PER_PARTITION_KEY = "pramen.default.records.per.partition"
   val DEFAULT_PREFER_COALESCE_KEY = "pramen.default.prefer.coalesce"
 
-  def fromConfig(conf: Config, appConfig: Config): DataFormat = {
-    val format = ConfigUtils.getOptionString(conf, FORMAT_KEY).getOrElse(DEFAULT_FORMAT)
-
+  def fromConfig(conf: Config, appConfig: Config, format: String): DataFormat = {
     val defaultRecordsPerPartition = ConfigUtils.getOptionLong(appConfig, DEFAULT_RECORDS_PER_PARTITION_KEY)
     val defaultPreferCoalesce = ConfigUtils.getOptionBoolean(appConfig, DEFAULT_PREFER_COALESCE_KEY).getOrElse(false)
 
@@ -72,6 +70,17 @@ object DataFormatParser {
         val cachePolicy = getCachePolicy(conf).getOrElse(CachePolicy.NoCache)
         DataFormat.Transient(cachePolicy)
       case _              => throw new IllegalArgumentException(s"Unknown format: $format")
+    }
+  }
+
+  def formatsFromConfig(conf: Config, appConfig: Config): Seq[DataFormat] = {
+    val format = ConfigUtils.getOptionString(conf, FORMAT_KEY).getOrElse(DEFAULT_FORMAT)
+
+    if (format.contains(",")) {
+      val formatsStr = format.split(",").map(_.trim)
+      formatsStr.map(f => fromConfig(conf, appConfig, f))
+    } else {
+      Seq(fromConfig(conf, appConfig, format))
     }
   }
 

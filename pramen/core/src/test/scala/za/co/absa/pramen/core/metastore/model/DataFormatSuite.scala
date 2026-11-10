@@ -27,7 +27,7 @@ class DataFormatSuite extends AnyWordSpec {
     "use 'parquet' as the default format" in {
       val conf = ConfigFactory.parseString("path = /a/b/c")
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "parquet")
 
       assert(format.name == "parquet")
       assert(!format.isTransient)
@@ -44,7 +44,7 @@ class DataFormatSuite extends AnyWordSpec {
           |prefer.coalesce = false
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "parquet")
 
       assert(format.name == "parquet")
       assert(!format.isTransient)
@@ -61,7 +61,7 @@ class DataFormatSuite extends AnyWordSpec {
           |prefer.coalesce = true
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "parquet")
 
       assert(format.name == "parquet")
       assert(!format.isTransient)
@@ -77,7 +77,7 @@ class DataFormatSuite extends AnyWordSpec {
           |number.of.partitions = 10
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "parquet")
 
       assert(format.name == "parquet")
       assert(!format.isTransient)
@@ -93,7 +93,7 @@ class DataFormatSuite extends AnyWordSpec {
           |records.per.partition = 200
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "delta")
 
       assert(format.name == "delta")
       assert(!format.isTransient)
@@ -110,7 +110,7 @@ class DataFormatSuite extends AnyWordSpec {
           |number.of.partitions = 10
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "delta")
 
       assert(format.name == "delta")
       assert(!format.isTransient)
@@ -126,7 +126,7 @@ class DataFormatSuite extends AnyWordSpec {
           |table = mydb.mytable
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "iceberg")
 
       assert(format.name == "iceberg")
       assert(!format.isTransient)
@@ -144,7 +144,7 @@ class DataFormatSuite extends AnyWordSpec {
           |path = /a/b/c
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "iceberg")
 
       assert(format.name == "iceberg")
       assert(!format.isTransient)
@@ -162,7 +162,7 @@ class DataFormatSuite extends AnyWordSpec {
           |""".stripMargin)
 
       val ex = intercept[IllegalArgumentException] {
-        DataFormatParser.fromConfig(conf, conf)
+        DataFormatParser.fromConfig(conf, conf, "iceberg")
       }
 
       assert(ex.getMessage.contains("Mandatory option for a metastore table having 'iceberg' format: table"))
@@ -174,7 +174,7 @@ class DataFormatSuite extends AnyWordSpec {
           |path = /a/b/c
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "raw")
 
       assert(format.name == "raw")
       assert(!format.isTransient)
@@ -185,7 +185,7 @@ class DataFormatSuite extends AnyWordSpec {
     "use 'transient_eager' when specified explicitly" in {
       val conf = ConfigFactory.parseString("format = transient_eager")
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "transient_eager")
 
       assert(format.name == "transient_eager")
       assert(format.isTransient)
@@ -200,7 +200,7 @@ class DataFormatSuite extends AnyWordSpec {
           |cache.policy = cache
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "transient_eager")
 
       assert(format.name == "transient_eager")
       assert(format.isTransient)
@@ -212,7 +212,7 @@ class DataFormatSuite extends AnyWordSpec {
     "use 'transient' when specified explicitly" in {
       val conf = ConfigFactory.parseString("format = transient")
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "transient")
 
       assert(format.name == "transient")
       assert(format.isTransient)
@@ -227,7 +227,7 @@ class DataFormatSuite extends AnyWordSpec {
           |cache.policy = cache
           |""".stripMargin)
 
-      val format = DataFormatParser.fromConfig(conf, conf)
+      val format = DataFormatParser.fromConfig(conf, conf, "transient")
 
       assert(format.name == "transient")
       assert(format.isTransient)
@@ -243,7 +243,7 @@ class DataFormatSuite extends AnyWordSpec {
 
       val appConf = ConfigFactory.parseString("pramen.default.records.per.partition = 100")
 
-      val format = DataFormatParser.fromConfig(conf, appConf)
+      val format = DataFormatParser.fromConfig(conf, appConf, "delta")
 
       assert(format.name == "delta")
       assert(!format.isTransient)
@@ -257,7 +257,7 @@ class DataFormatSuite extends AnyWordSpec {
       val conf = ConfigFactory.parseString("format = no_such_format")
 
       val ex = intercept[IllegalArgumentException] {
-        DataFormatParser.fromConfig(conf, conf)
+        DataFormatParser.fromConfig(conf, conf, "no_such_format")
       }
 
       assert(ex.getMessage.contains("Unknown format: no_such_format"))
@@ -267,7 +267,7 @@ class DataFormatSuite extends AnyWordSpec {
       val conf = ConfigFactory.parseString("format = parquet")
 
       val ex = intercept[IllegalArgumentException] {
-        DataFormatParser.fromConfig(conf, conf)
+        DataFormatParser.fromConfig(conf, conf, "parquet")
       }
 
       assert(ex.getMessage.contains("Mandatory option missing: path"))
@@ -277,10 +277,51 @@ class DataFormatSuite extends AnyWordSpec {
       val conf = ConfigFactory.parseString("format = raw")
 
       val ex = intercept[IllegalArgumentException] {
-        DataFormatParser.fromConfig(conf, conf)
+        DataFormatParser.fromConfig(conf, conf, "raw")
       }
 
       assert(ex.getMessage.contains("Mandatory option for a metastore table having 'raw' format"))
+    }
+  }
+
+  "formatsFromConfig" should {
+    "return all formats specified" in {
+      val conf = ConfigFactory.parseString(
+        """format = "delta, parquet"
+          |path = /a/b/c
+          |number.of.partitions = 10
+          |""".stripMargin)
+
+      val formats = DataFormatParser.formatsFromConfig(conf, conf)
+
+      assert(formats.length == 2)
+      assert(formats.head.name == "delta")
+      assert(!formats.head.isTransient)
+      assert(formats.head.isInstanceOf[Delta])
+      assert(formats.head.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
+      assert(formats.head.asInstanceOf[Delta].query.query == "/a/b/c")
+      assert(formats.head.asInstanceOf[Delta].partitionInfo == PartitionInfo.Explicit(10))
+      assert(!formats(1).isTransient)
+      assert(formats(1).isInstanceOf[Parquet])
+      assert(formats(1).asInstanceOf[Parquet].path == "/a/b/c")
+    }
+
+    "return 1 format when only 1 is specified" in {
+      val conf = ConfigFactory.parseString(
+        """format = "delta"
+          |path = /a/b/c
+          |number.of.partitions = 10
+          |""".stripMargin)
+
+      val formats = DataFormatParser.formatsFromConfig(conf, conf)
+
+      assert(formats.length == 1)
+      assert(formats.head.name == "delta")
+      assert(!formats.head.isTransient)
+      assert(formats.head.isInstanceOf[Delta])
+      assert(formats.head.asInstanceOf[Delta].query.isInstanceOf[Query.Path])
+      assert(formats.head.asInstanceOf[Delta].query.query == "/a/b/c")
+      assert(formats.head.asInstanceOf[Delta].partitionInfo == PartitionInfo.Explicit(10))
     }
   }
 
