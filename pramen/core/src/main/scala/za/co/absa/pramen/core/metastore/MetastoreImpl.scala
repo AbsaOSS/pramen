@@ -346,6 +346,32 @@ class MetastoreImpl(appConfig: Config,
       log.info(s"Committed ${commitRequests.length} requests.'")
     }
   }
+
+  /**
+    * Detects the actual data format of each table registered in the metastore and returns a new
+    * metastore instance whose table definitions reflect the detected formats.
+    *
+    * Detection happens only for tables that have multiple formats defined.
+    *
+    * For each table definition, the format is detected from the table's possible formats.
+    * If the table is new, the first available possible format is used.
+    *
+    * Tables whose detected format matches the configured one are kept unchanged.
+    *
+    * @return a new [[MetastoreImpl]] instance with table definitions updated to the detected formats.
+    */
+  def detectFormats(): MetastoreImpl = {
+    val newTables = tableDefs
+      .map(MetaTable.detectTableFormat(_))
+
+    new MetastoreImpl(appConfig,
+      tableDefsIn = newTables,
+      bookkeeper = bookkeeper,
+      metadata = metadata,
+      batchId = batchId,
+      isRerun = isRerun,
+      skipBookKeepingUpdates = skipBookKeepingUpdates)
+  }
 }
 
 object MetastoreImpl {

@@ -22,13 +22,12 @@ import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat.Parquet
 import za.co.absa.pramen.api.{DataFormat, PartitionInfo, PartitionScheme}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
-import za.co.absa.pramen.core.base.SparkTestBase
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
 
 import java.time.LocalDate
 
-class MetaTableSuite extends AnyWordSpec with SparkTestBase {
+class MetaTableSuite extends AnyWordSpec {
   "fromConfig()" should {
     "be able to parse multiple tables" in {
       val conf = ConfigFactory.parseString(
@@ -42,7 +41,7 @@ class MetaTableSuite extends AnyWordSpec with SparkTestBase {
           |pramen.metastore.tables = [
           |  {
           |    name = table1
-          |    format = parquet
+          |    format = "parquet, delta"
           |    path = /a/b/c
           |    information.date.column = INFO_DATE
           |    information.date.format = dd-MM-yyyy
@@ -72,6 +71,9 @@ class MetaTableSuite extends AnyWordSpec with SparkTestBase {
       assert(metaTables.size == 4)
       assert(metaTables.head.name == "table1")
       assert(metaTables.head.format.name == "parquet")
+      assert(metaTables.head.possibleFormats.length == 2)
+      assert(metaTables.head.possibleFormats.head.name == "parquet")
+      assert(metaTables.head.possibleFormats(1).name == "delta")
       assert(metaTables.head.infoDateColumn == "INFO_DATE")
       assert(metaTables.head.infoDateFormat == "dd-MM-yyyy")
       assert(metaTables.head.trackDays == 2)
