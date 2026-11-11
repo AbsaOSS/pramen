@@ -152,6 +152,7 @@ object TransferTableParser {
     MetaTable(transferTable.jobMetaTableName,
       "",
       DataFormat.Null(),
+      Seq(DataFormat.Null()),
       "",
       "",
       partitionScheme = PartitionScheme.NotPartitioned,

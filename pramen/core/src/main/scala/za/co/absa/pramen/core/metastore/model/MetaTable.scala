@@ -34,7 +34,8 @@ import scala.util.{Failure, Success, Try}
   *
   * @param name                   The name of the table.
   * @param description            The description of the table.
-  * @param format                 The format of the table.
+  * @param format                 The format of the table (primary or detected).
+  * @param possibleFormats        The possible formats of the table.
   * @param infoDateColumn         The name of the column that contains the information date (partitioned by).
   * @param infoDateFormat         The format of the information date.
   * @param partitionScheme        Specifies how the table should be partitioned (for Delta Lake only at the moment).
@@ -55,6 +56,7 @@ case class MetaTable(
                       name: String,
                       description: String,
                       format: DataFormat,
+                      possibleFormats: Seq[DataFormat],
                       infoDateColumn: String,
                       infoDateFormat: String,
                       partitionScheme: PartitionScheme,
@@ -96,7 +98,7 @@ object MetaTable {
   val DEFAULT_BATCH_ID_COLUMN_KEY = "pramen.batchid.column.default"
   val DEFAULT_BATCH_ID_COLUMN_NAME = "pramen_batchid"
 
-  def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String)(implicit spark: SparkSession): Seq[MetaTable] = {
+  def fromConfig(conf: Config, infoDateConfig: InfoDateConfig, key: String): Seq[MetaTable] = {
     val defaultInfoDateColumnName = infoDateConfig.columnName
     val defaultInfoDateFormat = infoDateConfig.dateFormat
     val defaultPartitionSchemne = infoDateConfig.partitionScheme
@@ -134,7 +136,7 @@ object MetaTable {
                              defaultTrackDays: Int,
                              defaultHiveConfig: HiveDefaultConfig,
                              defaultPreferAddPartition: Boolean,
-                             defaultBatchIdColumn: String)(implicit spark: SparkSession): MetaTable = {
+                             defaultBatchIdColumn: String): MetaTable = {
     val name = ConfigUtils.getOptionString(conf, NAME_KEY).getOrElse(throw new IllegalArgumentException(s"Mandatory option missing: $NAME_KEY"))
     val description = ConfigUtils.getOptionString(conf, NAME_DESCRIPTION).getOrElse("")
     val infoDateOverride = InfoDateOverride.fromConfig(conf)
@@ -154,12 +156,7 @@ object MetaTable {
       case Failure(ex) => throw new IllegalArgumentException(s"Unable to read data format from config for the metastore table: $name", ex)
     }
 
-    val format = FormatDetectors.detectFormat(formats) match {
-      case Some(f) => f
-      case None =>
-        log.info(s"The format of the data in '$name' cannot be detected for metatable '$name'. Using the first available format: ${formats.head.name}")
-        formats.head
-    }
+    val format = formats.head
 
     val batchIdColumn = if (format.isRaw) {
       ConfigUtils.getOptionString(conf, BATCH_ID_COLUMN_KEY).getOrElse(RAW_OFFSET_FIELD_KEY)
@@ -186,6 +183,7 @@ object MetaTable {
     MetaTable(name,
       description,
       format,
+      formats,
       infoDateColumn,
       infoDateFormat,
       partitionScheme,
@@ -206,11 +204,27 @@ object MetaTable {
       sparkConfig)
   }
 
+  def detectTableFormat(mt: MetaTable)(implicit spark: SparkSession): MetaTable = {
+    val possibleFormats = mt.possibleFormats
+    val detectedFormat = FormatDetectors.detectFormat(possibleFormats) match {
+      case Some(f) => f
+      case None =>
+        log.info(s"The format of the data in '${mt.name}' cannot be detected for metatable '${mt.name}'. Using the first available format: ${possibleFormats.head.name}")
+        possibleFormats.head
+    }
+
+    if (mt.format == detectedFormat)
+      mt
+    else
+      mt.copy(format = detectedFormat)
+  }
+
   def getNullTable(table: String): MetaTable = {
     MetaTable(
       name = table,
       description = "",
       format = DataFormat.Null(),
+      possibleFormats = Seq(DataFormat.Null()),
       infoDateColumn = "",
       infoDateFormat = "",
       partitionScheme = PartitionScheme.NotPartitioned,
