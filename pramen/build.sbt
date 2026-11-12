@@ -88,6 +88,10 @@ val assemblyFeatures = settingKey[Seq[String]]("Define assembly scope")
 lazy val UnitTest = config("unit") extend Test
 lazy val IntegrationTest = config("integration") extend Test
 
+lazy val commonJacocoExcludes: Seq[String] = Seq(
+  "za.co.absa.pramen.core.metastore.model.DataFormatKind*" // a case class
+)
+
 lazy val pramen = (project in file("."))
   .disablePlugins(sbtassembly.AssemblyPlugin)
   .settings(
@@ -157,6 +161,7 @@ lazy val core = (project in file("core"))
     populateBuildInfoTemplate,
     jacocoReportName := "pramen:core Jacoco Report",
     jacocoReportFormats := Set("html", "xml"),
+    jacocoExcludes := commonJacocoExcludes,
     assemblySettingsRunner
   )
   .dependsOn(api)
@@ -188,6 +193,7 @@ lazy val extras = (project in file("extras"))
     Test / javaOptions ++= projectJavaOptions,
     jacocoReportName := "pramen-extras Jacoco Report",
     jacocoReportFormats := Set("html", "xml"),
+    jacocoExcludes := commonJacocoExcludes,
     assemblySettingsExtras
   )
   .dependsOn(core)
