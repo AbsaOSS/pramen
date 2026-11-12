@@ -30,6 +30,8 @@ import za.co.absa.pramen.core.metadata.MetadataManagerNull
 import za.co.absa.pramen.core.metastore.{Metastore, MetastoreImpl}
 import za.co.absa.pramen.core.utils.SparkUtils
 
+import scala.util.control.NonFatal
+
 class AppContextImpl(val appConfig: AppConfig,
                      val bookkeeper: Bookkeeper,
                      val bulkLoadStateManager: BulkLoadStateManager,
@@ -66,8 +68,18 @@ object AppContextImpl {
 
     val (bookkeeper, tokenLockFactory, journal, metadataManager, bulkLoadStateManager, closable) = Bookkeeper.fromConfig(appConfig.bookkeepingConfig, appConfig.runtimeConfig, batchId)
 
-    val metastore0 = MetastoreImpl.fromConfig(conf, appConfig.runtimeConfig, appConfig.infoDateDefaults, bookkeeper, metadataManager, batchId)
-    val metastore: Metastore = metastore0.detectFormats()
+    val metastore: Metastore = try {
+      val metastore0 = MetastoreImpl.fromConfig(conf, appConfig.runtimeConfig, appConfig.infoDateDefaults, bookkeeper, metadataManager, batchId)
+      metastore0.detectFormats(conf)
+    } catch {
+      case NonFatal(ex) =>
+        try {
+          bookkeeper.close()
+        } finally {
+          closable.close()
+        }
+        throw ex
+    }
 
     PramenImpl.instance.asInstanceOf[PramenImpl].setMetadataManager(metadataManager)
     PramenImpl.instance.asInstanceOf[PramenImpl].setWorkflowConfig(conf)

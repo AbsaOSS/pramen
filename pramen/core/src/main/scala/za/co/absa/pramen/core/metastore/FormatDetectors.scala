@@ -121,24 +121,24 @@ object FormatDetectors {
     } else {
       val deltaLogPath = new Path(path, "_delta_log")
       val metadataPath = new Path(path, "metadata")
-      val dataPath = new Path(path, "data")
 
       val hasMetadataFolder = fs.exists(metadataPath) && fs.getFileStatus(metadataPath).isDirectory
-      val hasDataFolder = fs.exists(dataPath) && fs.getFileStatus(dataPath).isDirectory
       val hasDeltaLogFolder = fs.exists(deltaLogPath) && fs.getFileStatus(deltaLogPath).isDirectory
 
       if (hasDeltaLogFolder) {
         log.info(s"Path '$pathStr' detected as Delta format.")
         Some(DataFormatKind.Delta)
-      } else if (hasMetadataFolder && hasDataFolder) {
+      } else if (hasMetadataFolder) {
         log.info(s"Path '$pathStr' detected as Iceberg format.")
         Some(DataFormatKind.Iceberg)
-      } else if (!hasMetadataFolder && !hasDataFolder) {
-        log.info(s"Path '$pathStr' detected as Parquet format.")
-        Some(DataFormatKind.Parquet)
       } else {
-        log.info(s"The format of the data in '$pathStr' cannot be detected.")
-        None
+        if (fs.listStatus(path).isEmpty) {
+          log.info(s"Path '$pathStr' is empty. The format cannot be detected.")
+          None
+        } else {
+          log.info(s"Path '$pathStr' detected as Parquet format.")
+          Some(DataFormatKind.Parquet)
+        }
       }
     }
   }
