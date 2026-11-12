@@ -17,17 +17,21 @@
 package za.co.absa.pramen.core.metastore.model
 
 import com.typesafe.config.ConfigFactory
+import org.apache.hadoop.fs.Path
 import org.apache.spark.sql.SaveMode
 import org.scalatest.wordspec.AnyWordSpec
 import za.co.absa.pramen.api.DataFormat.Parquet
 import za.co.absa.pramen.api.{DataFormat, PartitionInfo, PartitionScheme}
 import za.co.absa.pramen.core.app.config.InfoDateConfig
+import za.co.absa.pramen.core.base.SparkTestBase
+import za.co.absa.pramen.core.fixtures.TempDirFixture
 import za.co.absa.pramen.core.reader.model.JdbcConfig
 import za.co.absa.pramen.core.utils.hive.HiveQueryTemplates
 
+import java.nio.charset.StandardCharsets
 import java.time.LocalDate
 
-class MetaTableSuite extends AnyWordSpec {
+class MetaTableSuite extends AnyWordSpec with SparkTestBase with TempDirFixture {
   "fromConfig()" should {
     "be able to parse multiple tables" in {
       val conf = ConfigFactory.parseString(
@@ -441,7 +445,104 @@ class MetaTableSuite extends AnyWordSpec {
 
       assert(ex.getMessage.contains("Invalid or unsupported save mode: 'invalid' for table 'table1'"))
     }
+  }
 
+  "detectTableFormat()" should {
+    "retain the original metastore if only a single format is specified" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |name = my_table
+          |format = delta
+          |path = /a/b/c
+          |""".stripMargin)
+
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
+
+      val metaTable0 = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 1, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+
+      val metaTable1 = MetaTable.detectTableFormat(metaTable0, conf)
+
+      assert(metaTable0 eq metaTable1)
+    }
+
+
+    "select afirst format if the path does not exist" in {
+      val conf = ConfigFactory.parseString(
+        """
+          |name = my_table
+          |format = "delta, parquet"
+          |path = /a/b/c
+          |""".stripMargin)
+
+      val defaultHiveConfig = HiveDefaultConfig.getNullConfig
+
+      val metaTable0 = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 1, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+
+      val metaTable1 = MetaTable.detectTableFormat(metaTable0, conf)
+
+      assert(metaTable0 eq metaTable1)
+      assert(metaTable0.format.isInstanceOf[DataFormat.Delta])
+    }
+
+    "select a new format if it is detected and multiple formats are specified and Hive table is not specified" in {
+      withTempDirectory("meta_table") { tempDir =>
+        val conf = ConfigFactory.parseString(
+          s"""
+            |name = my_table
+            |format = "delta, parquet"
+            |path = "$tempDir"
+            |""".stripMargin)
+
+        val filePath = new Path(tempDir, "file.txt")
+        val fs = filePath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+        val outputStream = fs.create(filePath, true)
+        try {
+          outputStream.write("test".getBytes(StandardCharsets.UTF_8))
+        } finally {
+          outputStream.close()
+        }
+
+        assert(fs.exists(filePath))
+
+        val defaultHiveConfig = HiveDefaultConfig.getNullConfig
+        val metaTable0 = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 1, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+        val metaTable1 = MetaTable.detectTableFormat(metaTable0, conf)
+
+        assert(metaTable0 ne metaTable1)
+        assert(metaTable1.format.isInstanceOf[DataFormat.Parquet])
+      }
+    }
+
+    "select a new format if it is detected and multiple formats are specified and Hive table is specified" in {
+      withTempDirectory("meta_table") { tempDir =>
+        val conf = ConfigFactory.parseString(
+          s"""
+             |name = my_table
+             |format = "parquet, delta"
+             |path = "$tempDir"
+             |
+             |hive {
+             |  api = spark_catalog
+             |  database = mydb2
+             |  table = my_hive_table
+             |  ignore.failures = true
+             |}
+             |
+             |""".stripMargin)
+
+        val dirPath = new Path(tempDir, "_delta_log")
+        val fs = dirPath.getFileSystem(spark.sparkContext.hadoopConfiguration)
+        fs.mkdirs(dirPath)
+
+        val defaultHiveConfig = HiveDefaultConfig.getNullConfig
+        val metaTable0 = MetaTable.fromConfigSingleEntity(conf, conf, "INFO_DATE", "dd-MM-yyyy", defaultPartitionScheme = PartitionScheme.PartitionByDay, LocalDate.parse("2020-01-31"), 1, 0, defaultHiveConfig, defaultPreferAddPartition = true, "batchid")
+        val metaTable1 = MetaTable.detectTableFormat(metaTable0, conf)
+
+        assert(metaTable0 ne metaTable1)
+        assert(metaTable1.format.isInstanceOf[DataFormat.Delta])
+        assert(metaTable0.hiveConfig ne metaTable1.hiveConfig)
+      }
+    }
   }
 
 }

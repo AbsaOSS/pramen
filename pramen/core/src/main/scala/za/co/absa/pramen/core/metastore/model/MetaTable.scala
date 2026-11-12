@@ -204,7 +204,7 @@ object MetaTable {
       sparkConfig)
   }
 
-  def detectTableFormat(mt: MetaTable)(implicit spark: SparkSession): MetaTable = {
+  def detectTableFormat(mt: MetaTable, conf: Config)(implicit spark: SparkSession): MetaTable = {
     val possibleFormats = mt.possibleFormats
     val detectedFormat = FormatDetectors.detectFormat(possibleFormats) match {
       case Some(f) => f
@@ -215,8 +215,15 @@ object MetaTable {
 
     if (mt.format == detectedFormat)
       mt
-    else
-      mt.copy(format = detectedFormat)
+    else {
+      if (mt.hiveTable.isEmpty) {
+        mt.copy(format = detectedFormat)
+      } else {
+        val defaultHiveConfig = HiveDefaultConfig.fromConfig(ConfigUtils.getOptionConfig(conf, DEFAULT_HIVE_CONFIG_PREFIX))
+        val hiveConfig = HiveConfig.fromConfigWithDefaults(ConfigUtils.getOptionConfig(conf, TABLE_HIVE_CONFIG_PREFIX), defaultHiveConfig, detectedFormat)
+        mt.copy(format = detectedFormat, hiveConfig = hiveConfig)
+      }
+    }
   }
 
   def getNullTable(table: String): MetaTable = {

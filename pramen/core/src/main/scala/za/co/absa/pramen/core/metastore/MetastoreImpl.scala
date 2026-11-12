@@ -358,11 +358,12 @@ class MetastoreImpl(appConfig: Config,
     *
     * Tables whose detected format matches the configured one are kept unchanged.
     *
+    * @param conf A workflow configuration
     * @return a new [[MetastoreImpl]] instance with table definitions updated to the detected formats.
     */
-  def detectFormats(): MetastoreImpl = {
+  def detectFormats(conf: Config): MetastoreImpl = {
     val newTables = tableDefs
-      .map(MetaTable.detectTableFormat(_))
+      .map(MetaTable.detectTableFormat(_, conf))
 
     new MetastoreImpl(appConfig,
       tableDefsIn = newTables,
